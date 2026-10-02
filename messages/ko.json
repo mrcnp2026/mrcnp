@@ -387,7 +387,10 @@
       "pendingShort": "연장 미승인",
       "blocked": "확인 필요",
       "clean": "이상 없음",
-      "pages": "페이지"
+      "pages": "페이지",
+      "reportXlsx": "월간 근태 확인서",
+      "reportXlsxHint": "인쇄용 양식(서명란 포함) + 원본·정정 이력·적용 기준. A4 한 장으로 출력됩니다.",
+      "payrollCsvHint": "급여 프로그램 입력용입니다. 엑셀로 열어 확인하지 마세요 — 사람이 볼 때는 위 확인서를 쓰세요."
     },
     "notices": {
       "title": "공지",

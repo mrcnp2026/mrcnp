@@ -387,7 +387,10 @@
       "pendingShort": "Overtime pending",
       "blocked": "Needs check",
       "clean": "All good",
-      "pages": "Pages"
+      "pages": "Pages",
+      "reportXlsx": "Monthly attendance report",
+      "reportXlsxHint": "Print-ready form with signature boxes + raw records, corrections and the rules used. Prints on one A4 page.",
+      "payrollCsvHint": "For the payroll program. Do not open it in Excel to check — use the report above for people."
     },
     "notices": {
       "title": "Notices",

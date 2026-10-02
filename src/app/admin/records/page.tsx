@@ -191,12 +191,14 @@ export default async function RecordsPage({ searchParams }: { searchParams: Prom
           <ShieldAlert aria-hidden size={18} strokeWidth={1.75} className="shrink-0" />
           {t('privacyWarning')}
         </p>
+        {/* 사람이 보고·인쇄하는 파일 = 엑셀 확인서 (②-4 7-5 요점 4: 증빙에 CSV 선택지를 두지 않는다) */}
         <Card className="flex items-center justify-between gap-2">
           <div>
-            <p className="font-semibold">{t('attendanceCsv')}</p>
-            <p className="num text-sm text-muted">{ym} · CSV</p>
+            <p className="font-semibold">{t('reportXlsx')}</p>
+            <p className="num text-sm text-muted">{ym} · Excel</p>
+            <p className="text-xs text-faint">{t('reportXlsxHint')}</p>
           </div>
-          <a href={`/api/admin/export/attendance${q(ym)}`} className="inline-flex min-h-11 items-center gap-2 rounded-button border border-border px-4 font-semibold text-primary">
+          <a href={`/api/admin/export/report${q(ym)}`} className="inline-flex min-h-11 shrink-0 items-center gap-2 rounded-button bg-primary px-4 font-semibold text-on-primary">
             <Download aria-hidden size={18} strokeWidth={1.75} />
             {t('download')}
           </a>
@@ -206,6 +208,7 @@ export default async function RecordsPage({ searchParams }: { searchParams: Prom
             <div>
               <p className="font-semibold">{t('payrollCsv')}</p>
               <p className="num text-sm text-muted">{ym} · CSV</p>
+              <p className="text-xs text-faint">{t('payrollCsvHint')}</p>
             </div>
             <a href={`/api/admin/export/payroll${q(ym)}`} className="inline-flex min-h-11 items-center gap-2 rounded-button border border-border px-4 font-semibold text-primary">
               <Download aria-hidden size={18} strokeWidth={1.75} />
