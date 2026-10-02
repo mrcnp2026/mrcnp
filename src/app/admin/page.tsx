@@ -6,7 +6,7 @@ import { getFormatter, getTranslations } from 'next-intl/server';
 import Link from 'next/link';
 import { Pager, pageOf } from '@/components/Pager';
 import { Card, CardTitle, PageShell } from '@/components/ui';
-import { resolveDayType } from '@/config/labor-rules';
+import { LABOR, resolveDayType } from '@/config/labor-rules';
 import { OFFICE } from '@/config/office';
 import { addDays, weekStartOf } from '@/lib/calendar';
 import { findMissingPunches } from '@/lib/missing-punch';
@@ -15,8 +15,10 @@ import { daysFor, loadPeriod, pendingCounts, syncOvertimeRequests } from '@/lib/
 import { createAdminClient } from '@/lib/supabase/admin';
 import { kstDateTime, toKstDate } from '@/lib/time';
 import { buildTodayBoard, type BoardPerson } from '@/lib/today';
+import { weekLimitList } from '@/lib/week-limit';
 import { AutoRefresh } from './AutoRefresh';
 import { BoardView } from './BoardView';
+import { WeekLimitCard } from './WeekLimitCard';
 
 export default async function AdminHome({ searchParams }: { searchParams: Promise<{ live?: string; np?: string }> }) {
   const t = await getTranslations('admin.home');
@@ -128,6 +130,14 @@ export default async function AdminHome({ searchParams }: { searchParams: Promis
       </Card>
 
       <BoardView board={board} total={active.length} limitMinutes={OFFICE.weeklyLimitHours * 60} cautionMinutes={OFFICE.weeklyCautionHours * 60} colored={OFFICE.workplaceSize === '5_or_more'} legend={legend} />
+
+      {data.rule && (
+        <WeekLimitCard
+          rows={weekLimitList(people, { regularMin: LABOR.weeklyRegularLimitMin, cautionMin: OFFICE.weeklyCautionHours * 60, limitMin: OFFICE.weeklyLimitHours * 60 })}
+          limitMin={OFFICE.weeklyLimitHours * 60}
+          colored={OFFICE.workplaceSize === '5_or_more'}
+        />
+      )}
 
       <Card className="flex scroll-mt-16 flex-col gap-2">
         <span id="notes" />

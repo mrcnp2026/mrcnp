@@ -441,6 +441,16 @@
       "holiday": "Holiday",
       "download": "Download payroll file",
       "empty": "No records this month."
+    },
+    "weekLimit": {
+      "title": "52-hour weekly limit",
+      "count": "{n}",
+      "hm": "{h}h {m}m",
+      "empty": "No one has passed 40 hours this week.",
+      "hint": "Staff over 40 hours this week (Mon–Sun). Marked from 48 hours.",
+      "flagged": "{n} need attention — adjust their remaining days.",
+      "left": "{hm} left until 52h",
+      "over": "{hm} over 52h"
     }
   },
   "nav": {
