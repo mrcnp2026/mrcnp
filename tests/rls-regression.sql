@@ -32,7 +32,8 @@ begin
 
   -- ── 관리자 세션 ──
   perform set_config('request.jwt.claims', json_build_object('sub', adm, 'role', 'authenticated')::text, true);
-  select count(*) into n from public.punch_events;
+  -- 표에 다른 직원의 연습 기록이 있을 수 있으므로 이 검사가 만든 두 직원 것만 센다
+  select count(*) into n from public.punch_events where employee_id in (adm, emp);
   out := out || case when n = 2 then 'PASS' else 'FAIL' end || '|06|admin sees all punch_events with RLS on (' || n || E')\n';
   begin insert into public.punch_events (employee_id, kind, work_date) values (emp, 'out', '2026-10-02'); out := out || E'FAIL|07|admin insert punch_events\n';
   exception when others then out := out || E'PASS|07|admin insert punch_events denied\n'; end;
@@ -80,7 +81,7 @@ begin
   exception when others then out := out || E'PASS|22|second active work rule denied\n'; end;
   begin delete from public.profiles where id = emp; out := out || E'FAIL|23|delete profile\n';
   exception when others then out := out || E'PASS|23|delete profile denied\n'; end;
-  select count(*) into n from public.punch_events;
+  select count(*) into n from public.punch_events where employee_id in (adm, emp);
   out := out || case when n = 2 then 'PASS' else 'FAIL' end || '|24|punch_events row count unchanged (' || n || E')\n';
 
   -- ── 게이트 3: 초대·챌린지·패스키 (0004) ──
