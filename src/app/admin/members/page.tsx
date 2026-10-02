@@ -66,39 +66,49 @@ export default async function MembersPage({ searchParams }: { searchParams: Prom
       {list.length === 0 ? (
         <p className="px-1 text-muted">{all.length === 0 ? t('empty') : t('emptyFilter')}</p>
       ) : (
-        <ul className="grid grid-cols-2 gap-2 md:grid-cols-3">
-          {list.map((p) => {
-            const ok = withPhone.has(p.id);
-            return (
-              <li key={p.id}>
-                <Card className={`flex h-full flex-col gap-2 p-4 ${p.active ? '' : 'opacity-60'}`}>
-                  <div className="min-w-0">
-                    <p className="truncate font-bold">{p.name}</p>
-                    <p className="num truncate text-xs text-faint">{p.employee_no}</p>
-                  </div>
-                  <div className="flex flex-wrap gap-1">
-                    {!p.active ? (
-                      <Chip>{t('inactive')}</Chip>
-                    ) : ok ? (
-                      <span className="inline-flex items-center gap-1 text-xs font-bold text-ok">
-                        <Check aria-hidden size={14} strokeWidth={2.5} />
-                        {t('joined')}
-                      </span>
-                    ) : (
-                      <span className="text-xs font-bold text-warn">{t('notJoined')}</span>
-                    )}
-                    {p.role === 'admin' && <Chip tone="info">{t('adminChip')}</Chip>}
-                  </div>
+        // 시안과 같은 한 줄 목록 (2026-10-02 의뢰인): 첫 글자 · 이름 · 사번과 가입 상태 · 링크 보내기
+        <Card className="p-0 py-1">
+          <ul>
+            {list.map((p) => {
+              const ok = withPhone.has(p.id);
+              return (
+                <li key={p.id} className={`flex min-h-16 items-center gap-3 px-5 py-2 ${p.active ? '' : 'opacity-60'}`}>
+                  <span
+                    aria-hidden
+                    className={`flex size-10 shrink-0 items-center justify-center rounded-chip font-bold ${ok ? 'bg-primary-tint text-primary' : 'bg-warn-tint text-warn'}`}
+                  >
+                    {p.name.slice(0, 1)}
+                  </span>
+                  <span className="min-w-0 flex-1">
+                    <span className="flex items-center gap-1.5">
+                      <span className="truncate font-medium">{p.name}</span>
+                      {p.role === 'admin' && <Chip tone="info">{t('adminChip')}</Chip>}
+                    </span>
+                    <span className="num flex items-center gap-1 truncate text-xs">
+                      <span className="text-faint">{p.employee_no}</span>
+                      <span className="text-faint">·</span>
+                      {!p.active ? (
+                        <span className="text-faint">{t('inactive')}</span>
+                      ) : ok ? (
+                        <span className="inline-flex items-center gap-0.5 font-bold text-ok">
+                          <Check aria-hidden size={12} strokeWidth={3} />
+                          {t('joined')}
+                        </span>
+                      ) : (
+                        <span className="font-bold text-warn">{t('notJoined')}</span>
+                      )}
+                    </span>
+                  </span>
                   {p.active && (
-                    <div className="mt-auto">
+                    <span className="shrink-0">
                       <NewInviteButton employeeId={p.id} name={p.name} compact again={ok} />
-                    </div>
+                    </span>
                   )}
-                </Card>
-              </li>
-            );
-          })}
-        </ul>
+                </li>
+              );
+            })}
+          </ul>
+        </Card>
       )}
 
       {/* 직원 추가 양식은 「추가」를 눌렀을 때만 (평소에는 목록만 보이게) */}

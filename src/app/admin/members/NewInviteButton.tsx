@@ -25,7 +25,7 @@ export function NewInviteButton({ employeeId, name, compact = false, again = fal
   }
   // 카드 안의 작은 버튼. 이미 가입한 사람은 "폰 바꿨을 때" 다시 보내는 것이라 글자를 바꾼다
   const button = (
-    <Button variant="outline" onClick={() => setStage('confirm')} className={compact ? 'min-h-11 w-full px-2 text-sm whitespace-nowrap' : 'shrink-0 text-sm'}>
+    <Button variant="outline" onClick={() => setStage('confirm')} className={compact ? 'min-h-11 px-3 text-sm whitespace-nowrap' : 'shrink-0 text-sm'}>
       <Send aria-hidden size={16} strokeWidth={2} />
       {compact ? t(again ? 'reInviteShort' : 'inviteShort') : again ? t('reInvite') : t('newInvite')}
     </Button>
