@@ -60,7 +60,7 @@ try {
   await a.locator('input[name=name]').fill('시험 직원');
   await a.locator('input[name=employeeNo]').fill('test');
   await a.locator('select[name=locale]').selectOption('en');
-  await a.getByRole('button').filter({ hasText: /초대 QR 만들기/ }).click();
+  await a.getByRole('button').filter({ hasText: /초대 링크 만들기/ }).click();
   const linkEl = a.locator('p.break-all');
   await linkEl.waitFor({ timeout: 15000 });
   const testInvite = (await linkEl.innerText()).trim();
@@ -72,7 +72,7 @@ try {
   await a.getByRole('button').filter({ hasText: /닫기/ }).click();
   await a.locator('input[name=name]').fill('중복');
   await a.locator('input[name=employeeNo]').fill('test');
-  await a.getByRole('button').filter({ hasText: /초대 QR 만들기/ }).click();
+  await a.getByRole('button').filter({ hasText: /초대 링크 만들기/ }).click();
   await a.getByText('이미 있는 사번입니다.').waitFor({ timeout: 10000 });
   ok('같은 사번은 다시 추가되지 않음');
 

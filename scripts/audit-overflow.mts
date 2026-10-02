@@ -103,15 +103,15 @@ try {
     await run(`더보기(${loc})`, '/admin/more');
     await run(`진단(${loc})`, '/admin/diag');
   }
-  // 초대 QR 창 (직원 카드의 "새 초대 QR" → 확인)
+  // 초대 창 (직원 카드의 "초대 링크 보내기" → 확인)
   await db.from('profiles').update({ locale: 'ko' }).eq('id', emp!.id);
   for (const w of [320, 360, 1280]) {
     await p.setViewportSize({ width: w, height: 800 });
     await p.goto(`${BASE}/admin/members`);
-    await p.getByRole('button', { name: /새 초대 QR/ }).first().click();
+    await p.getByRole('button', { name: /초대 링크 보내기/ }).first().click();
     for (const f of await scan(p)) findings.push(`[직원-초대 확인 @${w}] ${f}`);
     await p.getByRole('button', { name: '만들기' }).first().click();
-    await p.locator('img[alt*="초대"]').first().waitFor({ timeout: 15000 });
+    await p.locator('text=링크 보내기 (문자·카카오톡)').first().waitFor({ timeout: 15000 });
     for (const f of await scan(p)) findings.push(`[직원-초대 QR 창 @${w}] ${f}`);
     checked += 2;
   }
