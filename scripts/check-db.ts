@@ -47,7 +47,13 @@ async function main() {
   process.exit(ok ? 0 : 1);
 }
 
-main().catch(() => {
-  console.log('✗ 연결 중 오류가 났습니다. 프로젝트 주소와 키를 다시 복사해 넣어 주세요.');
+main().catch((e: Error) => {
+  // 키 값은 오류 메시지에 들어가지 않는다. 원인을 짐작해 "키를 다시 넣으라"고 하지 않는다 —
+  // Node 20에서 WebSocket이 없어 실패한 것을 키 문제로 잘못 안내한 적이 있다 (마스터 8-A 8-1).
+  if (/WebSocket/i.test(e.message)) {
+    console.log('✗ 이 PC의 Node.js 버전이 낮아 연결 도구가 시작되지 않았습니다. Node.js 22 이상이 필요합니다.');
+  } else {
+    console.log(`✗ 연결 중 오류: ${e.message}`);
+  }
   process.exit(1);
 });
