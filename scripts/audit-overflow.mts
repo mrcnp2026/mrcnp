@@ -70,6 +70,14 @@ if (!emp) {
 }
 await db.from('profiles').update({ active: true, role: 'employee' }).eq('id', emp!.id);
 const original = { role: 'employee', locale: 'en', active: false };
+// 이미 게시된 실제 공지는 검사 계정이 "확인함"으로 둔다 — 팝업이 화면을 가려 검사가 멈추지 않게 (검사 계정 것만, 실제 직원 확인 현황과 무관)
+{
+  const { data: live } = await db.from('notices').select('id, version').eq('status', 'published');
+  for (const n of live ?? []) {
+    await db.from('notice_reads').upsert({ notice_id: n.id, employee_id: emp!.id, version: n.version, shown_locale: 'ko' }, { onConflict: 'notice_id,employee_id,version', ignoreDuplicates: true });
+  }
+}
+
 const browser = await chromium.launch({ channel: 'chrome', headless: true });
 const findings: string[] = [];
 let checked = 0;
@@ -131,7 +139,7 @@ try {
   for (const w of [320, 360, 1280]) {
     await p.setViewportSize({ width: w, height: 800 });
     await p.goto(`${BASE}/admin/members`);
-    await p.getByRole('button', { name: /초대 링크 보내기/ }).first().click();
+    await p.getByRole('button', { name: /링크 보내기|다시 보내기/ }).first().click();
     for (const f of await scan(p)) findings.push(`[직원-초대 확인 @${w}] ${f}`);
     await p.getByRole('button', { name: '만들기' }).first().click();
     await p.locator('text=링크 보내기 (문자·카카오톡)').first().waitFor({ timeout: 15000 });

@@ -6,7 +6,6 @@ import Link from 'next/link';
 import { redirect } from 'next/navigation';
 import { AddToHomeIcon } from '@/components/AddToHome';
 import { LanguageSwitcher } from '@/components/LanguageSwitcher';
-import { LiveClock } from '@/components/LiveClock';
 import { SignOutButton } from '@/components/SignOutButton';
 import { TopBar } from '@/components/TopBar';
 import { PageShell } from '@/components/ui';
@@ -57,20 +56,21 @@ export default async function PunchPage() {
         }
       />
       <PageShell>
-        <section className="flex items-end justify-between gap-2 px-1">
-          <div className="min-w-0">
-            <p className="text-sm text-muted">{f.dateTime(kstDateTime(today.workDate, '12:00'), { dateStyle: 'full' })}</p>
-            <p className="text-xl font-semibold text-primary-deep">{t('hello', { name: me.name })}</p>
-          </div>
-          <p className="shrink-0 text-3xl font-bold text-primary-deep" aria-label={t('now')}>
-            <LiveClock initial={now.toISOString()} />
-          </p>
+        {/* 인사 — 토스풍: 날짜는 작게, 인사는 두 줄로 크게 (2026-10-02 의뢰인 선택 시안) */}
+        <section className="px-1 pt-2 pb-2">
+          <p className="text-sm text-muted">{f.dateTime(kstDateTime(today.workDate, '12:00'), { dateStyle: 'full' })}</p>
+          <h1 className="mt-1 text-2xl leading-snug font-extrabold tracking-tight">
+            {t('helloName', { name: me.name })}
+            <br />
+            {t(today.status === 'off' ? 'greetOff' : today.isOpen ? 'greetWorking' : today.lastOut ? 'greetDone' : 'greetBefore')}
+          </h1>
         </section>
 
         <MissingBanner items={recent.missing} />
 
         <TodayCard
           schedule={today.rule ? t('schedule', { start: hm(today.rule.startTime), end: hm(today.rule.endTime) }) : null}
+          endTime={today.rule ? hm(today.rule.endTime) : null}
           status={today.status}
           firstIn={today.firstIn}
           firstInVerified={today.firstInVerified}

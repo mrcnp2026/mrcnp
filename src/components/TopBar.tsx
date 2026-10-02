@@ -5,7 +5,7 @@ import { Logo } from './Logo';
 
 export function TopBar({ right, variant = 'full' }: { right?: ReactNode; variant?: 'full' | 'mark' }) {
   return (
-    <header className="sticky top-0 z-10 border-b border-border bg-bg pt-[env(safe-area-inset-top)]">
+    <header className="sticky top-0 z-10 bg-surface pt-[env(safe-area-inset-top)]">
       <div className="mx-auto flex min-h-14 w-full max-w-md items-center justify-between gap-2 px-4 md:max-w-none">
         <Logo variant={variant} height={28} priority />
         {right && <div className="flex items-center">{right}</div>}

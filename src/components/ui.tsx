@@ -4,7 +4,10 @@ import { AlertTriangle, Check, type LucideIcon } from 'lucide-react';
 import type { ButtonHTMLAttributes, ReactNode } from 'react';
 
 export function Card({ children, className = '' }: { children: ReactNode; className?: string }) {
-  return <section className={`rounded-card border border-border bg-bg p-4 shadow-card ${className}`}>{children}</section>;
+  // 토스풍: 테두리·그림자 없는 큰 흰 카드. 회색 바탕 위에서 흰색만으로 묶음이 보인다
+  // 부르는 쪽이 여백(p-…)을 주면 기본 여백을 빼서 겹치지 않게
+  const pad = /(^|\s)p-/.test(className) ? '' : 'p-5';
+  return <section className={`rounded-card bg-bg ${pad} ${className}`}>{children}</section>;
 }
 
 type Variant = 'primary' | 'ok' | 'outline';
@@ -12,7 +15,8 @@ const VARIANT: Record<Variant, string> = {
   // 한 화면에 색을 채운 버튼은 하나만 (R-10-7). 보조 행동은 outline
   primary: 'bg-primary text-on-primary',
   ok: 'bg-ok text-on-primary',
-  outline: 'border border-border bg-bg text-primary',
+  // 보조 버튼: 연한 파랑 바탕 + 파랑 글자 (흰 카드 위·회색 바탕 위 어디서나 보인다)
+  outline: 'bg-primary-tint text-primary',
 };
 
 export function Button({
@@ -22,7 +26,7 @@ export function Button({
 }: ButtonHTMLAttributes<HTMLButtonElement> & { variant?: Variant }) {
   return (
     <button
-      className={`inline-flex min-h-11 items-center justify-center gap-2 rounded-button px-4 py-2 text-base font-semibold disabled:opacity-60 ${VARIANT[variant]} ${className}`}
+      className={`inline-flex min-h-12 items-center justify-center gap-2 rounded-button px-4 py-2 text-base font-bold disabled:opacity-60 ${VARIANT[variant]} ${className}`}
       {...rest}
     />
   );
@@ -32,13 +36,13 @@ type Tone = 'neutral' | 'ok' | 'warn' | 'info';
 // 주황은 ⚠, 초록은 ✓ 아이콘과 글자를 항상 함께 — 색만으로 의미를 전하지 않는다 (R-10-8 색 규칙 3)
 export function Chip({ tone = 'neutral', children }: { tone?: Tone; children: ReactNode }) {
   const cls: Record<Tone, string> = {
-    neutral: 'bg-surface text-muted border-border',
-    ok: 'bg-ok-tint text-ok border-ok',
-    warn: 'bg-warn-tint text-warn border-warn',
-    info: 'bg-primary-tint text-primary border-primary-tint',
+    neutral: 'bg-surface text-muted',
+    ok: 'bg-ok-tint text-ok',
+    warn: 'bg-warn-tint text-warn',
+    info: 'bg-primary-tint text-primary',
   };
   return (
-    <span className={`inline-flex items-center gap-1 rounded-chip border px-2 py-1 text-xs font-semibold ${cls[tone]}`}>
+    <span className={`inline-flex items-center gap-1 rounded-chip px-2.5 py-1 text-xs font-bold ${cls[tone]}`}>
       {tone === 'ok' && <Check aria-hidden size={14} strokeWidth={1.75} />}
       {tone === 'warn' && <AlertTriangle aria-hidden size={14} strokeWidth={1.75} />}
       {children}
@@ -46,16 +50,14 @@ export function Chip({ tone = 'neutral', children }: { tone?: Tone; children: Re
   );
 }
 
-/** 카드 제목 — 연한 파랑 타일 안의 선 아이콘 + 제목. 색 면적은 작게 (R-10-8 색 규칙 1) */
-export function CardTitle({ icon: Icon, children, aside }: { icon: LucideIcon; children: ReactNode; aside?: ReactNode }) {
+/**
+ * 카드 제목 — 토스풍: 아이콘 타일 없이 작은 회색 글자 한 줄 (2026-10-02 의뢰인: "AI로 뚝딱 만든 느낌" — 카드마다 같은 아이콘 타일을 반복하던 것을 없앰).
+ * icon은 예전 호출과 맞추려고 받기만 하고 그리지 않는다.
+ */
+export function CardTitle({ children, aside }: { icon?: LucideIcon; children: ReactNode; aside?: ReactNode }) {
   return (
     <div className="flex items-center justify-between gap-2">
-      <h2 className="flex items-center gap-3 font-semibold">
-        <span className="flex size-8 items-center justify-center rounded-button bg-primary-tint text-primary">
-          <Icon aria-hidden size={18} strokeWidth={1.75} />
-        </span>
-        {children}
-      </h2>
+      <h2 className="text-sm font-medium text-muted">{children}</h2>
       {aside}
     </div>
   );
@@ -63,5 +65,5 @@ export function CardTitle({ icon: Icon, children, aside }: { icon: LucideIcon; c
 
 export function PageShell({ children, wide = false }: { children: ReactNode; wide?: boolean }) {
   // 화면 좌우 16px, 폰 기준 폭 (4-9). wide: 넓은 화면에서 표를 펼치는 화면(월간 집계) — 폰에서는 똑같이 좁다
-  return <main className={`mx-auto flex w-full flex-col gap-4 px-4 py-6 ${wide ? 'max-w-md md:max-w-3xl lg:max-w-5xl' : 'max-w-md'}`}>{children}</main>;
+  return <main className={`mx-auto flex w-full flex-col gap-3 px-4 py-4 ${wide ? 'max-w-md md:max-w-3xl lg:max-w-5xl' : 'max-w-md'}`}>{children}</main>;
 }

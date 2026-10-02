@@ -45,7 +45,7 @@ export function NavTab({
       onClick={onPress}
       className={`flex min-h-14 flex-col items-center justify-center gap-0.5 text-xs ${
         wideRow ? 'lg:flex-row lg:justify-start lg:gap-2 lg:rounded-button lg:px-3 lg:text-base' : ''
-      } ${active ? `font-semibold text-primary-deep ${wideRow ? 'lg:bg-primary-tint' : ''}` : 'text-muted'}`}
+      } ${active ? `font-bold text-text ${wideRow ? 'lg:bg-primary-tint' : ''}` : 'text-faint'}`}
     >
       <span className="relative">
         <Icon aria-hidden size={22} strokeWidth={active ? 2.25 : 1.75} />

@@ -37,8 +37,8 @@ export function AddEmployeeForm({ locales }: { locales: { code: string; name: st
           router.refresh();
         }}
       >
-        <h2 className="flex items-center gap-2 text-xl font-semibold">
-          <UserPlus aria-hidden size={22} strokeWidth={1.75} />
+        <h2 className="flex items-center gap-2 text-lg font-bold">
+          <UserPlus aria-hidden size={20} strokeWidth={2} />
           {t('addTitle')}
         </h2>
         <label className="flex flex-col gap-1 text-sm text-muted">

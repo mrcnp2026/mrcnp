@@ -66,13 +66,16 @@
     "office": "사무실 인터넷",
     "outside": "사무실 밖",
     "week": {
-      "title": "이번 주",
+      "title": "이번 주 근무",
       "total": "{h}시간 {m}분",
       "normal": "정상",
       "caution": "주의",
       "over": "한도 초과",
       "over52": "52시간+",
-      "noRule": "근무시간이 설정되면 주간 시간이 나옵니다."
+      "noRule": "근무시간이 설정되면 주간 시간이 나옵니다.",
+      "left": "{limit}시간까지 {h}시간 {m}분 남았어요",
+      "addOnOut": "오늘 시간은 퇴근을 찍으면 더해져요",
+      "records": "내 기록"
     },
     "note": {
       "title": "근무노트",
@@ -96,7 +99,18 @@
     "clockOutLabel": "퇴근",
     "toAdmin": "관리자 화면",
     "requestCorrection": "정정 요청",
-    "notices": "공지 (확인 안 한 공지 {n}개)"
+    "notices": "공지 (확인 안 한 공지 {n}개)",
+    "nowLabel": "지금",
+    "workingLabel": "근무 중",
+    "doneLabel": "퇴근했어요",
+    "beforeIn": "출근 전",
+    "plannedOut": "퇴근 예정",
+    "elapsed": "{h}시간 {m}분",
+    "helloName": "{name}님,",
+    "greetBefore": "오늘도 좋은 아침이에요",
+    "greetWorking": "오늘도 수고 많으세요",
+    "greetDone": "오늘도 수고하셨어요",
+    "greetOff": "오늘은 쉬는 날이에요"
   },
   "errors": {
     "invite_invalid": "초대 QR이 만료되었거나 이미 사용되었습니다. 관리자에게 새 QR을 받으세요.",
@@ -174,7 +188,18 @@
       "codeHelp": "또는 폰 브라우저 주소창에 {origin} 입력 → \"폰 등록하기\" → 이 코드 입력",
       "send": "링크 보내기 (문자·카카오톡)",
       "shareText": "[MRCNP 근태] {name}님 폰 등록 / Phone registration\nSafari·Chrome으로 여세요 / Open in Safari or Chrome: {url}\n등록 코드 / Code: {code}",
-      "qrInPerson": "직접 만나서 등록할 때 — QR 보여 주기"
+      "qrInPerson": "직접 만나서 등록할 때 — QR 보여 주기",
+      "addShort": "추가",
+      "filter": "가입 상태로 보기",
+      "f_all": "전체",
+      "f_joined": "가입",
+      "f_pending": "미가입",
+      "joined": "가입함",
+      "notJoined": "아직 가입 안 함",
+      "reInvite": "링크 다시 보내기",
+      "emptyFilter": "해당하는 직원이 없습니다.",
+      "inviteShort": "링크 보내기",
+      "reInviteShort": "다시 보내기"
     },
     "more": {
       "title": "더보기",
@@ -226,7 +251,24 @@
       "myPunch": "내 출퇴근",
       "notesTitle": "오늘 근무노트",
       "notesEmpty": "오늘 쓴 노트가 없습니다.",
-      "notesHint": "직원이 쓴 그대로입니다 (원문)."
+      "notesHint": "직원이 쓴 그대로입니다 (원문).",
+      "asOf": "{date} · {time} 기준",
+      "headline": "오늘 {total}명 중 {n}명 출근",
+      "statusTabs": "오늘 상태",
+      "basis": "숫자는 어떻게 세나요?",
+      "basisOpen": "보기",
+      "basisToday": "오늘 하루 기준입니다. 자정이 지나면 새로 셉니다.",
+      "basisLate": "지각: {time} 이후에 출근한 사람 (출근 시각 + 유예)",
+      "basisOvertime": "야근중: {time}이 지났는데 아직 퇴근을 안 찍은 사람",
+      "basisAbsent": "미출근: 오늘 근무일인데 아직 출근 기록이 없는 사람",
+      "basisOne": "한 사람은 한 칸에만 들어갑니다 (퇴근 → 야근중 → 지각 → 근무중 → 미출근 순서). 지각 후 야근 중이면 야근중 칸에 있고 \"지각\" 표시가 붙습니다.",
+      "basisPast": "지난 날짜와 월별 합계는 아래 「기록」 탭에서 봅니다.",
+      "everyone": "전체",
+      "showAll": "전체 보기",
+      "noRecord": "기록 없음",
+      "pages": "페이지",
+      "prevPage": "이전",
+      "nextPage": "다음"
     },
     "inbox": {
       "title": "처리함",
@@ -314,7 +356,19 @@
       "privacyWarning": "직원 개인정보가 들어 있습니다. 공유 폴더에 올리지 마세요.",
       "attendanceCsv": "근태 증빙 (원본·정정 시각)",
       "payrollCsv": "급여 입력용 (분 단위, 금액 없음)",
-      "download": "내려받기"
+      "download": "내려받기",
+      "sumLate": "이 달 지각(회)",
+      "sumAbsent": "이 달 결근(일)",
+      "sumPending": "연장 미승인(명)",
+      "filter": "보기",
+      "fAll": "전체 {n}명",
+      "fIssues": "확인 필요 {n}명",
+      "noIssues": "확인이 필요한 사람이 없습니다.",
+      "lateShort": "지각 {n}회",
+      "pendingShort": "연장 미승인",
+      "blocked": "확인 필요",
+      "clean": "이상 없음",
+      "pages": "페이지"
     },
     "notices": {
       "title": "공지",

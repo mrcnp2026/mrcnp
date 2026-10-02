@@ -72,7 +72,10 @@
       "caution": "Caution",
       "over": "Over limit",
       "over52": "52h+",
-      "noRule": "Weekly hours appear after work hours are set."
+      "noRule": "Weekly hours appear after work hours are set.",
+      "left": "{h}h {m}m left until {limit}h",
+      "addOnOut": "Today's time is added when you clock out",
+      "records": "My records"
     },
     "note": {
       "title": "Work note",
@@ -96,7 +99,18 @@
     "clockOutLabel": "Clock-out",
     "toAdmin": "Admin",
     "requestCorrection": "Request a correction",
-    "notices": "Notices ({n} unread)"
+    "notices": "Notices ({n} unread)",
+    "nowLabel": "Now",
+    "workingLabel": "Working",
+    "doneLabel": "Clocked out",
+    "beforeIn": "Not in yet",
+    "plannedOut": "Planned out",
+    "elapsed": "{h}h {m}m",
+    "helloName": "Hi {name},",
+    "greetBefore": "have a good day",
+    "greetWorking": "keep up the good work",
+    "greetDone": "great work today",
+    "greetOff": "enjoy your day off"
   },
   "errors": {
     "invite_invalid": "This invitation QR code has expired or was already used. Ask your manager for a new one.",
@@ -153,7 +167,7 @@
       "phoneNone": "No phone",
       "inactive": "Inactive",
       "adminChip": "Admin",
-      "newInvite": "Send invitation link",
+      "newInvite": "Send invite link",
       "newInviteConfirm": "Earlier unused links for {name} will stop working. Create a new link?",
       "confirm": "Create",
       "cancel": "Cancel",
@@ -174,7 +188,18 @@
       "codeHelp": "Or type {origin} in the phone browser → \"Register my phone\" → enter this code.",
       "send": "Send link (text / KakaoTalk)",
       "shareText": "[MRCNP Attendance] Phone registration for {name}\nOpen in Safari or Chrome: {url}\nCode: {code}",
-      "qrInPerson": "Registering in person? Show a QR code"
+      "qrInPerson": "Registering in person? Show a QR code",
+      "addShort": "Add",
+      "filter": "Filter by sign-up",
+      "f_all": "All",
+      "f_joined": "Joined",
+      "f_pending": "Not yet",
+      "joined": "Joined",
+      "notJoined": "Not joined yet",
+      "reInvite": "Send link again",
+      "emptyFilter": "No one here.",
+      "inviteShort": "Send link",
+      "reInviteShort": "Resend"
     },
     "more": {
       "title": "More",
@@ -226,7 +251,24 @@
       "myPunch": "My clock in / out",
       "notesTitle": "Today's work notes",
       "notesEmpty": "No notes today.",
-      "notesHint": "Written by staff as they typed it (original text)."
+      "notesHint": "Written by staff as they typed it (original text).",
+      "asOf": "{date} · as of {time}",
+      "headline": "{n} of {total} in today",
+      "statusTabs": "Today's status",
+      "basis": "How are these counted?",
+      "basisOpen": "Show",
+      "basisToday": "Today only. Counts reset at midnight.",
+      "basisLate": "Late: clocked in after {time} (start time + grace)",
+      "basisOvertime": "Overtime: still working after {time}",
+      "basisAbsent": "Not in: workday, but no clock-in yet",
+      "basisOne": "Each person is counted once (out → overtime → late → working → not in). Someone late and still working late shows under overtime with a \"late\" note.",
+      "basisPast": "Past days and monthly totals are in the Records tab.",
+      "everyone": "Everyone",
+      "showAll": "Show all",
+      "noRecord": "No record",
+      "pages": "Pages",
+      "prevPage": "Previous",
+      "nextPage": "Next"
     },
     "inbox": {
       "title": "Inbox",
@@ -314,7 +356,19 @@
       "privacyWarning": "These files contain staff personal information. Do not put them in shared folders.",
       "attendanceCsv": "Attendance evidence (original + corrected times)",
       "payrollCsv": "Payroll input (minutes only, no amounts)",
-      "download": "Download"
+      "download": "Download",
+      "sumLate": "Late (times)",
+      "sumAbsent": "Absent (days)",
+      "sumPending": "Overtime to approve",
+      "filter": "View",
+      "fAll": "All {n}",
+      "fIssues": "Needs check {n}",
+      "noIssues": "No one needs a check.",
+      "lateShort": "Late {n}x",
+      "pendingShort": "Overtime pending",
+      "blocked": "Needs check",
+      "clean": "All good",
+      "pages": "Pages"
     },
     "notices": {
       "title": "Notices",

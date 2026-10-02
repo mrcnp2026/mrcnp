@@ -1,9 +1,10 @@
 // ③ 기록 — 월간 집계 + 내려받기 모음 (마스터 5장, ①-4 7-10, 부록 R-10-5·R-10-6).
 // 네 묶음 이름 통일: 실제 · 인정 · 보류 · 미검토. 폰(<768px)은 카드, 넓은 화면만 표 — 표는 자기 상자 안에서만 가로 스크롤.
 // 색은 예외에만(지각·미기록·미승인) + 글자/아이콘을 함께.
-import { ChevronLeft, ChevronRight, Download, ShieldAlert } from 'lucide-react';
+import { ChevronDown, ChevronLeft, ChevronRight, Download, ShieldAlert } from 'lucide-react';
 import { getTranslations } from 'next-intl/server';
 import Link from 'next/link';
+import { Pager, pageOf } from '@/components/Pager';
 import { Card, Chip, PageShell } from '@/components/ui';
 import { OFFICE } from '@/config/office';
 import { getMe } from '@/lib/auth';
@@ -17,7 +18,7 @@ function shift(ym: string, n: number) {
   return d.toISOString().slice(0, 7);
 }
 
-export default async function RecordsPage({ searchParams }: { searchParams: Promise<{ m?: string; practice?: string }> }) {
+export default async function RecordsPage({ searchParams }: { searchParams: Promise<{ m?: string; practice?: string; p?: string; f?: string }> }) {
   const t = await getTranslations('admin.records');
   const me = (await getMe())!;
   const sp = await searchParams;
@@ -25,12 +26,23 @@ export default async function RecordsPage({ searchParams }: { searchParams: Prom
   const practice = OFFICE.practiceMode && sp.practice === '1';
   const q = (m: string) => `?m=${m}${practice ? '&practice=1' : ''}`;
   const { data, rows } = await buildMonth(ym, practice);
+  // 확인이 필요한 사람: 지각·결근·미승인 연장·막힘 표시 중 하나라도 있으면
+  const hasIssue = (r: (typeof rows)[number]['summary']['row']) =>
+    Number(r.late_count) > 0 || Number(r.absent_days) > 0 || Number(r.pending_overtime_minutes) > 0 || String(r.flags).split(';').some((f) => f.startsWith('block:') && f !== FLAG.LEAVE_MODULE_MISSING);
+  const issueRows = rows.filter((x) => hasIssue(x.summary.row));
+  const onlyIssues = sp.f === 'issues';
+  const pageRows = pageOf(onlyIssues ? issueRows : rows, sp.p, 10);
+  const totals = {
+    late: rows.reduce((a, x) => a + Number(x.summary.row.late_count), 0),
+    absent: rows.reduce((a, x) => a + Number(x.summary.row.absent_days), 0),
+    pending: rows.filter((x) => Number(x.summary.row.pending_overtime_minutes) > 0).length,
+  };
   const hm = (min: number) => t('hm', { h: Math.floor(min / 60), m: String(min % 60).padStart(2, '0') });
 
   return (
     <PageShell wide>
       <header className="flex flex-wrap items-center justify-between gap-2">
-        <h1 className="text-2xl font-semibold text-primary-deep">{t('title')}</h1>
+        <h1 className="text-2xl font-extrabold tracking-tight">{t('title')}</h1>
         <nav className="flex items-center gap-1" aria-label={t('month')}>
           <Link href={q(shift(ym, -1))} className="flex min-h-11 min-w-11 items-center justify-center" aria-label={t('prev')}>
             <ChevronLeft aria-hidden size={22} strokeWidth={1.75} />
@@ -50,43 +62,90 @@ export default async function RecordsPage({ searchParams }: { searchParams: Prom
       {!data.rule && <p className="rounded-card bg-warn-tint p-3 text-sm text-warn">{t('noRule')}</p>}
       {data.rule && rows.length === 0 && <p className="text-muted">{t('empty')}</p>}
 
-      {/* 폰: 직원 한 명 = 카드 한 장 */}
-      <ul className="flex flex-col gap-3 md:hidden">
-        {rows.map(({ person, summary: s }) => {
-          const r = s.row;
-          const blocks = String(r.flags).split(';').filter((f) => f.startsWith('block:') && f !== FLAG.LEAVE_MODULE_MISSING);
-          return (
-            <li key={person.id}>
-              <Card className="flex flex-col gap-2">
-                <div className="flex items-baseline justify-between">
-                  <span className="font-semibold">{person.name}</span>
-                  <span className="num text-sm text-muted">{t('worked', { t: hm(s.netMinutes) })}</span>
-                </div>
-                <dl className="num grid grid-cols-4 gap-1 text-center text-xs">
-                  {(['actual', 'approved', 'pending', 'unreviewed'] as const).map((k) => (
-                    <div key={k} className="rounded-button bg-surface p-1">
-                      <dt className="text-muted">{t(k)}</dt>
-                      <dd className="text-base font-semibold">
-                        {k === 'actual' ? hm(Number(r.overtime_minutes)) : k === 'approved' ? hm(Number(r.approved_overtime_minutes)) : k === 'pending' ? hm(Number(r.pending_overtime_minutes)) : hm(Number(r.unreviewed_overtime_minutes))}
-                      </dd>
-                    </div>
-                  ))}
-                </dl>
-                <p className="num text-xs text-muted">{t('overtimeRow')}</p>
-                <div className="num flex flex-wrap gap-2 text-sm">
-                  <span>{t('night', { t: hm(Number(r.night_minutes)) })}</span>
-                  <span>{t('holiday', { t: hm(Number(r.holiday_within8_minutes) + Number(r.holiday_over8_minutes)) })}</span>
-                </div>
-                <div className="flex flex-wrap gap-2">
-                  {Number(r.late_count) > 0 && <Chip tone="warn">{t('late', { n: Number(r.late_count), m: Number(r.late_minutes) })}</Chip>}
-                  {Number(r.absent_days) > 0 && <Chip tone="warn">{t('absent', { n: Number(r.absent_days) })}</Chip>}
-                  {blocks.map((b) => <Chip key={b} tone="warn">{b.slice(6)}</Chip>)}
-                </div>
-              </Card>
-            </li>
-          );
-        })}
-      </ul>
+      {/* 이 달 요약 — 한 줄로 */}
+      {rows.length > 0 && (
+        <Card className="grid grid-cols-3 p-2 text-center">
+          {[
+            { k: 'sumLate', n: totals.late, warn: totals.late > 0 },
+            { k: 'sumAbsent', n: totals.absent, warn: totals.absent > 0 },
+            { k: 'sumPending', n: totals.pending, warn: totals.pending > 0 },
+          ].map((x) => (
+            <div key={x.k} className="flex min-h-16 flex-col items-center justify-center">
+              <span className={`num text-2xl leading-none font-extrabold ${x.warn ? 'text-warn' : ''}`}>{x.n}</span>
+              <span className="mt-1 text-xs text-muted">{t(x.k)}</span>
+            </div>
+          ))}
+        </Card>
+      )}
+
+      {/* 폰: 직원 한 명 = 한 줄 (이름 · 근무시간 · 예외 표시). 누르면 펼쳐서 연장·야간·휴일. 10명씩 페이지 (2026-10-02 의뢰인) */}
+      {rows.length > 0 && (
+        <div className="flex flex-col gap-2 md:hidden">
+          <nav className="grid grid-cols-2 rounded-card bg-bg p-1" aria-label={t('filter')}>
+            {(['all', 'issues'] as const).map((k) => (
+              <Link
+                key={k}
+                href={`${q(ym)}${k === 'issues' ? '&f=issues' : ''}`}
+                scroll={false}
+                aria-current={onlyIssues === (k === 'issues') ? 'page' : undefined}
+                className={`flex min-h-11 items-center justify-center rounded-button text-sm font-bold ${onlyIssues === (k === 'issues') ? 'bg-primary-tint text-primary' : 'text-muted'}`}
+              >
+                {t(k === 'all' ? 'fAll' : 'fIssues', { n: k === 'all' ? rows.length : issueRows.length })}
+              </Link>
+            ))}
+          </nav>
+          <Card className="p-0 py-1">
+            {pageRows.items.length === 0 && <p className="px-5 py-4 text-sm text-faint">{t('noIssues')}</p>}
+            <ul>
+              {pageRows.items.map(({ person, summary: s }) => {
+                const r = s.row;
+                const blocks = String(r.flags).split(';').filter((f) => f.startsWith('block:') && f !== FLAG.LEAVE_MODULE_MISSING);
+                const clean = Number(r.late_count) === 0 && Number(r.absent_days) === 0 && Number(r.pending_overtime_minutes) === 0 && blocks.length === 0;
+                return (
+                  <li key={person.id}>
+                    <details className="group">
+                      <summary className="flex min-h-14 cursor-pointer list-none items-center gap-3 px-5 py-2">
+                        <span className="min-w-0 flex-1">
+                          <span className="block truncate font-medium">{person.name}</span>
+                          <span className="flex flex-wrap gap-x-2 text-xs">
+                            {Number(r.late_count) > 0 && <span className="text-warn">{t('lateShort', { n: Number(r.late_count) })}</span>}
+                            {Number(r.absent_days) > 0 && <span className="text-warn">{t('absent', { n: Number(r.absent_days) })}</span>}
+                            {Number(r.pending_overtime_minutes) > 0 && <span className="text-warn">{t('pendingShort')}</span>}
+                            {blocks.length > 0 && <span className="text-warn">{t('blocked')}</span>}
+                            {clean && <span className="text-faint">{t('clean')}</span>}
+                          </span>
+                        </span>
+                        <span className="num shrink-0 font-bold">{hm(s.netMinutes)}</span>
+                        <ChevronDown aria-hidden size={18} strokeWidth={2} className="shrink-0 text-faint group-open:rotate-180" />
+                      </summary>
+                      <div className="flex flex-col gap-2 px-5 pb-4">
+                        <dl className="num grid grid-cols-4 gap-1 text-center text-xs">
+                          {(['actual', 'approved', 'pending', 'unreviewed'] as const).map((k) => (
+                            <div key={k} className="rounded-button bg-surface p-1.5">
+                              <dt className="text-muted">{t(k)}</dt>
+                              <dd className="text-sm font-bold">
+                                {k === 'actual' ? hm(Number(r.overtime_minutes)) : k === 'approved' ? hm(Number(r.approved_overtime_minutes)) : k === 'pending' ? hm(Number(r.pending_overtime_minutes)) : hm(Number(r.unreviewed_overtime_minutes))}
+                              </dd>
+                            </div>
+                          ))}
+                        </dl>
+                        <p className="num text-xs text-muted">{t('overtimeRow')}</p>
+                        <div className="num flex flex-wrap gap-x-3 text-sm text-muted">
+                          <span>{t('night', { t: hm(Number(r.night_minutes)) })}</span>
+                          <span>{t('holiday', { t: hm(Number(r.holiday_within8_minutes) + Number(r.holiday_over8_minutes)) })}</span>
+                          {Number(r.late_count) > 0 && <span className="text-warn">{t('late', { n: Number(r.late_count), m: Number(r.late_minutes) })}</span>}
+                        </div>
+                        {blocks.length > 0 && <div className="flex flex-wrap gap-1">{blocks.map((b) => <Chip key={b} tone="warn">{b.slice(6)}</Chip>)}</div>}
+                      </div>
+                    </details>
+                  </li>
+                );
+              })}
+            </ul>
+            <Pager page={pageRows.page} pages={pageRows.pages} param="p" params={{ m: ym, practice: practice ? '1' : undefined, f: onlyIssues ? 'issues' : undefined }} label={t('pages')} />
+          </Card>
+        </div>
+      )}
 
       {/* 넓은 화면: 표 — 자기 상자 안에서만 가로 스크롤 (5장) */}
       {rows.length > 0 && (

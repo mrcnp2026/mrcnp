@@ -3,6 +3,7 @@
 // 알림은 보내지 않는다 (7-13 요점 3). 5인 미만이면 색 없이 숫자만 (요점 4).
 import { AlertTriangle, ChartNoAxesColumn } from 'lucide-react';
 import { getTranslations } from 'next-intl/server';
+import Link from 'next/link';
 import { Card, CardTitle } from '@/components/ui';
 import type { weeklyHours } from '@/lib/weekly-hours';
 
@@ -26,35 +27,37 @@ export async function WeekBar({
   const limitMin = limitHours * 60;
   const pct = Math.min(week.totalMinutes / limitMin, 1) * 100;
   const over = week.totalMinutes > limitMin;
-  const barColor = !week.colored ? 'bg-faint' : week.level === 'over' ? 'bg-danger' : week.level === 'caution' ? 'bg-warn' : 'bg-primary';
+  const barColor = !week.colored ? 'bg-primary' : week.level === 'over' ? 'bg-danger' : week.level === 'caution' ? 'bg-warn' : 'bg-primary';
   const textColor = !week.colored ? 'text-muted' : week.level === 'over' ? 'text-danger' : week.level === 'caution' ? 'text-warn' : 'text-muted';
   const h = Math.floor(week.totalMinutes / 60);
   const m = week.totalMinutes % 60;
 
+  const regMin = regularHours * 60;
+  const left = Math.max(0, regMin - week.totalMinutes);
+  // 토스풍: 제목은 작게, 합계는 크게, 아래 한 줄은 말로 ("40시간까지 7시간 50분 남았어요")
   return (
-    <Card className="flex flex-col gap-2">
+    <Card className="flex flex-col gap-3 p-6">
       <CardTitle
         icon={ChartNoAxesColumn}
         aside={
-          <p className={`num flex items-center gap-1 text-xl font-semibold ${textColor}`}>
-            {week.colored && week.level !== 'normal' && <AlertTriangle aria-hidden size={18} strokeWidth={1.75} />}
-            {over ? t('over52') : t('total', { h, m })}
-          </p>
+          <Link href="/punch/records" className="-my-3 inline-flex min-h-11 items-center text-sm text-faint">
+            {t('records')} ›
+          </Link>
         }
       >
         {t('title')}
       </CardTitle>
-      <div className="relative h-3 rounded-chip bg-surface" role="img" aria-label={t('total', { h, m })}>
-        <div className={`h-3 rounded-chip ${barColor}`} style={{ width: `${pct}%` }} />
-        <div className="absolute top-0 h-3 border-l-2 border-muted" style={{ left: `${(regularHours / limitHours) * 100}%` }} />
+      <p className={`num flex items-center gap-1 text-3xl font-extrabold tracking-tight ${week.colored && week.level !== 'normal' ? textColor : ''}`}>
+        {week.colored && week.level !== 'normal' && <AlertTriangle aria-hidden size={24} strokeWidth={2} />}
+        {over ? t('over52') : t('total', { h, m })}
+      </p>
+      <div className="relative h-2 rounded-chip bg-border" role="img" aria-label={t('total', { h, m })}>
+        <div className={`h-2 rounded-chip ${barColor}`} style={{ width: `${pct}%` }} />
+        <div className="absolute -top-0.5 h-3 border-l-2 border-bg" style={{ left: `${(regularHours / limitHours) * 100}%` }} />
       </div>
-      <div className="num relative h-4 text-xs text-faint">
-        <span className="absolute -translate-x-1/2" style={{ left: `${(regularHours / limitHours) * 100}%` }}>
-          {regularHours}h
-        </span>
-        <span className="absolute right-0">{limitHours}h</span>
-      </div>
-      {week.colored && <p className={`text-sm ${textColor}`}>{t(week.level)}</p>}
+      <p className={`text-sm ${week.colored && week.level !== 'normal' ? textColor : 'text-muted'}`}>
+        {week.colored && week.level !== 'normal' ? t(week.level) : left > 0 ? t('left', { limit: regularHours, h: Math.floor(left / 60), m: left % 60 }) : t('normal')}
+      </p>
     </Card>
   );
 }

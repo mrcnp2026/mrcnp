@@ -27,9 +27,11 @@
   --text-xs: var(--t-text-xs);
   --text-sm: var(--t-text-sm);
   --text-base: var(--t-text-base);
+  --text-lg: var(--t-text-lg);
   --text-xl: var(--t-text-xl);
   --text-2xl: var(--t-text-2xl);
   --text-3xl: var(--t-text-3xl);
+  --text-4xl: var(--t-text-4xl);
 
   --shadow-card: var(--t-shadow-card);
   --font-sans: var(--font-latin), var(--font-thai), var(--font-kr), system-ui, sans-serif;

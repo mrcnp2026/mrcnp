@@ -72,7 +72,10 @@
       "caution": "Chú ý",
       "over": "Vượt giới hạn",
       "over52": "52 giờ+",
-      "noRule": "Giờ làm trong tuần sẽ hiện sau khi cài đặt giờ làm."
+      "noRule": "Giờ làm trong tuần sẽ hiện sau khi cài đặt giờ làm.",
+      "left": "Còn {h} giờ {m} phút đến {limit} giờ",
+      "addOnOut": "Giờ hôm nay được cộng khi bạn tan ca",
+      "records": "Lịch sử"
     },
     "note": {
       "title": "Ghi chú công việc",
@@ -96,7 +99,18 @@
     "clockOutLabel": "Giờ ra",
     "toAdmin": "Quản lý",
     "requestCorrection": "Yêu cầu sửa",
-    "notices": "Thông báo ({n} chưa xem)"
+    "notices": "Thông báo ({n} chưa xem)",
+    "nowLabel": "Bây giờ",
+    "workingLabel": "Đang làm việc",
+    "doneLabel": "Đã tan ca",
+    "beforeIn": "Chưa vào ca",
+    "plannedOut": "Dự kiến tan ca",
+    "elapsed": "{h} giờ {m} phút",
+    "helloName": "Chào {name},",
+    "greetBefore": "chúc một ngày tốt lành",
+    "greetWorking": "chúc làm việc tốt",
+    "greetDone": "hôm nay bạn đã vất vả rồi",
+    "greetOff": "hôm nay là ngày nghỉ"
   },
   "errors": {
     "invite_invalid": "Mã QR mời đã hết hạn hoặc đã được dùng. Hãy xin quản lý mã mới.",
