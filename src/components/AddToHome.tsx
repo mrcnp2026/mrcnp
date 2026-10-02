@@ -76,7 +76,7 @@ export function AddToHomeIcon() {
         type="button"
         aria-label={t('addButton')}
         title={t('addButton')}
-        className="flex size-11 items-center justify-center rounded-button text-primary"
+        className="flex size-11 shrink-0 items-center justify-center rounded-button text-primary"
         onClick={async () => {
           if ((await promptInstall()) === 'unavailable') setSheet(true);
         }}

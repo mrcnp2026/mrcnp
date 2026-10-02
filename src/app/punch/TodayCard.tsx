@@ -10,6 +10,7 @@ import { useFormatter, useTranslations } from 'next-intl';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useState } from 'react';
+import { PUNCHED_EVENT } from '@/components/NoticeSheet';
 import { callApi, passkeyBrowserError } from '@/components/client-api';
 import { ErrorNote } from '@/components/ErrorNote';
 import { Card, CardTitle, Chip } from '@/components/ui';
@@ -65,6 +66,7 @@ export function TodayCard(props: {
       const r = await callApi<Result>('/api/punch', { kind, response });
       if (!r.ok) return setErr(r);
       setResult(r.data);
+      window.dispatchEvent(new Event(PUNCHED_EVENT)); // 공지 팝업은 이 다음에 뜬다 (②-5 7-15 요점 18)
       router.refresh();
     } finally {
       setBusy(false);

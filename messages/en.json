@@ -89,7 +89,8 @@
     "clockInLabel": "Clock-in",
     "clockOutLabel": "Clock-out",
     "toAdmin": "Admin",
-    "requestCorrection": "Request a correction"
+    "requestCorrection": "Request a correction",
+    "notices": "Notices ({n} unread)"
   },
   "errors": {
     "invite_invalid": "This invitation QR code has expired or was already used. Ask your manager for a new one.",
@@ -115,7 +116,13 @@
     "already": "Someone already handled this.",
     "not_found": "Not found. Please refresh.",
     "payroll_only": "Only payroll staff can download this file.",
-    "register_failed": "The phone could not create the registration. Check the items below and try again."
+    "register_failed": "The phone could not create the registration. Check the items below and try again.",
+    "notice_title": "Title must be 1–120 characters.",
+    "notice_body": "Body must be 1–4000 characters.",
+    "notice_period": "Check the period. The end must be after the start.",
+    "notice_targets": "Choose at least one employee.",
+    "notice_legal_review": "Legal or pay notices need a reviewed English translation before publishing.",
+    "notice_numbers_review": "Numbers in the translation differ from the original. Fix them and mark as reviewed."
   },
   "admin": {
     "nav": {
@@ -166,7 +173,9 @@
     "more": {
       "title": "More",
       "diag": "Diagnostics",
-      "diagHint": "Check what internet address the server sees"
+      "diagHint": "Check what internet address the server sees",
+      "notices": "Notices",
+      "noticesHint": "Write pop-up notices for staff · who has read them"
     },
     "diag": {
       "title": "Diagnostics",
@@ -300,6 +309,62 @@
       "attendanceCsv": "Attendance evidence (original + corrected times)",
       "payrollCsv": "Payroll input (minutes only, no amounts)",
       "download": "Download"
+    },
+    "notices": {
+      "title": "Notices",
+      "new": "New notice",
+      "edit": "Edit notice",
+      "empty": "No notices yet. Tap \"New notice\".",
+      "archive": "Archive",
+      "important": "Important",
+      "confirmed": "Read {n}/{total}",
+      "state": {
+        "draft": "Draft",
+        "scheduled": "Scheduled",
+        "live": "Live",
+        "ended": "Ended",
+        "archived": "Archived"
+      },
+      "notConfirmed": "Not read yet",
+      "titleLabel": "Title (Korean)",
+      "bodyLabel": "Body (Korean)",
+      "bodyHint": "Line breaks OK · no formatting · https links become clickable",
+      "importantHint": "No \"skip today\" — must be read",
+      "legal": "Legal or pay",
+      "legalHint": "Publish only after translation review",
+      "audience": "Audience",
+      "audienceAll": "Everyone",
+      "audienceSelected": "Choose employees",
+      "startsAt": "Start",
+      "endsAt": "End (empty = until archived)",
+      "editMode": "Editing a published notice",
+      "modeReshow": "Content change — show again to everyone (default)",
+      "modeTypo": "Typo fix — people who read it won't see it again",
+      "save": "Save",
+      "saveDraft": "Save draft",
+      "saved": "Saved.",
+      "translations": "Translations",
+      "translationsHint": "Foreign staff see their chosen language. Make a draft, read it, tick \"Reviewed\" and save.",
+      "translate": "Make translation draft",
+      "translated": "Draft ready. Read, fix and save.",
+      "translateNoKey": "Auto translation is not connected yet. Type English below, or publish in Korean only.",
+      "translateFailed": "Could not make a translation draft. Type English below, or publish in Korean only.",
+      "machine": "Machine",
+      "human": "Typed",
+      "numbersCheck": "Check numbers",
+      "stale": "Out of date",
+      "reviewed": "Reviewed",
+      "reviewedCheck": "Reviewed",
+      "saveTranslation": "Save translation",
+      "confirmPublish": "Send to {n} people. Publish?",
+      "confirmArchive": "Archived notices disappear for staff. Read records stay.",
+      "confirm": "Yes",
+      "cancel": "Cancel",
+      "publish": "Publish",
+      "archiveAction": "Archive",
+      "restore": "Restore",
+      "trTitle": "Translated title ({lang})",
+      "trBody": "Translated body ({lang})"
     }
   },
   "nav": {
@@ -399,5 +464,19 @@
     "android2": "Chrome must be signed in to a Google account (Settings → Google Password Manager).",
     "android3": "Settings → Security: a screen lock (PIN, pattern or fingerprint) must be set.",
     "other1": "Use a phone with a screen lock, and open the link in Safari or Chrome."
+  },
+  "notices": {
+    "title": "Notices",
+    "important": "Important",
+    "more": "{n} more",
+    "machine": "Machine translation",
+    "stale": "This translation is out of date. Please check the Korean original.",
+    "showOriginal": "Show Korean original",
+    "showTranslation": "Show translation",
+    "snooze": "Don't show again today",
+    "confirm": "OK",
+    "empty": "No notices right now.",
+    "confirmed": "Read",
+    "new": "New"
   }
 }

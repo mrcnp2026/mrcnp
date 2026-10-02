@@ -179,5 +179,26 @@ begin
   exception when others then out := out || E'PASS|47|admin session calls decide_overtime denied (server API only)\n'; end;
   perform set_config('role', 'postgres', true);
 
+  -- ── 공지 (0008): 직원·관리자 세션은 읽기·쓰기 모두 서버 API만, 공지 삭제·확인 기록 수정은 서버도 불가 ──
+  declare v_n uuid;
+  begin
+    insert into public.notices (title, body, created_by, updated_by) values ('t', 'b', adm, adm) returning id into v_n;
+    insert into public.notice_reads (notice_id, employee_id, version, shown_locale) values (v_n, emp, 1, 'ko');
+    begin delete from public.notices where id = v_n; out := out || E'FAIL|48|server delete notices\n';
+    exception when others then out := out || E'PASS|48|server delete notices denied (archive only)\n'; end;
+    begin update public.notice_reads set version = 2 where notice_id = v_n; out := out || E'FAIL|49|server update notice_reads\n';
+    exception when others then out := out || E'PASS|49|server update notice_reads denied\n'; end;
+    perform set_config('request.jwt.claims', json_build_object('sub', emp, 'role', 'authenticated')::text, true);
+    perform set_config('role', 'authenticated', true);
+    begin select count(*) into n from public.notices; out := out || E'FAIL|50|employee select notices directly\n';
+    exception when others then out := out || E'PASS|50|employee select notices denied (server API only)\n'; end;
+    begin insert into public.notice_reads (notice_id, employee_id, version, shown_locale) values (v_n, emp, 9, 'ko'); out := out || E'FAIL|51|employee insert notice_reads\n';
+    exception when others then out := out || E'PASS|51|employee insert notice_reads denied\n'; end;
+    perform set_config('request.jwt.claims', json_build_object('sub', adm, 'role', 'authenticated')::text, true);
+    begin insert into public.notices (title, body, created_by, updated_by) values ('x', 'y', adm, adm); out := out || E'FAIL|52|admin session insert notices\n';
+    exception when others then out := out || E'PASS|52|admin session insert notices denied (server API only)\n'; end;
+    perform set_config('role', 'postgres', true);
+  end;
+
   raise exception 'RLS_RESULTS_BEGIN%RLS_RESULTS_END', E'\n' || out;
 end $$;

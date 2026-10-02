@@ -90,7 +90,8 @@
     "clockInLabel": "Giờ vào",
     "clockOutLabel": "Giờ ra",
     "toAdmin": "Quản lý",
-    "requestCorrection": "Yêu cầu sửa"
+    "requestCorrection": "Yêu cầu sửa",
+    "notices": "Thông báo ({n} chưa xem)"
   },
   "errors": {
     "invite_invalid": "Mã QR mời đã hết hạn hoặc đã được dùng. Hãy xin quản lý mã mới.",
@@ -215,5 +216,19 @@
     "android2": "Chrome phải đăng nhập tài khoản Google (Cài đặt → Trình quản lý mật khẩu của Google).",
     "android3": "Cài đặt → Bảo mật: phải có khóa màn hình (PIN, hình vẽ hoặc vân tay).",
     "other1": "Dùng điện thoại có khóa màn hình và mở liên kết bằng Safari hoặc Chrome."
+  },
+  "notices": {
+    "title": "Thông báo",
+    "important": "Quan trọng",
+    "more": "Còn {n} thông báo",
+    "machine": "Dịch tự động",
+    "stale": "Bản dịch đã cũ. Vui lòng xem bản gốc tiếng Hàn.",
+    "showOriginal": "Xem bản gốc tiếng Hàn",
+    "showTranslation": "Xem bản dịch",
+    "snooze": "Không hiện lại hôm nay",
+    "confirm": "Đã xem",
+    "empty": "Hiện không có thông báo.",
+    "confirmed": "Đã xem",
+    "new": "Mới"
   }
 }
