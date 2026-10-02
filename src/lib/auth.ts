@@ -20,12 +20,15 @@ export type Me = {
  */
 export const getMe = cache(async (): Promise<Me | null> => {
   const supabase = await createClient();
-  const { data } = await supabase.auth.getUser(); // 서버에서 토큰을 다시 확인한다 (쿠키만 믿지 않는다)
-  if (!data.user) return null;
+  // 토큰 서명을 서버에서 검사한다 (쿠키 내용만 믿지 않는다). 서명 키가 ES256이라 인증 서버에 묻지 않고 여기서 확인 →
+  // 화면마다 인증 서버 왕복이 없어진다 (2026-10-02 속도). 퇴사·비활성은 아래 profiles.active로 매번 다시 본다.
+  const { data } = await supabase.auth.getClaims();
+  const uid = data?.claims?.sub;
+  if (!uid) return null;
   const { data: p } = await createAdminClient()
     .from('profiles')
     .select('id, name, employee_no, role, locale, active, can_view_payroll')
-    .eq('id', data.user.id)
+    .eq('id', uid)
     .maybeSingle();
   if (!p || !p.active) return null;
   return {

@@ -20,7 +20,8 @@ export async function middleware(request: NextRequest) {
       },
     },
   );
-  await supabase.auth.getUser();
+  // 세션 갱신. getClaims는 만료 전이면 서명만 검사하고(인증 서버 왕복 없음), 만료됐으면 새로 받아 쿠키에 쓴다
+  await supabase.auth.getClaims();
   return response;
 }
 

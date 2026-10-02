@@ -139,7 +139,8 @@ try {
   // ── 관리자: 「내용 변경」으로 고치면 다시 뜬다 (판 2), 영어 번역은 옛 판 ──
   await db.from('profiles').update({ role: 'admin', locale: 'ko' }).eq('id', emp.id);
   await p.goto(`${BASE}/admin/notices/${noticeId}`);
-  check(await p.getByText('확인 1/1명').isVisible(), '확인 현황 1/1명');
+  await p.waitForLoadState('networkidle');
+  check(await p.getByText('확인 1/1명').isVisible(), `확인 현황 1/1명 (${(await p.locator('header').last().innerText()).slice(0, 80)})`);
   await p.getByLabel('본문 (한국어)').fill('3월 14일은 휴무입니다. 3월 16일 09:00에 봬요.');
   await p.getByRole('button', { name: '저장', exact: true }).click();
   await p.getByText('저장했습니다.').waitFor();

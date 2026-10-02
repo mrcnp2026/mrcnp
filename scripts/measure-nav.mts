@@ -41,6 +41,17 @@ try {
   };
   await p.goto(`${BASE}/admin`);
   await p.waitForLoadState('networkidle');
+  // 서버 응답만 따로: 화면 이동 때 브라우저가 받는 RSC 응답 시간 (서버 처리 + 왕복)
+  for (const h of ['/login', '/login', '/brand/x', '/admin/more', '/admin/more', '/punch/corrections']) {
+    const ms = await p.evaluate(
+      (href) => fetch(href, { headers: { RSC: '1' } }).then(async (r) => { const t = performance.now(); await r.text(); return `${r.status} ${Math.round(performance.now() - t)}`; }),
+      h,
+    );
+    const t0 = Date.now();
+    const st = await p.evaluate((href) => fetch(href, { headers: { RSC: '1' } }).then((r) => r.text().then(() => r.status)), h);
+    void ms;
+    out.push(`RSC ${h.padEnd(18)} ${st} ${Date.now() - t0}ms`);
+  }
   for (let round = 1; round <= 2; round++) {
     out.push(`── 관리자 ${round}회차`);
     for (const [l, h] of [['처리함', '/admin/inbox'], ['기록', '/admin/records'], ['직원', '/admin/members'], ['더보기', '/admin/more'], ['홈', '/admin']]) await tap(l, h);
