@@ -5,7 +5,7 @@ import { useTranslations } from 'next-intl';
 import { useState } from 'react';
 import { callApi, passkeyBrowserError } from '@/components/client-api';
 import { ErrorNote } from '@/components/ErrorNote';
-import { InstallGuide } from '@/components/InstallGuide';
+import { AddToHomeAndContinue } from '@/components/AddToHome';
 import { InAppWarning, RegisterTroubleshoot } from '@/components/PasskeyHelp';
 import { Button } from '@/components/ui';
 
@@ -45,10 +45,8 @@ export function RegisterButton({ token }: { token: string }) {
           <Check aria-hidden size={20} strokeWidth={1.75} />
           {t('register.done')}
         </p>
-        <InstallGuide />
-        <Button onClick={() => window.location.assign(done)} className="w-full">
-          {t('register.continue')}
-        </Button>
+        <p className="text-sm text-muted">{t('install.why')}</p>
+        <AddToHomeAndContinue next={done} />
       </div>
     );
   }

@@ -47,8 +47,8 @@ describe('다국어', () => {
       const rel = path.relative(ROOT, f);
       // ① 한글은 주석 밖 어디에도 없어야 한다
       for (const m of code.matchAll(/[가-힣]+/g)) hits.push(`${rel}: 한글 "${m[0]}"`);
-      // ② JSX 글자 노드에 영어 단어 (태그 사이의 맨 글자)
-      for (const m of code.matchAll(/>\s*([A-Za-z][A-Za-z ,.'!?-]{2,})\s*</g)) hits.push(`${rel}: 글자 "${m[1]}"`);
+      // ② JSX가 있는 .tsx만 — .ts의 타입 표기(Promise<void> 등)를 문장으로 잘못 보지 않게
+      if (f.endsWith('.tsx')) for (const m of code.matchAll(/>\s*([A-Za-z][A-Za-z ,.'!?-]{2,})\s*</g)) hits.push(`${rel}: 글자 "${m[1]}"`);
       // ③ 사람이 읽는 속성에 문장
       for (const m of code.matchAll(/\b(placeholder|title|alt|aria-label|label)="([^"]*[A-Za-z]{2,}[^"]*)"/g)) {
         hits.push(`${rel}: ${m[1]}="${m[2]}"`);

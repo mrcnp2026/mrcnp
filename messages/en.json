@@ -89,7 +89,8 @@
     },
     "now": "Current time",
     "clockInLabel": "Clock-in",
-    "clockOutLabel": "Clock-out"
+    "clockOutLabel": "Clock-out",
+    "toAdmin": "Admin"
   },
   "errors": {
     "invite_invalid": "This invitation QR code has expired or was already used. Ask your manager for a new one.",
@@ -207,7 +208,8 @@
       "adminEntered": "Entered by admin",
       "week": "This week {h}h {m}m",
       "total": "Staff",
-      "nobody": "Nobody."
+      "nobody": "Nobody.",
+      "myPunch": "My clock in / out"
     },
     "inbox": {
       "title": "Inbox",
@@ -363,7 +365,13 @@
     "android1": "In Chrome, tap the ⋮ menu at the top right",
     "android2": "Tap \"Add to Home screen\" or \"Install app\"",
     "android3": "Tap \"Add\". Open the app from the new icon from now on.",
-    "other1": "Open this page on your phone and add it to the home screen from the browser menu."
+    "other1": "Open this page on your phone and add it to the home screen from the browser menu.",
+    "addButton": "Add to home screen",
+    "addedContinue": "Added · Continue",
+    "shareBelow": "Close this guide and look at the bottom of the screen",
+    "iosFindA": "1. Tap the Share button (square with arrow) at the bottom of Safari",
+    "iosFindB": "Not there? Tap ⋯ at the bottom right, then \"Share\"",
+    "iosThen": "2. Scroll down and tap \"Add to Home Screen\", then \"Add\""
   },
   "passkeyHelp": {
     "inAppTitle": "Open this page in your phone's browser",

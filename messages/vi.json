@@ -90,7 +90,8 @@
     },
     "now": "Giờ hiện tại",
     "clockInLabel": "Giờ vào",
-    "clockOutLabel": "Giờ ra"
+    "clockOutLabel": "Giờ ra",
+    "toAdmin": "Quản lý"
   },
   "errors": {
     "invite_invalid": "Mã QR mời đã hết hạn hoặc đã được dùng. Hãy xin quản lý mã mới.",
@@ -183,7 +184,13 @@
     "android1": "Trong Chrome, chạm menu ⋮ ở góc trên bên phải",
     "android2": "Chạm \"Thêm vào màn hình chính\" hoặc \"Cài đặt ứng dụng\"",
     "android3": "Chạm \"Thêm\". Từ nay hãy mở ứng dụng bằng biểu tượng mới.",
-    "other1": "Mở trang này trên điện thoại và thêm vào màn hình chính từ menu trình duyệt."
+    "other1": "Mở trang này trên điện thoại và thêm vào màn hình chính từ menu trình duyệt.",
+    "addButton": "Thêm vào màn hình chính",
+    "addedContinue": "Đã thêm · Tiếp tục",
+    "shareBelow": "Đóng hướng dẫn này và nhìn xuống cuối màn hình",
+    "iosFindA": "1. Chạm nút Chia sẻ (hình vuông có mũi tên) ở dưới cùng Safari",
+    "iosFindB": "Không thấy? Chạm ⋯ ở góc dưới bên phải rồi chạm \"Chia sẻ\"",
+    "iosThen": "2. Kéo xuống, chạm \"Thêm vào MH chính\" rồi \"Thêm\""
   },
   "passkeyHelp": {
     "inAppTitle": "Hãy mở trang này bằng trình duyệt của điện thoại",

@@ -89,7 +89,8 @@
     },
     "now": "지금 시각",
     "clockInLabel": "출근",
-    "clockOutLabel": "퇴근"
+    "clockOutLabel": "퇴근",
+    "toAdmin": "관리자 화면"
   },
   "errors": {
     "invite_invalid": "초대 QR이 만료되었거나 이미 사용되었습니다. 관리자에게 새 QR을 받으세요.",
@@ -207,7 +208,8 @@
       "adminEntered": "관리자 등록",
       "week": "이번 주 {h}시간 {m}분",
       "total": "전체",
-      "nobody": "없음"
+      "nobody": "없음",
+      "myPunch": "내 출퇴근"
     },
     "inbox": {
       "title": "처리함",
@@ -363,7 +365,13 @@
     "android1": "Chrome 오른쪽 위 ⋮ 메뉴를 누르세요",
     "android2": "\"홈 화면에 추가\" 또는 \"앱 설치\"를 누르세요",
     "android3": "\"추가\"를 누르세요. 앞으로는 새 아이콘으로 여세요.",
-    "other1": "폰에서 이 화면을 열고 브라우저 메뉴에서 홈 화면에 추가하세요."
+    "other1": "폰에서 이 화면을 열고 브라우저 메뉴에서 홈 화면에 추가하세요.",
+    "addButton": "홈 화면에 추가",
+    "addedContinue": "추가했어요 · 계속",
+    "shareBelow": "이 안내를 닫고 화면 맨 아래를 보세요",
+    "iosFindA": "1. Safari 맨 아래의 공유 버튼(네모에 위쪽 화살표)을 누르세요",
+    "iosFindB": "안 보이면? 오른쪽 아래 ⋯ 를 누르고 \"공유\"를 누르세요",
+    "iosThen": "2. 아래로 내려 \"홈 화면에 추가\" → \"추가\"를 누르세요"
   },
   "passkeyHelp": {
     "inAppTitle": "폰의 기본 브라우저로 열어 주세요",

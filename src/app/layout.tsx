@@ -2,6 +2,7 @@ import type { Metadata, Viewport } from 'next';
 import { NextIntlClientProvider } from 'next-intl';
 import { getLocale, getTranslations } from 'next-intl/server';
 import { Noto_Sans, Noto_Sans_KR, Noto_Sans_Thai } from 'next/font/google';
+import { CAPTURE_INSTALL_PROMPT } from '@/components/useInstall';
 import { BRAND } from '@/config/brand';
 import { themeCssVariables } from '@/config/theme';
 import './globals.css';
@@ -24,6 +25,7 @@ export default async function RootLayout({ children }: Readonly<{ children: Reac
     <html lang={locale} className={`${latin.variable} ${thai.variable} ${kr.variable}`}>
       <head>
         <style>{themeCssVariables()}</style>
+        <script dangerouslySetInnerHTML={{ __html: CAPTURE_INSTALL_PROMPT }} />
       </head>
       <body className="min-h-dvh bg-surface font-sans text-text antialiased">
         <NextIntlClientProvider>{children}</NextIntlClientProvider>

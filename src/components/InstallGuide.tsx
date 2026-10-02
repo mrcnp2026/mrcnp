@@ -4,6 +4,7 @@
 import { Share, SquarePlus, X } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 import { useEffect, useState } from 'react';
+import { AddToHomeButton } from './AddToHome';
 
 type Platform = 'ios' | 'android' | 'other';
 const KEY = 'install-guide-dismissed';
@@ -54,6 +55,9 @@ export function InstallGuide({ compact = false }: { compact?: boolean }) {
         )}
       </div>
       <p className="text-sm text-muted">{t('why')}</p>
+      {compact ? (
+        <AddToHomeButton />
+      ) : (
       <ol className="flex flex-col gap-2">
         {steps.map((k, i) => (
           <li key={k} className="flex items-start gap-3 text-sm">
@@ -65,6 +69,7 @@ export function InstallGuide({ compact = false }: { compact?: boolean }) {
           </li>
         ))}
       </ol>
+      )}
     </section>
   );
 }

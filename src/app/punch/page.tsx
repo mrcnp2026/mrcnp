@@ -1,6 +1,8 @@
 // 직원 홈 (PWA 진입점, 부록 R-10-1): 상단 바 → 인사 + 지금 시각 → 미기록 배너 → "오늘 근무" 카드(큰 버튼) → 이번 주 막대 → 근무노트.
 // 하단 탭은 layout.tsx.
 import { getFormatter, getTranslations } from 'next-intl/server';
+import { LayoutDashboard } from 'lucide-react';
+import Link from 'next/link';
 import { redirect } from 'next/navigation';
 import { InstallGuide } from '@/components/InstallGuide';
 import { LanguageSwitcher } from '@/components/LanguageSwitcher';
@@ -35,6 +37,12 @@ export default async function PunchPage() {
         variant="mark"
         right={
           <>
+            {me.role === 'admin' && (
+              <Link href="/admin" aria-label={t('toAdmin')} className="flex min-h-11 items-center gap-1 rounded-button px-2 text-sm font-semibold text-primary">
+                <LayoutDashboard aria-hidden size={18} strokeWidth={1.75} />
+                <span className="hidden sm:inline">{t('toAdmin')}</span>
+              </Link>
+            )}
             <LanguageSwitcher options={languageOptions()} />
             <SignOutButton />
           </>

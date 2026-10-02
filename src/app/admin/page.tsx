@@ -1,7 +1,7 @@
 // ① 홈 — 오늘 현황판(7-9) + 처리할 일 요약 (마스터 5장). 관리자가 폰을 열었을 때 첫 화면에서 끝나야 한다.
 // 홈에서 승인하지 않는다 — 요약을 누르면 처리함으로 간다 (5장 규칙 2).
 // 연습 기록은 기본으로 빼고(4-6), 연습 기간에는 "연습 기록으로 보기"로 따로 볼 수 있다 (연습 배너가 항상 붙는다).
-import { Inbox, TriangleAlert } from 'lucide-react';
+import { Fingerprint, Inbox, TriangleAlert } from 'lucide-react';
 import { getFormatter, getTranslations } from 'next-intl/server';
 import Link from 'next/link';
 import { Card, CardTitle, PageShell } from '@/components/ui';
@@ -79,6 +79,10 @@ export default async function AdminHome({ searchParams }: { searchParams: Promis
           </Link>
         )}
       </header>
+      <Link href="/punch" className="flex min-h-12 items-center justify-center gap-2 rounded-button border border-border bg-bg px-4 font-semibold text-primary shadow-card">
+        <Fingerprint aria-hidden size={20} strokeWidth={1.75} />
+        {t('myPunch')}
+      </Link>
       {practiceView && <p className="rounded-card bg-primary-tint p-3 text-sm text-primary">{t('practiceBanner')}</p>}
       {!data.rule && (
         <p className="flex gap-2 rounded-card border border-warn bg-warn-tint p-3 text-sm text-warn">
