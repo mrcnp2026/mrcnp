@@ -15,7 +15,7 @@ export default async function PunchLayout({ children }: { children: React.ReactN
   return (
     <>
       <div className="pb-[calc(4rem+env(safe-area-inset-bottom))]">{children}</div>
-      <EmployeeNav />
+      <EmployeeNav isAdmin={me.role === 'admin'} />
       <NoticeSheet items={pending} />
     </>
   );

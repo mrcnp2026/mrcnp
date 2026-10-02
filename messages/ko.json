@@ -443,7 +443,8 @@
   "nav": {
     "home": "홈",
     "records": "내 기록",
-    "corrections": "정정 요청"
+    "corrections": "정정 요청",
+    "manage": "직원관리"
   },
   "records": {
     "title": "내 기록",

@@ -141,7 +141,8 @@
   "nav": {
     "home": "หน้าหลัก",
     "records": "บันทึกของฉัน",
-    "corrections": "ขอแก้ไข"
+    "corrections": "ขอแก้ไข",
+    "manage": "จัดการ"
   },
   "records": {
     "title": "บันทึกของฉัน",

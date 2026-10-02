@@ -141,7 +141,8 @@
   "nav": {
     "home": "Trang chủ",
     "records": "Lịch sử",
-    "corrections": "Yêu cầu sửa"
+    "corrections": "Yêu cầu sửa",
+    "manage": "Quản lý"
   },
   "records": {
     "title": "Lịch sử của tôi",
