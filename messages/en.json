@@ -90,7 +90,8 @@
     "now": "Current time",
     "clockInLabel": "Clock-in",
     "clockOutLabel": "Clock-out",
-    "toAdmin": "Admin"
+    "toAdmin": "Admin",
+    "requestCorrection": "Request a correction"
   },
   "errors": {
     "invite_invalid": "This invitation QR code has expired or was already used. Ask your manager for a new one.",

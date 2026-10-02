@@ -136,3 +136,27 @@ describe('디자인 토큰 (R-10-8)', () => {
     expect(hits).toEqual([]);
   });
 });
+
+describe('명암비 (R-10-8: 글자 4.5 이상, 큰 글자·아이콘 3 이상)', () => {
+  const lum = (hex: string) => {
+    const c = [1, 3, 5].map((i) => parseInt(hex.slice(i, i + 2), 16) / 255).map((v) => (v <= 0.03928 ? v / 12.92 : ((v + 0.055) / 1.055) ** 2.4));
+    return 0.2126 * c[0] + 0.7152 * c[1] + 0.0722 * c[2];
+  };
+  const ratio = (a: string, b: string) => {
+    const [x, y] = [lum(a), lum(b)].sort((p, q) => q - p);
+    return (x + 0.05) / (y + 0.05);
+  };
+  it('실제로 쓰는 글자·바탕 조합이 기준을 넘는다', async () => {
+    const { COLORS: C } = await import('@/config/theme');
+    const pairs: [string, string, string, number][] = [
+      ['본문 / 흰 바탕', C.text, C.bg, 4.5], ['본문 / 회색 바탕', C.text, C.surface, 4.5],
+      ['보조 글자 / 회색 바탕', C.muted, C.surface, 4.5], ['캡션 / 흰 바탕', C.faint, C.bg, 4.5], ['캡션 / 회색 바탕', C.faint, C.surface, 4.5],
+      ['출근 버튼 흰 글자', C['on-primary'], C.primary, 4.5], ['퇴근 버튼 흰 글자', C['on-primary'], C.ok, 4.5],
+      ['연습 배지', C.primary, C['primary-tint'], 4.5], ['주의 칩', C.warn, C['warn-tint'], 4.5], ['정상 칩', C.ok, C['ok-tint'], 4.5],
+      ['위험 글자', C.danger, C['danger-tint'], 4.5], ['진한 제목 / 회색 바탕', C['primary-deep'], C.surface, 4.5],
+      ['현황판 전체 칸', C['on-primary'], C['primary-deep'], 4.5], ['처리함 배지(작은 숫자)', C['on-primary'], C.warn, 4.5],
+    ];
+    const low = pairs.filter(([, f, b, min]) => ratio(f, b) < min).map(([n, f, b]) => `${n} ${ratio(f, b).toFixed(2)}`);
+    expect(low).toEqual([]);
+  });
+});

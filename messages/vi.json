@@ -91,7 +91,8 @@
     "now": "Giờ hiện tại",
     "clockInLabel": "Giờ vào",
     "clockOutLabel": "Giờ ra",
-    "toAdmin": "Quản lý"
+    "toAdmin": "Quản lý",
+    "requestCorrection": "Yêu cầu sửa"
   },
   "errors": {
     "invite_invalid": "Mã QR mời đã hết hạn hoặc đã được dùng. Hãy xin quản lý mã mới.",

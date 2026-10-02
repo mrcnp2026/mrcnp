@@ -90,7 +90,8 @@
     "now": "지금 시각",
     "clockInLabel": "출근",
     "clockOutLabel": "퇴근",
-    "toAdmin": "관리자 화면"
+    "toAdmin": "관리자 화면",
+    "requestCorrection": "정정 요청"
   },
   "errors": {
     "invite_invalid": "초대 QR이 만료되었거나 이미 사용되었습니다. 관리자에게 새 QR을 받으세요.",

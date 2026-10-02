@@ -91,7 +91,8 @@
     "now": "เวลาปัจจุบัน",
     "clockInLabel": "เข้างาน",
     "clockOutLabel": "ออกงาน",
-    "toAdmin": "ผู้ดูแล"
+    "toAdmin": "ผู้ดูแล",
+    "requestCorrection": "ขอแก้ไข"
   },
   "errors": {
     "invite_invalid": "คิวอาร์โค้ดเชิญหมดอายุหรือถูกใช้แล้ว ขอรหัสใหม่จากผู้จัดการ",

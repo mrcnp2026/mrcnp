@@ -7,6 +7,7 @@
 import { browserSupportsWebAuthn, startAuthentication } from '@simplewebauthn/browser';
 import { CalendarClock, Check, Clock, LogIn, LogOut } from 'lucide-react';
 import { useFormatter, useTranslations } from 'next-intl';
+import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useState } from 'react';
 import { callApi, passkeyBrowserError } from '@/components/client-api';
@@ -134,6 +135,10 @@ export function TodayCard(props: {
           {busy ? t('recording') : t(kind === 'in' ? 'clockIn' : 'clockOut')}
         </button>
         <p className="text-center text-xs text-faint">{t('phoneCheck')}</p>
+        {/* 부록 R-10-1: 보조 행동(정정 요청)은 외곽선·작게, 주 버튼보다 눈에 띄지 않게 */}
+        <Link href="/punch/corrections" className="inline-flex min-h-11 items-center rounded-button border border-border px-4 text-sm text-primary">
+          {t('requestCorrection')}
+        </Link>
       </div>
 
       {err && <ErrorNote code={err.code} requestId={err.requestId} />}
