@@ -33,6 +33,20 @@ export const OFFICE = {
   weeklyCautionHours: 48, // 7-13
   weeklyLimitHours: 52, // 7-13
 
+  // ── 출퇴근 기록 (7-4) ──
+  // ★ 4-6: 연습 모드가 기본이다. 실제 운영 전환은 게이트 10에서 의뢰인이 명시적으로 — 열쇠 파일에 OPERATION_MODE=live.
+  //   기록의 is_test는 요청 본문이 아니라 **이 값**으로 정한다 (7-4 요점 4)
+  practiceMode: process.env.OPERATION_MODE !== 'live',
+  punchDedupeSeconds: 60, // 7-4 요점 1: 같은 버튼 재탭은 한 번만
+  // 퇴근이 직전 출근의 근무일을 이어받는 최대 간격. 이보다 오래된 출근에는 붙이지 않고 '짝 없는 퇴근'으로 남긴다
+  // (며칠 전 퇴근 미기록 출근에 오늘 퇴근이 붙어 수십 시간 근무가 되는 것을 막는다. 본문에 값이 없어 정함 — 게이트 4 보고)
+  openShiftMaxHours: 24,
+
+  // ── 사무실 IP 판정 (7-3, 부록 R-6) ──
+  // 플랫폼이 직접 덮어쓰는 헤더를 먼저 믿는다. 어느 헤더·어느 위치가 맞는지는 배포 후 /admin/diag로 **측정해서** 확정한다 (R-6의 1)
+  ipHeaderOrder: ['x-vercel-forwarded-for', 'x-real-ip', 'x-forwarded-for'] as const,
+  ipRuleMeasuredOn: null as string | null, // R-6의 2: 마지막으로 측정해 확정한 날짜. 플랫폼을 바꾸면 다시 측정
+
   // ── 폰 등록(패스키, 4-11·7-12) ──
   // ⚠️⚠️ 패스키는 이 주소의 도메인(rpID)에 묶인다. localhost에서 등록한 폰은 배포 주소에서 안 되고,
   //      배포 도메인을 나중에 바꾸면 전 직원의 폰 등록이 한꺼번에 무효가 된다 (6장 경고, B-13).

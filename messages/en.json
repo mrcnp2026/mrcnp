@@ -29,7 +29,50 @@
   },
   "home": {
     "hello": "Hello, {name}",
-    "comingSoon": "Clock in and out will appear here."
+    "today": "Today",
+    "schedule": "Work hours {start}–{end}",
+    "noRule": "Work hours are not set yet.",
+    "status": {
+      "working": "Working",
+      "late": "Late",
+      "absent": "Not in yet",
+      "done": "Done for today",
+      "overtime": "Working late",
+      "off": "Day off"
+    },
+    "clockIn": "Clock in",
+    "clockOut": "Clock out",
+    "recording": "Recording…",
+    "inAt": "In {time}",
+    "outAt": "Out {time}",
+    "lateBy": "Late {n} min",
+    "recordedIn": "Clock-in {time} recorded",
+    "recordedOut": "Clock-out {time} recorded",
+    "already": "Already recorded. You do not need to tap again.",
+    "outsideOffice": "Recorded. It looks like you were not on the office network.",
+    "office": "Office network",
+    "outside": "Outside office",
+    "practiceHint": "Practice mode: records are kept but not counted.",
+    "phoneCheck": "Your phone will ask for your fingerprint, face or PIN.",
+    "week": {
+      "title": "This week",
+      "total": "{h}h {m}m",
+      "normal": "Normal",
+      "caution": "Caution",
+      "over": "Over limit",
+      "over52": "52h+",
+      "noRule": "Weekly hours appear after work hours are set."
+    },
+    "note": {
+      "title": "Work note",
+      "hint": "Work details only. Please do not write health or personal matters.",
+      "placeholder": "e.g. Visited a client, came back at 3 pm",
+      "save": "Save note",
+      "saved": "Saved",
+      "edit": "Edit",
+      "counter": "{n}/200",
+      "cancel": "Cancel"
+    }
   },
   "errors": {
     "invite_invalid": "This invitation QR code has expired or was already used. Ask your manager for a new one.",
@@ -48,7 +91,10 @@
     "invalid_input": "Please check what you entered.",
     "network": "Could not connect. Check your internet and try again.",
     "generic": "Something went wrong. Please try again.",
-    "reference": "Reference number: {id}"
+    "reference": "Reference number: {id}",
+    "wrong_person": "This phone belongs to another account. Sign out first.",
+    "period_locked": "This month is closed. Ask your manager.",
+    "note_length": "Please write 1 to 200 characters."
   },
   "admin": {
     "nav": {

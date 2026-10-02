@@ -30,7 +30,50 @@
   },
   "home": {
     "hello": "Xin chào, {name}",
-    "comingSoon": "Nút chấm công vào/ra sẽ hiển thị ở đây."
+    "today": "Hôm nay",
+    "schedule": "Giờ làm {start}–{end}",
+    "noRule": "Chưa cài đặt giờ làm.",
+    "status": {
+      "working": "Đang làm",
+      "late": "Đi muộn",
+      "absent": "Chưa vào",
+      "done": "Đã về",
+      "overtime": "Làm thêm giờ",
+      "off": "Ngày nghỉ"
+    },
+    "clockIn": "Chấm công vào",
+    "clockOut": "Chấm công ra",
+    "recording": "Đang ghi…",
+    "inAt": "Vào {time}",
+    "outAt": "Ra {time}",
+    "lateBy": "Muộn {n} phút",
+    "recordedIn": "Đã ghi giờ vào {time}",
+    "recordedOut": "Đã ghi giờ ra {time}",
+    "already": "Đã ghi rồi. Bạn không cần bấm lại.",
+    "outsideOffice": "Đã ghi. Có vẻ bạn không dùng mạng của văn phòng.",
+    "office": "Mạng văn phòng",
+    "outside": "Ngoài văn phòng",
+    "practiceHint": "Chế độ thử nghiệm: dữ liệu được lưu nhưng không được tính.",
+    "phoneCheck": "Điện thoại sẽ hỏi vân tay, khuôn mặt hoặc mã PIN.",
+    "week": {
+      "title": "Tuần này",
+      "total": "{h} giờ {m} phút",
+      "normal": "Bình thường",
+      "caution": "Chú ý",
+      "over": "Vượt giới hạn",
+      "over52": "52 giờ+",
+      "noRule": "Giờ làm trong tuần sẽ hiện sau khi cài đặt giờ làm."
+    },
+    "note": {
+      "title": "Ghi chú công việc",
+      "hint": "Chỉ ghi nội dung công việc. Không ghi chuyện sức khỏe hay việc riêng.",
+      "placeholder": "VD: Đi gặp khách hàng, về lúc 15 giờ",
+      "save": "Lưu ghi chú",
+      "saved": "Đã lưu",
+      "edit": "Sửa",
+      "counter": "{n}/200",
+      "cancel": "Hủy"
+    }
   },
   "errors": {
     "invite_invalid": "Mã QR mời đã hết hạn hoặc đã được dùng. Hãy xin quản lý mã mới.",
@@ -49,6 +92,9 @@
     "invalid_input": "Vui lòng kiểm tra thông tin đã nhập.",
     "network": "Không thể kết nối. Hãy kiểm tra internet và thử lại.",
     "generic": "Đã xảy ra lỗi. Vui lòng thử lại.",
-    "reference": "Mã tham chiếu: {id}"
+    "reference": "Mã tham chiếu: {id}",
+    "wrong_person": "Điện thoại này thuộc tài khoản khác. Hãy đăng xuất trước.",
+    "period_locked": "Tháng này đã chốt. Hãy hỏi quản lý.",
+    "note_length": "Vui lòng viết từ 1 đến 200 ký tự."
   }
 }

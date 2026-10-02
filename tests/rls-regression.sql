@@ -109,5 +109,41 @@ begin
   exception when others then out := out || E'PASS|30|employee calls register_passkey denied\n'; end;
   perform set_config('role', 'postgres', true);
 
+  -- ── 게이트 4: 출퇴근 기록 함수·근무노트 (0005) ── 시각은 2026-11-02(월) KST 기준
+  declare r1 record; r2 record; r3 record; r4 record; r5 record; r6 record; v_wd date; v_note text;
+  begin
+    select * into r1 from public.record_punch(emp, 'in', '2026-11-02 13:00:00+00', 'Asia/Seoul', '203.0.113.5', false, 'web', true, null, 60, 24);
+    select * into r2 from public.record_punch(emp, 'in', '2026-11-02 13:00:30+00', 'Asia/Seoul', '203.0.113.5', false, 'web', true, null, 60, 24);
+    out := out || case when r2.deduped and r2.event_id = r1.event_id then 'PASS' else 'FAIL' end || E'|31|second tap within 60s returns same record\n';
+    select * into r3 from public.record_punch(emp, 'out', '2026-11-02 21:00:00+00', 'Asia/Seoul', null, false, 'web', true, null, 60, 24);
+    select work_date into v_wd from public.punch_events where id = r3.event_id;
+    out := out || case when v_wd = '2026-11-02' then 'PASS' else 'FAIL' end || '|32|overnight out inherits in work_date (' || v_wd || E')\n';
+    select * into r4 from public.record_punch(emp, 'out', '2026-11-04 09:00:00+00', 'Asia/Seoul', null, false, 'web', true, null, 60, 24);
+    select work_date, note into v_wd, v_note from public.punch_events where id = r4.event_id;
+    out := out || case when v_wd = '2026-11-04' and v_note = '짝 없는 퇴근' then 'PASS' else 'FAIL' end || E'|33|orphan out gets own date + note\n';
+    select * into r5 from public.record_punch(emp, 'in', '2026-11-05 00:00:00+00', 'Asia/Seoul', null, false, 'web', true, null, 60, 24);
+    select * into r6 from public.record_punch(emp, 'in', '2026-11-05 00:05:00+00', 'Asia/Seoul', null, false, 'web', true, null, 60, 24);
+    select note into v_note from public.punch_events where id = r6.event_id;
+    out := out || case when not r6.deduped and v_note = '중복 출근' then 'PASS' else 'FAIL' end || E'|34|second in same day recorded with note\n';
+    select count(*) into n from public.punch_events where employee_id = emp and is_test;
+    out := out || case when n = 6 then 'PASS' else 'FAIL' end || '|35|punches stored as practice (5 + 1 from #01 setup)  (' || n || E')\n';
+  end;
+  insert into public.work_notes (employee_id, work_date, body) values (emp, '2026-11-02', 'note');
+  begin update public.work_notes set body = 'x' where employee_id = emp; out := out || E'FAIL|36|server update work_notes\n';
+  exception when others then out := out || E'PASS|36|server update work_notes denied\n'; end;
+  begin insert into public.work_notes (employee_id, work_date, body) values (emp, '2026-11-02', repeat('a', 201)); out := out || E'FAIL|37|201-char note\n';
+  exception when others then out := out || E'PASS|37|201-char note denied\n'; end;
+
+  perform set_config('request.jwt.claims', json_build_object('sub', emp, 'role', 'authenticated')::text, true);
+  perform set_config('role', 'authenticated', true);
+  begin perform public.record_punch(emp, 'in', now(), 'Asia/Seoul', null, true, 'web', false, null, 60, 24); out := out || E'FAIL|38|employee calls record_punch directly\n';
+  exception when others then out := out || E'PASS|38|employee calls record_punch denied\n'; end;
+  begin insert into public.work_notes (employee_id, work_date, body) values (emp, '2026-11-02', 'x'); out := out || E'FAIL|39|employee insert work_notes\n';
+  exception when others then out := out || E'PASS|39|employee insert work_notes denied\n'; end;
+  select count(*) into n from public.work_notes;
+  out := out || case when n = 1 then 'PASS' else 'FAIL' end || '|40|employee reads own work_notes (' || n || E')\n';
+  perform set_config('role', 'postgres', true);
+
+
   raise exception 'RLS_RESULTS_BEGIN%RLS_RESULTS_END', E'\n' || out;
 end $$;

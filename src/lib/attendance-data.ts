@@ -1,0 +1,157 @@
+// DB 행 → 계산 모듈 입력. 서버 전용. 계산은 순수함수(worktime·today·weekly-hours)가 하고 여기서는 읽기만 한다.
+import 'server-only';
+import { resolveDayType } from '@/config/labor-rules';
+import { OFFICE } from '@/config/office';
+import { addDays, weekStartOf } from '@/lib/calendar';
+import { pairsByWorkDate } from '@/lib/pairs';
+import { createAdminClient } from '@/lib/supabase/admin';
+import { toKstDate } from '@/lib/time';
+import { classifyDay } from '@/lib/today';
+import type { HolidayRow, PunchCorrection, PunchEvent, WorkRule } from '@/lib/types';
+import { weeklyHours } from '@/lib/weekly-hours';
+import { calcWeek } from '@/lib/worktime';
+
+/** 활성 근무규칙. 없으면 null — ② 설정 화면 전에는 없을 수 있다. 0이나 기본값으로 지어내지 않는다 (7-14) */
+export async function loadActiveRule(): Promise<WorkRule | null> {
+  const { data } = await createAdminClient()
+    .from('work_rules')
+    .select('start_time, end_time, late_grace_min, break_start, break_end, workdays, weekly_rest_day')
+    .eq('active', true)
+    .maybeSingle();
+  if (!data) return null;
+  return {
+    startTime: data.start_time,
+    endTime: data.end_time,
+    lateGraceMin: data.late_grace_min,
+    breakStart: data.break_start,
+    breakEnd: data.break_end,
+    workdays: data.workdays,
+    weeklyRestDay: data.weekly_rest_day,
+  };
+}
+
+export async function loadHolidays(from: string, to: string): Promise<HolidayRow[]> {
+  const { data } = await createAdminClient().from('holidays').select('the_date, kind').gte('the_date', from).lte('the_date', to);
+  return (data ?? []).map((h) => ({ date: h.the_date, kind: h.kind }));
+}
+
+/** 사무실 대역 = DB(office_networks, ②에서 화면으로 관리) + 열쇠 파일 OFFICE_CIDRS. 둘 다 쓴다 (교체가 아니라 추가, 9-5) */
+export async function officeCidrs(): Promise<{ cidr: string; label: string | null; from: 'db' | 'env' }[]> {
+  const { data } = await createAdminClient().from('office_networks').select('cidr, label').eq('active', true);
+  return [
+    ...(data ?? []).map((r) => ({ cidr: String(r.cidr), label: r.label as string | null, from: 'db' as const })),
+    ...OFFICE.allowedCidrs.map((c) => ({ cidr: c, label: null, from: 'env' as const })),
+  ];
+}
+
+type EventRow = { id: string; employee_id: string; kind: 'in' | 'out'; punched_at: string; work_date: string; ip_verified: boolean; is_test: boolean; note: string | null };
+
+const toEvent = (e: EventRow): PunchEvent => ({
+  id: e.id,
+  employeeId: e.employee_id,
+  kind: e.kind,
+  punchedAt: new Date(e.punched_at),
+  workDate: e.work_date,
+});
+
+export type EmployeeToday = {
+  workDate: string;
+  rule: WorkRule | null;
+  status: ReturnType<typeof classifyDay>['status'];
+  firstIn: string | null;
+  firstInVerified: boolean | null;
+  lastOut: string | null;
+  isOpen: boolean; // 지금 출근 상태인가 → 주 버튼이 "퇴근하기"
+  lateMinutes: number | null;
+  week: ReturnType<typeof weeklyHours> | null; // 근무규칙이 없으면 null (휴게를 모르면 실근로를 못 셈)
+  note: { id: string; body: string } | null;
+  practice: boolean;
+};
+
+/**
+ * 직원 홈에 보여 줄 "오늘". 자정을 넘긴 야근 중이면 어제 근무일을 오늘로 본다 (출근이 열려 있고 openShiftMaxHours 이내).
+ * 연습/운영 기록은 지금 모드의 것만 본다 (4-6).
+ */
+export async function loadEmployeeToday(employeeId: string, now: Date): Promise<EmployeeToday> {
+  const db = createAdminClient();
+  const practice = OFFICE.practiceMode;
+  const today = toKstDate(now);
+  const weekStart = weekStartOf(today);
+  const from = addDays(weekStart, -1);
+
+  const [{ data: ev }, { data: corr }, rule, holidays] = await Promise.all([
+    db.from('punch_events')
+      .select('id, employee_id, kind, punched_at, work_date, ip_verified, is_test, note')
+      .eq('employee_id', employeeId).eq('is_test', practice).gte('work_date', from).order('punched_at'),
+    db.from('punch_corrections')
+      .select('id, correction_type, target_id, employee_id, work_date, kind, new_punched_at, status')
+      .eq('employee_id', employeeId).eq('status', 'approved').gte('work_date', from),
+    loadActiveRule(),
+    loadHolidays(from, addDays(weekStart, 6)),
+  ]);
+  const rows = (ev ?? []) as EventRow[];
+  const events = rows.map(toEvent);
+  const corrections: PunchCorrection[] = (corr ?? []).map((c) => ({
+    id: c.id, correctionType: c.correction_type, targetId: c.target_id, employeeId: c.employee_id, workDate: c.work_date,
+    kind: c.kind, newPunchedAt: c.new_punched_at ? new Date(c.new_punched_at) : null, status: c.status,
+  }));
+
+  // 지금 근무일: 마지막 기록이 열린 출근이고 충분히 최근이면 그 근무일 (B-4)
+  const last = rows[rows.length - 1];
+  const openShift = last && last.kind === 'in' && now.getTime() - new Date(last.punched_at).getTime() < OFFICE.openShiftMaxHours * 3_600_000;
+  const workDate = openShift ? last.work_date : today;
+
+  const byDate = pairsByWorkDate(events, corrections);
+  const pairs = byDate.get(workDate)?.pairs ?? [];
+  const dayType = rule ? resolveDayType(workDate, rule, holidays) : 'workday';
+  const c = classifyDay({ pairs, rule, dayType, workDate, now });
+  const firstInRow = rows.find((r) => r.work_date === workDate && r.kind === 'in');
+
+  let week: EmployeeToday['week'] = null;
+  if (rule) {
+    const days = [...Array(7)].map((_, i) => addDays(weekStart, i)).map((d) => ({
+      workDate: d,
+      pairs: byDate.get(d)?.pairs ?? [],
+      dayType: resolveDayType(d, rule, holidays),
+    }));
+    const calc = calcWeek(days, rule);
+    week = weeklyHours({
+      weekStart,
+      dailyWork: calc.map((d) => ({ workDate: d.workDate, netMinutes: d.regularMinutes + d.overtimeMinutes + d.holidayMinutes })),
+      is5OrMore: OFFICE.workplaceSize === '5_or_more',
+    });
+  }
+
+  const { data: notes } = await db
+    .from('work_notes')
+    .select('id, body, supersedes')
+    .eq('employee_id', employeeId).eq('work_date', workDate).eq('is_test', practice)
+    .order('created_at', { ascending: false }).limit(1);
+
+  return {
+    workDate,
+    rule,
+    status: c.status,
+    firstIn: c.firstIn?.toISOString() ?? null,
+    firstInVerified: firstInRow ? firstInRow.ip_verified : null,
+    lastOut: c.lastOut?.toISOString() ?? null,
+    isOpen: pairs.some((p) => p.in && !p.out),
+    lateMinutes: c.lateness?.verdict === 'late' ? c.lateness.lateMinutes : null,
+    week,
+    note: notes?.[0] ? { id: notes[0].id, body: notes[0].body } : null,
+    practice,
+  };
+}
+
+/** 근무노트·기록이 붙을 근무일 — 출근 기록과 같은 규칙 (R-10-2: 서버가 정한다) */
+export async function currentWorkDate(employeeId: string, now: Date): Promise<string> {
+  const { data } = await createAdminClient()
+    .from('punch_events').select('kind, punched_at, work_date')
+    .eq('employee_id', employeeId).eq('is_test', OFFICE.practiceMode)
+    .lte('punched_at', now.toISOString()).order('punched_at', { ascending: false }).limit(1);
+  const last = data?.[0];
+  if (last && last.kind === 'in' && now.getTime() - new Date(last.punched_at).getTime() < OFFICE.openShiftMaxHours * 3_600_000) {
+    return last.work_date;
+  }
+  return toKstDate(now);
+}
