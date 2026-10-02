@@ -61,7 +61,7 @@ export function CardTitle({ icon: Icon, children, aside }: { icon: LucideIcon; c
   );
 }
 
-export function PageShell({ children }: { children: ReactNode }) {
-  // 화면 좌우 16px, 폰 기준 폭 (4-9)
-  return <main className="mx-auto flex w-full max-w-md flex-col gap-4 px-4 py-6">{children}</main>;
+export function PageShell({ children, wide = false }: { children: ReactNode; wide?: boolean }) {
+  // 화면 좌우 16px, 폰 기준 폭 (4-9). wide: 넓은 화면에서 표를 펼치는 화면(월간 집계) — 폰에서는 똑같이 좁다
+  return <main className={`mx-auto flex w-full flex-col gap-4 px-4 py-6 ${wide ? 'max-w-md md:max-w-3xl lg:max-w-5xl' : 'max-w-md'}`}>{children}</main>;
 }

@@ -28,7 +28,7 @@ export default async function RecordsPage({ searchParams }: { searchParams: Prom
   const hm = (min: number) => t('hm', { h: Math.floor(min / 60), m: String(min % 60).padStart(2, '0') });
 
   return (
-    <PageShell>
+    <PageShell wide>
       <header className="flex flex-wrap items-center justify-between gap-2">
         <h1 className="text-2xl font-semibold text-primary-deep">{t('title')}</h1>
         <nav className="flex items-center gap-1" aria-label={t('month')}>
@@ -91,11 +91,11 @@ export default async function RecordsPage({ searchParams }: { searchParams: Prom
       {/* 넓은 화면: 표 — 자기 상자 안에서만 가로 스크롤 (5장) */}
       {rows.length > 0 && (
         <div className="hidden overflow-x-auto rounded-card border border-border md:block">
-          <table className="num w-full text-sm">
+          <table className="num w-full table-fixed text-sm">
             <thead className="bg-surface text-xs text-muted">
               <tr>
                 {(['name', 'workedCol', 'actual', 'approved', 'pending', 'unreviewed', 'nightCol', 'holidayCol', 'lateCol', 'absentCol'] as const).map((k) => (
-                  <th key={k} className="px-3 py-2 text-right first:text-left">{t(k)}</th>
+                  <th key={k} className="px-2 py-2 text-right whitespace-nowrap first:w-1/5 first:text-left">{t(k)}</th>
                 ))}
               </tr>
             </thead>
@@ -104,16 +104,16 @@ export default async function RecordsPage({ searchParams }: { searchParams: Prom
                 const r = s.row;
                 return (
                   <tr key={person.id}>
-                    <td className="px-3 py-2 text-left font-semibold">{person.name}</td>
-                    <td className="px-3 py-2 text-right">{hm(s.netMinutes)}</td>
-                    <td className="px-3 py-2 text-right">{hm(Number(r.overtime_minutes))}</td>
-                    <td className="px-3 py-2 text-right">{hm(Number(r.approved_overtime_minutes))}</td>
-                    <td className={`px-3 py-2 text-right ${Number(r.pending_overtime_minutes) > 0 ? 'text-warn' : ''}`}>{hm(Number(r.pending_overtime_minutes))}</td>
-                    <td className="px-3 py-2 text-right">{hm(Number(r.unreviewed_overtime_minutes))}</td>
-                    <td className="px-3 py-2 text-right">{hm(Number(r.night_minutes))}</td>
-                    <td className="px-3 py-2 text-right">{hm(Number(r.holiday_within8_minutes) + Number(r.holiday_over8_minutes))}</td>
-                    <td className={`px-3 py-2 text-right ${Number(r.late_count) > 0 ? 'text-warn' : ''}`}>{r.late_count}</td>
-                    <td className={`px-3 py-2 text-right ${Number(r.absent_days) > 0 ? 'text-warn' : ''}`}>{r.absent_days}</td>
+                    <td className="truncate px-2 py-2 text-left font-semibold">{person.name}</td>
+                    <td className="px-2 py-2 text-right whitespace-nowrap">{hm(s.netMinutes)}</td>
+                    <td className="px-2 py-2 text-right whitespace-nowrap">{hm(Number(r.overtime_minutes))}</td>
+                    <td className="px-2 py-2 text-right whitespace-nowrap">{hm(Number(r.approved_overtime_minutes))}</td>
+                    <td className={`px-2 py-2 text-right whitespace-nowrap ${Number(r.pending_overtime_minutes) > 0 ? 'text-warn' : ''}`}>{hm(Number(r.pending_overtime_minutes))}</td>
+                    <td className="px-2 py-2 text-right whitespace-nowrap">{hm(Number(r.unreviewed_overtime_minutes))}</td>
+                    <td className="px-2 py-2 text-right whitespace-nowrap">{hm(Number(r.night_minutes))}</td>
+                    <td className="px-2 py-2 text-right whitespace-nowrap">{hm(Number(r.holiday_within8_minutes) + Number(r.holiday_over8_minutes))}</td>
+                    <td className={`px-2 py-2 text-right whitespace-nowrap ${Number(r.late_count) > 0 ? 'text-warn' : ''}`}>{r.late_count}</td>
+                    <td className={`px-2 py-2 text-right whitespace-nowrap ${Number(r.absent_days) > 0 ? 'text-warn' : ''}`}>{r.absent_days}</td>
                   </tr>
                 );
               })}
