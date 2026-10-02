@@ -4,6 +4,7 @@
 import { Fingerprint, Inbox, NotebookPen, TriangleAlert } from 'lucide-react';
 import { getFormatter, getTranslations } from 'next-intl/server';
 import Link from 'next/link';
+import { Pager, pageOf } from '@/components/Pager';
 import { Card, CardTitle, PageShell } from '@/components/ui';
 import { resolveDayType } from '@/config/labor-rules';
 import { OFFICE } from '@/config/office';
@@ -17,7 +18,7 @@ import { buildTodayBoard, type BoardPerson } from '@/lib/today';
 import { AutoRefresh } from './AutoRefresh';
 import { BoardView } from './BoardView';
 
-export default async function AdminHome({ searchParams }: { searchParams: Promise<{ practice?: string }> }) {
+export default async function AdminHome({ searchParams }: { searchParams: Promise<{ practice?: string; np?: string }> }) {
   const t = await getTranslations('admin.home');
   const fmt = await getFormatter();
   const sp = await searchParams;
@@ -33,6 +34,8 @@ export default async function AdminHome({ searchParams }: { searchParams: Promis
     .eq('work_date', today).eq('is_test', practiceView).order('created_at', { ascending: false });
   const seenNote = new Set<string>();
   const notes = (noteRows ?? []).filter((n) => (seenNote.has(n.employee_id) ? false : (seenNote.add(n.employee_id), true)));
+  const notePage = pageOf(notes, sp.np);
+  const tc = await getTranslations('common');
 
   const active = data.people.filter((p) => p.active);
   const dayType = data.rule ? resolveDayType(today, data.rule, data.holidays) : 'workday';
@@ -100,7 +103,8 @@ export default async function AdminHome({ searchParams }: { searchParams: Promis
 
       <BoardView board={board} total={active.length} limitMinutes={OFFICE.weeklyLimitHours * 60} cautionMinutes={OFFICE.weeklyCautionHours * 60} colored={OFFICE.workplaceSize === '5_or_more'} />
 
-      <Card className="flex flex-col gap-2">
+      <Card className="flex scroll-mt-16 flex-col gap-2">
+        <span id="notes" />
         <CardTitle icon={NotebookPen} aside={<span className="num text-sm text-faint">{notes.length}</span>}>
           {t('notesTitle')}
         </CardTitle>
@@ -108,7 +112,7 @@ export default async function AdminHome({ searchParams }: { searchParams: Promis
           <p className="text-sm text-faint">{t('notesEmpty')}</p>
         ) : (
           <ul className="divide-y divide-border">
-            {notes.map((n) => (
+            {notePage.items.map((n) => (
               <li key={n.employee_id} className="flex flex-col gap-1 py-2">
                 <div className="flex items-baseline justify-between gap-2">
                   <span className="font-semibold">{data.people.find((p) => p.id === n.employee_id)?.name}</span>
@@ -119,6 +123,7 @@ export default async function AdminHome({ searchParams }: { searchParams: Promis
             ))}
           </ul>
         )}
+        <Pager page={notePage.page} pages={notePage.pages} param="np" params={sp} anchor="notes" label={tc('pages')} />
         <p className="text-xs text-faint">{t('notesHint')}</p>
       </Card>
 

@@ -2,6 +2,7 @@
 // 그날 근무노트를 연장 요청 옆에 보여 준다 (R-10-2의 8) — 사유로 자동 복사하지 않는다.
 // 누가·언제 처리했는지 항상 보인다 (R-2의 5).
 import { getFormatter, getTranslations } from 'next-intl/server';
+import { Pager, pageOf } from '@/components/Pager';
 import { Card, Chip, PageShell } from '@/components/ui';
 import { OFFICE } from '@/config/office';
 import { getMe } from '@/lib/auth';
@@ -11,11 +12,12 @@ import { createAdminClient } from '@/lib/supabase/admin';
 import { toKstDate } from '@/lib/time';
 import { CorrectionDecision, OvertimeDecision } from './Decisions';
 
-export default async function InboxPage({ searchParams }: { searchParams: Promise<{ practice?: string }> }) {
+export default async function InboxPage({ searchParams }: { searchParams: Promise<{ practice?: string; op?: string; cp?: string }> }) {
   const t = await getTranslations('admin.inbox');
   const f = await getFormatter();
   const me = (await getMe())!;
-  const practice = OFFICE.practiceMode && (await searchParams).practice === '1';
+  const sp = await searchParams;
+  const practice = OFFICE.practiceMode && sp.practice === '1';
   const today = toKstDate(new Date());
   const data = await loadPeriod(addDays(today, -31), today, practice);
   await syncOvertimeRequests(data, today);
@@ -44,6 +46,10 @@ export default async function InboxPage({ searchParams }: { searchParams: Promis
   const punchesOf = (e: string, d: string) =>
     (evs ?? []).filter((x) => x.employee_id === e && x.work_date === d).map((x) => `${x.kind === 'in' ? '↘' : '↗'} ${hm(x.punched_at)}`).join('  ');
 
+  const tc = await getTranslations('common');
+  const otPage = pageOf(ot ?? [], sp.op);
+  const coPage = pageOf(co ?? [], sp.cp);
+
   return (
     <PageShell>
       <h1 className="text-2xl font-semibold text-primary-deep">{t('title')}</h1>
@@ -55,7 +61,7 @@ export default async function InboxPage({ searchParams }: { searchParams: Promis
         </h2>
         <p className="text-sm text-muted">{t('overtimeHint')}</p>
         {(ot ?? []).length === 0 && <p className="text-sm text-faint">{t('empty')}</p>}
-        {(ot ?? []).map((o) => (
+        {otPage.items.map((o) => (
           <Card key={o.id} className="flex flex-col gap-2">
             <div className="flex items-start justify-between gap-2">
               <div>
@@ -91,6 +97,7 @@ export default async function InboxPage({ searchParams }: { searchParams: Promis
             <OvertimeDecision id={o.id} name={name.get(o.employee_id) ?? ''} facts={{ overtime: o.overtime_minutes, night: o.night_minutes, holiday: o.holiday_minutes }} />
           </Card>
         ))}
+        <Pager page={otPage.page} pages={otPage.pages} param="op" params={sp} anchor="overtime" label={tc('pages')} />
       </section>
 
       <section id="corrections" className="flex flex-col gap-3">
@@ -98,7 +105,7 @@ export default async function InboxPage({ searchParams }: { searchParams: Promis
           {t('correctionsTitle')} <span className="num text-base text-faint">{co?.length ?? 0}</span>
         </h2>
         {(co ?? []).length === 0 && <p className="text-sm text-faint">{t('empty')}</p>}
-        {(co ?? []).map((c) => {
+        {coPage.items.map((c) => {
           const target = c.target_id ? evs?.find((e) => e.id === c.target_id) : null;
           return (
             <Card key={c.id} className="flex flex-col gap-2">
@@ -119,6 +126,7 @@ export default async function InboxPage({ searchParams }: { searchParams: Promis
             </Card>
           );
         })}
+        <Pager page={coPage.page} pages={coPage.pages} param="cp" params={sp} anchor="corrections" label={tc('pages')} />
       </section>
 
       {(recent ?? []).length > 0 && (

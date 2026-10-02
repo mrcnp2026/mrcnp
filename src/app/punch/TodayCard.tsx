@@ -7,7 +7,6 @@
 import { browserSupportsWebAuthn, startAuthentication } from '@simplewebauthn/browser';
 import { CalendarClock, Check, Clock, LogIn, LogOut } from 'lucide-react';
 import { useFormatter, useTranslations } from 'next-intl';
-import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useState } from 'react';
 import { PUNCHED_EVENT } from '@/components/NoticeSheet';
@@ -129,17 +128,14 @@ export function TodayCard(props: {
           type="button"
           onClick={punch}
           disabled={busy}
-          className={`flex min-h-24 w-full items-center justify-center gap-3 rounded-punch px-4 text-2xl font-semibold text-on-primary disabled:opacity-60 ${
+          className={`flex min-h-16 w-full items-center justify-center gap-2 rounded-punch px-4 text-xl font-semibold text-on-primary disabled:opacity-60 ${
             kind === 'in' ? 'bg-primary' : 'bg-ok'
           }`}
         >
-          {busy ? <Clock aria-hidden size={28} strokeWidth={1.75} /> : <Icon aria-hidden size={28} strokeWidth={1.75} />}
+          {busy ? <Clock aria-hidden size={24} strokeWidth={1.75} /> : <Icon aria-hidden size={24} strokeWidth={1.75} />}
           {busy ? t('recording') : t(kind === 'in' ? 'clockIn' : 'clockOut')}
         </button>
-        {/* 부록 R-10-1: 보조 행동(정정 요청)은 외곽선·작게, 주 버튼보다 눈에 띄지 않게 */}
-        <Link href="/punch/corrections" className="inline-flex min-h-11 items-center rounded-button border border-border px-4 text-sm text-primary">
-          {t('requestCorrection')}
-        </Link>
+        {/* 정정 요청은 하단 탭에 있으므로 여기 따로 두지 않는다 (2026-10-02 의뢰인) */}
       </div>
 
       {err && <ErrorNote code={err.code} requestId={err.requestId} />}

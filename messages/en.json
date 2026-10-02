@@ -6,7 +6,8 @@
     "working": "Please wait…",
     "back": "Back",
     "practiceBadge": "Practice",
-    "translationNotice": "This is a reference translation. The Korean text is the original."
+    "translationNotice": "This is a reference translation. The Korean text is the original.",
+    "pages": "Pages"
   },
   "login": {
     "title": "Sign in",

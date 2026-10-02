@@ -9,7 +9,6 @@ import { toKstDate } from '@/lib/time';
 import { classifyDay } from '@/lib/today';
 import type { HolidayRow, PunchCorrection, PunchEvent, WorkRule } from '@/lib/types';
 import { weeklyHours } from '@/lib/weekly-hours';
-import { calcWeek } from '@/lib/worktime';
 
 /** 활성 근무규칙. 없으면 null — ② 설정 화면 전에는 없을 수 있다. 0이나 기본값으로 지어내지 않는다 (7-14) */
 export async function loadActiveRule(): Promise<WorkRule | null> {
@@ -114,10 +113,14 @@ export async function loadEmployeeToday(employeeId: string, now: Date): Promise<
       pairs: byDate.get(d)?.pairs ?? [],
       dayType: resolveDayType(d, rule, holidays),
     }));
-    const calc = calcWeek(days, rule);
     week = weeklyHours({
       weekStart,
-      dailyWork: calc.map((d) => ({ workDate: d.workDate, netMinutes: d.regularMinutes + d.overtimeMinutes + d.holidayMinutes })),
+      // 직원 화면의 이번 주 시간 = 출근부터 퇴근까지 실제 시간의 합 (끝난 출퇴근만, 2026-10-02 의뢰인).
+      // 휴게 공제·초과근무 판정은 급여·관리자 집계(calcWeek)에서 그대로 한다 — 여기 숫자는 보여 주기용이다.
+      dailyWork: days.map((d) => ({
+        workDate: d.workDate,
+        netMinutes: d.pairs.reduce((a, p) => a + (p.in && p.out && p.out > p.in ? Math.floor((p.out.getTime() - p.in.getTime()) / 60000) : 0), 0),
+      })),
       is5OrMore: OFFICE.workplaceSize === '5_or_more',
     });
   }
