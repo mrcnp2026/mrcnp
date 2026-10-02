@@ -75,7 +75,9 @@
       "noRule": "Giờ làm trong tuần sẽ hiện sau khi cài đặt giờ làm.",
       "left": "Còn {h} giờ {m} phút đến {limit} giờ",
       "addOnOut": "Giờ hôm nay được cộng khi bạn tan ca",
-      "records": "Lịch sử"
+      "records": "Lịch sử",
+      "regular": "Giờ chuẩn",
+      "overtime": "Tăng ca"
     },
     "note": {
       "title": "Ghi chú công việc",

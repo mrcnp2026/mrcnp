@@ -11,6 +11,7 @@ import { toKstDate } from '@/lib/time';
 import { classifyDay } from '@/lib/today';
 import type { HolidayRow, PunchCorrection, PunchEvent, WorkRule } from '@/lib/types';
 import { weeklyHours } from '@/lib/weekly-hours';
+import { calcWeek } from '@/lib/worktime';
 
 /**
  * 근무규칙 이력 전체 (숨긴 행 제외). 판정은 날짜마다 그날 유효한 규칙으로 한다 (② 4-1 — src/lib/rule-at.ts).
@@ -126,13 +127,16 @@ export async function loadEmployeeToday(employeeId: string, now: Date): Promise<
       pairs: byDate.get(d)?.pairs ?? [],
       dayType: resolveDayType(d, ruleAt(versions, d) ?? rule, holidays),
     }));
+    // 연장(빨강) = 급여·관리자 집계와 같은 계산 (calcWeek: 하루 8시간·주 40시간 초과 + 휴일 근로)
+    const calc = new Map(calcWeek(days, (d) => ruleAt(versions, d) ?? rule).map((r) => [r.workDate, r]));
     week = weeklyHours({
       weekStart,
       // 직원 화면의 이번 주 시간 = 출근부터 퇴근까지 실제 시간의 합 (끝난 출퇴근만, 2026-10-02 의뢰인).
-      // 휴게 공제·초과근무 판정은 급여·관리자 집계(calcWeek)에서 그대로 한다 — 여기 숫자는 보여 주기용이다.
+      // 휴게 공제는 급여·관리자 집계(calcWeek)에서 한다 — 합계는 보여 주기용, 정규 = 합계 − 연장.
       dailyWork: days.map((d) => ({
         workDate: d.workDate,
         netMinutes: d.pairs.reduce((a, p) => a + (p.in && p.out && p.out > p.in ? Math.floor((p.out.getTime() - p.in.getTime()) / 60000) : 0), 0),
+        overtimeMinutes: (calc.get(d.workDate)?.overtimeMinutes ?? 0) + (calc.get(d.workDate)?.holidayMinutes ?? 0),
       })),
       is5OrMore: OFFICE.workplaceSize === '5_or_more',
     });

@@ -502,6 +502,22 @@ describe('주간 누적', () => {
     expect(r.colored).toBe(false);
     expect(r.totalMinutes).toBe(H(53));
   });
+
+  it('막대 두 색: 정규 + 연장 = 합계, 연장은 합계를 넘지 않는다, 다른 주 연장은 빼낸다', () => {
+    const r = weeklyHours({
+      weekStart: MON,
+      dailyWork: [
+        { workDate: MON, netMinutes: H(10), overtimeMinutes: H(1) },
+        { workDate: SUN, netMinutes: H(3), overtimeMinutes: H(3) }, // 휴일 근로도 빨강
+        { workDate: '2026-10-19', netMinutes: H(9), overtimeMinutes: H(1) }, // 다음 주
+      ],
+      is5OrMore: true,
+    });
+    expect([r.totalMinutes, r.regularMinutes, r.overtimeMinutes]).toEqual([H(13), H(9), H(4)]);
+    const capped = weeklyHours({ weekStart: MON, dailyWork: [{ workDate: MON, netMinutes: 30, overtimeMinutes: 60 }], is5OrMore: true });
+    expect([capped.regularMinutes, capped.overtimeMinutes]).toEqual([0, 30]);
+    expect(weeklyHours({ weekStart: MON, dailyWork: [{ workDate: MON, netMinutes: 90 }], is5OrMore: true }).overtimeMinutes).toBe(0);
+  });
 });
 
 describe('금액 경계 (4-4)', () => {

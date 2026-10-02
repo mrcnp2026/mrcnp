@@ -25,9 +25,11 @@ export async function WeekBar({
     );
   }
   const limitMin = limitHours * 60;
-  const pct = Math.min(week.totalMinutes / limitMin, 1) * 100;
+  // 막대 한 줄을 두 색으로 (2026-10-02 의뢰인): 파랑 = 정규, 빨강 = 연장(야근·휴일). 합쳐서 52시간에서 멈춘다
+  const regPct = Math.min(week.regularMinutes / limitMin, 1) * 100;
+  const otPct = Math.min(week.overtimeMinutes / limitMin, 1 - regPct / 100) * 100;
   const over = week.totalMinutes > limitMin;
-  const barColor = !week.colored ? 'bg-primary' : week.level === 'over' ? 'bg-danger' : week.level === 'caution' ? 'bg-warn' : 'bg-primary';
+  const hm = (min: number) => t('total', { h: Math.floor(min / 60), m: min % 60 });
   const textColor = !week.colored ? 'text-muted' : week.level === 'over' ? 'text-danger' : week.level === 'caution' ? 'text-warn' : 'text-muted';
   const h = Math.floor(week.totalMinutes / 60);
   const m = week.totalMinutes % 60;
@@ -51,10 +53,27 @@ export async function WeekBar({
         {week.colored && week.level !== 'normal' && <AlertTriangle aria-hidden size={24} strokeWidth={2} />}
         {over ? t('over52') : t('total', { h, m })}
       </p>
-      <div className="relative h-2 rounded-chip bg-border" role="img" aria-label={t('total', { h, m })}>
-        <div className={`h-2 rounded-chip ${barColor}`} style={{ width: `${pct}%` }} />
-        <div className="absolute -top-0.5 h-3 border-l-2 border-bg" style={{ left: `${(regularHours / limitHours) * 100}%` }} />
+      <div
+        className="relative flex h-2.5 overflow-hidden rounded-chip bg-border"
+        role="img"
+        aria-label={`${t('regular')} ${hm(week.regularMinutes)}, ${t('overtime')} ${hm(week.overtimeMinutes)}`}
+      >
+        <div className="h-full bg-primary" style={{ width: `${regPct}%` }} />
+        <div className="h-full bg-danger" style={{ width: `${otPct}%` }} />
+        <div className="absolute inset-y-0 border-l-2 border-bg" style={{ left: `${(regularHours / limitHours) * 100}%` }} />
       </div>
+      <ul className="num flex flex-wrap gap-x-4 gap-y-1 text-sm">
+        <li className="flex items-center gap-1.5">
+          <span aria-hidden className="size-2.5 rounded-chip bg-primary" />
+          <span className="text-muted">{t('regular')}</span>
+          <span className="font-bold">{hm(week.regularMinutes)}</span>
+        </li>
+        <li className="flex items-center gap-1.5">
+          <span aria-hidden className="size-2.5 rounded-chip bg-danger" />
+          <span className="text-muted">{t('overtime')}</span>
+          <span className={`font-bold ${week.overtimeMinutes > 0 ? 'text-danger' : ''}`}>{hm(week.overtimeMinutes)}</span>
+        </li>
+      </ul>
       <p className={`text-sm ${week.colored && week.level !== 'normal' ? textColor : 'text-muted'}`}>
         {week.colored && week.level !== 'normal' ? t(week.level) : left > 0 ? t('left', { limit: regularHours, h: Math.floor(left / 60), m: left % 60 }) : t('normal')}
       </p>
