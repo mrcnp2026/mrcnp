@@ -1,6 +1,6 @@
 // 연차 (②-2 7-3) — 잔여·참고 계산기·신청 일수·날짜별 휴가
 import { describe, expect, it } from 'vitest';
-import { calcLeaveBalance, countLeaveDays, isFullDayLeave, leaveByDate, suggestAnnualDays, type LeaveGrant, type LeaveRequest, type LeaveType } from '@/lib/leave';
+import { calcLeaveBalance, countLeaveDays, isFullDayLeave, leaveByDate, suggestAnnualDays, suggestGrant, type LeaveGrant, type LeaveRequest, type LeaveType } from '@/lib/leave';
 import type { DayType } from '@/lib/types';
 
 const TYPES: LeaveType[] = [
@@ -44,6 +44,17 @@ describe('참고 계산기 (4-7) — 결과는 참고용 표시가 붙는다', (
     expect(suggestAnnualDays({ hiredOn: '2023-01-01', asOf: '2026-01-01', basis: 'hire_date' }).days).toBe(16);
     expect(suggestAnnualDays({ hiredOn: '1990-01-01', asOf: '2026-01-01', basis: 'hire_date' }).days).toBe(25);
     expect(suggestAnnualDays({ hiredOn: '2026-01-01', asOf: '2026-10-01', basis: 'fiscal_year' })).toMatchObject({ isReference: true });
+  });
+});
+
+describe('입사일 → 자동 채움 값 (기간·일수)', () => {
+  it('1년 미만: 입사일부터, 개월 수만큼', () => {
+    expect(suggestGrant('2026-03-15', '2026-10-14')).toMatchObject({ days: 6, effectiveFrom: '2026-03-15', periodLabel: '2026-03 입사 첫해' });
+  });
+  it('1년 이상: 가장 최근 기념일부터 1년, 기념일 당일 포함', () => {
+    expect(suggestGrant('2023-04-01', '2026-10-03')).toMatchObject({ days: 16, effectiveFrom: '2026-04-01', periodLabel: '2026-04~2027-03' });
+    expect(suggestGrant('2025-10-03', '2026-10-03')).toMatchObject({ days: 15, effectiveFrom: '2026-10-03' });
+    expect(suggestGrant('2025-10-04', '2026-10-03')).toMatchObject({ days: 11, effectiveFrom: '2025-10-04' });
   });
 });
 

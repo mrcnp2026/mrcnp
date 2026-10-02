@@ -489,7 +489,7 @@
     },
     "leave": {
       "title": "Leave",
-      "intro": "Managers enter annual leave days by hand. The reference number is only a guide and is never saved automatically.",
+      "intro": "Enter a join date and the statutory annual leave is calculated and filled in. Check it and save to confirm (nothing is saved automatically).",
       "practiceBanner": "Practice records — leave requests and approvals here are practice. Leave entitlements are real.",
       "hired": "Joined {date}",
       "noHireDate": "No join date",
@@ -498,7 +498,7 @@
       "pending": "Waiting",
       "remaining": "Left",
       "noGrant": "Not entered",
-      "reference": "Reference {n} days",
+      "reference": "Calculated {n} days",
       "add": "Enter leave",
       "edit": "Edit leave",
       "periodLabel": "Period name",
@@ -516,7 +516,14 @@
       "invalid_days": "Enter 0–99 days in 0.25-day steps.",
       "approvedTitle": "Approved leave",
       "approvedHint": "Approved leave from the last 31 days on. Cancel here if it clashes with clock-ins.",
-      "approvedNone": "No approved leave."
+      "approvedNone": "No approved leave.",
+      "joinedOn": "Join date",
+      "saveJoined": "Save join date",
+      "joinedOnHint": "Enter the join date to calculate annual leave.",
+      "addSuggested": "Enter leave: calculated {n} days",
+      "updateSuggested": "Re-enter: calculated {n} days",
+      "prefilled": "Filled with the calculated {n} days from the join date. Check and save.",
+      "invalid_date": "The join date must be today or earlier."
     }
   },
   "nav": {

@@ -489,7 +489,7 @@
     },
     "leave": {
       "title": "연차 관리",
-      "intro": "연차 일수는 관리자가 직접 입력합니다. 참고 계산값은 확인용일 뿐 자동으로 저장되지 않습니다.",
+      "intro": "입사일을 넣으면 근로기준법 기준 연차가 계산돼 입력칸에 채워집니다. 확인하고 저장하면 확정됩니다 (자동 저장 없음).",
       "practiceBanner": "연습 기록입니다 — 휴가 신청·승인은 연습용입니다. 연차 입력은 실제 값입니다.",
       "hired": "입사 {date}",
       "noHireDate": "입사일 없음",
@@ -498,7 +498,7 @@
       "pending": "대기",
       "remaining": "잔여",
       "noGrant": "연차 미입력",
-      "reference": "참고용 {n}일",
+      "reference": "계산값 {n}일",
       "add": "연차 입력",
       "edit": "연차 고치기",
       "periodLabel": "기간 이름",
@@ -516,7 +516,14 @@
       "invalid_days": "일수는 0~99, 0.25일 단위로 적어 주세요.",
       "approvedTitle": "승인된 휴가",
       "approvedHint": "최근 31일 이후의 승인 건입니다. 출근 기록과 겹치면 여기서 취소할 수 있습니다.",
-      "approvedNone": "승인된 휴가가 없습니다."
+      "approvedNone": "승인된 휴가가 없습니다.",
+      "joinedOn": "입사일",
+      "saveJoined": "입사일 저장",
+      "joinedOnHint": "입사일을 넣으면 연차가 계산됩니다.",
+      "addSuggested": "계산값 {n}일로 연차 입력",
+      "updateSuggested": "계산값 {n}일로 다시 입력",
+      "prefilled": "입사일 기준 계산값({n}일)을 채웠습니다. 확인하고 저장하세요.",
+      "invalid_date": "입사일은 오늘 이전 날짜여야 합니다."
     }
   },
   "nav": {

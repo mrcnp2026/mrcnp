@@ -52,6 +52,23 @@ export function suggestAnnualDays(args: { hiredOn: string; asOf: string; basis: 
   return { days, note, isReference: true };
 }
 
+/**
+ * 입사일 기준 지금 연차 기간 (자동 채움용, 2026-10-02 의뢰인: "입사일을 넣으면 계산값이 채워지고 관리자가 확인").
+ * 1년 미만: 입사일부터 (매월 1일씩 늘어나므로 달마다 다시 저장) · 1년 이상: 가장 최근 입사 기념일부터 1년.
+ */
+export function suggestGrant(hiredOn: string, asOf: string): { days: number; note: string; periodLabel: string; effectiveFrom: string; isReference: true } {
+  const ref = suggestAnnualDays({ hiredOn, asOf, basis: 'hire_date' });
+  const [hy, hm, hd] = hiredOn.split('-').map(Number);
+  const [ay, am, ad] = asOf.split('-').map(Number);
+  let years = ay - hy - (am < hm || (am === hm && ad < hd) ? 1 : 0);
+  if (years < 0) years = 0;
+  const anniv = (n: number) => `${hy + n}-${String(hm).padStart(2, '0')}-${String(hd).padStart(2, '0')}`;
+  if (years < 1) return { ...ref, periodLabel: `${hiredOn.slice(0, 7)} 입사 첫해`, effectiveFrom: hiredOn };
+  const start = anniv(years);
+  const end = addDays(anniv(years + 1), -1);
+  return { ...ref, periodLabel: `${start.slice(0, 7)}~${end.slice(0, 7)}`, effectiveFrom: start };
+}
+
 /** 신청 일수 = 기간 안의 근무일 수 × 종류 단위. 반차·반반차는 하루짜리만 (start = end) */
 export function countLeaveDays(args: { type: LeaveType; startDate: string; endDate: string; dayTypeOf: (d: string) => DayType }): number {
   if (args.endDate < args.startDate) return 0;

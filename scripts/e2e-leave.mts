@@ -104,6 +104,19 @@ try {
   r = await post(`/api/admin/work/${workId}/decide`, { decision: 'cancelled' });
   check(r.json.result === 'ok', '외근 승인 취소', JSON.stringify(r.json));
 
+  // 입사일 → 계산값 자동 채움 (2026-10-02 의뢰인 결정). 3년 근속이면 16일
+  const hired = `${Number(new Date().toISOString().slice(0, 4)) - 3}-01-02`;
+  r = await post(`/api/admin/employees/${emp!.id}/joined-on`, { joinedOn: hired });
+  check(r.status === 200, '입사일 저장', JSON.stringify(r.json));
+  r = await post(`/api/admin/employees/${emp!.id}/joined-on`, { joinedOn: '2999-01-01' });
+  check(r.status === 400 && r.json.error === 'invalid_date', '미래 입사일 거절', r.json.error);
+  await p.goto(`${BASE}/admin/leave`);
+  const btn = p.getByRole('button', { name: /계산값 16일/ }).first();
+  check(await btn.waitFor({ timeout: 15000 }).then(() => true, () => false), '계산값 16일 버튼 표시');
+  await btn.click();
+  check(await p.getByText('입사일 기준 계산값(16일)을 채웠습니다').first().isVisible(), '입력칸에 계산값 채움 (저장은 관리자)');
+  await db.from('profiles').update({ joined_on: null }).eq('id', emp!.id);
+
   // 8. 직원 화면
   await p.goto(`${BASE}/punch/leave`);
   check(await p.getByRole('heading', { name: '휴가·외근' }).waitFor({ timeout: 15000 }).then(() => true, () => false), '직원 연차 화면 열림');

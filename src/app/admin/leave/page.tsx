@@ -4,12 +4,12 @@ import { getFormatter, getTranslations } from 'next-intl/server';
 import { Card, Chip, PageShell } from '@/components/ui';
 import { OFFICE } from '@/config/office';
 import { addDays } from '@/lib/calendar';
-import { calcLeaveBalance, suggestAnnualDays } from '@/lib/leave';
+import { calcLeaveBalance, suggestGrant } from '@/lib/leave';
 import { loadLeaveGrants, loadLeaveRequests, loadLeaveTypes } from '@/lib/leave-data';
 import { createAdminClient } from '@/lib/supabase/admin';
 import { toKstDate } from '@/lib/time';
 import { LeaveCancel } from '../inbox/Decisions';
-import { GrantForm } from './GrantForm';
+import { GrantForm, JoinedOnForm } from './GrantForm';
 
 export default async function AdminLeavePage({ searchParams }: { searchParams: Promise<{ live?: string }> }) {
   const t = await getTranslations('admin.leave');
@@ -41,7 +41,7 @@ export default async function AdminLeavePage({ searchParams }: { searchParams: P
           const mine = grants.filter((g) => g.employeeId === p.id);
           const bal = calcLeaveBalance({ grants: mine, requests: requests.filter((r) => r.employeeId === p.id), types, asOf: today });
           const hiredOn = p.joined_on as string | null;
-          const ref = hiredOn ? suggestAnnualDays({ hiredOn, asOf: today, basis: 'hire_date' }) : null;
+          const ref = hiredOn ? suggestGrant(hiredOn, today) : null;
           return (
             <Card key={p.id} className="flex flex-col gap-3">
               <div className="flex items-baseline justify-between gap-2">
@@ -69,20 +69,20 @@ export default async function AdminLeavePage({ searchParams }: { searchParams: P
               ) : (
                 <Chip tone="warn">{t('noGrant')}</Chip>
               )}
+              <JoinedOnForm employeeId={p.id} joinedOn={hiredOn} today={today} />
               {ref && (
                 <p className="rounded-button bg-surface p-2 text-xs text-muted">
-                  <span className="font-semibold">{t('reference', { n: ref.days })}</span> — {ref.note}
+                  <span className="font-semibold">{t('reference', { n: ref.days })}</span> ({ref.periodLabel}) — {ref.note}
                 </p>
               )}
               <GrantForm
                 employeeId={p.id}
-                defaults={{
-                  periodLabel: bal.grant?.periodLabel ?? today.slice(0, 4),
-                  effectiveFrom: bal.grant?.effectiveFrom ?? `${today.slice(0, 4)}-01-01`,
-                  basis: bal.grant?.basis ?? 'hire_date',
-                  grantedDays: bal.grant ? String(bal.grant.grantedDays) : '',
-                  carriedDays: bal.grant ? String(bal.grant.carriedDays) : '0',
-                }}
+                current={
+                  bal.grant
+                    ? { periodLabel: bal.grant.periodLabel, effectiveFrom: bal.grant.effectiveFrom, basis: bal.grant.basis, grantedDays: String(bal.grant.grantedDays), carriedDays: String(bal.grant.carriedDays) }
+                    : null
+                }
+                suggested={ref ? { days: ref.days, periodLabel: ref.periodLabel, effectiveFrom: ref.effectiveFrom } : null}
               />
             </Card>
           );
