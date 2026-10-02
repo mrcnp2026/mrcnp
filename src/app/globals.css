@@ -1,1 +1,57 @@
 @import "tailwindcss";
+
+/* 값은 src/config/theme.ts에만 있다. 여기서는 Tailwind 이름에 연결만 한다 (부록 R-10-8). */
+@theme inline {
+  --color-bg: var(--t-color-bg);
+  --color-surface: var(--t-color-surface);
+  --color-border: var(--t-color-border);
+  --color-text: var(--t-color-text);
+  --color-muted: var(--t-color-muted);
+  --color-faint: var(--t-color-faint);
+  --color-primary: var(--t-color-primary);
+  --color-primary-tint: var(--t-color-primary-tint);
+  --color-primary-deep: var(--t-color-primary-deep);
+  --color-warn: var(--t-color-warn);
+  --color-warn-tint: var(--t-color-warn-tint);
+  --color-ok: var(--t-color-ok);
+  --color-ok-tint: var(--t-color-ok-tint);
+  --color-danger: var(--t-color-danger);
+  --color-danger-tint: var(--t-color-danger-tint);
+  --color-on-primary: var(--t-color-on-primary);
+
+  --radius-card: var(--t-radius-card);
+  --radius-button: var(--t-radius-button);
+  --radius-punch: var(--t-radius-punch);
+  --radius-chip: var(--t-radius-chip);
+
+  --text-xs: var(--t-text-xs);
+  --text-sm: var(--t-text-sm);
+  --text-base: var(--t-text-base);
+  --text-xl: var(--t-text-xl);
+  --text-2xl: var(--t-text-2xl);
+  --text-3xl: var(--t-text-3xl);
+
+  --shadow-card: var(--t-shadow-card);
+  --font-sans: var(--font-latin), var(--font-thai), var(--font-kr), system-ui, sans-serif;
+}
+
+html {
+  background: var(--t-color-bg);
+  color: var(--t-color-text);
+}
+body {
+  font-size: var(--t-text-base); /* 본문 16px 이상 — iOS 입력 확대도 막는다 (5장) */
+}
+
+/* 7-11 요점 4, B-20: keep-all은 한국어 화면에만. 태국어는 단어 사이 띄어쓰기가 없어 깨진다 */
+html[lang="ko"] body { word-break: keep-all; }
+html[lang="en"] body, html[lang="vi"] body { overflow-wrap: anywhere; }
+
+/* 숫자가 나오는 곳은 자리가 흔들리지 않게 (R-10-8) */
+.num { font-variant-numeric: tabular-nums; }
+
+/* 상태 변화만 짧게. 움직임 줄이기 설정이면 전부 끈다 */
+* { transition-duration: var(--t-motion); }
+@media (prefers-reduced-motion: reduce) {
+  * { transition: none !important; animation: none !important; }
+}

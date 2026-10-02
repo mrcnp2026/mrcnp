@@ -1,0 +1,7 @@
+{
+  "_comment": "언어별 검수 상태 (①-0 4-10, 부록 R-15). reviewed=false인 언어는 직원 언어 선택 목록에 나오지 않는다. scope: ui=일반 화면 문구, legal=급여·동의·법적 안내. 번역을 고치면 reviewed를 false로 되돌린다.",
+  "ko": { "reviewed": true, "reviewer": "원문", "reviewed_at": null, "scope": ["ui", "legal"] },
+  "en": { "reviewed": true, "reviewer": "개발 에이전트 작성 (원어민 검수 전)", "reviewed_at": null, "scope": ["ui"] },
+  "vi": { "reviewed": false, "reviewer": null, "reviewed_at": null, "scope": [] },
+  "th": { "reviewed": false, "reviewer": null, "reviewed_at": null, "scope": [] }
+}

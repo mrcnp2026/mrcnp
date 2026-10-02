@@ -1,0 +1,93 @@
+{
+  "common": {
+    "appName": "근태관리",
+    "language": "언어",
+    "signOut": "로그아웃",
+    "working": "처리하는 중…",
+    "back": "뒤로",
+    "practiceBadge": "연습",
+    "translationNotice": "참고용 번역이며 한국어가 원본입니다."
+  },
+  "login": {
+    "title": "로그인",
+    "subtitle": "회사에 등록한 폰으로 로그인합니다.",
+    "button": "내 폰으로 로그인",
+    "privacy": "지문·얼굴 확인은 폰 안에서만 이루어집니다. 회사는 그 정보를 받지 않습니다.",
+    "noPhone": "아직 폰을 등록하지 않았나요? 관리자에게 초대 QR을 받으세요."
+  },
+  "register": {
+    "title": "폰 등록",
+    "hello": "{name}님, 안녕하세요",
+    "employeeNo": "사번 {no}",
+    "explain": "이 폰을 한 번 등록하면, 이후 출퇴근은 폰 잠금 해제(지문·얼굴·PIN)로 합니다.",
+    "privacy": "지문·얼굴 정보는 폰 밖으로 나가지 않습니다. 회사는 지문으로 되돌릴 수 없는 보안 키만 저장합니다.",
+    "onePhone": "폰은 1대만 등록할 수 있습니다. 폰을 바꾸면 관리자에게 새 QR을 받으세요.",
+    "button": "이 폰 등록하기",
+    "done": "폰이 등록되었습니다.",
+    "continue": "계속",
+    "invalidTitle": "이 초대는 사용할 수 없습니다"
+  },
+  "home": {
+    "hello": "{name}님, 안녕하세요",
+    "comingSoon": "출퇴근 버튼이 여기에 표시됩니다."
+  },
+  "errors": {
+    "invite_invalid": "초대 QR이 만료되었거나 이미 사용되었습니다. 관리자에게 새 QR을 받으세요.",
+    "employee_inactive": "사용할 수 없는 계정입니다. 관리자에게 문의하세요.",
+    "already_registered": "이미 등록된 폰이 있습니다. 폰을 바꾸려면 관리자가 먼저 기존 폰 등록을 해제해야 합니다.",
+    "challenge_invalid": "시간이 너무 지났습니다. 다시 시도해 주세요.",
+    "verification_failed": "폰 확인에 실패했습니다. 다시 시도해 주세요.",
+    "user_verification_missing": "폰에 화면 잠금(지문·PIN·패턴)을 먼저 설정한 뒤 다시 시도해 주세요.",
+    "passkey_unknown": "등록되지 않은 폰입니다. 관리자에게 초대 QR을 받으세요.",
+    "passkey_revoked": "이 폰의 등록이 해제되었습니다. 관리자에게 새 초대 QR을 받으세요.",
+    "cancelled": "폰 확인이 취소되었습니다. 다시 시도해 주세요.",
+    "login_cancelled": "폰 확인이 취소되었거나, 등록되지 않은 폰입니다. 다시 시도하거나 관리자에게 초대 QR을 받으세요.",
+    "unsupported": "이 브라우저에서는 폰 로그인을 쓸 수 없습니다. Chrome이나 Safari에서 여세요.",
+    "not_signed_in": "다시 로그인해 주세요.",
+    "forbidden": "권한이 없습니다.",
+    "invalid_input": "입력한 내용을 확인해 주세요.",
+    "network": "연결할 수 없습니다. 인터넷 연결을 확인하고 다시 시도해 주세요.",
+    "generic": "문제가 생겼습니다. 다시 시도해 주세요.",
+    "reference": "문의번호 {id}"
+  },
+  "admin": {
+    "nav": {
+      "home": "홈",
+      "inbox": "처리함",
+      "records": "기록",
+      "members": "직원",
+      "more": "더보기"
+    },
+    "members": {
+      "title": "직원",
+      "count": "{n}명",
+      "empty": "아직 직원이 없습니다. 아래에서 첫 직원을 추가하세요.",
+      "addTitle": "직원 추가",
+      "name": "이름",
+      "employeeNo": "사번",
+      "employeeNoHelp": "영문·숫자·- 만 (20자 이내). 로그인에 쓰입니다.",
+      "locale": "직원 화면 언어",
+      "joinedOn": "입사일 (선택)",
+      "submit": "추가하고 초대 QR 만들기",
+      "phoneOk": "폰 등록됨",
+      "phoneNone": "폰 미등록",
+      "inactive": "비활성",
+      "adminChip": "관리자",
+      "newInvite": "새 초대 QR",
+      "newInviteConfirm": "{name}님의 쓰지 않은 이전 QR은 더 이상 쓸 수 없게 됩니다. 새로 만들까요?",
+      "confirm": "만들기",
+      "cancel": "취소",
+      "inviteFor": "{name}님 초대",
+      "inviteHelp": "{name}님이 폰 카메라로 이 QR을 찍으면 폰 등록 화면이 열립니다.",
+      "inviteValidUntil": "{time}까지 유효",
+      "inviteLink": "또는 이 링크를 보내세요",
+      "copy": "링크 복사",
+      "copied": "복사됨",
+      "close": "닫기",
+      "localhostWarning": "이 주소는 이 PC에서만 열립니다. 직원 폰 등록은 앱을 배포한 뒤(게이트 9)에 합니다.",
+      "duplicate_no": "이미 있는 사번입니다.",
+      "invalid_no": "사번은 영문·숫자·- 만 쓸 수 있습니다 (20자 이내).",
+      "invalid_name": "이름을 입력하세요 (50자 이내)."
+    }
+  }
+}

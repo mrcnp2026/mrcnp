@@ -83,5 +83,31 @@ begin
   select count(*) into n from public.punch_events;
   out := out || case when n = 2 then 'PASS' else 'FAIL' end || '|24|punch_events row count unchanged (' || n || E')\n';
 
+  -- ── 게이트 3: 초대·챌린지·패스키 (0004) ──
+  insert into public.invites (employee_id, token_hash, expires_at) values (emp, 'rls-hash-' || emp, now() + interval '1 hour');
+  insert into public.webauthn_challenges (challenge, purpose, expires_at) values ('rls-ch-' || emp, 'login', now() + interval '5 minutes');
+  -- 서버 함수로 등록: 1번째는 되고, 같은 직원의 2번째 활성 패스키는 거부 (4-11)
+  begin perform public.register_passkey('rls-hash-' || emp, 'cred-1-' || emp, '\x01'::bytea, 0, null, 'singleDevice', false, 'test');
+    out := out || E'PASS|25|first passkey registered via invite\n';
+  exception when others then out := out || 'FAIL|25|first passkey: ' || sqlerrm || E'\n'; end;
+  begin perform public.register_passkey('rls-hash-' || emp, 'cred-2-' || emp, '\x02'::bytea, 0, null, 'singleDevice', false, 'test');
+    out := out || E'FAIL|26|used invite accepted again\n';
+  exception when others then out := out || E'PASS|26|used invite rejected\n'; end;
+  insert into public.invites (employee_id, token_hash, expires_at) values (emp, 'rls-hash2-' || emp, now() + interval '1 hour');
+  begin perform public.register_passkey('rls-hash2-' || emp, 'cred-3-' || emp, '\x03'::bytea, 0, null, 'singleDevice', false, 'test');
+    out := out || E'FAIL|27|second active passkey for one employee\n';
+  exception when others then out := out || E'PASS|27|second active passkey denied\n'; end;
+
+  perform set_config('request.jwt.claims', json_build_object('sub', emp, 'role', 'authenticated')::text, true);
+  perform set_config('role', 'authenticated', true);
+  begin select count(*) into n from public.invites; out := out || E'FAIL|28|employee reads invites\n';
+  exception when others then out := out || E'PASS|28|employee reads invites denied\n'; end;
+  begin select count(*) into n from public.webauthn_challenges; out := out || E'FAIL|29|employee reads challenges\n';
+  exception when others then out := out || E'PASS|29|employee reads challenges denied\n'; end;
+  begin perform public.register_passkey('rls-hash2-' || emp, 'cred-4-' || emp, '\x04'::bytea, 0, null, 'singleDevice', false, 'test');
+    out := out || E'FAIL|30|employee calls register_passkey directly\n';
+  exception when others then out := out || E'PASS|30|employee calls register_passkey denied\n'; end;
+  perform set_config('role', 'postgres', true);
+
   raise exception 'RLS_RESULTS_BEGIN%RLS_RESULTS_END', E'\n' || out;
 end $$;

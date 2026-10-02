@@ -1,0 +1,54 @@
+{
+  "_draft": "Bản nháp máy — chưa được người bản xứ kiểm tra. Không hiển thị cho nhân viên cho đến khi _status.json reviewed=true.",
+  "common": {
+    "appName": "Chấm công",
+    "language": "Ngôn ngữ",
+    "signOut": "Đăng xuất",
+    "working": "Vui lòng chờ…",
+    "back": "Quay lại",
+    "practiceBadge": "Thử nghiệm",
+    "translationNotice": "Đây là bản dịch tham khảo. Bản tiếng Hàn là bản gốc."
+  },
+  "login": {
+    "title": "Đăng nhập",
+    "subtitle": "Dùng điện thoại bạn đã đăng ký với công ty.",
+    "button": "Đăng nhập bằng điện thoại",
+    "privacy": "Việc kiểm tra vân tay hoặc khuôn mặt chỉ diễn ra trên điện thoại của bạn. Công ty không bao giờ nhận được thông tin đó.",
+    "noPhone": "Chưa đăng ký điện thoại? Hãy xin quản lý mã QR mời."
+  },
+  "register": {
+    "title": "Đăng ký điện thoại",
+    "hello": "Xin chào, {name}",
+    "employeeNo": "Mã nhân viên {no}",
+    "explain": "Đăng ký điện thoại này một lần. Sau đó bạn chấm công vào/ra bằng cách mở khóa điện thoại (vân tay, khuôn mặt hoặc mã PIN).",
+    "privacy": "Vân tay và khuôn mặt của bạn không bao giờ rời khỏi điện thoại. Công ty chỉ lưu một khóa bảo mật không thể chuyển ngược thành vân tay.",
+    "onePhone": "Bạn chỉ có thể đăng ký một điện thoại. Nếu đổi điện thoại, hãy xin quản lý mã QR mới.",
+    "button": "Đăng ký điện thoại này",
+    "done": "Điện thoại của bạn đã được đăng ký.",
+    "continue": "Tiếp tục",
+    "invalidTitle": "Không thể dùng lời mời này"
+  },
+  "home": {
+    "hello": "Xin chào, {name}",
+    "comingSoon": "Nút chấm công vào/ra sẽ hiển thị ở đây."
+  },
+  "errors": {
+    "invite_invalid": "Mã QR mời đã hết hạn hoặc đã được dùng. Hãy xin quản lý mã mới.",
+    "employee_inactive": "Tài khoản này không hoạt động. Vui lòng liên hệ quản lý.",
+    "already_registered": "Bạn đã có điện thoại đăng ký. Để đổi điện thoại, hãy nhờ quản lý xóa điện thoại cũ trước.",
+    "challenge_invalid": "Yêu cầu mất quá nhiều thời gian. Vui lòng thử lại.",
+    "verification_failed": "Không thể xác nhận điện thoại của bạn. Vui lòng thử lại.",
+    "user_verification_missing": "Vui lòng cài khóa màn hình (vân tay, mã PIN hoặc hình vẽ) trên điện thoại trước, rồi thử lại.",
+    "passkey_unknown": "Điện thoại này chưa được đăng ký. Hãy xin quản lý mã QR mời.",
+    "passkey_revoked": "Đăng ký của điện thoại này đã bị gỡ. Hãy xin quản lý mã QR mời mới.",
+    "cancelled": "Việc kiểm tra điện thoại đã bị hủy. Vui lòng thử lại.",
+    "login_cancelled": "Việc kiểm tra điện thoại đã bị hủy, hoặc điện thoại này chưa được đăng ký. Hãy thử lại hoặc xin quản lý mã QR mời.",
+    "unsupported": "Trình duyệt này không hỗ trợ đăng nhập bằng điện thoại. Hãy mở liên kết bằng Chrome hoặc Safari.",
+    "not_signed_in": "Vui lòng đăng nhập lại.",
+    "forbidden": "Bạn không có quyền làm việc này.",
+    "invalid_input": "Vui lòng kiểm tra thông tin đã nhập.",
+    "network": "Không thể kết nối. Hãy kiểm tra internet và thử lại.",
+    "generic": "Đã xảy ra lỗi. Vui lòng thử lại.",
+    "reference": "Mã tham chiếu: {id}"
+  }
+}

@@ -9,12 +9,21 @@
     "lint": "eslint",
     "verify": "vitest run",
     "verify:rls": "cross-env RLS_REQUIRED=1 vitest run tests/rls-regression.test.ts",
-    "check:db": "tsx scripts/check-db.ts"
+    "check:db": "tsx scripts/check-db.ts",
+    "db:apply": "tsx scripts/apply-migration.mts",
+    "admin:invite": "tsx scripts/emergency-admin-invite.mts",
+    "e2e:gate3": "tsx scripts/e2e-gate3.mts",
+    "i18n:export": "tsx scripts/export-translations.mts"
   },
   "dependencies": {
+    "@simplewebauthn/browser": "^14.0.0",
+    "@simplewebauthn/server": "^14.0.3",
     "@supabase/ssr": "^0.12.7",
     "@supabase/supabase-js": "^2.109.0",
+    "lucide-react": "^1.49.0",
     "next": "15.5.27",
+    "next-intl": "^4.14.8",
+    "qrcode": "^1.5.4",
     "react": "19.1.0",
     "react-dom": "19.1.0",
     "server-only": "^0.0.1"
@@ -24,6 +33,7 @@
     "@tailwindcss/postcss": "^4",
     "@types/node": "^20",
     "@types/pg": "^8.23.1",
+    "@types/qrcode": "^1.5.6",
     "@types/react": "^19",
     "@types/react-dom": "^19",
     "cross-env": "^10.1.0",
@@ -31,6 +41,7 @@
     "eslint": "^9",
     "eslint-config-next": "15.5.27",
     "pg": "^8.23.1",
+    "playwright-core": "^1.63.0",
     "tailwindcss": "^4",
     "tsx": "^4.23.15",
     "typescript": "^5",

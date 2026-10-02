@@ -10,6 +10,11 @@ function parseCidrs(raw: string | undefined): string[] {
     .filter(Boolean);
 }
 
+// 앱이 열리는 주소. 내 PC는 http://localhost:4123, 배포 후에는 열쇠 파일의 APP_ORIGIN (https://…)
+function appOrigin(): string {
+  return (process.env.APP_ORIGIN || 'http://localhost:4123').replace(/\/$/, '');
+}
+
 export const OFFICE = {
   // 4-5. 시간대는 여기에만 쓴다. 다른 파일에 'Asia/Seoul'을 직접 쓰지 마라.
   timezone: 'Asia/Seoul',
@@ -27,6 +32,16 @@ export const OFFICE = {
   missingInGraceMin: 30, // 7-8. 기준 출근 + 이 분이 지나야 '출근 미기록'
   weeklyCautionHours: 48, // 7-13
   weeklyLimitHours: 52, // 7-13
+
+  // ── 폰 등록(패스키, 4-11·7-12) ──
+  // ⚠️⚠️ 패스키는 이 주소의 도메인(rpID)에 묶인다. localhost에서 등록한 폰은 배포 주소에서 안 되고,
+  //      배포 도메인을 나중에 바꾸면 전 직원의 폰 등록이 한꺼번에 무효가 된다 (6장 경고, B-13).
+  //      그래서 실제 도메인을 게이트 9에서 확정한 뒤 직원을 등록한다. rpID는 여기서만 정한다.
+  appOrigin: appOrigin(),
+  rpID: new URL(appOrigin()).hostname,
+  rpName: 'Attendance',
+  challengeTtlMin: 5, // 7-12 요점 2: 챌린지는 1회용·5분 만료
+  inviteValidHours: 72, // 초대 QR 유효 시간. 지나면 관리자가 새로 발급한다
 
   // 부록 R-12-2: 계산 모듈(worktime·overtime·lateness·labor-rules)을 바꿀 때마다 올린다.
   // 집계 결과를 저장하는 곳에 함께 남겨 "어느 숫자가 어느 코드로 나왔는지" 알게 한다.

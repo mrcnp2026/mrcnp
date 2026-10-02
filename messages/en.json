@@ -1,0 +1,93 @@
+{
+  "common": {
+    "appName": "Attendance",
+    "language": "Language",
+    "signOut": "Sign out",
+    "working": "Please wait…",
+    "back": "Back",
+    "practiceBadge": "Practice",
+    "translationNotice": "This is a reference translation. The Korean text is the original."
+  },
+  "login": {
+    "title": "Sign in",
+    "subtitle": "Use the phone you registered with the company.",
+    "button": "Sign in with my phone",
+    "privacy": "Your fingerprint or face check happens only on your phone. The company never receives it.",
+    "noPhone": "Phone not registered yet? Ask your manager for an invitation QR code."
+  },
+  "register": {
+    "title": "Register your phone",
+    "hello": "Hello, {name}",
+    "employeeNo": "Employee number {no}",
+    "explain": "Register this phone once. After that, you clock in and out by unlocking this phone (fingerprint, face or PIN).",
+    "privacy": "Your fingerprint or face never leaves your phone. The company only stores a security key that cannot be turned back into your fingerprint.",
+    "onePhone": "You can register one phone. If you change phones, ask your manager for a new QR code.",
+    "button": "Register this phone",
+    "done": "Your phone is registered.",
+    "continue": "Continue",
+    "invalidTitle": "This invitation cannot be used"
+  },
+  "home": {
+    "hello": "Hello, {name}",
+    "comingSoon": "Clock in and out will appear here."
+  },
+  "errors": {
+    "invite_invalid": "This invitation QR code has expired or was already used. Ask your manager for a new one.",
+    "employee_inactive": "This account is not active. Please talk to your manager.",
+    "already_registered": "A phone is already registered for you. To change phones, ask your manager to remove the old one first.",
+    "challenge_invalid": "The request took too long. Please try again.",
+    "verification_failed": "We could not confirm your phone. Please try again.",
+    "user_verification_missing": "Please set up a screen lock (fingerprint, PIN or pattern) on your phone first, then try again.",
+    "passkey_unknown": "This phone is not registered. Ask your manager for an invitation QR code.",
+    "passkey_revoked": "This phone's registration was removed. Ask your manager for a new invitation QR code.",
+    "cancelled": "The phone check was cancelled. Please try again.",
+    "login_cancelled": "The phone check was cancelled, or this phone is not registered. Try again, or ask your manager for an invitation QR code.",
+    "unsupported": "This browser cannot use phone sign-in. Please open the link in Chrome or Safari.",
+    "not_signed_in": "Please sign in again.",
+    "forbidden": "You do not have permission for this.",
+    "invalid_input": "Please check what you entered.",
+    "network": "Could not connect. Check your internet and try again.",
+    "generic": "Something went wrong. Please try again.",
+    "reference": "Reference number: {id}"
+  },
+  "admin": {
+    "nav": {
+      "home": "Home",
+      "inbox": "Inbox",
+      "records": "Records",
+      "members": "Staff",
+      "more": "More"
+    },
+    "members": {
+      "title": "Staff",
+      "count": "{n} people",
+      "empty": "No staff yet. Add the first person below.",
+      "addTitle": "Add staff",
+      "name": "Name",
+      "employeeNo": "Employee number",
+      "employeeNoHelp": "Letters, numbers and - only (up to 20). Used to sign in.",
+      "locale": "Staff screen language",
+      "joinedOn": "Start date (optional)",
+      "submit": "Add and create invitation QR",
+      "phoneOk": "Phone registered",
+      "phoneNone": "No phone",
+      "inactive": "Inactive",
+      "adminChip": "Admin",
+      "newInvite": "New invitation QR",
+      "newInviteConfirm": "Earlier unused QR codes for {name} will stop working. Create a new one?",
+      "confirm": "Create",
+      "cancel": "Cancel",
+      "inviteFor": "Invitation for {name}",
+      "inviteHelp": "Ask {name} to scan this QR with the phone camera. The phone registration screen will open.",
+      "inviteValidUntil": "Valid until {time}",
+      "inviteLink": "Or send this link",
+      "copy": "Copy link",
+      "copied": "Copied",
+      "close": "Close",
+      "localhostWarning": "This address only works on this PC. Phones can register after the app is deployed (gate 9).",
+      "duplicate_no": "This employee number already exists.",
+      "invalid_no": "Employee number: letters, numbers and - only (up to 20).",
+      "invalid_name": "Please enter a name (up to 50 characters)."
+    }
+  }
+}
