@@ -35,8 +35,8 @@ try {
     await Promise.race([p.waitForURL((u) => u.pathname === href, { timeout: 15000 }), p.locator('[aria-busy=true]').first().waitFor({ timeout: 15000 })]);
     const first = Date.now() - t0;
     await p.waitForURL((u) => u.pathname === href, { timeout: 15000 });
-    await p.locator('[aria-busy=true]').first().waitFor({ state: 'detached', timeout: 15000 }).catch(() => {});
-    await p.waitForLoadState('networkidle');
+    // 불러오는 자리가 사라지고 실제 내용(h1 또는 카드)이 보이면 "다 참". networkidle은 0.5초 조용함을 기다려 숫자를 부풀리므로 쓰지 않는다
+    await p.waitForFunction("!document.querySelector('[aria-busy=true]') && !!document.querySelector('main h1, h1, section')", null, { timeout: 15000, polling: 16 });
     out.push(`${label.padEnd(14)} 반응 ${String(first).padStart(5)}ms · 다 참 ${String(Date.now() - t0).padStart(5)}ms`);
   };
   await p.goto(`${BASE}/admin`);
