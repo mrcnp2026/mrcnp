@@ -53,6 +53,18 @@ html[lang="en"] body, html[lang="vi"] body { overflow-wrap: anywhere; }
 
 /* 상태 변화만 짧게. 움직임 줄이기 설정이면 전부 끈다 */
 * { transition-duration: var(--t-motion); }
+
+/* 누르는 느낌 (2026-10-02 의뢰인: "눌러도 아무 반응이 없어 보인다") — 누르는 순간 살짝 작아지고 옅어진다.
+   폰 기본 회색 번쩍임은 끄고 우리 효과로 대신한다. 막힌(disabled) 버튼에는 주지 않는다 */
+button, a, summary, [role='button'] {
+  -webkit-tap-highlight-color: transparent;
+  transition-property: transform, opacity, background-color, color, border-color;
+  transition-timing-function: ease-out;
+}
+button:not(:disabled):active, a:active, summary:active, [role='button']:active {
+  transform: scale(0.97);
+  opacity: 0.85;
+}
 @media (prefers-reduced-motion: reduce) {
   * { transition: none !important; animation: none !important; }
 }
