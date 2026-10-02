@@ -108,7 +108,8 @@
     "note_length": "Vui lòng viết từ 1 đến 200 ký tự.",
     "already": "Đã có người xử lý.",
     "not_found": "Không tìm thấy. Vui lòng tải lại.",
-    "payroll_only": "Chỉ nhân viên phụ trách lương mới tải được tệp này."
+    "payroll_only": "Chỉ nhân viên phụ trách lương mới tải được tệp này.",
+    "register_failed": "Điện thoại không tạo được đăng ký. Hãy kiểm tra các mục dưới đây và thử lại."
   },
   "nav": {
     "home": "Trang chủ",
@@ -176,5 +177,19 @@
     "android2": "Chạm \"Thêm vào màn hình chính\" hoặc \"Cài đặt ứng dụng\"",
     "android3": "Chạm \"Thêm\". Từ nay hãy mở ứng dụng bằng biểu tượng mới.",
     "other1": "Mở trang này trên điện thoại và thêm vào màn hình chính từ menu trình duyệt."
+  },
+  "passkeyHelp": {
+    "inAppTitle": "Hãy mở trang này bằng trình duyệt của điện thoại",
+    "inAppIos": "Trang đang mở bên trong một ứng dụng (KakaoTalk...). Chạm ⋯ hoặc nút chia sẻ và chọn \"Mở bằng Safari\".",
+    "inAppAndroid": "Trang đang mở bên trong một ứng dụng (KakaoTalk...). Chạm ⋮ và chọn \"Mở bằng trình duyệt khác\" → Chrome.",
+    "checkTitle": "Vui lòng kiểm tra",
+    "inAppFirst": "Mở liên kết bằng Safari (iPhone) hoặc Chrome (Android), không mở trong KakaoTalk hay ứng dụng khác.",
+    "ios1": "Mở liên kết bằng Safari.",
+    "ios2": "Cài đặt → tên của bạn → iCloud → Mật khẩu (Chuỗi khóa): bật lên.",
+    "ios3": "Cài đặt → Face ID & Mật mã: phải có mật mã.",
+    "android1": "Mở liên kết bằng Chrome.",
+    "android2": "Chrome phải đăng nhập tài khoản Google (Cài đặt → Trình quản lý mật khẩu của Google).",
+    "android3": "Cài đặt → Bảo mật: phải có khóa màn hình (PIN, hình vẽ hoặc vân tay).",
+    "other1": "Dùng điện thoại có khóa màn hình và mở liên kết bằng Safari hoặc Chrome."
   }
 }

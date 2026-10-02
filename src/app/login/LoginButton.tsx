@@ -5,6 +5,7 @@ import { useTranslations } from 'next-intl';
 import { useState } from 'react';
 import { callApi, passkeyBrowserError } from '@/components/client-api';
 import { ErrorNote } from '@/components/ErrorNote';
+import { InAppWarning } from '@/components/PasskeyHelp';
 import { Button } from '@/components/ui';
 
 export function LoginButton() {
@@ -38,6 +39,7 @@ export function LoginButton() {
 
   return (
     <div className="flex flex-col gap-3">
+      <InAppWarning />
       <Button onClick={signIn} disabled={busy} className="min-h-14 w-full">
         <Fingerprint aria-hidden size={24} strokeWidth={1.75} />
         {busy ? t('common.working') : t('login.button')}

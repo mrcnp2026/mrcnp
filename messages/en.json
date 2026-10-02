@@ -107,7 +107,8 @@
     "note_length": "Please write 1 to 200 characters.",
     "already": "Someone already handled this.",
     "not_found": "Not found. Please refresh.",
-    "payroll_only": "Only payroll staff can download this file."
+    "payroll_only": "Only payroll staff can download this file.",
+    "register_failed": "The phone could not create the registration. Check the items below and try again."
   },
   "admin": {
     "nav": {
@@ -352,5 +353,19 @@
     "android2": "Tap \"Add to Home screen\" or \"Install app\"",
     "android3": "Tap \"Add\". Open the app from the new icon from now on.",
     "other1": "Open this page on your phone and add it to the home screen from the browser menu."
+  },
+  "passkeyHelp": {
+    "inAppTitle": "Open this page in your phone's browser",
+    "inAppIos": "This page is open inside an app (KakaoTalk, etc.). Tap ⋯ or the share button and choose \"Open in Safari\".",
+    "inAppAndroid": "This page is open inside an app (KakaoTalk, etc.). Tap ⋮ and choose \"Open in another browser\" → Chrome.",
+    "checkTitle": "Please check",
+    "inAppFirst": "Open this link in Safari (iPhone) or Chrome (Android), not inside KakaoTalk or another app.",
+    "ios1": "Open the link in Safari.",
+    "ios2": "Settings → your name → iCloud → Passwords (Keychain): turn it on.",
+    "ios3": "Settings → Face ID & Passcode: a passcode must be set.",
+    "android1": "Open the link in Chrome.",
+    "android2": "Chrome must be signed in to a Google account (Settings → Google Password Manager).",
+    "android3": "Settings → Security: a screen lock (PIN, pattern or fingerprint) must be set.",
+    "other1": "Use a phone with a screen lock, and open the link in Safari or Chrome."
   }
 }

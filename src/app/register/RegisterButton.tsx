@@ -6,6 +6,7 @@ import { useState } from 'react';
 import { callApi, passkeyBrowserError } from '@/components/client-api';
 import { ErrorNote } from '@/components/ErrorNote';
 import { InstallGuide } from '@/components/InstallGuide';
+import { InAppWarning, RegisterTroubleshoot } from '@/components/PasskeyHelp';
 import { Button } from '@/components/ui';
 
 export function RegisterButton({ token }: { token: string }) {
@@ -25,7 +26,9 @@ export function RegisterButton({ token }: { token: string }) {
       try {
         response = await startRegistration({ optionsJSON: opts.data }); // 폰이 화면 잠금(지문·얼굴·PIN)을 묻는다
       } catch (e) {
-        return setErr({ code: passkeyBrowserError(e) });
+        // 등록에서의 '취소'는 대부분 폰 설정·앱 안 브라우저 문제다 — 원인별 확인 목록을 함께 보여 준다
+        const code = passkeyBrowserError(e);
+        return setErr({ code: code === 'cancelled' ? 'register_failed' : code });
       }
       const r = await callApi<{ next: string }>('/api/passkey/register/verify', { token, response });
       if (!r.ok) return setErr(r);
@@ -51,11 +54,13 @@ export function RegisterButton({ token }: { token: string }) {
   }
   return (
     <div className="flex flex-col gap-3">
+      <InAppWarning />
       <Button onClick={register} disabled={busy} className="min-h-14 w-full">
         <Fingerprint aria-hidden size={24} strokeWidth={1.75} />
         {busy ? t('common.working') : t('register.button')}
       </Button>
       {err && <ErrorNote code={err.code} requestId={err.requestId} />}
+      {err && ['register_failed', 'unsupported', 'verification_failed', 'user_verification_missing'].includes(err.code) && <RegisterTroubleshoot />}
     </div>
   );
 }
