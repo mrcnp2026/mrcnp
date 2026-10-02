@@ -8,6 +8,7 @@ import { redirect } from 'next/navigation';
 import { Card, Chip, PageShell } from '@/components/ui';
 import { OFFICE } from '@/config/office';
 import { getMe } from '@/lib/auth';
+import { judgeLateness } from '@/lib/lateness';
 import { isYearMonth, monthRange } from '@/lib/month-data';
 import { daysFor, loadPeriod } from '@/lib/period-data';
 import { toKstDate } from '@/lib/time';
@@ -47,11 +48,20 @@ export default async function MyRecordsPage({ searchParams }: { searchParams: Pr
   const worked = days.filter((d) => d.pairs.some((p) => p.in));
   const total = days.reduce((a, d) => a + d.netMinutes, 0);
   const overtimeTotal = days.reduce((a, d) => a + d.overtimeMinutes + d.holidayMinutes, 0);
+  // 지각 — 관리자 월간 집계(monthly.ts)와 같은 판정: 근무일의 첫 출근만, 기준 시각 + 유예 (2026-10-02 의뢰인: 직원도 자기 지각을 보게)
+  const lateOf = new Map<string, number>();
+  for (const d of days) {
+    const firstIn = d.pairs.map((x) => x.in).filter((x): x is Date => !!x).sort((a, b) => a.getTime() - b.getTime())[0];
+    if (!firstIn || d.dayType !== 'workday' || !data.rule) continue;
+    const l = judgeLateness({ punchedAt: firstIn, workDate: d.workDate, rule: data.rule, isHoliday: false });
+    if (l.verdict === 'late') lateOf.set(d.workDate, l.lateMinutes);
+  }
+  const lateMin = [...lateOf.values()].reduce((a, b) => a + b, 0);
 
   return (
     <PageShell>
       <header className="flex items-center justify-between gap-2">
-        <h1 className="text-2xl font-semibold text-primary-deep">{t('title')}</h1>
+        <h1 className="text-2xl font-extrabold tracking-tight">{t('title')}</h1>
         <nav className="flex shrink-0 items-center" aria-label={t('month')}>
           {ym > oldest ? (
             <Link href={`?m=${shift(ym, -1)}`} aria-label={t('prev')} className="flex size-11 shrink-0 items-center justify-center text-primary">
@@ -73,18 +83,31 @@ export default async function MyRecordsPage({ searchParams }: { searchParams: Pr
 
       {!data.rule && <p className="text-sm text-faint">{th('noRule')}</p>}
 
-      <dl className="grid grid-cols-3 gap-2 text-center">
-        {[
-          [t('daysWorked'), t('days', { n: worked.length })],
-          [t('totalWorked'), dur(total)],
-          [t('overtimeTotal'), dur(overtimeTotal)],
-        ].map(([k, v]) => (
-          <div key={k} className="rounded-card border border-border bg-bg p-3 shadow-card">
-            <dt className="text-xs text-muted">{k}</dt>
-            <dd className="num text-base font-semibold whitespace-nowrap">{v}</dd>
+      {/* 이 달 요약 — 근무 시간을 크게, 나머지는 2×2 (토스풍) */}
+      <Card className="flex flex-col gap-4 p-6">
+        <div>
+          <p className="text-sm font-medium text-muted">{t('totalWorked')}</p>
+          <p className="num text-3xl font-extrabold tracking-tight">{dur(total)}</p>
+        </div>
+        <dl className="grid grid-cols-2 gap-2">
+          <div className="rounded-button bg-surface px-4 py-3">
+            <dt className="text-xs text-muted">{t('daysWorked')}</dt>
+            <dd className="num text-lg font-extrabold">{t('days', { n: worked.length })}</dd>
           </div>
-        ))}
-      </dl>
+          <div className="rounded-button bg-surface px-4 py-3">
+            <dt className="text-xs text-muted">{t('lateTotal')}</dt>
+            <dd className={`num text-lg font-extrabold ${lateOf.size > 0 ? 'text-warn' : ''}`}>{t('lateValue', { n: lateOf.size, m: lateMin })}</dd>
+          </div>
+          <div className="rounded-button bg-surface px-4 py-3">
+            <dt className="text-xs text-muted">{t('overtimeTotal')}</dt>
+            <dd className="num text-lg font-extrabold">{dur(overtimeTotal)}</dd>
+          </div>
+          <div className="rounded-button bg-surface px-4 py-3">
+            <dt className="text-xs text-muted">{t('leaveUsed')}</dt>
+            <dd className="text-sm font-bold text-faint">{t('leaveSoon')}</dd>
+          </div>
+        </dl>
+      </Card>
 
       {shown.length === 0 && <p className="text-muted">{t('emptyMonth')}</p>}
       <ul className="flex flex-col gap-2">
@@ -109,8 +132,9 @@ export default async function MyRecordsPage({ searchParams }: { searchParams: Pr
                   <span className="mx-2 text-faint">→</span>
                   {open ? (d.workDate === today ? <span className="text-muted">{th('status.working')}</span> : <span className="text-warn">{t('noOut')}</span>) : lastOut ? t('outLine', { time: hm(lastOut) }) : t('noOut')}
                 </p>
-                {(corrected || pendingCorr || req || d.overtimeMinutes + d.holidayMinutes > 0) && (
+                {(corrected || pendingCorr || req || lateOf.has(d.workDate) || d.overtimeMinutes + d.holidayMinutes > 0) && (
                   <div className="flex flex-wrap items-center gap-2">
+                    {lateOf.has(d.workDate) && <Chip tone="warn">{th('lateBy', { n: lateOf.get(d.workDate)! })}</Chip>}
                     {corrected && <Chip tone="info">{t('corrected')}</Chip>}
                     {pendingCorr && <Chip>{t('correctionPending')}</Chip>}
                     {d.overtimeMinutes + d.holidayMinutes > 0 && (

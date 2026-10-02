@@ -169,7 +169,11 @@
     "outLine": "Ra {time}",
     "noIn": "Thiếu giờ vào",
     "noOut": "Thiếu giờ ra",
-    "olderHint": "Bạn xem được {n} tháng gần nhất. Dữ liệu cũ hơn hãy hỏi quản lý."
+    "olderHint": "Bạn xem được {n} tháng gần nhất. Dữ liệu cũ hơn hãy hỏi quản lý.",
+    "lateTotal": "Đi muộn",
+    "lateValue": "{n} lần · {m} phút",
+    "leaveUsed": "Nghỉ phép đã dùng",
+    "leaveSoon": "Sắp có"
   },
   "corrections": {
     "title": "Yêu cầu sửa",

@@ -458,7 +458,11 @@
     "outLine": "퇴근 {time}",
     "noIn": "출근 기록 없음",
     "noOut": "퇴근 기록 없음",
-    "olderHint": "최근 {n}개월까지 볼 수 있습니다. 그 전 기록은 관리자에게 요청하세요."
+    "olderHint": "최근 {n}개월까지 볼 수 있습니다. 그 전 기록은 관리자에게 요청하세요.",
+    "lateTotal": "지각",
+    "lateValue": "{n}회 · {m}분",
+    "leaveUsed": "연차 사용",
+    "leaveSoon": "연차 기능 준비 중"
   },
   "corrections": {
     "title": "정정 요청",

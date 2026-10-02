@@ -458,7 +458,11 @@
     "outLine": "Out {time}",
     "noIn": "No clock-in",
     "noOut": "No clock-out",
-    "olderHint": "You can see the last {n} months. For older records, ask your manager."
+    "olderHint": "You can see the last {n} months. For older records, ask your manager.",
+    "lateTotal": "Late",
+    "lateValue": "{n}× · {m} min",
+    "leaveUsed": "Leave used",
+    "leaveSoon": "Coming soon"
   },
   "corrections": {
     "title": "Corrections",
