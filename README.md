@@ -1,36 +1,33 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# 사무실 근태관리 — 앱 코드
 
-## Getting Started
+기획 문서는 `근태관리\01 빌드 프롬프트\`에 있다 (이 폴더로 복사하지 않는다). 진행 상태는 `근태관리\CURRENT_STATUS.md`.
+문서 우선순위: **부록(1.5판) > ①②③ 본문**.
 
-First, run the development server:
+## 명령어
 
-```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
-```
+| 명령 | 하는 일 |
+|---|---|
+| `npm run dev` | 앱 켜기 — http://localhost:4123 |
+| `npm run verify` | 자동 검사 전체 (계정 없이 도는 것 + 열쇠가 있으면 권한 회귀 검사) |
+| `npm run verify:rls` | 권한 회귀 검사만. `SUPABASE_DB_URL`이 없으면 **실패**한다. 마이그레이션 적용 후 매번 (부록 R-12-6) |
+| `npm run check:db` | 열쇠 파일(`.env.local`)이 제대로 들어갔는지 확인 |
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+## 열쇠 파일
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+`.env.sample`을 복사해 `.env.local`로 저장하고 값을 넣는다. `.env.local`은 git에 올라가지 않는다.
+`SUPABASE_SERVICE_ROLE_KEY`는 서버 전용이다 — `src/lib/supabase/admin.ts`만 쓰고, 이 파일은 브라우저 코드에서 import하면 빌드가 실패한다.
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+## 데이터베이스
 
-## Learn More
+- 프로젝트: Supabase `출퇴근관리`, **서울 리전**(`ap-northeast-2`) — 부록 R-1
+- 표 만들기 파일: `supabase/migrations/` (번호 순서대로, 이미 적용한 파일은 고치지 않는다 — R-12-6)
+- 권한 잠금 세 겹:
+  1. 브라우저 로그인 세션은 **읽기 정책만** 있다 (직원은 자기 것, 관리자는 전체)
+  2. 브라우저 쪽 역할(anon·authenticated)에서 **쓰기 권한 자체를 회수**했다
+  3. **트리거**: 서버도 `punch_events`를 고치거나 지우지 못한다. 정정·연장·패스키 표는 사실 칸을 못 바꾼다
+- 기록을 쓰는 것은 서버 API(`service_role`)뿐이다 (마스터 6장 1.3판)
 
-To learn more about Next.js, take a look at the following resources:
+## 알려진 한계 (마스터 지시로 여기에 적는다)
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
-
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
-
-## Deploy on Vercel
-
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+- **사무실 WiFi 확인은 완전한 대리 출근 방지가 아니다.** WiFi가 닿는 곳(주차장·옆 건물)에서도 찍힌다. 목표는 재택·외부 출근 기록을 걸러내는 것이다.
+- (게이트 3 이후 채움) 패스키 동기화 한계, 미기록 배너는 앱을 열어야 보인다는 한계.
