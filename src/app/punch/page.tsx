@@ -3,6 +3,7 @@
 import { getFormatter, getTranslations } from 'next-intl/server';
 import { redirect } from 'next/navigation';
 import { LanguageSwitcher } from '@/components/LanguageSwitcher';
+import { Logo } from '@/components/Logo';
 import { SignOutButton } from '@/components/SignOutButton';
 import { PageShell } from '@/components/ui';
 import { LABOR } from '@/config/labor-rules';
@@ -29,8 +30,11 @@ export default async function PunchPage() {
   return (
     <PageShell>
       <header className="flex items-center justify-between gap-2">
-        <LanguageSwitcher options={languageOptions()} />
-        <SignOutButton />
+        <Logo variant="mark" height={32} priority />
+        <div className="flex items-center gap-1">
+          <LanguageSwitcher options={languageOptions()} />
+          <SignOutButton />
+        </div>
       </header>
       <p className="text-xl font-semibold">{t('hello', { name: me.name })}</p>
       <MissingBanner items={recent.missing} />

@@ -2,6 +2,7 @@ import { ShieldCheck } from 'lucide-react';
 import { getTranslations } from 'next-intl/server';
 import { redirect } from 'next/navigation';
 import { LanguageSwitcher } from '@/components/LanguageSwitcher';
+import { Logo } from '@/components/Logo';
 import { Card, PageShell } from '@/components/ui';
 import { languageOptions } from '@/i18n/locales';
 import { getMe } from '@/lib/auth';
@@ -14,7 +15,8 @@ export default async function LoginPage() {
   const t = await getTranslations('login');
   return (
     <PageShell>
-      <div className="flex justify-end">
+      <div className="flex items-center justify-between gap-2">
+        <Logo height={32} priority />
         <LanguageSwitcher options={languageOptions()} />
       </div>
       <Card className="flex flex-col gap-4">

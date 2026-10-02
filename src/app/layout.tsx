@@ -2,6 +2,7 @@ import type { Metadata, Viewport } from 'next';
 import { NextIntlClientProvider } from 'next-intl';
 import { getLocale, getTranslations } from 'next-intl/server';
 import { Noto_Sans, Noto_Sans_KR, Noto_Sans_Thai } from 'next/font/google';
+import { BRAND } from '@/config/brand';
 import { themeCssVariables } from '@/config/theme';
 import './globals.css';
 
@@ -12,7 +13,7 @@ const kr = Noto_Sans_KR({ weight: ['400', '600', '700'], variable: '--font-kr', 
 
 export async function generateMetadata(): Promise<Metadata> {
   const t = await getTranslations('common');
-  return { title: t('appName') };
+  return { title: `${BRAND.name} ${t('appName')}` };
 }
 
 export const viewport: Viewport = { width: 'device-width', initialScale: 1, viewportFit: 'cover' };

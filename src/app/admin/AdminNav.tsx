@@ -4,6 +4,7 @@ import { ClipboardList, House, Inbox, Menu, Users, type LucideIcon } from 'lucid
 import { useTranslations } from 'next-intl';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
+import { Logo } from '@/components/Logo';
 
 // 탭 5개, 순서 ① 홈 ② 처리함 ③ 기록 ④ 직원 ⑤ 더보기 (마스터 5장). ②의 메뉴는 이 목록에 미리 넣지 않는다 (규칙 3).
 const TABS: { href: string; key: 'home' | 'inbox' | 'records' | 'members' | 'more'; icon: LucideIcon }[] = [
@@ -22,6 +23,9 @@ export function AdminNav({ inboxCount }: { inboxCount: number }) {
     <nav
       className="fixed inset-x-0 bottom-0 z-10 border-t border-border bg-bg pb-[env(safe-area-inset-bottom)] lg:static lg:min-h-dvh lg:w-48 lg:border-t-0 lg:border-r lg:pb-0"
     >
+      <div className="hidden px-4 pt-5 pb-3 lg:block">
+        <Logo height={32} />
+      </div>
       <ul className="flex lg:flex-col lg:gap-1 lg:p-3">
         {TABS.map(({ href, key, icon: Icon }) => {
           const active = href === '/admin' ? path === '/admin' : path.startsWith(href) || (key === 'more' && path.startsWith('/admin/diag'));

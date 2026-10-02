@@ -3,6 +3,7 @@ import { ShieldCheck, Smartphone } from 'lucide-react';
 import { NextIntlClientProvider } from 'next-intl';
 import { getLocale, getTranslations } from 'next-intl/server';
 import { ErrorNote } from '@/components/ErrorNote';
+import { Logo } from '@/components/Logo';
 import { Card, PageShell } from '@/components/ui';
 import { isLocale, selectableLocales, type Locale } from '@/i18n/locales';
 import { messagesFor } from '@/i18n/messages';
@@ -28,7 +29,8 @@ export default async function RegisterPage({ searchParams }: { searchParams: Pro
   return (
     <NextIntlClientProvider locale={locale} messages={messagesFor(locale)}>
       <PageShell>
-        <Card className="flex flex-col gap-4" >
+        <Logo height={32} priority />
+        <Card className="flex flex-col gap-4">
           <h1 className="flex items-center gap-2 text-2xl font-semibold text-primary-deep">
             <Smartphone aria-hidden size={28} strokeWidth={1.75} />
             {invite ? t('title') : t('invalidTitle')}
