@@ -10,6 +10,7 @@ export type Me = {
   role: 'admin' | 'employee';
   locale: 'ko' | 'en' | 'vi' | 'th';
   active: boolean;
+  canViewPayroll: boolean; // 부록 R-2의 7: 급여 담당자만 급여용 CSV를 받는다
 };
 
 /** 로그인 세션 → 직원 정보. 세션이 없거나 퇴사 처리된 직원이면 null */
@@ -19,11 +20,14 @@ export async function getMe(): Promise<Me | null> {
   if (!data.user) return null;
   const { data: p } = await createAdminClient()
     .from('profiles')
-    .select('id, name, employee_no, role, locale, active')
+    .select('id, name, employee_no, role, locale, active, can_view_payroll')
     .eq('id', data.user.id)
     .maybeSingle();
   if (!p || !p.active) return null;
-  return { id: p.id, name: p.name, employeeNo: p.employee_no, role: p.role, locale: p.locale, active: p.active };
+  return {
+    id: p.id, name: p.name, employeeNo: p.employee_no, role: p.role, locale: p.locale, active: p.active,
+    canViewPayroll: p.can_view_payroll,
+  };
 }
 
 export async function requireAdmin(): Promise<Me | null> {

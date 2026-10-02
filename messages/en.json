@@ -72,6 +72,13 @@
       "edit": "Edit",
       "counter": "{n}/200",
       "cancel": "Cancel"
+    },
+    "missing": {
+      "noOut": "No clock-out on {day}",
+      "noIn": "No clock-in on {day}",
+      "reviewing": "Request under review",
+      "request": "Request correction",
+      "more": "{n} more"
     }
   },
   "errors": {
@@ -94,7 +101,10 @@
     "reference": "Reference number: {id}",
     "wrong_person": "This phone belongs to another account. Sign out first.",
     "period_locked": "This month is closed. Ask your manager.",
-    "note_length": "Please write 1 to 200 characters."
+    "note_length": "Please write 1 to 200 characters.",
+    "already": "Someone already handled this.",
+    "not_found": "Not found. Please refresh.",
+    "payroll_only": "Only payroll staff can download this file."
   },
   "admin": {
     "nav": {
@@ -165,6 +175,164 @@
       "rate7": "Last 7 days: {n} of {total}",
       "rateHint": "A sudden jump usually means the office internet address changed. Add the new range — do not replace the old one.",
       "practiceNote": "Counted from practice records (practice mode)."
+    },
+    "home": {
+      "title": "Today",
+      "showLive": "Show real records",
+      "showPractice": "Show practice records",
+      "practiceBanner": "Practice records — not counted anywhere.",
+      "noRule": "Work hours are not set, so late and working-late cannot be judged.",
+      "todo": "To do",
+      "pendingOvertime": "Overtime to review",
+      "pendingCorrections": "Corrections to review",
+      "missing": "Staff with a missing record",
+      "adminEntered": "Entered by admin",
+      "week": "This week {h}h {m}m",
+      "total": "Staff",
+      "nobody": "Nobody."
+    },
+    "inbox": {
+      "title": "Inbox",
+      "practiceBanner": "Practice records — decisions here do not affect real records.",
+      "overtimeTitle": "Overtime approval",
+      "overtimeHint": "Counted hours are facts and cannot be changed. You decide how much to recognize. Rejecting does not delete the work record.",
+      "correctionsTitle": "Correction requests",
+      "empty": "Nothing waiting.",
+      "needsReview": "Needs review",
+      "self": "Own request",
+      "overtime": "Overtime",
+      "night": "Night",
+      "holiday": "Holiday",
+      "min": "{n} min",
+      "nowCounted": "now {n} min",
+      "reason": "Reason",
+      "note": "Work note (written by staff)",
+      "decidedBy": "{status} by {who}",
+      "status": {
+        "approved": "Approved",
+        "rejected": "Rejected",
+        "pending": "Waiting"
+      },
+      "type": {
+        "add_missing": "Add missing record",
+        "modify": "Change time",
+        "void": "Cancel record"
+      },
+      "kind": {
+        "in": "clock-in",
+        "out": "clock-out"
+      },
+      "addMissingLine": "Add {kind} at {time}",
+      "modifyLine": "{from} → {to}",
+      "voidLine": "Cancel record at {time}",
+      "recent": "Recently handled",
+      "approve": "Approve",
+      "partial": "Partly",
+      "reject": "Reject",
+      "confirm": "Confirm",
+      "cancel": "Cancel",
+      "next": "Next",
+      "partialHint": "Enter the minutes to recognize (up to the counted minutes).",
+      "confirmApprove": "Recognize all overtime {o} min · night {n} min · holiday {h} min for {name}?",
+      "confirmPartial": "Recognize overtime {o} min · night {n} min · holiday {h} min for {name}?",
+      "confirmReject": "Do not recognize the overtime for {name}?",
+      "rejectKeepsRecord": "The work record stays as it is. Only the recognition is refused.",
+      "confirmCorrection": "Approve the correction for {name}? It will be used in the hours.",
+      "confirmCorrectionReject": "Reject the correction request from {name}?",
+      "originalKept": "The original record is never changed.",
+      "doneMsg": "Done.",
+      "already": "Already handled by another admin.",
+      "conflict": "A missing record for the same day was already approved.",
+      "over_fact": "Recognized minutes cannot exceed counted minutes."
+    },
+    "records": {
+      "title": "Records",
+      "month": "Month",
+      "prev": "Previous month",
+      "next": "Next month",
+      "showLive": "Show real records",
+      "showPractice": "Show practice records",
+      "practiceBanner": "Practice records — not for payroll.",
+      "noRule": "Work hours are not set, so hours cannot be calculated.",
+      "empty": "No staff to show for this month.",
+      "hm": "{h}:{m}",
+      "worked": "Worked {t}",
+      "actual": "Actual",
+      "approved": "Approved",
+      "pending": "Waiting",
+      "unreviewed": "Unreviewed",
+      "overtimeRow": "Overtime: actual · approved · waiting · unreviewed (under 30 min)",
+      "night": "Night {t}",
+      "holiday": "Holiday {t}",
+      "late": "Late {n}× ({m} min)",
+      "absent": "No record {n} days",
+      "name": "Name",
+      "workedCol": "Worked",
+      "nightCol": "Night",
+      "holidayCol": "Holiday",
+      "lateCol": "Late",
+      "absentCol": "No record",
+      "leaveNote": "Days without records may be leave — the leave module is not connected yet (doc 2).",
+      "downloads": "Downloads",
+      "privacyWarning": "These files contain staff personal information. Do not put them in shared folders.",
+      "attendanceCsv": "Attendance evidence (original + corrected times)",
+      "payrollCsv": "Payroll input (minutes only, no amounts)",
+      "download": "Download"
     }
+  },
+  "nav": {
+    "home": "Home",
+    "records": "My records",
+    "corrections": "Corrections"
+  },
+  "records": {
+    "title": "My records",
+    "empty": "No records in the last 14 days.",
+    "hm": "{h}h {m}m",
+    "missingTime": "--:--",
+    "corrected": "Corrected",
+    "correctionPending": "Correction pending",
+    "overtimeLine": "Overtime {o} · Night {n} · Holiday {h}",
+    "overtime": {
+      "pending": "Overtime: waiting",
+      "approved": "Overtime: approved",
+      "rejected": "Overtime: not approved"
+    },
+    "reasonLabel": "Reason for overtime (optional)",
+    "saveReason": "Save reason",
+    "saved": "Saved"
+  },
+  "corrections": {
+    "title": "Corrections",
+    "intro": "Ask your manager to fix a record. The original record is kept; an approved correction is used for your hours.",
+    "kind": {
+      "in": "Clock-in",
+      "out": "Clock-out"
+    },
+    "mine": "My requests",
+    "none": "No requests yet.",
+    "type": {
+      "add_missing": "Add a missing record",
+      "modify": "Change a time",
+      "void": "Cancel a wrong record"
+    },
+    "status": {
+      "pending": "Waiting",
+      "approved": "Approved",
+      "rejected": "Not approved"
+    },
+    "typeLabel": "What do you need?",
+    "date": "Date",
+    "which": "Which record",
+    "record": "Record to fix",
+    "time": "Correct time",
+    "nextDay": "The time is after midnight (next day)",
+    "reason": "Reason",
+    "reasonHint": "Work details only. Please do not write health or personal matters.",
+    "sent": "Request sent. Your manager will review it.",
+    "submit": "Send request",
+    "reason_required": "Please write a reason (up to 200 characters).",
+    "future_time": "You cannot request a time in the future.",
+    "duplicate_request": "You already have a waiting request for this record."
   }
 }

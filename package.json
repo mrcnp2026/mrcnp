@@ -14,7 +14,8 @@
     "admin:invite": "tsx scripts/emergency-admin-invite.mts",
     "e2e:gate3": "tsx scripts/e2e-gate3.mts",
     "i18n:export": "tsx scripts/export-translations.mts",
-    "e2e:gate4": "tsx scripts/e2e-gate4.mts"
+    "e2e:gate4": "tsx scripts/e2e-gate4.mts",
+    "e2e:gate6-8": "tsx scripts/e2e-gate6-8.mts"
   },
   "dependencies": {
     "@simplewebauthn/browser": "^14.0.0",

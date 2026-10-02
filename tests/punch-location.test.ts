@@ -1,6 +1,6 @@
 // 게이트 4·5 — 사무실 IP 판정(7-3) · 오늘 상태 분류(7-9 요점 8, 직원 홈 칩과 현황판이 같이 씀)
 import { describe, expect, it } from 'vitest';
-import { classifyDay } from '@/lib/today';
+import { buildTodayBoard, classifyDay } from '@/lib/today';
 import { kstDateTime } from '@/lib/time';
 import type { WorkRule } from '@/lib/types';
 import { extractClientIp, isOfficeIp, normalize, parseCidr, traceClientIp } from '@/lib/verify-location';
@@ -73,6 +73,28 @@ describe('오늘 상태 (한 사람은 한 칸)', () => {
     const r = c([{ in: at('11:00'), out: null }], '12:00', 'rest_off');
     expect(r.status).toBe('working');
     expect(r.lateness?.verdict).toBe('not_applicable');
+  });
+
+  it('현황판: 지각 후 야근 중인 사람은 야근중 칸에만 + 지각 배지, 5칸 합 + 휴무 = 직원 수 ← B-26', () => {
+    const person = (id: string, pairs: { in: Date | null; out: Date | null }[]) => ({
+      id, name: id, employeeNo: id, pairs, firstInVerified: true, adminEntered: false, weekMinutes: 0,
+    });
+    const people = [
+      person('a-late-then-overtime', [{ in: at('09:30'), out: null }]),
+      person('b-done', [{ in: at('09:00'), out: at('18:05') }]),
+      person('c-absent', []),
+      person('d-working', [{ in: at('09:05'), out: null }]),
+    ];
+    const b = buildTodayBoard({ people, rule: RULE, dayType: 'workday', workDate: D, now: at('19:00') });
+    // 19:00: a(지각 후)와 d(정시) 모두 기준 퇴근이 지나 야근중. a는 지각 칸에 중복으로 세지 않고 배지만
+    expect(b.overtime.map((r) => r.id)).toEqual(['a-late-then-overtime', 'd-working']);
+    expect(b.overtime.find((r) => r.id === 'a-late-then-overtime')?.late).toBe(true);
+    expect(b.overtime.find((r) => r.id === 'd-working')?.late).toBe(false);
+    expect(b.late).toEqual([]);
+    const five = b.working.length + b.late.length + b.absent.length + b.done.length + b.overtime.length;
+    expect(five + b.off.length).toBe(people.length);
+    const holiday = buildTodayBoard({ people, rule: RULE, dayType: 'holiday', workDate: D, now: at('10:00') });
+    expect(holiday.off.map((r) => r.id)).toEqual(['c-absent']); // 휴일에 출근한 사람은 off가 아니다
   });
 
   it('근무규칙이 아직 없으면 지각·야근중을 판정하지 않는다 (추측하지 않음)', () => {

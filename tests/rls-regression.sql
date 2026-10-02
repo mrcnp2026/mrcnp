@@ -76,7 +76,10 @@ begin
   exception when others then out := out || E'PASS|20|edit counted overtime (fact) denied\n'; end;
   begin update public.overtime_requests set status = 'approved', approved_minutes = 45, approved_by = adm, decided_at = now() where employee_id = emp; out := out || E'PASS|21|partial approval 45/60 allowed\n';
   exception when others then out := out || 'FAIL|21|partial approval blocked: ' || sqlerrm || E'\n'; end;
-  insert into public.work_rules (name, start_time, end_time, effective_from) values ('r1', '09:00', '18:00', '2026-10-01');
+  -- 실제 근무규칙이 이미 있으면 그것이 '첫 번째 활성 규칙'이다 (2026-10-02 의뢰인 규칙 입력 후)
+  if not exists (select 1 from public.work_rules where active) then
+    insert into public.work_rules (name, start_time, end_time, effective_from) values ('r1', '09:00', '18:00', '2026-10-01');
+  end if;
   begin insert into public.work_rules (name, start_time, end_time, effective_from) values ('r2', '10:00', '19:00', '2026-10-01'); out := out || E'FAIL|22|second active work rule\n';
   exception when others then out := out || E'PASS|22|second active work rule denied\n'; end;
   begin delete from public.profiles where id = emp; out := out || E'FAIL|23|delete profile\n';
@@ -145,6 +148,36 @@ begin
   out := out || case when n = 1 then 'PASS' else 'FAIL' end || '|40|employee reads own work_notes (' || n || E')\n';
   perform set_config('role', 'postgres', true);
 
+
+  -- ── 게이트 7·8: 결정 함수 (0006) ──
+  declare v_ot uuid; v_c1 uuid; v_c2 uuid; v_res text; v_res2 text;
+  begin
+    insert into public.overtime_requests (employee_id, work_date, overtime_minutes, night_minutes) values (emp, '2026-11-09', 90, 0) returning id into v_ot;
+    v_res := public.decide_overtime(v_ot, 'approved', 60, null, null, adm, null, 'rid-1');
+    v_res2 := public.decide_overtime(v_ot, 'rejected', null, null, null, adm, null, 'rid-2');
+    out := out || case when v_res = 'ok' and v_res2 = 'already' then 'PASS' else 'FAIL' end || '|41|second decision on same overtime = already (' || v_res || '/' || v_res2 || E')\n';
+    select count(*) into n from public.decision_log where subject_id = v_ot;
+    out := out || case when n = 1 then 'PASS' else 'FAIL' end || '|42|one decision_log row with actor (' || n || E')\n';
+    update public.overtime_requests set needs_review = true, recomputed_overtime_minutes = 30 where id = v_ot;
+    v_res := public.decide_overtime(v_ot, 'approved', 30, null, null, adm, 're-check', 'rid-3');
+    out := out || case when v_res = 'ok' then 'PASS' else 'FAIL' end || E'|43|needs_review request can be re-decided\n';
+    begin update public.overtime_requests set overtime_minutes = 30 where id = v_ot; out := out || E'FAIL|44|recompute overwrote fact column\n';
+    exception when others then out := out || E'PASS|44|fact column still immutable after 0006\n'; end;
+    insert into public.punch_corrections (employee_id, work_date, reason, requested_by, correction_type, kind, new_punched_at)
+      values (emp, '2026-11-09', 'a', emp, 'add_missing', 'out', '2026-11-09 09:00:00+00') returning id into v_c1;
+    insert into public.punch_corrections (employee_id, work_date, reason, requested_by, correction_type, kind, new_punched_at)
+      values (emp, '2026-11-09', 'b', emp, 'add_missing', 'out', '2026-11-09 10:00:00+00') returning id into v_c2;
+    v_res := public.decide_correction(v_c1, 'approved', adm, null, 'rid-4');
+    v_res2 := public.decide_correction(v_c2, 'approved', adm, null, 'rid-5');
+    out := out || case when v_res = 'ok' and v_res2 = 'conflict' then 'PASS' else 'FAIL' end || '|45|second add_missing approval = conflict (' || v_res || '/' || v_res2 || E')\n';
+    begin update public.decision_log set decision = 'rejected' where subject_id = v_ot; out := out || E'FAIL|46|decision_log updated\n';
+    exception when others then out := out || E'PASS|46|decision_log update denied\n'; end;
+  end;
+  perform set_config('request.jwt.claims', json_build_object('sub', adm, 'role', 'authenticated')::text, true);
+  perform set_config('role', 'authenticated', true);
+  begin perform public.decide_overtime(gen_random_uuid(), 'approved', null, null, null, adm, null, null); out := out || E'FAIL|47|admin session calls decide_overtime directly\n';
+  exception when others then out := out || E'PASS|47|admin session calls decide_overtime denied (server API only)\n'; end;
+  perform set_config('role', 'postgres', true);
 
   raise exception 'RLS_RESULTS_BEGIN%RLS_RESULTS_END', E'\n' || out;
 end $$;

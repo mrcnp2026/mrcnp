@@ -73,6 +73,13 @@
       "edit": "Sửa",
       "counter": "{n}/200",
       "cancel": "Hủy"
+    },
+    "missing": {
+      "noOut": "Thiếu giờ ra ngày {day}",
+      "noIn": "Thiếu giờ vào ngày {day}",
+      "reviewing": "Đang xem xét yêu cầu",
+      "request": "Yêu cầu sửa",
+      "more": "Còn {n} mục"
     }
   },
   "errors": {
@@ -95,6 +102,64 @@
     "reference": "Mã tham chiếu: {id}",
     "wrong_person": "Điện thoại này thuộc tài khoản khác. Hãy đăng xuất trước.",
     "period_locked": "Tháng này đã chốt. Hãy hỏi quản lý.",
-    "note_length": "Vui lòng viết từ 1 đến 200 ký tự."
+    "note_length": "Vui lòng viết từ 1 đến 200 ký tự.",
+    "already": "Đã có người xử lý.",
+    "not_found": "Không tìm thấy. Vui lòng tải lại.",
+    "payroll_only": "Chỉ nhân viên phụ trách lương mới tải được tệp này."
+  },
+  "nav": {
+    "home": "Trang chủ",
+    "records": "Lịch sử",
+    "corrections": "Yêu cầu sửa"
+  },
+  "records": {
+    "title": "Lịch sử của tôi",
+    "empty": "Không có dữ liệu trong 14 ngày qua.",
+    "hm": "{h} giờ {m} phút",
+    "missingTime": "--:--",
+    "corrected": "Đã sửa",
+    "correctionPending": "Đang chờ sửa",
+    "overtimeLine": "Thêm giờ {o} · Ban đêm {n} · Ngày lễ {h}",
+    "overtime": {
+      "pending": "Thêm giờ: đang chờ",
+      "approved": "Thêm giờ: được công nhận",
+      "rejected": "Thêm giờ: không được công nhận"
+    },
+    "reasonLabel": "Lý do làm thêm giờ (không bắt buộc)",
+    "saveReason": "Lưu lý do",
+    "saved": "Đã lưu"
+  },
+  "corrections": {
+    "title": "Yêu cầu sửa",
+    "intro": "Nhờ quản lý sửa dữ liệu. Dữ liệu gốc được giữ lại; bản sửa đã duyệt sẽ được dùng để tính giờ.",
+    "kind": {
+      "in": "Giờ vào",
+      "out": "Giờ ra"
+    },
+    "mine": "Yêu cầu của tôi",
+    "none": "Chưa có yêu cầu.",
+    "type": {
+      "add_missing": "Thêm dữ liệu bị thiếu",
+      "modify": "Sửa giờ",
+      "void": "Hủy dữ liệu sai"
+    },
+    "status": {
+      "pending": "Đang chờ",
+      "approved": "Đã duyệt",
+      "rejected": "Từ chối"
+    },
+    "typeLabel": "Bạn cần gì?",
+    "date": "Ngày",
+    "which": "Loại",
+    "record": "Dữ liệu cần sửa",
+    "time": "Giờ đúng",
+    "nextDay": "Giờ sau nửa đêm (ngày hôm sau)",
+    "reason": "Lý do",
+    "reasonHint": "Chỉ ghi nội dung công việc. Không ghi chuyện sức khỏe hay việc riêng.",
+    "sent": "Đã gửi yêu cầu. Quản lý sẽ xem xét.",
+    "submit": "Gửi yêu cầu",
+    "reason_required": "Vui lòng ghi lý do (tối đa 200 ký tự).",
+    "future_time": "Không thể yêu cầu giờ trong tương lai.",
+    "duplicate_request": "Đã có yêu cầu đang chờ cho dữ liệu này."
   }
 }

@@ -1,18 +1,21 @@
 'use client';
 // 폰(< 1024px): 하단 탭 바 · 넓은 화면: 왼쪽 세로 메뉴. 구조는 같고 배치만 다르다 (마스터 5장)
-import { Menu, Users, type LucideIcon } from 'lucide-react';
+import { ClipboardList, House, Inbox, Menu, Users, type LucideIcon } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 
-// ★ 만든 탭만 여기 넣는다 (5장 규칙 3). 순서는 ① 홈 ② 처리함 ③ 기록 ④ 직원 ⑤ 더보기
-//   홈(게이트 6)·처리함(7)·기록(8)은 그 게이트에서 추가한다. 더보기는 게이트 5(진단)부터.
+// 탭 5개, 순서 ① 홈 ② 처리함 ③ 기록 ④ 직원 ⑤ 더보기 (마스터 5장). ②의 메뉴는 이 목록에 미리 넣지 않는다 (규칙 3).
 const TABS: { href: string; key: 'home' | 'inbox' | 'records' | 'members' | 'more'; icon: LucideIcon }[] = [
+  { href: '/admin', key: 'home', icon: House },
+  { href: '/admin/inbox', key: 'inbox', icon: Inbox },
+  { href: '/admin/records', key: 'records', icon: ClipboardList },
   { href: '/admin/members', key: 'members', icon: Users },
   { href: '/admin/more', key: 'more', icon: Menu },
 ];
 
-export function AdminNav() {
+// 규칙 1: 배지는 처리함 탭에만, 0이면 숨긴다
+export function AdminNav({ inboxCount }: { inboxCount: number }) {
   const t = useTranslations('admin.nav');
   const path = usePathname();
   return (
@@ -21,7 +24,7 @@ export function AdminNav() {
     >
       <ul className="flex lg:flex-col lg:gap-1 lg:p-3">
         {TABS.map(({ href, key, icon: Icon }) => {
-          const active = path.startsWith(href) || (key === 'more' && path.startsWith('/admin/diag'));
+          const active = href === '/admin' ? path === '/admin' : path.startsWith(href) || (key === 'more' && path.startsWith('/admin/diag'));
           return (
             <li key={href} className="flex-1 lg:flex-none">
               <Link
@@ -31,7 +34,14 @@ export function AdminNav() {
                   active ? 'font-semibold text-primary-deep lg:bg-primary-tint' : 'text-muted'
                 }`}
               >
-                <Icon aria-hidden size={22} strokeWidth={1.75} />
+                <span className="relative">
+                  <Icon aria-hidden size={22} strokeWidth={1.75} />
+                  {key === 'inbox' && inboxCount > 0 && (
+                    <span className="num absolute -top-2 -right-3 min-w-5 rounded-chip bg-warn px-1 text-center text-xs font-semibold text-on-primary">
+                      {inboxCount}
+                    </span>
+                  )}
+                </span>
                 {t(key)}
               </Link>
             </li>
