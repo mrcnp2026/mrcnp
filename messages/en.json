@@ -13,7 +13,9 @@
     "subtitle": "Use the phone you registered with the company.",
     "button": "Sign in with my phone",
     "privacy": "Your fingerprint or face check happens only on your phone. The company never receives it.",
-    "noPhone": "Phone not registered yet? Ask your manager for an invitation QR code."
+    "firstTime": "First time?",
+    "qrHint": "If your phone is not registered yet, \"Sign in\" may show a QR screen. Close it and register your phone here.",
+    "registerLink": "Register my phone"
   },
   "register": {
     "title": "Register your phone",
@@ -25,7 +27,12 @@
     "button": "Register this phone",
     "done": "Your phone is registered.",
     "continue": "Continue",
-    "invalidTitle": "This invitation cannot be used"
+    "invalidTitle": "This invitation cannot be used",
+    "codeLabel": "Registration code from your manager",
+    "codePlaceholder": "XXXX-XXXX",
+    "codeSubmit": "Continue",
+    "codeHelp": "Ask your manager for an 8-character code. Capital letters and spaces do not matter.",
+    "haveAccount": "Already registered? Sign in"
   },
   "home": {
     "hello": "Hello, {name}",
@@ -150,7 +157,11 @@
       "invalid_name": "Please enter a name (up to 50 characters).",
       "step1": "Open the phone camera and point it at this QR code, then tap the link.",
       "step2": "Tap \"Register this phone\" and unlock the phone the usual way (fingerprint, face or screen lock).",
-      "step3": "Add the app to the home screen. Every day: open it → tap Clock in → touch the fingerprint."
+      "step3": "Add the app to the home screen. Every day: open it → tap Clock in → touch the fingerprint.",
+      "codeLabel": "Registration code",
+      "codeHelp": "Or type {origin} in the phone browser → \"Register my phone\" → enter this code.",
+      "send": "Send (text / KakaoTalk)",
+      "shareText": "[MRCNP Attendance] Phone registration for {name}\nOpen in Safari or Chrome: {url}\nCode: {code}"
     },
     "more": {
       "title": "More",

@@ -1,5 +1,6 @@
 import { ShieldCheck } from 'lucide-react';
 import { getTranslations } from 'next-intl/server';
+import Link from 'next/link';
 import { redirect } from 'next/navigation';
 import { LanguageSwitcher } from '@/components/LanguageSwitcher';
 import { Logo } from '@/components/Logo';
@@ -32,7 +33,16 @@ export default async function LoginPage() {
           {t('privacy')}
         </p>
       </Card>
-      <p className="text-sm text-faint">{t('noPhone')}</p>
+      <Card className="flex flex-col gap-3">
+        <p className="font-semibold">{t('firstTime')}</p>
+        <p className="text-sm text-muted">{t('qrHint')}</p>
+        <Link
+          href="/register"
+          className="inline-flex min-h-12 items-center justify-center rounded-button border border-border bg-bg px-4 font-semibold text-primary"
+        >
+          {t('registerLink')}
+        </Link>
+      </Card>
     </PageShell>
   );
 }

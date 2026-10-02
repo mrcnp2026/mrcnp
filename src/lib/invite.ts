@@ -1,9 +1,9 @@
 // 초대 QR 발급·직원 추가. 서버 전용 (관리자 API와 비상 스크립트가 함께 쓴다).
 import 'server-only';
-import { randomBytes } from 'node:crypto';
 import QRCode from 'qrcode';
 import { OFFICE } from '@/config/office';
 import { COLORS } from '@/config/theme';
+import { formatInviteCode, newInviteCode } from '@/lib/invite-code';
 import { hashToken } from '@/lib/passkey';
 import { staffEmail } from '@/lib/session';
 import { createAdminClient } from '@/lib/supabase/admin';
@@ -11,7 +11,7 @@ import type { Locale } from '@/i18n/locales';
 
 export const EMPLOYEE_NO_RE = /^[A-Za-z0-9-]{1,20}$/;
 
-export type IssuedInvite = { url: string; qrDataUrl: string; expiresAt: string };
+export type IssuedInvite = { url: string; code: string; qrDataUrl: string; expiresAt: string };
 
 /**
  * 새 초대를 만든다. 같은 직원의 쓰지 않은 이전 초대는 취소한다(revoked_at) — 유효한 QR이 여러 장 돌지 않게.
@@ -32,7 +32,7 @@ export async function issueInvite(args: {
     .is('revoked_at', null);
   if (e1) throw new Error(`issueInvite.revoke: ${e1.message}`);
 
-  const token = randomBytes(32).toString('base64url');
+  const token = newInviteCode();
   const expiresAt = new Date(now.getTime() + OFFICE.inviteValidHours * 3_600_000);
   const { error: e2 } = await db.from('invites').insert({
     employee_id: args.employeeId,
@@ -49,7 +49,7 @@ export async function issueInvite(args: {
     width: 280,
     color: { dark: COLORS.text, light: COLORS.bg },
   });
-  return { url, qrDataUrl, expiresAt: expiresAt.toISOString() };
+  return { url, code: formatInviteCode(token), qrDataUrl, expiresAt: expiresAt.toISOString() };
 }
 
 export class DuplicateEmployeeNo extends Error {}

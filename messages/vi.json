@@ -14,7 +14,9 @@
     "subtitle": "Dùng điện thoại bạn đã đăng ký với công ty.",
     "button": "Đăng nhập bằng điện thoại",
     "privacy": "Việc kiểm tra vân tay hoặc khuôn mặt chỉ diễn ra trên điện thoại của bạn. Công ty không bao giờ nhận được thông tin đó.",
-    "noPhone": "Chưa đăng ký điện thoại? Hãy xin quản lý mã QR mời."
+    "firstTime": "Lần đầu sử dụng?",
+    "qrHint": "Nếu điện thoại chưa đăng ký, nút \"Đăng nhập\" có thể hiện màn hình QR. Hãy đóng lại và đăng ký điện thoại ở đây.",
+    "registerLink": "Đăng ký điện thoại"
   },
   "register": {
     "title": "Đăng ký điện thoại",
@@ -26,7 +28,12 @@
     "button": "Đăng ký điện thoại này",
     "done": "Điện thoại của bạn đã được đăng ký.",
     "continue": "Tiếp tục",
-    "invalidTitle": "Không thể dùng lời mời này"
+    "invalidTitle": "Không thể dùng lời mời này",
+    "codeLabel": "Mã đăng ký từ quản lý",
+    "codePlaceholder": "XXXX-XXXX",
+    "codeSubmit": "Tiếp tục",
+    "codeHelp": "Hãy xin quản lý mã 8 ký tự. Chữ hoa/thường và khoảng trắng không quan trọng.",
+    "haveAccount": "Đã đăng ký? Đăng nhập"
   },
   "home": {
     "hello": "Xin chào, {name}",

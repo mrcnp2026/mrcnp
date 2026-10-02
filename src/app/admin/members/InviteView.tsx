@@ -1,11 +1,11 @@
 'use client';
 // 초대 QR 보여 주기. 토큰 원문은 이 화면에만 있고 DB에는 지문(해시)만 남는다
-import { Copy } from 'lucide-react';
+import { Copy, Send } from 'lucide-react';
 import { useFormatter, useTranslations } from 'next-intl';
 import { useState } from 'react';
 import { Button, Card } from '@/components/ui';
 
-export type Invite = { url: string; qrDataUrl: string; expiresAt: string };
+export type Invite = { url: string; code: string; qrDataUrl: string; expiresAt: string };
 
 export function InviteView({ name, invite, onClose }: { name: string; invite: Invite; onClose: () => void }) {
   const t = useTranslations('admin.members');
@@ -17,6 +17,11 @@ export function InviteView({ name, invite, onClose }: { name: string; invite: In
       <h2 className="text-xl font-semibold">{t('inviteFor', { name })}</h2>
       {/* eslint-disable-next-line @next/next/no-img-element -- 서버가 만든 data: 주소라 이미지 최적화 대상이 아니다 */}
       <img src={invite.qrDataUrl} width={240} height={240} alt={t('inviteFor', { name })} className="rounded-card border border-border" />
+      <div className="flex w-full flex-col items-center gap-1 rounded-card border border-border p-3">
+        <p className="text-xs text-muted">{t('codeLabel')}</p>
+        <p className="num text-3xl font-bold tracking-widest text-primary-deep">{invite.code}</p>
+        <p className="text-center text-xs text-muted">{t('codeHelp', { origin: new URL(invite.url).host })}</p>
+      </div>
       <ol className="flex w-full flex-col gap-2 rounded-card bg-surface p-3 text-sm">
         {(['step1', 'step2', 'step3'] as const).map((k, i) => (
           <li key={k} className="flex items-start gap-3">
@@ -33,12 +38,32 @@ export function InviteView({ name, invite, onClose }: { name: string; invite: In
       <div className="flex w-full flex-col gap-2">
         <p className="text-sm text-muted">{t('inviteLink')}</p>
         <p className="break-all rounded-button bg-surface p-2 text-xs text-muted">{invite.url}</p>
+        <Button
+          className="w-full"
+          onClick={async () => {
+            const text = t('shareText', { name, code: invite.code, url: invite.url });
+            // 관리자 폰의 공유 창(문자·카카오톡 등)으로 바로 보낸다. 공유 창이 없는 PC는 복사로
+            if (navigator.share) {
+              try {
+                await navigator.share({ text });
+                return;
+              } catch {
+                return; // 공유 창을 닫은 경우
+              }
+            }
+            await navigator.clipboard.writeText(text);
+            setCopied(true);
+          }}
+        >
+          <Send aria-hidden size={18} strokeWidth={1.75} />
+          {t('send')}
+        </Button>
         <div className="flex gap-2">
           <Button
             variant="outline"
             className="flex-1"
             onClick={async () => {
-              await navigator.clipboard.writeText(invite.url);
+              await navigator.clipboard.writeText(t('shareText', { name, code: invite.code, url: invite.url }));
               setCopied(true);
             }}
           >

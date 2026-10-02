@@ -9,7 +9,7 @@
 // 발급 기록은 invites.issued_via='emergency'로 남고, 관리자 홈(게이트 6)이 "비상 초대가 발급됐습니다"를 띄운다.
 import { createClient } from '@supabase/supabase-js';
 import { config } from 'dotenv';
-import { createHash, randomBytes } from 'node:crypto';
+import { createHash, randomInt } from 'node:crypto';
 import path from 'node:path';
 import QRCode from 'qrcode';
 
@@ -68,7 +68,8 @@ if (!existing) {
 
 const now = new Date();
 await db.from('invites').update({ revoked_at: now.toISOString() }).eq('employee_id', employeeId).is('used_at', null).is('revoked_at', null);
-const token = randomBytes(32).toString('base64url');
+const ALPHABET = 'ABCDEFGHJKMNPQRSTUVWXYZ23456789'; // src/lib/invite-code.ts와 같게
+const token = Array.from({ length: 8 }, () => ALPHABET[randomInt(ALPHABET.length)]).join('');
 const expiresAt = new Date(now.getTime() + INVITE_HOURS * 3_600_000);
 const { error: e3 } = await db.from('invites').insert({
   employee_id: employeeId,
@@ -84,6 +85,7 @@ console.log(`\n비상 초대 — ${displayName} (${employeeNo})`);
 console.log(`유효: ${expiresAt.toLocaleString('ko-KR', { timeZone: 'Asia/Seoul' })} 까지 (${INVITE_HOURS}시간)\n`);
 console.log(await QRCode.toString(link, { type: 'terminal', small: true }));
 console.log(link);
+console.log(`\n등록 코드: ${token.slice(0, 4)}-${token.slice(4)}   (${origin} → "폰 등록하기"에서 입력)`);
 if (origin.includes('localhost')) {
   console.log('\n※ 이 주소는 이 PC에서만 열립니다. 이 PC의 브라우저에서 위 주소를 열어 Windows Hello(PIN·지문)로 등록하세요.');
 }

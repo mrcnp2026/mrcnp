@@ -193,3 +193,25 @@ describe('폰으로 본인 확인', () => {
     expect(await code(svc.verifyAssertion(stranger.assert(opts.challenge), 'punch'))).toBe('passkey_unknown');
   });
 });
+
+describe('짧은 등록 코드', () => {
+  it('코드는 8자, 헷갈리는 글자(0 O 1 I L)가 없다', async () => {
+    const { newInviteCode } = await import('@/lib/invite-code');
+    for (let i = 0; i < 200; i++) expect(newInviteCode()).toMatch(/^[A-HJKMNP-Z2-9]{8}$/);
+  });
+  it('소문자·띄어쓰기·하이픈으로 입력해도 같은 초대로 찾는다', () => {
+    expect(hashToken('k7p2 9qxa')).toBe(hashToken('K7P2-9QXA'));
+    expect(hashToken('K7P29QXA')).toBe(hashToken('K7P2-9QXA'));
+  });
+  it('예전 긴 토큰은 대소문자를 그대로 구분한다', () => {
+    const long = 'o6XGYVDOX39N5jty0Tz6BoO3kd3-n1X5kefFUKAmjRU';
+    expect(hashToken(long)).not.toBe(hashToken(long.toUpperCase()));
+  });
+  it('코드로 실제 등록까지 된다', async () => {
+    store.invites.set(hashToken('ABCD2345'), invite({ inviteId: 'inv-code' }));
+    const opts = await svc.beginRegistration('abcd-2345');
+    const phone = new SoftAuthenticator(RP.rpID, RP.origin);
+    const r = await svc.finishRegistration('abcd 2345', phone.register(opts.challenge));
+    expect(r.employeeId).toBe(EMP);
+  });
+});

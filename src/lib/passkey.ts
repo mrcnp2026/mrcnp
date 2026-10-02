@@ -17,6 +17,7 @@ import {
   type RegistrationResponseJSON,
 } from '@simplewebauthn/server';
 import { createHash } from 'node:crypto';
+import { normalizeInviteToken } from '@/lib/invite-code';
 
 export type ChallengePurpose = 'register' | 'login' | 'punch';
 
@@ -85,7 +86,7 @@ export class PasskeyError extends Error {
 }
 
 export function hashToken(token: string): string {
-  return createHash('sha256').update(token).digest('hex');
+  return createHash('sha256').update(normalizeInviteToken(token)).digest('hex');
 }
 
 /** 브라우저 응답의 clientDataJSON에서 챌린지를 꺼낸다 (서명 검증 전 — 어느 챌린지를 쓰려는지 알기 위해서만) */

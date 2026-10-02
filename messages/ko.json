@@ -13,7 +13,9 @@
     "subtitle": "회사에 등록한 폰으로 로그인합니다.",
     "button": "내 폰으로 로그인",
     "privacy": "지문·얼굴 확인은 폰 안에서만 이루어집니다. 회사는 그 정보를 받지 않습니다.",
-    "noPhone": "아직 폰을 등록하지 않았나요? 관리자에게 초대 QR을 받으세요."
+    "firstTime": "처음이신가요?",
+    "qrHint": "아직 등록하지 않은 폰에서 \"로그인\"을 누르면 QR 화면이 뜰 수 있습니다. 닫고 여기서 폰을 등록하세요.",
+    "registerLink": "폰 등록하기"
   },
   "register": {
     "title": "폰 등록",
@@ -25,7 +27,12 @@
     "button": "이 폰 등록하기",
     "done": "폰이 등록되었습니다.",
     "continue": "계속",
-    "invalidTitle": "이 초대는 사용할 수 없습니다"
+    "invalidTitle": "이 초대는 사용할 수 없습니다",
+    "codeLabel": "관리자에게 받은 등록 코드",
+    "codePlaceholder": "XXXX-XXXX",
+    "codeSubmit": "계속",
+    "codeHelp": "관리자에게 8자리 코드를 받으세요. 대소문자·띄어쓰기는 상관없습니다.",
+    "haveAccount": "이미 등록했나요? 로그인"
   },
   "home": {
     "hello": "{name}님, 안녕하세요",
@@ -150,7 +157,11 @@
       "invalid_name": "이름을 입력하세요 (50자 이내).",
       "step1": "폰 카메라를 켜고 이 QR을 비춘 뒤, 뜨는 링크를 누릅니다.",
       "step2": "\"이 폰 등록하기\"를 누르고, 평소처럼 폰 잠금을 풉니다 (지문·얼굴·화면 잠금).",
-      "step3": "홈 화면에 추가합니다. 매일: 앱 열기 → 출근하기 → 지문 한 번."
+      "step3": "홈 화면에 추가합니다. 매일: 앱 열기 → 출근하기 → 지문 한 번.",
+      "codeLabel": "등록 코드",
+      "codeHelp": "또는 폰 브라우저 주소창에 {origin} 입력 → \"폰 등록하기\" → 이 코드 입력",
+      "send": "보내기 (문자·카카오톡)",
+      "shareText": "[MRCNP 근태] {name}님 폰 등록 / Phone registration\nSafari·Chrome으로 여세요 / Open in Safari or Chrome: {url}\n등록 코드 / Code: {code}"
     },
     "more": {
       "title": "더보기",
