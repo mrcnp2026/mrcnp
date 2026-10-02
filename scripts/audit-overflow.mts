@@ -1,6 +1,7 @@
 // 가로 넘침 검수 — 모든 화면 × 여러 폭 × 언어. 마스터 4-9·5장: 가로 스크롤은 버그다 (월간 표만 자기 상자 안 예외였지만 지금은 그것도 없앰).
 //   npm run audit:overflow        (앱이 켜져 있어야 한다)
-// 사번 test 직원을 잠깐 관리자로 바꿔 관리자 화면도 본다 — 끝나면 되돌린다. 기록은 만들지 않는다.
+// 검사 전용 직원(사번 e2e-audit)을 쓴다 — 검사 동안만 활성·관리자로 켰다가 끝나면 비활성으로 끈다 (현황판 인원에 안 섞이게).
+// 실제 사람의 등록(test·admin)은 건드리지 않는다. 기록은 만들지 않는다.
 // 찾는 것: ① 페이지 가로 스크롤 ② 상자 안 가로 스크롤 ③ 화면 밖으로 나간 요소 ④ 글자가 잘린 버튼·칩·링크
 import { createClient } from '@supabase/supabase-js';
 import { config } from 'dotenv';
@@ -10,7 +11,19 @@ import { chromium, type Page } from 'playwright-core';
 
 config({ path: path.join(import.meta.dirname, '..', '.env.local'), quiet: true });
 const BASE = 'http://localhost:4123';
+// 이 스크립트가 만든 가짜 폰만 해제한다 — 사람이 직접 등록한 폰(의뢰인 PC 등)은 건드리지 않는다 (2026-10-02)
+const STARTED_AT = new Date().toISOString();
 const db = createClient(process.env.NEXT_PUBLIC_SUPABASE_URL!, process.env.SUPABASE_SERVICE_ROLE_KEY!, { auth: { persistSession: false } });
+
+// 안전 정지: 사람이 직접 등록한 폰이 있으면 이 스크립트는 아무것도 하지 않는다 (2026-10-02 — 의뢰인 폰·PC 등록을 지우지 않게)
+for (const no of [] as string[]) {
+  const { data: pp } = await db.from('profiles').select('id').eq('employee_no', no).maybeSingle();
+  const { count } = pp ? await db.from('user_passkeys').select('id', { count: 'exact', head: true }).eq('employee_id', pp.id).is('revoked_at', null) : { count: 0 };
+  if (count) {
+    console.log(`중단: 사번 ${no}에 사람이 등록한 폰이 있습니다. 이 검사는 등록을 바꾸므로 실행하지 않습니다. (검사 전용 직원을 따로 만들어 쓰세요)`);
+    process.exit(2);
+  }
+}
 const WIDTHS = [320, 360, 390, 430, 768, 1024, 1280];
 
 // 브라우저 안에서 도는 검사. 문자열로 넘긴다 — tsx가 함수에 끼워 넣는 __name 도우미가 브라우저에는 없어서
@@ -47,8 +60,14 @@ async function invite(id: string) {
   return token;
 }
 
-const { data: emp } = await db.from('profiles').select('id, role, locale').eq('employee_no', 'test').single();
-const original = { role: emp!.role, locale: emp!.locale };
+let { data: emp } = await db.from('profiles').select('id, role, locale').eq('employee_no', 'e2e-audit').maybeSingle();
+if (!emp) {
+  const { data: u } = await db.auth.admin.createUser({ email: 'e2e-audit@staff.invalid', email_confirm: true });
+  await db.from('profiles').insert({ id: u.user!.id, name: '검사용(자동)', employee_no: 'e2e-audit', role: 'employee', locale: 'en', active: false });
+  emp = { id: u.user!.id, role: 'employee', locale: 'en' };
+}
+await db.from('profiles').update({ active: true, role: 'employee' }).eq('id', emp!.id);
+const original = { role: 'employee', locale: 'en', active: false };
 const browser = await chromium.launch({ channel: 'chrome', headless: true });
 const findings: string[] = [];
 let checked = 0;
@@ -120,7 +139,7 @@ try {
 } finally {
   await browser.close();
   await db.from('profiles').update(original).eq('id', emp!.id);
-  await db.from('user_passkeys').update({ revoked_at: new Date().toISOString(), device_label: 'E2E 가상 인증기 (자동 확인용)' }).eq('employee_id', emp!.id).is('revoked_at', null);
+  await db.from('user_passkeys').update({ revoked_at: new Date().toISOString(), device_label: 'E2E 가상 인증기 (자동 확인용)' }).eq('employee_id', emp!.id).is('revoked_at', null).gte('created_at', STARTED_AT);
   await db.from('invites').update({ revoked_at: new Date().toISOString() }).eq('employee_id', emp!.id).is('used_at', null).is('revoked_at', null);
   console.log(`검사한 화면×폭: ${checked}`);
   console.log(findings.length ? findings.join('\n') : '넘치는 곳 없음');

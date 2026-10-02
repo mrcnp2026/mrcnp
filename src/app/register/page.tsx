@@ -3,6 +3,7 @@
 import { ShieldCheck, Smartphone } from 'lucide-react';
 import { NextIntlClientProvider } from 'next-intl';
 import { getLocale, getTranslations } from 'next-intl/server';
+import { cookies } from 'next/headers';
 import Link from 'next/link';
 import { ErrorNote } from '@/components/ErrorNote';
 import { LanguageSwitcher } from '@/components/LanguageSwitcher';
@@ -12,6 +13,7 @@ import { InAppWarning } from '@/components/PasskeyHelp';
 import { Card, PageShell } from '@/components/ui';
 import { isLocale, languageOptions, selectableLocales, type Locale } from '@/i18n/locales';
 import { messagesFor } from '@/i18n/messages';
+import { LOCALE_COOKIE } from '@/i18n/request';
 import { PasskeyError } from '@/lib/passkey';
 import { passkeyService } from '@/lib/passkey-store';
 import { CodeForm } from './CodeForm';
@@ -29,9 +31,15 @@ export default async function RegisterPage({ searchParams }: { searchParams: Pro
     }
   }
 
-  // 검수된 언어면 그 언어로, 아니면 지금 언어(기본 영어) 그대로 (B-21)
+  // 언어: ① 이 화면에서 직원이 직접 고른 언어(쿠키) → ② 관리자가 초대 때 정한 언어 → ③ 지금 언어(기본 영어). 검수된 언어만 (B-21)
+  const chosen = (await cookies()).get(LOCALE_COOKIE)?.value;
+  const allowed = selectableLocales();
   const locale: Locale =
-    invite && isLocale(invite.locale) && selectableLocales().includes(invite.locale) ? invite.locale : ((await getLocale()) as Locale);
+    isLocale(chosen) && allowed.includes(chosen)
+      ? chosen
+      : invite && isLocale(invite.locale) && allowed.includes(invite.locale)
+        ? invite.locale
+        : ((await getLocale()) as Locale);
   const t = await getTranslations({ locale, namespace: 'register' });
 
   return (
@@ -40,7 +48,7 @@ export default async function RegisterPage({ searchParams }: { searchParams: Pro
         <OpenExternal />
         <div className="flex items-center justify-between gap-2">
           <Logo height={32} priority />
-          {!invite && <LanguageSwitcher options={languageOptions()} />}
+          <LanguageSwitcher options={languageOptions()} />
         </div>
         <Card className="flex flex-col gap-4">
           <h1 className="flex items-center gap-2 text-2xl font-semibold text-primary-deep">

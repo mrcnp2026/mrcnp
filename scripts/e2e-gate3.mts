@@ -1,7 +1,8 @@
 // 게이트 3 실제 브라우저 확인 — Chrome(이 PC에 설치된 것)을 자동으로 열고, Chrome의 "가상 인증기"를 폰 대신 쓴다.
 // 가상 인증기는 진짜 폰과 같은 패스키 절차를 밟는다 (화면 잠금 확인 = 통과로 설정).
 //   npm run e2e:gate3 -- <관리자 초대 링크>
-// 앱이 켜져 있어야 한다 (npm run start). 360px 화면 캡처를 checks/화면-캡처/ 에 남긴다 (가짜 데이터만).
+// 앱이 켜져 있어야 한다 (npm run start).
+// ⚠️ 첫 관리자 만들기 때만 쓰는 검사다. 관리자·test가 실제로 등록된 뒤에는 돌리지 마라 (등록을 바꾼다). 360px 화면 캡처를 checks/화면-캡처/ 에 남긴다 (가짜 데이터만).
 import path from 'node:path';
 import { chromium, type BrowserContext, type Page } from 'playwright-core';
 

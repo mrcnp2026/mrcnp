@@ -13,8 +13,20 @@ import { SoftAuthenticator } from '../tests/helpers/soft-authenticator.ts';
 
 config({ path: path.join(import.meta.dirname, '..', '.env.local'), quiet: true });
 const BASE = 'http://localhost:4123';
+// 이 스크립트가 만든 가짜 폰만 해제한다 — 사람이 직접 등록한 폰(의뢰인 PC 등)은 건드리지 않는다 (2026-10-02)
+const STARTED_AT = new Date().toISOString();
 const SHOTS = path.join(import.meta.dirname, '..', '..', 'checks', '화면-캡처');
 const db = createClient(process.env.NEXT_PUBLIC_SUPABASE_URL!, process.env.SUPABASE_SERVICE_ROLE_KEY!, { auth: { persistSession: false } });
+
+// 안전 정지: 사람이 직접 등록한 폰이 있으면 이 스크립트는 아무것도 하지 않는다 (2026-10-02 — 의뢰인 폰·PC 등록을 지우지 않게)
+for (const no of ['test']) {
+  const { data: pp } = await db.from('profiles').select('id').eq('employee_no', no).maybeSingle();
+  const { count } = pp ? await db.from('user_passkeys').select('id', { count: 'exact', head: true }).eq('employee_id', pp.id).is('revoked_at', null) : { count: 0 };
+  if (count) {
+    console.log(`중단: 사번 ${no}에 사람이 등록한 폰이 있습니다. 이 검사는 등록을 바꾸므로 실행하지 않습니다. (검사 전용 직원을 따로 만들어 쓰세요)`);
+    process.exit(2);
+  }
+}
 const results: string[] = [];
 const check = (c: boolean, m: string) => results.push(`${c ? 'PASS' : 'FAIL'} ${m}`);
 
@@ -24,7 +36,7 @@ async function post(p: string, body?: unknown) {
 }
 
 async function freshInvite(employeeId: string) {
-  await db.from('user_passkeys').update({ revoked_at: new Date().toISOString() }).eq('employee_id', employeeId).is('revoked_at', null);
+  await db.from('user_passkeys').update({ revoked_at: new Date().toISOString() }).eq('employee_id', employeeId).is('revoked_at', null).gte('created_at', STARTED_AT);
   await db.from('invites').update({ revoked_at: new Date().toISOString() }).eq('employee_id', employeeId).is('used_at', null).is('revoked_at', null);
   const token = randomBytes(32).toString('base64url');
   await db.from('invites').insert({ employee_id: employeeId, token_hash: createHash('sha256').update(token).digest('hex'), issued_via: 'admin', expires_at: new Date(Date.now() + 3_600_000).toISOString() });
@@ -88,7 +100,7 @@ try {
   check(!!last!.passkey_id, '어느 폰으로 찍었는지(passkey_id) 남음');
 
   // 해제된 폰으로는 안 찍힘
-  await db.from('user_passkeys').update({ revoked_at: new Date().toISOString() }).eq('employee_id', empId).is('revoked_at', null);
+  await db.from('user_passkeys').update({ revoked_at: new Date().toISOString() }).eq('employee_id', empId).is('revoked_at', null).gte('created_at', STARTED_AT);
   const revoked = await softPunch(phone, 'in');
   check(revoked.status === 400 && revoked.json.error === 'passkey_revoked', '해제된 폰으로 출퇴근 → 거부');
 
@@ -147,7 +159,7 @@ try {
   results.push(`FAIL 중단: ${(e as Error).message.split('\n')[0]}`);
 } finally {
   // 가짜 폰 등록 해제 (해제 기록은 남는다)
-  await db.from('user_passkeys').update({ revoked_at: new Date().toISOString(), device_label: 'E2E 가상 인증기 (자동 확인용)' }).eq('employee_id', empId).is('revoked_at', null);
+  await db.from('user_passkeys').update({ revoked_at: new Date().toISOString(), device_label: 'E2E 가상 인증기 (자동 확인용)' }).eq('employee_id', empId).is('revoked_at', null).gte('created_at', STARTED_AT);
   console.log(results.join('\n'));
   if (results.some((r) => r.startsWith('FAIL'))) process.exitCode = 1;
 }
