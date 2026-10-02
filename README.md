@@ -44,3 +44,10 @@
 ## 로그인 방식 (마스터 8-3)
 
 비밀번호가 없다. 폰의 패스키를 서버가 검증한 뒤 Supabase 1회용 로그인 링크를 서버 안에서 바로 세션으로 바꾼다 (`src/lib/session.ts`). 직원 계정 이메일은 받는 사람이 없는 `{사번}@staff.invalid`.
+
+## 배포 (게이트 9)
+
+- 주소: **https://mrcnp-saas.vercel.app** (Vercel 팀 `mrcnp`, 프로젝트 `mrcnp-saas`). 폰 등록(패스키)이 이 주소에 묶인다 — 바꾸면 전 직원 재등록 (B-13)
+- GitHub `mrcnp2026/mrcnp`의 `main`에 올리면 자동 배포된다. 이 PC의 로컬 브랜치는 `master` → `git push origin master:main`
+- ⚠️ Vercel 무료(Hobby) 팀은 **팀 멤버가 아닌 사람이 만든 커밋의 배포를 막는다(BLOCKED)**. 그래서 이 저장소의 커밋 작성자는 `mrcnp2026`으로 설정해 두었다 (`git config user.name/user.email`, 저장소 단위)
+- 서버 열쇠: Vercel → Settings → Environment Variables에 `NEXT_PUBLIC_SUPABASE_URL`·`NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY`·`SUPABASE_SERVICE_ROLE_KEY`(sensitive)·`APP_ORIGIN`. `SUPABASE_DB_URL`은 서버에 두지 않는다 (PC 검사용)
