@@ -17,7 +17,15 @@ export function InviteView({ name, invite, onClose }: { name: string; invite: In
       <h2 className="text-xl font-semibold">{t('inviteFor', { name })}</h2>
       {/* eslint-disable-next-line @next/next/no-img-element -- 서버가 만든 data: 주소라 이미지 최적화 대상이 아니다 */}
       <img src={invite.qrDataUrl} width={240} height={240} alt={t('inviteFor', { name })} className="rounded-card border border-border" />
-      <p className="text-center text-sm text-muted">{t('inviteHelp', { name })}</p>
+      <ol className="flex w-full flex-col gap-2 rounded-card bg-surface p-3 text-sm">
+        {(['step1', 'step2', 'step3'] as const).map((k, i) => (
+          <li key={k} className="flex items-start gap-3">
+            <span className="num flex size-6 shrink-0 items-center justify-center rounded-chip bg-primary text-xs font-semibold text-on-primary">{i + 1}</span>
+            <span className="pt-0.5">{t(k)}</span>
+          </li>
+        ))}
+      </ol>
+      <p className="text-center text-xs text-muted">{t('inviteHelp', { name })}</p>
       <p className="num text-sm text-faint">
         {t('inviteValidUntil', { time: f.dateTime(new Date(invite.expiresAt), { dateStyle: 'medium', timeStyle: 'short' }) })}
       </p>

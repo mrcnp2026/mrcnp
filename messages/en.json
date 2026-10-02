@@ -79,7 +79,10 @@
       "reviewing": "Request under review",
       "request": "Request correction",
       "more": "{n} more"
-    }
+    },
+    "now": "Current time",
+    "clockInLabel": "Clock-in",
+    "clockOutLabel": "Clock-out"
   },
   "errors": {
     "invite_invalid": "This invitation QR code has expired or was already used. Ask your manager for a new one.",
@@ -143,7 +146,10 @@
       "localhostWarning": "This address only works on this PC. Phones can register after the app is deployed (gate 9).",
       "duplicate_no": "This employee number already exists.",
       "invalid_no": "Employee number: letters, numbers and - only (up to 20).",
-      "invalid_name": "Please enter a name (up to 50 characters)."
+      "invalid_name": "Please enter a name (up to 50 characters).",
+      "step1": "Open the phone camera and point it at this QR code, then tap the link.",
+      "step2": "Tap \"Register this phone\" and unlock the phone the usual way (fingerprint, face or screen lock).",
+      "step3": "Add the app to the home screen. Every day: open it → tap Clock in → touch the fingerprint."
     },
     "more": {
       "title": "More",
@@ -334,5 +340,17 @@
     "reason_required": "Please write a reason (up to 200 characters).",
     "future_time": "You cannot request a time in the future.",
     "duplicate_request": "You already have a waiting request for this record."
+  },
+  "install": {
+    "title": "Add to your home screen",
+    "why": "Then you can open the app with one tap, like any other app.",
+    "close": "Close",
+    "ios1": "In Safari, tap the Share button at the bottom",
+    "ios2": "Scroll down and tap \"Add to Home Screen\"",
+    "ios3": "Tap \"Add\". Open the app from the new icon from now on.",
+    "android1": "In Chrome, tap the ⋮ menu at the top right",
+    "android2": "Tap \"Add to Home screen\" or \"Install app\"",
+    "android3": "Tap \"Add\". Open the app from the new icon from now on.",
+    "other1": "Open this page on your phone and add it to the home screen from the browser menu."
   }
 }

@@ -13,13 +13,17 @@ export default async function LoginPage() {
   const me = await getMe();
   if (me) redirect(homePathForRole(me.role));
   const t = await getTranslations('login');
+  const tc = await getTranslations('common');
   return (
     <PageShell>
-      <div className="flex items-center justify-between gap-2">
-        <Logo height={32} priority />
+      <div className="flex justify-end">
         <LanguageSwitcher options={languageOptions()} />
       </div>
-      <Card className="flex flex-col gap-4">
+      <section className="flex flex-col items-center gap-3 py-6 text-center">
+        <Logo height={56} priority />
+        <p className="text-sm text-muted">{tc('appName')}</p>
+      </section>
+      <Card className="flex flex-col gap-4 p-6">
         <h1 className="text-2xl font-semibold text-primary-deep">{t('title')}</h1>
         <p className="text-muted">{t('subtitle')}</p>
         <LoginButton />

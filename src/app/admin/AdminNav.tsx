@@ -21,7 +21,7 @@ export function AdminNav({ inboxCount }: { inboxCount: number }) {
   const path = usePathname();
   return (
     <nav
-      className="fixed inset-x-0 bottom-0 z-10 border-t border-border bg-bg pb-[env(safe-area-inset-bottom)] lg:static lg:min-h-dvh lg:w-48 lg:border-t-0 lg:border-r lg:pb-0"
+      className="fixed inset-x-0 bottom-0 z-20 border-t border-border bg-bg pb-[env(safe-area-inset-bottom)] lg:sticky lg:top-0 lg:h-dvh lg:w-56 lg:border-t-0 lg:border-r lg:pb-0"
     >
       <div className="hidden px-4 pt-5 pb-3 lg:block">
         <Logo height={32} />

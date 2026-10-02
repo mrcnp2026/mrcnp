@@ -1,13 +1,15 @@
 'use client';
 // 숫자 5칸 — 360px에서 스크롤 없이 먼저 보이고, 탭하면 이름이 펼쳐진다 (7-9 요점 2). 표를 쓰지 않는다.
 // 휴무(off)는 숫자 칸 없이 아래에 접어 둔다 (요점 8). 색은 예외에만 (R-10-5) — 숫자 칸 자체는 칠하지 않는다.
-import { ChevronDown } from 'lucide-react';
+import { AlarmClock, Briefcase, ChevronDown, CircleCheck, Moon, UserX, Users, type LucideIcon } from 'lucide-react';
 import { useFormatter, useTranslations } from 'next-intl';
 import { useState } from 'react';
 import { Card, Chip } from '@/components/ui';
 import type { BoardRow, DayStatus } from '@/lib/today';
 
 const ORDER: Exclude<DayStatus, 'off'>[] = ['working', 'late', 'absent', 'done', 'overtime'];
+const ICON: Record<Exclude<DayStatus, 'off'>, LucideIcon> = { working: Briefcase, late: AlarmClock, absent: UserX, done: CircleCheck, overtime: Moon };
+const ATTENTION = new Set<DayStatus>(['late', 'overtime']);
 
 export function BoardView({
   board,
@@ -57,22 +59,36 @@ export function BoardView({
   return (
     <div className="flex flex-col gap-3">
       <div className="grid grid-cols-3 gap-2" role="tablist">
-        {ORDER.map((k) => (
-          <button
-            key={k}
-            type="button"
-            role="tab"
-            aria-selected={open === k}
-            onClick={() => setOpen(open === k ? null : k)}
-            className={`flex min-h-20 flex-col items-center justify-center rounded-card border p-2 ${open === k ? 'border-primary bg-primary-tint' : 'border-border bg-bg'}`}
-          >
-            <span className="num text-3xl font-bold text-text">{board[k].length}</span>
-            <span className="text-sm text-muted">{th(`status.${k}`)}</span>
-          </button>
-        ))}
-        <div className="flex min-h-20 flex-col items-center justify-center rounded-card bg-surface p-2">
-          <span className="num text-3xl font-bold text-faint">{total}</span>
-          <span className="text-sm text-faint">{t('total')}</span>
+        {ORDER.map((k) => {
+          const Icon = ICON[k];
+          const attention = ATTENTION.has(k) && board[k].length > 0;
+          return (
+            <button
+              key={k}
+              type="button"
+              role="tab"
+              aria-selected={open === k}
+              onClick={() => setOpen(open === k ? null : k)}
+              className={`flex min-h-24 flex-col items-start justify-between rounded-card border p-3 text-left shadow-card ${open === k ? 'border-primary bg-primary-tint' : 'border-border bg-bg'}`}
+            >
+              <span className={`flex size-7 items-center justify-center rounded-button ${attention ? 'bg-warn-tint text-warn' : 'bg-surface text-muted'}`}>
+                <Icon aria-hidden size={16} strokeWidth={1.75} />
+              </span>
+              <span>
+                <span className={`num block text-3xl leading-none font-bold ${attention ? 'text-warn' : 'text-text'}`}>{board[k].length}</span>
+                <span className="mt-1 block text-xs text-muted">{th(`status.${k}`)}</span>
+              </span>
+            </button>
+          );
+        })}
+        <div className="flex min-h-24 flex-col items-start justify-between rounded-card border border-border bg-primary-deep p-3">
+          <span className="flex size-7 items-center justify-center rounded-button bg-bg text-primary-deep">
+            <Users aria-hidden size={16} strokeWidth={1.75} />
+          </span>
+          <span>
+            <span className="num block text-3xl leading-none font-bold text-on-primary">{total}</span>
+            <span className="mt-1 block text-xs text-on-primary">{t('total')}</span>
+          </span>
         </div>
       </div>
 

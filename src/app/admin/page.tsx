@@ -2,9 +2,9 @@
 // 홈에서 승인하지 않는다 — 요약을 누르면 처리함으로 간다 (5장 규칙 2).
 // 연습 기록은 기본으로 빼고(4-6), 연습 기간에는 "연습 기록으로 보기"로 따로 볼 수 있다 (연습 배너가 항상 붙는다).
 import { Inbox, TriangleAlert } from 'lucide-react';
-import { getTranslations } from 'next-intl/server';
+import { getFormatter, getTranslations } from 'next-intl/server';
 import Link from 'next/link';
-import { Card, PageShell } from '@/components/ui';
+import { Card, CardTitle, PageShell } from '@/components/ui';
 import { resolveDayType } from '@/config/labor-rules';
 import { OFFICE } from '@/config/office';
 import { addDays, weekStartOf } from '@/lib/calendar';
@@ -18,6 +18,7 @@ import { BoardView } from './BoardView';
 
 export default async function AdminHome({ searchParams }: { searchParams: Promise<{ practice?: string }> }) {
   const t = await getTranslations('admin.home');
+  const fmt = await getFormatter();
   const sp = await searchParams;
   const practiceView = OFFICE.practiceMode && sp.practice === '1';
   const now = new Date();
@@ -68,7 +69,10 @@ export default async function AdminHome({ searchParams }: { searchParams: Promis
     <PageShell>
       <AutoRefresh seconds={30} />
       <header className="flex items-baseline justify-between gap-2">
-        <h1 className="text-2xl font-semibold text-primary-deep">{t('title')}</h1>
+        <div>
+          <p className="text-sm text-muted">{fmt.dateTime(now, { dateStyle: 'full' })}</p>
+          <h1 className="text-2xl font-semibold text-primary-deep">{t('title')}</h1>
+        </div>
         {OFFICE.practiceMode && (
           <Link href={practiceView ? '/admin' : '/admin?practice=1'} className="min-h-11 content-center text-sm text-primary">
             {practiceView ? t('showLive') : t('showPractice')}
@@ -86,10 +90,7 @@ export default async function AdminHome({ searchParams }: { searchParams: Promis
       <BoardView board={board} total={active.length} limitMinutes={OFFICE.weeklyLimitHours * 60} cautionMinutes={OFFICE.weeklyCautionHours * 60} colored={OFFICE.workplaceSize === '5_or_more'} />
 
       <Card className="flex flex-col gap-1">
-        <h2 className="flex items-center gap-2 font-semibold">
-          <Inbox aria-hidden size={20} strokeWidth={1.75} />
-          {t('todo')}
-        </h2>
+        <CardTitle icon={Inbox}>{t('todo')}</CardTitle>
         <ul className="divide-y divide-border">
           {todo.map((x) => (
             <li key={x.key}>

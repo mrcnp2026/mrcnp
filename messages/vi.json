@@ -80,7 +80,10 @@
       "reviewing": "Đang xem xét yêu cầu",
       "request": "Yêu cầu sửa",
       "more": "Còn {n} mục"
-    }
+    },
+    "now": "Giờ hiện tại",
+    "clockInLabel": "Giờ vào",
+    "clockOutLabel": "Giờ ra"
   },
   "errors": {
     "invite_invalid": "Mã QR mời đã hết hạn hoặc đã được dùng. Hãy xin quản lý mã mới.",
@@ -161,5 +164,17 @@
     "reason_required": "Vui lòng ghi lý do (tối đa 200 ký tự).",
     "future_time": "Không thể yêu cầu giờ trong tương lai.",
     "duplicate_request": "Đã có yêu cầu đang chờ cho dữ liệu này."
+  },
+  "install": {
+    "title": "Thêm vào màn hình chính",
+    "why": "Sau đó bạn mở ứng dụng bằng một lần chạm, như các ứng dụng khác.",
+    "close": "Đóng",
+    "ios1": "Trong Safari, chạm nút Chia sẻ ở phía dưới",
+    "ios2": "Kéo xuống và chạm \"Thêm vào MH chính\"",
+    "ios3": "Chạm \"Thêm\". Từ nay hãy mở ứng dụng bằng biểu tượng mới.",
+    "android1": "Trong Chrome, chạm menu ⋮ ở góc trên bên phải",
+    "android2": "Chạm \"Thêm vào màn hình chính\" hoặc \"Cài đặt ứng dụng\"",
+    "android3": "Chạm \"Thêm\". Từ nay hãy mở ứng dụng bằng biểu tượng mới.",
+    "other1": "Mở trang này trên điện thoại và thêm vào màn hình chính từ menu trình duyệt."
   }
 }

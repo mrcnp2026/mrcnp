@@ -5,13 +5,13 @@
 // - 누르면 폰 확인(지문·얼굴·PIN) → 서버가 정한 시각을 큰 숫자로 확인시킨다 (R-10-8 신뢰 장치)
 // - 기록 중에는 버튼을 막고 "기록하는 중" — 두 번 눌러도 한 번만 (7-4 요점 1)
 import { browserSupportsWebAuthn, startAuthentication } from '@simplewebauthn/browser';
-import { Check, Clock, LogIn, LogOut } from 'lucide-react';
+import { CalendarClock, Check, Clock, LogIn, LogOut } from 'lucide-react';
 import { useFormatter, useTranslations } from 'next-intl';
 import { useRouter } from 'next/navigation';
 import { useState } from 'react';
 import { callApi, passkeyBrowserError } from '@/components/client-api';
 import { ErrorNote } from '@/components/ErrorNote';
-import { Card, Chip } from '@/components/ui';
+import { Card, CardTitle, Chip } from '@/components/ui';
 import type { DayStatus } from '@/lib/today';
 
 type Result = { kind: 'in' | 'out'; punchedAt: string; ipVerified: boolean; isTest: boolean; deduped: boolean };
@@ -26,7 +26,6 @@ const STATUS_TONE: Record<DayStatus, 'neutral' | 'ok' | 'warn' | 'info'> = {
 };
 
 export function TodayCard(props: {
-  dateLabel: string;
   schedule: string | null;
   status: DayStatus;
   firstIn: string | null;
@@ -74,23 +73,35 @@ export function TodayCard(props: {
   const Icon = kind === 'in' ? LogIn : LogOut;
   return (
     <Card className="flex flex-col gap-4">
-      <div className="flex items-start justify-between gap-2">
-        <div>
-          <p className="text-sm text-faint">{t('today')}</p>
-          <p className="font-semibold">{props.dateLabel}</p>
-          <p className="num text-sm text-muted">{props.schedule ?? t('noRule')}</p>
-        </div>
-        <div className="flex flex-col items-end gap-1">
-          <Chip tone={STATUS_TONE[props.status]}>{t(`status.${props.status}`)}</Chip>
-          {/* 연습 모드 배지: 연한 파랑 + 파랑 글자 — 주황·초록·빨강 금지 (4-6, R-10-8 규칙 7) */}
-          {props.practice && <Chip tone="info">{tc('practiceBadge')}</Chip>}
-        </div>
-      </div>
+      <CardTitle
+        icon={CalendarClock}
+        aside={
+          <div className="flex flex-wrap justify-end gap-1">
+            <Chip tone={STATUS_TONE[props.status]}>{t(`status.${props.status}`)}</Chip>
+            {/* 연습 모드 배지: 연한 파랑 + 파랑 글자 — 주황·초록·빨강 금지 (4-6, R-10-8 규칙 7) */}
+            {props.practice && <Chip tone="info">{tc('practiceBadge')}</Chip>}
+          </div>
+        }
+      >
+        <span className="flex flex-col">
+          <span>{t('today')}</span>
+          <span className="num text-sm font-normal whitespace-nowrap text-muted">{props.schedule ?? t('noRule')}</span>
+        </span>
+      </CardTitle>
 
-      {(props.firstIn || props.lastOut) && (
-        <div className="flex flex-wrap items-center gap-2 text-base">
-          {props.firstIn && <span className="num font-semibold">{t('inAt', { time: time(props.firstIn) })}</span>}
-          {props.lastOut && !props.isOpen && <span className="num font-semibold">{t('outAt', { time: time(props.lastOut) })}</span>}
+      <div className="grid grid-cols-2 gap-2">
+        {(['in', 'out'] as const).map((k) => {
+          const v = k === 'in' ? props.firstIn : !props.isOpen ? props.lastOut : null;
+          return (
+            <div key={k} className="rounded-button bg-surface p-3">
+              <p className="text-xs text-muted">{t(k === 'in' ? 'clockInLabel' : 'clockOutLabel')}</p>
+              <p className={`num text-2xl font-bold ${v ? 'text-text' : 'text-faint'}`}>{v ? time(v) : '--:--'}</p>
+            </div>
+          );
+        })}
+      </div>
+      {(props.firstInVerified !== null || props.lateMinutes !== null) && (
+        <div className="flex flex-wrap items-center gap-2">
           {props.firstInVerified === true && <Chip tone="ok">{t('office')}</Chip>}
           {props.firstInVerified === false && <Chip tone="warn">{t('outside')}</Chip>}
           {props.lateMinutes !== null && <Chip tone="warn">{t('lateBy', { n: props.lateMinutes })}</Chip>}

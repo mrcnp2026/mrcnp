@@ -1,9 +1,9 @@
 // 이번 주 누적 막대 (부록 R-10-3, ①-1 7-13). 서버가 계산한 값만 그린다 — 화면이 다시 계산하지 않는다.
 // 막대 길이는 52시간 = 100%. 넘으면 끝에서 멈추고 "52h+". 40·52시간 눈금. 색만 쓰지 않고 숫자와 상태 글자를 함께.
 // 알림은 보내지 않는다 (7-13 요점 3). 5인 미만이면 색 없이 숫자만 (요점 4).
-import { AlertTriangle } from 'lucide-react';
+import { AlertTriangle, ChartNoAxesColumn } from 'lucide-react';
 import { getTranslations } from 'next-intl/server';
-import { Card } from '@/components/ui';
+import { Card, CardTitle } from '@/components/ui';
 import type { weeklyHours } from '@/lib/weekly-hours';
 
 export async function WeekBar({
@@ -33,13 +33,17 @@ export async function WeekBar({
 
   return (
     <Card className="flex flex-col gap-2">
-      <div className="flex items-baseline justify-between">
-        <h2 className="font-semibold">{t('title')}</h2>
-        <p className={`num flex items-center gap-1 text-xl font-semibold ${textColor}`}>
-          {week.colored && week.level !== 'normal' && <AlertTriangle aria-hidden size={18} strokeWidth={1.75} />}
-          {over ? t('over52') : t('total', { h, m })}
-        </p>
-      </div>
+      <CardTitle
+        icon={ChartNoAxesColumn}
+        aside={
+          <p className={`num flex items-center gap-1 text-xl font-semibold ${textColor}`}>
+            {week.colored && week.level !== 'normal' && <AlertTriangle aria-hidden size={18} strokeWidth={1.75} />}
+            {over ? t('over52') : t('total', { h, m })}
+          </p>
+        }
+      >
+        {t('title')}
+      </CardTitle>
       <div className="relative h-3 rounded-chip bg-surface" role="img" aria-label={t('total', { h, m })}>
         <div className={`h-3 rounded-chip ${barColor}`} style={{ width: `${pct}%` }} />
         <div className="absolute top-0 h-3 border-l-2 border-muted" style={{ left: `${(regularHours / limitHours) * 100}%` }} />

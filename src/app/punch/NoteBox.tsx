@@ -6,7 +6,7 @@ import { useTranslations } from 'next-intl';
 import { useState } from 'react';
 import { callApi } from '@/components/client-api';
 import { ErrorNote } from '@/components/ErrorNote';
-import { Button, Card } from '@/components/ui';
+import { Button, Card, CardTitle } from '@/components/ui';
 
 const MAX = 200;
 
@@ -20,10 +20,7 @@ export function NoteBox({ initial }: { initial: string | null }) {
 
   return (
     <Card className="flex flex-col gap-2">
-      <h2 className="flex items-center gap-2 font-semibold">
-        <NotebookPen aria-hidden size={20} strokeWidth={1.75} />
-        {t('title')}
-      </h2>
+      <CardTitle icon={NotebookPen}>{t('title')}</CardTitle>
       {!editing && saved !== null ? (
         <>
           <p className="whitespace-pre-wrap break-words">{saved}</p>

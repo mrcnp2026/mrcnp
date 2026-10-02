@@ -1,6 +1,6 @@
 // 공통 화면 조각. 색·모서리·글자 크기는 theme.ts 토큰 이름(bg-primary, rounded-card …)만 쓴다 (R-10-8).
 // 문장은 여기 쓰지 않는다 — 부르는 쪽이 번역 파일에서 읽어 넘긴다 (4-10).
-import { AlertTriangle, Check } from 'lucide-react';
+import { AlertTriangle, Check, type LucideIcon } from 'lucide-react';
 import type { ButtonHTMLAttributes, ReactNode } from 'react';
 
 export function Card({ children, className = '' }: { children: ReactNode; className?: string }) {
@@ -43,6 +43,21 @@ export function Chip({ tone = 'neutral', children }: { tone?: Tone; children: Re
       {tone === 'warn' && <AlertTriangle aria-hidden size={14} strokeWidth={1.75} />}
       {children}
     </span>
+  );
+}
+
+/** 카드 제목 — 연한 파랑 타일 안의 선 아이콘 + 제목. 색 면적은 작게 (R-10-8 색 규칙 1) */
+export function CardTitle({ icon: Icon, children, aside }: { icon: LucideIcon; children: ReactNode; aside?: ReactNode }) {
+  return (
+    <div className="flex items-center justify-between gap-2">
+      <h2 className="flex items-center gap-3 font-semibold">
+        <span className="flex size-8 items-center justify-center rounded-button bg-primary-tint text-primary">
+          <Icon aria-hidden size={18} strokeWidth={1.75} />
+        </span>
+        {children}
+      </h2>
+      {aside}
+    </div>
   );
 }
 

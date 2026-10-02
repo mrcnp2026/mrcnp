@@ -25,7 +25,7 @@ export default async function RootLayout({ children }: Readonly<{ children: Reac
       <head>
         <style>{themeCssVariables()}</style>
       </head>
-      <body className="min-h-dvh bg-bg font-sans text-text antialiased">
+      <body className="min-h-dvh bg-surface font-sans text-text antialiased">
         <NextIntlClientProvider>{children}</NextIntlClientProvider>
       </body>
     </html>

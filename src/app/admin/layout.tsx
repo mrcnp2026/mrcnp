@@ -2,6 +2,7 @@
 import { redirect } from 'next/navigation';
 import { getMe } from '@/lib/auth';
 import { pendingCounts } from '@/lib/period-data';
+import { TopBar } from '@/components/TopBar';
 import { AdminNav } from './AdminNav';
 
 export default async function AdminLayout({ children }: { children: React.ReactNode }) {
@@ -13,7 +14,12 @@ export default async function AdminLayout({ children }: { children: React.ReactN
     <div className="lg:flex">
       <AdminNav inboxCount={c.overtime + c.corrections} />
       {/* 폰에서는 하단 탭 바 높이 + 아이폰 하단 여백만큼 비운다 */}
-      <div className="flex-1 pb-[calc(4rem+env(safe-area-inset-bottom))] lg:pb-0">{children}</div>
+      <div className="flex-1 pb-[calc(4rem+env(safe-area-inset-bottom))] lg:pb-0">
+        <div className="lg:hidden">
+          <TopBar />
+        </div>
+        {children}
+      </div>
     </div>
   );
 }

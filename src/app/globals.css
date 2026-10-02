@@ -36,7 +36,8 @@
 }
 
 html {
-  background: var(--t-color-bg);
+  /* 바탕은 연한 회색(surface), 카드는 흰색 — 흰 카드가 떠 보여야 정보 묶음이 읽힌다 (R-10-8 표: bg/surface) */
+  background: var(--t-color-surface);
   color: var(--t-color-text);
 }
 body {
