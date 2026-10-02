@@ -11,7 +11,7 @@ export default async function PunchLayout({ children }: { children: React.ReactN
   const me = await getMe();
   if (!me) redirect('/login');
   // 공지 팝업: 대상 · 게시 중 · 현재 판 미확인 · 최대 3개 (②-5 7-15 요점 19). 언어는 지금 고른 언어
-  const pending = (await pendingNoticesFor(me.id, await getLocale(), new Date())).map(({ id, version, important, display, original }) => ({ id, version, important, display, original }));
+  const pending = (await pendingNoticesFor(me.id, await getLocale())).map(({ id, version, important, display, original }) => ({ id, version, important, display, original }));
   return (
     <>
       <div className="pb-[calc(4rem+env(safe-area-inset-bottom))]">{children}</div>

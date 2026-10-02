@@ -16,7 +16,7 @@ import { languageOptions } from '@/i18n/locales';
 import { loadEmployeeToday } from '@/lib/attendance-data';
 import { getMe } from '@/lib/auth';
 import { loadEmployeeRecent } from '@/lib/employee-data';
-import { visibleNoticesFor } from '@/lib/notices';
+import { visibleNoticesNow } from '@/lib/notices';
 import { kstDateTime } from '@/lib/time';
 import { MissingBanner } from './MissingBanner';
 import { NoteBox } from './NoteBox';
@@ -29,7 +29,7 @@ export default async function PunchPage() {
   const t = await getTranslations('home');
   const f = await getFormatter();
   const now = new Date();
-  const [today, recent, notices] = await Promise.all([loadEmployeeToday(me.id, now), loadEmployeeRecent(me.id, now), visibleNoticesFor(me.id, await getLocale(), now)]);
+  const [today, recent, notices] = await Promise.all([loadEmployeeToday(me.id, now), loadEmployeeRecent(me.id, now), visibleNoticesNow(me.id, await getLocale())]);
   const unread = notices.filter((n) => !n.confirmed).length;
   const hm = (time: string) => f.dateTime(kstDateTime(today.workDate, time), { hour: '2-digit', minute: '2-digit', hourCycle: 'h23' });
 

@@ -1,5 +1,6 @@
 // 공지 — 서버 전용 읽기·쓰기 (②-5 7-15). 쓰기는 전부 여기를 거친다 (브라우저 쓰기 권한 없음).
 import 'server-only';
+import { cache } from 'react';
 import { selectableLocales, type Locale } from '@/i18n/locales';
 import { noticeState, numbersMatch, pickDisplay, popupOrder, type NoticeRow, type TranslationRow } from '@/lib/notice-logic';
 import { createAdminClient } from '@/lib/supabase/admin';
@@ -141,9 +142,12 @@ export async function setStatus(noticeId: string, status: 'published' | 'archive
   if (error) throw new Error(`notice.status: ${error.code}`);
 }
 
+/** 지금 시각 기준 직원 공지 — 한 요청 안에서 한 번만 읽는다 (틀의 팝업과 홈의 종 아이콘이 같이 쓴다) */
+export const visibleNoticesNow = cache((employeeId: string, locale: string) => visibleNoticesFor(employeeId, locale, new Date()));
+
 /** 직원에게 지금 보여 줄 공지 (요점 19): 대상 · 게시 중 · 현재 판을 아직 확인 안 함 */
-export async function pendingNoticesFor(employeeId: string, locale: string, now: Date) {
-  const all = await visibleNoticesFor(employeeId, locale, now);
+export async function pendingNoticesFor(employeeId: string, locale: string) {
+  const all = await visibleNoticesNow(employeeId, locale);
   return popupOrder(all.filter((n) => !n.confirmed), 3);
 }
 

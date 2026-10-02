@@ -1,5 +1,6 @@
 // 지금 요청한 사람이 누구인가. 서버 전용.
 import 'server-only';
+import { cache } from 'react';
 import { createAdminClient } from '@/lib/supabase/admin';
 import { createClient } from '@/lib/supabase/server';
 
@@ -13,8 +14,11 @@ export type Me = {
   canViewPayroll: boolean; // 부록 R-2의 7: 급여 담당자만 급여용 CSV를 받는다
 };
 
-/** 로그인 세션 → 직원 정보. 세션이 없거나 퇴사 처리된 직원이면 null */
-export async function getMe(): Promise<Me | null> {
+/**
+ * 로그인 세션 → 직원 정보. 세션이 없거나 퇴사 처리된 직원이면 null.
+ * 한 요청 안에서는 한 번만 확인한다 (cache) — 틀·언어·본문이 각각 부르면 화면마다 3~4번 DB를 왕복해 느려진다 (2026-10-02)
+ */
+export const getMe = cache(async (): Promise<Me | null> => {
   const supabase = await createClient();
   const { data } = await supabase.auth.getUser(); // 서버에서 토큰을 다시 확인한다 (쿠키만 믿지 않는다)
   if (!data.user) return null;
@@ -28,7 +32,7 @@ export async function getMe(): Promise<Me | null> {
     id: p.id, name: p.name, employeeNo: p.employee_no, role: p.role, locale: p.locale, active: p.active,
     canViewPayroll: p.can_view_payroll,
   };
-}
+});
 
 export async function requireAdmin(): Promise<Me | null> {
   const me = await getMe();
