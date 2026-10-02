@@ -95,7 +95,7 @@ export default async function RecordsPage({ searchParams }: { searchParams: Prom
             <thead className="bg-surface text-xs text-muted">
               <tr>
                 {(['name', 'workedCol', 'actual', 'approved', 'pending', 'unreviewed', 'nightCol', 'holidayCol', 'lateCol', 'absentCol'] as const).map((k) => (
-                  <th key={k} className="px-2 py-2 text-right whitespace-nowrap first:w-1/5 first:text-left">{t(k)}</th>
+                  <th key={k} className="px-2 py-2 text-right leading-tight break-words first:w-1/5 first:text-left">{t(k)}</th>
                 ))}
               </tr>
             </thead>

@@ -16,7 +16,8 @@
     "i18n:export": "tsx scripts/export-translations.mts",
     "e2e:gate4": "tsx scripts/e2e-gate4.mts",
     "e2e:gate6-8": "tsx scripts/e2e-gate6-8.mts",
-    "db:holidays": "tsx scripts/seed-holidays.mts"
+    "db:holidays": "tsx scripts/seed-holidays.mts",
+    "audit:overflow": "tsx scripts/audit-overflow.mts"
   },
   "dependencies": {
     "@simplewebauthn/browser": "^14.0.0",
