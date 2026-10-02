@@ -1,4 +1,5 @@
 'use client';
+import { DateTimeInput } from '@/components/DateTimeInput';
 import { UserPlus } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 import { useRouter } from 'next/navigation';
@@ -61,7 +62,7 @@ export function AddEmployeeForm({ locales }: { locales: { code: string; name: st
         </label>
         <label className="flex flex-col gap-1 text-sm text-muted">
           {t('joinedOn')}
-          <input name="joinedOn" type="date" className={`num ${field}`} />
+          <DateTimeInput name="joinedOn" type="date" className={`num ${field}`} />
         </label>
         {err && <ErrorNote code={err.code} requestId={err.requestId} namespace="admin.members" />}
         <Button type="submit" disabled={busy} className="w-full">

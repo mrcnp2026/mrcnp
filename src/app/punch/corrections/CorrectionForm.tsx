@@ -1,4 +1,5 @@
 'use client';
+import { DateTimeInput } from '@/components/DateTimeInput';
 import { useTranslations } from 'next-intl';
 import { useRouter } from 'next/navigation';
 import { useState } from 'react';
@@ -61,7 +62,7 @@ export function CorrectionForm(props: {
           <>
             <label className="flex flex-col gap-1 text-sm text-muted">
               {t('date')}
-              <input name="workDate" type="date" required max={props.today} defaultValue={props.initialDate ?? ''} className={`num ${field}`} />
+              <DateTimeInput name="workDate" type="date" required max={props.today} defaultValue={props.initialDate ?? ''} className={`num ${field}`} />
             </label>
             <label className="flex flex-col gap-1 text-sm text-muted">
               {t('which')}
@@ -88,7 +89,7 @@ export function CorrectionForm(props: {
           <>
             <label className="flex flex-col gap-1 text-sm text-muted">
               {t('time')}
-              <input name="time" type="time" required className={`num ${field}`} />
+              <DateTimeInput name="time" type="time" required className={`num ${field}`} />
             </label>
             <label className="flex min-h-11 items-center gap-2 text-sm">
               <input name="nextDay" type="checkbox" className="size-5" />

@@ -2,6 +2,7 @@
 // 공지 작성·번역·게시 (②-5 7-15, 폰 기준). 사진은 다음 단계(아직 없음).
 // 순서: ① 한국어 제목·본문 저장 → ② 번역 초안(켜진 언어만, 지금은 영어) → 고치고 「확인했음」 → ③ 게시
 // 게시 뒤 고칠 때는 「내용 변경 — 다시 모두에게」(기본) / 「오타 수정」 중 하나 (요점 15). 삭제는 없고 보관만.
+import { DateTimeInput } from '@/components/DateTimeInput';
 import { Archive, Languages, Megaphone, RotateCcw, Save, Send } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 import { useRouter } from 'next/navigation';
@@ -175,11 +176,11 @@ export function NoticeEditor({ people, initial }: { people: { id: string; name: 
         <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
           <label className="flex flex-col gap-1 text-sm text-muted">
             {t('startsAt')}
-            <input type="datetime-local" value={f.startsAt} onChange={(e) => upd({ startsAt: e.target.value })} className={`num ${field}`} />
+            <DateTimeInput type="datetime-local" value={f.startsAt} onChange={(v) => upd({ startsAt: v })} className={`num ${field}`} />
           </label>
           <label className="flex flex-col gap-1 text-sm text-muted">
             {t('endsAt')}
-            <input type="datetime-local" value={f.endsAt} onChange={(e) => upd({ endsAt: e.target.value })} className={`num ${field}`} />
+            <DateTimeInput type="datetime-local" value={f.endsAt} onChange={(v) => upd({ endsAt: v })} className={`num ${field}`} />
           </label>
         </div>
         {published && (

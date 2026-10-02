@@ -68,3 +68,8 @@ button:not(:disabled):active, a:active, summary:active, [role='button']:active {
 @media (prefers-reduced-motion: reduce) {
   * { transition: none !important; animation: none !important; }
 }
+
+/* 날짜·시각 칸: 브라우저 기본 글자(폰 언어로 "연도-월-일"·"오전")를 숨기고 앱이 그린 글자만 보이게 (DateTimeInput.tsx) */
+.dt-native::-webkit-datetime-edit {
+  opacity: 0;
+}

@@ -7,7 +7,12 @@
     "back": "뒤로",
     "practiceBadge": "연습",
     "translationNotice": "참고용 번역이며 한국어가 원본입니다.",
-    "pages": "페이지"
+    "pages": "페이지",
+    "dateFormat": {
+      "date": "연도-월-일",
+      "time": "시:분",
+      "dateTime": "연도-월-일 시:분"
+    }
   },
   "login": {
     "title": "로그인",

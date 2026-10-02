@@ -7,7 +7,12 @@
     "working": "กรุณารอสักครู่…",
     "back": "ย้อนกลับ",
     "practiceBadge": "ทดลอง",
-    "translationNotice": "นี่เป็นคำแปลเพื่อการอ้างอิง ต้นฉบับคือภาษาเกาหลี"
+    "translationNotice": "นี่เป็นคำแปลเพื่อการอ้างอิง ต้นฉบับคือภาษาเกาหลี",
+    "dateFormat": {
+      "date": "YYYY-MM-DD",
+      "time": "HH:MM",
+      "dateTime": "YYYY-MM-DD HH:MM"
+    }
   },
   "login": {
     "title": "เข้าสู่ระบบ",

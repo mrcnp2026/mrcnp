@@ -7,7 +7,12 @@
     "back": "Back",
     "practiceBadge": "Practice",
     "translationNotice": "This is a reference translation. The Korean text is the original.",
-    "pages": "Pages"
+    "pages": "Pages",
+    "dateFormat": {
+      "date": "YYYY-MM-DD",
+      "time": "HH:MM",
+      "dateTime": "YYYY-MM-DD HH:MM"
+    }
   },
   "login": {
     "title": "Sign in",

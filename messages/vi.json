@@ -7,7 +7,12 @@
     "working": "Vui lòng chờ…",
     "back": "Quay lại",
     "practiceBadge": "Thử nghiệm",
-    "translationNotice": "Đây là bản dịch tham khảo. Bản tiếng Hàn là bản gốc."
+    "translationNotice": "Đây là bản dịch tham khảo. Bản tiếng Hàn là bản gốc.",
+    "dateFormat": {
+      "date": "YYYY-MM-DD",
+      "time": "HH:MM",
+      "dateTime": "YYYY-MM-DD HH:MM"
+    }
   },
   "login": {
     "title": "Đăng nhập",
