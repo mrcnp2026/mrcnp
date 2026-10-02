@@ -7,6 +7,7 @@ import Link from 'next/link';
 import { ErrorNote } from '@/components/ErrorNote';
 import { LanguageSwitcher } from '@/components/LanguageSwitcher';
 import { Logo } from '@/components/Logo';
+import { OpenExternal } from '@/components/OpenExternal';
 import { InAppWarning } from '@/components/PasskeyHelp';
 import { Card, PageShell } from '@/components/ui';
 import { isLocale, languageOptions, selectableLocales, type Locale } from '@/i18n/locales';
@@ -36,6 +37,7 @@ export default async function RegisterPage({ searchParams }: { searchParams: Pro
   return (
     <NextIntlClientProvider locale={locale} messages={messagesFor(locale)}>
       <PageShell>
+        <OpenExternal />
         <div className="flex items-center justify-between gap-2">
           <Logo height={32} priority />
           {!invite && <LanguageSwitcher options={languageOptions()} />}

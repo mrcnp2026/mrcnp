@@ -3,6 +3,7 @@ import { getTranslations } from 'next-intl/server';
 import Link from 'next/link';
 import { redirect } from 'next/navigation';
 import { LanguageSwitcher } from '@/components/LanguageSwitcher';
+import { OpenExternal } from '@/components/OpenExternal';
 import { Logo } from '@/components/Logo';
 import { Card, PageShell } from '@/components/ui';
 import { languageOptions } from '@/i18n/locales';
@@ -17,6 +18,7 @@ export default async function LoginPage() {
   const tc = await getTranslations('common');
   return (
     <PageShell>
+      <OpenExternal />
       <div className="flex justify-end">
         <LanguageSwitcher options={languageOptions()} />
       </div>
