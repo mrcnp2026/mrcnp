@@ -28,6 +28,10 @@ export const OFFICE = {
   weeklyCautionHours: 48, // 7-13
   weeklyLimitHours: 52, // 7-13
 
+  // 부록 R-12-2: 계산 모듈(worktime·overtime·lateness·labor-rules)을 바꿀 때마다 올린다.
+  // 집계 결과를 저장하는 곳에 함께 남겨 "어느 숫자가 어느 코드로 나왔는지" 알게 한다.
+  calcVersion: '2026.10-1',
+
   // 부록 R-5의 7: 진단용 IP 로그 보존 기간(일). 본문이 값을 비워 둬서 부록이 30일로 정함
   diagIpLogRetentionDays: 30,
 } as const;
