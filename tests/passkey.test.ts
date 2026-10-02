@@ -58,6 +58,7 @@ describe('폰 등록', () => {
     const opts = await svc.beginRegistration('tok-1');
     expect(opts.user.name).toBe('A001');
     expect(opts.authenticatorSelection?.userVerification).toBe('required');
+    expect(opts.authenticatorSelection?.authenticatorAttachment).toBe('platform'); // USB 보안키 제외
     const phone = new SoftAuthenticator(RP.rpID, RP.origin);
     const r = await svc.finishRegistration('tok-1', phone.register(opts.challenge), 'Android');
     expect(r.employeeId).toBe(EMP);

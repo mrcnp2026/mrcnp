@@ -144,6 +144,9 @@ export function createPasskeyService(store: PasskeyStore, rp: RpConfig, clock: (
       userID: new TextEncoder().encode(inv.employeeId),
       attestationType: 'none',
       authenticatorSelection: {
+        // 그 기기에 내장된 잠금(폰의 지문·얼굴·PIN, PC의 Windows Hello)으로만 등록한다.
+        // USB 보안키는 빌려줄 수 있어 "직원당 폰 1대"(4-11)를 무너뜨리고, 브라우저가 USB를 먼저 묻는 혼란도 생긴다 (2026-10-02 실측)
+        authenticatorAttachment: 'platform',
         residentKey: 'required', // 사번을 입력하지 않고 "폰으로 로그인" 한 번에 되게
         userVerification: 'required', // 요점 1: 화면 잠금(지문·얼굴·PIN) 필수
       },
