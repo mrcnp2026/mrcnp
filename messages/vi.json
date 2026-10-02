@@ -60,8 +60,6 @@
     "outsideOffice": "Đã ghi. Có vẻ bạn không dùng mạng của văn phòng.",
     "office": "Mạng văn phòng",
     "outside": "Ngoài văn phòng",
-    "practiceHint": "Chế độ thử nghiệm: dữ liệu được lưu nhưng không được tính.",
-    "phoneCheck": "Điện thoại sẽ hỏi vân tay, khuôn mặt hoặc mã PIN.",
     "week": {
       "title": "Tuần này",
       "total": "{h} giờ {m} phút",
@@ -127,9 +125,7 @@
   },
   "records": {
     "title": "Lịch sử của tôi",
-    "empty": "Không có dữ liệu trong 14 ngày qua.",
     "hm": "{h} giờ {m} phút",
-    "missingTime": "--:--",
     "corrected": "Đã sửa",
     "correctionPending": "Đang chờ sửa",
     "overtimeLine": "Thêm giờ {o} · Ban đêm {n} · Ngày lễ {h}",
@@ -140,7 +136,20 @@
     },
     "reasonLabel": "Lý do làm thêm giờ (không bắt buộc)",
     "saveReason": "Lưu lý do",
-    "saved": "Đã lưu"
+    "saved": "Đã lưu",
+    "month": "Tháng",
+    "prev": "Tháng trước",
+    "next": "Tháng sau",
+    "daysWorked": "Ngày làm",
+    "days": "{n} ngày",
+    "totalWorked": "Giờ làm",
+    "overtimeTotal": "Thêm giờ",
+    "emptyMonth": "Không có dữ liệu tháng này.",
+    "inLine": "Vào {time}",
+    "outLine": "Ra {time}",
+    "noIn": "Thiếu giờ vào",
+    "noOut": "Thiếu giờ ra",
+    "olderHint": "Bạn xem được {n} tháng gần nhất. Dữ liệu cũ hơn hãy hỏi quản lý."
   },
   "corrections": {
     "title": "Yêu cầu sửa",

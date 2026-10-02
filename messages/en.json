@@ -59,8 +59,6 @@
     "outsideOffice": "Recorded. It looks like you were not on the office network.",
     "office": "Office network",
     "outside": "Outside office",
-    "practiceHint": "Practice mode: records are kept but not counted.",
-    "phoneCheck": "Your phone will ask for your fingerprint, face or PIN.",
     "week": {
       "title": "This week",
       "total": "{h}h {m}m",
@@ -210,7 +208,10 @@
       "week": "This week {h}h {m}m",
       "total": "Staff",
       "nobody": "Nobody.",
-      "myPunch": "My clock in / out"
+      "myPunch": "My clock in / out",
+      "notesTitle": "Today's work notes",
+      "notesEmpty": "No notes today.",
+      "notesHint": "Written by staff as they typed it (original text)."
     },
     "inbox": {
       "title": "Inbox",
@@ -308,9 +309,7 @@
   },
   "records": {
     "title": "My records",
-    "empty": "No records in the last 14 days.",
     "hm": "{h}h {m}m",
-    "missingTime": "--:--",
     "corrected": "Corrected",
     "correctionPending": "Correction pending",
     "overtimeLine": "Overtime {o} · Night {n} · Holiday {h}",
@@ -321,7 +320,20 @@
     },
     "reasonLabel": "Reason for overtime (optional)",
     "saveReason": "Save reason",
-    "saved": "Saved"
+    "saved": "Saved",
+    "month": "Month",
+    "prev": "Previous month",
+    "next": "Next month",
+    "daysWorked": "Days worked",
+    "days": "{n} days",
+    "totalWorked": "Hours worked",
+    "overtimeTotal": "Overtime",
+    "emptyMonth": "No records this month.",
+    "inLine": "In {time}",
+    "outLine": "Out {time}",
+    "noIn": "No clock-in",
+    "noOut": "No clock-out",
+    "olderHint": "You can see the last {n} months. For older records, ask your manager."
   },
   "corrections": {
     "title": "Corrections",

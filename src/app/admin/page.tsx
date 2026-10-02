@@ -1,7 +1,7 @@
 // ① 홈 — 오늘 현황판(7-9) + 처리할 일 요약 (마스터 5장). 관리자가 폰을 열었을 때 첫 화면에서 끝나야 한다.
 // 홈에서 승인하지 않는다 — 요약을 누르면 처리함으로 간다 (5장 규칙 2).
 // 연습 기록은 기본으로 빼고(4-6), 연습 기간에는 "연습 기록으로 보기"로 따로 볼 수 있다 (연습 배너가 항상 붙는다).
-import { Fingerprint, Inbox, TriangleAlert } from 'lucide-react';
+import { Fingerprint, Inbox, NotebookPen, TriangleAlert } from 'lucide-react';
 import { getFormatter, getTranslations } from 'next-intl/server';
 import Link from 'next/link';
 import { Card, CardTitle, PageShell } from '@/components/ui';
@@ -11,6 +11,7 @@ import { addDays, weekStartOf } from '@/lib/calendar';
 import { findMissingPunches } from '@/lib/missing-punch';
 import { weekTotalMinutes } from '@/lib/period';
 import { daysFor, loadPeriod, pendingCounts, syncOvertimeRequests } from '@/lib/period-data';
+import { createAdminClient } from '@/lib/supabase/admin';
 import { toKstDate } from '@/lib/time';
 import { buildTodayBoard, type BoardPerson } from '@/lib/today';
 import { AutoRefresh } from './AutoRefresh';
@@ -26,6 +27,12 @@ export default async function AdminHome({ searchParams }: { searchParams: Promis
   const data = await loadPeriod(addDays(today, -13), today, practiceView);
   await syncOvertimeRequests(data, today);
   const counts = await pendingCounts(practiceView);
+  // 오늘 근무노트 — 같은 직원·같은 날은 가장 최근 것만 (고친 노트는 새 행, 이전은 기록으로 남음 — R-10-2)
+  const { data: noteRows } = await createAdminClient()
+    .from('work_notes').select('employee_id, body, created_at')
+    .eq('work_date', today).eq('is_test', practiceView).order('created_at', { ascending: false });
+  const seenNote = new Set<string>();
+  const notes = (noteRows ?? []).filter((n) => (seenNote.has(n.employee_id) ? false : (seenNote.add(n.employee_id), true)));
 
   const active = data.people.filter((p) => p.active);
   const dayType = data.rule ? resolveDayType(today, data.rule, data.holidays) : 'workday';
@@ -92,6 +99,28 @@ export default async function AdminHome({ searchParams }: { searchParams: Promis
       )}
 
       <BoardView board={board} total={active.length} limitMinutes={OFFICE.weeklyLimitHours * 60} cautionMinutes={OFFICE.weeklyCautionHours * 60} colored={OFFICE.workplaceSize === '5_or_more'} />
+
+      <Card className="flex flex-col gap-2">
+        <CardTitle icon={NotebookPen} aside={<span className="num text-sm text-faint">{notes.length}</span>}>
+          {t('notesTitle')}
+        </CardTitle>
+        {notes.length === 0 ? (
+          <p className="text-sm text-faint">{t('notesEmpty')}</p>
+        ) : (
+          <ul className="divide-y divide-border">
+            {notes.map((n) => (
+              <li key={n.employee_id} className="flex flex-col gap-1 py-2">
+                <div className="flex items-baseline justify-between gap-2">
+                  <span className="font-semibold">{data.people.find((p) => p.id === n.employee_id)?.name}</span>
+                  <span className="num text-xs text-faint">{fmt.dateTime(new Date(n.created_at), { hour: '2-digit', minute: '2-digit', hourCycle: 'h23' })}</span>
+                </div>
+                <p className="whitespace-pre-wrap break-words text-sm">{n.body}</p>
+              </li>
+            ))}
+          </ul>
+        )}
+        <p className="text-xs text-faint">{t('notesHint')}</p>
+      </Card>
 
       <Card className="flex flex-col gap-1">
         <CardTitle icon={Inbox}>{t('todo')}</CardTitle>

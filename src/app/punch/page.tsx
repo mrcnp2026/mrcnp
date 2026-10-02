@@ -4,7 +4,7 @@ import { getFormatter, getTranslations } from 'next-intl/server';
 import { LayoutDashboard } from 'lucide-react';
 import Link from 'next/link';
 import { redirect } from 'next/navigation';
-import { InstallGuide } from '@/components/InstallGuide';
+import { AddToHomeIcon } from '@/components/AddToHome';
 import { LanguageSwitcher } from '@/components/LanguageSwitcher';
 import { LiveClock } from '@/components/LiveClock';
 import { SignOutButton } from '@/components/SignOutButton';
@@ -38,13 +38,13 @@ export default async function PunchPage() {
         right={
           <>
             {me.role === 'admin' && (
-              <Link href="/admin" aria-label={t('toAdmin')} className="flex min-h-11 items-center gap-1 rounded-button px-2 text-sm font-semibold text-primary">
+              <Link href="/admin" aria-label={t('toAdmin')} className="flex min-h-11 min-w-11 items-center justify-center gap-1 rounded-button text-sm font-semibold text-primary">
                 <LayoutDashboard aria-hidden size={18} strokeWidth={1.75} />
                 <span className="hidden sm:inline">{t('toAdmin')}</span>
               </Link>
             )}
+            <AddToHomeIcon />
             <LanguageSwitcher options={languageOptions()} />
-            <SignOutButton />
           </>
         }
       />
@@ -76,7 +76,7 @@ export default async function PunchPage() {
 
         <NoteBox initial={today.note?.body ?? null} />
 
-        <InstallGuide compact />
+        <SignOutButton />
       </PageShell>
     </>
   );

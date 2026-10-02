@@ -42,7 +42,7 @@ export default async function RecordsPage({ searchParams }: { searchParams: Prom
         </nav>
       </header>
       {OFFICE.practiceMode && (
-        <Link href={practice ? `?m=${ym}` : `?m=${ym}&practice=1`} className="text-sm text-primary">
+        <Link href={practice ? `?m=${ym}` : `?m=${ym}&practice=1`} className="inline-flex min-h-11 items-center self-start text-sm text-primary">
           {practice ? t('showLive') : t('showPractice')}
         </Link>
       )}

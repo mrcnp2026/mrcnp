@@ -36,7 +36,7 @@ export function LanguageSwitcher({ options }: { options: { code: string; name: s
               aria-pressed={on}
               disabled={pending}
               onClick={() => change(o.code)}
-              className={`min-h-10 rounded-chip px-3 text-sm font-semibold ${on ? 'bg-primary text-on-primary' : 'text-muted'}`}
+              className={`min-h-11 rounded-chip px-2.5 text-sm font-semibold ${on ? 'bg-primary text-on-primary' : 'text-muted'}`}
             >
               {o.name}
             </button>

@@ -7,8 +7,8 @@ export function TopBar({ right, variant = 'full' }: { right?: ReactNode; variant
   return (
     <header className="sticky top-0 z-10 border-b border-border bg-bg pt-[env(safe-area-inset-top)]">
       <div className="mx-auto flex min-h-14 w-full max-w-md items-center justify-between gap-2 px-4 md:max-w-none">
-        <Logo variant={variant} height={variant === 'full' ? 28 : 32} priority />
-        {right && <div className="flex items-center gap-1">{right}</div>}
+        <Logo variant={variant} height={28} priority />
+        {right && <div className="flex items-center">{right}</div>}
       </div>
     </header>
   );

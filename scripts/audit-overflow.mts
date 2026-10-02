@@ -43,6 +43,8 @@ const SCAN = `(() => {
     if (r.right > vw + 1 && cs.position !== 'fixed') out.push('OUTSIDE ' + Math.round(r.right) + 'px ' + label(el));
     const ox = cs.overflowX;
     if ((ox === 'auto' || ox === 'scroll') && el.scrollWidth > el.clientWidth + 1) out.push('INNER-SCROLL ' + el.scrollWidth + '>' + el.clientWidth + ' ' + label(el));
+    // 터치 영역 44px 이상 (마스터 5장) — 버튼·링크·선택 상자. 숨김(sr-only) 요소는 제외
+    if (['BUTTON', 'A', 'SELECT', 'SUMMARY'].includes(el.tagName) && (r.height < 43.5 || r.width < 43.5) && cs.position !== 'absolute') out.push('SMALL-TARGET ' + Math.round(r.width) + 'x' + Math.round(r.height) + ' ' + label(el));
     const isControl = ['BUTTON', 'A', 'LABEL', 'SELECT'].includes(el.tagName) || el.classList.contains('rounded-chip');
     if (isControl && el.scrollWidth > el.clientWidth + 1) out.push((ox === 'visible' ? 'TEXT-OVERFLOW ' : 'CLIPPED ') + label(el));
   }
@@ -113,6 +115,8 @@ try {
   await db.from('profiles').update({ role: 'admin' }).eq('id', emp!.id);
   for (const loc of ['ko', 'en'] as const) {
     await db.from('profiles').update({ locale: loc }).eq('id', emp!.id);
+    await run(`관리자가 본 출퇴근 화면(${loc})`, '/punch');
+    await run(`관리자가 본 내 기록(${loc})`, '/punch/records');
     await run(`관리자 홈(${loc})`, '/admin?practice=1', async (pg) => {
       await pg.locator('[role=tablist] button').nth(1).click();
     });

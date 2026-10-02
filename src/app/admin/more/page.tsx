@@ -3,6 +3,7 @@
 import { ChevronRight, Stethoscope } from 'lucide-react';
 import { getTranslations } from 'next-intl/server';
 import Link from 'next/link';
+import { SignOutButton } from '@/components/SignOutButton';
 import { PageShell } from '@/components/ui';
 
 export default async function MorePage() {
@@ -22,6 +23,7 @@ export default async function MorePage() {
           </Link>
         </li>
       </ul>
+      <SignOutButton />
     </PageShell>
   );
 }

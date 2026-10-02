@@ -63,3 +63,27 @@ export function AddToHomeButton() {
     </>
   );
 }
+
+/** 상단 바용 작은 아이콘 버튼 — 아직 홈 화면에 추가하지 않았을 때만 보인다 */
+export function AddToHomeIcon() {
+  const t = useTranslations('install');
+  const { state, promptInstall } = useInstall();
+  const [sheet, setSheet] = useState(false);
+  if (!state || state.installed) return null;
+  return (
+    <>
+      <button
+        type="button"
+        aria-label={t('addButton')}
+        title={t('addButton')}
+        className="flex size-11 items-center justify-center rounded-button text-primary"
+        onClick={async () => {
+          if ((await promptInstall()) === 'unavailable') setSheet(true);
+        }}
+      >
+        <SquarePlus aria-hidden size={22} strokeWidth={1.75} />
+      </button>
+      {sheet && <InstallSheet platform={state.platform} onDone={() => setSheet(false)} onClose={() => setSheet(false)} />}
+    </>
+  );
+}

@@ -59,8 +59,6 @@
     "outsideOffice": "기록됐습니다. 사무실 밖에서 찍으신 것으로 확인됩니다.",
     "office": "사무실 인터넷",
     "outside": "사무실 밖",
-    "practiceHint": "연습 모드: 기록은 남지만 집계에는 들어가지 않습니다.",
-    "phoneCheck": "폰이 지문·얼굴·PIN을 물어봅니다.",
     "week": {
       "title": "이번 주",
       "total": "{h}시간 {m}분",
@@ -210,7 +208,10 @@
       "week": "이번 주 {h}시간 {m}분",
       "total": "전체",
       "nobody": "없음",
-      "myPunch": "내 출퇴근"
+      "myPunch": "내 출퇴근",
+      "notesTitle": "오늘 근무노트",
+      "notesEmpty": "오늘 쓴 노트가 없습니다.",
+      "notesHint": "직원이 쓴 그대로입니다 (원문)."
     },
     "inbox": {
       "title": "처리함",
@@ -308,9 +309,7 @@
   },
   "records": {
     "title": "내 기록",
-    "empty": "최근 14일 기록이 없습니다.",
     "hm": "{h}시간 {m}분",
-    "missingTime": "--:--",
     "corrected": "정정됨",
     "correctionPending": "정정 검토 중",
     "overtimeLine": "연장 {o} · 야간 {n} · 휴일 {h}",
@@ -321,7 +320,20 @@
     },
     "reasonLabel": "연장 사유 (선택)",
     "saveReason": "사유 저장",
-    "saved": "저장됨"
+    "saved": "저장됨",
+    "month": "월",
+    "prev": "이전 달",
+    "next": "다음 달",
+    "daysWorked": "근무일",
+    "days": "{n}일",
+    "totalWorked": "근로시간",
+    "overtimeTotal": "연장",
+    "emptyMonth": "이 달 기록이 없습니다.",
+    "inLine": "출근 {time}",
+    "outLine": "퇴근 {time}",
+    "noIn": "출근 기록 없음",
+    "noOut": "퇴근 기록 없음",
+    "olderHint": "최근 {n}개월까지 볼 수 있습니다. 그 전 기록은 관리자에게 요청하세요."
   },
   "corrections": {
     "title": "정정 요청",
