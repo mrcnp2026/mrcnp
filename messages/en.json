@@ -134,6 +134,37 @@
       "duplicate_no": "This employee number already exists.",
       "invalid_no": "Employee number: letters, numbers and - only (up to 20).",
       "invalid_name": "Please enter a name (up to 50 characters)."
+    },
+    "more": {
+      "title": "More",
+      "diag": "Diagnostics",
+      "diagHint": "Check what internet address the server sees"
+    },
+    "diag": {
+      "title": "Diagnostics",
+      "subtitle": "Values the server actually saw for this request. Use this when the office check looks wrong.",
+      "thisDevice": "This device",
+      "ip": "Address used",
+      "none": "(none)",
+      "header": "Header used",
+      "kind": "Type",
+      "match": "Office network?",
+      "yes": "Yes",
+      "no": "No",
+      "headers": "Headers checked (in this order)",
+      "ranges": "Registered office ranges",
+      "noRanges": "No office range is registered yet. Every record is marked \"outside office\" until one is added (gate 5).",
+      "fromDb": "settings",
+      "fromEnv": "key file",
+      "invalid": "Invalid range — ignored",
+      "rule": "How the address is chosen",
+      "measured": "Last measured: {date}",
+      "notMeasured": "Not measured yet — measure after deployment (gate 9).",
+      "rate": "Outside-office clock-ins",
+      "rate24": "Last 24 hours: {n} of {total}",
+      "rate7": "Last 7 days: {n} of {total}",
+      "rateHint": "A sudden jump usually means the office internet address changed. Add the new range — do not replace the old one.",
+      "practiceNote": "Counted from practice records (practice mode)."
     }
   }
 }
