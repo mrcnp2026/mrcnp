@@ -18,11 +18,12 @@ import { buildTodayBoard, type BoardPerson } from '@/lib/today';
 import { AutoRefresh } from './AutoRefresh';
 import { BoardView } from './BoardView';
 
-export default async function AdminHome({ searchParams }: { searchParams: Promise<{ practice?: string; np?: string }> }) {
+export default async function AdminHome({ searchParams }: { searchParams: Promise<{ live?: string; np?: string }> }) {
   const t = await getTranslations('admin.home');
   const fmt = await getFormatter();
   const sp = await searchParams;
-  const practiceView = OFFICE.practiceMode && sp.practice === '1';
+// ★ 연습 모드에서는 모든 기록이 연습 기록이다 — 관리자 화면도 기본으로 연습 기록을 본다 (2026-10-02: 시험직원 정정 요청이 관리자에게 0건으로 보이던 문제). ?live=1이면 실제 기록
+  const practiceView = OFFICE.practiceMode && sp.live !== '1';
   const now = new Date();
   const today = toKstDate(now);
   const data = await loadPeriod(addDays(today, -13), today, practiceView);
@@ -41,7 +42,7 @@ export default async function AdminHome({ searchParams }: { searchParams: Promis
   const dayType = data.rule ? resolveDayType(today, data.rule, data.holidays) : 'workday';
   const weekStart = weekStartOf(today);
   const dayTypes = Object.fromEntries(
-    [...Array(14)].map((_, i) => addDays(today, -13 + i)).map((d) => [d, data.rule ? resolveDayType(d, data.rule, data.holidays) : 'workday']),
+    [...Array(14)].map((_, i) => addDays(today, -13 + i)).map((d) => [d, data.ruleAt(d) ? resolveDayType(d, data.ruleAt(d)!, data.holidays) : 'workday']),
   );
 
   let missingPeople = 0;
@@ -96,7 +97,7 @@ export default async function AdminHome({ searchParams }: { searchParams: Promis
         </div>
         <h1 className="num text-2xl font-extrabold tracking-tight">{t('headline', { total: active.length, n: inCount })}</h1>
         {OFFICE.practiceMode && (
-          <Link href={practiceView ? '/admin' : '/admin?practice=1'} className="inline-flex min-h-11 items-center self-start text-sm text-primary">
+          <Link href={practiceView ? '/admin?live=1' : '/admin'} className="inline-flex min-h-11 items-center self-start text-sm text-primary">
             {practiceView ? t('showLive') : t('showPractice')}
           </Link>
         )}
@@ -116,7 +117,7 @@ export default async function AdminHome({ searchParams }: { searchParams: Promis
         <ul>
           {todo.map((x) => (
             <li key={x.key}>
-              <Link href={practiceView && x.href.startsWith('/admin/inbox') ? x.href.replace('/admin/inbox', '/admin/inbox?practice=1') : x.href} className="flex min-h-14 items-center gap-3 px-5">
+              <Link href={!practiceView && OFFICE.practiceMode && x.href.startsWith('/admin/inbox') ? x.href.replace('/admin/inbox', '/admin/inbox?live=1') : x.href} className="flex min-h-14 items-center gap-3 px-5">
                 <span className="flex-1">{t(x.key)}</span>
                 <span className={`num inline-flex min-w-6 items-center justify-center rounded-chip px-2 text-sm font-bold ${x.n > 0 ? 'bg-primary text-on-primary' : 'text-faint'}`}>{x.n}</span>
                 <ChevronRight aria-hidden size={20} strokeWidth={2} className="text-faint" />

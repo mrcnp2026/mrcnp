@@ -3,6 +3,8 @@
 // 서버 로그에는 요청 번호·경로·오류 코드·걸린 시간만 남긴다 — 이름·IP·노트·금액 금지 (R-5의 7).
 import 'server-only';
 import { randomUUID } from 'node:crypto';
+import { codeForRoute } from '@/config/error-catalog';
+import { logError } from '@/lib/error-log';
 import { NextResponse, type NextRequest } from 'next/server';
 import { PasskeyError } from '@/lib/passkey';
 
@@ -35,16 +37,22 @@ export function api<C extends { params: Promise<object> } = { params: Promise<Re
       } else if (e instanceof PasskeyError) {
         status = 400;
         body = { error: e.code };
+        // 폰 확인 실패는 경고로 남긴다 — 같은 직원이 연속 실패하면 관리자가 폰 해제·재등록을 안내 (② 7-16)
+        await logError({ code: 'PASSKEY_VERIFY_FAILED', route, detail: { errorName: 'PasskeyError', httpStatus: 400, ms: Date.now() - started, requestId } });
       } else {
         status = 500;
         body = { error: 'generic' };
         // 원인 메시지는 서버 로그에만 (화면에 스택·SQL·키를 보이지 않는다, ②-1 요점 3)
         console.error(JSON.stringify({ requestId, route, code: 'unhandled', detail: String((e as Error)?.message ?? e).slice(0, 300) }));
+        // ② 7-16: 오류 기록 표에 한 줄 (같은 오류는 묶임). detail은 허용 칸만 — 메시지 원문은 넣지 않는다
+        const dbCode = /:\s*([A-Z0-9]{2,10})$/.exec(String((e as Error)?.message ?? ''))?.[1];
+        await logError({ code: codeForRoute(route), route, detail: { errorName: (e as Error)?.name, httpStatus: 500, dbCode, ms: Date.now() - started, requestId } });
       }
     }
     if (status >= 400) {
       console.error(JSON.stringify({ requestId, route, code: (body as { error: string }).error, ms: Date.now() - started }));
-      body = { ...(body as object), requestId };
+      // ② 7-16: { errorCode, retryable } — 화면이 요청자 언어로 바꿔 보여 준다. 원문 오류는 내려보내지 않는다
+      body = { ...(body as object), errorCode: (body as { error: string }).error, retryable: status >= 500, requestId };
     }
     const res = NextResponse.json(body, { status });
     res.headers.set('x-request-id', requestId);

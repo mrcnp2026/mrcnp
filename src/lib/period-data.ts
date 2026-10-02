@@ -2,10 +2,11 @@
 // 예약 작업(cron)을 만들지 않는다 (3장) — 처리함·현황판·월간 집계를 **열 때** 계산하고 필요한 요청 행을 만든다.
 import 'server-only';
 import { OFFICE } from '@/config/office';
-import { loadActiveRule, loadHolidays } from '@/lib/attendance-data';
+import { loadHolidays, loadRuleVersions } from '@/lib/attendance-data';
 import { addDays, weekStartOf } from '@/lib/calendar';
 import { buildOvertimeRequest } from '@/lib/overtime';
 import { computeEmployeeDays, type DayRow } from '@/lib/period';
+import { ruleAt } from '@/lib/rule-at';
 import { createAdminClient } from '@/lib/supabase/admin';
 import { toKstDate } from '@/lib/time';
 import type { HolidayRow, PunchCorrection, PunchEvent, WorkRule } from '@/lib/types';
@@ -48,7 +49,8 @@ export type PeriodData = {
   from: string;
   to: string;
   practice: boolean;
-  rule: WorkRule | null;
+  rule: WorkRule | null; // 기간 끝 날짜의 규칙 — 화면 안내용. 판정은 ruleAt(날짜)로 한다 (② 4-1)
+  ruleAt: (date: string) => WorkRule | null;
   holidays: HolidayRow[];
   people: Person[];
   events: EventRow[];
@@ -60,8 +62,8 @@ export type PeriodData = {
 export async function loadPeriod(from: string, to: string, practice = OFFICE.practiceMode): Promise<PeriodData> {
   const db = createAdminClient();
   const readFrom = addDays(weekStartOf(from), -1); // 자정 넘긴 퇴근의 근무일 상속 여유
-  const [rule, holidays, { data: ppl }, { data: ev }, { data: co }, { data: ot }] = await Promise.all([
-    loadActiveRule(),
+  const [versions, holidays, { data: ppl }, { data: ev }, { data: co }, { data: ot }] = await Promise.all([
+    loadRuleVersions(),
     loadHolidays(readFrom, to),
     db.from('profiles').select('id, name, employee_no, role, active, joined_on, created_at').order('name'),
     db.from('punch_events')
@@ -76,7 +78,8 @@ export async function loadPeriod(from: string, to: string, practice = OFFICE.pra
     from,
     to,
     practice,
-    rule,
+    rule: ruleAt(versions, to),
+    ruleAt: (date: string) => ruleAt(versions, date),
     holidays,
     people: (ppl ?? []).map((p) => ({
       id: p.id, name: p.name, employeeNo: p.employee_no, role: p.role, active: p.active, joinedOn: p.joined_on,
@@ -114,6 +117,7 @@ export function daysFor(data: PeriodData, employeeId: string, from = data.from, 
     events: data.events.filter((e) => e.employeeId === employeeId),
     approvedCorrections: data.corrections.filter((c) => c.employeeId === employeeId && c.status === 'approved'),
     rule: data.rule,
+    ruleAt: data.ruleAt,
     holidays: data.holidays,
     from,
     to,

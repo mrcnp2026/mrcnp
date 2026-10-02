@@ -1,16 +1,18 @@
 'use client';
 // 폰(< 1024px): 하단 탭 바 · 넓은 화면: 왼쪽 세로 메뉴. 구조는 같고 배치만 다르다 (마스터 5장)
-import { ClipboardList, House, Inbox, Menu, Users, type LucideIcon } from 'lucide-react';
+import { BellRing, ClipboardList, House, Menu, Users, Wallet, type LucideIcon } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 import { Logo } from '@/components/Logo';
 import { NavTab, usePressedTab } from '@/components/NavTab';
 
-// 탭 5개, 순서 ① 홈 ② 처리함 ③ 기록 ④ 직원 ⑤ 더보기 (마스터 5장). ②의 메뉴는 이 목록에 미리 넣지 않는다 (규칙 3).
-const TABS: { href: string; key: 'home' | 'inbox' | 'records' | 'members' | 'more'; icon: LucideIcon }[] = [
+// 탭 6개 (2026-10-02 의뢰인): ① 홈 ② 요청(정정·연장·연차 승인 — 예전 이름 "처리함"은 무엇이 들어 있는지 안 보였다)
+// ③ 기록 ④ 직원 ⑤ 급여(③ 급여 문서) ⑥ 더보기
+const TABS: { href: string; key: 'home' | 'inbox' | 'records' | 'members' | 'payroll' | 'more'; icon: LucideIcon }[] = [
   { href: '/admin', key: 'home', icon: House },
-  { href: '/admin/inbox', key: 'inbox', icon: Inbox },
+  { href: '/admin/inbox', key: 'inbox', icon: BellRing },
   { href: '/admin/records', key: 'records', icon: ClipboardList },
   { href: '/admin/members', key: 'members', icon: Users },
+  { href: '/admin/payroll', key: 'payroll', icon: Wallet },
   { href: '/admin/more', key: 'more', icon: Menu },
 ];
 
@@ -37,7 +39,7 @@ export function AdminNav({ inboxCount }: { inboxCount: number }) {
                 wideRow
                 badge={
                   key === 'inbox' && inboxCount > 0 ? (
-                    <span className="num absolute -top-2 -right-3 min-w-5 rounded-chip bg-warn px-1 text-center text-xs font-semibold text-on-primary">
+                    <span className="num absolute -top-2 -right-3 min-w-5 rounded-chip bg-warn px-1 text-center text-xs leading-5 font-bold text-on-primary">
                       {inboxCount}
                     </span>
                   ) : null

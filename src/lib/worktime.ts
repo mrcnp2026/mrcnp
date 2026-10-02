@@ -157,13 +157,13 @@ export type WeekDayInput = {
  */
 export function calcWeek(
   days: WeekDayInput[],
-  rule: WorkRule,
+  rule: WorkRule | ((workDate: string) => WorkRule), // ② 4-1: 날짜마다 그날 규칙
 ): (WorkCalc & { workDate: string; dayType: DayType; weekRegularMinutesSoFar: number })[] {
   const sorted = [...days].sort((a, b) => (a.workDate < b.workDate ? -1 : 1));
   let regSoFar = 0;
   let totalSoFar = 0;
   return sorted.map((d) => {
-    const r = calcWorkMinutes(d.pairs, rule, {
+    const r = calcWorkMinutes(d.pairs, typeof rule === 'function' ? rule(d.workDate) : rule, {
       workDate: d.workDate,
       dayType: d.dayType,
       weekRegularMinutesSoFar: regSoFar,

@@ -147,10 +147,11 @@
   "admin": {
     "nav": {
       "home": "Home",
-      "inbox": "Inbox",
+      "inbox": "Requests",
       "records": "Records",
       "members": "Staff",
-      "more": "More"
+      "more": "More",
+      "payroll": "Payroll"
     },
     "members": {
       "title": "Staff",
@@ -271,7 +272,7 @@
       "nextPage": "Next"
     },
     "inbox": {
-      "title": "Inbox",
+      "title": "Requests",
       "practiceBanner": "Practice records — decisions here do not affect real records.",
       "overtimeTitle": "Overtime approval",
       "overtimeHint": "Counted hours are facts and cannot be changed. You decide how much to recognize. Rejecting does not delete the work record.",
@@ -425,6 +426,18 @@
       "restore": "Restore",
       "trTitle": "Translated title ({lang})",
       "trBody": "Translated body ({lang})"
+    },
+    "payroll": {
+      "title": "Payroll",
+      "subtitle": "Monthly hours summary · payroll file",
+      "noAccess": "Only payroll staff can see this. Assign payroll staff in the Staff tab.",
+      "building": "Payslips (base pay, allowances, insurance, tax) are being built. For now: hours summary and the payroll file.",
+      "worked": "Worked",
+      "overtime": "Overtime",
+      "night": "Night",
+      "holiday": "Holiday",
+      "download": "Download payroll file",
+      "empty": "No records this month."
     }
   },
   "nav": {

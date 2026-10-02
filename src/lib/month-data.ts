@@ -42,6 +42,7 @@ export async function buildMonth(ym: string, practice: boolean): Promise<{ data:
       requests: data.overtime.filter((o) => o.employeeId === p.id).map((o) => ({ ...o })),
       pendingCorrections: data.corrections.filter((c) => c.employeeId === p.id && c.status === 'pending' && c.workDate >= from && c.workDate <= to).length,
       rule: data.rule,
+      ruleAt: data.ruleAt,
       joinedOn: p.startsOn,
       now,
       today,

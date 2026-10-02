@@ -12,12 +12,13 @@ import { createAdminClient } from '@/lib/supabase/admin';
 import { toKstDate } from '@/lib/time';
 import { CorrectionDecision, OvertimeDecision } from './Decisions';
 
-export default async function InboxPage({ searchParams }: { searchParams: Promise<{ practice?: string; op?: string; cp?: string }> }) {
+export default async function InboxPage({ searchParams }: { searchParams: Promise<{ live?: string; op?: string; cp?: string }> }) {
   const t = await getTranslations('admin.inbox');
   const f = await getFormatter();
   const me = (await getMe())!;
   const sp = await searchParams;
-  const practice = OFFICE.practiceMode && sp.practice === '1';
+// ★ 연습 모드에서는 모든 기록이 연습 기록이다 — 관리자 화면도 기본으로 연습 기록을 본다 (2026-10-02: 시험직원 정정 요청이 관리자에게 0건으로 보이던 문제). ?live=1이면 실제 기록
+  const practice = OFFICE.practiceMode && sp.live !== '1';
   const today = toKstDate(new Date());
   const data = await loadPeriod(addDays(today, -31), today, practice);
   await syncOvertimeRequests(data, today);

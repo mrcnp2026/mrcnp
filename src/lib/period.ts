@@ -14,11 +14,13 @@ export type DayRow = WorkCalc & { workDate: string; dayType: DayType; pairs: Pun
 export function computeEmployeeDays(args: {
   events: PunchEvent[];
   approvedCorrections: PunchCorrection[];
-  rule: WorkRule;
+  rule: WorkRule; // 기본 규칙 (그날 규칙이 없을 때)
+  ruleAt?: (date: string) => WorkRule | null; // ② 4-1: 날짜마다 그날 유효한 규칙
   holidays: HolidayRow[];
   from: string;
   to: string;
 }): DayRow[] {
+  const ruleOf = (d: string) => args.ruleAt?.(d) ?? args.rule;
   const byDate = pairsByWorkDate(args.events, args.approvedCorrections.filter((c) => c.status === 'approved'));
   const out: DayRow[] = [];
   for (let ws = weekStartOf(args.from); ws <= args.to; ws = addDays(ws, 7)) {
@@ -26,9 +28,9 @@ export function computeEmployeeDays(args: {
       workDate: d,
       pairs: byDate.get(d)?.pairs ?? [],
       flags: byDate.get(d)?.flags ?? [],
-      dayType: resolveDayType(d, args.rule, args.holidays),
+      dayType: resolveDayType(d, ruleOf(d), args.holidays),
     }));
-    const calc = calcWeek(days, args.rule);
+    const calc = calcWeek(days, ruleOf);
     for (const r of calc) {
       if (r.workDate < args.from || r.workDate > args.to) continue;
       out.push({ ...r, pairs: byDate.get(r.workDate)?.pairs ?? [] });

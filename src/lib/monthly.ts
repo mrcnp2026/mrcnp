@@ -49,6 +49,7 @@ export function summarizeMonth(args: {
   requests: MonthRequest[]; // 그 달 연장 요청 (연습/운영 같은 모드)
   pendingCorrections: number;
   rule: WorkRule;
+  ruleAt?: (date: string) => WorkRule | null; // ② 4-1: 지각 판정은 그날 규칙으로
   joinedOn: string | null;
   now: Date;
   today: string; // 사무실 날짜
@@ -101,7 +102,7 @@ export function summarizeMonth(args: {
 
     const firstIn = d.pairs.map((p) => p.in).filter((x): x is Date => !!x).sort((a, b) => a.getTime() - b.getTime())[0];
     if (firstIn && d.dayType === 'workday') {
-      const l = judgeLateness({ punchedAt: firstIn, workDate: d.workDate, rule: args.rule, isHoliday: false });
+      const l = judgeLateness({ punchedAt: firstIn, workDate: d.workDate, rule: args.ruleAt?.(d.workDate) ?? args.rule, isHoliday: false });
       if (l.verdict === 'late') {
         lateCount++;
         lateMinutes += l.lateMinutes;

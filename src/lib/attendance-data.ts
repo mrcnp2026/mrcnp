@@ -1,32 +1,44 @@
 // DB 행 → 계산 모듈 입력. 서버 전용. 계산은 순수함수(worktime·today·weekly-hours)가 하고 여기서는 읽기만 한다.
 import 'server-only';
+import { cache } from 'react';
 import { resolveDayType } from '@/config/labor-rules';
 import { OFFICE } from '@/config/office';
 import { addDays, weekStartOf } from '@/lib/calendar';
 import { pairsByWorkDate } from '@/lib/pairs';
+import { ruleAt, type RuleVersion } from '@/lib/rule-at';
 import { createAdminClient } from '@/lib/supabase/admin';
 import { toKstDate } from '@/lib/time';
 import { classifyDay } from '@/lib/today';
 import type { HolidayRow, PunchCorrection, PunchEvent, WorkRule } from '@/lib/types';
 import { weeklyHours } from '@/lib/weekly-hours';
 
-/** 활성 근무규칙. 없으면 null — ② 설정 화면 전에는 없을 수 있다. 0이나 기본값으로 지어내지 않는다 (7-14) */
-export async function loadActiveRule(): Promise<WorkRule | null> {
+/**
+ * 근무규칙 이력 전체 (숨긴 행 제외). 판정은 날짜마다 그날 유효한 규칙으로 한다 (② 4-1 — src/lib/rule-at.ts).
+ * 없으면 빈 배열 — ② 설정 화면 전에는 없을 수 있다. 0이나 기본값으로 지어내지 않는다 (7-14)
+ */
+export const loadRuleVersions = cache(async (): Promise<RuleVersion[]> => {
   const { data } = await createAdminClient()
     .from('work_rules')
-    .select('start_time, end_time, late_grace_min, break_start, break_end, workdays, weekly_rest_day')
+    .select('start_time, end_time, late_grace_min, break_start, break_end, workdays, weekly_rest_day, effective_from')
     .eq('active', true)
-    .maybeSingle();
-  if (!data) return null;
-  return {
-    startTime: data.start_time,
-    endTime: data.end_time,
-    lateGraceMin: data.late_grace_min,
-    breakStart: data.break_start,
-    breakEnd: data.break_end,
-    workdays: data.workdays,
-    weeklyRestDay: data.weekly_rest_day,
-  };
+    .order('effective_from', { ascending: false });
+  return (data ?? []).map((d) => ({
+    effectiveFrom: d.effective_from,
+    rule: {
+      startTime: d.start_time,
+      endTime: d.end_time,
+      lateGraceMin: d.late_grace_min,
+      breakStart: d.break_start,
+      breakEnd: d.break_end,
+      workdays: d.workdays,
+      weeklyRestDay: d.weekly_rest_day,
+    },
+  }));
+});
+
+/** 오늘(KST) 유효한 근무규칙 */
+export async function loadActiveRule(): Promise<WorkRule | null> {
+  return ruleAt(await loadRuleVersions(), toKstDate(new Date()));
 }
 
 export async function loadHolidays(from: string, to: string): Promise<HolidayRow[]> {
@@ -78,14 +90,14 @@ export async function loadEmployeeToday(employeeId: string, now: Date): Promise<
   const weekStart = weekStartOf(today);
   const from = addDays(weekStart, -1);
 
-  const [{ data: ev }, { data: corr }, rule, holidays] = await Promise.all([
+  const [{ data: ev }, { data: corr }, versions, holidays] = await Promise.all([
     db.from('punch_events')
       .select('id, employee_id, kind, punched_at, work_date, ip_verified, is_test, note')
       .eq('employee_id', employeeId).eq('is_test', practice).gte('work_date', from).order('punched_at'),
     db.from('punch_corrections')
       .select('id, correction_type, target_id, employee_id, work_date, kind, new_punched_at, status')
       .eq('employee_id', employeeId).eq('status', 'approved').gte('work_date', from),
-    loadActiveRule(),
+    loadRuleVersions(),
     loadHolidays(from, addDays(weekStart, 6)),
   ]);
   const rows = (ev ?? []) as EventRow[];
@@ -100,6 +112,7 @@ export async function loadEmployeeToday(employeeId: string, now: Date): Promise<
   const openShift = last && last.kind === 'in' && now.getTime() - new Date(last.punched_at).getTime() < OFFICE.openShiftMaxHours * 3_600_000;
   const workDate = openShift ? last.work_date : today;
 
+  const rule = ruleAt(versions, workDate);
   const byDate = pairsByWorkDate(events, corrections);
   const pairs = byDate.get(workDate)?.pairs ?? [];
   const dayType = rule ? resolveDayType(workDate, rule, holidays) : 'workday';
@@ -111,7 +124,7 @@ export async function loadEmployeeToday(employeeId: string, now: Date): Promise<
     const days = [...Array(7)].map((_, i) => addDays(weekStart, i)).map((d) => ({
       workDate: d,
       pairs: byDate.get(d)?.pairs ?? [],
-      dayType: resolveDayType(d, rule, holidays),
+      dayType: resolveDayType(d, ruleAt(versions, d) ?? rule, holidays),
     }));
     week = weeklyHours({
       weekStart,

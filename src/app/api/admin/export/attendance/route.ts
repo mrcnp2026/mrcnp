@@ -24,7 +24,7 @@ export async function GET(req: NextRequest) {
   if (!me || me.role !== 'admin') return deny(403, 'forbidden');
   const ym = req.nextUrl.searchParams.get('m');
   if (!isYearMonth(ym)) return deny(400, 'invalid_input');
-  const practice = OFFICE.practiceMode && req.nextUrl.searchParams.get('practice') === '1';
+  const practice = OFFICE.practiceMode && req.nextUrl.searchParams.get('live') !== '1';
   const { from, to } = monthRange(ym);
   const data = await loadPeriod(from, to, practice);
   const person = new Map(data.people.map((p) => [p.id, p]));

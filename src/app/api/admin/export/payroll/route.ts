@@ -14,7 +14,7 @@ export async function GET(req: NextRequest) {
   if (!me.canViewPayroll) return deny(403, 'payroll_only');
   const ym = req.nextUrl.searchParams.get('m');
   if (!isYearMonth(ym)) return deny(400, 'invalid_input');
-  const practice = OFFICE.practiceMode && req.nextUrl.searchParams.get('practice') === '1';
+  const practice = OFFICE.practiceMode && req.nextUrl.searchParams.get('live') !== '1';
   const { rows } = await buildMonth(ym, practice);
   const body = toCsv(PAYROLL_COLUMNS, rows.map((r) => PAYROLL_COLUMNS.map((c) => r.summary.row[c])));
   return csvResponse(body, exportFileName('payroll', practice ? `${ym}-practice` : ym, new Date()));

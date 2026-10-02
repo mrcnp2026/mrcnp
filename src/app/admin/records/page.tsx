@@ -18,13 +18,14 @@ function shift(ym: string, n: number) {
   return d.toISOString().slice(0, 7);
 }
 
-export default async function RecordsPage({ searchParams }: { searchParams: Promise<{ m?: string; practice?: string; p?: string; f?: string }> }) {
+export default async function RecordsPage({ searchParams }: { searchParams: Promise<{ m?: string; live?: string; p?: string; f?: string }> }) {
   const t = await getTranslations('admin.records');
   const me = (await getMe())!;
   const sp = await searchParams;
   const ym = isYearMonth(sp.m) ? sp.m : toKstDate(new Date()).slice(0, 7);
-  const practice = OFFICE.practiceMode && sp.practice === '1';
-  const q = (m: string) => `?m=${m}${practice ? '&practice=1' : ''}`;
+// ★ 연습 모드에서는 모든 기록이 연습 기록이다 — 관리자 화면도 기본으로 연습 기록을 본다 (2026-10-02: 시험직원 정정 요청이 관리자에게 0건으로 보이던 문제). ?live=1이면 실제 기록
+  const practice = OFFICE.practiceMode && sp.live !== '1';
+  const q = (m: string) => `?m=${m}${OFFICE.practiceMode && !practice ? '&live=1' : ''}`;
   const { data, rows } = await buildMonth(ym, practice);
   // 확인이 필요한 사람: 지각·결근·미승인 연장·막힘 표시 중 하나라도 있으면
   const hasIssue = (r: (typeof rows)[number]['summary']['row']) =>
@@ -54,7 +55,7 @@ export default async function RecordsPage({ searchParams }: { searchParams: Prom
         </nav>
       </header>
       {OFFICE.practiceMode && (
-        <Link href={practice ? `?m=${ym}` : `?m=${ym}&practice=1`} className="inline-flex min-h-11 items-center self-start text-sm text-primary">
+        <Link href={practice ? `?m=${ym}&live=1` : `?m=${ym}`} className="inline-flex min-h-11 items-center self-start text-sm text-primary">
           {practice ? t('showLive') : t('showPractice')}
         </Link>
       )}
@@ -142,7 +143,7 @@ export default async function RecordsPage({ searchParams }: { searchParams: Prom
                 );
               })}
             </ul>
-            <Pager page={pageRows.page} pages={pageRows.pages} param="p" params={{ m: ym, practice: practice ? '1' : undefined, f: onlyIssues ? 'issues' : undefined }} label={t('pages')} />
+            <Pager page={pageRows.page} pages={pageRows.pages} param="p" params={{ m: ym, live: OFFICE.practiceMode && !practice ? '1' : undefined, f: onlyIssues ? 'issues' : undefined }} label={t('pages')} />
           </Card>
         </div>
       )}
