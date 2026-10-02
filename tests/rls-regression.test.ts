@@ -6,7 +6,7 @@ import path from 'node:path';
 import { Client } from 'pg';
 import { describe, expect, it } from 'vitest';
 
-const EXPECTED_CHECKS = 52;
+const EXPECTED_CHECKS = 59;
 const dbUrl = process.env.SUPABASE_DB_URL;
 const required = process.env.RLS_REQUIRED === '1';
 

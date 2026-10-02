@@ -11,7 +11,8 @@ import { OFFICE } from '@/config/office';
 import { addDays, weekStartOf } from '@/lib/calendar';
 import { findMissingPunches } from '@/lib/missing-punch';
 import { weekTotalMinutes } from '@/lib/period';
-import { daysFor, loadPeriod, pendingCounts, syncOvertimeRequests } from '@/lib/period-data';
+import { fullLeaveSet } from '@/lib/leave';
+import { daysFor, leaveDaysFor, loadPeriod, pendingCounts, syncOvertimeRequests } from '@/lib/period-data';
 import { createAdminClient } from '@/lib/supabase/admin';
 import { kstDateTime, toKstDate } from '@/lib/time';
 import { buildTodayBoard, type BoardPerson } from '@/lib/today';
@@ -50,6 +51,7 @@ export default async function AdminHome({ searchParams }: { searchParams: Promis
   let missingPeople = 0;
   const people: BoardPerson[] = active.map((p) => {
     const evs = data.events.filter((e) => e.employeeId === p.id);
+    const fullLeave = fullLeaveSet(leaveDaysFor(data, p.id));
     const todays = evs.filter((e) => e.workDate === today);
     const days = daysFor(data, p.id, weekStart, today);
     const todayRow = days.find((d) => d.workDate === today);
@@ -58,6 +60,7 @@ export default async function AdminHome({ searchParams }: { searchParams: Promis
         employeeId: p.id, events: evs, approvedCorrections: data.corrections.filter((c) => c.status === 'approved'),
         pendingCorrections: data.corrections.filter((c) => c.status === 'pending'), rule: data.rule, dayTypes, now,
         outGraceHours: OFFICE.missingOutGraceHours, inGraceMin: OFFICE.missingInGraceMin, joinedOn: p.startsOn,
+        fullLeaveDates: fullLeave,
       });
       if (miss.length) missingPeople++;
     }
@@ -69,6 +72,7 @@ export default async function AdminHome({ searchParams }: { searchParams: Promis
       firstInVerified: todays.find((e) => e.kind === 'in')?.ipVerified ?? null,
       adminEntered: todays.some((e) => e.source === 'admin'),
       weekMinutes: data.rule ? weekTotalMinutes(days) : null,
+      onLeave: fullLeave.has(today),
     };
   });
   const board = buildTodayBoard({ people, rule: data.rule, dayType, workDate: today, now });
@@ -83,6 +87,7 @@ export default async function AdminHome({ searchParams }: { searchParams: Promis
   const todo = [
     { key: 'pendingOvertime', n: counts.overtime, href: '/admin/inbox#overtime' },
     { key: 'pendingCorrections', n: counts.corrections, href: '/admin/inbox#corrections' },
+    { key: 'pendingLeave', n: counts.leave, href: '/admin/inbox#leave' },
     { key: 'missing', n: missingPeople, href: '/admin/records' },
   ] as const;
 

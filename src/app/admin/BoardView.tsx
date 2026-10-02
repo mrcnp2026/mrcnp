@@ -132,7 +132,7 @@ export function BoardView({
                   <span className={`num block truncate text-xs text-faint ${weekTone(r.weekMinutes)}`}>{sub(r)}</span>
                 </span>
                 <span className="flex shrink-0 flex-col items-end">
-                  <span className={`text-sm font-bold ${TONE[r.status]}`}>{th(`status.${r.status}`)}</span>
+                  <span className={`text-sm font-bold ${r.onLeave && r.status === 'off' ? 'text-primary' : TONE[r.status]}`}>{r.onLeave && r.status === 'off' ? t('onLeave') : th(`status.${r.status}`)}</span>
                   {r.late && r.status !== 'late' && <span className="text-xs text-warn">{th('lateBy', { n: r.lateMinutes })}</span>}
                   {r.status === 'late' && <span className="num text-xs text-warn">{th('lateBy', { n: r.lateMinutes })}</span>}
                   {r.firstInVerified === false && <span className="text-xs text-warn">{th('outside')}</span>}

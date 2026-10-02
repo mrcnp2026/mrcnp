@@ -200,5 +200,31 @@ begin
     perform set_config('role', 'postgres', true);
   end;
 
+  -- ── 연차 (0011): 직원이 스스로 승인된 연차를 넣지 못한다 (B-29), 신청 사실 칸 고정, 결정은 서버 함수만 ──
+  declare v_l uuid; v_lr text; v_lr2 text;
+  begin
+    insert into public.leave_requests (employee_id, type_code, start_date, end_date, days, requested_by)
+      values (emp, 'annual', '2026-11-10', '2026-11-10', 1, emp) returning id into v_l;
+    begin update public.leave_requests set days = 0.5 where id = v_l; out := out || E'FAIL|53|server update leave days\n';
+    exception when others then out := out || E'PASS|53|leave request facts immutable\n'; end;
+    begin delete from public.leave_requests where id = v_l; out := out || E'FAIL|54|server delete leave_requests\n';
+    exception when others then out := out || E'PASS|54|leave_requests delete denied\n'; end;
+    v_lr := public.decide_leave(v_l, 'approved', adm, null, 'rid-l1');
+    v_lr2 := public.decide_leave(v_l, 'rejected', adm, null, 'rid-l2');
+    out := out || case when v_lr = 'ok' and v_lr2 = 'already' then 'PASS' else 'FAIL' end || '|55|leave decided once (' || v_lr || '/' || v_lr2 || E')\n';
+    out := out || case when public.decide_leave(v_l, 'cancelled', adm, null, 'rid-l3') = 'ok' then 'PASS' else 'FAIL' end || E'|56|approved leave can be cancelled by admin\n';
+    perform set_config('request.jwt.claims', json_build_object('sub', emp, 'role', 'authenticated')::text, true);
+    perform set_config('role', 'authenticated', true);
+    begin insert into public.leave_requests (employee_id, type_code, start_date, end_date, days, requested_by, status) values (emp, 'annual', '2026-11-11', '2026-11-11', 1, emp, 'approved');
+      out := out || E'FAIL|57|employee insert approved leave\n';
+    exception when others then out := out || E'PASS|57|employee insert leave_requests denied (B-29)\n'; end;
+    begin insert into public.leave_grants (employee_id, period_label, granted_days, basis, effective_from) values (emp, 'x', 99, 'hire_date', '2026-01-01');
+      out := out || E'FAIL|58|employee insert leave_grants\n';
+    exception when others then out := out || E'PASS|58|employee insert leave_grants denied\n'; end;
+    begin perform public.decide_leave(v_l, 'approved', emp, null, null); out := out || E'FAIL|59|employee calls decide_leave\n';
+    exception when others then out := out || E'PASS|59|employee calls decide_leave denied\n'; end;
+    perform set_config('role', 'postgres', true);
+  end;
+
   raise exception 'RLS_RESULTS_BEGIN%RLS_RESULTS_END', E'\n' || out;
 end $$;

@@ -47,11 +47,13 @@ try {
   await shot('admin-records', '/admin/records');
   await shot('admin-inbox', '/admin/inbox');
   await shot('admin-more', '/admin/more');
+  await shot('admin-leave', '/admin/leave');
   await shot('admin-punch-home', '/punch', false);
   await db.from('profiles').update({ role: 'employee' }).eq('id', emp!.id);
   await shot('punch-home', '/punch');
   await shot('punch-records', '/punch/records');
   await shot('punch-corrections', '/punch/corrections');
+  await shot('punch-leave', '/punch/leave');
 } finally {
   await browser.close();
   await db.from('profiles').update({ role: 'employee', locale: 'en', active: false }).eq('id', emp!.id);

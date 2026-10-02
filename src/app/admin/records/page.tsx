@@ -111,6 +111,7 @@ export default async function RecordsPage({ searchParams }: { searchParams: Prom
                           <span className="flex flex-wrap gap-x-2 text-xs">
                             {Number(r.late_count) > 0 && <span className="text-warn">{t('lateShort', { n: Number(r.late_count) })}</span>}
                             {Number(r.absent_days) > 0 && <span className="text-warn">{t('absent', { n: Number(r.absent_days) })}</span>}
+                            {s.leaveDates.length > 0 && <span className="text-primary">{t('leaveShort', { n: s.paidLeaveDays + Number(r.unpaid_leave_days ?? 0) })}</span>}
                             {Number(r.pending_overtime_minutes) > 0 && <span className="text-warn">{t('pendingShort')}</span>}
                             {blocks.length > 0 && <span className="text-warn">{t('blocked')}</span>}
                             {clean && <span className="text-faint">{t('clean')}</span>}

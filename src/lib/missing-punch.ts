@@ -23,6 +23,7 @@ export function findMissingPunches(args: {
   inGraceMin: number; // office.ts missingInGraceMin
   joinedOn?: string | null; // 입사 전 날짜는 제외 (요점 3)
   lookbackDays?: number; // 기본 14
+  fullLeaveDates?: Set<string>; // 하루 전부 승인된 휴가인 날 — 출근 미기록이 아니다 (②-2)
 }): MissingPunch[] {
   const mine = args.events.filter((e) => e.employeeId === args.employeeId);
   const approved = args.approvedCorrections.filter((c) => c.employeeId === args.employeeId && c.status === 'approved');
@@ -55,7 +56,7 @@ export function findMissingPunches(args: {
 
     // 요점 3 — 출근 미기록: workday에만. 휴일·휴무일은 제외. 판정표 값이 없는 날은 추측하지 않고 건너뛴다.
     // 오늘은 제외한다 — 오늘 출근은 첫 화면의 출근 버튼이 해결하므로 배너를 겹쳐 띄우지 않는다.
-    if (d === today || args.dayTypes[d] !== 'workday') continue;
+    if (d === today || args.dayTypes[d] !== 'workday' || args.fullLeaveDates?.has(d)) continue;
     const hasIn = pairs.some((p) => p.in);
     const due = kstDateTime(d, args.rule.startTime).getTime() + args.inGraceMin * 60_000;
     if (!hasIn && args.now.getTime() > due) {

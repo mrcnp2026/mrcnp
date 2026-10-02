@@ -117,6 +117,68 @@ export function OvertimeDecision({ id, name, facts }: { id: string; name: string
   );
 }
 
+/** 휴가 승인·거부. 출근 기록과 겹치면 경고만 — 자동으로 한쪽을 지우지 않는다 (②-2 7-3 요점 4) */
+export function LeaveDecision({ id, name, summary }: { id: string; name: string; summary: string }) {
+  const t = useTranslations('admin.inbox');
+  const { busy, err, done, send } = useDecide(`/api/admin/leave/${id}/decide`);
+  const [pending, setPending] = useState<'approved' | 'rejected' | null>(null);
+  if (done) return <p className="text-sm font-semibold text-muted">{t(done === 'already' ? 'already' : 'doneMsg')}</p>;
+  if (pending) {
+    return (
+      <div className="flex flex-col gap-2 rounded-card border border-border p-3">
+        <p className="text-sm">{t(pending === 'approved' ? 'confirmLeave' : 'confirmLeaveReject', { name, summary })}</p>
+        <div className="flex gap-2">
+          <Button disabled={busy} className="flex-1" onClick={() => send({ decision: pending })}>
+            {t('confirm')}
+          </Button>
+          <Button variant="outline" className="flex-1" onClick={() => setPending(null)}>
+            {t('cancel')}
+          </Button>
+        </div>
+        {err && <ErrorNote code={err.code} requestId={err.requestId} namespace="admin.inbox" />}
+      </div>
+    );
+  }
+  return (
+    <div className="flex gap-2">
+      <Button className="flex-1" onClick={() => setPending('approved')}>
+        {t('approve')}
+      </Button>
+      <Button variant="outline" className="flex-1" onClick={() => setPending('rejected')}>
+        {t('reject')}
+      </Button>
+    </div>
+  );
+}
+
+/** 승인된 휴가 취소 (관리자) — 출근 기록과 충돌할 때 관리자가 판단해 쓴다 */
+export function LeaveCancel({ id, name }: { id: string; name: string }) {
+  const t = useTranslations('admin.inbox');
+  const { busy, err, done, send } = useDecide(`/api/admin/leave/${id}/decide`);
+  const [ask, setAsk] = useState(false);
+  if (done) return <p className="text-sm font-semibold text-muted">{t(done === 'already' ? 'already' : 'doneMsg')}</p>;
+  if (!ask)
+    return (
+      <Button variant="outline" className="self-start" onClick={() => setAsk(true)}>
+        {t('leaveCancel')}
+      </Button>
+    );
+  return (
+    <div className="flex flex-col gap-2 rounded-card border border-border p-3">
+      <p className="text-sm">{t('confirmLeaveCancel', { name })}</p>
+      <div className="flex gap-2">
+        <Button disabled={busy} className="flex-1" onClick={() => send({ decision: 'cancelled' })}>
+          {t('confirm')}
+        </Button>
+        <Button variant="outline" className="flex-1" onClick={() => setAsk(false)}>
+          {t('cancel')}
+        </Button>
+      </div>
+      {err && <ErrorNote code={err.code} requestId={err.requestId} namespace="admin.inbox" />}
+    </div>
+  );
+}
+
 export function CorrectionDecision({ id, name }: { id: string; name: string }) {
   const t = useTranslations('admin.inbox');
   const { busy, err, done, send } = useDecide(`/api/admin/corrections/${id}/decide`);

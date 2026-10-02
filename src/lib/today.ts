@@ -15,6 +15,7 @@ export type BoardPerson = {
   firstInVerified: boolean | null; // 첫 출근의 사무실 확인 여부 (4-3: 미검증은 눈에 띄게)
   adminEntered: boolean; // 대리 등록 기록이 있는가 (요점 7, ②)
   weekMinutes: number | null; // 이번 주 누적 (요점 6)
+  onLeave?: boolean; // 오늘 하루 전부 승인된 휴가 — 출근 기록이 없으면 미출근이 아니라 휴무 칸 (②-2 B-2)
 };
 
 export type BoardRow = Omit<BoardPerson, 'pairs'> & {
@@ -41,9 +42,10 @@ export function buildTodayBoard(args: {
     const c = classifyDay({ pairs: p.pairs, rule: args.rule, dayType: args.dayType, workDate: args.workDate, now: args.now });
     const { pairs: _pairs, ...rest } = p;
     void _pairs;
-    board[c.status].push({
+    const status: DayStatus = c.status === 'absent' && p.onLeave ? 'off' : c.status;
+    board[status].push({
       ...rest,
-      status: c.status,
+      status,
       firstIn: c.firstIn,
       lastOut: c.lastOut,
       late: c.lateness?.verdict === 'late',

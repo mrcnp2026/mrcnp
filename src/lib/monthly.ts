@@ -3,6 +3,7 @@
 import { OFFICE } from '@/config/office';
 import { FLAG } from '@/lib/flags';
 import { judgeLateness } from '@/lib/lateness';
+import { isFullDayLeave, roundDays, type LeaveOnDay } from '@/lib/leave';
 import { approvedMinutes, buildOvertimeRequest, pendingMinutes, type OvertimeRequest } from '@/lib/overtime';
 import type { DayRow } from '@/lib/period';
 import { kstDateTime } from '@/lib/time';
@@ -28,10 +29,12 @@ export type MonthSummary = {
   netMinutes: number; // 실제 근로 합계 (화면용)
   absentDates: string[];
   missingOutDates: string[];
+  leaveDates: string[]; // 승인된 휴가가 있는 근무일
+  paidLeaveDays: number; // 유급휴가 일수 (연차·반차·경조사 등) — 화면·엑셀용. 급여용 CSV 칸 목록은 그대로
 };
 
 // 급여를 막는 사유(block:)와 사람이 봐야 할 사실(warn:)을 접두어로 나눈다 (7-10). ③은 block:만 차단한다 (부록 R-11 #7)
-const WARN_FLAGS = new Set<string>([FLAG.WEEKLY_LIMIT_EXCEEDED, FLAG.LEGAL_BREAK_UNCONFIRMED, FLAG.DUPLICATE_IN, FLAG.DUPLICATE_OUT]);
+const WARN_FLAGS = new Set<string>([FLAG.WEEKLY_LIMIT_EXCEEDED, FLAG.LEGAL_BREAK_UNCONFIRMED, FLAG.DUPLICATE_IN, FLAG.DUPLICATE_OUT, FLAG.LEAVE_DAY_PUNCH]);
 const MISSING_IN = '출근 미기록';
 const PENDING_CORRECTION = '대기 중인 정정';
 const NEEDS_REVIEW = '재확인 필요';
@@ -54,6 +57,8 @@ export function summarizeMonth(args: {
   now: Date;
   today: string; // 사무실 날짜
   thresholdMinutes: number;
+  // 날짜별 승인 휴가 (②-2). 넘기지 않으면 결근인지 연차인지 모른다 → 무급휴가 빈 칸 + 차단 표시 (7-14)
+  leave?: Map<string, LeaveOnDay[]>;
 }): MonthSummary {
   const s = { regular: 0, overtime: 0, night: 0, h8: 0, hOver: 0, net: 0 };
   const ap = { overtime: 0, night: 0, h8: 0, hOver: 0 };
@@ -64,6 +69,9 @@ export function summarizeMonth(args: {
   const flags = new Set<string>();
   const absentDates: string[] = [];
   const missingOutDates: string[] = [];
+  const leaveDates: string[] = [];
+  let paidLeave = 0;
+  let unpaidLeave = 0;
   const reqByDate = new Map(args.requests.map((r) => [r.workDate, r]));
 
   for (const d of args.days) {
@@ -108,9 +116,19 @@ export function summarizeMonth(args: {
         lateMinutes += l.lateMinutes;
       }
     }
-    // 결근 후보: 근무일, 입사 후, 지난 날(오늘은 결근 판정 시각 이후), 출근 기록 없음 — 연차인지는 모른다 (7-14)
+    // 휴가 (②-2): ★ 유급휴가일은 결근이 아니다 (B-2). 무급은 무급휴가 일수로. 휴가일에 출근 기록이 있으면 경고만 (요점 4)
+    const lv = args.leave?.get(d.workDate);
+    if (lv) {
+      leaveDates.push(d.workDate);
+      for (const x of lv) {
+        if (x.isPaid) paidLeave += x.unit;
+        else unpaidLeave += x.unit;
+      }
+      if (firstIn) flags.add(FLAG.LEAVE_DAY_PUNCH);
+    }
+    // 결근 후보: 근무일, 입사 후, 지난 날(오늘은 결근 판정 시각 이후), 출근 기록 없음, 하루 전부 휴가가 아님
     const past = d.workDate < args.today || (d.workDate === args.today && args.now >= kstDateTime(d.workDate, OFFICE.absentCheckTime));
-    if (d.dayType === 'workday' && past && !firstIn && (!args.joinedOn || d.workDate >= args.joinedOn)) {
+    if (d.dayType === 'workday' && past && !firstIn && !isFullDayLeave(lv) && (!args.joinedOn || d.workDate >= args.joinedOn)) {
       absentDates.push(d.workDate);
     }
   }
@@ -118,8 +136,8 @@ export function summarizeMonth(args: {
   if (absentDates.length) flags.add(MISSING_IN);
   if (pe.overtime + pe.night + pe.holiday > 0) flags.add(FLAG.PENDING_OVERTIME);
   if (args.pendingCorrections > 0) flags.add(PENDING_CORRECTION);
-  // 7-14: 연차 모듈(②)이 없어 결근인지 연차인지 모른다 → 무급휴가는 빈 칸 + 차단 표시 (0을 쓰지 않는다, B-27)
-  flags.add(FLAG.LEAVE_MODULE_MISSING);
+  // 7-14: 연차 자료가 없으면 결근인지 연차인지 모른다 → 무급휴가는 빈 칸 + 차단 표시 (0을 쓰지 않는다, B-27)
+  if (!args.leave) flags.add(FLAG.LEAVE_MODULE_MISSING);
 
   const ordered = [...flags].map(prefixFlag).sort((a, b) => (a.startsWith('block:') === b.startsWith('block:') ? a.localeCompare(b) : a.startsWith('block:') ? -1 : 1));
 
@@ -127,6 +145,8 @@ export function summarizeMonth(args: {
     netMinutes: s.net,
     absentDates,
     missingOutDates,
+    leaveDates,
+    paidLeaveDays: roundDays(paidLeave),
     row: {
       employee_no: args.employeeNo,
       name: args.name,
@@ -147,7 +167,7 @@ export function summarizeMonth(args: {
       late_count: lateCount,
       late_minutes: lateMinutes,
       absent_days: absentDates.length,
-      unpaid_leave_days: null,
+      unpaid_leave_days: args.leave ? roundDays(unpaidLeave) : null,
       flags: ordered.join(';'),
     },
   };

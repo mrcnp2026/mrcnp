@@ -210,7 +210,9 @@
       "diag": "Diagnostics",
       "diagHint": "Check what internet address the server sees",
       "notices": "Notices",
-      "noticesHint": "Write pop-up notices for staff · who has read them"
+      "noticesHint": "Write pop-up notices for staff · who has read them",
+      "leave": "Leave",
+      "leaveHint": "Enter annual leave · balances · cancel approved leave"
     },
     "diag": {
       "title": "Diagnostics",
@@ -272,7 +274,9 @@
       "noRecord": "No record",
       "pages": "Pages",
       "prevPage": "Previous",
-      "nextPage": "Next"
+      "nextPage": "Next",
+      "pendingLeave": "Leave waiting for approval",
+      "onLeave": "On leave"
     },
     "inbox": {
       "title": "Requests",
@@ -294,7 +298,8 @@
       "status": {
         "approved": "Approved",
         "rejected": "Rejected",
-        "pending": "Waiting"
+        "pending": "Waiting",
+        "cancelled": "Cancelled"
       },
       "type": {
         "add_missing": "Add missing record",
@@ -326,7 +331,16 @@
       "doneMsg": "Done.",
       "already": "Already handled by another admin.",
       "conflict": "A missing record for the same day was already approved.",
-      "over_fact": "Recognized minutes cannot exceed counted minutes."
+      "over_fact": "Recognized minutes cannot exceed counted minutes.",
+      "leaveTitle": "Leave",
+      "leaveBalance": "{remaining} days left · {pending} days waiting (incl. this one)",
+      "leaveNoGrant": "Annual leave has not been entered for this person yet.",
+      "leaveClash": "⚠ There are clock-ins on: {dates}. Approving does not delete them — reject the leave or correct the records.",
+      "leaveManage": "Manage leave",
+      "confirmLeave": "Approve {summary} for {name}?",
+      "confirmLeaveReject": "Reject {summary} for {name}?",
+      "confirmLeaveCancel": "Cancel approved leave for {name}? Those days count as workdays again.",
+      "leaveCancel": "Cancel approval"
     },
     "records": {
       "title": "Records",
@@ -355,7 +369,8 @@
       "holidayCol": "Holiday",
       "lateCol": "Late",
       "absentCol": "No record",
-      "leaveNote": "Days without records may be leave — the leave module is not connected yet (doc 2).",
+      "leaveNote": "Approved leave days are not counted as absent. If someone clocked in on a leave day it is marked \"clock-in on leave day\".",
+      "leaveShort": "Leave {n}d",
       "downloads": "Downloads",
       "privacyWarning": "These files contain staff personal information. Do not put them in shared folders.",
       "attendanceCsv": "Attendance evidence (original + corrected times)",
@@ -451,13 +466,45 @@
       "flagged": "{n} need attention — adjust their remaining days.",
       "left": "{hm} left until 52h",
       "over": "{hm} over 52h"
+    },
+    "leave": {
+      "title": "Leave",
+      "intro": "Managers enter annual leave days by hand. The reference number is only a guide and is never saved automatically.",
+      "practiceBanner": "Practice records — leave requests and approvals here are practice. Leave entitlements are real.",
+      "hired": "Joined {date}",
+      "noHireDate": "No join date",
+      "granted": "Given",
+      "used": "Used",
+      "pending": "Waiting",
+      "remaining": "Left",
+      "noGrant": "Not entered",
+      "reference": "Reference {n} days",
+      "add": "Enter leave",
+      "edit": "Edit leave",
+      "periodLabel": "Period name",
+      "effectiveFrom": "Starts on",
+      "grantedDays": "Days given",
+      "carriedDays": "Carried over",
+      "basis": "Basis",
+      "basisHire": "Join date",
+      "basisFiscal": "Fiscal year",
+      "note": "Note (optional)",
+      "manualHint": "In 0.25-day steps. Saving again with the same period name updates it; changes are kept in the change log.",
+      "save": "Save",
+      "close": "Close",
+      "saved": "Saved.",
+      "invalid_days": "Enter 0–99 days in 0.25-day steps.",
+      "approvedTitle": "Approved leave",
+      "approvedHint": "Approved leave from the last 31 days on. Cancel here if it clashes with clock-ins.",
+      "approvedNone": "No approved leave."
     }
   },
   "nav": {
     "home": "Home",
     "records": "My records",
     "corrections": "Corrections",
-    "manage": "Manage"
+    "manage": "Manage",
+    "leave": "Leave"
   },
   "records": {
     "title": "My records",
@@ -569,5 +616,52 @@
     "empty": "No notices right now.",
     "confirmed": "Read",
     "new": "New"
+  },
+  "leave": {
+    "title": "Leave",
+    "balanceTitle": "Annual leave left",
+    "days": "{n} days",
+    "granted": "Given",
+    "used": "Used",
+    "pending": "Waiting",
+    "pendingHint": "Days waiting for approval come off your balance once approved.",
+    "noGrant": "Your annual leave for this year has not been entered yet. It will show here once your manager adds it.",
+    "request": "Request leave",
+    "typeLabel": "Type",
+    "type": {
+      "annual": "Annual leave",
+      "half": "Half day",
+      "quarter": "Quarter day",
+      "sick": "Sick leave",
+      "condolence": "Family event",
+      "unpaid": "Unpaid leave"
+    },
+    "date": "Date",
+    "start": "From",
+    "end": "To",
+    "workdaysOnly": "Only workdays count — weekends and public holidays are skipped.",
+    "reason": "Reason (optional)",
+    "reasonHint": "You can leave this empty. Only managers see it.",
+    "submit": "Send request",
+    "sent": "Requested {n} days. Your manager will check it.",
+    "mine": "My requests",
+    "none": "No leave requests yet.",
+    "status": {
+      "pending": "Waiting",
+      "approved": "Approved",
+      "rejected": "Rejected",
+      "cancelled": "Cancelled"
+    },
+    "cancel": "Cancel request",
+    "cancelConfirm": "Cancel this request?",
+    "cancelYes": "Cancel it",
+    "back": "Go back",
+    "range_too_long": "You can request up to 31 days at once.",
+    "too_old": "For dates more than 31 days ago, ask your manager directly.",
+    "no_rule": "Work hours are not set yet, so leave cannot be requested.",
+    "no_workdays": "There are no workdays in that range. Half and quarter days must be a single workday.",
+    "duplicate_request": "You already have leave on that date.",
+    "no_grant": "Your annual leave has not been entered yet. Ask your manager.",
+    "insufficient_balance": "This is more than your remaining leave (not counting requests waiting)."
   }
 }

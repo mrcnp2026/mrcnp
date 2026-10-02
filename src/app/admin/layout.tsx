@@ -12,7 +12,7 @@ export default async function AdminLayout({ children }: { children: React.ReactN
   const c = await pendingCounts();
   return (
     <div className="lg:flex">
-      <AdminNav inboxCount={c.overtime + c.corrections} />
+      <AdminNav inboxCount={c.total} />
       {/* 폰에서는 하단 탭 바 높이 + 아이폰 하단 여백만큼 비운다 */}
       <div className="flex-1 pb-[calc(4rem+env(safe-area-inset-bottom))] lg:pb-0">
         <div className="lg:hidden">

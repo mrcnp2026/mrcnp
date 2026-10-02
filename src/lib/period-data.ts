@@ -1,8 +1,11 @@
 // 기간 데이터 읽기 + 연장 확인 대상 만들기. 서버 전용.
 // 예약 작업(cron)을 만들지 않는다 (3장) — 처리함·현황판·월간 집계를 **열 때** 계산하고 필요한 요청 행을 만든다.
 import 'server-only';
+import { resolveDayType } from '@/config/labor-rules';
 import { OFFICE } from '@/config/office';
 import { loadHolidays, loadRuleVersions } from '@/lib/attendance-data';
+import { leaveByDate, type LeaveOnDay, type LeaveRequest, type LeaveType } from '@/lib/leave';
+import { loadLeaveRequests, loadLeaveTypes } from '@/lib/leave-data';
 import { addDays, weekStartOf } from '@/lib/calendar';
 import { buildOvertimeRequest } from '@/lib/overtime';
 import { computeEmployeeDays, type DayRow } from '@/lib/period';
@@ -56,13 +59,28 @@ export type PeriodData = {
   events: EventRow[];
   corrections: CorrectionRow[];
   overtime: OvertimeRow[];
+  leaveRequests: LeaveRequest[]; // 기간과 겹치는 휴가 신청 (모든 상태) — 결근 판정은 승인된 것만 (leaveDaysFor)
+  leaveTypes: LeaveType[];
 };
+
+/** 한 직원의 날짜별 승인 휴가 (근무일만). ★ 유급휴가일은 결근이 아니다 (②-2 B-2) */
+export function leaveDaysFor(data: PeriodData, employeeId: string): Map<string, LeaveOnDay[]> {
+  const fallback = data.rule;
+  if (!fallback) return new Map();
+  return leaveByDate({
+    requests: data.leaveRequests.filter((r) => r.employeeId === employeeId),
+    types: data.leaveTypes,
+    dayTypeOf: (d) => resolveDayType(d, data.ruleAt(d) ?? fallback, data.holidays),
+    from: data.from,
+    to: data.to,
+  });
+}
 
 /** from~to 데이터. 주 40시간 계산을 위해 기록은 from이 속한 주 월요일부터 읽는다 (period.ts) */
 export async function loadPeriod(from: string, to: string, practice = OFFICE.practiceMode): Promise<PeriodData> {
   const db = createAdminClient();
   const readFrom = addDays(weekStartOf(from), -1); // 자정 넘긴 퇴근의 근무일 상속 여유
-  const [versions, holidays, { data: ppl }, { data: ev }, { data: co }, { data: ot }] = await Promise.all([
+  const [versions, holidays, { data: ppl }, { data: ev }, { data: co }, { data: ot }, leaveRequests, leaveTypes] = await Promise.all([
     loadRuleVersions(),
     loadHolidays(readFrom, to),
     db.from('profiles').select('id, name, employee_no, role, active, joined_on, created_at').order('name'),
@@ -73,6 +91,8 @@ export async function loadPeriod(from: string, to: string, practice = OFFICE.pra
       .select('id, correction_type, target_id, employee_id, work_date, kind, new_punched_at, status, reason, requested_by, approved_by, created_at, decided_at')
       .eq('is_test', practice).gte('work_date', readFrom).lte('work_date', to).order('created_at'),
     db.from('overtime_requests').select('*').eq('is_test', practice).gte('work_date', from).lte('work_date', to),
+    loadLeaveRequests({ from: readFrom, to, practice }),
+    loadLeaveTypes(),
   ]);
   return {
     from,
@@ -95,6 +115,8 @@ export async function loadPeriod(from: string, to: string, practice = OFFICE.pra
       requestedBy: c.requested_by, approvedBy: c.approved_by, createdAt: c.created_at, decidedAt: c.decided_at,
     })),
     overtime: (ot ?? []).map(toOvertimeRow),
+    leaveRequests,
+    leaveTypes,
   };
 }
 
@@ -180,12 +202,14 @@ export async function syncOvertimeRequests(data: PeriodData, upTo: string): Prom
   return inserts.length + reviews.length;
 }
 
-export async function pendingCounts(practice = OFFICE.practiceMode): Promise<{ overtime: number; corrections: number }> {
+export async function pendingCounts(practice = OFFICE.practiceMode): Promise<{ overtime: number; corrections: number; leave: number; total: number }> {
   const db = createAdminClient();
-  const [{ count: a }, { count: b }, { count: c }] = await Promise.all([
+  const [{ count: a }, { count: b }, { count: c }, { count: l }] = await Promise.all([
     db.from('overtime_requests').select('id', { count: 'exact', head: true }).eq('is_test', practice).eq('status', 'pending'),
     db.from('overtime_requests').select('id', { count: 'exact', head: true }).eq('is_test', practice).eq('needs_review', true).neq('status', 'pending'),
     db.from('punch_corrections').select('id', { count: 'exact', head: true }).eq('is_test', practice).eq('status', 'pending'),
+    db.from('leave_requests').select('id', { count: 'exact', head: true }).eq('is_test', practice).eq('status', 'pending'),
   ]);
-  return { overtime: (a ?? 0) + (b ?? 0), corrections: c ?? 0 };
+  const r = { overtime: (a ?? 0) + (b ?? 0), corrections: c ?? 0, leave: l ?? 0 };
+  return { ...r, total: r.overtime + r.corrections + r.leave };
 }

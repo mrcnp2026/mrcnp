@@ -1,6 +1,7 @@
 // 게이트 8 — 월간 집계·급여용 CSV (①-4 11-A "급여용 CSV", ①-1 11-A의 CSV 항목)
 import { describe, expect, it } from 'vitest';
 import { csvCell, PAYROLL_COLUMNS, prefixFlag, summarizeMonth, toCsv, type MonthRequest } from '@/lib/monthly';
+import type { LeaveOnDay } from '@/lib/leave';
 import { computeEmployeeDays } from '@/lib/period';
 import { kstDateTime } from '@/lib/time';
 import type { PunchCorrection, PunchEvent, WorkRule } from '@/lib/types';
@@ -11,14 +12,39 @@ const RULE: WorkRule = {
 let seq = 0;
 const ev = (kind: 'in' | 'out', d: string, t: string, wd = d): PunchEvent => ({ id: `e${++seq}`, employeeId: 'e1', kind, punchedAt: kstDateTime(d, t), workDate: wd });
 
-function month(events: PunchEvent[], opts: { requests?: MonthRequest[]; corrections?: PunchCorrection[]; pendingCorrections?: number; today?: string } = {}) {
+function month(events: PunchEvent[], opts: { requests?: MonthRequest[]; corrections?: PunchCorrection[]; pendingCorrections?: number; today?: string; leave?: Map<string, LeaveOnDay[]> } = {}) {
   const days = computeEmployeeDays({ events, approvedCorrections: opts.corrections ?? [], rule: RULE, holidays: [], from: '2026-10-01', to: '2026-10-31' });
   const today = opts.today ?? '2026-11-01';
   return summarizeMonth({
     employeeNo: 'A001', name: 'Nguyen', yearMonth: '2026-10', days, requests: opts.requests ?? [], pendingCorrections: opts.pendingCorrections ?? 0,
-    rule: RULE, joinedOn: '2026-10-12', now: kstDateTime(today, '12:00'), today, thresholdMinutes: 30,
+    rule: RULE, joinedOn: '2026-10-12', now: kstDateTime(today, '12:00'), today, thresholdMinutes: 30, leave: opts.leave,
   });
 }
+
+describe('연차 연결 (②-2 B-2: 유급휴가일은 결근이 아니다)', () => {
+  const L = (typeCode: string, isPaid: boolean, unit: number): LeaveOnDay => ({ typeCode, isPaid, unit, requestId: 'r' });
+  it('연차일은 결근에서 빠지고, 무급휴가는 무급휴가 일수로, 연차 모듈 차단 표시가 사라진다', () => {
+    const all = month([]); // 10-12(월)~10-30(금) 근무일 15일 전부 기록 없음
+    const leave = new Map([
+      ['2026-10-12', [L('annual', true, 1)]],
+      ['2026-10-13', [L('unpaid', false, 1)]],
+      ['2026-10-14', [L('half', true, 0.5)]], // 반차만 — 나머지 반나절 기록이 없으니 결근 후보로 남는다
+    ]);
+    const r = month([], { leave });
+    expect(r.absentDates).not.toContain('2026-10-12');
+    expect(r.absentDates).not.toContain('2026-10-13');
+    expect(r.absentDates).toContain('2026-10-14');
+    expect(Number(r.row.absent_days)).toBe(Number(all.row.absent_days) - 2);
+    expect(r.row.unpaid_leave_days).toBe(1);
+    expect(r.paidLeaveDays).toBe(1.5);
+    expect(String(r.row.flags)).not.toContain('연차 모듈 미연결');
+  });
+  it('휴가일에 출근 기록이 있으면 warn:휴가일 출근 기록 (자동으로 지우지 않는다)', () => {
+    const r = month([ev('in', '2026-10-15', '09:00'), ev('out', '2026-10-15', '18:00')], { leave: new Map([['2026-10-15', [L('annual', true, 1)]]]) });
+    expect(String(r.row.flags)).toContain('warn:휴가일 출근 기록');
+    expect(r.netMinutes).toBeGreaterThan(0);
+  });
+});
 
 describe('급여용 CSV 형식', () => {
   it('열 이름과 순서가 7-10 목록과 정확히 같다', () => {

@@ -10,9 +10,12 @@ import { addDays } from '@/lib/calendar';
 import { loadPeriod, syncOvertimeRequests } from '@/lib/period-data';
 import { createAdminClient } from '@/lib/supabase/admin';
 import { toKstDate } from '@/lib/time';
-import { CorrectionDecision, OvertimeDecision } from './Decisions';
+import Link from 'next/link';
+import { calcLeaveBalance } from '@/lib/leave';
+import { loadLeaveGrants, loadLeaveRequests, loadLeaveTypes } from '@/lib/leave-data';
+import { CorrectionDecision, LeaveDecision, OvertimeDecision } from './Decisions';
 
-export default async function InboxPage({ searchParams }: { searchParams: Promise<{ live?: string; op?: string; cp?: string }> }) {
+export default async function InboxPage({ searchParams }: { searchParams: Promise<{ live?: string; op?: string; cp?: string; lp?: string }> }) {
   const t = await getTranslations('admin.inbox');
   const f = await getFormatter();
   const me = (await getMe())!;
@@ -50,6 +53,23 @@ export default async function InboxPage({ searchParams }: { searchParams: Promis
   const tc = await getTranslations('common');
   const otPage = pageOf(ot ?? [], sp.op);
   const coPage = pageOf(co ?? [], sp.cp);
+
+  // 연차·휴가 신청 (②-2 게이트 5): 남은 연차 + 그 날짜 출근 기록 충돌 경고 (자동으로 지우지 않는다, 요점 4)
+  const tl = await getTranslations('leave');
+  const [leaveTypes, leavePending] = await Promise.all([loadLeaveTypes(), loadLeaveRequests({ practice }).then((rs) => rs.filter((r) => r.status === 'pending'))]);
+  const leaveEmp = [...new Set(leavePending.map((r) => r.employeeId))];
+  const [leaveGrants, leaveAll, { data: leavePunches }] = await Promise.all([
+    Promise.all(leaveEmp.map((e) => loadLeaveGrants(e))).then((x) => x.flat()),
+    Promise.all(leaveEmp.map((e) => loadLeaveRequests({ employeeId: e, practice }))).then((x) => x.flat()),
+    leaveEmp.length
+      ? db.from('punch_events').select('employee_id, work_date').in('employee_id', leaveEmp).eq('is_test', practice)
+          .gte('work_date', leavePending.reduce((a, r) => (r.startDate < a ? r.startDate : a), '9999-12-31'))
+          .lte('work_date', leavePending.reduce((a, r) => (r.endDate > a ? r.endDate : a), '0000-01-01'))
+      : Promise.resolve({ data: [] as { employee_id: string; work_date: string }[] }),
+  ]);
+  const leaveName = (code: string) => (tl.has(`type.${code}`) ? tl(`type.${code}`) : code);
+  const nDays = (v: number) => f.number(v, { maximumFractionDigits: 2 });
+  const lvPage = pageOf(leavePending, sp.lp);
 
   return (
     <PageShell>
@@ -130,13 +150,55 @@ export default async function InboxPage({ searchParams }: { searchParams: Promis
         <Pager page={coPage.page} pages={coPage.pages} param="cp" params={sp} anchor="corrections" label={tc('pages')} />
       </section>
 
+      <section id="leave" className="flex scroll-mt-16 flex-col gap-3">
+        <h2 className="flex items-center gap-2 text-xl font-semibold">
+          {t('leaveTitle')} <span className="num text-base text-faint">{leavePending.length}</span>
+        </h2>
+        {leavePending.length === 0 && <p className="text-sm text-faint">{t('empty')}</p>}
+        {lvPage.items.map((r) => {
+          const bal = calcLeaveBalance({ grants: leaveGrants.filter((g) => g.employeeId === r.employeeId), requests: leaveAll.filter((x) => x.employeeId === r.employeeId), types: leaveTypes, asOf: r.startDate });
+          const deducts = leaveTypes.find((x) => x.code === r.typeCode)?.deductsBalance;
+          const clash = [...new Set((leavePunches ?? []).filter((p) => p.employee_id === r.employeeId && p.work_date >= r.startDate && p.work_date <= r.endDate).map((p) => p.work_date))];
+          const range = r.startDate === r.endDate ? dayLabel(r.startDate) : `${dayLabel(r.startDate)} ~ ${dayLabel(r.endDate)}`;
+          const summary = `${leaveName(r.typeCode)} ${tl('days', { n: nDays(r.days) })} (${range})`;
+          return (
+            <Card key={r.id} className="flex flex-col gap-2">
+              <div className="flex items-start justify-between gap-2">
+                <div>
+                  <p className="font-semibold">{name.get(r.employeeId)}</p>
+                  <p className="num text-sm text-muted">{range}</p>
+                </div>
+                {r.employeeId === me.id && <Chip>{t('self')}</Chip>}
+              </div>
+              <p className="num font-semibold">
+                {leaveName(r.typeCode)} · {tl('days', { n: nDays(r.days) })}
+              </p>
+              {deducts && (
+                <p className="num text-sm text-muted">
+                  {bal.grant ? t('leaveBalance', { remaining: nDays(bal.remaining), pending: nDays(bal.pending) }) : t('leaveNoGrant')}
+                </p>
+              )}
+              {r.reason && <p className="text-sm"><span className="text-muted">{t('reason')}: </span>{r.reason}</p>}
+              {clash.length > 0 && (
+                <p className="rounded-button border border-warn bg-warn-tint p-2 text-sm text-warn">{t('leaveClash', { dates: clash.map(dayLabel).join(', ') })}</p>
+              )}
+              <LeaveDecision id={r.id} name={name.get(r.employeeId) ?? ''} summary={summary} />
+            </Card>
+          );
+        })}
+        <Pager page={lvPage.page} pages={lvPage.pages} param="lp" params={sp} anchor="leave" label={tc('pages')} />
+        <Link href="/admin/leave" className="inline-flex min-h-11 items-center self-start text-sm text-primary">
+          {t('leaveManage')} ›
+        </Link>
+      </section>
+
       {(recent ?? []).length > 0 && (
         <section className="flex flex-col gap-2">
           <h2 className="font-semibold">{t('recent')}</h2>
           <ul className="divide-y divide-border rounded-card border border-border px-4 text-sm">
             {(recent ?? []).map((r, i) => (
               <li key={i} className="flex min-h-11 items-center justify-between gap-2 py-2">
-                <span>{t(r.subject_table === 'overtime_requests' ? 'overtimeTitle' : 'correctionsTitle')} · {t(`status.${r.decision}`)}</span>
+                <span>{t(r.subject_table === 'overtime_requests' ? 'overtimeTitle' : r.subject_table === 'leave_requests' ? 'leaveTitle' : 'correctionsTitle')} · {t(`status.${r.decision}`)}</span>
                 <span className="num text-muted">{name.get(r.decided_by)} · {f.dateTime(new Date(r.created_at), { month: 'numeric', day: 'numeric', hour: '2-digit', minute: '2-digit', hourCycle: 'h23' })}</span>
               </li>
             ))}

@@ -210,7 +210,9 @@
       "diag": "진단",
       "diagHint": "서버가 보는 인터넷 주소 확인",
       "notices": "공지",
-      "noticesHint": "직원에게 팝업으로 알릴 내용 쓰기 · 확인 현황"
+      "noticesHint": "직원에게 팝업으로 알릴 내용 쓰기 · 확인 현황",
+      "leave": "연차 관리",
+      "leaveHint": "직원별 연차 입력 · 잔여 · 승인된 휴가 취소"
     },
     "diag": {
       "title": "진단",
@@ -272,7 +274,9 @@
       "noRecord": "기록 없음",
       "pages": "페이지",
       "prevPage": "이전",
-      "nextPage": "다음"
+      "nextPage": "다음",
+      "pendingLeave": "연차·휴가 승인 대기",
+      "onLeave": "휴가"
     },
     "inbox": {
       "title": "요청",
@@ -294,7 +298,8 @@
       "status": {
         "approved": "승인",
         "rejected": "거부",
-        "pending": "대기"
+        "pending": "대기",
+        "cancelled": "취소"
       },
       "type": {
         "add_missing": "빠진 기록 추가",
@@ -326,7 +331,16 @@
       "doneMsg": "처리했습니다.",
       "already": "이미 다른 관리자가 처리했습니다.",
       "conflict": "같은 날의 빠진 기록 추가가 이미 승인되어 있습니다.",
-      "over_fact": "인정 분은 집계된 분보다 클 수 없습니다."
+      "over_fact": "인정 분은 집계된 분보다 클 수 없습니다.",
+      "leaveTitle": "연차·휴가",
+      "leaveBalance": "남은 연차 {remaining}일 · 승인 대기 {pending}일 (이 신청 포함)",
+      "leaveNoGrant": "이 직원은 아직 연차가 입력되지 않았습니다.",
+      "leaveClash": "⚠ 이 날짜에 출근 기록이 있습니다: {dates}. 승인해도 출근 기록은 지워지지 않습니다 — 연차를 거부하거나, 출근 기록을 정정하세요.",
+      "leaveManage": "연차 관리",
+      "confirmLeave": "{name}님의 {summary}를 승인할까요?",
+      "confirmLeaveReject": "{name}님의 {summary}를 거부할까요?",
+      "confirmLeaveCancel": "{name}님의 승인된 휴가를 취소할까요? 그 날은 다시 근무일로 계산됩니다.",
+      "leaveCancel": "승인 취소"
     },
     "records": {
       "title": "기록",
@@ -355,7 +369,8 @@
       "holidayCol": "휴일",
       "lateCol": "지각",
       "absentCol": "기록 없음",
-      "leaveNote": "기록 없는 날은 연차일 수 있습니다 — 연차 모듈(② 문서)이 아직 연결되지 않았습니다.",
+      "leaveNote": "승인된 휴가일은 결근(기록 없음)으로 세지 않습니다. 휴가일에 출근 기록이 있으면 \"휴가일 출근 기록\"으로 표시됩니다.",
+      "leaveShort": "휴가 {n}일",
       "downloads": "내려받기",
       "privacyWarning": "직원 개인정보가 들어 있습니다. 공유 폴더에 올리지 마세요.",
       "attendanceCsv": "근태 증빙 (원본·정정 시각)",
@@ -451,13 +466,45 @@
       "flagged": "주의가 필요한 직원 {n}명 — 남은 요일 근무를 조정하세요.",
       "left": "52시간까지 {hm} 남음",
       "over": "52시간을 {hm} 넘었습니다"
+    },
+    "leave": {
+      "title": "연차 관리",
+      "intro": "연차 일수는 관리자가 직접 입력합니다. 참고 계산값은 확인용일 뿐 자동으로 저장되지 않습니다.",
+      "practiceBanner": "연습 기록입니다 — 휴가 신청·승인은 연습용입니다. 연차 입력은 실제 값입니다.",
+      "hired": "입사 {date}",
+      "noHireDate": "입사일 없음",
+      "granted": "받은",
+      "used": "사용",
+      "pending": "대기",
+      "remaining": "잔여",
+      "noGrant": "연차 미입력",
+      "reference": "참고용 {n}일",
+      "add": "연차 입력",
+      "edit": "연차 고치기",
+      "periodLabel": "기간 이름",
+      "effectiveFrom": "적용 시작일",
+      "grantedDays": "발생 일수",
+      "carriedDays": "이월 일수",
+      "basis": "기준",
+      "basisHire": "입사일 기준",
+      "basisFiscal": "회계연도 기준",
+      "note": "메모 (선택)",
+      "manualHint": "0.25일 단위. 같은 기간 이름으로 다시 저장하면 고쳐지고, 바꾼 내용은 변경 기록에 남습니다.",
+      "save": "저장",
+      "close": "닫기",
+      "saved": "저장했습니다.",
+      "invalid_days": "일수는 0~99, 0.25일 단위로 적어 주세요.",
+      "approvedTitle": "승인된 휴가",
+      "approvedHint": "최근 31일 이후의 승인 건입니다. 출근 기록과 겹치면 여기서 취소할 수 있습니다.",
+      "approvedNone": "승인된 휴가가 없습니다."
     }
   },
   "nav": {
     "home": "홈",
     "records": "내 기록",
     "corrections": "정정 요청",
-    "manage": "직원관리"
+    "manage": "직원관리",
+    "leave": "연차"
   },
   "records": {
     "title": "내 기록",
@@ -569,5 +616,52 @@
     "empty": "지금 볼 공지가 없습니다.",
     "confirmed": "확인함",
     "new": "새 공지"
+  },
+  "leave": {
+    "title": "연차·휴가",
+    "balanceTitle": "남은 연차",
+    "days": "{n}일",
+    "granted": "받은 연차",
+    "used": "쓴 연차",
+    "pending": "승인 대기",
+    "pendingHint": "승인 대기 중인 일수는 승인되면 남은 연차에서 빠집니다.",
+    "noGrant": "아직 올해 연차가 입력되지 않았습니다. 관리자가 입력하면 여기에 나옵니다.",
+    "request": "휴가 신청",
+    "typeLabel": "종류",
+    "type": {
+      "annual": "연차",
+      "half": "반차",
+      "quarter": "반반차",
+      "sick": "병가",
+      "condolence": "경조사",
+      "unpaid": "무급휴가"
+    },
+    "date": "날짜",
+    "start": "시작일",
+    "end": "종료일",
+    "workdaysOnly": "주말·공휴일은 빼고 근무일만 셉니다.",
+    "reason": "사유 (선택)",
+    "reasonHint": "적지 않아도 됩니다. 관리자만 봅니다.",
+    "submit": "신청하기",
+    "sent": "{n}일 신청했습니다. 관리자가 확인합니다.",
+    "mine": "내 신청",
+    "none": "아직 신청한 휴가가 없습니다.",
+    "status": {
+      "pending": "대기",
+      "approved": "승인",
+      "rejected": "거부",
+      "cancelled": "취소"
+    },
+    "cancel": "신청 취소",
+    "cancelConfirm": "이 신청을 취소할까요?",
+    "cancelYes": "취소하기",
+    "back": "돌아가기",
+    "range_too_long": "한 번에 31일까지 신청할 수 있습니다.",
+    "too_old": "31일보다 지난 날짜는 관리자에게 직접 요청하세요.",
+    "no_rule": "근무시간이 아직 설정되지 않아 신청할 수 없습니다.",
+    "no_workdays": "고른 기간에 근무일이 없습니다. 반차·반반차는 근무일 하루만 고르세요.",
+    "duplicate_request": "그 날짜에 이미 신청한 휴가가 있습니다.",
+    "no_grant": "아직 연차가 입력되지 않았습니다. 관리자에게 문의하세요.",
+    "insufficient_balance": "남은 연차(승인 대기 제외)보다 많이 신청했습니다."
   }
 }
