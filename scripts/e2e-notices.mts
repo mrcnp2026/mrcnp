@@ -118,15 +118,13 @@ try {
   check(true, '게시 → 「게시 중」');
   await scanAll(p, '공지 편집(게시 중)', `/admin/notices/${noticeId}`);
 
-  // ── 직원(영어): 홈에서는 출퇴근 전엔 안 뜬다 ──
+  // ── 직원(영어): 게시된 공지는 홈에서도 바로 뜬다 (2026-10-02 의뢰인 결정) ──
   await db.from('profiles').update({ role: 'employee', locale: 'en' }).eq('id', emp.id);
   await p.goto(`${BASE}/punch`);
   await p.waitForLoadState('networkidle');
-  check(!(await p.getByRole('dialog').isVisible()), '홈(출퇴근 화면)에서는 출퇴근 전 팝업이 안 뜬다');
   check(await p.getByRole('link', { name: /Notices \(1 unread\)/ }).isVisible(), '홈 상단 종 아이콘에 미확인 1');
-  await p.evaluate("window.dispatchEvent(new Event('attendance:punched'))");
   await p.getByRole('dialog').waitFor({ timeout: 5000 });
-  check(true, '출퇴근을 찍은 다음에 팝업이 뜬다');
+  check(true, '홈을 열자마자 팝업이 뜬다');
   const dlg = p.getByRole('dialog');
   check(await dlg.getByText('[Check] Office closed March 14').isVisible(), '팝업이 영어(상단 언어)로 보인다');
   check(await dlg.getByRole('link', { name: 'https://example.com/a' }).isVisible(), '주소는 링크');
@@ -144,35 +142,44 @@ try {
   check(!(await p.getByRole('dialog').isVisible()), '확인한 공지는 다시 안 뜬다');
   await scanAll(p, '직원 공지 목록(en)', '/punch/notices');
 
-  // ── 관리자: 「내용 변경」으로 고치면 다시 뜬다 (판 2), 영어 번역은 옛 판 ──
+  // ── 직원 화면을 열어 둔 채로 관리자가 「내용 변경」 → 새로 고침 없이 30초 안에 다시 뜬다 (판 2) ──
   await db.from('profiles').update({ role: 'admin', locale: 'ko' }).eq('id', emp.id);
-  await p.goto(`${BASE}/admin/notices/${noticeId}`);
+  await p.context().addCookies([{ name: 'locale', value: 'ko', url: BASE }]);
+  await p.goto(`${BASE}/punch/records`); // 관리자도 직원 화면을 쓴다 — 이 화면을 열어 둔다
   await p.waitForLoadState('networkidle');
-  check(await p.getByText('확인 1/1명').isVisible(), `확인 현황 1/1명 (${(await p.locator('header').last().innerText()).slice(0, 80)})`);
-  await p.getByLabel('본문 (한국어)').fill('3월 14일은 휴무입니다. 3월 16일 09:00에 봬요.');
-  await p.getByRole('button', { name: '저장', exact: true }).click();
-  await p.getByText('저장했습니다.').waitFor();
+  const p2 = await p.context().newPage();
+  await p2.goto(`${BASE}/admin/notices/${noticeId}`);
+  await p2.waitForLoadState('networkidle');
+  await p2.waitForFunction("!document.querySelector('[aria-busy=true]')");
+  check(await p2.getByText('확인 1/1명').isVisible(), '확인 현황 1/1명');
+  await p2.getByLabel('본문 (한국어)').fill('3월 14일은 휴무입니다. 3월 16일 09:00에 봬요.');
+  await p2.getByRole('button', { name: '저장', exact: true }).click();
+  await p2.getByText('저장했습니다.').waitFor();
   const { data: nv } = await db.from('notices').select('version').eq('id', noticeId).single();
   check(nv?.version === 2, `내용 변경(기본) → 판 2 (${nv?.version})`);
-  await db.from('profiles').update({ role: 'employee', locale: 'en' }).eq('id', emp.id);
-  await p.goto(`${BASE}/punch/records`);
-  await p.getByRole('dialog').waitFor({ timeout: 5000 });
-  check(await p.getByRole('dialog').getByText('out of date', { exact: false }).isVisible(), '다시 뜨고, 영어 번역에 「옛 내용」 안내');
-  // 한국어로 바꾸면 같은 공지가 한국어로
-  await db.from('profiles').update({ locale: 'ko' }).eq('id', emp.id);
-  await p.context().addCookies([{ name: 'locale', value: 'ko', url: BASE }]);
-  await p.goto(`${BASE}/punch/records`);
-  await p.getByRole('dialog').waitFor({ timeout: 5000 });
-  check(await p.getByRole('dialog').getByText('3월 16일 09:00에 봬요', { exact: false }).isVisible(), '언어를 한국어로 바꾸면 팝업도 한국어');
+  await p2.close();
+  const t0 = Date.now();
+  await p.bringToFront();
+  await p.getByRole('dialog').waitFor({ timeout: 40000 });
+  check(await p.getByRole('dialog').getByText('3월 16일 09:00에 봬요', { exact: false }).isVisible(), `열어 둔 화면에 새로 고침 없이 다시 뜬다 (${Math.round((Date.now() - t0) / 1000)}초, 한국어)`);
   await scanAll(p, '공지 팝업(ko)');
-  await p.getByRole('dialog').getByRole('button', { name: '오늘 하루 보지 않기' }).click();
+  // 영어로 보면 번역이 옛 판이라는 안내
+  await db.from('profiles').update({ role: 'employee', locale: 'en' }).eq('id', emp.id);
+  await p.context().addCookies([{ name: 'locale', value: 'en', url: BASE }]);
+  await p.goto(`${BASE}/punch/records`);
+  await p.getByRole('dialog').waitFor({ timeout: 5000 });
+  check(await p.getByRole('dialog').getByText('out of date', { exact: false }).isVisible(), '영어 번역에 「옛 내용」 안내');
+  await p.getByRole('dialog').getByRole('button', { name: "Don't show again today" }).click();
   await p.goto(`${BASE}/punch/records`);
   await p.waitForLoadState('networkidle');
+  await p.waitForTimeout(1500);
   check(!(await p.getByRole('dialog').isVisible()), '「오늘 하루 보지 않기」 → 오늘은 안 뜬다');
   const { count: rc } = await db.from('notice_reads').select('id', { count: 'exact', head: true }).eq('notice_id', noticeId).eq('version', 2);
   check(rc === 0, '「오늘 하루 보지 않기」는 확인 기록이 아니다');
 } catch (e) {
   check(false, `중단: ${(e as Error).message.split('\n')[0]}`);
+  // 멈춘 화면을 남긴다 (shots/는 git에 올리지 않는다)
+  await browser.contexts()[0]?.pages()[0]?.screenshot({ path: path.join(import.meta.dirname, '..', 'shots', 'e2e-fail.png'), fullPage: true }).catch(() => {});
 } finally {
   await browser.close();
   if (noticeId) await db.from('notices').update({ status: 'archived' }).eq('id', noticeId);

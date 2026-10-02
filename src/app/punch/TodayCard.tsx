@@ -9,7 +9,7 @@ import { Check, Clock, LogIn, LogOut } from 'lucide-react';
 import { useFormatter, useTranslations } from 'next-intl';
 import { useRouter } from 'next/navigation';
 import { useEffect, useState } from 'react';
-import { PUNCHED_EVENT } from '@/components/NoticeSheet';
+import { PUNCHED_EVENT, PUNCHING_EVENT } from '@/components/NoticeSheet';
 import { callApi, passkeyBrowserError } from '@/components/client-api';
 import { ErrorNote } from '@/components/ErrorNote';
 import { LiveClock } from '@/components/LiveClock';
@@ -45,6 +45,7 @@ export function TodayCard(props: {
     setResult(null);
     if (!browserSupportsWebAuthn()) return setErr({ code: 'unsupported' });
     setBusy(true);
+    window.dispatchEvent(new Event(PUNCHING_EVENT)); // 확인하는 동안 공지 팝업을 미룬다
     try {
       const opts = await callApi<Parameters<typeof startAuthentication>[0]['optionsJSON']>('/api/punch/options');
       if (!opts.ok) return setErr(opts);
@@ -58,10 +59,10 @@ export function TodayCard(props: {
       const r = await callApi<Result>('/api/punch', { kind, response });
       if (!r.ok) return setErr(r);
       setResult(r.data);
-      window.dispatchEvent(new Event(PUNCHED_EVENT)); // 공지 팝업은 이 다음에 뜬다 (②-5 7-15 요점 18)
       router.refresh();
     } finally {
       setBusy(false);
+      window.dispatchEvent(new Event(PUNCHED_EVENT)); // 성공·실패 모두 — 미뤘던 공지를 이제 띄운다
     }
   }
 

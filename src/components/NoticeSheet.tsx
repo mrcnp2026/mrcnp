@@ -1,12 +1,13 @@
 'use client';
 // 공지 팝업 (②-5 7-15 요점 18~22): 아래에서 올라오는 판 + 맨 아래 폭 전체 「확인」.
 // 언어는 상단 언어 버튼을 따른다 — 서버가 그 언어의 번역을 골라 넘긴다 (없으면 한국어 원문).
-// 출퇴근 화면(/punch)에서는 출퇴근을 찍은 다음에 띄운다 — 버튼을 가리지 않게 (요점 18). 공지 목록 화면에서는 띄우지 않는다.
-// 「오늘 하루 보지 않기」는 이 브라우저에만 기억한다.
+// 게시하자마자 뜬다 (2026-10-02 의뢰인): 화면을 연 동안 30초마다, 그리고 앱으로 돌아올 때마다 서버에 새 공지를 묻는다.
+//   예전 규칙(출퇴근 화면에서는 찍은 뒤에만, 요점 18)은 의뢰인 결정으로 바꿨다 — 출퇴근 버튼을 누르는 중에만 띄우지 않는다.
+// 공지 목록 화면에서는 띄우지 않는다. 「오늘 하루 보지 않기」는 이 브라우저에만 기억한다.
 import { Megaphone } from 'lucide-react';
 import { useLocale, useTranslations } from 'next-intl';
 import { usePathname, useRouter } from 'next/navigation';
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { callApi } from './client-api';
 import { NoticeBody } from './NoticeBody';
 import { Button, Chip } from './ui';
@@ -20,6 +21,8 @@ export type SheetNotice = {
 };
 
 export const PUNCHED_EVENT = 'attendance:punched';
+export const PUNCHING_EVENT = 'attendance:punching'; // 출퇴근 확인 중 — 이때는 팝업을 미룬다
+const POLL_MS = 30_000;
 const today = () => new Date().toLocaleDateString('sv-SE', { timeZone: 'Asia/Seoul' });
 const snoozeKey = (n: SheetNotice) => `notice-snooze:${n.id}:${n.version}:${today()}`;
 
@@ -38,21 +41,52 @@ export function NoticeSheet({ items }: { items: SheetNotice[] }) {
   const router = useRouter();
   const [queue, setQueue] = useState<SheetNotice[]>([]);
   const path = usePathname();
-  const [punched, setPunched] = useState(false);
+  const [punching, setPunching] = useState(false);
+  const [latest, setLatest] = useState<SheetNotice[]>(items);
+  const handled = useRef(new Set<string>()); // 이 화면에서 이미 확인·미룬 공지 (서버 반영 전에 다시 뜨지 않게)
   const [showOriginal, setShowOriginal] = useState(false);
   const [busy, setBusy] = useState(false);
 
-  useEffect(() => setQueue(items.filter((n) => n.important || !snoozed(n))), [items]);
+  useEffect(() => setLatest(items), [items]);
+  useEffect(
+    () => setQueue(latest.filter((n) => !handled.current.has(`${n.id}:${n.version}`) && (n.important || !snoozed(n)))),
+    [latest],
+  );
+
+  // 새 공지 묻기 — 화면이 보일 때만 (백그라운드 탭에서는 쉬어 서버를 아낀다)
+  const poll = useCallback(async () => {
+    if (document.visibilityState !== 'visible') return;
+    const r = await callApi<{ items: SheetNotice[] }>('/api/notices/pending', { locale });
+    if (r.ok) setLatest(r.data.items);
+  }, [locale]);
   useEffect(() => {
-    const on = () => setPunched(true);
-    window.addEventListener(PUNCHED_EVENT, on);
-    return () => window.removeEventListener(PUNCHED_EVENT, on);
+    const id = setInterval(poll, POLL_MS);
+    const onVisible = () => void poll();
+    document.addEventListener('visibilitychange', onVisible);
+    window.addEventListener('focus', onVisible);
+    return () => {
+      clearInterval(id);
+      document.removeEventListener('visibilitychange', onVisible);
+      window.removeEventListener('focus', onVisible);
+    };
+  }, [poll]);
+
+  useEffect(() => {
+    const start = () => setPunching(true);
+    const end = () => setPunching(false);
+    window.addEventListener(PUNCHING_EVENT, start);
+    window.addEventListener(PUNCHED_EVENT, end);
+    return () => {
+      window.removeEventListener(PUNCHING_EVENT, start);
+      window.removeEventListener(PUNCHED_EVENT, end);
+    };
   }, []);
 
   const n = queue[0];
-  if (!n || path === '/punch/notices' || (path === '/punch' && !punched)) return null;
+  if (!n || path === '/punch/notices' || punching) return null;
 
   const next = () => {
+    handled.current.add(`${n.id}:${n.version}`);
     setShowOriginal(false);
     const rest = queue.slice(1);
     setQueue(rest);
