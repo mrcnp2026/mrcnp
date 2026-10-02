@@ -12,4 +12,5 @@ export const FLAG = {
   PENDING_OVERTIME: '미승인 연장', // 7-7 요점 3
   LEAVE_MODULE_MISSING: 'block:연차 모듈 미연결', // 7-14: 결근인지 연차인지 모른다 (연차 자료를 못 넘겨받았을 때만)
   LEAVE_DAY_PUNCH: '휴가일 출근 기록', // ②-2 7-3 요점 4: 자동으로 한쪽을 지우지 않고 관리자가 판단
+  WORK_DAY_NO_HOURS: '외근·출장일 시간 미반영', // ②-3 7-11 요점 3: 기록 없는 승인 외근일 — 결근 아님, 근로시간 간주는 노무 확인 전
 } as const;

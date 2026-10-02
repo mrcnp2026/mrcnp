@@ -226,5 +226,23 @@ begin
     perform set_config('role', 'postgres', true);
   end;
 
+  -- ── 외근 (0012): 직원이 스스로 승인된 외근을 넣지 못한다, 장소 필수, 결정은 서버 함수만 ──
+  declare v_w uuid;
+  begin
+    begin insert into public.work_requests (employee_id, kind, start_date, end_date, place, requested_by) values (emp, 'outside', '2026-11-12', '2026-11-12', '', emp);
+      out := out || E'FAIL|60|empty place accepted\n';
+    exception when others then out := out || E'PASS|60|place required\n'; end;
+    insert into public.work_requests (employee_id, kind, start_date, end_date, place, requested_by) values (emp, 'outside', '2026-11-12', '2026-11-12', 'client', emp) returning id into v_w;
+    begin update public.work_requests set place = 'x' where id = v_w; out := out || E'FAIL|61|work request facts changed\n';
+    exception when others then out := out || E'PASS|61|work request facts immutable\n'; end;
+    out := out || case when public.decide_work(v_w, 'approved', adm, null, 'rid-w1') = 'ok' and public.decide_work(v_w, 'rejected', adm, null, 'rid-w2') = 'already' then 'PASS' else 'FAIL' end || E'|62|work decided once\n';
+    perform set_config('request.jwt.claims', json_build_object('sub', emp, 'role', 'authenticated')::text, true);
+    perform set_config('role', 'authenticated', true);
+    begin insert into public.work_requests (employee_id, kind, start_date, end_date, place, requested_by, status) values (emp, 'outside', '2026-11-13', '2026-11-13', 'c', emp, 'approved');
+      out := out || E'FAIL|63|employee insert approved work request\n';
+    exception when others then out := out || E'PASS|63|employee insert work_requests denied\n'; end;
+    perform set_config('role', 'postgres', true);
+  end;
+
   raise exception 'RLS_RESULTS_BEGIN%RLS_RESULTS_END', E'\n' || out;
 end $$;

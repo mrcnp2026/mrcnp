@@ -25,7 +25,7 @@ export default async function AdminLeavePage({ searchParams }: { searchParams: P
     loadLeaveRequests({ practice }),
   ]);
   const n = (v: number) => f.number(v, { maximumFractionDigits: 2 });
-  const day = (d: string) => f.dateTime(new Date(`${d}T12:00:00+09:00`), { month: 'short', day: 'numeric', weekday: 'short' });
+  const day = (d: string) => f.dateTime(new Date(`${d}T12:00:00+09:00`), { year: d.slice(0, 4) === today.slice(0, 4) ? undefined : 'numeric', month: 'short', day: 'numeric', weekday: 'short' });
   const name = new Map((ppl ?? []).map((p) => [p.id, p.name]));
   const leaveName = (code: string) => (tl.has(`type.${code}`) ? tl(`type.${code}`) : code);
   const approved = requests.filter((r) => r.status === 'approved' && r.endDate >= addDays(today, -31)).sort((a, b) => (a.startDate < b.startDate ? -1 : 1));

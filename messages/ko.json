@@ -276,7 +276,14 @@
       "prevPage": "이전",
       "nextPage": "다음",
       "pendingLeave": "연차·휴가 승인 대기",
-      "onLeave": "휴가"
+      "onLeave": "휴가",
+      "pendingWork": "외근·출장 승인 대기",
+      "work": {
+        "outside": "외근",
+        "business_trip": "출장",
+        "remote": "재택"
+      },
+      "workApproved": "승인된 {kind}"
     },
     "inbox": {
       "title": "요청",
@@ -340,7 +347,17 @@
       "confirmLeave": "{name}님의 {summary}를 승인할까요?",
       "confirmLeaveReject": "{name}님의 {summary}를 거부할까요?",
       "confirmLeaveCancel": "{name}님의 승인된 휴가를 취소할까요? 그 날은 다시 근무일로 계산됩니다.",
-      "leaveCancel": "승인 취소"
+      "leaveCancel": "승인 취소",
+      "workTitle": "외근·출장·재택",
+      "workKind": {
+        "outside": "외근",
+        "business_trip": "출장",
+        "remote": "재택"
+      },
+      "place": "장소",
+      "workClashHint": "승인해도 출퇴근 기록의 \"사무실 밖\" 사실은 그대로 남고, 화면에 \"승인된 외근\"으로 표시됩니다.",
+      "confirmWork": "{name}님의 {summary}을(를) 승인할까요?",
+      "confirmWorkReject": "{name}님의 {summary}을(를) 거부할까요?"
     },
     "records": {
       "title": "기록",
@@ -507,7 +524,7 @@
     "records": "내 기록",
     "corrections": "정정 요청",
     "manage": "직원관리",
-    "leave": "연차"
+    "leave": "휴가·외근"
   },
   "records": {
     "title": "내 기록",
@@ -621,7 +638,7 @@
     "new": "새 공지"
   },
   "leave": {
-    "title": "연차·휴가",
+    "title": "휴가·외근",
     "balanceTitle": "남은 연차",
     "days": "{n}일",
     "granted": "받은 연차",
@@ -666,5 +683,46 @@
     "duplicate_request": "그 날짜에 이미 신청한 휴가가 있습니다.",
     "no_grant": "아직 연차가 입력되지 않았습니다. 관리자에게 문의하세요.",
     "insufficient_balance": "남은 연차(승인 대기 제외)보다 많이 신청했습니다."
+  },
+  "work": {
+    "title": "외근·출장·재택 신청",
+    "intro": "사무실 밖에서 일한 날을 알려 주세요. 다녀온 뒤에 신청해도 됩니다 (31일 안).",
+    "kindLabel": "종류",
+    "kind": {
+      "outside": "외근",
+      "business_trip": "출장",
+      "remote": "재택"
+    },
+    "date": "날짜",
+    "start": "시작일",
+    "end": "종료일",
+    "halfDay": "몇 시간만 (하루짜리)",
+    "from": "부터",
+    "until": "까지",
+    "place": "장소 (필수)",
+    "placeHint": "예: OO건설 현장, 부산 출장",
+    "reason": "사유 (선택)",
+    "submit": "신청하기",
+    "sent": "신청했습니다. 관리자가 확인합니다.",
+    "mine": "내 외근 신청",
+    "none": "아직 외근 신청이 없습니다.",
+    "status": {
+      "pending": "대기",
+      "approved": "승인",
+      "rejected": "거부",
+      "cancelled": "취소"
+    },
+    "cancel": "신청 취소",
+    "cancelConfirm": "이 신청을 취소할까요?",
+    "cancelYes": "취소하기",
+    "back": "돌아가기",
+    "outsideHint": "사무실 밖에서 찍혔습니다. 외근·출장이었다면 신청해 주세요.",
+    "outsideLink": "외근 신청하기",
+    "place_required": "장소를 적어 주세요 (100자 이내).",
+    "invalid_time": "시간은 하루짜리 신청에서 시작이 끝보다 빨라야 합니다.",
+    "range_too_long": "한 번에 31일까지 신청할 수 있습니다.",
+    "too_old": "31일보다 지난 날짜는 관리자에게 직접 요청하세요.",
+    "duplicate_request": "그 기간에 이미 대기·승인된 외근 신청이 있습니다.",
+    "period_locked": "마감된 달은 신청할 수 없습니다."
   }
 }

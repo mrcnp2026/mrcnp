@@ -117,16 +117,33 @@ export function OvertimeDecision({ id, name, facts }: { id: string; name: string
   );
 }
 
+/** 외근 승인·거부 — 연차와 같은 모양 (②-3 7-11 요점 6) */
+export function WorkDecision({ id, name, summary }: { id: string; name: string; summary: string }) {
+  return <LeaveDecision id={id} name={name} summary={summary} url={`/api/admin/work/${id}/decide`} keys={['confirmWork', 'confirmWorkReject']} />;
+}
+
 /** 휴가 승인·거부. 출근 기록과 겹치면 경고만 — 자동으로 한쪽을 지우지 않는다 (②-2 7-3 요점 4) */
-export function LeaveDecision({ id, name, summary }: { id: string; name: string; summary: string }) {
+export function LeaveDecision({
+  id,
+  name,
+  summary,
+  url,
+  keys = ['confirmLeave', 'confirmLeaveReject'],
+}: {
+  id: string;
+  name: string;
+  summary: string;
+  url?: string;
+  keys?: [string, string];
+}) {
   const t = useTranslations('admin.inbox');
-  const { busy, err, done, send } = useDecide(`/api/admin/leave/${id}/decide`);
+  const { busy, err, done, send } = useDecide(url ?? `/api/admin/leave/${id}/decide`);
   const [pending, setPending] = useState<'approved' | 'rejected' | null>(null);
   if (done) return <p className="text-sm font-semibold text-muted">{t(done === 'already' ? 'already' : 'doneMsg')}</p>;
   if (pending) {
     return (
       <div className="flex flex-col gap-2 rounded-card border border-border p-3">
-        <p className="text-sm">{t(pending === 'approved' ? 'confirmLeave' : 'confirmLeaveReject', { name, summary })}</p>
+        <p className="text-sm">{t(pending === 'approved' ? keys[0] : keys[1], { name, summary })}</p>
         <div className="flex gap-2">
           <Button disabled={busy} className="flex-1" onClick={() => send({ decision: pending })}>
             {t('confirm')}

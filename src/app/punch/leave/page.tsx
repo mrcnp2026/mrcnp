@@ -8,18 +8,23 @@ import { getMe } from '@/lib/auth';
 import { calcLeaveBalance } from '@/lib/leave';
 import { loadLeaveGrants, loadLeaveRequests, loadLeaveTypes } from '@/lib/leave-data';
 import { toKstDate } from '@/lib/time';
+import { loadWorkRequests } from '@/lib/work-data';
 import { CancelLeave, LeaveForm } from './LeaveForm';
+import { CancelWork, WorkForm } from './WorkForm';
 
-export default async function LeavePage() {
+export default async function LeavePage({ searchParams }: { searchParams: Promise<{ workDate?: string }> }) {
   const me = await getMe();
   if (!me) redirect('/login');
   const t = await getTranslations('leave');
+  const tw = await getTranslations('work');
   const f = await getFormatter();
+  const sp = await searchParams;
   const today = toKstDate(new Date());
-  const [types, grants, requests] = await Promise.all([loadLeaveTypes(), loadLeaveGrants(me.id), loadLeaveRequests({ employeeId: me.id })]);
+  const [types, grants, requests, works] = await Promise.all([loadLeaveTypes(), loadLeaveGrants(me.id), loadLeaveRequests({ employeeId: me.id }), loadWorkRequests({ employeeId: me.id })]);
   const bal = calcLeaveBalance({ grants, requests, types, asOf: today });
   const nameOf = (code: string) => (t.has(`type.${code}`) ? t(`type.${code}`) : (types.find((x) => x.code === code)?.name ?? code));
-  const day = (d: string) => f.dateTime(new Date(`${d}T12:00:00+09:00`), { month: 'short', day: 'numeric', weekday: 'short' });
+  // 올해가 아니면 연도도 (지난해·먼 미래 신청이 올해로 읽히지 않게)
+  const day = (d: string) => f.dateTime(new Date(`${d}T12:00:00+09:00`), { year: d.slice(0, 4) === today.slice(0, 4) ? undefined : 'numeric', month: 'short', day: 'numeric', weekday: 'short' });
   const n = (v: number) => f.number(v, { maximumFractionDigits: 2 });
 
   return (
@@ -70,6 +75,30 @@ export default async function LeavePage() {
             <p className="num text-sm">{r.startDate === r.endDate ? day(r.startDate) : `${day(r.startDate)} ~ ${day(r.endDate)}`}</p>
             {r.reason && <p className="text-sm text-muted">{r.reason}</p>}
             {r.status === 'pending' && <CancelLeave id={r.id} />}
+          </Card>
+        ))}
+      </section>
+
+      {/* 외근·출장·재택 (②-3 7-11) — 연차와 같은 화면 */}
+      <section id="work" className="flex scroll-mt-16 flex-col gap-3">
+        <h2 className="text-xl font-semibold">{tw('title')}</h2>
+        <WorkForm today={today} initialDate={sp.workDate && /^\d{4}-\d{2}-\d{2}$/.test(sp.workDate) ? sp.workDate : null} />
+        <h3 className="font-semibold">{tw('mine')}</h3>
+        {works.length === 0 && <p className="text-sm text-faint">{tw('none')}</p>}
+        {works.map((w) => (
+          <Card key={w.id} className="flex flex-col gap-1">
+            <div className="flex items-center justify-between gap-2">
+              <span className="font-semibold">
+                {tw(`kind.${w.kind}`)} · {w.place}
+              </span>
+              <Chip tone={w.status === 'approved' ? 'ok' : w.status === 'pending' ? 'warn' : 'neutral'}>{tw(`status.${w.status}`)}</Chip>
+            </div>
+            <p className="num text-sm">
+              {w.startDate === w.endDate ? day(w.startDate) : `${day(w.startDate)} ~ ${day(w.endDate)}`}
+              {w.startTime && ` · ${w.startTime}~${w.endTime}`}
+            </p>
+            {w.reason && <p className="text-sm text-muted">{w.reason}</p>}
+            {w.status === 'pending' && <CancelWork id={w.id} />}
           </Card>
         ))}
       </section>

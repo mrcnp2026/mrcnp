@@ -132,10 +132,12 @@ export function BoardView({
                   <span className={`num block truncate text-xs text-faint ${weekTone(r.weekMinutes)}`}>{sub(r)}</span>
                 </span>
                 <span className="flex shrink-0 flex-col items-end">
-                  <span className={`text-sm font-bold ${r.onLeave && r.status === 'off' ? 'text-primary' : TONE[r.status]}`}>{r.onLeave && r.status === 'off' ? t('onLeave') : th(`status.${r.status}`)}</span>
+                  <span className={`text-sm font-bold ${(r.onLeave || r.work) && r.status === 'off' ? 'text-primary' : TONE[r.status]}`}>
+                    {r.status === 'off' && r.onLeave ? t('onLeave') : r.status === 'off' && r.work ? t(`work.${r.work}`) : th(`status.${r.status}`)}
+                  </span>
                   {r.late && r.status !== 'late' && <span className="text-xs text-warn">{th('lateBy', { n: r.lateMinutes })}</span>}
                   {r.status === 'late' && <span className="num text-xs text-warn">{th('lateBy', { n: r.lateMinutes })}</span>}
-                  {r.firstInVerified === false && <span className="text-xs text-warn">{th('outside')}</span>}
+                  {r.firstInVerified === false && (r.work ? <span className="text-xs text-primary">{t('workApproved', { kind: t(`work.${r.work}`) })}</span> : <span className="text-xs text-warn">{th('outside')}</span>)}
                   {r.adminEntered && <span className="text-xs text-faint">{t('adminEntered')}</span>}
                 </span>
               </li>

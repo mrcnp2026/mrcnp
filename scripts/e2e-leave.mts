@@ -75,7 +75,7 @@ try {
 
   // 6. 요청함에 뜨고, 승인 → 잔여 반영
   await p.goto(`${BASE}/admin/inbox#leave`);
-  check(await p.locator('#leave').getByText('반차').first().isVisible(), '요청함 연차 섹션에 신청이 보임');
+  check(await p.locator('#leave').getByText('반차').first().waitFor({ timeout: 15000 }).then(() => true, () => false), '요청함 연차 섹션에 신청이 보임');
   r = await post(`/api/admin/leave/${halfId}/decide`, { decision: 'approved' });
   check(r.json.result === 'ok', '관리자 승인', JSON.stringify(r.json));
   r = await post(`/api/admin/leave/${halfId}/decide`, { decision: 'rejected' });
@@ -85,10 +85,29 @@ try {
   // 7. 승인 취소
   r = await post(`/api/admin/leave/${halfId}/decide`, { decision: 'cancelled' });
   check(r.json.result === 'ok', '승인된 휴가 취소', JSON.stringify(r.json));
+  // 외근 (②-3 7-11): 장소 필수 · 겹침 거절 · 승인 한 번만 · 요청함에 뜸
+  r = await post('/api/work', { kind: 'outside', startDate: DAY, place: '' });
+  check(r.status === 400 && r.json.error === 'place_required', '외근: 장소 없으면 거절', r.json.error);
+  r = await post('/api/work', { kind: 'outside', startDate: DAY, endDate: DAY, startTime: '13:00', endTime: '17:00', place: 'e2e 고객사' });
+  check(r.status === 200, '외근 신청(반나절)', JSON.stringify(r.json));
+  const workId = r.json.id as string;
+  r = await post('/api/work', { kind: 'business_trip', startDate: DAY, endDate: DAY, place: 'x' });
+  check(r.status === 409 && r.json.error === 'duplicate_request', '외근: 같은 날 겹치면 거절', r.json.error);
+  r = await post('/api/work', { kind: 'remote', startDate: DAY, endDate: DAY, startTime: '17:00', endTime: '13:00', place: 'x' });
+  check(r.status === 400 && r.json.error === 'invalid_time', '외근: 시작이 끝보다 늦으면 거절', r.json.error);
+  await p.goto(`${BASE}/admin/inbox#work`);
+  check(await p.locator('#work').getByText('e2e 고객사').first().waitFor({ timeout: 15000 }).then(() => true, () => false), '요청함 외근 섹션에 신청이 보임');
+  r = await post(`/api/admin/work/${workId}/decide`, { decision: 'approved' });
+  check(r.json.result === 'ok', '외근 승인', JSON.stringify(r.json));
+  r = await post(`/api/admin/work/${workId}/decide`, { decision: 'approved' });
+  check(r.json.result === 'already', '외근 두 번째 결정은 이미 처리됨', JSON.stringify(r.json));
+  r = await post(`/api/admin/work/${workId}/decide`, { decision: 'cancelled' });
+  check(r.json.result === 'ok', '외근 승인 취소', JSON.stringify(r.json));
+
   // 8. 직원 화면
   await p.goto(`${BASE}/punch/leave`);
-  check(await p.getByRole('heading', { name: '연차·휴가' }).waitFor({ timeout: 15000 }).then(() => true, () => false), '직원 연차 화면 열림');
-  check(await p.getByRole('link', { name: '연차' }).isVisible(), '하단 탭에 연차');
+  check(await p.getByRole('heading', { name: '휴가·외근' }).waitFor({ timeout: 15000 }).then(() => true, () => false), '직원 연차 화면 열림');
+  check(await p.getByRole('link', { name: '휴가·외근' }).isVisible(), '하단 탭에 휴가·외근');
 } finally {
   await browser.close();
   await db.from('profiles').update({ role: 'employee', locale: 'en', active: false }).eq('id', emp!.id);

@@ -10,6 +10,7 @@ import { FLAG } from '@/lib/flags';
 import { buildMonth, monthRange } from '@/lib/month-data';
 import { daysFor } from '@/lib/period-data';
 import { toKstDate } from '@/lib/time';
+import { workStatusOn } from '@/lib/work-requests';
 
 const HM = new Intl.DateTimeFormat('en-GB', { timeZone: OFFICE.timezone, hour: '2-digit', minute: '2-digit', hourCycle: 'h23' });
 const DT = new Intl.DateTimeFormat('sv-SE', { timeZone: OFFICE.timezone, year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit', hourCycle: 'h23' });
@@ -17,6 +18,7 @@ const hhmm = (d: Date | null | undefined) => (d ? HM.format(d) : null);
 const stamp = (d: Date | string | null | undefined) => (d ? DT.format(new Date(d)) : null);
 const WEEK = ['', '월', '화', '수', '목', '금', '토', '일'];
 const LEAVE_NAME: Record<string, string> = { annual: '연차', half: '반차', quarter: '반반차', sick: '병가', condolence: '경조사', unpaid: '무급휴가' };
+const WORK_NAME: Record<string, string> = { outside: '외근', business_trip: '출장', remote: '재택' };
 const HOLIDAY_KIND: Record<string, string> = { public: '공휴일', company: '회사 휴일', weekly_rest: '주휴일' };
 
 // 비고에 쓸 확인 필요 사항 — flags 문자열에서 접두어를 떼고, 화면에 이미 칸이 있는 것은 뺀다
@@ -55,7 +57,7 @@ export async function buildAttendanceReport(ym: string, practice: boolean, gener
       absentDays: Number(r.absent_days),
       paidLeaveDays: s.paidLeaveDays,
       unpaidLeaveDays: Number(r.unpaid_leave_days ?? 0),
-      notes: [...new Set(notes)],
+      notes: [...new Set([...notes, ...(s.workDates.length ? [`외근·출장·재택 ${s.workDates.length}일`] : [])])],
     };
   });
 
@@ -69,6 +71,10 @@ export async function buildAttendanceReport(ym: string, practice: boolean, gener
         employeeNo: p?.employeeNo ?? null, name: p?.name ?? '', workDate: e.workDate, kind: e.kind, original: hhmm(e.punchedAt),
         corrected: c?.correctionType === 'modify' ? hhmm(c.newPunchedAt) : null, correctionType: c?.correctionType ?? null,
         officeVerified: e.source === 'admin' ? null : e.ipVerified, source: e.source as string, note: e.note, sort: e.punchedAt.getTime(),
+        approvedWork: (() => {
+          const k = workStatusOn(e.workDate, e.employeeId, data.workRequests);
+          return k ? WORK_NAME[k] : null;
+        })(),
       };
     }),
     // 빠진 기록 추가(승인) — 원래 없던 기록이라 '찍은 시각'이 비어 있다
@@ -76,7 +82,7 @@ export async function buildAttendanceReport(ym: string, practice: boolean, gener
       const p = person.get(c.employeeId);
       return {
         employeeNo: p?.employeeNo ?? null, name: p?.name ?? '', workDate: c.workDate, kind: c.kind ?? '', original: null, corrected: hhmm(c.newPunchedAt),
-        correctionType: 'add_missing', officeVerified: null, source: 'correction', note: null, sort: c.newPunchedAt?.getTime() ?? 0,
+        correctionType: 'add_missing', officeVerified: null, approvedWork: null, source: 'correction', note: null, sort: c.newPunchedAt?.getTime() ?? 0,
       };
     }),
   ]
@@ -103,6 +109,18 @@ export async function buildAttendanceReport(ym: string, practice: boolean, gener
       return {
         employeeNo: p?.employeeNo ?? null, name: p?.name ?? '', type: LEAVE_NAME[l.typeCode] ?? l.typeCode, start: l.startDate, end: l.endDate, days: l.days, status: l.status,
         decidedBy: l.approvedBy ? (nameOf.get(l.approvedBy) ?? '') : null, decidedAt: stamp(l.decidedAt),
+      };
+    })
+    .sort((a, b) => a.start.localeCompare(b.start) || a.name.localeCompare(b.name, 'ko'));
+
+  const work = data.workRequests
+    .filter((w) => w.startDate <= to && w.endDate >= from)
+    .map((w) => {
+      const p = person.get(w.employeeId);
+      return {
+        employeeNo: p?.employeeNo ?? null, name: p?.name ?? '', kind: WORK_NAME[w.kind], start: w.startDate, end: w.endDate,
+        hours: w.startTime ? `${w.startTime}~${w.endTime}` : null, place: w.place, status: w.status,
+        decidedBy: w.approvedBy ? (nameOf.get(w.approvedBy) ?? '') : null, decidedAt: stamp(w.decidedAt),
       };
     })
     .sort((a, b) => a.start.localeCompare(b.start) || a.name.localeCompare(b.name, 'ko'));
@@ -135,6 +153,7 @@ export async function buildAttendanceReport(ym: string, practice: boolean, gener
     punches,
     corrections,
     leave,
+    work,
     rules,
     holidays: data.holidays.filter((h) => inMonth(h.date)).map((h) => ({ date: h.date, kind: HOLIDAY_KIND[h.kind] ?? h.kind })),
     settings: [

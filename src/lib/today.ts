@@ -4,6 +4,7 @@
 import { judgeLateness, type LatenessResult } from '@/lib/lateness';
 import { kstDateTime } from '@/lib/time';
 import type { DayType, PunchPair, WorkRule } from '@/lib/types';
+import type { WorkKind } from '@/lib/work-requests';
 
 export type DayStatus = 'working' | 'late' | 'absent' | 'done' | 'overtime' | 'off';
 
@@ -16,6 +17,7 @@ export type BoardPerson = {
   adminEntered: boolean; // 대리 등록 기록이 있는가 (요점 7, ②)
   weekMinutes: number | null; // 이번 주 누적 (요점 6)
   onLeave?: boolean; // 오늘 하루 전부 승인된 휴가 — 출근 기록이 없으면 미출근이 아니라 휴무 칸 (②-2 B-2)
+  work?: WorkKind | null; // 오늘 승인된 외근·출장·재택 — 기록이 없어도 미출근이 아니고, 사무실 밖 경고 대신 "승인된 외근" (②-3 7-11)
 };
 
 export type BoardRow = Omit<BoardPerson, 'pairs'> & {
@@ -42,7 +44,7 @@ export function buildTodayBoard(args: {
     const c = classifyDay({ pairs: p.pairs, rule: args.rule, dayType: args.dayType, workDate: args.workDate, now: args.now });
     const { pairs: _pairs, ...rest } = p;
     void _pairs;
-    const status: DayStatus = c.status === 'absent' && p.onLeave ? 'off' : c.status;
+    const status: DayStatus = c.status === 'absent' && (p.onLeave || p.work) ? 'off' : c.status;
     board[status].push({
       ...rest,
       status,

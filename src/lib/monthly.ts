@@ -4,6 +4,7 @@ import { OFFICE } from '@/config/office';
 import { FLAG } from '@/lib/flags';
 import { judgeLateness } from '@/lib/lateness';
 import { isFullDayLeave, roundDays, type LeaveOnDay } from '@/lib/leave';
+import type { WorkKind } from '@/lib/work-requests';
 import { approvedMinutes, buildOvertimeRequest, pendingMinutes, type OvertimeRequest } from '@/lib/overtime';
 import type { DayRow } from '@/lib/period';
 import { kstDateTime } from '@/lib/time';
@@ -31,10 +32,11 @@ export type MonthSummary = {
   missingOutDates: string[];
   leaveDates: string[]; // 승인된 휴가가 있는 근무일
   paidLeaveDays: number; // 유급휴가 일수 (연차·반차·경조사 등) — 화면·엑셀용. 급여용 CSV 칸 목록은 그대로
+  workDates: string[]; // 승인된 외근·출장·재택 근무일
 };
 
 // 급여를 막는 사유(block:)와 사람이 봐야 할 사실(warn:)을 접두어로 나눈다 (7-10). ③은 block:만 차단한다 (부록 R-11 #7)
-const WARN_FLAGS = new Set<string>([FLAG.WEEKLY_LIMIT_EXCEEDED, FLAG.LEGAL_BREAK_UNCONFIRMED, FLAG.DUPLICATE_IN, FLAG.DUPLICATE_OUT, FLAG.LEAVE_DAY_PUNCH]);
+const WARN_FLAGS = new Set<string>([FLAG.WEEKLY_LIMIT_EXCEEDED, FLAG.LEGAL_BREAK_UNCONFIRMED, FLAG.DUPLICATE_IN, FLAG.DUPLICATE_OUT, FLAG.LEAVE_DAY_PUNCH, FLAG.WORK_DAY_NO_HOURS]);
 const MISSING_IN = '출근 미기록';
 const PENDING_CORRECTION = '대기 중인 정정';
 const NEEDS_REVIEW = '재확인 필요';
@@ -59,6 +61,8 @@ export function summarizeMonth(args: {
   thresholdMinutes: number;
   // 날짜별 승인 휴가 (②-2). 넘기지 않으면 결근인지 연차인지 모른다 → 무급휴가 빈 칸 + 차단 표시 (7-14)
   leave?: Map<string, LeaveOnDay[]>;
+  // 날짜별 승인 외근·출장·재택 (②-3). 기록 없는 날도 결근이 아니다
+  work?: Map<string, WorkKind>;
 }): MonthSummary {
   const s = { regular: 0, overtime: 0, night: 0, h8: 0, hOver: 0, net: 0 };
   const ap = { overtime: 0, night: 0, h8: 0, hOver: 0 };
@@ -70,6 +74,7 @@ export function summarizeMonth(args: {
   const absentDates: string[] = [];
   const missingOutDates: string[] = [];
   const leaveDates: string[] = [];
+  const workDates: string[] = [];
   let paidLeave = 0;
   let unpaidLeave = 0;
   const reqByDate = new Map(args.requests.map((r) => [r.workDate, r]));
@@ -128,8 +133,11 @@ export function summarizeMonth(args: {
     }
     // 결근 후보: 근무일, 입사 후, 지난 날(오늘은 결근 판정 시각 이후), 출근 기록 없음, 하루 전부 휴가가 아님
     const past = d.workDate < args.today || (d.workDate === args.today && args.now >= kstDateTime(d.workDate, OFFICE.absentCheckTime));
+    const wk = args.work?.get(d.workDate);
+    if (wk) workDates.push(d.workDate);
     if (d.dayType === 'workday' && past && !firstIn && !isFullDayLeave(lv) && (!args.joinedOn || d.workDate >= args.joinedOn)) {
-      absentDates.push(d.workDate);
+      if (wk) flags.add(FLAG.WORK_DAY_NO_HOURS);
+      else absentDates.push(d.workDate);
     }
   }
 
@@ -147,6 +155,7 @@ export function summarizeMonth(args: {
     missingOutDates,
     leaveDates,
     paidLeaveDays: roundDays(paidLeave),
+    workDates,
     row: {
       employee_no: args.employeeNo,
       name: args.name,

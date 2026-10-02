@@ -276,7 +276,14 @@
       "prevPage": "Previous",
       "nextPage": "Next",
       "pendingLeave": "Leave waiting for approval",
-      "onLeave": "On leave"
+      "onLeave": "On leave",
+      "pendingWork": "Off-site work waiting",
+      "work": {
+        "outside": "Off-site",
+        "business_trip": "Business trip",
+        "remote": "Remote"
+      },
+      "workApproved": "Approved {kind}"
     },
     "inbox": {
       "title": "Requests",
@@ -340,7 +347,17 @@
       "confirmLeave": "Approve {summary} for {name}?",
       "confirmLeaveReject": "Reject {summary} for {name}?",
       "confirmLeaveCancel": "Cancel approved leave for {name}? Those days count as workdays again.",
-      "leaveCancel": "Cancel approval"
+      "leaveCancel": "Cancel approval",
+      "workTitle": "Off-site · trip · remote",
+      "workKind": {
+        "outside": "Off-site",
+        "business_trip": "Business trip",
+        "remote": "Remote"
+      },
+      "place": "Place",
+      "workClashHint": "Approving keeps the fact that clock-ins were outside the office; they are shown as \"approved off-site\".",
+      "confirmWork": "Approve {summary} for {name}?",
+      "confirmWorkReject": "Reject {summary} for {name}?"
     },
     "records": {
       "title": "Records",
@@ -507,7 +524,7 @@
     "records": "My records",
     "corrections": "Corrections",
     "manage": "Manage",
-    "leave": "Leave"
+    "leave": "Leave/Out"
   },
   "records": {
     "title": "My records",
@@ -621,7 +638,7 @@
     "new": "New"
   },
   "leave": {
-    "title": "Leave",
+    "title": "Leave & off-site",
     "balanceTitle": "Annual leave left",
     "days": "{n} days",
     "granted": "Given",
@@ -666,5 +683,46 @@
     "duplicate_request": "You already have leave on that date.",
     "no_grant": "Your annual leave has not been entered yet. Ask your manager.",
     "insufficient_balance": "This is more than your remaining leave (not counting requests waiting)."
+  },
+  "work": {
+    "title": "Off-site / trip / remote",
+    "intro": "Tell us about days you worked outside the office. You can send it afterwards (within 31 days).",
+    "kindLabel": "Type",
+    "kind": {
+      "outside": "Off-site",
+      "business_trip": "Business trip",
+      "remote": "Remote"
+    },
+    "date": "Date",
+    "start": "From",
+    "end": "To",
+    "halfDay": "Only some hours (one day)",
+    "from": "From",
+    "until": "Until",
+    "place": "Place (required)",
+    "placeHint": "e.g. client site, Busan trip",
+    "reason": "Reason (optional)",
+    "submit": "Send request",
+    "sent": "Sent. Your manager will check it.",
+    "mine": "My off-site requests",
+    "none": "No off-site requests yet.",
+    "status": {
+      "pending": "Waiting",
+      "approved": "Approved",
+      "rejected": "Rejected",
+      "cancelled": "Cancelled"
+    },
+    "cancel": "Cancel request",
+    "cancelConfirm": "Cancel this request?",
+    "cancelYes": "Cancel it",
+    "back": "Go back",
+    "outsideHint": "This clock-in was outside the office. If you were working off-site, send a request.",
+    "outsideLink": "Request off-site work",
+    "place_required": "Enter the place (up to 100 characters).",
+    "invalid_time": "Hours only work for a one-day request, and the start must be before the end.",
+    "range_too_long": "You can request up to 31 days at once.",
+    "too_old": "For dates more than 31 days ago, ask your manager directly.",
+    "duplicate_request": "You already have an off-site request waiting or approved for that time.",
+    "period_locked": "That month is closed."
   }
 }

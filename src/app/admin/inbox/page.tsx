@@ -13,9 +13,10 @@ import { toKstDate } from '@/lib/time';
 import Link from 'next/link';
 import { calcLeaveBalance } from '@/lib/leave';
 import { loadLeaveGrants, loadLeaveRequests, loadLeaveTypes } from '@/lib/leave-data';
-import { CorrectionDecision, LeaveDecision, OvertimeDecision } from './Decisions';
+import { loadWorkRequests } from '@/lib/work-data';
+import { CorrectionDecision, LeaveDecision, OvertimeDecision, WorkDecision } from './Decisions';
 
-export default async function InboxPage({ searchParams }: { searchParams: Promise<{ live?: string; op?: string; cp?: string; lp?: string }> }) {
+export default async function InboxPage({ searchParams }: { searchParams: Promise<{ live?: string; op?: string; cp?: string; lp?: string; wp?: string }> }) {
   const t = await getTranslations('admin.inbox');
   const f = await getFormatter();
   const me = (await getMe())!;
@@ -70,6 +71,8 @@ export default async function InboxPage({ searchParams }: { searchParams: Promis
   const leaveName = (code: string) => (tl.has(`type.${code}`) ? tl(`type.${code}`) : code);
   const nDays = (v: number) => f.number(v, { maximumFractionDigits: 2 });
   const lvPage = pageOf(leavePending, sp.lp);
+  const workPending = (await loadWorkRequests({ practice })).filter((w) => w.status === 'pending').sort((a, b) => (a.startDate < b.startDate ? -1 : 1));
+  const wkPage = pageOf(workPending, sp.wp);
 
   return (
     <PageShell>
@@ -192,13 +195,42 @@ export default async function InboxPage({ searchParams }: { searchParams: Promis
         </Link>
       </section>
 
+      <section id="work" className="flex scroll-mt-16 flex-col gap-3">
+        <h2 className="flex items-center gap-2 text-xl font-semibold">
+          {t('workTitle')} <span className="num text-base text-faint">{workPending.length}</span>
+        </h2>
+        <p className="text-sm text-muted">{t('workClashHint')}</p>
+        {workPending.length === 0 && <p className="text-sm text-faint">{t('empty')}</p>}
+        {wkPage.items.map((w) => {
+          const range = w.startDate === w.endDate ? dayLabel(w.startDate) : `${dayLabel(w.startDate)} ~ ${dayLabel(w.endDate)}`;
+          const when = `${range}${w.startTime ? ` ${w.startTime}~${w.endTime}` : ''}`;
+          return (
+            <Card key={w.id} className="flex flex-col gap-2">
+              <div className="flex items-start justify-between gap-2">
+                <div>
+                  <p className="font-semibold">{name.get(w.employeeId)}</p>
+                  <p className="num text-sm text-muted">{when}</p>
+                </div>
+                {w.employeeId === me.id && <Chip>{t('self')}</Chip>}
+              </div>
+              <p className="font-semibold">
+                {t(`workKind.${w.kind}`)} · <span className="font-normal">{t('place')}: {w.place}</span>
+              </p>
+              {w.reason && <p className="text-sm"><span className="text-muted">{t('reason')}: </span>{w.reason}</p>}
+              <WorkDecision id={w.id} name={name.get(w.employeeId) ?? ''} summary={`${t(`workKind.${w.kind}`)} (${when})`} />
+            </Card>
+          );
+        })}
+        <Pager page={wkPage.page} pages={wkPage.pages} param="wp" params={sp} anchor="work" label={tc('pages')} />
+      </section>
+
       {(recent ?? []).length > 0 && (
         <section className="flex flex-col gap-2">
           <h2 className="font-semibold">{t('recent')}</h2>
           <ul className="divide-y divide-border rounded-card border border-border px-4 text-sm">
             {(recent ?? []).map((r, i) => (
               <li key={i} className="flex min-h-11 items-center justify-between gap-2 py-2">
-                <span>{t(r.subject_table === 'overtime_requests' ? 'overtimeTitle' : r.subject_table === 'leave_requests' ? 'leaveTitle' : 'correctionsTitle')} · {t(`status.${r.decision}`)}</span>
+                <span>{t(r.subject_table === 'overtime_requests' ? 'overtimeTitle' : r.subject_table === 'leave_requests' ? 'leaveTitle' : r.subject_table === 'work_requests' ? 'workTitle' : 'correctionsTitle')} · {t(`status.${r.decision}`)}</span>
                 <span className="num text-muted">{name.get(r.decided_by)} · {f.dateTime(new Date(r.created_at), { month: 'numeric', day: 'numeric', hour: '2-digit', minute: '2-digit', hourCycle: 'h23' })}</span>
               </li>
             ))}

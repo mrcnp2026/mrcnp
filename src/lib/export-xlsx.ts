@@ -21,9 +21,10 @@ export type ReportPerson = {
   unpaidLeaveDays: number;
   notes: string[]; // 확인 필요 사항 (퇴근 미기록 등)
 };
-export type ReportPunch = { employeeNo: string | null; name: string; workDate: string; kind: string; original: string | null; corrected: string | null; correctionType: string | null; officeVerified: boolean | null; source: string; note: string | null };
+export type ReportPunch = { employeeNo: string | null; name: string; workDate: string; kind: string; original: string | null; corrected: string | null; correctionType: string | null; officeVerified: boolean | null; approvedWork?: string | null; source: string; note: string | null };
 export type ReportCorrection = { employeeNo: string | null; name: string; workDate: string; kind: string; type: string; original: string | null; requested: string | null; reason: string; status: string; requestedBy: string; requestedAt: string; decidedBy: string | null; decidedAt: string | null };
 export type ReportLeave = { employeeNo: string | null; name: string; type: string; start: string; end: string; days: number; status: string; decidedBy: string | null; decidedAt: string | null };
+export type ReportWork = { employeeNo: string | null; name: string; kind: string; start: string; end: string; hours: string | null; place: string; status: string; decidedBy: string | null; decidedAt: string | null };
 
 export type AttendanceReport = {
   company: string;
@@ -39,6 +40,7 @@ export type AttendanceReport = {
   punches: ReportPunch[];
   corrections: ReportCorrection[];
   leave: ReportLeave[];
+  work: ReportWork[]; // 외근·출장·재택 신청 (②-3)
   rules: { effectiveFrom: string; hours: string; grace: string; breakTime: string; workdays: string; restDay: string }[];
   holidays: { date: string; kind: string }[];
   settings: [string, string][];
@@ -258,13 +260,13 @@ function sheetRaw(wb: ExcelJS.Workbook, r: AttendanceReport) {
       { h: '찍은 시각', w: 10, key: 'orig', fmt: '@' },
       { h: '정정 시각', w: 10, key: 'corr', fmt: '@' },
       { h: '정정', w: 13, key: 'ctype' },
-      { h: '사무실 확인', w: 10, key: 'office' },
+      { h: '사무실 확인', w: 18, key: 'office' },
       { h: '경로', w: 14, key: 'src' },
       { h: '근무노트', w: 30, key: 'note' },
     ],
     r.punches.map((p) => ({
       no: p.employeeNo ?? '', name: p.name, date: dateCell(p.workDate), kind: kind(p.kind), orig: p.original ?? '', corr: p.corrected ?? '',
-      ctype: ctype(p.correctionType), office: p.officeVerified === null ? '' : p.officeVerified ? '확인' : '미확인', src: src(p.source), note: p.note ?? '',
+      ctype: ctype(p.correctionType), office: p.officeVerified === null ? '' : p.officeVerified ? '확인' : p.approvedWork ? `미확인(승인된 ${p.approvedWork})` : '미확인', src: src(p.source), note: p.note ?? '',
     })),
   );
   ws.autoFilter = { from: 'A1', to: `J${Math.max(end - 1, 1)}` };
@@ -325,6 +327,33 @@ function sheetHistory(wb: ExcelJS.Workbook, r: AttendanceReport) {
     }
   });
   if (r.leave.length === 0) ws.getCell(`A${end + 1}`).value = '이 달 휴가 신청이 없습니다.';
+
+  // 외근·출장·재택 내역 (②-3 7-11)
+  end += Math.max(r.leave.length, 1) + 2;
+  const wt = ws.getCell(`A${end}`);
+  wt.value = '외근·출장·재택 내역';
+  wt.font = { name: FONT, size: 11, bold: true };
+  end++;
+  const wh = ['사번', '성명', '시작일', '종료일', '종류', '시간', '장소', '', '상태', '처리자', '처리 일시'];
+  wh.forEach((h, i) => {
+    if (!h) return;
+    const c = ws.getRow(end).getCell(i + 1);
+    c.value = h;
+    c.style = { font: { name: FONT, size: 10, bold: true }, fill: { type: 'pattern', pattern: 'solid', fgColor: { argb: C.head } }, alignment: { horizontal: 'center' }, border: box };
+  });
+  r.work.forEach((w, i) => {
+    const row = ws.getRow(end + 1 + i);
+    const vals: [number, ExcelJS.CellValue, string?][] = [
+      [1, w.employeeNo ?? '', '@'], [2, w.name], [3, dateCell(w.start), 'yyyy-mm-dd'], [4, dateCell(w.end), 'yyyy-mm-dd'], [5, w.kind], [6, w.hours ?? '하루', '@'], [7, w.place],
+      [9, st(w.status)], [10, w.decidedBy ?? ''], [11, w.decidedAt ?? '', '@'],
+    ];
+    for (const [ci, v, f] of vals) {
+      const c = row.getCell(ci);
+      c.value = v;
+      c.style = { font: { name: FONT, size: 10 }, border: box, numFmt: f };
+    }
+  });
+  if (r.work.length === 0) ws.getCell(`A${end + 1}`).value = '이 달 외근·출장·재택 신청이 없습니다.';
 }
 
 // ───────────────────────── 시트 4: 적용기준 ─────────────────────────

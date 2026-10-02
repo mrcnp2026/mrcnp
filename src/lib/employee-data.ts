@@ -5,7 +5,7 @@ import { OFFICE } from '@/config/office';
 import { addDays } from '@/lib/calendar';
 import { findMissingPunches, type MissingPunch } from '@/lib/missing-punch';
 import { fullLeaveSet } from '@/lib/leave';
-import { daysFor, leaveDaysFor, loadPeriod, type CorrectionRow, type EventRow, type OvertimeRow } from '@/lib/period-data';
+import { daysFor, leaveDaysFor, loadPeriod, workDaysFor, type CorrectionRow, type EventRow, type OvertimeRow } from '@/lib/period-data';
 import type { DayRow } from '@/lib/period';
 import { toKstDate } from '@/lib/time';
 
@@ -43,7 +43,7 @@ export async function loadEmployeeRecent(employeeId: string, now: Date, lookback
       inGraceMin: OFFICE.missingInGraceMin,
       joinedOn: me?.startsOn ?? null,
       lookbackDays: lookback,
-      fullLeaveDates: fullLeaveSet(leaveDaysFor(data, employeeId)),
+      fullLeaveDates: new Set([...fullLeaveSet(leaveDaysFor(data, employeeId)), ...workDaysFor(data, employeeId).keys()]),
     });
   }
   return {

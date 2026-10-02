@@ -17,6 +17,8 @@ import { getMe } from '@/lib/auth';
 import { loadEmployeeRecent } from '@/lib/employee-data';
 import { visibleNoticesNow } from '@/lib/notices';
 import { kstDateTime } from '@/lib/time';
+import { loadWorkRequests } from '@/lib/work-data';
+import { workStatusOn } from '@/lib/work-requests';
 import { MissingBanner } from './MissingBanner';
 import { NoteBox } from './NoteBox';
 import { TodayCard } from './TodayCard';
@@ -26,6 +28,7 @@ export default async function PunchPage() {
   const me = await getMe();
   if (!me) redirect('/login');
   const t = await getTranslations('home');
+  const tw = await getTranslations('work');
   const f = await getFormatter();
   const now = new Date();
   const [today, recent, notices] = await Promise.all([loadEmployeeToday(me.id, now), loadEmployeeRecent(me.id, now), visibleNoticesNow(me.id, await getLocale())]);
@@ -79,6 +82,14 @@ export default async function PunchPage() {
           lateMinutes={today.lateMinutes}
           practice={today.practice}
         />
+
+        {/* 사무실 밖에서 찍혔는데 승인된 외근이 없으면 신청 안내 (②-3 7-11) */}
+        {today.firstInVerified === false && !workStatusOn(today.workDate, me.id, await loadWorkRequests({ employeeId: me.id, from: today.workDate, to: today.workDate })) && (
+          <Link href={`/punch/leave?workDate=${today.workDate}#work`} className="flex min-h-11 items-center justify-between gap-2 rounded-card border border-warn bg-warn-tint px-4 py-3 text-sm text-warn">
+            <span>{tw('outsideHint')}</span>
+            <span className="shrink-0 font-semibold">{tw('outsideLink')} ›</span>
+          </Link>
+        )}
 
         <WeekBar week={today.week} regularHours={LABOR.weeklyRegularLimitMin / 60} limitHours={OFFICE.weeklyLimitHours} />
 

@@ -3,7 +3,7 @@ import 'server-only';
 import { OFFICE } from '@/config/office';
 import { addDays } from '@/lib/calendar';
 import { summarizeMonth, type MonthSummary } from '@/lib/monthly';
-import { daysFor, leaveDaysFor, loadPeriod, syncOvertimeRequests, type PeriodData, type Person } from '@/lib/period-data';
+import { daysFor, leaveDaysFor, loadPeriod, syncOvertimeRequests, workDaysFor, type PeriodData, type Person } from '@/lib/period-data';
 import { toKstDate } from '@/lib/time';
 
 export function monthRange(ym: string): { from: string; to: string } {
@@ -48,6 +48,7 @@ export async function buildMonth(ym: string, practice: boolean): Promise<{ data:
       today,
       thresholdMinutes: OFFICE.overtimeReviewThresholdMin,
       leave: leaveDaysFor(data, p.id),
+      work: workDaysFor(data, p.id),
     });
     rows.push({ person: p, summary });
   }
