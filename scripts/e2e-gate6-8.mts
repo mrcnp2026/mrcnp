@@ -61,7 +61,7 @@ try {
   await a.goto(admin.url);
   await a.getByRole('button').filter({ hasText: /등록/ }).click();
   await a.getByRole('button').filter({ hasText: /계속/ }).click();
-  await a.waitForURL('**/admin');
+  await a.waitForURL('**/punch'); // 관리자도 출퇴근 홈에서 시작 (2026-10-02)
   const e = await phonePage(browser);
   await e.goto(emp.url);
   await e.getByRole('button', { name: /Register this phone/ }).click();

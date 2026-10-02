@@ -19,5 +19,5 @@ export const POST = api('passkey.register.verify', async (req) => {
     await createAdminClient().from('profiles').update({ locale: chosen }).eq('id', r.employeeId);
   }
   await issueSession(r.employeeId);
-  return { ok: true, next: await homePathFor(r.employeeId) };
+  return { ok: true, next: await homePathFor() };
 });

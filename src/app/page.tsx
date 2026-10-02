@@ -5,5 +5,5 @@ import { homePathForRole } from '@/lib/home-path';
 
 export default async function Home() {
   const me = await getMe();
-  redirect(me ? homePathForRole(me.role) : '/login');
+  redirect(me ? homePathForRole() : '/login');
 }

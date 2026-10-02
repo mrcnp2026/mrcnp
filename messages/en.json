@@ -75,7 +75,9 @@
       "noRule": "Weekly hours appear after work hours are set.",
       "left": "{h}h {m}m left until {limit}h",
       "addOnOut": "Today's time is added when you clock out",
-      "records": "My records"
+      "records": "My records",
+      "regular": "Regular",
+      "overtime": "Overtime"
     },
     "note": {
       "title": "Work note",
@@ -147,6 +149,7 @@
   "admin": {
     "nav": {
       "home": "Home",
+      "board": "Today",
       "inbox": "Requests",
       "records": "Records",
       "members": "Staff",

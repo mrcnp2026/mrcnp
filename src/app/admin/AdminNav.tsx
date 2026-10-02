@@ -1,14 +1,16 @@
 'use client';
 // 폰(< 1024px): 하단 탭 바 · 넓은 화면: 왼쪽 세로 메뉴. 구조는 같고 배치만 다르다 (마스터 5장)
-import { BellRing, ClipboardList, House, Menu, Users, Wallet, type LucideIcon } from 'lucide-react';
+import { BellRing, ClipboardList, House, LayoutDashboard, Menu, Users, Wallet, type LucideIcon } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 import { Logo } from '@/components/Logo';
 import { NavTab, usePressedTab } from '@/components/NavTab';
 
-// 탭 6개 (2026-10-02 의뢰인): ① 홈 ② 요청(정정·연장·연차 승인 — 예전 이름 "처리함"은 무엇이 들어 있는지 안 보였다)
-// ③ 기록 ④ 직원 ⑤ 급여(③ 급여 문서) ⑥ 더보기
-const TABS: { href: string; key: 'home' | 'inbox' | 'records' | 'members' | 'payroll' | 'more'; icon: LucideIcon }[] = [
-  { href: '/admin', key: 'home', icon: House },
+// 탭 7개 (2026-10-02 의뢰인): ① 홈 = 처음 들어온 출퇴근 화면으로 돌아가기 (하단 메뉴가 바뀌어도 홈은 같은 곳)
+// ② 현황(관리자 현황판) ③ 요청(정정·연장·연차 승인 — 예전 이름 "처리함"은 무엇이 들어 있는지 안 보였다)
+// ④ 기록 ⑤ 직원 ⑥ 급여(③ 급여 문서) ⑦ 더보기
+const TABS: { href: string; key: 'home' | 'board' | 'inbox' | 'records' | 'members' | 'payroll' | 'more'; icon: LucideIcon }[] = [
+  { href: '/punch', key: 'home', icon: House },
+  { href: '/admin', key: 'board', icon: LayoutDashboard },
   { href: '/admin/inbox', key: 'inbox', icon: BellRing },
   { href: '/admin/records', key: 'records', icon: ClipboardList },
   { href: '/admin/members', key: 'members', icon: Users },

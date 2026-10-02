@@ -9,5 +9,5 @@ export const POST = api('passkey.login.verify', async (req) => {
   if (!response) throw new ApiError(400, 'invalid_input');
   const r = await passkeyService().verifyAssertion(response, 'login');
   await issueSession(r.employeeId);
-  return { ok: true, next: await homePathFor(r.employeeId) };
+  return { ok: true, next: await homePathFor() };
 });

@@ -13,7 +13,7 @@ import { LoginButton } from './LoginButton';
 
 export default async function LoginPage() {
   const me = await getMe();
-  if (me) redirect(homePathForRole(me.role));
+  if (me) redirect(homePathForRole());
   const t = await getTranslations('login');
   const tc = await getTranslations('common');
   return (
