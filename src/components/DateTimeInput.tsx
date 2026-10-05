@@ -36,7 +36,7 @@ export function DateTimeInput({
   const shown = v ? (type === 'datetime-local' ? v.replace('T', ' ') : v) : null;
 
   return (
-    <span className="relative block">
+    <span className="relative block w-full min-w-0">
       <input
         ref={ref}
         type={type}
@@ -58,7 +58,7 @@ export function DateTimeInput({
         }}
         className={`${className} dt-native text-transparent caret-transparent`}
       />
-      <span aria-hidden className={`num pointer-events-none absolute inset-y-0 left-3 flex items-center text-base ${shown ? 'text-text' : 'text-faint'}`}>
+      <span aria-hidden className={`num pointer-events-none absolute inset-y-0 right-1 left-3 flex items-center overflow-hidden text-base whitespace-nowrap ${shown ? 'text-text' : 'text-faint'}`}>
         {shown ?? t(type === 'date' ? 'date' : type === 'time' ? 'time' : 'dateTime')}
       </span>
     </span>
