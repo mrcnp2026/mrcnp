@@ -2,7 +2,11 @@
 import { redirect } from 'next/navigation';
 import { getMe } from '@/lib/auth';
 import { pendingCounts } from '@/lib/period-data';
+import { ConsentGate } from '@/components/ConsentGate';
 import { TopBar } from '@/components/TopBar';
+import { CONSENT } from '@/config/consent';
+import { languageOptions } from '@/i18n/locales';
+import { hasConsent } from '@/lib/consent';
 import { AdminNav } from './AdminNav';
 
 export default async function AdminLayout({ children }: { children: React.ReactNode }) {
@@ -10,6 +14,7 @@ export default async function AdminLayout({ children }: { children: React.ReactN
   if (!me) redirect('/login');
   if (me.role !== 'admin') redirect('/punch');
   const c = await pendingCounts();
+  const consented = await hasConsent(me.id); // 관리자도 직원이다 — 같은 동의 창 (2026-10-05)
   return (
     <div className="lg:flex">
       <AdminNav inboxCount={c.total} />
@@ -20,6 +25,7 @@ export default async function AdminLayout({ children }: { children: React.ReactN
         </div>
         {children}
       </div>
+      {!consented && <ConsentGate version={CONSENT.version} languages={languageOptions()} />}
     </div>
   );
 }

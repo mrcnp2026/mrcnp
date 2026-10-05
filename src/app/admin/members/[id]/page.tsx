@@ -7,6 +7,7 @@ import { notFound } from 'next/navigation';
 import { Card, CardTitle, Chip, PageShell } from '@/components/ui';
 import { LOCALE_NAMES, LOCALES } from '@/i18n/locales';
 import { getMe } from '@/lib/auth';
+import { consentAt } from '@/lib/consent';
 import { buildOrgTree, groupPath } from '@/lib/org';
 import { loadOrgGroups } from '@/lib/org-data';
 import { resignChecklist } from '@/lib/staff-data';
@@ -35,6 +36,7 @@ export default async function MemberDetailPage({ params }: { params: Promise<{ i
   const options = tree.flatMap((d) => [{ id: d.id, label: d.name }, ...d.teams.map((x) => ({ id: x.id, label: `${d.name} › ${x.name}` }))]);
   const path = groupPath(groups, p.group_id);
   const day = (s: string) => f.dateTime(new Date(s), { dateStyle: 'medium' });
+  const agreedAt = await consentAt(p.id);
   // 관리 동작: 본인 것은 스스로 못 바꾼다 (R-2). 퇴사 처리 전에 남은 일을 보여 준다 (②-2 7-2 요점 3)
   const self = me.id === p.id;
   const todo = p.active && !self ? await resignChecklist(p.id) : null;
@@ -60,6 +62,7 @@ export default async function MemberDetailPage({ params }: { params: Promise<{ i
             {p.role === 'admin' && <Chip tone="info">{t('adminChip')}</Chip>}
             {p.can_view_payroll && <Chip tone="info">{t('payrollChip')}</Chip>}
             {!p.active && <Chip>{t('inactive')}</Chip>}
+            {p.active && (agreedAt ? <Chip tone="ok">{t('consentYes', { date: day(agreedAt) })}</Chip> : <Chip tone="warn">{t('consentNo')}</Chip>)}
           </p>
         </div>
       </header>

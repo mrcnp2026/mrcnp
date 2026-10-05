@@ -9,6 +9,7 @@ import { OFFICE } from '@/config/office';
 import { api, ApiError, readJson } from '@/lib/api';
 import { officeCidrs } from '@/lib/attendance-data';
 import { getMe } from '@/lib/auth';
+import { hasConsent } from '@/lib/consent';
 import { parseCoords, roundCoord, verifyGeo } from '@/lib/geo';
 import { loadOfficeLocations } from '@/lib/geo-data';
 import { passkeyService } from '@/lib/passkey-store';
@@ -37,7 +38,8 @@ export const POST = api('punch', async (req) => {
   let verifiedBy: 'ip' | 'gps' | null = byIp ? 'ip' : null;
   let geo: { lat: number; lng: number } | null = null;
   if (!byIp) {
-    const coords = parseCoords(body.geo);
+    // 수집 동의가 없는 사람이 보낸 위치는 읽지 않는다
+    const coords = (await hasConsent(who.employeeId)) ? parseCoords(body.geo) : null;
     if (coords && verifyGeo(coords, await loadOfficeLocations()).verified) {
       verifiedBy = 'gps';
       geo = { lat: roundCoord(coords.lat), lng: roundCoord(coords.lng) };

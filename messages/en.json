@@ -243,7 +243,9 @@
       "profileSaved": "Saved.",
       "invalid_phone": "Use digits and - only for the mobile number (7–20 characters).",
       "invalid_group": "That group was not found. Please refresh.",
-      "invalid_date": "The start date must be today or earlier."
+      "invalid_date": "The start date must be today or earlier.",
+      "consentYes": "Consented {date}",
+      "consentNo": "No consent yet"
     },
     "more": {
       "title": "More",
@@ -1001,5 +1003,42 @@
     "too_old": "For dates more than 31 days ago, ask your manager directly.",
     "duplicate_request": "You already have an off-site request waiting or approved for that time.",
     "period_locked": "That month is closed."
+  },
+  "consent": {
+    "title": "Consent to collect and use personal data",
+    "intro": "To record attendance we collect and use the information below. Please read it and agree. You need to agree to use the app.",
+    "collectTitle": "What we collect",
+    "item": {
+      "basic": {
+        "name": "Employee details",
+        "detail": "Name, employee number, department and job title, mobile number (if the company entered it)"
+      },
+      "punch": {
+        "name": "Attendance records",
+        "detail": "Clock-in and clock-out times, work notes, and your correction, leave and off-site requests"
+      },
+      "network": {
+        "name": "Internet address (IP)",
+        "detail": "Recorded when you punch, to check whether you are on the office internet."
+      },
+      "device": {
+        "name": "Phone registration",
+        "detail": "Device type and a public key for registration. Biometrics such as fingerprint or face stay on your phone; the company never receives them."
+      },
+      "location": {
+        "name": "Location",
+        "detail": "If the company turns on the office-location check, your location is checked only at the moment you punch away from the office internet. Only a location confirmed inside the office radius is stored; any other location is not stored. You are not tracked at other times."
+      }
+    },
+    "purposeTitle": "Purpose",
+    "purpose": "Recording and managing working hours, the basis for pay calculation, and keeping records required by law",
+    "keepTitle": "How long we keep it",
+    "keep": "Kept for 3 years after your employment ends, then deleted.",
+    "refuseTitle": "Your right to refuse",
+    "refuse": "You may refuse. If you do, you cannot record attendance in this app and must use another method set by the company. Ask an admin if you have questions.",
+    "version": "Notice version {v}",
+    "agree": "I agree",
+    "later": "Sign out without agreeing",
+    "consent_outdated": "The notice has changed. Please read the new notice and tap again."
   }
 }
