@@ -25,8 +25,8 @@ export function RegisterWizard({ groups, locales, today }: { groups: OrgOption[]
       <ol className="grid grid-cols-2 gap-2" aria-label={t('steps')}>
         {([1, 2] as const).map((n) => (
           <li key={n} aria-current={step === n ? 'step' : undefined} className={`flex min-h-12 items-center gap-2 rounded-card px-4 text-sm font-bold ${step === n ? 'bg-primary text-on-primary' : 'bg-bg text-muted'}`}>
-            <span className={`num flex size-6 shrink-0 items-center justify-center rounded-chip text-xs ${step === n ? 'bg-bg text-primary' : step > n ? 'bg-ok-tint text-ok' : 'bg-surface text-muted'}`}>
-              {step > n ? <Check aria-hidden size={14} strokeWidth={3} /> : n}
+            <span className={`num flex size-6 shrink-0 items-center justify-center rounded-chip text-xs ${step === n ? 'bg-bg text-primary' : n < step ? 'bg-ok-tint text-ok' : 'bg-surface text-muted'}`}>
+              {n < step ? <Check aria-hidden size={14} strokeWidth={3} /> : n}
             </span>
             {t(n === 1 ? 'stepInfo' : 'stepInvite')}
           </li>
