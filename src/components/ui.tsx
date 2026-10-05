@@ -10,13 +10,15 @@ export function Card({ children, className = '' }: { children: ReactNode; classN
   return <section className={`rounded-card bg-bg ${pad} ${className}`}>{children}</section>;
 }
 
-type Variant = 'primary' | 'ok' | 'outline';
+type Variant = 'primary' | 'ok' | 'outline' | 'danger';
 const VARIANT: Record<Variant, string> = {
   // 한 화면에 색을 채운 버튼은 하나만 (R-10-7). 보조 행동은 outline
   primary: 'bg-primary text-on-primary',
   ok: 'bg-ok text-on-primary',
   // 보조 버튼: 연한 파랑 바탕 + 파랑 글자 (흰 카드 위·회색 바탕 위 어디서나 보인다)
   outline: 'bg-primary-tint text-primary',
+  // 되돌리기 어려운 확인(퇴사 처리·폰 해제)에만 (theme.ts: danger는 되돌릴 수 없는 확인창에만)
+  danger: 'bg-danger text-on-primary',
 };
 
 export function Button({

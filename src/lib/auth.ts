@@ -15,7 +15,7 @@ export type Me = {
 };
 
 /**
- * 로그인 세션 → 직원 정보. 세션이 없거나 퇴사 처리된 직원이면 null.
+ * 로그인 세션 → 직원 정보. 세션이 없거나, 퇴사 처리됐거나, 등록된 폰이 해제된 직원이면 null.
  * 한 요청 안에서는 한 번만 확인한다 (cache) — 틀·언어·본문이 각각 부르면 화면마다 3~4번 DB를 왕복해 느려진다 (2026-10-02)
  */
 export const getMe = cache(async (): Promise<Me | null> => {
@@ -25,12 +25,14 @@ export const getMe = cache(async (): Promise<Me | null> => {
   const { data } = await supabase.auth.getClaims();
   const uid = data?.claims?.sub;
   if (!uid) return null;
-  const { data: p } = await createAdminClient()
-    .from('profiles')
-    .select('id, name, employee_no, role, locale, active, can_view_payroll')
-    .eq('id', uid)
-    .maybeSingle();
-  if (!p || !p.active) return null;
+  const db = createAdminClient();
+  // 등록된 폰이 해제되면 그 폰에 남아 있던 로그인도 바로 끊는다 (2026-10-05: 분실 폰을 해제해도 열려 있던 화면이 계속 쓰이던 문제).
+  // 로그인은 폰 확인으로만 생기므로, 활성 폰 등록이 하나도 없는 사람의 세션은 유효하지 않다
+  const [{ data: p }, { count: phones }] = await Promise.all([
+    db.from('profiles').select('id, name, employee_no, role, locale, active, can_view_payroll').eq('id', uid).maybeSingle(),
+    db.from('user_passkeys').select('id', { count: 'exact', head: true }).eq('employee_id', uid).is('revoked_at', null),
+  ]);
+  if (!p || !p.active || !phones) return null;
   return {
     id: p.id, name: p.name, employeeNo: p.employee_no, role: p.role, locale: p.locale, active: p.active,
     canViewPayroll: p.can_view_payroll,

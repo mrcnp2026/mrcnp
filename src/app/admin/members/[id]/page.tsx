@@ -6,16 +6,21 @@ import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import { Card, CardTitle, Chip, PageShell } from '@/components/ui';
 import { LOCALE_NAMES, LOCALES } from '@/i18n/locales';
+import { getMe } from '@/lib/auth';
 import { buildOrgTree, groupPath } from '@/lib/org';
 import { loadOrgGroups } from '@/lib/org-data';
+import { resignChecklist } from '@/lib/staff-data';
 import { createAdminClient } from '@/lib/supabase/admin';
 import { toKstDate } from '@/lib/time';
 import { NewInviteButton } from '../NewInviteButton';
+import { ManageAction } from './ManageAction';
 import { ProfileForm } from './ProfileForm';
 
 export default async function MemberDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const t = await getTranslations('admin.members');
+  const tm = await getTranslations('admin.manage');
   const f = await getFormatter();
+  const me = (await getMe())!;
   const { id } = await params;
   if (!/^[0-9a-f-]{36}$/i.test(id)) notFound();
   const db = createAdminClient();
@@ -30,6 +35,13 @@ export default async function MemberDetailPage({ params }: { params: Promise<{ i
   const options = tree.flatMap((d) => [{ id: d.id, label: d.name }, ...d.teams.map((x) => ({ id: x.id, label: `${d.name} › ${x.name}` }))]);
   const path = groupPath(groups, p.group_id);
   const day = (s: string) => f.dateTime(new Date(s), { dateStyle: 'medium' });
+  // 관리 동작: 본인 것은 스스로 못 바꾼다 (R-2). 퇴사 처리 전에 남은 일을 보여 준다 (②-2 7-2 요점 3)
+  const self = me.id === p.id;
+  const todo = p.active && !self ? await resignChecklist(p.id) : null;
+  const todoNotes = todo
+    ? ([['overtime', todo.overtime], ['corrections', todo.corrections], ['leave', todo.leave], ['work', todo.work]] as const).filter(([, n]) => n > 0).map(([k, n]) => tm(`todo.${k}`, { n }))
+    : [];
+  const api = `/api/admin/employees/${p.id}`;
 
   return (
     <PageShell>
@@ -87,6 +99,38 @@ export default async function MemberDetailPage({ params }: { params: Promise<{ i
           locales={LOCALES.map((code) => ({ code, name: LOCALE_NAMES[code] }))}
           today={toKstDate(new Date())}
         />
+      </Card>
+
+      <Card className="p-0 py-1">
+        <div className="px-5 pt-3 pb-1">
+          <CardTitle>{tm('title')}</CardTitle>
+        </div>
+        {self ? (
+          <p className="px-5 py-3 text-sm text-muted">{tm('selfNote')}</p>
+        ) : (
+          <>
+            {p.active && p.role !== 'admin' && (
+              <ManageAction title={tm('makeAdmin')} hint={tm('makeAdminHint')} confirmLabel={tm('makeAdmin')} endpoint={`${api}/role`} body={{ role: 'admin' }} presets={[tm('preset.newAdmin'), tm('preset.handover')]} />
+            )}
+            {p.active && p.role === 'admin' && (
+              <ManageAction title={tm('removeAdmin')} hint={tm('removeAdminHint')} confirmLabel={tm('removeAdmin')} endpoint={`${api}/role`} body={{ role: 'employee' }} presets={[tm('preset.handover'), tm('preset.mistake')]} />
+            )}
+            {p.active && p.role === 'admin' && me.canViewPayroll && !p.can_view_payroll && (
+              <ManageAction title={tm('grantPayroll')} hint={tm('grantPayrollHint')} confirmLabel={tm('grantPayroll')} endpoint={`${api}/role`} body={{ canViewPayroll: true }} presets={[tm('preset.payrollOwner')]} />
+            )}
+            {p.active && p.role === 'admin' && me.canViewPayroll && p.can_view_payroll && (
+              <ManageAction title={tm('revokePayroll')} hint={tm('revokePayrollHint')} confirmLabel={tm('revokePayroll')} endpoint={`${api}/role`} body={{ canViewPayroll: false }} presets={[tm('preset.handover'), tm('preset.mistake')]} />
+            )}
+            {key && (
+              <ManageAction title={tm('revokePhone')} hint={tm('revokePhoneHint')} confirmLabel={tm('revokePhone')} endpoint={`${api}/phone`} body={{}} presets={[tm('preset.lost'), tm('preset.changed')]} notes={[tm('revokePhoneNote')]} danger />
+            )}
+            {p.active ? (
+              <ManageAction title={tm('resign')} hint={tm('resignHint')} confirmLabel={tm('resign')} endpoint={`${api}/status`} body={{ action: 'resign' }} presets={[tm('preset.resigned'), tm('preset.contractEnd')]} notes={[tm('resignNote'), ...todoNotes]} danger />
+            ) : (
+              <ManageAction title={tm('reinstate')} hint={tm('reinstateHint')} confirmLabel={tm('reinstate')} endpoint={`${api}/status`} body={{ action: 'reinstate' }} presets={[tm('preset.rejoin'), tm('preset.mistake')]} />
+            )}
+          </>
+        )}
       </Card>
     </PageShell>
   );
