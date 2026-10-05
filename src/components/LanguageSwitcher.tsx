@@ -1,7 +1,7 @@
 'use client';
 // 언어 전환 — 검수된 언어만, 각 언어의 자기 이름으로 (7-11 요점 6, B-21).
-// 2개 이하면 토글 버튼(English | 한국어), 3개 이상이면 드롭다운 — 4개를 버튼으로 늘어놓으면 360px 머리줄이 넘친다.
-// (2026-10-02 의뢰인: "드롭다운은 눈에 안 띈다, 토글로")
+// 2개 이하면 토글 버튼(KO | EN — 글자는 짧은 코드, 읽어 주는 이름·툴팁은 각 언어의 자기 이름), 3개 이상이면 드롭다운 — 4개를 버튼으로 늘어놓으면 360px 머리줄이 넘친다.
+// (2026-10-02 의뢰인: "드롭다운은 눈에 안 띈다, 토글로" / 2026-10-05: 글자 로고와 한 줄에 들어가게 KO/EN으로)
 import { Languages } from 'lucide-react';
 import { useLocale, useTranslations } from 'next-intl';
 import { useRouter } from 'next/navigation';
@@ -34,11 +34,13 @@ export function LanguageSwitcher({ options }: { options: { code: string; name: s
               type="button"
               lang={o.code}
               aria-pressed={on}
+              aria-label={o.name}
+              title={o.name}
               disabled={pending}
               onClick={() => change(o.code)}
-              className={`min-h-11 rounded-chip px-2.5 text-sm font-semibold ${on ? 'bg-primary text-on-primary' : 'text-muted'}`}
+              className={`min-h-11 min-w-11 rounded-chip px-2 text-sm font-semibold ${on ? 'bg-primary text-on-primary' : 'text-muted'}`}
             >
-              {o.name}
+              {o.code.toUpperCase()}
             </button>
           );
         })}

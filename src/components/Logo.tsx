@@ -2,8 +2,8 @@
 import Image from 'next/image';
 import { BRAND } from '@/config/brand';
 
-export function Logo({ height = 28, variant = 'full', priority = false }: { height?: number; variant?: 'full' | 'mark'; priority?: boolean }) {
+export function Logo({ height = 28, variant = 'full', priority = false, className = 'shrink-0' }: { height?: number; variant?: 'full' | 'mark'; priority?: boolean; className?: string }) {
   const img = variant === 'full' ? BRAND.logo : BRAND.mark;
   const width = Math.round((img.width / img.height) * height);
-  return <Image src={img.src} alt={BRAND.name} width={width} height={height} priority={priority} className="shrink-0" />;
+  return <Image src={img.src} alt={BRAND.name} width={width} height={height} priority={priority} className={className} />;
 }

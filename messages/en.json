@@ -21,7 +21,12 @@
     "privacy": "Your fingerprint or face check happens only on your phone. The company never receives it.",
     "firstTime": "First time?",
     "qrHint": "If your phone is not registered yet, \"Sign in\" may show a QR screen. Close it and register your phone here.",
-    "registerLink": "Register my phone"
+    "registerLink": "Register my phone",
+    "heroTitle": "From clock-in to clock-out,\nin a single tap",
+    "heroSub": "For MRCNP staff only.",
+    "point1": "No password — sign in with fingerprint, face or PIN",
+    "point2": "Work hours, leave and off-site work in one place",
+    "point3": "Records are never edited; every correction stays on file"
   },
   "register": {
     "title": "Register your phone",
@@ -283,7 +288,8 @@
         "business_trip": "Business trip",
         "remote": "Remote"
       },
-      "workApproved": "Approved {kind}"
+      "workApproved": "Approved {kind}",
+      "rate": "{target} expected · {p}% in"
     },
     "inbox": {
       "title": "Requests",
@@ -407,7 +413,8 @@
       "pages": "Pages",
       "reportXlsx": "Monthly attendance report",
       "reportXlsxHint": "Print-ready form with signature boxes + raw records, corrections and the rules used. Prints on one A4 page.",
-      "payrollCsvHint": "For the payroll program. Do not open it in Excel to check — use the report above for people."
+      "payrollCsvHint": "For the payroll program. Do not open it in Excel to check — use the report above for people.",
+      "viewDays": "View daily records"
     },
     "notices": {
       "title": "Notices",
@@ -524,6 +531,59 @@
       "updateSuggested": "Re-enter: calculated {n} days",
       "prefilled": "Filled with the calculated {n} days from the join date. Check and save.",
       "invalid_date": "The join date must be today or earlier."
+    },
+    "detail": {
+      "backToList": "Records",
+      "practiceBanner": "Practice records — anything you add here is also a practice record.",
+      "sumWorked": "Worked",
+      "sumLate": "Late (times)",
+      "sumMissing": "Needs check (days)",
+      "sumLeave": "Leave (days)",
+      "dayOff": "Day off",
+      "noRecord": "No record",
+      "noRecordOk": "No punch record",
+      "extra": "Overtime & holiday {t}",
+      "rawTitle": "Original punches & corrections ({n})",
+      "rawPunched": "Punched in the app",
+      "byAdmin": "Added by admin {who}",
+      "byRequest": "Requested by employee",
+      "reasonLine": "Reason: {reason}",
+      "add": "Add record",
+      "addOther": "Add a record on another date",
+      "saved": "Record added.",
+      "formTitle": "Add a record for {name}",
+      "confirmTitle": "Add this record for {name}?",
+      "date": "Date",
+      "which": "Record",
+      "whichOne": "Record to add: {kind}",
+      "kind": {
+        "in": "Clock in",
+        "out": "Clock out"
+      },
+      "time": "Time",
+      "nextDay": "This time is after midnight (next day)",
+      "nextDayShort": "next day",
+      "reason": "Reason",
+      "reasonHint": "Required. Who added it, when and why are kept on record, and the employee can see it in their corrections.",
+      "preset": {
+        "battery": "Phone battery dead",
+        "noPhone": "Phone not at hand",
+        "appError": "App error"
+      },
+      "confirmWarn": "A record you add cannot be deleted or changed. Check the date and time again.",
+      "back": "Edit",
+      "save": "Add",
+      "cancel": "Cancel",
+      "next": "Next",
+      "otherHint": "Use this for a date not listed above, such as work on a day off.",
+      "footNote": "Original punches are never changed. Records added by an admin are marked \"Entered by admin\" and also appear in the Excel report.",
+      "reason_required": "Enter a reason of at least 2 characters (up to 200).",
+      "future_time": "A future time cannot be added.",
+      "already_exists": "That record already exists on this date.",
+      "pending_exists": "The employee has a pending request for this. Handle it in the Requests tab.",
+      "time_order": "Clock-out must be after clock-in. Check the time.",
+      "selfNote": "You cannot add your own records here. Send a correction request and another admin will handle it.",
+      "proxy_self": "You cannot add your own record. Please send a correction request."
     }
   },
   "nav": {

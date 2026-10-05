@@ -38,7 +38,6 @@ export default async function PunchPage() {
   return (
     <>
       <TopBar
-        variant="mark"
         right={
           <>
             {me.role === 'admin' && (

@@ -21,7 +21,12 @@
     "privacy": "지문·얼굴 확인은 폰 안에서만 이루어집니다. 회사는 그 정보를 받지 않습니다.",
     "firstTime": "처음이신가요?",
     "qrHint": "아직 등록하지 않은 폰에서 \"로그인\"을 누르면 QR 화면이 뜰 수 있습니다. 닫고 여기서 폰을 등록하세요.",
-    "registerLink": "폰 등록하기"
+    "registerLink": "폰 등록하기",
+    "heroTitle": "출근부터 퇴근까지,\n한 번의 터치로",
+    "heroSub": "MRCNP 임직원 전용 서비스입니다.",
+    "point1": "비밀번호 없이 지문·얼굴·PIN으로 로그인",
+    "point2": "근무시간·연차·외근을 한곳에서",
+    "point3": "기록은 고쳐지지 않고, 정정 내역이 그대로 남습니다"
   },
   "register": {
     "title": "폰 등록",
@@ -283,7 +288,8 @@
         "business_trip": "출장",
         "remote": "재택"
       },
-      "workApproved": "승인된 {kind}"
+      "workApproved": "승인된 {kind}",
+      "rate": "출근 대상 {target}명 · 출근율 {p}%"
     },
     "inbox": {
       "title": "요청",
@@ -407,7 +413,8 @@
       "pages": "페이지",
       "reportXlsx": "월간 근태 확인서",
       "reportXlsxHint": "인쇄용 양식(서명란 포함) + 원본·정정 이력·적용 기준. A4 한 장으로 출력됩니다.",
-      "payrollCsvHint": "급여 프로그램 입력용입니다. 엑셀로 열어 확인하지 마세요 — 사람이 볼 때는 위 확인서를 쓰세요."
+      "payrollCsvHint": "급여 프로그램 입력용입니다. 엑셀로 열어 확인하지 마세요 — 사람이 볼 때는 위 확인서를 쓰세요.",
+      "viewDays": "날짜별 기록 보기"
     },
     "notices": {
       "title": "공지",
@@ -524,6 +531,59 @@
       "updateSuggested": "계산값 {n}일로 다시 입력",
       "prefilled": "입사일 기준 계산값({n}일)을 채웠습니다. 확인하고 저장하세요.",
       "invalid_date": "입사일은 오늘 이전 날짜여야 합니다."
+    },
+    "detail": {
+      "backToList": "기록",
+      "practiceBanner": "연습 기록입니다 — 여기서 넣는 기록도 연습 기록입니다.",
+      "sumWorked": "근로",
+      "sumLate": "지각(회)",
+      "sumMissing": "확인 필요(일)",
+      "sumLeave": "휴가(일)",
+      "dayOff": "휴일",
+      "noRecord": "기록 없음",
+      "noRecordOk": "출퇴근 기록 없음",
+      "extra": "연장·휴일 {t}",
+      "rawTitle": "원래 기록·정정 내역 {n}건",
+      "rawPunched": "앱으로 찍음",
+      "byAdmin": "관리자 {who} 등록",
+      "byRequest": "직원 요청",
+      "reasonLine": "사유: {reason}",
+      "add": "기록 넣기",
+      "addOther": "다른 날짜에 기록 넣기",
+      "saved": "기록을 넣었습니다.",
+      "formTitle": "{name}님 기록 넣기",
+      "confirmTitle": "{name}님 기록을 이렇게 넣을까요?",
+      "date": "날짜",
+      "which": "기록",
+      "whichOne": "넣을 기록: {kind}",
+      "kind": {
+        "in": "출근",
+        "out": "퇴근"
+      },
+      "time": "시각",
+      "nextDay": "자정을 넘긴 시각입니다 (다음 날)",
+      "nextDayShort": "다음 날",
+      "reason": "사유",
+      "reasonHint": "필수입니다. 누가·언제·왜 넣었는지 기록에 남고, 직원도 자기 정정 내역에서 볼 수 있습니다.",
+      "preset": {
+        "battery": "폰 배터리 방전",
+        "noPhone": "폰 미소지",
+        "appError": "앱 오류"
+      },
+      "confirmWarn": "넣은 기록은 지우거나 고칠 수 없습니다. 날짜와 시각을 다시 확인하세요.",
+      "back": "고치기",
+      "save": "넣기",
+      "cancel": "취소",
+      "next": "다음",
+      "otherHint": "휴일 근무처럼 위 목록에 없는 날짜에 넣을 때 씁니다.",
+      "footNote": "원래 찍은 기록은 바뀌지 않습니다. 관리자가 넣은 기록은 「관리자 등록」으로 표시되고 엑셀 확인서에도 남습니다.",
+      "reason_required": "사유를 2자 이상 적어 주세요 (200자 이내).",
+      "future_time": "미래 시각은 넣을 수 없습니다.",
+      "already_exists": "그 날짜에 같은 기록이 이미 있습니다.",
+      "pending_exists": "직원이 보낸 대기 중인 요청이 있습니다. 요청 탭에서 처리하세요.",
+      "time_order": "퇴근은 출근보다 뒤여야 합니다. 시각을 확인하세요.",
+      "selfNote": "본인 기록은 여기서 넣을 수 없습니다. 「정정 요청」으로 보내면 다른 관리자가 처리합니다.",
+      "proxy_self": "본인 기록은 대신 넣을 수 없습니다. 정정 요청을 보내 주세요."
     }
   },
   "nav": {

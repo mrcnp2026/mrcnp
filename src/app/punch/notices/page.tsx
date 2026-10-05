@@ -20,7 +20,7 @@ export default async function EmployeeNoticesPage() {
   const list = await visibleNoticesFor(me.id, await getLocale(), new Date());
   return (
     <>
-      <TopBar variant="mark" right={<LanguageSwitcher options={languageOptions()} />} />
+      <TopBar right={<LanguageSwitcher options={languageOptions()} />} />
       <PageShell>
         <h1 className="flex items-center gap-2 text-2xl font-semibold text-primary-deep">
           <Megaphone aria-hidden size={24} strokeWidth={1.75} />
