@@ -9,10 +9,11 @@ import { notFound } from 'next/navigation';
 import { Card, Chip, PageShell } from '@/components/ui';
 import { OFFICE } from '@/config/office';
 import { getMe } from '@/lib/auth';
-import { buildDayDetails, isProxyCorrection } from '@/lib/day-detail';
+import { buildDayDetails } from '@/lib/day-detail';
 import { buildMonth, isYearMonth, monthRange } from '@/lib/month-data';
 import { daysFor, leaveDaysFor, workDaysFor } from '@/lib/period-data';
 import { toKstDate } from '@/lib/time';
+import { CancelCorrection } from './CancelCorrection';
 import { ProxyEntry } from './ProxyEntry';
 
 function shift(ym: string, n: number) {
@@ -172,10 +173,11 @@ export default async function EmployeeRecordsPage({ params, searchParams }: { pa
                                     ? ti('modifyLine', { from: target ? hm(target.punchedAt) : '', to: hm(c.newPunchedAt) })
                                     : ti('voidLine', { time: target ? hm(target.punchedAt) : '' })}
                               </span>
-                              <span>{isProxyCorrection(c) ? t('byAdmin', { who: nameOf.get(c.requestedBy) ?? '' }) : t('byRequest')}</span>
-                              <span className={c.status === 'pending' ? 'text-warn' : ''}>{ti(`status.${c.status}`)}</span>
+                              <span>{c.correctionType === 'add_missing' && c.requestedBy !== c.employeeId ? t('byAdmin', { who: nameOf.get(c.requestedBy) ?? '' }) : t('byRequest')}</span>
+                              <span className={c.status === 'pending' ? 'text-warn' : c.status === 'cancelled' ? 'line-through' : ''}>{ti(`status.${c.status}`)}</span>
                             </span>
                             <span className="break-words whitespace-pre-wrap">{t('reasonLine', { reason: c.reason })}</span>
+                            {c.status === 'approved' && canEnter && <CancelCorrection id={c.id} label={c.kind ? `${ti(`kind.${c.kind}`)} ${c.newPunchedAt ? hm(c.newPunchedAt) : ''}`.trim() : ti(`type.${c.correctionType}`)} />}
                           </li>
                         );
                       })}
@@ -183,7 +185,7 @@ export default async function EmployeeRecordsPage({ params, searchParams }: { pa
                   </details>
                 )}
                 {canEnter && d.canAdd.length > 0 && (
-                  <ProxyEntry employeeId={id} name={person.name} workDate={d.workDate} dateLabel={dayLabel(d.workDate)} kinds={d.missing === 'out' ? ['out'] : d.canAdd} today={today} />
+                  <ProxyEntry key={(d.missing === 'out' ? ['out'] : d.canAdd).join()} employeeId={id} name={person.name} workDate={d.workDate} dateLabel={dayLabel(d.workDate)} kinds={d.missing === 'out' ? ['out'] : d.canAdd} today={today} />
                 )}
               </Card>
             </li>

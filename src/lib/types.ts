@@ -36,7 +36,7 @@ export type PunchCorrection = {
   workDate: string;
   kind: PunchKind | null;
   newPunchedAt: Date | null;
-  status: 'pending' | 'approved' | 'rejected';
+  status: 'pending' | 'approved' | 'rejected' | 'cancelled'; // cancelled: 승인됐다가 취소됨 (0016) — 집계에 쓰이지 않는다
 };
 
 /** 한 근무일 안의 출근–퇴근 한 쌍. 한쪽이 없으면 null — 0이나 추정값으로 채우지 않는다 (4-8). */

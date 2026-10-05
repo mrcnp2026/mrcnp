@@ -604,7 +604,7 @@
         "noPhone": "Phone not at hand",
         "appError": "App error"
       },
-      "confirmWarn": "A record you add cannot be deleted or changed. Check the date and time again.",
+      "confirmWarn": "Check the date and time again. If it is wrong, you can cancel it on this screen with a reason.",
       "back": "Edit",
       "save": "Add",
       "cancel": "Cancel",
@@ -617,7 +617,19 @@
       "pending_exists": "The employee has a pending request for this. Handle it in the Requests tab.",
       "time_order": "Clock-out must be after clock-in. Check the time.",
       "selfNote": "You cannot add your own records here. Send a correction request and another admin will handle it.",
-      "proxy_self": "You cannot add your own record. Please send a correction request."
+      "proxy_self": "You cannot add your own record. Please send a correction request.",
+      "cancelCorrection": "Cancel this record",
+      "cancelOf": "Cancel {what}",
+      "cancelTitle": "{what} — cancel it?",
+      "cancelWarn": "Once cancelled, this correction is left out of work-hour calculations. The cancellation stays on record and you can add it again if needed.",
+      "cancelPreset": {
+        "wrongTime": "Wrong time entered",
+        "wrongDay": "Wrong date entered",
+        "wrongPerson": "Belongs to another employee"
+      },
+      "cancelConfirm": "Cancel it",
+      "self_change": "You cannot cancel a correction on your own record. Ask another admin.",
+      "already": "It is already cancelled or not approved. Please refresh."
     },
     "org": {
       "title": "Org chart",
@@ -747,7 +759,8 @@
     "status": {
       "pending": "Waiting",
       "approved": "Approved",
-      "rejected": "Not approved"
+      "rejected": "Not approved",
+      "cancelled": "Cancelled"
     },
     "typeLabel": "What do you need?",
     "date": "Date",

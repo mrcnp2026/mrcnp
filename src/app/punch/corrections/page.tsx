@@ -35,7 +35,7 @@ export default async function CorrectionsPage({ searchParams }: { searchParams: 
           <Card key={c.id} className="flex flex-col gap-1">
             <div className="flex items-center justify-between gap-2">
               <span className="font-semibold">{day(c.workDate)} · {t(`type.${c.correctionType}`)}</span>
-              <Chip tone={c.status === 'approved' ? 'ok' : c.status === 'rejected' ? 'neutral' : 'warn'}>{t(`status.${c.status}`)}</Chip>
+              <Chip tone={c.status === 'approved' ? 'ok' : c.status === 'pending' ? 'warn' : 'neutral'}>{t(`status.${c.status}`)}</Chip>
             </div>
             {c.newPunchedAt && <p className="num text-sm">{t(`kind.${c.kind}`)} {hm(c.newPunchedAt)}</p>}
             <p className="text-sm text-muted">{c.reason}</p>

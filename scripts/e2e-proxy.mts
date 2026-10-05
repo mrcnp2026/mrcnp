@@ -3,7 +3,7 @@
 //   VIEW_ONLY=1 을 붙이면 새 기록을 넣지 않고, 전에 넣은 날짜로 화면 이동·넘침만 확인한다 (시험 날짜를 아낀다)
 // 검사 전용 계정 둘을 쓴다: e2e-audit(검사 동안만 관리자) → e2e-audit2(대상 직원, 늘 비활성)의 기록을 넣는다.
 //   본인 기록은 대신 넣을 수 없어서 대상 계정이 따로 필요하다.
-// 넣은 기록은 지울 수 없으므로(4-1) 연습 기록(is_test)으로, 지난 날짜 중 아직 안 쓴 하루를 고른다.
+// 연습 기록(is_test)으로, 지난 날짜 중 승인된 정정이 없는 하루를 고른다. 끝나면 이번에 넣은 기록을 취소해 둔다(취소 내역은 남는다, 4-1).
 // 끝나면 가짜 폰 등록을 해제하고 e2e-audit을 다시 끈다.
 import { createClient } from '@supabase/supabase-js';
 import { config } from 'dotenv';
@@ -31,7 +31,8 @@ await db.from('invites').insert({ employee_id: emp!.id, token_hash: createHash('
 // 시험 날짜: 근무규칙이 있는 날(가장 이른 적용 시작일)부터 어제까지 중, 이 계정에 아직 기록을 넣지 않은 하루.
 //   근무규칙이 없는 날짜는 화면이 계산하지 않아 줄이 나오지 않는다. 넣은 기록은 못 지우므로 쓴 날짜는 다시 못 쓴다.
 const { data: firstRule } = await db.from('work_rules').select('effective_from').order('effective_from').limit(1).maybeSingle();
-const { data: usedRows } = await db.from('punch_corrections').select('work_date').eq('employee_id', target!.id);
+// 취소된 정정은 집계에 안 쓰이므로 그 날짜는 다시 쓸 수 있다 — 승인 상태로 남은 날짜만 뺀다
+const { data: usedRows } = await db.from('punch_corrections').select('work_date').eq('employee_id', target!.id).eq('status', 'approved');
 const used = new Set((usedRows ?? []).map((x) => x.work_date));
 const kstToday = new Date(Date.now() + 9 * 3600e3).toISOString().slice(0, 10);
 const free: string[] = [];
@@ -96,10 +97,10 @@ try {
   check(await p.getByRole('button', { name: '다음' }).isDisabled(), '사유 없이는 「다음」이 눌리지 않음');
   await p.getByRole('button', { name: '폰 배터리 방전' }).click();
   await p.getByRole('button', { name: '다음' }).click();
-  await p.getByText('넣은 기록은 지우거나 고칠 수 없습니다').waitFor();
+  await p.getByText('날짜와 시각을 다시 확인하세요').waitFor();
   await shot('proxy-confirm');
   await p.getByRole('button', { name: '넣기', exact: true }).click();
-  await p.getByText('넣은 기록은 지우거나 고칠 수 없습니다').waitFor({ state: 'hidden', timeout: 20000 });
+  await p.getByText('날짜와 시각을 다시 확인하세요').waitFor({ state: 'hidden', timeout: 20000 });
   await row.getByText('출근 09:00').first().waitFor({ timeout: 20000 });
   check(true, '출근을 넣으면 그 날 줄에 「출근 09:00」이 뜸');
   check((await row.getByText('관리자 등록', { exact: true }).count()) > 0, '「관리자 등록」 표시');
@@ -113,23 +114,46 @@ try {
   await row.locator('textarea').fill('폰 미소지 — 수기 기록지 확인');
   await p.getByRole('button', { name: '다음' }).click();
   await p.getByRole('button', { name: '넣기', exact: true }).click();
-  await p.getByText('넣은 기록은 지우거나 고칠 수 없습니다').waitFor({ state: 'hidden', timeout: 20000 });
+  await p.getByText('날짜와 시각을 다시 확인하세요').waitFor({ state: 'hidden', timeout: 20000 });
   await row.getByText('퇴근 18:30').first().waitFor({ timeout: 20000 });
   check(true, '퇴근을 넣으면 「퇴근 18:30」이 뜸');
   if (WEEKDAY) check((await row.getByText('8시간 30분').count()) > 0, '근로시간 8시간 30분 (휴게 1시간 제외)');
   r = await post(api, { workDate: DAY, kind: 'out', time: '19:00', reason: '시험 사유' });
   check(r.status === 409 && r.json.error === 'already_exists', '같은 날 같은 기록을 또 넣으면 차단');
-  await row.getByText(/원래 기록·정정 내역 2건/).click();
+  await row.getByText(/원래 기록·정정 내역 \d+건/).click();
+  await p.waitForTimeout(300);
   check((await row.getByText(/관리자 .* 등록/).count()) > 0 && (await row.getByText('사유: 폰 배터리 방전').count()) > 0, '원래 기록·정정 내역에 넣은 사람·사유가 보임');
   await shot('proxy-detail-390');
+
+  // ── 잘못 넣은 기록 취소 (0016) ──
+  r = await post(`/api/admin/corrections/11111111-1111-1111-1111-111111111111/cancel`, { reason: '시험 사유' });
+  check(r.status === 404, '없는 정정은 취소할 수 없음');
+  const { data: outRow } = await db.from('punch_corrections').select('id').eq('employee_id', target!.id).eq('work_date', DAY).eq('kind', 'out').eq('status', 'approved').single();
+  r = await post(`/api/admin/corrections/${outRow!.id}/cancel`, { reason: '' });
+  check(r.status === 400 && r.json.error === 'reason_required', '사유 없는 취소 차단');
+  await row.getByRole('button', { name: '퇴근 18:30 취소' }).click();
+  await row.getByRole('button', { name: '시각을 잘못 넣음' }).click();
+  await row.getByRole('button', { name: '취소하기', exact: true }).click();
+  await row.getByText('퇴근 기록 없음').waitFor({ timeout: 20000 });
+  check(true, '퇴근을 취소하면 다시 「퇴근 기록 없음」');
+  const { data: cancelled } = await db.from('punch_corrections').select('status').eq('id', outRow!.id).single();
+  const { data: cl } = await db.from('decision_log').select('decision, reason, decided_by').eq('subject_id', outRow!.id).eq('decision', 'cancelled');
+  check(cancelled?.status === 'cancelled' && cl?.length === 1 && cl[0].decided_by === emp!.id && cl[0].reason === '시각을 잘못 넣음', '정정은 지워지지 않고 취소됨으로 남음 + 결정 기록에 누가·왜');
+  r = await post(`/api/admin/corrections/${outRow!.id}/cancel`, { reason: '시험 사유' });
+  check(r.status === 409 && r.json.error === 'already', '이미 취소한 것을 또 취소하면 "이미"');
+  r = await post(api, { workDate: DAY, kind: 'out', time: '18:30', reason: '폰 미소지 — 다시 넣음' });
+  check(r.status === 200, '취소한 뒤에는 같은 날 퇴근을 다시 넣을 수 있음');
+  await p.reload();
+  await row.getByText('퇴근 18:30').first().waitFor({ timeout: 20000 });
 
   // ── DB: 원본은 그대로, 정정·결정 기록만 ──
   const { count: evCount } = await db.from('punch_events').select('id', { count: 'exact', head: true }).eq('employee_id', target!.id).eq('work_date', DAY);
   check(evCount === 0, '원본 기록(punch_events)에는 아무것도 안 들어감', `${evCount}건`);
-  const { data: co } = await db.from('punch_corrections').select('id, status, requested_by, approved_by, reason, is_test, correction_type').eq('employee_id', target!.id).eq('work_date', DAY);
-  check(co?.length === 2 && co.every((c) => c.status === 'approved' && c.requested_by === emp!.id && c.approved_by === emp!.id && c.correction_type === 'add_missing' && c.reason.length > 1), '정정 2건: 승인됨·넣은 사람·사유 기록', `${co?.length}건`);
+  const { data: co } = await db.from('punch_corrections').select('id, status, requested_by, approved_by, reason, is_test, correction_type').eq('employee_id', target!.id).eq('work_date', DAY).gte('created_at', STARTED_AT);
+  const live = (co ?? []).filter((c) => c.status === 'approved');
+  check(co?.length === 3 && live.length === 2 && live.every((c) => c.requested_by === emp!.id && c.approved_by === emp!.id && c.correction_type === 'add_missing' && c.reason.length > 1), '정정 3건(승인 2 · 취소 1): 넣은 사람·사유 기록', `${co?.length}건`);
   const { count: logCount } = await db.from('decision_log').select('id', { count: 'exact', head: true }).in('subject_id', (co ?? []).map((c) => c.id));
-  check(logCount === 2, '결정 기록(decision_log) 2건', `${logCount}건`);
+  check(logCount === 4, '결정 기록(decision_log) 4건 (승인 3 + 취소 1)', `${logCount}건`);
   const { count: pend } = await db.from('punch_corrections').select('id', { count: 'exact', head: true }).eq('employee_id', target!.id).eq('status', 'pending');
   check(pend === 0, '거절된 시도가 대기 건으로 남지 않음', `${pend}건`);
 
@@ -165,6 +189,9 @@ try {
   check(false, '검사 중단', (e as Error).message.split('\n')[0]);
 } finally {
   await browser.close();
+  // 이번에 넣은 기록은 취소해 둔다 — 연습 기록 화면에 검사 흔적이 남지 않고, 그 날짜를 다음 검사에 다시 쓸 수 있다
+  const { data: mine } = await db.from('punch_corrections').select('id').eq('employee_id', target!.id).eq('status', 'approved').gte('created_at', STARTED_AT);
+  for (const c of mine ?? []) await db.rpc('cancel_correction', { p_id: c.id, p_decided_by: emp!.id, p_reason: 'e2e 검사 정리', p_request_id: 'e2e-proxy' });
   // 넣은 기록 때문에 화면을 열 때 연장 확인 요청이 자동으로 생긴다 — 실제 관리자의 요청함에 남지 않게 거부로 닫는다 (연습 기록, 검사 계정 것만)
   const { data: ot } = await db.from('overtime_requests').select('id').eq('employee_id', target!.id).eq('status', 'pending');
   for (const o of ot ?? []) {
