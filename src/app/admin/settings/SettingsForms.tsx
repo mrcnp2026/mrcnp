@@ -252,3 +252,75 @@ export function NetworkForm({ currentIp, currentKnown }: { currentIp: string | n
     </Fold>
   );
 }
+
+export function LocationForm() {
+  const t = useTranslations('admin.settings');
+  const { busy, err, post } = useSettingsPost();
+  const [lat, setLat] = useState('');
+  const [lng, setLng] = useState('');
+  const [locating, setLocating] = useState<'idle' | 'busy' | 'failed'>('idle');
+  return (
+    <Fold label={t('locationAdd')}>
+      {(close) => (
+        <form
+          className="flex flex-col gap-3"
+          onSubmit={async (e) => {
+            e.preventDefault();
+            const fd = new FormData(e.currentTarget);
+            if (await post({ action: 'location.add', lat, lng, radiusM: fd.get('radiusM'), label: fd.get('label') })) close();
+          }}
+        >
+          <p className="text-sm text-muted">{t('locationAddHint')}</p>
+          <button
+            type="button"
+            disabled={locating === 'busy'}
+            onClick={() => {
+              if (!('geolocation' in navigator)) return setLocating('failed');
+              setLocating('busy');
+              navigator.geolocation.getCurrentPosition(
+                (p) => {
+                  setLat(p.coords.latitude.toFixed(6));
+                  setLng(p.coords.longitude.toFixed(6));
+                  setLocating('idle');
+                },
+                () => setLocating('failed'),
+                { enableHighAccuracy: true, timeout: 10000 },
+              );
+            }}
+            className="min-h-11 self-start rounded-chip bg-bg px-3 text-sm font-medium text-primary disabled:opacity-60"
+          >
+            {t('locationUseCurrent')}
+          </button>
+          {locating === 'failed' && <p className="text-sm text-warn">{t('locationFailed')}</p>}
+          <div className="grid grid-cols-2 gap-2">
+            <label className="flex flex-col gap-1 text-sm text-muted">
+              {t('lat')}
+              <input value={lat} onChange={(e) => setLat(e.target.value)} required inputMode="decimal" maxLength={12} className={`num ${field}`} autoComplete="off" />
+            </label>
+            <label className="flex flex-col gap-1 text-sm text-muted">
+              {t('lng')}
+              <input value={lng} onChange={(e) => setLng(e.target.value)} required inputMode="decimal" maxLength={12} className={`num ${field}`} autoComplete="off" />
+            </label>
+          </div>
+          <label className="flex flex-col gap-1 text-sm text-muted">
+            {t('radius')}
+            <input name="radiusM" type="number" inputMode="numeric" min={30} max={1000} required defaultValue={100} className={`num ${field}`} />
+          </label>
+          <label className="flex flex-col gap-1 text-sm text-muted">
+            {t('networkLabel')}
+            <input name="label" maxLength={40} className={field} autoComplete="off" />
+          </label>
+          {err && <ErrorNote code={err.code} requestId={err.requestId} namespace="admin.settings" />}
+          <div className="flex gap-2">
+            <Button type="button" variant="outline" className="flex-1" onClick={close}>
+              {t('cancel')}
+            </Button>
+            <Button type="submit" className="flex-1" disabled={busy || !lat.trim() || !lng.trim()}>
+              {t('save')}
+            </Button>
+          </div>
+        </form>
+      )}
+    </Fold>
+  );
+}

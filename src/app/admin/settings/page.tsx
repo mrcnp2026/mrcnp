@@ -9,7 +9,8 @@ import { addDays } from '@/lib/calendar';
 import { createAdminClient } from '@/lib/supabase/admin';
 import { hhmm, toKstDate } from '@/lib/time';
 import { isOfficeIp, parseCidr, traceClientIp } from '@/lib/verify-location';
-import { ConfirmButton, HolidayForm, NetworkForm, RuleForm } from './SettingsForms';
+import { loadOfficeLocations } from '@/lib/geo-data';
+import { ConfirmButton, HolidayForm, LocationForm, NetworkForm, RuleForm } from './SettingsForms';
 
 export default async function SettingsPage() {
   const t = await getTranslations('admin.settings');
@@ -22,6 +23,8 @@ export default async function SettingsPage() {
     db.from('holidays').select('the_date, label, kind').gte('the_date', monthStart).order('the_date').limit(60),
     db.from('office_networks').select('id, cidr, label, active').order('created_at'),
   ]);
+  // 검사 스크립트가 넣었다 끈 위치(메모가 e2e-…)는 목록에 보이지 않게
+  const locations = (await loadOfficeLocations(true)).filter((l) => l.active || !l.label?.startsWith('e2e-'));
   const current = (rules ?? []).find((r) => r.effective_from <= today) ?? null;
   const upcoming = (rules ?? []).filter((r) => r.effective_from > today).reverse();
   // 2024-01-01은 월요일 — 요일 이름(월…일)을 화면 언어로
@@ -134,6 +137,29 @@ export default async function SettingsPage() {
         </ul>
         <NetworkForm currentIp={trace.ip} currentKnown={here} />
         <p className="text-xs text-faint">{t('networkNote')}</p>
+      </Card>
+
+      <Card className="flex flex-col gap-2">
+        <CardTitle>{t('locationTitle')}</CardTitle>
+        <p className={`rounded-button p-3 text-sm ${locations.some((l) => l.active) ? 'bg-ok-tint text-ok' : 'bg-surface text-muted'}`}>{t(locations.some((l) => l.active) ? 'gpsOn' : 'gpsOff')}</p>
+        <ul className="divide-y divide-border">
+          {locations.map((l) => (
+            <li key={l.id} className={`flex min-h-12 items-center gap-2 ${l.active ? '' : 'opacity-60'}`}>
+              <span className="min-w-0 flex-1">
+                <span className="num block truncate text-sm">{l.lat.toFixed(5)}, {l.lng.toFixed(5)} · {t('radiusM', { n: l.radiusM })}</span>
+                {l.label && <span className="block truncate text-xs text-muted">{l.label}</span>}
+              </span>
+              {!l.active && <Chip>{t('off')}</Chip>}
+              {l.active ? (
+                <ConfirmButton body={{ action: 'location.toggle', id: l.id, active: false }} label={t('turnOff')} confirmLabel={t('turnOffConfirm')} ariaLabel={t('turnOffOf', { what: l.label ?? t('locationTitle') })} />
+              ) : (
+                <ConfirmButton body={{ action: 'location.toggle', id: l.id, active: true }} label={t('turnOn')} confirmLabel={t('turnOn')} ariaLabel={t('turnOnOf', { what: l.label ?? t('locationTitle') })} />
+              )}
+            </li>
+          ))}
+        </ul>
+        <LocationForm />
+        <p className="text-xs text-faint">{t('locationNote')}</p>
       </Card>
     </PageShell>
   );

@@ -2,9 +2,11 @@
 // - 근무시간은 고치지 않고 "언제부터 적용"되는 새 규칙을 넣는다 (② 4-1). 잘못 넣은 규칙은 숨긴다(지우지 않는다)
 // - 휴일은 이번 달과 앞으로의 날짜만 넣고 뺄 수 있다 (지난 달 집계가 달라지지 않게)
 // - 사무실 주소는 추가하고, 안 쓰는 것은 끈다 (지우지 않는다). 교체가 아니라 추가가 기본이다 (9-5)
+// - 사무실 위치(GPS)는 좌표+반경. 하나라도 켜져 있으면, 사무실 인터넷이 아닌 곳에서 찍을 때 폰이 위치를 함께 보낸다 (0017)
 // 누가 바꿨는지는 변경 기록에 남는다 (표에 *_by 칸이 없어 따로 한 줄 적는다).
 import { api, ApiError, readJson } from '@/lib/api';
 import { requireAdmin } from '@/lib/auth';
+import { validateLocation } from '@/lib/geo';
 import { cleanLabel, normalizeCidr, validateHoliday, validateRule } from '@/lib/settings-rules';
 import { auditStaffAction } from '@/lib/staff-data';
 import { createAdminClient } from '@/lib/supabase/admin';
@@ -93,6 +95,20 @@ export const POST = api('admin.settings', async (req, ctx) => {
       if (error) throw new Error(`settings.network.toggle: ${error.code}`);
       if (!data?.length) throw new ApiError(404, 'not_found');
       await note('office_networks', b.id, b.active ? 'network.on' : 'network.off', { cidr: String(data[0].cidr) });
+      return { ok: true };
+    }
+    case 'location.add': {
+      const v = validateLocation(b);
+      if (!v) throw new ApiError(400, 'invalid_location');
+      const { data, error } = await db.from('office_locations').insert({ lat: v.lat, lng: v.lng, radius_m: v.radiusM, label: cleanLabel(b.label), created_by: me.id, updated_by: me.id }).select('id').single();
+      if (error) throw new Error(`settings.location.add: ${error.code}`);
+      return { id: data.id };
+    }
+    case 'location.toggle': {
+      if (typeof b.id !== 'string' || !UUID.test(b.id) || typeof b.active !== 'boolean') throw new ApiError(400, 'invalid_input');
+      const { data, error } = await db.from('office_locations').update({ active: b.active, updated_by: me.id }).eq('id', b.id).select('id');
+      if (error) throw new Error(`settings.location.toggle: ${error.code}`);
+      if (!data?.length) throw new ApiError(404, 'not_found');
       return { ok: true };
     }
     default:

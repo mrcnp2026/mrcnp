@@ -159,6 +159,7 @@ export default async function EmployeeRecordsPage({ params, searchParams }: { pa
                           <span className="font-semibold text-text">{ti(`kind.${e.kind}`)} {hm(e.punchedAt)}</span>
                           <span>{t('rawPunched')}</span>
                           {!e.ipVerified && <span className="text-warn">{th('outside')}</span>}
+                          {e.verifiedBy === 'gps' && <span className="text-ok">{t('byGps')}</span>}
                         </li>
                       ))}
                       {corr.map((c) => {

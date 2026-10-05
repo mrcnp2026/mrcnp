@@ -117,7 +117,9 @@
     "greetBefore": "have a good day",
     "greetWorking": "keep up the good work",
     "greetDone": "great work today",
-    "greetOff": "enjoy your day off"
+    "greetOff": "enjoy your day off",
+    "officeByGps": "Office confirmed by location.",
+    "outsideNoLocation": "Recorded. You are not on the office internet and your location could not be checked. Allow location access to be checked by location next time."
   },
   "errors": {
     "invite_invalid": "This invitation QR code has expired or was already used. Ask your manager for a new one.",
@@ -633,7 +635,8 @@
       },
       "cancelConfirm": "Cancel it",
       "self_change": "You cannot cancel a correction on your own record. Ask another admin.",
-      "already": "It is already cancelled or not approved. Please refresh."
+      "already": "It is already cancelled or not approved. Please refresh.",
+      "byGps": "Confirmed by GPS"
     },
     "org": {
       "title": "Org chart",
@@ -776,7 +779,20 @@
       "invalid_label": "Enter a name of 1–40 characters.",
       "duplicate_holiday": "That date is already a holiday.",
       "invalid_cidr": "Check the address. Example: 203.0.113.7 or 203.0.113.0/24 (very wide ranges are not accepted).",
-      "duplicate_network": "That address is already registered."
+      "duplicate_network": "That address is already registered.",
+      "locationTitle": "Office location (GPS)",
+      "gpsOn": "GPS check is on. When someone punches away from the office internet, the phone also sends its location; inside the radius counts as the office.",
+      "gpsOff": "GPS check is off. Register an office location to turn it on.",
+      "locationAdd": "Add office location",
+      "locationAddHint": "Most accurate: open this screen inside the office and tap \"Use my location\". Indoors the error can be tens of metres, so a radius around 100 m is recommended.",
+      "locationUseCurrent": "Use my location",
+      "locationFailed": "Could not get the location. Allow location access in the browser or enter the coordinates yourself.",
+      "lat": "Latitude",
+      "lng": "Longitude",
+      "radius": "Radius (m, 30–1000)",
+      "radiusM": "radius {n} m",
+      "locationNote": "Location is requested only when the office internet check fails. A location judged outside the office is not stored. Collecting staff location requires prior consent.",
+      "invalid_location": "Check the latitude, longitude and radius (30–1000 m)."
     }
   },
   "nav": {

@@ -16,7 +16,19 @@ import { LiveClock } from '@/components/LiveClock';
 import { Card, Chip } from '@/components/ui';
 import type { DayStatus } from '@/lib/today';
 
-type Result = { kind: 'in' | 'out'; punchedAt: string; ipVerified: boolean; isTest: boolean; deduped: boolean };
+type Result = { kind: 'in' | 'out'; punchedAt: string; ipVerified: boolean; verifiedBy?: 'ip' | 'gps' | null; isTest: boolean; deduped: boolean };
+
+/** 지금 위치 한 번 (최대 8초). 거절·실패·미지원이면 null — 위치 없이도 기록은 남는다 */
+function currentPosition(): Promise<{ lat: number; lng: number; accuracy: number } | null> {
+  return new Promise((resolve) => {
+    if (!('geolocation' in navigator)) return resolve(null);
+    navigator.geolocation.getCurrentPosition(
+      (p) => resolve({ lat: p.coords.latitude, lng: p.coords.longitude, accuracy: p.coords.accuracy }),
+      () => resolve(null),
+      { enableHighAccuracy: true, timeout: 8000, maximumAge: 30000 },
+    );
+  });
+}
 
 export function TodayCard(props: {
   schedule: string | null;
@@ -35,6 +47,7 @@ export function TodayCard(props: {
   const router = useRouter();
   const [busy, setBusy] = useState(false);
   const [result, setResult] = useState<Result | null>(null);
+  const [geoFailed, setGeoFailed] = useState(false);
   const [err, setErr] = useState<{ code: string; requestId?: string } | null>(null);
 
   const time = (iso: string) => f.dateTime(new Date(iso), { hour: '2-digit', minute: '2-digit', hourCycle: 'h23' });
@@ -47,16 +60,20 @@ export function TodayCard(props: {
     setBusy(true);
     window.dispatchEvent(new Event(PUNCHING_EVENT)); // 확인하는 동안 공지 팝업을 미룬다
     try {
-      const opts = await callApi<Parameters<typeof startAuthentication>[0]['optionsJSON']>('/api/punch/options');
+      const opts = await callApi<Parameters<typeof startAuthentication>[0]['optionsJSON'] & { needLocation?: boolean }>('/api/punch/options');
       if (!opts.ok) return setErr(opts);
+      const { needLocation, ...optionsJSON } = opts.data;
+      // 사무실 인터넷이 아닐 때만 위치를 묻는다 (GPS로 사무실 확인 — 설정에 사무실 위치가 있을 때)
+      const geo = needLocation ? await currentPosition() : null;
+      setGeoFailed(!!needLocation && !geo);
       let response;
       try {
-        response = await startAuthentication({ optionsJSON: opts.data }); // 출퇴근마다 폰 확인 (4-11)
+        response = await startAuthentication({ optionsJSON }); // 출퇴근마다 폰 확인 (4-11)
       } catch (e) {
         return setErr({ code: passkeyBrowserError(e) });
       }
-      // 본문에는 kind와 폰의 서명만 보낸다. 시각·IP·연습 여부는 서버가 정한다 (7-4 요점 4)
-      const r = await callApi<Result>('/api/punch', { kind, response });
+      // 본문에는 kind와 폰의 서명(+ 필요할 때만 위치)만 보낸다. 시각·IP·연습 여부·사무실 판정은 서버가 정한다 (7-4 요점 4)
+      const r = await callApi<Result>('/api/punch', { kind, response, ...(geo ? { geo } : {}) });
       if (!r.ok) return setErr(r);
       setResult(r.data);
       router.refresh();
@@ -122,7 +139,8 @@ export function TodayCard(props: {
             <span className="num">{t(result.kind === 'in' ? 'recordedIn' : 'recordedOut', { time: time(result.punchedAt) })}</span>
           </p>
           {result.deduped && <p className="text-sm text-muted">{t('already')}</p>}
-          {!result.ipVerified && <ErrorNote code="outsideOffice" namespace="home" />}
+          {result.verifiedBy === 'gps' && <p className="text-sm font-medium text-ok">{t('officeByGps')}</p>}
+          {!result.ipVerified && <ErrorNote code={geoFailed ? 'outsideNoLocation' : 'outsideOffice'} namespace="home" />}
         </div>
       )}
 
