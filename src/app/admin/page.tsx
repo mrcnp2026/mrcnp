@@ -11,6 +11,7 @@ import { OFFICE } from '@/config/office';
 import { addDays, weekStartOf } from '@/lib/calendar';
 import { findMissingPunches } from '@/lib/missing-punch';
 import { weekTotalMinutes } from '@/lib/period';
+import { isProxyCorrection } from '@/lib/day-detail';
 import { fullLeaveSet } from '@/lib/leave';
 import { daysFor, leaveDaysFor, loadPeriod, pendingCounts, syncOvertimeRequests, workDaysFor } from '@/lib/period-data';
 import { createAdminClient } from '@/lib/supabase/admin';
@@ -71,7 +72,7 @@ export default async function AdminHome({ searchParams }: { searchParams: Promis
       employeeNo: p.employeeNo,
       pairs: todayRow?.pairs ?? todays.map((e) => (e.kind === 'in' ? { in: e.punchedAt, out: null } : { in: null, out: e.punchedAt })),
       firstInVerified: todays.find((e) => e.kind === 'in')?.ipVerified ?? null,
-      adminEntered: todays.some((e) => e.source === 'admin'),
+      adminEntered: todays.some((e) => e.source === 'admin') || data.corrections.some((c) => c.employeeId === p.id && c.workDate === today && isProxyCorrection(c)),
       weekMinutes: data.rule ? weekTotalMinutes(days) : null,
       onLeave: fullLeave.has(today),
       work: work.get(today) ?? null,
@@ -79,6 +80,9 @@ export default async function AdminHome({ searchParams }: { searchParams: Promis
   });
   const board = buildTodayBoard({ people, rule: data.rule, dayType, workDate: today, now });
   const inCount = active.length - board.absent.length - board.off.length;
+  // 출근율 = 출근한 사람 ÷ 오늘 출근 대상(휴무·휴가·승인된 외근 제외). 대상이 없으면(휴일) 보이지 않는다
+  const target = active.length - board.off.length;
+  const rate = target > 0 ? Math.round((Math.min(inCount, target) / target) * 100) : null;
   const hhmm = (d: Date) => fmt.dateTime(d, { hour: '2-digit', minute: '2-digit', hourCycle: 'h23' });
   const legend = data.rule
     ? {
@@ -106,6 +110,7 @@ export default async function AdminHome({ searchParams }: { searchParams: Promis
           </Link>
         </div>
         <h1 className="num text-2xl font-extrabold tracking-tight">{t('headline', { total: active.length, n: inCount })}</h1>
+        {rate !== null && <p className="num text-sm text-muted">{t('rate', { target, p: rate })}</p>}
         {OFFICE.practiceMode && (
           <Link href={practiceView ? '/admin?live=1' : '/admin'} className="inline-flex min-h-11 items-center self-start text-sm text-primary">
             {practiceView ? t('showLive') : t('showPractice')}

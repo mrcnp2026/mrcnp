@@ -77,12 +77,12 @@ export async function buildAttendanceReport(ym: string, practice: boolean, gener
         })(),
       };
     }),
-    // 빠진 기록 추가(승인) — 원래 없던 기록이라 '찍은 시각'이 비어 있다
+    // 빠진 기록 추가(승인) — 원래 없던 기록이라 '찍은 시각'이 비어 있다. 관리자가 넣은 것(요청자 ≠ 본인)은 '관리자 대리 등록'으로 적는다 (②-3 7-6 요점 3)
     ...approved.filter((c) => c.correctionType === 'add_missing' && inMonth(c.workDate)).map((c) => {
       const p = person.get(c.employeeId);
       return {
         employeeNo: p?.employeeNo ?? null, name: p?.name ?? '', workDate: c.workDate, kind: c.kind ?? '', original: null, corrected: hhmm(c.newPunchedAt),
-        correctionType: 'add_missing', officeVerified: null, approvedWork: null, source: 'correction', note: null, sort: c.newPunchedAt?.getTime() ?? 0,
+        correctionType: 'add_missing', officeVerified: null, approvedWork: null, source: c.requestedBy !== c.employeeId ? 'admin' : 'correction', note: null, sort: c.newPunchedAt?.getTime() ?? 0,
       };
     }),
   ]

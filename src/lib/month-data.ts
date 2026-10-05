@@ -29,7 +29,10 @@ export async function buildMonth(ym: string, practice: boolean): Promise<{ data:
   const rows: { person: Person; summary: MonthSummary }[] = [];
   if (!data.rule) return { data, rows };
   for (const p of data.people) {
-    const hasRecords = data.events.some((e) => e.employeeId === p.id && e.workDate >= from && e.workDate <= to);
+    // 기록 = 찍은 원본 또는 승인된 '빠진 기록 추가'(대리 등록 포함) — 원본 없이 정정만 있는 달도 빠지지 않게
+    const hasRecords =
+      data.events.some((e) => e.employeeId === p.id && e.workDate >= from && e.workDate <= to) ||
+      data.corrections.some((c) => c.employeeId === p.id && c.status === 'approved' && c.correctionType === 'add_missing' && c.workDate >= from && c.workDate <= to);
     if (!p.active && !hasRecords) continue; // 퇴사자는 그 달 기록이 있을 때만
     const upTo = today < to ? today : to;
     if (upTo < from) continue;

@@ -1,6 +1,7 @@
 // ③ 기록 — 월간 집계 + 내려받기 모음 (마스터 5장, ①-4 7-10, 부록 R-10-5·R-10-6).
 // 네 묶음 이름 통일: 실제 · 인정 · 보류 · 미검토. 폰(<768px)은 카드, 넓은 화면만 표 — 표는 자기 상자 안에서만 가로 스크롤.
 // 색은 예외에만(지각·미기록·미승인) + 글자/아이콘을 함께.
+// 직원 이름(넓은 화면)·「날짜별 기록 보기」(폰)를 누르면 그 직원의 하루 단위 기록으로 간다 (records/[id]).
 import { ChevronDown, ChevronLeft, ChevronRight, Download, ShieldAlert } from 'lucide-react';
 import { getTranslations } from 'next-intl/server';
 import Link from 'next/link';
@@ -138,6 +139,9 @@ export default async function RecordsPage({ searchParams }: { searchParams: Prom
                           {Number(r.late_count) > 0 && <span className="text-warn">{t('late', { n: Number(r.late_count), m: Number(r.late_minutes) })}</span>}
                         </div>
                         {blocks.length > 0 && <div className="flex flex-wrap gap-1">{blocks.map((b) => <Chip key={b} tone="warn">{b.slice(6)}</Chip>)}</div>}
+                        <Link href={`/admin/records/${person.id}${q(ym)}`} className="inline-flex min-h-11 items-center self-start text-sm font-bold text-primary">
+                          {t('viewDays')} ›
+                        </Link>
                       </div>
                     </details>
                   </li>
@@ -165,7 +169,11 @@ export default async function RecordsPage({ searchParams }: { searchParams: Prom
                 const r = s.row;
                 return (
                   <tr key={person.id}>
-                    <td className="truncate px-2 py-2 text-left font-semibold">{person.name}</td>
+                    <td className="truncate px-2 py-2 text-left font-semibold">
+                      <Link href={`/admin/records/${person.id}${q(ym)}`} title={t('viewDays')} className="inline-flex min-h-11 items-center text-primary">
+                        {person.name}
+                      </Link>
+                    </td>
                     <td className="px-2 py-2 text-right whitespace-nowrap">{hm(s.netMinutes)}</td>
                     <td className="px-2 py-2 text-right whitespace-nowrap">{hm(Number(r.overtime_minutes))}</td>
                     <td className="px-2 py-2 text-right whitespace-nowrap">{hm(Number(r.approved_overtime_minutes))}</td>
