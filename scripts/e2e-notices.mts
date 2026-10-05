@@ -9,6 +9,7 @@ import { config } from 'dotenv';
 import { createHash, randomBytes } from 'node:crypto';
 import path from 'node:path';
 import { chromium, type Page } from 'playwright-core';
+import { createPassword } from './lib/e2e-password.ts';
 
 config({ path: path.join(import.meta.dirname, '..', '.env.local'), quiet: true });
 const BASE = 'http://localhost:4123';
@@ -64,12 +65,8 @@ let noticeId: string | null = null;
 try {
   const ctx = await browser.newContext({ viewport: { width: 360, height: 800 } });
   const p = await ctx.newPage();
-  const cdp = await ctx.newCDPSession(p);
-  await cdp.send('WebAuthn.enable');
-  await cdp.send('WebAuthn.addVirtualAuthenticator', { options: { protocol: 'ctap2', transport: 'internal', hasResidentKey: true, hasUserVerification: true, isUserVerified: true, automaticPresenceSimulation: true } });
   await p.goto(`${BASE}/register?token=${token}`);
-  await p.getByRole('button', { name: /이 폰 등록하기|Register this phone/ }).click();
-  await p.getByText(/폰이 등록되었습니다|Your phone is registered/).waitFor({ timeout: 20000 });
+  await createPassword(p);
   await p.waitForTimeout(1500);
 
   // ── 관리자: 더보기 › 공지 › 새 공지 ──

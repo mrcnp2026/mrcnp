@@ -6,6 +6,7 @@ import { config } from 'dotenv';
 import { createHash, randomBytes } from 'node:crypto';
 import path from 'node:path';
 import { chromium } from 'playwright-core';
+import { createPassword } from './lib/e2e-password.ts';
 
 config({ path: path.join(import.meta.dirname, '..', '.env.local'), quiet: true });
 const BASE = process.env.BASE ?? 'http://localhost:4123';
@@ -29,12 +30,8 @@ const out: string[] = [];
 try {
   const ctx = await browser.newContext({ viewport: { width: 390, height: 844 } });
   const p = await ctx.newPage();
-  const cdp = await ctx.newCDPSession(p);
-  await cdp.send('WebAuthn.enable');
-  await cdp.send('WebAuthn.addVirtualAuthenticator', { options: { protocol: 'ctap2', transport: 'internal', hasResidentKey: true, hasUserVerification: true, isUserVerified: true, automaticPresenceSimulation: true } });
   await p.goto(`${BASE}/register?token=${token}`);
-  await p.getByRole('button', { name: /이 폰 등록하기/ }).click();
-  await p.getByText('폰이 등록되었습니다.').waitFor({ timeout: 20000 });
+  await createPassword(p);
 
   // 탭 누르기: 주소가 바뀌거나 불러오는 자리가 보이면 ①, 서버 응답이 끝나 화면이 조용해지면 ②
   const tap = async (label: string, href: string) => {

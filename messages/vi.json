@@ -12,33 +12,41 @@
       "date": "YYYY-MM-DD",
       "time": "HH:MM",
       "dateTime": "YYYY-MM-DD HH:MM"
-    }
+    },
+    "account": "Tài khoản · mật khẩu"
   },
   "login": {
     "title": "Đăng nhập",
-    "subtitle": "Dùng điện thoại bạn đã đăng ký với công ty.",
-    "button": "Đăng nhập bằng điện thoại",
-    "privacy": "Việc kiểm tra vân tay hoặc khuôn mặt chỉ diễn ra trên điện thoại của bạn. Công ty không bao giờ nhận được thông tin đó.",
+    "subtitle": "Đăng nhập bằng mã nhân viên và mật khẩu. Dùng được trên mọi máy tính hoặc điện thoại.",
+    "button": "Đăng nhập bằng vân tay hoặc khuôn mặt (chỉ thiết bị đã đăng ký)",
     "firstTime": "Lần đầu sử dụng?",
-    "qrHint": "Nếu điện thoại chưa đăng ký, nút \"Đăng nhập\" có thể hiện màn hình QR. Hãy đóng lại và đăng ký điện thoại ở đây.",
-    "registerLink": "Đăng ký điện thoại"
+    "idLabel": "Mã nhân viên hoặc số điện thoại",
+    "passwordLabel": "Mật khẩu",
+    "submit": "Đăng nhập",
+    "showPassword": "Hiện mật khẩu",
+    "hidePassword": "Ẩn mật khẩu",
+    "forgot": "Quên mật khẩu? Hãy xin quản lý một liên kết mới.",
+    "secure": "Mật khẩu được lưu ở dạng mã hóa. Công ty và quản lý không thể xem.",
+    "setupHint": "Tạo mật khẩu bằng liên kết hoặc mã 8 ký tự từ quản lý. Bạn chỉ cần làm một lần.",
+    "setupLink": "Tạo mật khẩu"
   },
   "register": {
-    "title": "Đăng ký điện thoại",
+    "title": "Tạo mật khẩu",
     "hello": "Xin chào, {name}",
     "employeeNo": "Mã nhân viên {no}",
-    "explain": "Đăng ký điện thoại này một lần. Sau đó bạn chấm công vào/ra bằng cách mở khóa điện thoại (vân tay, khuôn mặt hoặc mã PIN).",
-    "privacy": "Vân tay và khuôn mặt của bạn không bao giờ rời khỏi điện thoại. Công ty chỉ lưu một khóa bảo mật không thể chuyển ngược thành vân tay.",
-    "onePhone": "Bạn chỉ có thể đăng ký một điện thoại. Nếu đổi điện thoại, hãy xin quản lý mã QR mới.",
-    "button": "Đăng ký điện thoại này",
-    "done": "Điện thoại của bạn đã được đăng ký.",
+    "explain": "Hãy chọn mật khẩu để đăng nhập. Từ nay bạn đăng nhập bằng mã nhân viên và mật khẩu này, trên mọi máy tính hoặc điện thoại.",
+    "button": "Tạo mật khẩu và bắt đầu",
+    "done": "Đã tạo mật khẩu.",
     "continue": "Tiếp tục",
     "invalidTitle": "Không thể dùng lời mời này",
-    "codeLabel": "Mã đăng ký từ quản lý",
+    "codeLabel": "Mã từ quản lý",
     "codePlaceholder": "XXXX-XXXX",
     "codeSubmit": "Tiếp tục",
     "codeHelp": "Hãy xin quản lý mã 8 ký tự. Chữ hoa/thường và khoảng trắng không quan trọng.",
-    "haveAccount": "Đã đăng ký? Đăng nhập"
+    "haveAccount": "Đã có mật khẩu? Đăng nhập",
+    "passwordLabel": "Mật khẩu mới",
+    "passwordHint": "Ít nhất 8 ký tự. Không được trùng với mã nhân viên.",
+    "confirmLabel": "Nhập lại mật khẩu mới"
   },
   "home": {
     "hello": "Xin chào, {name}",
@@ -115,17 +123,17 @@
     "greetOff": "hôm nay là ngày nghỉ"
   },
   "errors": {
-    "invite_invalid": "Mã QR mời đã hết hạn hoặc đã được dùng. Hãy xin quản lý mã mới.",
+    "invite_invalid": "Liên kết mời đã hết hạn hoặc đã được dùng. Hãy xin quản lý liên kết mới.",
     "employee_inactive": "Tài khoản này không hoạt động. Vui lòng liên hệ quản lý.",
     "already_registered": "Bạn đã có điện thoại đăng ký. Để đổi điện thoại, hãy nhờ quản lý xóa điện thoại cũ trước.",
     "challenge_invalid": "Yêu cầu mất quá nhiều thời gian. Vui lòng thử lại.",
     "verification_failed": "Không thể xác nhận điện thoại của bạn. Vui lòng thử lại.",
     "user_verification_missing": "Vui lòng cài khóa màn hình (vân tay, mã PIN hoặc hình vẽ) trên điện thoại trước, rồi thử lại.",
-    "passkey_unknown": "Điện thoại này chưa được đăng ký. Hãy xin quản lý mã QR mời.",
-    "passkey_revoked": "Đăng ký của điện thoại này đã bị gỡ. Hãy xin quản lý mã QR mời mới.",
+    "passkey_unknown": "Thiết bị này chưa cài đăng nhập bằng vân tay/khuôn mặt. Hãy đăng nhập bằng mã nhân viên và mật khẩu.",
+    "passkey_revoked": "Đăng nhập bằng vân tay/khuôn mặt trên thiết bị này đã bị tắt. Hãy đăng nhập bằng mã nhân viên và mật khẩu.",
     "cancelled": "Việc kiểm tra điện thoại đã bị hủy. Vui lòng thử lại.",
-    "login_cancelled": "Việc kiểm tra điện thoại đã bị hủy, hoặc điện thoại này chưa được đăng ký. Hãy thử lại hoặc xin quản lý mã QR mời.",
-    "unsupported": "Trình duyệt này không hỗ trợ đăng nhập bằng điện thoại. Hãy mở liên kết bằng Chrome hoặc Safari.",
+    "login_cancelled": "Việc kiểm tra đã bị hủy, hoặc thiết bị này chưa cài đăng nhập bằng vân tay/khuôn mặt. Hãy đăng nhập bằng mã nhân viên và mật khẩu.",
+    "unsupported": "Trình duyệt này không hỗ trợ đăng nhập bằng vân tay/khuôn mặt. Hãy đăng nhập bằng mã nhân viên và mật khẩu.",
     "not_signed_in": "Vui lòng đăng nhập lại.",
     "forbidden": "Bạn không có quyền làm việc này.",
     "invalid_input": "Vui lòng kiểm tra thông tin đã nhập.",
@@ -138,7 +146,14 @@
     "already": "Đã có người xử lý.",
     "not_found": "Không tìm thấy. Vui lòng tải lại.",
     "payroll_only": "Chỉ nhân viên phụ trách lương mới tải được tệp này.",
-    "register_failed": "Điện thoại không tạo được đăng ký. Hãy kiểm tra các mục dưới đây và thử lại."
+    "register_failed": "Điện thoại không tạo được đăng ký. Hãy kiểm tra các mục dưới đây và thử lại.",
+    "login_failed": "Mã nhân viên hoặc mật khẩu không đúng. Vui lòng kiểm tra và thử lại.",
+    "login_throttled": "Nhập sai quá nhiều lần. Vui lòng thử lại sau 15 phút.",
+    "password_short": "Mật khẩu phải có ít nhất 8 ký tự.",
+    "password_long": "Mật khẩu quá dài. Vui lòng chọn mật khẩu ngắn hơn.",
+    "password_same_as_id": "Mật khẩu không được trùng với mã nhân viên.",
+    "password_mismatch": "Hai mật khẩu không giống nhau.",
+    "password_wrong": "Mật khẩu hiện tại không đúng."
   },
   "nav": {
     "home": "Trang chủ",
@@ -257,5 +272,18 @@
     "empty": "Hiện không có thông báo.",
     "confirmed": "Đã xem",
     "new": "Mới"
+  },
+  "account": {
+    "title": "Tài khoản của tôi",
+    "idLabel": "Tên đăng nhập (mã nhân viên)",
+    "changeTitle": "Đổi mật khẩu",
+    "createTitle": "Tạo mật khẩu",
+    "createNote": "Bạn chưa có mật khẩu. Tạo mật khẩu để đăng nhập từ máy tính hoặc điện thoại khác bằng mã nhân viên và mật khẩu.",
+    "currentLabel": "Mật khẩu hiện tại",
+    "newLabel": "Mật khẩu mới",
+    "confirmLabel": "Nhập lại mật khẩu mới",
+    "hint": "Ít nhất 8 ký tự. Khi đổi, các thiết bị khác sẽ bị đăng xuất.",
+    "save": "Lưu",
+    "saved": "Đã lưu mật khẩu."
   }
 }

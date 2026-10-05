@@ -1,6 +1,6 @@
-// 직원 상세 (2026-10-05 의뢰인: 샤플 대조) — 한 사람에 관한 일을 한 화면에서: 소속·연락처, 폰 등록, 기록 바로가기, 정보 수정.
-// 지우는 버튼은 없다 (4-6). 퇴사·권한·폰 해제는 아래 「관리」 묶음에서 사유와 함께 한다.
-import { CalendarDays, ChevronRight, Smartphone } from 'lucide-react';
+// 직원 상세 (2026-10-05 의뢰인: 샤플 대조) — 한 사람에 관한 일을 한 화면에서: 소속·연락처, 로그인(가입 여부), 기록 바로가기, 정보 수정.
+// 지우는 버튼은 없다 (4-6). 퇴사·권한·로그인 초기화는 아래 「관리」 묶음에서 사유와 함께 한다.
+import { CalendarDays, ChevronRight, KeyRound } from 'lucide-react';
 import { getFormatter, getTranslations } from 'next-intl/server';
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
@@ -27,12 +27,14 @@ export default async function MemberDetailPage({ params }: { params: Promise<{ i
   if (!/^[0-9a-f-]{36}$/i.test(id)) notFound();
   const db = createAdminClient();
   const [{ data: p }, { data: keys }, groups] = await Promise.all([
-    db.from('profiles').select('id, name, employee_no, role, active, joined_on, locale, can_view_payroll, group_id, phone, job_title').eq('id', id).maybeSingle(),
-    db.from('user_passkeys').select('id, device_label, created_at, last_used_at').eq('employee_id', id).is('revoked_at', null),
+    db.from('profiles').select('id, name, employee_no, role, active, joined_on, locale, can_view_payroll, group_id, phone, job_title, password_set_at').eq('id', id).maybeSingle(),
+    db.from('user_passkeys').select('id').eq('employee_id', id).is('revoked_at', null),
     loadOrgGroups(),
   ]);
   if (!p) notFound();
-  const key = keys?.[0] ?? null;
+  // 가입 = 비밀번호를 만들었거나, 예전 방식으로 폰(지문 로그인)을 등록해 둔 사람
+  const hasPasskey = (keys?.length ?? 0) > 0;
+  const joined = !!p.password_set_at || hasPasskey;
   const tree = buildOrgTree(groups);
   const options = tree.flatMap((d) => [{ id: d.id, label: d.name }, ...d.teams.map((x) => ({ id: x.id, label: `${d.name} › ${x.name}` }))]);
   const path = groupPath(groups, p.group_id);
@@ -57,7 +59,7 @@ export default async function MemberDetailPage({ params }: { params: Promise<{ i
 
   return (
     <PageShell>
-      <Link href="/admin/members" className="-mb-2 inline-flex min-h-11 items-center self-start text-sm font-medium text-muted">
+      <Link href="/admin/members" className="-mb-2 inline-flex min-h-11 min-w-11 items-center self-start text-sm font-medium text-muted">
         ‹ {t('title')}
       </Link>
       <header className="flex items-center gap-3 px-1">
@@ -80,21 +82,19 @@ export default async function MemberDetailPage({ params }: { params: Promise<{ i
       {pendingRole && <RoleRequestCard id={pendingRole.id} change={changeLabel} requester={requesterName} reason={pendingRole.reason} mine={pendingRole.requested_by === me.id} />}
 
       <Card className="flex flex-col gap-3">
-        <CardTitle>{t('phoneCard')}</CardTitle>
+        <CardTitle>{t('loginCard')}</CardTitle>
         <div className="flex items-center gap-3">
-          <Smartphone aria-hidden size={22} strokeWidth={1.75} className={`shrink-0 ${key ? 'text-ok' : 'text-warn'}`} />
+          <KeyRound aria-hidden size={22} strokeWidth={1.75} className={`shrink-0 ${joined ? 'text-ok' : 'text-warn'}`} />
           <div className="min-w-0 flex-1">
-            <p className={`font-bold ${key ? '' : 'text-warn'}`}>{key ? (key.device_label || t('phoneOk')) : t('phoneNone')}</p>
-            {key && (
-              <p className="num text-xs text-muted">
-                {t('phoneSince', { date: day(key.created_at) })}
-                {key.last_used_at ? ` · ${t('phoneLast', { date: day(key.last_used_at) })}` : ''}
-              </p>
-            )}
+            <p className={`font-bold ${joined ? '' : 'text-warn'}`}>{t(joined ? 'loginReady' : 'loginNone')}</p>
+            <p className="num text-xs text-muted">
+              {t('loginId', { no: p.employee_no ?? '' })}
+              {p.password_set_at ? ` · ${t('loginSince', { date: day(p.password_set_at) })}` : hasPasskey ? ` · ${t('loginPasskeyOnly')}` : ''}
+            </p>
           </div>
-          {p.active && <NewInviteButton employeeId={p.id} name={p.name} compact again={!!key} />}
+          {p.active && <NewInviteButton employeeId={p.id} name={p.name} compact again={joined} />}
         </div>
-        {p.active && <p className="text-xs text-faint">{t(key ? 'phoneChangeHint' : 'phoneInviteHint')}</p>}
+        {p.active && <p className="text-xs text-faint">{t(joined ? 'loginResetHint' : 'loginInviteHint')}</p>}
       </Card>
 
       <Card className="p-0 py-1">
@@ -137,7 +137,7 @@ export default async function MemberDetailPage({ params }: { params: Promise<{ i
             {!pendingRole && p.active && p.role === 'admin' && me.canViewPayroll && p.can_view_payroll && (
               <ManageAction title={tm('revokePayroll')} hint={tm('revokePayrollHint')} confirmLabel={tm('revokePayroll')} endpoint={`${api}/role`} body={{ canViewPayroll: false }} presets={[tm('preset.handover'), tm('preset.mistake')]} />
             )}
-            {key && (
+            {joined && (
               <ManageAction title={tm('revokePhone')} hint={tm('revokePhoneHint')} confirmLabel={tm('revokePhone')} endpoint={`${api}/phone`} body={{}} presets={[tm('preset.lost'), tm('preset.changed')]} notes={[tm('revokePhoneNote')]} danger />
             )}
             {p.active ? (

@@ -8,6 +8,7 @@ import { config } from 'dotenv';
 import { createHash, randomBytes } from 'node:crypto';
 import path from 'node:path';
 import { chromium } from 'playwright-core';
+import { createPassword } from './lib/e2e-password.ts';
 
 config({ path: path.join(import.meta.dirname, '..', '.env.local'), quiet: true });
 const BASE = process.env.BASE ?? 'http://localhost:4123';
@@ -36,12 +37,8 @@ try {
   const firstLine = (s: string) => (process.env.FULL_ERRORS ? s.slice(0, 2500) : s.split(/\r?\n/)[0].slice(0, 200));
   p.on('pageerror', (e) => pageErrors.push(`${new URL(p.url()).pathname}: ${firstLine(e.message)}`));
   p.on('console', (m) => m.type() === 'error' && !/Failed to load resource/.test(m.text()) && pageErrors.push(`${new URL(p.url()).pathname}: ${firstLine(m.text())}`));
-  const cdp = await ctx.newCDPSession(p);
-  await cdp.send('WebAuthn.enable');
-  await cdp.send('WebAuthn.addVirtualAuthenticator', { options: { protocol: 'ctap2', transport: 'internal', hasResidentKey: true, hasUserVerification: true, isUserVerified: true, automaticPresenceSimulation: true } });
   await p.goto(`${BASE}/register?token=${token}`);
-  await p.getByRole('button', { name: /이 폰 등록하기/ }).click();
-  await p.getByText('폰이 등록되었습니다.').waitFor({ timeout: 30000 });
+  await createPassword(p);
   const post = (url: string, body?: unknown) =>
     p.evaluate(async ([u, b]) => {
       const r = await fetch(u as string, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify(b ?? {}) });

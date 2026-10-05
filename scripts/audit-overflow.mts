@@ -8,6 +8,7 @@ import { config } from 'dotenv';
 import { createHash, randomBytes } from 'node:crypto';
 import path from 'node:path';
 import { chromium, type Page } from 'playwright-core';
+import { createPassword } from './lib/e2e-password.ts';
 
 config({ path: path.join(import.meta.dirname, '..', '.env.local'), quiet: true });
 const BASE = 'http://localhost:4123';
@@ -84,9 +85,6 @@ let checked = 0;
 try {
   const ctx = await browser.newContext({ viewport: { width: 360, height: 780 } });
   const p = await ctx.newPage();
-  const cdp = await ctx.newCDPSession(p);
-  await cdp.send('WebAuthn.enable');
-  await cdp.send('WebAuthn.addVirtualAuthenticator', { options: { protocol: 'ctap2', transport: 'internal', hasResidentKey: true, hasUserVerification: true, isUserVerified: true, automaticPresenceSimulation: true } });
 
   const run = async (label: string, url: string, prep?: (p: Page) => Promise<void>) => {
     for (const w of WIDTHS) {
@@ -107,14 +105,14 @@ try {
   // 등록 → 직원 화면 (영어)
   await p.setViewportSize({ width: 360, height: 800 });
   await p.goto(`${BASE}/register?token=${tok}`);
-  await p.getByRole('button', { name: /Register this phone/ }).click();
-  await p.getByText('Your phone is registered.').waitFor();
+  await createPassword(p);
   for (const f of await scan(p)) findings.push(`[등록 완료+설치 안내(en) @360] ${f}`);
   for (const loc of ['en', 'ko'] as const) {
     await db.from('profiles').update({ locale: loc }).eq('id', emp!.id);
     await run(`직원 홈(${loc})`, '/punch');
     await run(`내 기록(${loc})`, '/punch/records');
     await run(`정정 요청(${loc})`, '/punch/corrections');
+    await run(`내 계정(${loc})`, '/punch/account');
     await run(`정정 요청-시각수정(${loc})`, '/punch/corrections', async (pg) => {
       await pg.locator('input[type=radio]').nth(1).check();
     });
@@ -138,7 +136,8 @@ try {
   await db.from('profiles').update({ locale: 'ko' }).eq('id', emp!.id);
   for (const w of [320, 360, 1280]) {
     await p.setViewportSize({ width: w, height: 800 });
-    await p.goto(`${BASE}/admin/members`);
+    // 직원 상세의 로그인 카드에는 항상 초대 버튼이 있다 (목록에는 아직 가입 안 한 사람에게만 보인다)
+    await p.goto(`${BASE}/admin/members/${emp!.id}`);
     await p.getByRole('button', { name: /링크 보내기|다시 보내기/ }).first().click();
     for (const f of await scan(p)) findings.push(`[직원-초대 확인 @${w}] ${f}`);
     await p.getByRole('button', { name: '만들기' }).first().click();

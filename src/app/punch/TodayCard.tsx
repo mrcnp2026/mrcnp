@@ -2,15 +2,14 @@
 // "오늘 근무" 카드 + 주 버튼 1개 (부록 R-10-1).
 // - 버튼은 상태에 따라 출근하기(파랑·LogIn 아이콘) ↔ 퇴근하기(검정·LogOut 아이콘). 색 + 글자 + 아이콘 셋으로 구분 (색만 X)
 // - 폭 100%·높이 56px (2026-10-02 의뢰인: 96px은 너무 큼), 화면 하단 고정 금지 (12장 5번)
-// - 누르면 폰 확인(지문·얼굴·PIN) → 서버가 정한 시각을 큰 숫자로 확인시킨다 (R-10-8 신뢰 장치)
+// - 누르면 바로 기록 → 서버가 정한 시각을 큰 숫자로 확인시킨다 (R-10-8 신뢰 장치). 지문 확인은 묻지 않는다 (2026-10-05 의뢰인)
 // - 기록 중에는 버튼을 막고 "기록하는 중" — 두 번 눌러도 한 번만 (7-4 요점 1)
-import { browserSupportsWebAuthn, startAuthentication } from '@simplewebauthn/browser';
 import { Check, Clock, LogIn, LogOut } from 'lucide-react';
 import { useFormatter, useTranslations } from 'next-intl';
 import { useRouter } from 'next/navigation';
 import { useEffect, useState } from 'react';
 import { PUNCHED_EVENT, PUNCHING_EVENT } from '@/components/NoticeSheet';
-import { callApi, passkeyBrowserError } from '@/components/client-api';
+import { callApi } from '@/components/client-api';
 import { ErrorNote } from '@/components/ErrorNote';
 import { LiveClock } from '@/components/LiveClock';
 import { Card, Chip } from '@/components/ui';
@@ -56,24 +55,17 @@ export function TodayCard(props: {
   async function punch() {
     setErr(null);
     setResult(null);
-    if (!browserSupportsWebAuthn()) return setErr({ code: 'unsupported' });
     setBusy(true);
     window.dispatchEvent(new Event(PUNCHING_EVENT)); // 확인하는 동안 공지 팝업을 미룬다
     try {
-      const opts = await callApi<Parameters<typeof startAuthentication>[0]['optionsJSON'] & { needLocation?: boolean }>('/api/punch/options');
+      const opts = await callApi<{ needLocation?: boolean }>('/api/punch/options');
       if (!opts.ok) return setErr(opts);
-      const { needLocation, ...optionsJSON } = opts.data;
+      const { needLocation } = opts.data;
       // 사무실 인터넷이 아닐 때만 위치를 묻는다 (GPS로 사무실 확인 — 설정에 사무실 위치가 있을 때)
       const geo = needLocation ? await currentPosition() : null;
       setGeoFailed(!!needLocation && !geo);
-      let response;
-      try {
-        response = await startAuthentication({ optionsJSON }); // 출퇴근마다 폰 확인 (4-11)
-      } catch (e) {
-        return setErr({ code: passkeyBrowserError(e) });
-      }
-      // 본문에는 kind와 폰의 서명(+ 필요할 때만 위치)만 보낸다. 시각·IP·연습 여부·사무실 판정은 서버가 정한다 (7-4 요점 4)
-      const r = await callApi<Result>('/api/punch', { kind, response, ...(geo ? { geo } : {}) });
+      // 본문에는 kind(+ 필요할 때만 위치)만 보낸다. 누구인지·시각·IP·연습 여부·사무실 판정은 서버가 정한다 (7-4 요점 4)
+      const r = await callApi<Result>('/api/punch', { kind, ...(geo ? { geo } : {}) });
       if (!r.ok) return setErr(r);
       setResult(r.data);
       router.refresh();

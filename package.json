@@ -15,6 +15,7 @@
     "e2e:gate3": "tsx scripts/e2e-gate3.mts",
     "i18n:export": "tsx scripts/export-translations.mts",
     "e2e:gate4": "tsx scripts/e2e-gate4.mts",
+    "e2e:login": "tsx scripts/e2e-login.mts",
     "e2e:gate6-8": "tsx scripts/e2e-gate6-8.mts",
     "db:holidays": "tsx scripts/seed-holidays.mts",
     "audit:overflow": "tsx scripts/audit-overflow.mts"

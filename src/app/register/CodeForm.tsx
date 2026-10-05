@@ -1,5 +1,5 @@
 'use client';
-// 등록 코드 입력 — 주소창에 앱 주소만 치고 들어온 직원이 관리자에게 받은 8자리 코드로 등록한다.
+// 가입 코드 입력 — 주소창에 앱 주소만 치고 들어온 직원이 관리자에게 받은 8자리 코드로 비밀번호를 만든다.
 // 소문자·공백·하이픈은 서버가 정리한다 (invite-code.ts).
 import { KeyRound } from 'lucide-react';
 import { useTranslations } from 'next-intl';

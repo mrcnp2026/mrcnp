@@ -1,4 +1,4 @@
-// 새 초대 QR. 이전에 쓰지 않은 QR은 취소된다. 활성 폰이 있으면 등록 화면에서 막힌다 (해제는 ②-3)
+// 새 초대(링크·8자리 코드·QR). 이전에 쓰지 않은 초대는 취소된다. 직원은 이 초대로 비밀번호를 만든다 — 이미 가입한 사람에게 다시 보내면 비밀번호 재설정이 된다
 import { api, ApiError } from '@/lib/api';
 import { requireAdmin } from '@/lib/auth';
 import { issueInvite } from '@/lib/invite';

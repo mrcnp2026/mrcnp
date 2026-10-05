@@ -1,6 +1,6 @@
-// ④ 직원 탭 — 조직도(부서 › 팀)로 묶어 본다 (2026-10-05 의뢰인: 샤플 대조). 누가 가입(폰 등록)했고 누가 아직인지도 한눈에.
+// ④ 직원 탭 — 조직도(부서 › 팀)로 묶어 본다 (2026-10-05 의뢰인: 샤플 대조). 누가 가입(비밀번호를 만듦)했고 누가 아직인지도 한눈에.
 // 위: 전체·가입·미가입 걸러보기 / 가운데: 부서별 묶음 → 팀 → 직원 한 줄 (이름·직급·사번·가입 상태·초대 링크).
-// 이름을 누르면 직원 상세(정보 수정·폰·기록). 직원 추가와 조직도 관리는 각각 따로 화면이 있다.
+// 이름을 누르면 직원 상세(정보 수정·로그인·기록). 직원 추가와 조직도 관리는 각각 따로 화면이 있다.
 import { Check, ChevronRight, Network, UserPlus } from 'lucide-react';
 import { getTranslations } from 'next-intl/server';
 import Link from 'next/link';
@@ -19,13 +19,14 @@ export default async function MembersPage({ searchParams }: { searchParams: Prom
   const filter: Filter = sp.f === 'joined' || sp.f === 'pending' ? sp.f : 'all';
   const db = createAdminClient();
   const [{ data: people }, { data: keys }, groups, { data: roleReqs }] = await Promise.all([
-    db.from('profiles').select('id, name, employee_no, role, active, group_id, job_title').order('name'),
+    db.from('profiles').select('id, name, employee_no, role, active, group_id, job_title, password_set_at').order('name'),
     db.from('user_passkeys').select('employee_id').is('revoked_at', null),
     loadOrgGroups(),
     db.from('role_change_requests').select('target_id').eq('status', 'pending'),
   ]);
   const roleWaiting = new Set((roleReqs ?? []).map((x) => x.target_id)); // 권한 변경 확인 대기 (R-2의 8)
-  const withPhone = new Set((keys ?? []).map((k) => k.employee_id));
+  // 가입 = 비밀번호를 만들었거나, 예전 방식으로 폰(지문 로그인)을 등록해 둔 사람
+  const withPhone = new Set([...(keys ?? []).map((k) => k.employee_id), ...(people ?? []).filter((p) => p.password_set_at).map((p) => p.id)]);
   // 검사 전용 계정(e2e-audit, e2e-audit2)은 검사 중에만 켜진다 — 꺼져 있으면 목록에 안 보이게
   const all: Row[] = (people ?? [])
     .filter((p) => p.active || !p.employee_no?.startsWith('e2e-audit'))

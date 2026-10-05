@@ -1,6 +1,7 @@
 // 지금 요청한 사람이 누구인가. 서버 전용.
 import 'server-only';
 import { cache } from 'react';
+import { authTimeOf, sessionRevoked } from '@/lib/login-rules';
 import { createAdminClient } from '@/lib/supabase/admin';
 import { createClient } from '@/lib/supabase/server';
 
@@ -15,7 +16,7 @@ export type Me = {
 };
 
 /**
- * 로그인 세션 → 직원 정보. 세션이 없거나, 퇴사 처리됐거나, 등록된 폰이 해제된 직원이면 null.
+ * 로그인 세션 → 직원 정보. 세션이 없거나, 퇴사 처리됐거나, 로그인이 초기화되기 전에 받은 세션이면 null.
  * 한 요청 안에서는 한 번만 확인한다 (cache) — 틀·언어·본문이 각각 부르면 화면마다 3~4번 DB를 왕복해 느려진다 (2026-10-02)
  */
 export const getMe = cache(async (): Promise<Me | null> => {
@@ -26,13 +27,15 @@ export const getMe = cache(async (): Promise<Me | null> => {
   const uid = data?.claims?.sub;
   if (!uid) return null;
   const db = createAdminClient();
-  // 등록된 폰이 해제되면 그 폰에 남아 있던 로그인도 바로 끊는다 (2026-10-05: 분실 폰을 해제해도 열려 있던 화면이 계속 쓰이던 문제).
-  // 로그인은 폰 확인으로만 생기므로, 활성 폰 등록이 하나도 없는 사람의 세션은 유효하지 않다
-  const [{ data: p }, { count: phones }] = await Promise.all([
-    db.from('profiles').select('id, name, employee_no, role, locale, active, can_view_payroll').eq('id', uid).maybeSingle(),
-    db.from('user_passkeys').select('id', { count: 'exact', head: true }).eq('employee_id', uid).is('revoked_at', null),
-  ]);
-  if (!p || !p.active || !phones) return null;
+  const { data: p } = await db
+    .from('profiles')
+    .select('id, name, employee_no, role, locale, active, can_view_payroll, sessions_revoked_at')
+    .eq('id', uid)
+    .maybeSingle();
+  if (!p || !p.active) return null;
+  // 비밀번호를 바꾸거나 관리자가 로그인을 초기화하면, 그 전에 로그인해 둔 기기는 바로 끊는다
+  // (2026-10-05: 분실 폰을 막아도 열려 있던 화면이 계속 쓰이던 문제 — 로그인이 폰 등록에 묶이지 않게 된 뒤에도 같은 보장을 유지)
+  if (sessionRevoked(authTimeOf(data.claims), p.sessions_revoked_at)) return null;
   return {
     id: p.id, name: p.name, employeeNo: p.employee_no, role: p.role, locale: p.locale, active: p.active,
     canViewPayroll: p.can_view_payroll,

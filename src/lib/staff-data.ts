@@ -29,7 +29,7 @@ export async function auditStaffAction(args: { actorId: string; targetId: string
   if (error) throw new Error(`auditStaffAction: ${error.code}`);
 }
 
-/** 그 직원의 활성 폰 등록을 전부 해제하고, 쓰지 않은 초대도 무효로 한다. 해제한 폰 수를 돌려준다 */
+/** 그 직원이 예전 방식으로 등록해 둔 폰(지문 로그인)을 전부 해제하고, 쓰지 않은 초대도 무효로 한다. 해제한 폰 수를 돌려준다 */
 export async function revokePhones(employeeId: string, actorId: string): Promise<number> {
   const db = createAdminClient();
   const now = new Date().toISOString();

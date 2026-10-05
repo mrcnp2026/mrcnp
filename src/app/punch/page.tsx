@@ -1,7 +1,7 @@
 // 직원 홈 (PWA 진입점, 부록 R-10-1): 상단 바 → 인사 + 지금 시각 → 미기록 배너 → "오늘 근무" 카드(큰 버튼) → 이번 주 막대 → 근무노트.
 // 하단 탭은 layout.tsx.
 import { getFormatter, getLocale, getTranslations } from 'next-intl/server';
-import { Bell, LayoutDashboard } from 'lucide-react';
+import { Bell, LayoutDashboard, UserRound } from 'lucide-react';
 import Link from 'next/link';
 import { redirect } from 'next/navigation';
 import { AddToHomeIcon } from '@/components/AddToHome';
@@ -29,6 +29,7 @@ export default async function PunchPage() {
   if (!me) redirect('/login');
   const t = await getTranslations('home');
   const tw = await getTranslations('work');
+  const tc = await getTranslations('common');
   const f = await getFormatter();
   const now = new Date();
   const [today, recent, notices] = await Promise.all([loadEmployeeToday(me.id, now), loadEmployeeRecent(me.id, now), visibleNoticesNow(me.id, await getLocale())]);
@@ -94,6 +95,10 @@ export default async function PunchPage() {
 
         <NoteBox initial={today.note?.body ?? null} />
 
+        <Link href="/punch/account" className="inline-flex min-h-11 w-full items-center justify-center gap-2 rounded-button border border-border bg-bg px-4 text-sm text-muted">
+          <UserRound aria-hidden size={18} strokeWidth={1.75} />
+          {tc('account')}
+        </Link>
         <SignOutButton />
       </PageShell>
     </>

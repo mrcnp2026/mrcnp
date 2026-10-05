@@ -9,6 +9,7 @@ import { config } from 'dotenv';
 import { createHash, randomBytes } from 'node:crypto';
 import path from 'node:path';
 import { chromium } from 'playwright-core';
+import { createPassword } from './lib/e2e-password.ts';
 
 config({ path: path.join(import.meta.dirname, '..', '.env.local'), quiet: true });
 const BASE = process.env.BASE ?? 'http://localhost:4123';
@@ -37,12 +38,8 @@ const browser = await chromium.launch({ channel: 'chrome', headless: true });
 try {
   const ctx = await browser.newContext({ viewport: { width: 390, height: 844 } });
   const p = await ctx.newPage();
-  const cdp = await ctx.newCDPSession(p);
-  await cdp.send('WebAuthn.enable');
-  await cdp.send('WebAuthn.addVirtualAuthenticator', { options: { protocol: 'ctap2', transport: 'internal', hasResidentKey: true, hasUserVerification: true, isUserVerified: true, automaticPresenceSimulation: true } });
   await p.goto(`${BASE}/register?token=${token}`);
-  await p.getByRole('button', { name: /이 폰 등록하기/ }).click();
-  await p.getByText('폰이 등록되었습니다.').waitFor({ timeout: 20000 });
+  await createPassword(p);
   const post = (url: string, body?: unknown) =>
     p.evaluate(async ([u, b]) => {
       const r = await fetch(u as string, { method: 'POST', headers: { 'content-type': 'application/json' }, body: b === undefined ? undefined : JSON.stringify(b) });
@@ -56,12 +53,8 @@ try {
   const token2 = randomBytes(32).toString('base64url');
   await db.from('invites').insert({ employee_id: other!.id, token_hash: createHash('sha256').update(token2).digest('hex'), issued_via: 'admin', expires_at: new Date(Date.now() + 3600e3).toISOString() });
   const p2 = await (await browser.newContext({ viewport: { width: 390, height: 844 } })).newPage();
-  const cdp2 = await p2.context().newCDPSession(p2);
-  await cdp2.send('WebAuthn.enable');
-  await cdp2.send('WebAuthn.addVirtualAuthenticator', { options: { protocol: 'ctap2', transport: 'internal', hasResidentKey: true, hasUserVerification: true, isUserVerified: true, automaticPresenceSimulation: true } });
   await p2.goto(`${BASE}/register?token=${token2}`);
-  await p2.getByRole('button', { name: /이 폰 등록하기/ }).click();
-  await p2.getByText('폰이 등록되었습니다.').waitFor({ timeout: 20000 });
+  await createPassword(p2);
   const decide = (url: string, body?: unknown) =>
     p2.evaluate(async ([u, b]) => {
       const r = await fetch(u as string, { method: 'POST', headers: { 'content-type': 'application/json' }, body: b === undefined ? undefined : JSON.stringify(b) });

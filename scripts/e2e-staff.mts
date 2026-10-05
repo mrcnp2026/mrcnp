@@ -9,6 +9,7 @@ import { config } from 'dotenv';
 import { createHash, randomBytes } from 'node:crypto';
 import path from 'node:path';
 import { chromium, type BrowserContext } from 'playwright-core';
+import { createPassword } from './lib/e2e-password.ts';
 
 config({ path: path.join(import.meta.dirname, '..', '.env.local'), quiet: true });
 const BASE = process.env.BASE ?? 'http://localhost:4123';
@@ -41,21 +42,18 @@ const check = (ok: boolean, what: string, extra = '') => {
   if (!ok) fails++;
 };
 const row = async () => (await db.from('profiles').select('active, role, can_view_payroll, updated_by').eq('id', target!.id).single()).data!;
-const phones = async () => (await db.from('user_passkeys').select('id', { count: 'exact', head: true }).eq('employee_id', target!.id).is('revoked_at', null)).count ?? 0;
+// 가입 여부 = 비밀번호를 만들었는가 (2026-10-05 로그인 방식 변경 — 예전에는 등록된 폰 수)
+const phones = async () => ((await db.from('profiles').select('password_set_at').eq('id', target!.id).single()).data?.password_set_at ? 1 : 0);
 
 const browser = await chromium.launch({ channel: 'chrome', headless: true });
 const withPhone = async (ctx: BrowserContext) => {
   const p = await ctx.newPage();
-  const cdp = await ctx.newCDPSession(p);
-  await cdp.send('WebAuthn.enable');
-  await cdp.send('WebAuthn.addVirtualAuthenticator', { options: { protocol: 'ctap2', transport: 'internal', hasResidentKey: true, hasUserVerification: true, isUserVerified: true, automaticPresenceSimulation: true } });
   return p;
 };
 try {
   const p = await withPhone(await browser.newContext({ viewport: { width: 390, height: 844 }, deviceScaleFactor: 2 }));
   await p.goto(`${BASE}/register?token=${await invite(emp!.id)}`);
-  await p.getByRole('button', { name: /이 폰 등록하기/ }).click();
-  await p.getByText('폰이 등록되었습니다.').waitFor({ timeout: 30000 });
+  await createPassword(p);
   const post = (url: string, body?: unknown) =>
     p.evaluate(async ([u, b]) => {
       const r = await fetch(u as string, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify(b ?? {}) });
@@ -100,16 +98,14 @@ try {
   const tctx = await browser.newContext({ viewport: { width: 390, height: 844 } });
   const tp = await withPhone(tctx);
   await tp.goto(`${BASE}/register?token=${await invite(target!.id)}`);
-  await tp.getByRole('button', { name: /Register this phone|이 폰 등록하기/ }).click();
-  await tp.getByText(/Your phone is registered\.|폰이 등록되었습니다\./).waitFor({ timeout: 30000 });
+  await createPassword(tp);
   await tp.goto(`${BASE}/punch`);
-  check(new URL(tp.url()).pathname === '/punch' && (await phones()) === 1, '대상 직원: 폰 등록 후 출퇴근 화면 접속');
+  check(new URL(tp.url()).pathname === '/punch' && (await phones()) === 1, '대상 직원: 비밀번호를 만든 뒤 출퇴근 화면 접속');
 
   // ── 권한 변경은 두 번째 관리자가 확인해야 반영된다 (R-2의 8) ──
   const cp = await withPhone(await browser.newContext({ viewport: { width: 390, height: 844 }, deviceScaleFactor: 2 }));
   await cp.goto(`${BASE}/register?token=${await invite(second!.id)}`);
-  await cp.getByRole('button', { name: /이 폰 등록하기/ }).click();
-  await cp.getByText('폰이 등록되었습니다.').waitFor({ timeout: 30000 });
+  await createPassword(cp);
   // 두 번째 관리자가 수집 동의를 아직 안 했으면 동의 창이 화면을 가린다 → 먼저 동의
   await cp.goto(`${BASE}/admin`);
   await cp.waitForLoadState('networkidle');
@@ -174,26 +170,23 @@ try {
   check(new URL(tp.url()).pathname !== '/admin', '해제된 사람은 관리자 화면에서 밀려남', new URL(tp.url()).pathname);
   await cp.context().close();
 
-  // ── 폰 해제 ──
+  // ── 로그인 초기화 (예전의 폰 해제) ──
   await p.goto(`${BASE}/admin/members/${target!.id}`);
   await shot('staff-detail');
-  await p.getByRole('button', { name: /폰 등록 해제/ }).click();
+  await p.getByRole('button', { name: /로그인 초기화/ }).click();
   await p.getByRole('button', { name: '폰 분실', exact: true }).click();
-  await p.getByRole('button', { name: '폰 등록 해제', exact: true }).last().click();
-  await p.getByText('폰 미등록').waitFor({ timeout: 20000 });
-  check((await phones()) === 0, '화면에서 폰 해제');
-  r = await post(`${api}/phone`, { reason: '시험 사유' });
-  check(r.status === 409 && r.json.error === 'no_phone', '등록된 폰이 없으면 해제할 것이 없음');
+  await p.getByRole('button', { name: '로그인 초기화', exact: true }).last().click();
+  await p.getByText('아직 가입 안 함').waitFor({ timeout: 20000 });
+  check((await phones()) === 0, '화면에서 로그인 초기화: 가입 전 상태로');
 
   // ── 퇴사 처리: 바로 접속이 끊긴다 ──
   await tp.goto(`${BASE}/punch`);
-  check(new URL(tp.url()).pathname === '/login', '폰이 해제되면 그 폰에 열려 있던 화면도 바로 로그인으로 밀려남', new URL(tp.url()).pathname);
-  // 새 폰을 다시 등록 (초대 링크) → 다시 접속된다
+  check(new URL(tp.url()).pathname === '/login', '로그인을 초기화하면 열려 있던 화면도 바로 로그인으로 밀려남', new URL(tp.url()).pathname);
+  // 초대 링크로 비밀번호를 다시 만든다 → 다시 접속된다
   await tp.goto(`${BASE}/register?token=${await invite(target!.id)}`);
-  await tp.getByRole('button', { name: /Register this phone|이 폰 등록하기/ }).click();
-  await tp.getByText(/Your phone is registered.|폰이 등록되었습니다./).waitFor({ timeout: 30000 });
+  await createPassword(tp);
   await tp.goto(`${BASE}/punch`);
-  check(new URL(tp.url()).pathname === '/punch' && (await phones()) === 1, '초대 링크로 새 폰을 등록하면 다시 접속');
+  check(new URL(tp.url()).pathname === '/punch' && (await phones()) === 1, '초대 링크로 비밀번호를 다시 만들면 접속');
   // 직접 DB 읽기에 쓸 로그인 토큰 (퇴사 뒤에도 만료 전까지 유효한 것)
   const cookies = await tctx.cookies();
   const authCookie = cookies.filter((c) => c.name.includes('auth-token')).sort((a, b) => a.name.localeCompare(b.name)).map((c) => c.value).join('');
@@ -222,7 +215,7 @@ try {
   check(!!(au.user as { banned_until?: string } | null)?.banned_until, '로그인 계정 차단됨');
   const { data: logs } = await db.from('audit_logs').select('reason, after_data, actor_id').eq('target_table', 'profiles').eq('target_id', target!.id).gte('created_at', STARTED_AT).not('reason', 'is', null);
   const events = (logs ?? []).map((l) => (l.after_data as { event?: string })?.event);
-  check(['reinstate', 'role_changed', 'phone_revoked', 'resign'].every((e) => events.includes(e)) && (logs ?? []).every((l) => l.actor_id === emp!.id || l.actor_id === second!.id), '변경 기록에 누가·무엇을·왜가 남음', events.join(','));
+  check(['reinstate', 'role_changed', 'login_reset', 'resign'].every((e) => events.includes(e)) && (logs ?? []).every((l) => l.actor_id === emp!.id || l.actor_id === second!.id), '변경 기록에 누가·무엇을·왜가 남음', events.join(','));
   await p.goto(`${BASE}/admin/members`);
   check((await p.getByText('검사용2(자동)').count()) === 0, '검사 계정은 직원 목록에 보이지 않음');
   await tctx.close();

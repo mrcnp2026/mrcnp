@@ -1,5 +1,5 @@
 // 직원 관리 규칙 (부록 R-2, ②-2 7-2, ②-3 7-12) — 해도 되는지 판단. 순수함수.
-// ★ 자기 자신의 재직 상태·권한·폰 등록은 스스로 바꾸지 못한다 (자기 잠금·자기 승격을 막는다).
+// ★ 자기 자신의 재직 상태·권한은 스스로 바꾸지 못하고, 로그인 초기화도 스스로 못 한다 (자기 잠금·자기 승격을 막는다).
 // ★ 활성 관리자가 MIN_ADMINS명 미만이 되는 변경은 차단한다 (퇴사·관리자 해제).
 // ★ 급여 담당자는 급여 담당자만 지정·해제하고, 0명이 되는 변경은 차단한다 (R-2의 7).
 // ★ 권한 변경은 두 번째 관리자가 확인해야 반영된다 (R-2의 8) — 확인해 줄 다른 관리자가 있을 때만. 혼자면 바로 반영한다.
@@ -60,7 +60,7 @@ export function checkRoleChange(args: { actor: Staff; target: Staff; all: Staff[
   return floor ? { code: floor } : { next };
 }
 
-/** 폰 등록 해제: 자기 폰은 스스로 해제하지 못한다 (R-2의 2). 다른 관리자가 한다 */
+/** 로그인 초기화(예전의 폰 등록 해제): 자기 것은 스스로 못 한다 (R-2의 2). 다른 관리자가 한다. 비밀번호 변경은 본인이 「내 계정」에서 한다 */
 export function checkPhoneRevoke(actorId: string, targetId: string): StaffRuleCode | null {
   return actorId === targetId ? 'self_change' : null;
 }
