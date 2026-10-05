@@ -65,6 +65,15 @@ export function checkPhoneRevoke(actorId: string, targetId: string): StaffRuleCo
   return actorId === targetId ? 'self_change' : null;
 }
 
+/**
+ * 자기 요청을 스스로 결정(승인·거부·취소)하지 못한다 — 다른 관리자가 있을 때만 막는다.
+ * 관리자가 혼자면 그 사람의 요청을 처리할 사람이 없으므로 허용한다 (화면에는 "본인 요청"으로 표시된다).
+ */
+export function selfDecisionBlocked(actorId: string, employeeId: string, all: Staff[]): boolean {
+  if (actorId !== employeeId) return false;
+  return all.some((s) => s.id !== actorId && s.active && s.role === 'admin');
+}
+
 export function cleanReason(v: unknown): string | null {
   if (typeof v !== 'string') return null;
   const s = v.replace(/[\u0000-\u0009\u000B-\u001F\u007F]/g, '').trim();

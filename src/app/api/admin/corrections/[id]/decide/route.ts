@@ -3,6 +3,7 @@
 import { api, ApiError, readJson } from '@/lib/api';
 import { requireAdmin } from '@/lib/auth';
 import { isPeriodLocked } from '@/lib/punch';
+import { assertNotOwnRequest } from '@/lib/staff-data';
 import { createAdminClient } from '@/lib/supabase/admin';
 
 export const POST = api<{ params: Promise<{ id: string }> }>('admin.corrections.decide', async (req, ctx) => {
@@ -14,6 +15,7 @@ export const POST = api<{ params: Promise<{ id: string }> }>('admin.corrections.
   const db = createAdminClient();
   const { data: c } = await db.from('punch_corrections').select('employee_id, work_date').eq('id', id).maybeSingle();
   if (!c) throw new ApiError(404, 'not_found');
+  await assertNotOwnRequest(me.id, c.employee_id); // 자기 요청은 다른 관리자가 처리한다
   if (await isPeriodLocked(c.employee_id, c.work_date)) throw new ApiError(409, 'period_locked');
   const { data, error } = await db.rpc('decide_correction', {
     p_id: id,

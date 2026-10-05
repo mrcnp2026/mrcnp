@@ -8,6 +8,8 @@ import { OFFICE } from '@/config/office';
 import { getMe } from '@/lib/auth';
 import { addDays } from '@/lib/calendar';
 import { loadPeriod, syncOvertimeRequests } from '@/lib/period-data';
+import { loadStaff } from '@/lib/staff-data';
+import { selfDecisionBlocked } from '@/lib/staff-rules';
 import { createAdminClient } from '@/lib/supabase/admin';
 import { toKstDate } from '@/lib/time';
 import Link from 'next/link';
@@ -20,6 +22,9 @@ export default async function InboxPage({ searchParams }: { searchParams: Promis
   const t = await getTranslations('admin.inbox');
   const f = await getFormatter();
   const me = (await getMe())!;
+  // 자기 요청은 다른 관리자가 처리한다 — 다른 관리자가 있을 때만 막는다 (staff-rules.ts)
+  const ownBlocked = selfDecisionBlocked(me.id, me.id, await loadStaff());
+  const ownNote = <p className="text-sm text-muted">{t('selfBlocked')}</p>;
   const sp = await searchParams;
 // ★ 연습 모드에서는 모든 기록이 연습 기록이다 — 관리자 화면도 기본으로 연습 기록을 본다 (2026-10-02: 시험직원 정정 요청이 관리자에게 0건으로 보이던 문제). ?live=1이면 실제 기록
   const practice = OFFICE.practiceMode && sp.live !== '1';
@@ -118,7 +123,7 @@ export default async function InboxPage({ searchParams }: { searchParams: Promis
             {o.status !== 'pending' && (
               <p className="text-xs text-muted">{t('decidedBy', { status: t(`status.${o.status}`), who: name.get(o.approved_by) ?? '—' })}</p>
             )}
-            <OvertimeDecision id={o.id} name={name.get(o.employee_id) ?? ''} facts={{ overtime: o.overtime_minutes, night: o.night_minutes, holiday: o.holiday_minutes }} />
+            {ownBlocked && o.employee_id === me.id ? ownNote : <OvertimeDecision id={o.id} name={name.get(o.employee_id) ?? ''} facts={{ overtime: o.overtime_minutes, night: o.night_minutes, holiday: o.holiday_minutes }} />}
           </Card>
         ))}
         <Pager page={otPage.page} pages={otPage.pages} param="op" params={sp} anchor="overtime" label={tc('pages')} />
@@ -146,7 +151,7 @@ export default async function InboxPage({ searchParams }: { searchParams: Promis
                 {c.correction_type === 'void' && t('voidLine', { time: hm(target?.punched_at ?? null) })}
               </p>
               <p className="text-sm"><span className="text-muted">{t('reason')}: </span>{c.reason}</p>
-              <CorrectionDecision id={c.id} name={name.get(c.employee_id) ?? ''} />
+              {ownBlocked && c.employee_id === me.id ? ownNote : <CorrectionDecision id={c.id} name={name.get(c.employee_id) ?? ''} />}
             </Card>
           );
         })}
@@ -185,7 +190,7 @@ export default async function InboxPage({ searchParams }: { searchParams: Promis
               {clash.length > 0 && (
                 <p className="rounded-button border border-warn bg-warn-tint p-2 text-sm text-warn">{t('leaveClash', { dates: clash.map(dayLabel).join(', ') })}</p>
               )}
-              <LeaveDecision id={r.id} name={name.get(r.employeeId) ?? ''} summary={summary} />
+              {ownBlocked && r.employeeId === me.id ? ownNote : <LeaveDecision id={r.id} name={name.get(r.employeeId) ?? ''} summary={summary} />}
             </Card>
           );
         })}
@@ -217,7 +222,7 @@ export default async function InboxPage({ searchParams }: { searchParams: Promis
                 {t(`workKind.${w.kind}`)} · <span className="font-normal">{t('place')}: {w.place}</span>
               </p>
               {w.reason && <p className="text-sm"><span className="text-muted">{t('reason')}: </span>{w.reason}</p>}
-              <WorkDecision id={w.id} name={name.get(w.employeeId) ?? ''} summary={`${t(`workKind.${w.kind}`)} (${when})`} />
+              {ownBlocked && w.employeeId === me.id ? ownNote : <WorkDecision id={w.id} name={name.get(w.employeeId) ?? ''} summary={`${t(`workKind.${w.kind}`)} (${when})`} />}
             </Card>
           );
         })}

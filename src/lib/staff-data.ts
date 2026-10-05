@@ -1,13 +1,20 @@
 // 직원 관리 — DB를 건드리는 쪽. 서버 전용. 판단은 staff-rules.ts가 한다.
 import 'server-only';
 import { OFFICE } from '@/config/office';
-import type { Staff } from '@/lib/staff-rules';
+import { ApiError } from '@/lib/api';
+import { selfDecisionBlocked, type Staff } from '@/lib/staff-rules';
 import { createAdminClient } from '@/lib/supabase/admin';
 
 export async function loadStaff(): Promise<Staff[]> {
   const { data, error } = await createAdminClient().from('profiles').select('id, role, active, can_view_payroll');
   if (error) throw new Error(`loadStaff: ${error.code}`);
   return (data ?? []).map((p) => ({ id: p.id, role: p.role, active: p.active, canViewPayroll: p.can_view_payroll }));
+}
+
+/** 요청 결정 API가 부른다: 본인 요청인데 다른 관리자가 있으면 거절 (403 self_decision) */
+export async function assertNotOwnRequest(actorId: string, employeeId: string): Promise<void> {
+  if (actorId !== employeeId) return;
+  if (selfDecisionBlocked(actorId, employeeId, await loadStaff())) throw new ApiError(403, 'self_decision');
 }
 
 /**

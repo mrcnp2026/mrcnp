@@ -149,7 +149,8 @@
     "notice_period": "게시 기간을 확인해 주세요. 끝 시각은 시작보다 뒤여야 합니다.",
     "notice_targets": "공지를 받을 직원을 한 명 이상 골라 주세요.",
     "notice_legal_review": "법적·급여 관련 공지는 영어 번역을 「확인했음」으로 저장해야 게시할 수 있습니다.",
-    "notice_numbers_review": "번역의 숫자가 원문과 다릅니다. 숫자를 고치고 「확인했음」으로 저장해 주세요."
+    "notice_numbers_review": "번역의 숫자가 원문과 다릅니다. 숫자를 고치고 「확인했음」으로 저장해 주세요.",
+    "self_decision": "본인 요청은 스스로 처리할 수 없습니다. 다른 관리자에게 요청하세요."
   },
   "admin": {
     "nav": {
@@ -395,7 +396,8 @@
       "place": "장소",
       "workClashHint": "승인해도 출퇴근 기록의 \"사무실 밖\" 사실은 그대로 남고, 화면에 \"승인된 외근\"으로 표시됩니다.",
       "confirmWork": "{name}님의 {summary}을(를) 승인할까요?",
-      "confirmWorkReject": "{name}님의 {summary}을(를) 거부할까요?"
+      "confirmWorkReject": "{name}님의 {summary}을(를) 거부할까요?",
+      "selfBlocked": "본인 요청은 다른 관리자가 처리합니다."
     },
     "records": {
       "title": "기록",

@@ -149,7 +149,8 @@
     "notice_period": "Check the period. The end must be after the start.",
     "notice_targets": "Choose at least one employee.",
     "notice_legal_review": "Legal or pay notices need a reviewed English translation before publishing.",
-    "notice_numbers_review": "Numbers in the translation differ from the original. Fix them and mark as reviewed."
+    "notice_numbers_review": "Numbers in the translation differ from the original. Fix them and mark as reviewed.",
+    "self_decision": "You cannot handle your own request. Ask another admin."
   },
   "admin": {
     "nav": {
@@ -395,7 +396,8 @@
       "place": "Place",
       "workClashHint": "Approving keeps the fact that clock-ins were outside the office; they are shown as \"approved off-site\".",
       "confirmWork": "Approve {summary} for {name}?",
-      "confirmWorkReject": "Reject {summary} for {name}?"
+      "confirmWorkReject": "Reject {summary} for {name}?",
+      "selfBlocked": "Another admin handles your own request."
     },
     "records": {
       "title": "Records",

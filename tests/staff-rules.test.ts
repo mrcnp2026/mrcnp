@@ -1,6 +1,6 @@
 // 직원 관리 규칙 (부록 R-2): 퇴사·복직·권한·폰 해제
 import { describe, expect, it } from 'vitest';
-import { checkPhoneRevoke, checkReinstate, checkResign, checkRoleChange, cleanReason, type Staff } from '@/lib/staff-rules';
+import { checkPhoneRevoke, checkReinstate, checkResign, checkRoleChange, cleanReason, selfDecisionBlocked, type Staff } from '@/lib/staff-rules';
 
 const s = (id: string, role: 'admin' | 'employee' = 'employee', canViewPayroll = false, active = true): Staff => ({ id, role, active, canViewPayroll });
 const A = s('a', 'admin', true);
@@ -84,5 +84,17 @@ describe('폰 해제·사유', () => {
     expect(cleanReason('  폰 분실 ')).toBe('폰 분실');
     expect(cleanReason('x'.repeat(201))).toBeNull();
     expect(cleanReason(undefined)).toBeNull();
+  });
+});
+
+describe('본인 요청 본인 승인', () => {
+  it('다른 관리자가 있으면 자기 요청을 스스로 결정하지 못한다', () => {
+    expect(selfDecisionBlocked('a', 'a', [A, B])).toBe(true);
+  });
+  it('관리자가 혼자면 허용한다 (처리할 사람이 없다) — 비활성·일반 직원은 세지 않는다', () => {
+    expect(selfDecisionBlocked('a', 'a', [A, E, s('z', 'admin', false, false)])).toBe(false);
+  });
+  it('남의 요청은 언제나 결정할 수 있다', () => {
+    expect(selfDecisionBlocked('a', 'e', [A, B, E])).toBe(false);
   });
 });

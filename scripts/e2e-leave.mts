@@ -2,7 +2,8 @@
 //   연차 입력(관리자) → 신청(직원) → 잔여 부족·겹침 거절 → 요청함에 뜸 → 승인 → 잔여 반영 → 다시 승인하면 "이미 처리됨" → 승인 취소
 //   npx tsx scripts/e2e-leave.mts   (앱이 켜져 있어야 한다. BASE·APP_ORIGIN을 같은 주소로)
 // 기록은 연습 기록(is_test)으로만 남고, 휴가 신청은 지울 수 없으므로(4-1) 시험 날짜를 먼 미래 하루로 고른다.
-// 끝나면 가짜 폰 등록을 해제하고 e2e-audit을 다시 끈다.
+// 자기 요청은 스스로 승인할 수 없으므로(2026-10-05), 승인·거부·취소는 두 번째 검사 계정 e2e-audit2(검사 동안만 관리자)가 한다.
+// 끝나면 가짜 폰 등록을 해제하고 두 계정을 다시 끈다.
 import { createClient } from '@supabase/supabase-js';
 import { config } from 'dotenv';
 import { createHash, randomBytes } from 'node:crypto';
@@ -48,6 +49,25 @@ try {
       return { status: r.status, json: await r.json() };
     }, [url, body] as const);
 
+  // 자기 요청은 스스로 결정하지 못한다 → 본인이 누르면 거절되는지 보고, 실제 결정은 다른 관리자(e2e-audit2)가 한다
+  const { data: other } = await db.from('profiles').select('id').eq('employee_no', 'e2e-audit2').single();
+  await db.auth.admin.updateUserById(other!.id, { ban_duration: 'none' });
+  await db.from('profiles').update({ active: true, role: 'admin', locale: 'ko' }).eq('id', other!.id);
+  const token2 = randomBytes(32).toString('base64url');
+  await db.from('invites').insert({ employee_id: other!.id, token_hash: createHash('sha256').update(token2).digest('hex'), issued_via: 'admin', expires_at: new Date(Date.now() + 3600e3).toISOString() });
+  const p2 = await (await browser.newContext({ viewport: { width: 390, height: 844 } })).newPage();
+  const cdp2 = await p2.context().newCDPSession(p2);
+  await cdp2.send('WebAuthn.enable');
+  await cdp2.send('WebAuthn.addVirtualAuthenticator', { options: { protocol: 'ctap2', transport: 'internal', hasResidentKey: true, hasUserVerification: true, isUserVerified: true, automaticPresenceSimulation: true } });
+  await p2.goto(`${BASE}/register?token=${token2}`);
+  await p2.getByRole('button', { name: /이 폰 등록하기/ }).click();
+  await p2.getByText('폰이 등록되었습니다.').waitFor({ timeout: 20000 });
+  const decide = (url: string, body?: unknown) =>
+    p2.evaluate(async ([u, b]) => {
+      const r = await fetch(u as string, { method: 'POST', headers: { 'content-type': 'application/json' }, body: b === undefined ? undefined : JSON.stringify(b) });
+      return { status: r.status, json: await r.json() };
+    }, [url, body] as const);
+
   // 1. 연차 1일만 입력 (그 해 1월 1일부터)
   let r = await post('/api/admin/leave/grants', { employeeId: emp!.id, periodLabel: LABEL, grantedDays: 1, carriedDays: 0, basis: 'hire_date', effectiveFrom: `${DAY.slice(0, 4)}-01-01` });
   check(r.status === 200, '관리자 연차 입력', String(r.status));
@@ -77,13 +97,15 @@ try {
   await p.goto(`${BASE}/admin/inbox#leave`);
   check(await p.locator('#leave').getByText('반차').first().waitFor({ timeout: 15000 }).then(() => true, () => false), '요청함 연차 섹션에 신청이 보임');
   r = await post(`/api/admin/leave/${halfId}/decide`, { decision: 'approved' });
+  check(r.status === 403 && r.json.error === 'self_decision', '자기 휴가 신청은 스스로 승인하지 못함', JSON.stringify(r.json.error));
+  r = await decide(`/api/admin/leave/${halfId}/decide`, { decision: 'approved' });
   check(r.json.result === 'ok', '관리자 승인', JSON.stringify(r.json));
-  r = await post(`/api/admin/leave/${halfId}/decide`, { decision: 'rejected' });
+  r = await decide(`/api/admin/leave/${halfId}/decide`, { decision: 'rejected' });
   check(r.json.result === 'already', '두 번째 결정은 이미 처리됨', JSON.stringify(r.json));
   await p.goto(`${BASE}/admin/leave`);
   check(await p.getByRole('heading', { name: '연차 관리' }).waitFor({ timeout: 15000 }).then(() => true, () => false), '연차 관리 화면 열림');
   // 7. 승인 취소
-  r = await post(`/api/admin/leave/${halfId}/decide`, { decision: 'cancelled' });
+  r = await decide(`/api/admin/leave/${halfId}/decide`, { decision: 'cancelled' });
   check(r.json.result === 'ok', '승인된 휴가 취소', JSON.stringify(r.json));
   // 외근 (②-3 7-11): 장소 필수 · 겹침 거절 · 승인 한 번만 · 요청함에 뜸
   r = await post('/api/work', { kind: 'outside', startDate: DAY, place: '' });
@@ -97,11 +119,11 @@ try {
   check(r.status === 400 && r.json.error === 'invalid_time', '외근: 시작이 끝보다 늦으면 거절', r.json.error);
   await p.goto(`${BASE}/admin/inbox#work`);
   check(await p.locator('#work').getByText('e2e 고객사').first().waitFor({ timeout: 15000 }).then(() => true, () => false), '요청함 외근 섹션에 신청이 보임');
-  r = await post(`/api/admin/work/${workId}/decide`, { decision: 'approved' });
+  r = await decide(`/api/admin/work/${workId}/decide`, { decision: 'approved' });
   check(r.json.result === 'ok', '외근 승인', JSON.stringify(r.json));
-  r = await post(`/api/admin/work/${workId}/decide`, { decision: 'approved' });
+  r = await decide(`/api/admin/work/${workId}/decide`, { decision: 'approved' });
   check(r.json.result === 'already', '외근 두 번째 결정은 이미 처리됨', JSON.stringify(r.json));
-  r = await post(`/api/admin/work/${workId}/decide`, { decision: 'cancelled' });
+  r = await decide(`/api/admin/work/${workId}/decide`, { decision: 'cancelled' });
   check(r.json.result === 'ok', '외근 승인 취소', JSON.stringify(r.json));
 
   // 입사일 → 계산값 자동 채움 (2026-10-02 의뢰인 결정). 3년 근속이면 16일
@@ -125,6 +147,15 @@ try {
   await browser.close();
   await db.from('profiles').update({ role: 'employee', locale: 'en', active: false }).eq('id', emp!.id);
   await db.from('user_passkeys').update({ revoked_at: new Date().toISOString(), device_label: 'E2E 가상 인증기 (자동 확인용)' }).eq('employee_id', emp!.id).is('revoked_at', null).gte('created_at', STARTED_AT);
+  // 두 번째 검사 계정 정리 + 검사 계정의 남은 대기 요청은 거부로 닫는다 (실제 관리자의 요청함에 남지 않게)
+  const { data: o2 } = await db.from('profiles').select('id').eq('employee_no', 'e2e-audit2').single();
+  for (const [table, fn] of [['leave_requests', 'decide_leave'], ['work_requests', 'decide_work']] as const) {
+    const { data: left } = await db.from(table).select('id').eq('employee_id', emp!.id).eq('status', 'pending');
+    for (const x of left ?? []) await db.rpc(fn, { p_id: x.id, p_decision: 'rejected', p_decided_by: o2!.id, p_reason: 'e2e 검사 정리', p_request_id: 'e2e-leave' });
+  }
+  await db.from('profiles').update({ role: 'employee', locale: 'en', active: false }).eq('id', o2!.id);
+  await db.from('user_passkeys').update({ revoked_at: new Date().toISOString(), device_label: 'E2E 가상 인증기 (자동 확인용)' }).eq('employee_id', o2!.id).is('revoked_at', null).gte('created_at', STARTED_AT);
+  await db.from('invites').update({ revoked_at: new Date().toISOString() }).eq('employee_id', o2!.id).is('used_at', null).is('revoked_at', null);
   await db.from('invites').update({ revoked_at: new Date().toISOString() }).eq('employee_id', emp!.id).is('used_at', null).is('revoked_at', null);
 }
 console.log(fails ? `${fails}개 실패` : '모두 통과');
