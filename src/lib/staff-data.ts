@@ -21,9 +21,9 @@ export async function assertNotOwnRequest(actorId: string, employeeId: string): 
  * 변경 기록에 "무엇을·왜"를 한 줄 남긴다. 직원 정보 표(profiles)에는 사유 칸이 없어서
  * 자동 기록(audit_row)만으로는 퇴사·권한 변경의 사유가 빠진다 (R-2의 5: 누가 눌렀는지·왜가 보여야 한다).
  */
-export async function auditStaffAction(args: { actorId: string; targetId: string; event: string; reason: string; detail?: Record<string, unknown> }): Promise<void> {
+export async function auditStaffAction(args: { actorId: string; targetId: string; event: string; reason: string; detail?: Record<string, unknown>; table?: string }): Promise<void> {
   const { error } = await createAdminClient().from('audit_logs').insert({
-    actor_id: args.actorId, action: 'update', target_table: 'profiles', target_id: args.targetId,
+    actor_id: args.actorId, action: 'update', target_table: args.table ?? 'profiles', target_id: args.targetId,
     after_data: { event: args.event, ...args.detail }, reason: args.reason,
   });
   if (error) throw new Error(`auditStaffAction: ${error.code}`);
