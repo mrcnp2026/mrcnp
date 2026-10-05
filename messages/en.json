@@ -445,7 +445,8 @@
       "workClashHint": "Approving keeps the fact that clock-ins were outside the office; they are shown as \"approved off-site\".",
       "confirmWork": "Approve {summary} for {name}?",
       "confirmWorkReject": "Reject {summary} for {name}?",
-      "selfBlocked": "Another admin handles your own request."
+      "selfBlocked": "Another admin handles your own request.",
+      "recentHint": "What admins approved, rejected or cancelled in the last {days} days."
     },
     "records": {
       "title": "Records",

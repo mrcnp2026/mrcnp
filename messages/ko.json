@@ -445,7 +445,8 @@
       "workClashHint": "승인해도 출퇴근 기록의 \"사무실 밖\" 사실은 그대로 남고, 화면에 \"승인된 외근\"으로 표시됩니다.",
       "confirmWork": "{name}님의 {summary}을(를) 승인할까요?",
       "confirmWorkReject": "{name}님의 {summary}을(를) 거부할까요?",
-      "selfBlocked": "본인 요청은 다른 관리자가 처리합니다."
+      "selfBlocked": "본인 요청은 다른 관리자가 처리합니다.",
+      "recentHint": "최근 {days}일 동안 관리자가 승인·거부·취소한 내역입니다."
     },
     "records": {
       "title": "기록",

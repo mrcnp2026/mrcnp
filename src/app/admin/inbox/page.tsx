@@ -18,7 +18,11 @@ import { loadLeaveGrants, loadLeaveRequests, loadLeaveTypes } from '@/lib/leave-
 import { loadWorkRequests } from '@/lib/work-data';
 import { CorrectionDecision, LeaveDecision, OvertimeDecision, WorkDecision } from './Decisions';
 
-export default async function InboxPage({ searchParams }: { searchParams: Promise<{ live?: string; op?: string; cp?: string; lp?: string; wp?: string }> }) {
+const RECENT_DAYS = 30;
+const RECENT_PAGE = 7;
+const RECENT_MAX_PAGES = 5;
+
+export default async function InboxPage({ searchParams }: { searchParams: Promise<{ live?: string; op?: string; cp?: string; lp?: string; wp?: string; rp?: string }> }) {
   const t = await getTranslations('admin.inbox');
   const f = await getFormatter();
   const me = (await getMe())!;
@@ -33,12 +37,18 @@ export default async function InboxPage({ searchParams }: { searchParams: Promis
   await syncOvertimeRequests(data, today);
 
   const db = createAdminClient();
-  const [{ data: ot }, { data: co }, { data: recent }] = await Promise.all([
+  // 최근 처리: 최근 30일, 한 쪽에 7줄씩 최대 5쪽 (2026-10-05 의뢰인: 끝없이 쌓여 길어지던 목록).
+  // 자동 검사 계정(e2e-audit…)이 처리한 것은 뺀다 — 검사 스크립트가 돌 때마다 수십 줄씩 쌓여 실제 처리를 가렸다
+  const [{ data: ot }, { data: co }, { data: recentAll }, { data: staff }] = await Promise.all([
     db.from('overtime_requests').select('*').eq('is_test', practice).or('status.eq.pending,needs_review.eq.true').order('work_date'),
     db.from('punch_corrections').select('*').eq('is_test', practice).eq('status', 'pending').order('created_at'),
-    db.from('decision_log').select('subject_table, decision, decided_by, created_at, subject_id').order('created_at', { ascending: false }).limit(10),
+    db.from('decision_log').select('subject_table, decision, decided_by, created_at, subject_id').gte('created_at', new Date(Date.now() - RECENT_DAYS * 86_400_000).toISOString()).order('created_at', { ascending: false }).limit(500),
+    db.from('profiles').select('id, name, employee_no'),
   ]);
-  const name = new Map(data.people.map((p) => [p.id, p.name]));
+  const name = new Map((staff ?? []).map((p) => [p.id, p.name]));
+  const checkAccounts = new Set((staff ?? []).filter((p) => p.employee_no?.startsWith('e2e-audit')).map((p) => p.id));
+  const recent = (recentAll ?? []).filter((r) => !checkAccounts.has(r.decided_by)).slice(0, RECENT_PAGE * RECENT_MAX_PAGES);
+  const rcPage = pageOf(recent, sp.rp, RECENT_PAGE);
   const keys = [...(ot ?? []).map((o) => [o.employee_id, o.work_date]), ...(co ?? []).map((c) => [c.employee_id, c.work_date])];
   const empIds = [...new Set(keys.map((k) => k[0]))];
   const dates = [...new Set(keys.map((k) => k[1]))];
@@ -229,17 +239,19 @@ export default async function InboxPage({ searchParams }: { searchParams: Promis
         <Pager page={wkPage.page} pages={wkPage.pages} param="wp" params={sp} anchor="work" label={tc('pages')} />
       </section>
 
-      {(recent ?? []).length > 0 && (
-        <section className="flex flex-col gap-2">
+      {recent.length > 0 && (
+        <section id="recent" className="flex scroll-mt-16 flex-col gap-2">
           <h2 className="font-semibold">{t('recent')}</h2>
+          <p className="text-xs text-faint">{t('recentHint', { days: RECENT_DAYS })}</p>
           <ul className="divide-y divide-border rounded-card border border-border px-4 text-sm">
-            {(recent ?? []).map((r, i) => (
+            {rcPage.items.map((r, i) => (
               <li key={i} className="flex min-h-11 items-center justify-between gap-2 py-2">
                 <span>{t(r.subject_table === 'overtime_requests' ? 'overtimeTitle' : r.subject_table === 'leave_requests' ? 'leaveTitle' : r.subject_table === 'work_requests' ? 'workTitle' : 'correctionsTitle')} · {t(`status.${r.decision}`)}</span>
                 <span className="num text-muted">{name.get(r.decided_by)} · {f.dateTime(new Date(r.created_at), { month: 'numeric', day: 'numeric', hour: '2-digit', minute: '2-digit', hourCycle: 'h23' })}</span>
               </li>
             ))}
           </ul>
+          <Pager page={rcPage.page} pages={rcPage.pages} param="rp" params={sp} anchor="recent" label={tc('pages')} />
         </section>
       )}
     </PageShell>
