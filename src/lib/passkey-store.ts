@@ -122,6 +122,48 @@ export function supabasePasskeyStore(): PasskeyStore {
       } satisfies StoredPasskey;
     },
 
+    async activePasskeyOf(employeeId) {
+      const { data, error } = await db
+        .from('user_passkeys')
+        .select('id, employee_id, credential_id, public_key, sign_count, transports, revoked_at')
+        .eq('employee_id', employeeId)
+        .is('revoked_at', null)
+        .maybeSingle();
+      if (error) fail('activePasskeyOf', error);
+      if (!data) return null;
+      return {
+        id: data.id,
+        employeeId: data.employee_id,
+        credentialId: data.credential_id,
+        publicKey: fromHex(data.public_key),
+        signCount: Number(data.sign_count),
+        transports: data.transports,
+        revokedAt: null,
+      } satisfies StoredPasskey;
+    },
+
+    async addPasskey(p) {
+      const { data, error } = await db
+        .from('user_passkeys')
+        .insert({
+          employee_id: p.employeeId,
+          credential_id: p.credentialId,
+          public_key: toHex(p.publicKey),
+          sign_count: p.signCount,
+          transports: p.transports,
+          device_type: p.deviceType,
+          backed_up: p.backedUp,
+          device_label: p.deviceLabel,
+        })
+        .select('id')
+        .single();
+      if (error) {
+        if (error.code === '23505') throw new PasskeyError('already_registered'); // one_active_passkey — 동시에 두 기기를 등록하려 해도 하나만
+        fail('addPasskey', error);
+      }
+      return { passkeyId: data!.id };
+    },
+
     async touchPasskey(id, signCount, now) {
       const { error } = await db
         .from('user_passkeys')

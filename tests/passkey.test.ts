@@ -194,6 +194,73 @@ describe('폰으로 본인 확인', () => {
   });
 });
 
+describe('출퇴근 기기 — 로그인한 본인이 직접 등록 (2026-10-05)', () => {
+  const ME = { employeeId: EMP, employeeNo: 'A001', name: 'Nguyen Van A' };
+  async function registerOwn(who = ME, phone = new SoftAuthenticator(RP.rpID, RP.origin)) {
+    const opts = await svc.beginDeviceRegistration(who);
+    await svc.finishDeviceRegistration(who.employeeId, phone.register(opts.challenge), 'Android');
+    return phone;
+  }
+
+  it('초대 코드 없이 등록되고, 기기 내장 잠금(지문·얼굴·PIN)만 받는다', async () => {
+    const opts = await svc.beginDeviceRegistration(ME);
+    expect(opts.user.name).toBe('A001');
+    expect(opts.authenticatorSelection?.authenticatorAttachment).toBe('platform');
+    expect(opts.authenticatorSelection?.userVerification).toBe('required');
+    const phone = new SoftAuthenticator(RP.rpID, RP.origin);
+    const r = await svc.finishDeviceRegistration(EMP, phone.register(opts.challenge), 'iPhone');
+    expect(r.credentialId).toBe(phone.id);
+    expect(store.passkeys.filter((p) => !p.revokedAt)).toHaveLength(1);
+  });
+
+  it('기기는 1대만 — 이미 있으면 두 번째는 시작도 끝도 못 한다', async () => {
+    const second = new SoftAuthenticator(RP.rpID, RP.origin);
+    const early = await svc.beginDeviceRegistration(ME); // 첫 기기 등록 전에 받아 둔 챌린지
+    await registerOwn();
+    expect(await code(svc.beginDeviceRegistration(ME))).toBe('already_registered');
+    expect(await code(svc.finishDeviceRegistration(EMP, second.register(early.challenge)))).toBe('already_registered');
+    expect(store.passkeys).toHaveLength(1);
+  });
+
+  it('관리자가 해제하면 새 기기를 등록할 수 있고, 옛 기기로는 찍지 못한다', async () => {
+    const old = await registerOwn();
+    store.passkeys[0].revokedAt = new Date();
+    const fresh = await registerOwn();
+    const opts = await svc.beginPunchAssertion(EMP);
+    expect(opts.allowCredentials?.map((c) => c.id)).toEqual([fresh.id]);
+    expect(await code(svc.verifyPunch(EMP, old.assert(opts.challenge)))).toBe('passkey_revoked');
+  });
+
+  it('등록한 기기가 없으면 출퇴근 확인을 시작할 수 없다', async () => {
+    expect(await code(svc.beginPunchAssertion(EMP))).toBe('device_required');
+  });
+
+  it('본인 기기의 서명만 통과한다 — 등록 안 한 기기는 거부', async () => {
+    const mine = await registerOwn();
+    let opts = await svc.beginPunchAssertion(EMP);
+    expect((await svc.verifyPunch(EMP, mine.assert(opts.challenge))).passkeyId).toBe(store.passkeys[0].id);
+    opts = await svc.beginPunchAssertion(EMP);
+    const stranger = new SoftAuthenticator(RP.rpID, RP.origin);
+    expect(await code(svc.verifyPunch(EMP, stranger.assert(opts.challenge)))).toBe('passkey_unknown');
+  });
+
+  it('비밀번호를 알려 줘도 동료의 기기로는 내 출퇴근을 찍지 못한다 (wrong_person)', async () => {
+    const OTHER = { employeeId: 'emp-2', employeeNo: 'B002', name: 'Colleague' };
+    store.activeEmployees.add('emp-2');
+    await registerOwn();
+    const colleaguePhone = await registerOwn(OTHER);
+    // 동료가 내 아이디·비밀번호로 로그인해(세션 = EMP) 자기 폰의 지문으로 서명한다
+    const opts = await svc.beginPunchAssertion(EMP);
+    expect(await code(svc.verifyPunch(EMP, colleaguePhone.assert(opts.challenge)))).toBe('wrong_person');
+  });
+
+  it('로그인용 챌린지로는 출퇴근을 찍을 수 없다', async () => {
+    const mine = await registerOwn();
+    const login = await svc.beginAssertion('login');
+    expect(await code(svc.verifyPunch(EMP, mine.assert(login.challenge)))).toBe('challenge_invalid');
+  });
+});
+
 describe('짧은 등록 코드', () => {
   it('코드는 8자, 헷갈리는 글자(0 O 1 I L)가 없다', async () => {
     const { newInviteCode } = await import('@/lib/invite-code');

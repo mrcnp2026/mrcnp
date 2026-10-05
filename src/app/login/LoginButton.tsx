@@ -1,5 +1,5 @@
 'use client';
-// 지문·얼굴 로그인 — 예전에 폰을 등록해 둔 기기에서만 되는 보조 수단 (2026-10-05 의뢰인: 기본 로그인은 아이디 + 비밀번호).
+// 지문·얼굴 로그인 — 출퇴근 기기로 등록한 그 기기에서만 되는 보조 수단 (2026-10-05 의뢰인: 기본 로그인은 아이디 + 비밀번호).
 // 등록하지 않은 기기에서 누르면 브라우저가 "보안 키(USB)"를 찾으라고 하므로, 눈에 덜 띄는 작은 버튼으로 둔다.
 import { browserSupportsWebAuthn, startAuthentication } from '@simplewebauthn/browser';
 import { Fingerprint } from 'lucide-react';

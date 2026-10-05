@@ -53,6 +53,15 @@ export class MemoryPasskeyStore implements PasskeyStore {
   async findPasskey(credentialId: string) {
     return this.passkeys.find((p) => p.credentialId === credentialId) ?? null;
   }
+  async activePasskeyOf(employeeId: string) {
+    return this.passkeys.find((p) => p.employeeId === employeeId && !p.revokedAt) ?? null;
+  }
+  async addPasskey(p: Parameters<PasskeyStore['addPasskey']>[0]) {
+    if (await this.hasActivePasskey(p.employeeId)) throw new PasskeyError('already_registered'); // one_active_passkey
+    const row: StoredPasskey = { id: `pk${++this.seq}`, employeeId: p.employeeId, credentialId: p.credentialId, publicKey: p.publicKey, signCount: p.signCount, transports: p.transports, revokedAt: null };
+    this.passkeys.push(row);
+    return { passkeyId: row.id };
+  }
   async touchPasskey(id: string, signCount: number) {
     const p = this.passkeys.find((x) => x.id === id);
     if (p) p.signCount = signCount;

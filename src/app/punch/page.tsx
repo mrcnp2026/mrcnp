@@ -14,6 +14,7 @@ import { OFFICE } from '@/config/office';
 import { languageOptions } from '@/i18n/locales';
 import { loadEmployeeToday } from '@/lib/attendance-data';
 import { getMe } from '@/lib/auth';
+import { createAdminClient } from '@/lib/supabase/admin';
 import { loadEmployeeRecent } from '@/lib/employee-data';
 import { visibleNoticesNow } from '@/lib/notices';
 import { kstDateTime } from '@/lib/time';
@@ -32,7 +33,13 @@ export default async function PunchPage() {
   const tc = await getTranslations('common');
   const f = await getFormatter();
   const now = new Date();
-  const [today, recent, notices] = await Promise.all([loadEmployeeToday(me.id, now), loadEmployeeRecent(me.id, now), visibleNoticesNow(me.id, await getLocale())]);
+  const [today, recent, notices, { data: key }] = await Promise.all([
+    loadEmployeeToday(me.id, now),
+    loadEmployeeRecent(me.id, now),
+    visibleNoticesNow(me.id, await getLocale()),
+    // 출퇴근 기기 (등록한 1대). 없으면 홈의 버튼 자리에 등록 안내가 나온다
+    createAdminClient().from('user_passkeys').select('credential_id, device_label').eq('employee_id', me.id).is('revoked_at', null).maybeSingle(),
+  ]);
   const unread = notices.filter((n) => !n.confirmed).length;
   const hm = (time: string) => f.dateTime(kstDateTime(today.workDate, time), { hour: '2-digit', minute: '2-digit', hourCycle: 'h23' });
 
@@ -81,6 +88,7 @@ export default async function PunchPage() {
           isOpen={today.isOpen}
           lateMinutes={today.lateMinutes}
           practice={today.practice}
+          device={key ? { credentialId: key.credential_id, label: key.device_label } : null}
         />
 
         {/* 사무실 밖에서 찍혔는데 승인된 외근이 없으면 신청 안내 (②-3 7-11) */}

@@ -18,7 +18,7 @@
   "login": {
     "title": "Sign in",
     "subtitle": "Sign in with your employee number and password. Works on any PC or phone.",
-    "button": "Sign in with fingerprint or face (registered devices only)",
+    "button": "Sign in with fingerprint or face (your registered punch device only)",
     "firstTime": "First time?",
     "heroTitle": "From clock-in to clock-out,\nin a single tap",
     "heroSub": "For MRCNP staff only.",
@@ -39,7 +39,7 @@
     "title": "Create your password",
     "hello": "Hello, {name}",
     "employeeNo": "Employee number {no}",
-    "explain": "Choose a password for signing in. From now on you sign in with your employee number and this password, on any PC or phone.",
+    "explain": "Choose a password for signing in. From now on you sign in with your employee number and this password, on any PC or phone. To clock in and out, you register one phone of your own after signing in.",
     "button": "Create password and start",
     "done": "Your password is set.",
     "continue": "Continue",
@@ -127,18 +127,33 @@
     "greetDone": "great work today",
     "greetOff": "enjoy your day off",
     "officeByGps": "Office confirmed by location.",
-    "outsideNoLocation": "Recorded. You are not on the office internet and your location could not be checked. Allow location access to be checked by location next time."
+    "outsideNoLocation": "Recorded. You are not on the office internet and your location could not be checked. Allow location access to be checked by location next time.",
+    "device": {
+      "registerTitle": "Register your punch device",
+      "registerExplain": "You can clock in and out only from one registered device. Register the phone you carry every day. Each time you punch, the device checks your fingerprint or face (or screen lock).",
+      "registerButton": "Register this device for punching",
+      "registered": "This device is registered. Use the button below to punch.",
+      "privacy": "Your fingerprint or face never leaves the device. The company only stores a security key that cannot be turned back into your fingerprint.",
+      "otherTitle": "You cannot punch from this device",
+      "otherExplain": "You can punch only from your registered device. If you changed phones, ask your manager to release the punch device.",
+      "otherExplainLabel": "You can punch only from your registered device ({label}). If you changed phones, ask your manager to release the punch device.",
+      "otherRetry": "This is my registered device · check again"
+    },
+    "cancelled": "The check was cancelled, or this is not your registered punch device.",
+    "passkey_unknown": "This device is not registered as a punch device.",
+    "passkey_revoked": "This device was released. Please register it again.",
+    "unsupported": "This browser cannot do the device check. Please open the app in Chrome or Safari."
   },
   "errors": {
     "invite_invalid": "This invitation link has expired or was already used. Ask your manager for a new one.",
     "employee_inactive": "This account is not active. Please talk to your manager.",
-    "already_registered": "A phone is already registered for you. To change phones, ask your manager to remove the old one first.",
+    "already_registered": "You already have a registered punch device. To change it, a manager must release the current one first.",
     "challenge_invalid": "The request took too long. Please try again.",
-    "verification_failed": "We could not confirm your phone. Please try again.",
+    "verification_failed": "The device check failed. Please try again.",
     "user_verification_missing": "Please set up a screen lock (fingerprint, PIN or pattern) on your phone first, then try again.",
     "passkey_unknown": "Fingerprint/face sign-in is not set up on this device. Sign in with your employee number and password.",
     "passkey_revoked": "Fingerprint/face sign-in on this device was turned off. Sign in with your employee number and password.",
-    "cancelled": "The phone check was cancelled. Please try again.",
+    "cancelled": "The device check was cancelled. Please try again.",
     "login_cancelled": "The check was cancelled, or fingerprint/face sign-in is not set up on this device. Sign in with your employee number and password.",
     "unsupported": "This browser cannot use fingerprint/face sign-in. Sign in with your employee number and password.",
     "not_signed_in": "Please sign in again.",
@@ -147,13 +162,13 @@
     "network": "Could not connect. Check your internet and try again.",
     "generic": "Something went wrong. Please try again.",
     "reference": "Reference number: {id}",
-    "wrong_person": "This phone belongs to another account. Sign out first.",
+    "wrong_person": "This device is registered to another account.",
     "period_locked": "This month is closed. Ask your manager.",
     "note_length": "Please write 1 to 200 characters.",
     "already": "Someone already handled this.",
     "not_found": "Not found. Please refresh.",
     "payroll_only": "Only payroll staff can download this file.",
-    "register_failed": "The phone could not create the registration. Check the items below and try again.",
+    "register_failed": "This device could not create the registration. Check the items below and try again.",
     "notice_title": "Title must be 1–120 characters.",
     "notice_body": "Body must be 1–4000 characters.",
     "notice_period": "Check the period. The end must be after the start.",
@@ -167,7 +182,8 @@
     "password_long": "The password is too long. Please choose a shorter one.",
     "password_same_as_id": "The password cannot be the same as your employee number.",
     "password_mismatch": "The two passwords do not match.",
-    "password_wrong": "The current password is not correct."
+    "password_wrong": "The current password is not correct.",
+    "device_required": "Please register your punch device first."
   },
   "admin": {
     "nav": {
@@ -208,7 +224,7 @@
       "invalid_name": "Please enter a name (up to 50 characters).",
       "step1": "The person taps the link you sent.",
       "step2": "They choose a password for signing in (at least 8 characters).",
-      "step3": "From then on they sign in with their employee number and password, on any PC or phone.",
+      "step3": "After signing in on their phone, they tap \"Register this device for punching\" on the home screen. Every day: open the app → Clock in → one fingerprint.",
       "codeLabel": "Sign-up code",
       "codeHelp": "Or type {origin} in the browser → \"Create my password\" → enter this code.",
       "send": "Send link (text / KakaoTalk)",
@@ -259,10 +275,16 @@
       "loginId": "ID (employee number) {no}",
       "loginReady": "Signed up",
       "loginSince": "Password set {date}",
-      "loginPasskeyOnly": "Fingerprint sign-in only (no password)",
+      "loginPasskeyOnly": "No password (fingerprint sign-in on the punch device only)",
       "loginNone": "Not signed up yet",
       "loginInviteHint": "Send the link and the employee creates a password and signs in right away.",
-      "loginResetHint": "Forgotten password? Send the link again. Once they create a new password, the old one stops working."
+      "loginResetHint": "Forgotten password? Send the link again. Once they create a new password, the old one stops working.",
+      "deviceOk": "Punch device: {label}",
+      "deviceUnknown": "registered",
+      "deviceNone": "No punch device",
+      "deviceNoneHint": "The employee signs in on their own phone and registers it from the home screen.",
+      "deviceSince": "Registered {date}",
+      "deviceLast": "last used {date}"
     },
     "more": {
       "title": "More",
@@ -697,7 +719,7 @@
       "revokePayroll": "Remove payroll access",
       "revokePayrollHint": "They can no longer see the payroll screen or payroll files.",
       "revokePhone": "Reset sign-in",
-      "revokePhoneHint": "When a phone is lost or the password may have leaked.",
+      "revokePhoneHint": "When a phone is lost or the password may have leaked. The punch device is released too.",
       "revokePhoneNote": "After this, every device is signed out right away and the current password stops working. Send the invite link again so the employee can create a new password. Until then, add punches with \"Add record\".",
       "resign": "Mark as left",
       "resignHint": "Sign-in is blocked right away. Records are not deleted.",
@@ -719,7 +741,8 @@
         "changed": "Password may have leaked",
         "resigned": "Left the company",
         "contractEnd": "Contract ended",
-        "rejoin": "Rejoined"
+        "rejoin": "Rejoined",
+        "newPhone": "Phone replaced"
       },
       "reason_required": "Enter a reason of at least 2 characters (up to 200).",
       "self_change": "You cannot change your own account. Ask another admin.",
@@ -739,7 +762,11 @@
       "pendingHide": "A role change request is waiting for confirmation. You can change it again after it is handled.",
       "request_pending": "A role change for this employee is already waiting for confirmation.",
       "self_decision": "You cannot confirm a change you requested. Another admin must confirm it.",
-      "forbidden": "Only the admin who requested it can cancel."
+      "forbidden": "Only the admin who requested it can cancel.",
+      "revokeDevice": "Release punch device",
+      "revokeDeviceHint": "When they changed or lost their phone. The password stays the same.",
+      "revokeDeviceNote": "After this, that device can no longer punch. The employee signs in on the new phone and registers it. Until then, add punches with \"Add record\".",
+      "no_device": "No punch device is registered."
     },
     "settings": {
       "title": "Settings",
@@ -1052,8 +1079,8 @@
         "detail": "Recorded when you punch, to check whether you are on the office internet."
       },
       "device": {
-        "name": "Sign-in information",
-        "detail": "Your sign-in password (stored encrypted; the company and managers cannot see it). If you registered fingerprint or face sign-in earlier, the device type and a public key for it — biometrics such as fingerprint or face stay on your phone; the company never receives them."
+        "name": "Punch device and sign-in information",
+        "detail": "The type of the device you register for punching and a public key for it, and your sign-in password (stored encrypted; the company and managers cannot see it). Biometrics such as fingerprint or face stay on your device; the company never receives them."
       },
       "location": {
         "name": "Location",

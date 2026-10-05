@@ -66,6 +66,15 @@ export function checkPhoneRevoke(actorId: string, targetId: string): StaffRuleCo
 }
 
 /**
+ * 출퇴근 기기 해제: 본인 것은 스스로 못 한다 — 다른 관리자가 있을 때만 막는다.
+ * 관리자가 혼자면 해 줄 사람이 없어 폰을 바꿀 길이 막히므로 허용한다 (변경 기록에는 본인이 했다고 남는다).
+ */
+export function checkDeviceRevoke(actorId: string, targetId: string, all: Staff[]): StaffRuleCode | null {
+  if (actorId !== targetId) return null;
+  return all.some((s) => s.id !== actorId && s.active && s.role === 'admin') ? 'self_change' : null;
+}
+
+/**
  * 자기 요청을 스스로 결정(승인·거부·취소)하지 못한다 — 다른 관리자가 있을 때만 막는다.
  * 관리자가 혼자면 그 사람의 요청을 처리할 사람이 없으므로 허용한다 (화면에는 "본인 요청"으로 표시된다).
  */

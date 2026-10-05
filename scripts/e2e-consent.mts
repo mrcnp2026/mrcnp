@@ -74,7 +74,8 @@ try {
   });
   check(bad.status === 409 && bad.json.error === 'consent_outdated', '다른 판으로 보낸 동의는 받지 않음');
   const opt = await n.evaluate(async () => (await (await fetch('/api/punch/options', { method: 'POST', headers: { 'content-type': 'application/json' }, body: '{}' })).json()).needLocation);
-  check(opt === false, '동의하지 않은 사람에게는 위치를 묻지 않음');
+  // 출퇴근 기기를 등록하지 않은 계정은 여기서 device_required로 끝나 needLocation이 아예 없다 — 어느 쪽이든 위치를 묻지 않는다
+  check(opt !== true, '동의하지 않은 사람에게는 위치를 묻지 않음');
   await dialog.getByRole('button', { name: 'EN' }).click();
   await n.getByRole('dialog', { name: 'Consent to collect and use personal data' }).waitFor({ timeout: 20000 });
   check(true, '동의 창 안에서 언어를 바꿀 수 있음 (영어)');

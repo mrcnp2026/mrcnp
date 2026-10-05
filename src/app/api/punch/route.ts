@@ -1,7 +1,7 @@
 // 출퇴근 기록 API — IP는 여기서만 읽는다 (6장 파일 트리, 7-3 요점 1).
-// ★ 로그인한 본인의 기록만 남긴다 (2026-10-05 의뢰인: 출퇴근마다 지문을 묻던 폰 확인을 없앰 — PC·폰 어디서나 찍는다).
-//    누구의 기록인지는 로그인 세션이 정한다. 대리 출근은 사무실 확인(인터넷 주소·GPS)이 거른다 (README 알려진 한계).
-// ★★ 7-4 요점 4: 요청 본문에서 읽는 것은 kind(와 필요할 때의 위치)뿐이다. punched_at·ip_verified·is_test·work_date 등은
+// ★ 4-11 (2026-10-05 의뢰인 확정): 로그인(아이디 + 비밀번호)만으로는 찍히지 않는다. **로그인한 본인이 등록한 기기**의
+//    지문·얼굴 확인(패스키 서명)을 통과한 요청만 받는다 — 비밀번호를 동료에게 알려 줘도 동료 폰으로는 대신 찍지 못한다 (B-14).
+// ★★ 7-4 요점 4: 요청 본문에서 읽는 것은 kind와 기기의 서명(와 필요할 때의 위치)뿐이다. punched_at·ip_verified·is_test·work_date 등은
 //    본문에 있어도 읽지 않는다 (B-23). 시각=서버 시계, IP=서버가 본 헤더, 연습 여부=서버 설정, 직원=로그인 세션.
 // ★ 4-3: 사무실 밖이어도 기록은 남긴다 (ip_verified=false).
 // ★ GPS (2026-10-05): 인터넷 주소로 사무실이 확인되지 않을 때만, 폰이 함께 보낸 위치(body.geo)로 한 번 더 본다.
@@ -12,6 +12,7 @@ import { officeCidrs } from '@/lib/attendance-data';
 import { getMe } from '@/lib/auth';
 import { hasConsent } from '@/lib/consent';
 import { parseCoords, roundCoord, verifyGeo } from '@/lib/geo';
+import { passkeyService } from '@/lib/passkey-store';
 import { loadOfficeLocations } from '@/lib/geo-data';
 import { isPeriodLocked, recordPunch } from '@/lib/punch';
 import { toKstDate } from '@/lib/time';
@@ -23,6 +24,9 @@ export const POST = api('punch', async (req) => {
   if (kind !== 'in' && kind !== 'out') throw new ApiError(400, 'invalid_input');
   const me = await getMe();
   if (!me) throw new ApiError(401, 'not_signed_in');
+  if (!body.response) throw new ApiError(401, 'verification_failed');
+  // 서명 검증 + 그 기기가 로그인한 본인의 것인지 (다른 사람 계정에 등록된 기기면 wrong_person)
+  const { passkeyId } = await passkeyService().verifyPunch(me.id, body.response);
   const who = { employeeId: me.id };
 
   const now = new Date();
@@ -52,7 +56,7 @@ export const POST = api('punch', async (req) => {
     geo,
     source: 'web',
     isTest: OFFICE.practiceMode,
-    passkeyId: null, // 어느 기기인지는 더 이상 묻지 않는다 (예전 기록에는 남아 있다)
+    passkeyId,
   });
   return {
     kind: event.kind,

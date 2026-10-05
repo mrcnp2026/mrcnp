@@ -1,6 +1,6 @@
 // 직원 관리 규칙 (부록 R-2): 퇴사·복직·권한·폰 해제
 import { describe, expect, it } from 'vitest';
-import { checkPhoneRevoke, checkReinstate, checkResign, checkRoleChange, cleanReason, needsSecondAdmin, selfDecisionBlocked, type Staff } from '@/lib/staff-rules';
+import { checkDeviceRevoke, checkPhoneRevoke, checkReinstate, checkResign, checkRoleChange, cleanReason, needsSecondAdmin, selfDecisionBlocked, type Staff } from '@/lib/staff-rules';
 
 const s = (id: string, role: 'admin' | 'employee' = 'employee', canViewPayroll = false, active = true): Staff => ({ id, role, active, canViewPayroll });
 const A = s('a', 'admin', true);
@@ -78,6 +78,12 @@ describe('폰 해제·사유', () => {
   it('자기 폰은 스스로 해제하지 못한다 ← R-2의 2', () => {
     expect(checkPhoneRevoke('a', 'a')).toBe('self_change');
     expect(checkPhoneRevoke('a', 'b')).toBeNull();
+  });
+  it('출퇴근 기기 해제: 본인 것은 다른 관리자가 있으면 못 하고, 혼자면 할 수 있다', () => {
+    expect(checkDeviceRevoke('a', 'a', [A, B, E])).toBe('self_change');
+    expect(checkDeviceRevoke('a', 'a', [A, E])).toBeNull(); // 관리자가 혼자 — 아니면 폰을 바꿀 길이 없다
+    expect(checkDeviceRevoke('a', 'a', [A, s('b', 'admin', false, false)])).toBeNull(); // 퇴사한 관리자는 세지 않는다
+    expect(checkDeviceRevoke('a', 'e', [A, B, E])).toBeNull();
   });
   it('사유는 2~200자', () => {
     expect(cleanReason('.')).toBeNull();

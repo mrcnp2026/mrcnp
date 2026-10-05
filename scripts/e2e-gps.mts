@@ -8,7 +8,7 @@ import { config } from 'dotenv';
 import { createHash, randomBytes } from 'node:crypto';
 import path from 'node:path';
 import { chromium } from 'playwright-core';
-import { createPassword } from './lib/e2e-password.ts';
+import { createPassword, registerDevice } from './lib/e2e-password.ts';
 
 config({ path: path.join(import.meta.dirname, '..', '.env.local'), quiet: true });
 const BASE = process.env.BASE ?? 'http://localhost:4123';
@@ -36,6 +36,7 @@ try {
   const p = await ctx.newPage();
   await p.goto(`${BASE}/register?token=${token}`);
   await createPassword(p);
+  await registerDevice(p); // 출퇴근은 등록한 기기에서만 찍힌다
   const post = (url: string, body?: unknown) =>
     p.evaluate(async ([u, b]) => {
       const r = await fetch(u as string, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify(b ?? {}) });

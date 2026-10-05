@@ -29,12 +29,13 @@ export async function auditStaffAction(args: { actorId: string; targetId: string
   if (error) throw new Error(`auditStaffAction: ${error.code}`);
 }
 
-/** 그 직원이 예전 방식으로 등록해 둔 폰(지문 로그인)을 전부 해제하고, 쓰지 않은 초대도 무효로 한다. 해제한 폰 수를 돌려준다 */
-export async function revokePhones(employeeId: string, actorId: string): Promise<number> {
+/** 그 직원의 출퇴근 기기(패스키) 등록을 해제하고, 쓰지 않은 초대도 무효로 한다. 해제한 기기 수를 돌려준다 */
+export async function revokePhones(employeeId: string, actorId: string, opts: { keepInvites?: boolean } = {}): Promise<number> {
   const db = createAdminClient();
   const now = new Date().toISOString();
   const { data, error } = await db.from('user_passkeys').update({ revoked_at: now, revoked_by: actorId }).eq('employee_id', employeeId).is('revoked_at', null).select('id');
   if (error) throw new Error(`revokePhones: ${error.code}`);
+  if (opts.keepInvites) return data?.length ?? 0; // 기기만 해제 — 비밀번호 만들기 초대는 그대로 둔다
   const { error: e2 } = await db.from('invites').update({ revoked_at: now }).eq('employee_id', employeeId).is('used_at', null).is('revoked_at', null);
   if (e2) throw new Error(`revokePhones.invites: ${e2.code}`);
   return data?.length ?? 0;

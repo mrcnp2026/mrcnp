@@ -1,10 +1,16 @@
-// 폰 등록(패스키) — 7-12, 4-11.
+// 출퇴근 기기 등록(패스키) — 7-12, 4-11.
+//
+// ★ 2026-10-05 의뢰인 결정: 로그인은 아이디 + 비밀번호(어느 기기에서나), **출퇴근 찍기만** 등록한 기기 1대 + 지문·얼굴 확인.
+//   - 등록: 로그인한 직원이 자기 폰에서 직접 한다 (beginDeviceRegistration). 초대 코드가 필요 없다.
+//   - 바꾸기: 관리자가 기존 기기를 해제해야 새 기기를 등록할 수 있다 (직원당 활성 1개 — one_active_passkey).
+//   - 초대 토큰으로 등록하는 예전 길(beginRegistration)은 비상 초대·옛 검사 스크립트용으로만 남아 있다.
 //
 // 저장소(PasskeyStore)를 주입받는다. 운영은 passkey-store.ts(Supabase), 검사는 메모리 저장소를 쓴다.
 // 그래야 실제 DB에 지울 수 없는 시험 기록을 남기지 않고 1회용 챌린지·해제·sign_count 규칙을 검사할 수 있다.
 //
 // ★ 서버는 생체정보를 받지 않는다. 지문·얼굴 확인은 폰 안에서 끝나고, 서버는 공개키와 서명만 본다.
-// ★ 출퇴근 API는 verifyAssertion을 통과한 요청만 받는다. 로그인 세션만으로 찍히게 하지 마라 (요점 4, B-14).
+// ★ 출퇴근 API는 verifyAssertion을 통과한 요청만 받는다. 로그인 세션만으로 찍히게 하지 마라 (요점 4, B-14) —
+//   비밀번호를 동료에게 알려 줘도 그 동료의 폰으로는 찍히지 않게 하는 것이 이 확인이다.
 
 import {
   generateAuthenticationOptions,
@@ -63,6 +69,19 @@ export interface PasskeyStore {
     deviceLabel: string | null;
   }): Promise<{ passkeyId: string; employeeId: string }>;
   findPasskey(credentialId: string): Promise<StoredPasskey | null>;
+  /** 그 직원의 지금 출퇴근 기기 (활성 패스키). 없으면 null */
+  activePasskeyOf(employeeId: string): Promise<StoredPasskey | null>;
+  /** 로그인한 직원이 직접 등록 — 활성 기기가 이미 있으면 already_registered (DB 유일 인덱스가 최종 방어) */
+  addPasskey(p: {
+    employeeId: string;
+    credentialId: string;
+    publicKey: Uint8Array;
+    signCount: number;
+    transports: string[] | null;
+    deviceType: string;
+    backedUp: boolean;
+    deviceLabel: string | null;
+  }): Promise<{ passkeyId: string }>;
   touchPasskey(id: string, signCount: number, now: Date): Promise<void>;
 }
 
@@ -73,6 +92,8 @@ export type PasskeyErrorCode =
   | 'invite_invalid' // 없음·만료·사용됨·취소됨
   | 'employee_inactive'
   | 'already_registered' // 활성 폰이 이미 있음 → 관리자가 해제해야 함 (4-11)
+  | 'device_required' // 출퇴근 기기를 아직 등록하지 않음
+  | 'wrong_person' // 다른 사람 계정에 등록된 기기
   | 'challenge_invalid' // 1회용·5분 (요점 2)
   | 'verification_failed'
   | 'user_verification_missing' // 화면 잠금 없음 (요점 1)
@@ -194,6 +215,84 @@ export function createPasskeyService(store: PasskeyStore, rp: RpConfig, clock: (
     });
   }
 
+  const registrationOptions = (who: { employeeId: string; employeeNo: string; name: string }) =>
+    generateRegistrationOptions({
+      rpName: rp.rpName,
+      rpID: rp.rpID,
+      userName: who.employeeNo, // 요점 5: 계정 식별자는 사번
+      userDisplayName: who.name,
+      userID: new TextEncoder().encode(who.employeeId),
+      attestationType: 'none',
+      authenticatorSelection: {
+        // 그 기기에 내장된 잠금(폰의 지문·얼굴·PIN)으로만. USB 보안키는 빌려줄 수 있어 "기기 1대"를 무너뜨린다
+        authenticatorAttachment: 'platform',
+        residentKey: 'required',
+        userVerification: 'required',
+      },
+      timeout: rp.challengeTtlMin * 60_000,
+    });
+
+  /** 로그인한 직원이 지금 쓰는 기기를 출퇴근 기기로 등록 — 1단계 */
+  async function beginDeviceRegistration(who: { employeeId: string; employeeNo: string; name: string }): Promise<PublicKeyCredentialCreationOptionsJSON> {
+    if (await store.hasActivePasskey(who.employeeId)) throw new PasskeyError('already_registered');
+    const options = await registrationOptions(who);
+    await store.saveChallenge({ challenge: options.challenge, purpose: 'register', inviteId: null, expiresAt: expiry() });
+    return options;
+  }
+
+  /** 2단계: 기기의 응답 검증 → 공개키 저장 */
+  async function finishDeviceRegistration(employeeId: string, response: unknown, deviceLabel: string | null = null): Promise<{ passkeyId: string; credentialId: string }> {
+    const res = response as RegistrationResponseJSON;
+    const challenge = challengeOf(res);
+    if (!(await store.consumeChallenge({ challenge, purpose: 'register', inviteId: null, now: clock() }))) {
+      throw new PasskeyError('challenge_invalid');
+    }
+    if (await store.hasActivePasskey(employeeId)) throw new PasskeyError('already_registered');
+    let v;
+    try {
+      v = await verifyRegistrationResponse({ response: res, expectedChallenge: challenge, expectedOrigin: rp.origin, expectedRPID: rp.rpID, requireUserVerification: true });
+    } catch (e) {
+      throw new PasskeyError(/user verification/i.test(String(e)) ? 'user_verification_missing' : 'verification_failed');
+    }
+    if (!v.verified) throw new PasskeyError('verification_failed');
+    const info = v.registrationInfo;
+    const { passkeyId } = await store.addPasskey({
+      employeeId,
+      credentialId: info.credential.id,
+      publicKey: info.credential.publicKey,
+      signCount: info.credential.counter,
+      transports: info.credential.transports ?? null,
+      deviceType: info.credentialDeviceType,
+      backedUp: info.credentialBackedUp,
+      deviceLabel,
+    });
+    return { passkeyId, credentialId: info.credential.id };
+  }
+
+  /**
+   * 출퇴근 확인 1단계 — 그 직원이 등록한 기기만 답할 수 있게 지정한다 (allowCredentials).
+   * 등록하지 않은 기기에서 브라우저가 "보안 키(USB)"를 찾으라고 하는 혼란을 줄인다.
+   */
+  async function beginPunchAssertion(employeeId: string): Promise<PublicKeyCredentialRequestOptionsJSON> {
+    const pk = await store.activePasskeyOf(employeeId);
+    if (!pk) throw new PasskeyError('device_required');
+    const options = await generateAuthenticationOptions({
+      rpID: rp.rpID,
+      userVerification: 'required', // 출퇴근마다 지문·얼굴·PIN을 다시 묻는다 (4-11)
+      allowCredentials: [{ id: pk.credentialId, transports: ['internal'] }],
+      timeout: rp.challengeTtlMin * 60_000,
+    });
+    await store.saveChallenge({ challenge: options.challenge, purpose: 'punch', inviteId: null, expiresAt: expiry() });
+    return options;
+  }
+
+  /** 출퇴근 확인 2단계 — 서명이 맞고, 그 기기가 **로그인한 본인**의 것이어야 한다 */
+  async function verifyPunch(employeeId: string, response: unknown): Promise<{ passkeyId: string }> {
+    const who = await verifyAssertion(response, 'punch');
+    if (who.employeeId !== employeeId) throw new PasskeyError('wrong_person');
+    return { passkeyId: who.passkeyId };
+  }
+
   async function beginAssertion(purpose: 'login' | 'punch' = 'login'): Promise<PublicKeyCredentialRequestOptionsJSON> {
     const options = await generateAuthenticationOptions({
       rpID: rp.rpID,
@@ -243,7 +342,7 @@ export function createPasskeyService(store: PasskeyStore, rp: RpConfig, clock: (
     return { employeeId: pk.employeeId, passkeyId: pk.id };
   }
 
-  return { describeInvite, beginRegistration, finishRegistration, beginAssertion, verifyAssertion };
+  return { describeInvite, beginRegistration, finishRegistration, beginDeviceRegistration, finishDeviceRegistration, beginPunchAssertion, verifyPunch, beginAssertion, verifyAssertion };
 }
 
 export type PasskeyService = ReturnType<typeof createPasskeyService>;

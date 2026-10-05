@@ -1,4 +1,4 @@
-// 아이디 + 비밀번호 로그인 실제 서버 확인 (2026-10-05 의뢰인: 폰 1대 고정 대신 PC·폰 어디서나) — 켜진 앱(http://localhost:4123)에 진짜 요청을 보낸다.
+// 아이디 + 비밀번호 로그인 · 출퇴근 기기 1대 실제 서버 확인 (2026-10-05 의뢰인: 로그인은 PC·폰 어디서나, 출퇴근 찍기는 등록한 기기 + 지문) — 켜진 앱(http://localhost:4123)에 진짜 요청을 보낸다.
 //   npm run e2e:login
 // 검사 전용 계정 e2e-audit(직원)·e2e-audit2(잠깐 관리자)를 검사 동안만 켰다가 끈다. 비밀번호는 실행할 때마다 새로 만든 무작위 값이고,
 // 끝나면 아무도 모르는 값으로 다시 덮는다. 출퇴근은 연습 기록(is_test)으로 한 번 남는다 (지울 수 없다, 4-1).
@@ -7,9 +7,11 @@ import { config } from 'dotenv';
 import { createHash, randomBytes, randomInt } from 'node:crypto';
 import path from 'node:path';
 import { chromium, type BrowserContext } from 'playwright-core';
+import { registerDevice } from './lib/e2e-password.ts';
 
 config({ path: path.join(import.meta.dirname, '..', '.env.local'), quiet: true });
 const BASE = 'http://localhost:4123';
+const STARTED_AT = new Date().toISOString();
 const SHOTS = path.join(import.meta.dirname, '..', '..', 'checks', '화면-캡처');
 const db = createClient(process.env.NEXT_PUBLIC_SUPABASE_URL!, process.env.SUPABASE_SERVICE_ROLE_KEY!, { auth: { persistSession: false } });
 
@@ -82,14 +84,23 @@ try {
   const reuse = await post('/api/auth/password/setup', { token: code, password: newPassword() });
   check(reuse.status === 400 && reuse.json.error === 'invite_invalid', `쓴 초대 코드를 다시 쓰면 거부 (${reuse.json.error})`);
 
-  // ── ② 출퇴근: 지문 확인 없이 로그인 세션으로 ──
+  // ── ② 출퇴근: 등록한 기기 1대 + 지문·얼굴 확인 ──
   const noSession = await post('/api/punch', { kind: 'in' });
   check(noSession.status === 401, `로그인 없이 출퇴근 API → 거부 (${noSession.status})`);
+  check((await p.getByRole('button', { name: /Clock (in|out)/ }).count()) === 0 && (await p.getByRole('button', { name: 'Register this device for punching' }).count()) === 1, '기기를 등록하기 전에는 출근 버튼 대신 등록 안내가 보임');
+  await p.screenshot({ path: path.join(SHOTS, '로그인_03a_기기등록-안내_360.png'), fullPage: true });
+  const noDevice = await postAs(phone, '/api/punch/options');
+  check(noDevice.status === 400 && noDevice.json.error === 'device_required', `등록한 기기 없이 출퇴근 시작 → 거부 (${noDevice.json.error})`);
+  const sessionOnly = await postAs(phone, '/api/punch', { kind: 'in' });
+  check(sessionOnly.status === 401, `로그인만으로(기기 확인 없이) 출퇴근 API → 거부 (${sessionOnly.status})`);
+  await registerDevice(p); // 가상 지문 인식기를 단 이 브라우저를 출퇴근 기기로
+  const { data: reg } = await db.from('user_passkeys').select('id, device_label').eq('employee_id', empId).is('revoked_at', null);
+  check(reg?.length === 1, '초대 코드 없이 본인이 직접 출퇴근 기기를 등록함 (1대)');
   const before = new Date().toISOString();
   await p.getByRole('button', { name: /Clock (in|out)/ }).click();
   await p.getByText(/Clock-(in|out) \d{2}:\d{2} recorded/).waitFor();
   const { data: last } = await db.from('punch_events').select('employee_id, is_test, passkey_id, source').eq('employee_id', empId).gte('created_at', before).order('created_at', { ascending: false }).limit(1);
-  check(last?.length === 1 && last[0].is_test === true && last[0].passkey_id === null && last[0].source === 'web', '버튼 한 번으로 본인의 연습 기록이 남음 (폰 확인 없음)');
+  check(last?.length === 1 && last[0].is_test === true && last[0].passkey_id === reg?.[0]?.id && last[0].source === 'web', '등록한 기기에서 지문 확인 뒤 본인의 연습 기록이 남음 (어느 기기인지 기록)');
   await p.screenshot({ path: path.join(SHOTS, '로그인_03_출퇴근_360.png'), fullPage: true });
 
   // ── ③ PC에서도 같은 계정으로 (동시에 두 기기) ──
@@ -108,6 +119,15 @@ try {
   check(true, 'PC에서도 같은 사번·비밀번호로 로그인됨');
   await p.reload();
   check(new URL(p.url()).pathname === '/punch', '폰 쪽 로그인도 그대로 유지됨 (두 기기 동시 사용)');
+
+  // ── ③-2 같은 아이디·비밀번호로 로그인한 다른 기기에서는 출퇴근을 못 찍는다 (대리 출근 차단) ──
+  await q.getByText('You cannot punch from this device').waitFor();
+  check((await q.getByRole('button', { name: /Clock (in|out)/ }).count()) === 0, '다른 기기(PC)에는 출근 버튼 대신 "등록한 기기에서만" 안내가 보임');
+  await q.screenshot({ path: path.join(SHOTS, '로그인_04b_다른기기-출퇴근불가_1280.png'), fullPage: true });
+  const otherPunch = await postAs(pc, '/api/punch', { kind: 'in' });
+  check(otherPunch.status === 401, `다른 기기에서 기기 확인 없이 출퇴근 API → 거부 (${otherPunch.status})`);
+  const second = await postAs(pc, '/api/device/register/options');
+  check(second.status === 400 && second.json.error === 'already_registered', `다른 기기를 두 번째 출퇴근 기기로 등록 → 거부 (${second.json.error})`);
 
   // ── ④ 비밀번호 바꾸기 → 다른 기기는 로그아웃 ──
   const pw2 = newPassword();
@@ -140,6 +160,18 @@ try {
   check(self.status === 403 && self.json.error === 'self_change', `본인 로그인은 스스로 초기화 못 함 (${self.json.error})`);
   const asEmployee = await postAs(pc, `/api/admin/employees/${admId}/phone`, { reason: 'e2e not admin' });
   check(asEmployee.status === 403, `일반 직원은 초기화 못 함 (${asEmployee.status})`);
+  // 출퇴근 기기 해제 (폰 교체 승인): 비밀번호는 그대로, 기기 등록만 풀린다
+  const selfDevice = await postAs(admCtx, `/api/admin/employees/${admId}/device`, { reason: 'e2e self device' });
+  check(selfDevice.status === 403 || selfDevice.status === 409, `다른 관리자가 있으면 본인 기기는 스스로 해제 못 함 (${selfDevice.status} ${selfDevice.json.error})`);
+  const release = await postAs(admCtx, `/api/admin/employees/${empId}/device`, { reason: 'e2e phone replaced' });
+  const { count: left } = await db.from('user_passkeys').select('id', { count: 'exact', head: true }).eq('employee_id', empId).is('revoked_at', null);
+  check(release.status === 200 && left === 0, `관리자가 출퇴근 기기 해제 (${release.status})`);
+  const again = await postAs(admCtx, `/api/admin/employees/${empId}/device`, { reason: 'e2e phone replaced' });
+  check(again.status === 409 && again.json.error === 'no_device', `등록된 기기가 없으면 해제할 것이 없음 (${again.json.error})`);
+  const stillIn = await post('/api/auth/login', { id: 'e2e-audit', password: pw2 });
+  check(stillIn.status === 200, `기기를 해제해도 비밀번호 로그인은 그대로 됨 (${stillIn.status})`);
+  await q.goto(`${BASE}/punch`);
+  check((await q.getByRole('button', { name: 'Register this device for punching' }).count()) === 1, '해제 뒤에는 직원이 새 기기를 직접 등록할 수 있음');
   const reset = await postAs(admCtx, `/api/admin/employees/${empId}/phone`, { reason: 'e2e login reset' });
   check(reset.status === 200, `관리자가 직원 로그인 초기화 (${reset.status})`);
   await q.goto(`${BASE}/punch`);
@@ -169,6 +201,7 @@ try {
     await db.auth.admin.updateUserById(id, { password: randomBytes(32).toString('base64url') });
     await db.from('profiles').update({ active: false, role: 'employee', password_set_at: null, sessions_revoked_at: new Date().toISOString() }).eq('id', id);
     await db.from('invites').update({ revoked_at: new Date().toISOString() }).eq('employee_id', id).is('used_at', null).is('revoked_at', null);
+    await db.from('user_passkeys').update({ revoked_at: new Date().toISOString(), device_label: 'E2E 가상 인증기 (자동 확인용)' }).eq('employee_id', id).is('revoked_at', null).gte('created_at', STARTED_AT);
   }
   await db.from('login_attempts').delete().eq('login_key', sha(fakeId));
   console.log(results.join('\n'));

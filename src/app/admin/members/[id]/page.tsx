@@ -1,6 +1,6 @@
 // 직원 상세 (2026-10-05 의뢰인: 샤플 대조) — 한 사람에 관한 일을 한 화면에서: 소속·연락처, 로그인(가입 여부), 기록 바로가기, 정보 수정.
 // 지우는 버튼은 없다 (4-6). 퇴사·권한·로그인 초기화는 아래 「관리」 묶음에서 사유와 함께 한다.
-import { CalendarDays, ChevronRight, KeyRound } from 'lucide-react';
+import { CalendarDays, ChevronRight, KeyRound, Smartphone } from 'lucide-react';
 import { getFormatter, getTranslations } from 'next-intl/server';
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
@@ -28,12 +28,13 @@ export default async function MemberDetailPage({ params }: { params: Promise<{ i
   const db = createAdminClient();
   const [{ data: p }, { data: keys }, groups] = await Promise.all([
     db.from('profiles').select('id, name, employee_no, role, active, joined_on, locale, can_view_payroll, group_id, phone, job_title, password_set_at').eq('id', id).maybeSingle(),
-    db.from('user_passkeys').select('id').eq('employee_id', id).is('revoked_at', null),
+    db.from('user_passkeys').select('id, device_label, created_at, last_used_at').eq('employee_id', id).is('revoked_at', null),
     loadOrgGroups(),
   ]);
   if (!p) notFound();
-  // 가입 = 비밀번호를 만들었거나, 예전 방식으로 폰(지문 로그인)을 등록해 둔 사람
-  const hasPasskey = (keys?.length ?? 0) > 0;
+  // 가입 = 비밀번호를 만들었거나, 출퇴근 기기를 등록해 둔 사람. 출퇴근 기기(key)는 직원당 1대
+  const key = keys?.[0] ?? null;
+  const hasPasskey = !!key;
   const joined = !!p.password_set_at || hasPasskey;
   const tree = buildOrgTree(groups);
   const options = tree.flatMap((d) => [{ id: d.id, label: d.name }, ...d.teams.map((x) => ({ id: x.id, label: `${d.name} › ${x.name}` }))]);
@@ -47,6 +48,7 @@ export default async function MemberDetailPage({ params }: { params: Promise<{ i
     ? ([['overtime', todo.overtime], ['corrections', todo.corrections], ['leave', todo.leave], ['work', todo.work]] as const).filter(([, n]) => n > 0).map(([k, n]) => tm(`todo.${k}`, { n }))
     : [];
   const api = `/api/admin/employees/${p.id}`;
+  const soleAdmin = self && ((await db.from('profiles').select('id', { count: 'exact', head: true }).eq('role', 'admin').eq('active', true).neq('id', me.id)).count ?? 0) === 0;
   // 대기 중인 권한 변경 (두 번째 관리자 확인, R-2의 8)
   const { data: pendingRole } = await db.from('role_change_requests').select('id, new_role, new_can_view_payroll, reason, requested_by').eq('target_id', p.id).eq('status', 'pending').maybeSingle();
   const requesterName = pendingRole ? ((await db.from('profiles').select('name').eq('id', pendingRole.requested_by).maybeSingle()).data?.name ?? '') : '';
@@ -95,6 +97,16 @@ export default async function MemberDetailPage({ params }: { params: Promise<{ i
           {p.active && <NewInviteButton employeeId={p.id} name={p.name} compact again={joined} />}
         </div>
         {p.active && <p className="text-xs text-faint">{t(joined ? 'loginResetHint' : 'loginInviteHint')}</p>}
+        {/* 출퇴근 기기: 직원이 자기 폰에서 직접 등록한다. 바꾸려면 아래 「관리 › 출퇴근 기기 해제」 */}
+        <div className="flex items-center gap-3 border-t border-border pt-3">
+          <Smartphone aria-hidden size={22} strokeWidth={1.75} className={`shrink-0 ${key ? 'text-ok' : 'text-warn'}`} />
+          <div className="min-w-0 flex-1">
+            <p className={`font-bold ${key ? '' : 'text-warn'}`}>{key ? t('deviceOk', { label: key.device_label || t('deviceUnknown') }) : t('deviceNone')}</p>
+            <p className="num text-xs text-muted">
+              {key ? `${t('deviceSince', { date: day(key.created_at) })}${key.last_used_at ? ` · ${t('deviceLast', { date: day(key.last_used_at) })}` : ''}` : t('deviceNoneHint')}
+            </p>
+          </div>
+        </div>
       </Card>
 
       <Card className="p-0 py-1">
@@ -121,7 +133,13 @@ export default async function MemberDetailPage({ params }: { params: Promise<{ i
           <CardTitle>{tm('title')}</CardTitle>
         </div>
         {self ? (
-          <p className="px-5 py-3 text-sm text-muted">{tm('selfNote')}</p>
+          <>
+            <p className="px-5 py-3 text-sm text-muted">{tm('selfNote')}</p>
+            {/* 관리자가 혼자면 자기 출퇴근 기기는 스스로 해제할 수 있다 — 아니면 폰을 바꿀 길이 없다 */}
+            {key && soleAdmin && (
+              <ManageAction title={tm('revokeDevice')} hint={tm('revokeDeviceHint')} confirmLabel={tm('revokeDevice')} endpoint={`${api}/device`} body={{}} presets={[tm('preset.lost'), tm('preset.newPhone')]} notes={[tm('revokeDeviceNote')]} danger />
+            )}
+          </>
         ) : (
           <>
             {pendingRole && <p className="px-5 py-3 text-sm text-muted">{tm('pendingHide')}</p>}
@@ -136,6 +154,9 @@ export default async function MemberDetailPage({ params }: { params: Promise<{ i
             )}
             {!pendingRole && p.active && p.role === 'admin' && me.canViewPayroll && p.can_view_payroll && (
               <ManageAction title={tm('revokePayroll')} hint={tm('revokePayrollHint')} confirmLabel={tm('revokePayroll')} endpoint={`${api}/role`} body={{ canViewPayroll: false }} presets={[tm('preset.handover'), tm('preset.mistake')]} />
+            )}
+            {key && (
+              <ManageAction title={tm('revokeDevice')} hint={tm('revokeDeviceHint')} confirmLabel={tm('revokeDevice')} endpoint={`${api}/device`} body={{}} presets={[tm('preset.lost'), tm('preset.newPhone')]} notes={[tm('revokeDeviceNote')]} danger />
             )}
             {joined && (
               <ManageAction title={tm('revokePhone')} hint={tm('revokePhoneHint')} confirmLabel={tm('revokePhone')} endpoint={`${api}/phone`} body={{}} presets={[tm('preset.lost'), tm('preset.changed')]} notes={[tm('revokePhoneNote')]} danger />
