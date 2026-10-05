@@ -5,12 +5,15 @@
 import { ChevronDown, ChevronLeft, ChevronRight, Download, ShieldAlert } from 'lucide-react';
 import { getTranslations } from 'next-intl/server';
 import Link from 'next/link';
+import { GroupFilter } from '@/components/GroupFilter';
 import { Pager, pageOf } from '@/components/Pager';
 import { Card, Chip, PageShell } from '@/components/ui';
 import { OFFICE } from '@/config/office';
 import { getMe } from '@/lib/auth';
 import { FLAG } from '@/lib/flags';
 import { buildMonth, isYearMonth } from '@/lib/month-data';
+import { buildOrgTree, groupScope } from '@/lib/org';
+import { loadOrgGroups } from '@/lib/org-data';
 import { toKstDate } from '@/lib/time';
 
 function shift(ym: string, n: number) {
@@ -19,15 +22,22 @@ function shift(ym: string, n: number) {
   return d.toISOString().slice(0, 7);
 }
 
-export default async function RecordsPage({ searchParams }: { searchParams: Promise<{ m?: string; live?: string; p?: string; f?: string }> }) {
+export default async function RecordsPage({ searchParams }: { searchParams: Promise<{ m?: string; live?: string; p?: string; f?: string; g?: string }> }) {
   const t = await getTranslations('admin.records');
   const me = (await getMe())!;
   const sp = await searchParams;
   const ym = isYearMonth(sp.m) ? sp.m : toKstDate(new Date()).slice(0, 7);
 // ★ 연습 모드에서는 모든 기록이 연습 기록이다 — 관리자 화면도 기본으로 연습 기록을 본다 (2026-10-02: 시험직원 정정 요청이 관리자에게 0건으로 보이던 문제). ?live=1이면 실제 기록
   const practice = OFFICE.practiceMode && sp.live !== '1';
-  const q = (m: string) => `?m=${m}${OFFICE.practiceMode && !practice ? '&live=1' : ''}`;
-  const { data, rows } = await buildMonth(ym, practice);
+  // 부서·팀으로 걸러 보기 (조직도, 2026-10-05). 부서를 고르면 그 밑의 팀 직원도 함께 나온다. 엑셀 내려받기는 걸러지지 않는다(전체)
+  const groups = await loadOrgGroups();
+  const groupOptions = buildOrgTree(groups).flatMap((d) => [{ id: d.id, label: d.name }, ...d.teams.map((x) => ({ id: x.id, label: `${d.name} › ${x.name}` }))]);
+  const g = groupOptions.some((o) => o.id === sp.g) ? sp.g! : '';
+  const q = (m: string) => `?m=${m}${OFFICE.practiceMode && !practice ? '&live=1' : ''}${g ? `&g=${g}` : ''}`;
+  const month = await buildMonth(ym, practice);
+  const data = month.data;
+  const scope = g ? groupScope(groups, g) : null;
+  const rows = scope ? month.rows.filter((x) => x.person.groupId && scope.has(x.person.groupId)) : month.rows;
   // 확인이 필요한 사람: 지각·결근·미승인 연장·막힘 표시 중 하나라도 있으면
   const hasIssue = (r: (typeof rows)[number]['summary']['row']) =>
     Number(r.late_count) > 0 || Number(r.absent_days) > 0 || Number(r.pending_overtime_minutes) > 0 || String(r.flags).split(';').some((f) => f.startsWith('block:') && f !== FLAG.LEAVE_MODULE_MISSING);
@@ -60,6 +70,7 @@ export default async function RecordsPage({ searchParams }: { searchParams: Prom
           {practice ? t('showLive') : t('showPractice')}
         </Link>
       )}
+      <GroupFilter value={g} options={groupOptions} allLabel={t('groupAll')} label={t('groupFilter')} params={{ m: ym, live: OFFICE.practiceMode && !practice ? '1' : undefined }} />
       {practice && <p className="rounded-card bg-primary-tint p-3 text-sm text-primary">{t('practiceBanner')}</p>}
       {!data.rule && <p className="rounded-card bg-warn-tint p-3 text-sm text-warn">{t('noRule')}</p>}
       {data.rule && rows.length === 0 && <p className="text-muted">{t('empty')}</p>}
@@ -148,7 +159,7 @@ export default async function RecordsPage({ searchParams }: { searchParams: Prom
                 );
               })}
             </ul>
-            <Pager page={pageRows.page} pages={pageRows.pages} param="p" params={{ m: ym, live: OFFICE.practiceMode && !practice ? '1' : undefined, f: onlyIssues ? 'issues' : undefined }} label={t('pages')} />
+            <Pager page={pageRows.page} pages={pageRows.pages} param="p" params={{ m: ym, live: OFFICE.practiceMode && !practice ? '1' : undefined, f: onlyIssues ? 'issues' : undefined, g: g || undefined }} label={t('pages')} />
           </Card>
         </div>
       )}

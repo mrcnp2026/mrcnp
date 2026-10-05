@@ -4,6 +4,8 @@ import { api, ApiError, readJson } from '@/lib/api';
 import { requireAdmin } from '@/lib/auth';
 import { createEmployee, DuplicateEmployeeNo, EMPLOYEE_NO_RE, issueInvite } from '@/lib/invite';
 import { isLocale } from '@/i18n/locales';
+import { cleanJobTitle, cleanPhone } from '@/lib/org';
+import { assignableGroup } from '@/lib/org-data';
 
 export const POST = api('admin.employees.create', async (req) => {
   const me = await requireAdmin();
@@ -15,10 +17,16 @@ export const POST = api('admin.employees.create', async (req) => {
   if (!name || name.length > 50) throw new ApiError(400, 'invalid_name');
   if (!EMPLOYEE_NO_RE.test(employeeNo)) throw new ApiError(400, 'invalid_no');
   if (!isLocale(b.locale)) throw new ApiError(400, 'invalid_input');
+  const phone = cleanPhone(b.phone);
+  if (phone === undefined) throw new ApiError(400, 'invalid_phone');
+  const jobTitle = cleanJobTitle(b.jobTitle);
+  if (jobTitle === undefined) throw new ApiError(400, 'invalid_input');
+  const groupId = await assignableGroup(b.groupId);
+  if (groupId === undefined) throw new ApiError(400, 'invalid_group');
 
   let employeeId: string;
   try {
-    employeeId = await createEmployee({ name, employeeNo, locale: b.locale, role: 'employee', joinedOn });
+    employeeId = await createEmployee({ name, employeeNo, locale: b.locale, role: 'employee', joinedOn, phone, jobTitle, groupId, createdBy: me.id });
   } catch (e) {
     if (e instanceof DuplicateEmployeeNo) throw new ApiError(409, 'duplicate_no');
     throw e;

@@ -61,6 +61,10 @@ export async function createEmployee(args: {
   locale: Locale;
   role: 'admin' | 'employee';
   joinedOn: string | null;
+  phone?: string | null;
+  jobTitle?: string | null;
+  groupId?: string | null;
+  createdBy?: string | null;
 }): Promise<string> {
   const db = createAdminClient();
   const { data: dup } = await db.from('profiles').select('id').eq('employee_no', args.employeeNo).maybeSingle();
@@ -78,6 +82,10 @@ export async function createEmployee(args: {
     role: args.role,
     locale: args.locale,
     joined_on: args.joinedOn,
+    phone: args.phone ?? null,
+    job_title: args.jobTitle ?? null,
+    group_id: args.groupId ?? null,
+    updated_by: args.createdBy ?? null,
   });
   if (e2) {
     // 직원 정보가 아직 없으므로 계정은 지워도 기록이 고아가 되지 않는다 (profiles가 생긴 뒤에는 지우지 않는다, 4-1)

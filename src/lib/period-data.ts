@@ -17,7 +17,7 @@ import { toKstDate } from '@/lib/time';
 import type { HolidayRow, PunchCorrection, PunchEvent, WorkRule } from '@/lib/types';
 
 // startsOn: 입사일(joined_on), 비어 있으면 계정을 만든 날 — 그 전 날짜는 미기록·결근으로 세지 않는다 (7-8 요점 3)
-export type Person = { id: string; name: string; employeeNo: string | null; role: 'admin' | 'employee'; active: boolean; joinedOn: string | null; startsOn: string };
+export type Person = { id: string; name: string; employeeNo: string | null; role: 'admin' | 'employee'; active: boolean; joinedOn: string | null; startsOn: string; groupId: string | null };
 
 export type EventRow = PunchEvent & { ipVerified: boolean; source: 'web' | 'qr' | 'admin'; note: string | null; clientIp: string | null };
 
@@ -91,7 +91,7 @@ export async function loadPeriod(from: string, to: string, practice = OFFICE.pra
   const [versions, holidays, { data: ppl }, { data: ev }, { data: co }, { data: ot }, leaveRequests, leaveTypes, workRequests] = await Promise.all([
     loadRuleVersions(),
     loadHolidays(readFrom, to),
-    db.from('profiles').select('id, name, employee_no, role, active, joined_on, created_at').order('name'),
+    db.from('profiles').select('id, name, employee_no, role, active, joined_on, created_at, group_id').order('name'),
     db.from('punch_events')
       .select('id, employee_id, kind, punched_at, work_date, ip_verified, source, note, client_ip')
       .eq('is_test', practice).gte('work_date', readFrom).lte('work_date', to).order('punched_at'),
@@ -113,6 +113,7 @@ export async function loadPeriod(from: string, to: string, practice = OFFICE.pra
     people: (ppl ?? []).map((p) => ({
       id: p.id, name: p.name, employeeNo: p.employee_no, role: p.role, active: p.active, joinedOn: p.joined_on,
       startsOn: p.joined_on ?? toKstDate(new Date(p.created_at)),
+      groupId: p.group_id,
     })),
     events: (ev ?? []).map((e) => ({
       id: e.id, employeeId: e.employee_id, kind: e.kind, punchedAt: new Date(e.punched_at), workDate: e.work_date,
