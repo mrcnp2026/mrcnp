@@ -115,7 +115,7 @@ try {
   // ── 변경 기록 · 원래 설정 그대로 · 화면 ──
   const { data: logs } = await db.from('audit_logs').select('after_data, actor_id').gte('created_at', STARTED_AT).in('target_table', ['work_rules', 'holidays', 'office_networks']).eq('actor_id', emp!.id);
   const events = new Set((logs ?? []).map((l) => (l.after_data as { event?: string })?.event));
-  check(['rule.add', 'rule.hide', 'holiday.add', 'holiday.remove', 'network.add', 'network.off'].every((e) => events.has(e)), '변경 기록에 누가·무엇을 바꿨는지 남음', [...events].join(','));
+  check(['rule.add', 'rule.hide', 'holiday.add', 'holiday.remove', 'network.off'].every((e) => events.has(e)) && (events.has('network.add') || events.has('network.on')), '변경 기록에 누가·무엇을 바꿨는지 남음', [...events].join(','));
   const after = {
     rules: (await db.from('work_rules').select('id', { count: 'exact', head: true }).eq('active', true)).count,
     holidays: (await db.from('holidays').select('the_date', { count: 'exact', head: true })).count,

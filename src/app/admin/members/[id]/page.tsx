@@ -15,6 +15,7 @@ import { createAdminClient } from '@/lib/supabase/admin';
 import { toKstDate } from '@/lib/time';
 import { NewInviteButton } from '../NewInviteButton';
 import { ManageAction } from './ManageAction';
+import { RoleRequestCard } from './RoleRequestCard';
 import { ProfileForm } from './ProfileForm';
 
 export default async function MemberDetailPage({ params }: { params: Promise<{ id: string }> }) {
@@ -44,6 +45,15 @@ export default async function MemberDetailPage({ params }: { params: Promise<{ i
     ? ([['overtime', todo.overtime], ['corrections', todo.corrections], ['leave', todo.leave], ['work', todo.work]] as const).filter(([, n]) => n > 0).map(([k, n]) => tm(`todo.${k}`, { n }))
     : [];
   const api = `/api/admin/employees/${p.id}`;
+  // 대기 중인 권한 변경 (두 번째 관리자 확인, R-2의 8)
+  const { data: pendingRole } = await db.from('role_change_requests').select('id, new_role, new_can_view_payroll, reason, requested_by').eq('target_id', p.id).eq('status', 'pending').maybeSingle();
+  const requesterName = pendingRole ? ((await db.from('profiles').select('name').eq('id', pendingRole.requested_by).maybeSingle()).data?.name ?? '') : '';
+  const changeLabel = pendingRole
+    ? [
+        pendingRole.new_role !== p.role ? tm(pendingRole.new_role === 'admin' ? 'makeAdmin' : 'removeAdmin') : null,
+        pendingRole.new_role === 'admin' && pendingRole.new_can_view_payroll !== p.can_view_payroll ? tm(pendingRole.new_can_view_payroll ? 'grantPayroll' : 'revokePayroll') : null,
+      ].filter(Boolean).join(' · ')
+    : '';
 
   return (
     <PageShell>
@@ -66,6 +76,8 @@ export default async function MemberDetailPage({ params }: { params: Promise<{ i
           </p>
         </div>
       </header>
+
+      {pendingRole && <RoleRequestCard id={pendingRole.id} change={changeLabel} requester={requesterName} reason={pendingRole.reason} mine={pendingRole.requested_by === me.id} />}
 
       <Card className="flex flex-col gap-3">
         <CardTitle>{t('phoneCard')}</CardTitle>
@@ -112,16 +124,17 @@ export default async function MemberDetailPage({ params }: { params: Promise<{ i
           <p className="px-5 py-3 text-sm text-muted">{tm('selfNote')}</p>
         ) : (
           <>
-            {p.active && p.role !== 'admin' && (
+            {pendingRole && <p className="px-5 py-3 text-sm text-muted">{tm('pendingHide')}</p>}
+            {!pendingRole && p.active && p.role !== 'admin' && (
               <ManageAction title={tm('makeAdmin')} hint={tm('makeAdminHint')} confirmLabel={tm('makeAdmin')} endpoint={`${api}/role`} body={{ role: 'admin' }} presets={[tm('preset.newAdmin'), tm('preset.handover')]} />
             )}
-            {p.active && p.role === 'admin' && (
+            {!pendingRole && p.active && p.role === 'admin' && (
               <ManageAction title={tm('removeAdmin')} hint={tm('removeAdminHint')} confirmLabel={tm('removeAdmin')} endpoint={`${api}/role`} body={{ role: 'employee' }} presets={[tm('preset.handover'), tm('preset.mistake')]} />
             )}
-            {p.active && p.role === 'admin' && me.canViewPayroll && !p.can_view_payroll && (
+            {!pendingRole && p.active && p.role === 'admin' && me.canViewPayroll && !p.can_view_payroll && (
               <ManageAction title={tm('grantPayroll')} hint={tm('grantPayrollHint')} confirmLabel={tm('grantPayroll')} endpoint={`${api}/role`} body={{ canViewPayroll: true }} presets={[tm('preset.payrollOwner')]} />
             )}
-            {p.active && p.role === 'admin' && me.canViewPayroll && p.can_view_payroll && (
+            {!pendingRole && p.active && p.role === 'admin' && me.canViewPayroll && p.can_view_payroll && (
               <ManageAction title={tm('revokePayroll')} hint={tm('revokePayrollHint')} confirmLabel={tm('revokePayroll')} endpoint={`${api}/role`} body={{ canViewPayroll: false }} presets={[tm('preset.handover'), tm('preset.mistake')]} />
             )}
             {key && (

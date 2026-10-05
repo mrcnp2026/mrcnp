@@ -9,6 +9,7 @@ import { Card, CardTitle, PageShell } from '@/components/ui';
 import { LABOR, resolveDayType } from '@/config/labor-rules';
 import { OFFICE } from '@/config/office';
 import { addDays, weekStartOf } from '@/lib/calendar';
+import { getMe } from '@/lib/auth';
 import { findMissingPunches } from '@/lib/missing-punch';
 import { weekTotalMinutes } from '@/lib/period';
 import { isProxyCorrection } from '@/lib/day-detail';
@@ -90,13 +91,17 @@ export default async function AdminHome({ searchParams }: { searchParams: Promis
         end: hhmm(kstDateTime(today, data.rule.endTime)),
       }
     : null;
+  // 내가 확인해 줘야 하는 권한 변경 (다른 관리자가 요청한 것, R-2의 8)
+  const meId = (await getMe())!.id;
+  const { data: roleReqs } = await createAdminClient().from('role_change_requests').select('target_id').eq('status', 'pending').neq('requested_by', meId).order('created_at');
   const todo = [
     { key: 'pendingOvertime', n: counts.overtime, href: '/admin/inbox#overtime' },
     { key: 'pendingCorrections', n: counts.corrections, href: '/admin/inbox#corrections' },
     { key: 'pendingLeave', n: counts.leave, href: '/admin/inbox#leave' },
     { key: 'pendingWork', n: counts.work, href: '/admin/inbox#work' },
     { key: 'missing', n: missingPeople, href: '/admin/records' },
-  ] as const;
+    ...(roleReqs?.length ? [{ key: 'pendingRole' as const, n: roleReqs.length, href: `/admin/members/${roleReqs[0].target_id}` }] : []),
+  ];
 
   return (
     <PageShell>

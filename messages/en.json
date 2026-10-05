@@ -245,7 +245,8 @@
       "invalid_group": "That group was not found. Please refresh.",
       "invalid_date": "The start date must be today or earlier.",
       "consentYes": "Consented {date}",
-      "consentNo": "No consent yet"
+      "consentNo": "No consent yet",
+      "roleWaiting": "Role change pending"
     },
     "more": {
       "title": "More",
@@ -328,7 +329,8 @@
         "remote": "Remote"
       },
       "workApproved": "Approved {kind}",
-      "rate": "{target} expected · {p}% in"
+      "rate": "{target} expected · {p}% in",
+      "pendingRole": "Role changes to confirm"
     },
     "inbox": {
       "title": "Requests",
@@ -709,7 +711,18 @@
       "min_payroll": "This would leave no one with payroll access. Give another admin payroll access first.",
       "payroll_only_grant": "Only someone with payroll access can give or remove it.",
       "payroll_needs_admin": "Only an admin can have payroll access.",
-      "no_phone": "No phone is registered."
+      "no_phone": "No phone is registered.",
+      "pendingTitle": "Role change — waiting for confirmation",
+      "pendingBy": "Requested by {who}",
+      "pendingReason": "Reason: {reason}",
+      "pendingWait": "It takes effect when another admin confirms.",
+      "pendingCancel": "Cancel request",
+      "pendingApprove": "Confirm (apply)",
+      "pendingReject": "Reject",
+      "pendingHide": "A role change request is waiting for confirmation. You can change it again after it is handled.",
+      "request_pending": "A role change for this employee is already waiting for confirmation.",
+      "self_decision": "You cannot confirm a change you requested. Another admin must confirm it.",
+      "forbidden": "Only the admin who requested it can cancel."
     },
     "settings": {
       "title": "Settings",

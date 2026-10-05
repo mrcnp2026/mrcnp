@@ -1,6 +1,6 @@
 // 직원 관리 규칙 (부록 R-2): 퇴사·복직·권한·폰 해제
 import { describe, expect, it } from 'vitest';
-import { checkPhoneRevoke, checkReinstate, checkResign, checkRoleChange, cleanReason, selfDecisionBlocked, type Staff } from '@/lib/staff-rules';
+import { checkPhoneRevoke, checkReinstate, checkResign, checkRoleChange, cleanReason, needsSecondAdmin, selfDecisionBlocked, type Staff } from '@/lib/staff-rules';
 
 const s = (id: string, role: 'admin' | 'employee' = 'employee', canViewPayroll = false, active = true): Staff => ({ id, role, active, canViewPayroll });
 const A = s('a', 'admin', true);
@@ -96,5 +96,14 @@ describe('본인 요청 본인 승인', () => {
   });
   it('남의 요청은 언제나 결정할 수 있다', () => {
     expect(selfDecisionBlocked('a', 'e', [A, B, E])).toBe(false);
+  });
+});
+
+describe('두 번째 관리자 확인 ← R-2의 8', () => {
+  it('요청자 말고 다른 활성 관리자가 있으면 확인이 필요하다', () => {
+    expect(needsSecondAdmin('a', [A, B, E])).toBe(true);
+  });
+  it('관리자가 혼자면 바로 반영한다 (첫 두 번째 관리자를 지정할 수 있어야 한다)', () => {
+    expect(needsSecondAdmin('a', [A, E, s('z', 'admin', false, false)])).toBe(false);
   });
 });

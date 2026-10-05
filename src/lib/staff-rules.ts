@@ -2,7 +2,7 @@
 // ★ 자기 자신의 재직 상태·권한·폰 등록은 스스로 바꾸지 못한다 (자기 잠금·자기 승격을 막는다).
 // ★ 활성 관리자가 MIN_ADMINS명 미만이 되는 변경은 차단한다 (퇴사·관리자 해제).
 // ★ 급여 담당자는 급여 담당자만 지정·해제하고, 0명이 되는 변경은 차단한다 (R-2의 7).
-// ⚠️ "두 번째 관리자 확인"(R-2의 8)은 아직 없다 — 관리자가 2명 이상이 된 뒤 따로 붙인다.
+// ★ 권한 변경은 두 번째 관리자가 확인해야 반영된다 (R-2의 8) — 확인해 줄 다른 관리자가 있을 때만. 혼자면 바로 반영한다.
 
 export const MIN_ADMINS = 2;
 export const REASON_MIN = 2;
@@ -71,6 +71,14 @@ export function checkPhoneRevoke(actorId: string, targetId: string): StaffRuleCo
  */
 export function selfDecisionBlocked(actorId: string, employeeId: string, all: Staff[]): boolean {
   if (actorId !== employeeId) return false;
+  return all.some((s) => s.id !== actorId && s.active && s.role === 'admin');
+}
+
+/**
+ * 권한 변경에 두 번째 관리자의 확인이 필요한가 (R-2의 8) — 요청자 말고 다른 활성 관리자가 있으면 필요하다.
+ * 관리자가 혼자면 확인해 줄 사람이 없으므로 바로 반영한다 (그래야 첫 두 번째 관리자를 지정할 수 있다).
+ */
+export function needsSecondAdmin(actorId: string, all: Staff[]): boolean {
   return all.some((s) => s.id !== actorId && s.active && s.role === 'admin');
 }
 

@@ -159,15 +159,15 @@ try {
 
   }
   // ── 기록 탭 → 직원 화면으로 들어가는 길 + 현황판 출근율 ──
-  await p.goto(`${BASE}/admin/records?m=${YM}`);
-  await p.getByText('검사용2(자동)').first().click();
+  check((await (await p.goto(`${BASE}/admin/records?m=${YM}`), p.getByText('검사용2(자동)')).count()) === 0, '꺼져 있는 검사 계정은 기록 탭 목록에 보이지 않음');
+  await p.getByText('검사용(자동)', { exact: true }).first().click();
   await p.getByRole('link', { name: /날짜별 기록 보기/ }).first().click();
-  await p.waitForURL(new RegExp(`/admin/records/${target!.id}`));
+  await p.waitForURL(new RegExp(`/admin/records/${emp!.id}`));
   check(true, '기록 탭(폰) › 직원 펼침 › 「날짜별 기록 보기」로 이동');
   await p.setViewportSize({ width: 1280, height: 800 });
   await p.goto(`${BASE}/admin/records?m=${YM}`);
-  await p.getByRole('link', { name: '검사용2(자동)' }).click();
-  await p.waitForURL(new RegExp(`/admin/records/${target!.id}`));
+  await p.getByRole('link', { name: '검사용(자동)', exact: true }).click();
+  await p.waitForURL(new RegExp(`/admin/records/${emp!.id}`));
   check(true, '기록 탭(넓은 화면) › 이름을 누르면 이동');
   await shot('proxy-detail-1280');
   await p.goto(`${BASE}/admin/records/${emp!.id}`);

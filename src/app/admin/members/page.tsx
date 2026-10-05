@@ -18,11 +18,13 @@ export default async function MembersPage({ searchParams }: { searchParams: Prom
   const sp = await searchParams;
   const filter: Filter = sp.f === 'joined' || sp.f === 'pending' ? sp.f : 'all';
   const db = createAdminClient();
-  const [{ data: people }, { data: keys }, groups] = await Promise.all([
+  const [{ data: people }, { data: keys }, groups, { data: roleReqs }] = await Promise.all([
     db.from('profiles').select('id, name, employee_no, role, active, group_id, job_title').order('name'),
     db.from('user_passkeys').select('employee_id').is('revoked_at', null),
     loadOrgGroups(),
+    db.from('role_change_requests').select('target_id').eq('status', 'pending'),
   ]);
+  const roleWaiting = new Set((roleReqs ?? []).map((x) => x.target_id)); // 권한 변경 확인 대기 (R-2의 8)
   const withPhone = new Set((keys ?? []).map((k) => k.employee_id));
   // 검사 전용 계정(e2e-audit, e2e-audit2)은 검사 중에만 켜진다 — 꺼져 있으면 목록에 안 보이게
   const all: Row[] = (people ?? [])
@@ -53,6 +55,7 @@ export default async function MembersPage({ searchParams }: { searchParams: Prom
               <span className="truncate font-medium">{p.name}</span>
               {p.jobTitle && <span className="shrink-0 text-xs text-muted">{p.jobTitle}</span>}
               {p.role === 'admin' && <Chip tone="info">{t('adminChip')}</Chip>}
+              {roleWaiting.has(p.id) && <Chip tone="warn">{t('roleWaiting')}</Chip>}
             </span>
             <span className="num flex items-center gap-1 truncate text-xs">
               <span className="text-faint">{p.employeeNo}</span>
