@@ -21,6 +21,15 @@ export function isLocale(x: unknown): x is Locale {
   return typeof x === 'string' && (LOCALES as readonly string[]).includes(x);
 }
 
+/** 브라우저가 보낸 언어 목록(Accept-Language, 선호 순)에서 고를 수 있는 첫 언어. 없으면 null */
+export function localeFromAcceptLanguage(header: string | null | undefined, allowed: readonly Locale[]): Locale | null {
+  for (const part of (header ?? '').split(',')) {
+    const tag = part.split(';')[0].trim().toLowerCase().split('-')[0];
+    if (isLocale(tag) && allowed.includes(tag)) return tag;
+  }
+  return null;
+}
+
 type Status = Record<string, { reviewed?: boolean } | string>;
 
 /** 언어 선택 목록 (자기 이름 표기) */

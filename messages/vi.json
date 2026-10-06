@@ -17,17 +17,14 @@
   },
   "login": {
     "title": "Đăng nhập",
-    "subtitle": "Đăng nhập bằng mã nhân viên và mật khẩu. Dùng được trên mọi máy tính hoặc điện thoại.",
-    "button": "Đăng nhập bằng vân tay hoặc khuôn mặt (chỉ thiết bị chấm công đã đăng ký)",
+    "button": "Đăng nhập bằng vân tay hoặc khuôn mặt",
     "firstTime": "Lần đầu sử dụng?",
     "idLabel": "Mã nhân viên hoặc số điện thoại",
     "passwordLabel": "Mật khẩu",
     "submit": "Đăng nhập",
     "showPassword": "Hiện mật khẩu",
     "hidePassword": "Ẩn mật khẩu",
-    "forgot": "Quên mật khẩu? Hãy xin quản lý một liên kết mới.",
-    "secure": "Mật khẩu được lưu ở dạng mã hóa. Công ty và quản lý không thể xem.",
-    "setupHint": "Tạo mật khẩu bằng liên kết hoặc mã 8 ký tự từ quản lý. Bạn chỉ cần làm một lần.",
+    "forgot": "Quên mật khẩu? Hãy liên hệ quản lý.",
     "setupLink": "Tạo mật khẩu"
   },
   "register": {

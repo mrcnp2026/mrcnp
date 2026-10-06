@@ -2,7 +2,7 @@
 import { readFileSync, readdirSync, statSync } from 'node:fs';
 import path from 'node:path';
 import { describe, expect, it } from 'vitest';
-import { DEFAULT_EMPLOYEE_LOCALE, LOCALE_NAMES, selectableLocales } from '@/i18n/locales';
+import { DEFAULT_EMPLOYEE_LOCALE, LOCALE_NAMES, localeFromAcceptLanguage, selectableLocales } from '@/i18n/locales';
 import { messagesFor, withFallback } from '@/i18n/messages';
 import en from '../messages/en.json';
 import ko from '../messages/ko.json';
@@ -67,6 +67,14 @@ describe('다국어', () => {
   it('검수 안 된 언어(vi·th)는 언어 선택 목록에 나오지 않는다 ← B-21', () => {
     expect(selectableLocales()).toEqual(['ko', 'en']);
     expect(selectableLocales({ vi: { reviewed: true }, th: { reviewed: false }, en: { reviewed: true } })).toEqual(['en', 'vi']);
+  });
+
+  it('로그인 전에는 브라우저 언어를 따른다 (고를 수 있는 언어만, 없으면 null → 영어)', () => {
+    expect(localeFromAcceptLanguage('ko-KR,ko;q=0.9,en-US;q=0.8,en;q=0.7', ['ko', 'en'])).toBe('ko');
+    expect(localeFromAcceptLanguage('en-US,en;q=0.9,ko;q=0.8', ['ko', 'en'])).toBe('en');
+    expect(localeFromAcceptLanguage('vi-VN,vi;q=0.9,en;q=0.8', ['ko', 'en'])).toBe('en'); // 검수 전 언어는 건너뛴다
+    expect(localeFromAcceptLanguage('th-TH,th;q=0.9', ['ko', 'en'])).toBeNull();
+    expect(localeFromAcceptLanguage(null, ['ko', 'en'])).toBeNull();
   });
 
   it('언어 이름은 각 언어의 자기 이름이다', () => {
