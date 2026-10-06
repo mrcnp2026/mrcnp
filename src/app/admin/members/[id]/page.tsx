@@ -5,6 +5,7 @@ import { getFormatter, getTranslations } from 'next-intl/server';
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import { Card, CardTitle, Chip, PageShell } from '@/components/ui';
+import { OFFICE } from '@/config/office';
 import { LOCALE_NAMES, LOCALES } from '@/i18n/locales';
 import { getMe } from '@/lib/auth';
 import { consentAt } from '@/lib/consent';
@@ -48,7 +49,8 @@ export default async function MemberDetailPage({ params }: { params: Promise<{ i
     ? ([['overtime', todo.overtime], ['corrections', todo.corrections], ['leave', todo.leave], ['work', todo.work]] as const).filter(([, n]) => n > 0).map(([k, n]) => tm(`todo.${k}`, { n }))
     : [];
   const api = `/api/admin/employees/${p.id}`;
-  const soleAdmin = self && ((await db.from('profiles').select('id', { count: 'exact', head: true }).eq('role', 'admin').eq('active', true).neq('id', me.id)).count ?? 0) === 0;
+  // 오너는 다른 관리자가 있어도 자기 출퇴근 기기를 직접 해제한다 (staff-rules.checkDeviceRevoke)
+  const soleAdmin = self && (me.employeeNo === OFFICE.ownerEmployeeNo || ((await db.from('profiles').select('id', { count: 'exact', head: true }).eq('role', 'admin').eq('active', true).neq('id', me.id)).count ?? 0) === 0);
   // 대기 중인 권한 변경 (두 번째 관리자 확인, R-2의 8)
   const { data: pendingRole } = await db.from('role_change_requests').select('id, new_role, new_can_view_payroll, reason, requested_by').eq('target_id', p.id).eq('status', 'pending').maybeSingle();
   const requesterName = pendingRole ? ((await db.from('profiles').select('name').eq('id', pendingRole.requested_by).maybeSingle()).data?.name ?? '') : '';

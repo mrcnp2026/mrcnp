@@ -5,7 +5,7 @@
 import { resetLogin } from '@/lib/account';
 import { api, ApiError, readJson } from '@/lib/api';
 import { requireAdmin } from '@/lib/auth';
-import { auditStaffAction, revokePhones } from '@/lib/staff-data';
+import { auditStaffAction, loadStaff, revokePhones } from '@/lib/staff-data';
 import { checkPhoneRevoke, cleanReason } from '@/lib/staff-rules';
 import { createAdminClient } from '@/lib/supabase/admin';
 
@@ -16,7 +16,8 @@ export const POST = api<{ params: Promise<{ id: string }> }>('admin.employees.ph
   const b = await readJson(req);
   const reason = cleanReason(b.reason);
   if (!reason) throw new ApiError(400, 'reason_required');
-  if (checkPhoneRevoke(me.id, id)) throw new ApiError(403, 'self_change');
+  const blocked = checkPhoneRevoke(me.id, id, await loadStaff());
+  if (blocked) throw new ApiError(403, blocked);
   const { data: p } = await createAdminClient().from('profiles').select('id').eq('id', id).maybeSingle();
   if (!p) throw new ApiError(404, 'not_found');
   await resetLogin(id, me.id);

@@ -819,7 +819,8 @@
       "revokeDevice": "Release punch device",
       "revokeDeviceHint": "When they changed or lost their phone. The password stays the same.",
       "revokeDeviceNote": "After this, that device can no longer punch. The employee signs in on the new phone and registers it. Until then, add punches with \"Add record\".",
-      "no_device": "No punch device is registered."
+      "no_device": "No punch device is registered.",
+      "owner_only": "Only the owner can change the owner account's role, status or sign-in."
     },
     "settings": {
       "title": "Settings",

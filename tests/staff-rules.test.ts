@@ -113,3 +113,28 @@ describe('두 번째 관리자 확인 ← R-2의 8', () => {
     expect(needsSecondAdmin('a', [A, E, s('z', 'admin', false, false)])).toBe(false);
   });
 });
+
+describe('오너 계정 (2026-10-06 의뢰인: admin은 오너가 쓴다 — 모든 것을 할 수 있어야 한다)', () => {
+  const owner: Staff = { id: 'o', role: 'admin', active: true, canViewPayroll: true, owner: true };
+  const other: Staff = { id: 'a', role: 'admin', active: true, canViewPayroll: false };
+  const emp: Staff = { id: 'e', role: 'employee', active: true, canViewPayroll: false };
+  const all = [owner, other, emp];
+  it('오너는 다른 관리자의 확인 없이 권한을 바꾸고, 자기 요청·자기 기기를 직접 처리한다', () => {
+    expect(needsSecondAdmin('o', all)).toBe(false);
+    expect(needsSecondAdmin('a', all)).toBe(true);
+    expect(selfDecisionBlocked('o', 'o', all)).toBe(false);
+    expect(selfDecisionBlocked('a', 'a', all)).toBe(true);
+    expect(checkDeviceRevoke('o', 'o', all)).toBeNull();
+    expect(checkRoleChange({ actor: owner, target: other, all, canViewPayroll: true })).toEqual({ next: { ...other, canViewPayroll: true } });
+  });
+  it('다른 관리자는 오너의 권한·재직 상태·로그인을 바꾸지 못한다', () => {
+    expect(checkRoleChange({ actor: other, target: owner, all, role: 'employee' })).toEqual({ code: 'owner_only' });
+    expect(checkResign('a', owner, all)).toBe('owner_only');
+    expect(checkPhoneRevoke('a', 'o', all)).toBe('owner_only');
+  });
+  it('오너라도 자기 권한 내리기·자기 퇴사·자기 로그인 초기화는 못 한다 (스스로 잠기지 않게)', () => {
+    expect(checkRoleChange({ actor: owner, target: owner, all, role: 'employee' })).toEqual({ code: 'self_change' });
+    expect(checkResign('o', owner, all)).toBe('self_change');
+    expect(checkPhoneRevoke('o', 'o', all)).toBe('self_change');
+  });
+});

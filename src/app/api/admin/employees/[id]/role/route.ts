@@ -26,7 +26,7 @@ export const POST = api<{ params: Promise<{ id: string }> }>('admin.employees.ro
   const target = all.find((s) => s.id === id);
   if (!actor || !target) throw new ApiError(404, 'not_found');
   const r = checkRoleChange({ actor, target, all, role, canViewPayroll });
-  if ('code' in r) throw new ApiError(r.code === 'self_change' || r.code === 'payroll_only_grant' ? 403 : 409, r.code);
+  if ('code' in r) throw new ApiError(r.code === 'self_change' || r.code === 'payroll_only_grant' || r.code === 'owner_only' ? 403 : 409, r.code);
 
   if (needsSecondAdmin(me.id, all)) {
     const { data: made, error: e0 } = await createAdminClient()

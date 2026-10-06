@@ -23,7 +23,7 @@ export const POST = api<{ params: Promise<{ id: string }> }>('admin.employees.st
 
   if (b.action === 'resign') {
     const code = checkResign(me.id, target, all);
-    if (code) throw new ApiError(code === 'self_change' ? 403 : 409, code);
+    if (code) throw new ApiError(code === 'self_change' || code === 'owner_only' ? 403 : 409, code);
     // active를 먼저 끈다 — 여기서부터 화면·API·DB 읽기가 모두 막힌다. 뒤 단계가 실패해도 접속은 이미 끊겨 있다
     const { error } = await db.from('profiles').update({ active: false, updated_by: me.id }).eq('id', id);
     if (error) throw new Error(`status.resign: ${error.code}`);

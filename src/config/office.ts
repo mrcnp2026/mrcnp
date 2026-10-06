@@ -55,6 +55,9 @@ export const OFFICE = {
   rpID: new URL(appOrigin()).hostname,
   rpName: 'Attendance',
   challengeTtlMin: 5, // 7-12 요점 2: 챌린지는 1회용·5분 만료
+  // 오너(대표) 계정의 사번 (2026-10-06 의뢰인: admin은 오너가 쓰는 계정 — 모든 것을 할 수 있어야 한다).
+  // 오너는 다른 관리자의 확인 없이 권한을 바꾸고, 자기 요청도 직접 처리한다. 다른 관리자는 오너의 권한·재직 상태·로그인을 바꾸지 못한다 (staff-rules.ts)
+  ownerEmployeeNo: 'admin',
   inviteValidHours: 72, // 초대 QR 유효 시간. 지나면 관리자가 새로 발급한다
 
   // 부록 R-12-2: 계산 모듈(worktime·overtime·lateness·labor-rules)을 바꿀 때마다 올린다.
