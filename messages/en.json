@@ -852,6 +852,30 @@
       "invalid_location": "Check the latitude, longitude and radius (30–1000 m)."
     }
   },
+  "side": {
+    "menu": "Menu",
+    "my": "My work",
+    "manage": "Attendance",
+    "people": "Staff",
+    "office": "Payroll · Notices",
+    "settings": "Settings",
+    "home": "Home",
+    "records": "My records",
+    "corrections": "Corrections",
+    "leave": "Leave/Out",
+    "notices": "Notices",
+    "board": "Dashboard",
+    "inbox": "Requests",
+    "adminRecords": "Punch records",
+    "adminLeave": "Leave management",
+    "members": "Staff list",
+    "org": "Org chart",
+    "payroll": "Payroll",
+    "adminNotices": "Manage notices",
+    "config": "Company settings",
+    "diag": "Diagnostics",
+    "account": "My account"
+  },
   "nav": {
     "home": "Home",
     "records": "My records",

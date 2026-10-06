@@ -19,7 +19,7 @@ export function EmployeeNav({ isAdmin = false }: { isAdmin?: boolean }) {
   const t = useTranslations('nav');
   const { path, pressed, setPressed } = usePressedTab();
   return (
-    <nav className="fixed inset-x-0 bottom-0 z-10 border-t border-border bg-bg pb-[env(safe-area-inset-bottom)]">
+    <nav className="fixed inset-x-0 bottom-0 z-10 border-t border-border bg-bg pb-[env(safe-area-inset-bottom)] lg:hidden">
       <ul className="mx-auto flex max-w-md">
         {(isAdmin ? [...TABS, ADMIN_TAB] : TABS).map(({ href, key, icon }) => {
           const here = href === '/punch' ? path === '/punch' : path.startsWith(href);

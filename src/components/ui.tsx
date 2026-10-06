@@ -66,6 +66,7 @@ export function CardTitle({ children, aside }: { icon?: LucideIcon; children: Re
 }
 
 export function PageShell({ children, wide = false }: { children: ReactNode; wide?: boolean }) {
-  // 화면 좌우 16px, 폰 기준 폭 (4-9). wide: 넓은 화면에서 표를 펼치는 화면(월간 집계) — 폰에서는 똑같이 좁다
-  return <main className={`mx-auto flex w-full flex-col gap-3 px-4 py-4 ${wide ? 'max-w-md md:max-w-3xl lg:max-w-5xl' : 'max-w-md'}`}>{children}</main>;
+  // 화면 좌우 16px, 폰 기준 폭 (4-9). 폰에서는 언제나 좁은 한 칸이다.
+  // PC(1024px~, 2026-10-06 의뢰인: PC가 폰 화면 그대로였다): 기본은 입력·읽기 좋은 폭, wide는 현황판·목록·표를 화면 가득 펼친다
+  return <main className={`mx-auto flex w-full flex-col gap-3 px-4 py-4 lg:gap-4 lg:px-8 lg:py-6 ${wide ? 'max-w-md md:max-w-3xl lg:max-w-7xl' : 'max-w-md lg:max-w-3xl'}`}>{children}</main>;
 }

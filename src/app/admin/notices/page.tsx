@@ -33,7 +33,7 @@ export default async function NoticesPage() {
   );
 
   return (
-    <PageShell>
+    <PageShell wide>
       <header className="flex items-center justify-between gap-2">
         <h1 className="text-2xl font-semibold text-primary-deep">{t('title')}</h1>
         <Link href="/admin/notices/new" className="inline-flex min-h-11 items-center gap-1 rounded-button bg-primary px-4 font-semibold text-on-primary">

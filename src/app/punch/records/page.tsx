@@ -60,7 +60,7 @@ export default async function MyRecordsPage({ searchParams }: { searchParams: Pr
   const lateMin = [...lateOf.values()].reduce((a, b) => a + b, 0);
 
   return (
-    <PageShell>
+    <PageShell wide>
       <header className="flex items-center justify-between gap-2">
         <h1 className="text-2xl font-extrabold tracking-tight">{t('title')}</h1>
         <nav className="flex shrink-0 items-center" aria-label={t('month')}>

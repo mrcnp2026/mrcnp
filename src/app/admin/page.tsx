@@ -104,7 +104,7 @@ export default async function AdminHome({ searchParams }: { searchParams: Promis
   ];
 
   return (
-    <PageShell>
+    <PageShell wide>
       <AutoRefresh seconds={30} />
       {/* 토스풍 머리: 날짜·기준 시각은 작게, 한 줄 요약을 크게 (2026-10-02 의뢰인 선택 시안) */}
       <header className="flex flex-col gap-1 px-1 pt-2">
@@ -130,7 +130,9 @@ export default async function AdminHome({ searchParams }: { searchParams: Promis
         </p>
       )}
 
-      <Card className="flex flex-col p-0 py-2">
+      {/* PC: 왼쪽 = 오늘 출근 현황, 오른쪽 = 처리할 일·주 52시간·근무노트 (2026-10-06 의뢰인) · 폰: 한 칸 */}
+      <div className="flex flex-col gap-3 lg:grid lg:grid-cols-5 lg:items-start lg:gap-4">
+      <Card className="flex flex-col p-0 py-2 lg:col-span-2 lg:col-start-4 lg:row-start-1">
         <div className="px-5 pt-2">
           <CardTitle icon={Inbox}>{t('todo')}</CardTitle>
         </div>
@@ -147,8 +149,11 @@ export default async function AdminHome({ searchParams }: { searchParams: Promis
         </ul>
       </Card>
 
+      <div className="flex flex-col gap-3 lg:col-span-3 lg:col-start-1 lg:row-span-3 lg:row-start-1 lg:gap-4">
       <BoardView board={board} total={active.length} limitMinutes={OFFICE.weeklyLimitHours * 60} cautionMinutes={OFFICE.weeklyCautionHours * 60} colored={OFFICE.workplaceSize === '5_or_more'} legend={legend} />
+      </div>
 
+      <div className="flex flex-col gap-3 lg:col-span-2 lg:col-start-4 lg:gap-4">
       {data.rule && (
         <WeekLimitCard
           rows={weekLimitList(people, { regularMin: LABOR.weeklyRegularLimitMin, cautionMin: OFFICE.weeklyCautionHours * 60, limitMin: OFFICE.weeklyLimitHours * 60 })}
@@ -180,6 +185,8 @@ export default async function AdminHome({ searchParams }: { searchParams: Promis
         <Pager page={notePage.page} pages={notePage.pages} param="np" params={sp} anchor="notes" label={tc('pages')} />
         <p className="text-xs text-faint">{t('notesHint')}</p>
       </Card>
+      </div>
+      </div>
 
     </PageShell>
   );

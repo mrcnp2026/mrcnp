@@ -852,6 +852,30 @@
       "invalid_location": "위도·경도와 반경(30~1000m)을 확인해 주세요."
     }
   },
+  "side": {
+    "menu": "메뉴",
+    "my": "내 근무",
+    "manage": "근태 관리",
+    "people": "직원",
+    "office": "급여 · 공지",
+    "settings": "설정",
+    "home": "홈",
+    "records": "내 기록",
+    "corrections": "정정 요청",
+    "leave": "휴가·외근",
+    "notices": "공지",
+    "board": "현황",
+    "inbox": "요청",
+    "adminRecords": "출퇴근 기록",
+    "adminLeave": "연차 관리",
+    "members": "직원 목록",
+    "org": "조직도",
+    "payroll": "급여",
+    "adminNotices": "공지 관리",
+    "config": "회사 설정",
+    "diag": "진단",
+    "account": "내 계정"
+  },
   "nav": {
     "home": "홈",
     "records": "내 기록",

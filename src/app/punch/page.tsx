@@ -67,7 +67,7 @@ export default async function PunchPage() {
           </>
         }
       />
-      <PageShell>
+      <PageShell wide>
         {/* 인사 — 토스풍: 날짜는 작게, 인사는 두 줄로 크게 (2026-10-02 의뢰인 선택 시안) */}
         <section className="px-1 pt-2 pb-2">
           <p className="text-sm text-muted">{f.dateTime(kstDateTime(today.workDate, '12:00'), { dateStyle: 'full' })}</p>
@@ -78,6 +78,9 @@ export default async function PunchPage() {
           </h1>
         </section>
 
+        {/* PC: 왼쪽 = 오늘 근무, 오른쪽 = 이번 주·근무노트 (2026-10-06 의뢰인) · 폰: 한 칸 */}
+        <div className="flex flex-col gap-3 lg:grid lg:grid-cols-2 lg:items-start lg:gap-4">
+        <div className="flex flex-col gap-3 lg:gap-4">
         <MissingBanner items={recent.missing} />
 
         <TodayCard
@@ -102,15 +105,21 @@ export default async function PunchPage() {
           </Link>
         )}
 
+        </div>
+        <div className="flex flex-col gap-3 lg:gap-4">
         <WeekBar week={today.week} regularHours={LABOR.weeklyRegularLimitMin / 60} limitHours={OFFICE.weeklyLimitHours} />
 
         <NoteBox initial={today.note?.body ?? null} />
+        </div>
+        </div>
 
+        <div className="flex flex-col gap-3 lg:hidden">
         <Link href="/punch/account" className="inline-flex min-h-11 w-full items-center justify-center gap-2 rounded-button border border-border bg-bg px-4 text-sm text-muted">
           <UserRound aria-hidden size={18} strokeWidth={1.75} />
           {tc('account')}
         </Link>
         <SignOutButton />
+        </div>
       </PageShell>
     </>
   );

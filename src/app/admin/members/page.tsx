@@ -86,7 +86,7 @@ export default async function MembersPage({ searchParams }: { searchParams: Prom
   };
 
   return (
-    <PageShell>
+    <PageShell wide>
       <header className="flex items-center justify-between gap-2 px-1 pt-2">
         <h1 className="text-2xl font-extrabold tracking-tight">{t('title')}</h1>
         <div className="flex shrink-0 items-center gap-2">

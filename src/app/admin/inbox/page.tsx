@@ -90,7 +90,7 @@ export default async function InboxPage({ searchParams }: { searchParams: Promis
   const wkPage = pageOf(workPending, sp.wp);
 
   return (
-    <PageShell>
+    <PageShell wide>
       <h1 className="text-2xl font-semibold text-primary-deep">{t('title')}</h1>
       {practice && <p className="rounded-card bg-primary-tint p-3 text-sm text-primary">{t('practiceBanner')}</p>}
 

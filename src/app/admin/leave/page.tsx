@@ -31,7 +31,7 @@ export default async function AdminLeavePage({ searchParams }: { searchParams: P
   const approved = requests.filter((r) => r.status === 'approved' && r.endDate >= addDays(today, -31)).sort((a, b) => (a.startDate < b.startDate ? -1 : 1));
 
   return (
-    <PageShell>
+    <PageShell wide>
       <h1 className="text-2xl font-semibold text-primary-deep">{t('title')}</h1>
       <p className="text-sm text-muted">{t('intro')}</p>
       {practice && <p className="rounded-card bg-primary-tint p-3 text-sm text-primary">{t('practiceBanner')}</p>}
