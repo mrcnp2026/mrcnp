@@ -21,7 +21,7 @@ import { buildTodayBoard, type BoardPerson } from '@/lib/today';
 import { weekLimitList } from '@/lib/week-limit';
 import { AutoRefresh } from './AutoRefresh';
 import { BoardView } from './BoardView';
-import { TodayCharts } from './TodayCharts';
+import { Analytics } from './Analytics';
 import { WeekLimitCard } from './WeekLimitCard';
 
 export default async function AdminHome({ searchParams }: { searchParams: Promise<{ live?: string; np?: string }> }) {
@@ -93,12 +93,23 @@ export default async function AdminHome({ searchParams }: { searchParams: Promis
         end: hhmm(kstDateTime(today, data.rule.endTime)),
       }
     : null;
-  // PC 그래프: 최근 7일 출근 인원 (그날 출근을 한 번이라도 찍은 재직 직원 수)
-  const trend = [...Array(7)].map((_, i) => addDays(today, -6 + i)).map((d) => {
-    const n = active.filter((p) => data.events.some((e) => e.employeeId === p.id && e.workDate === d && e.kind === 'in')).length;
-    const at = kstDateTime(d, '12:00');
-    return { key: d, n, off: dayTypes[d] !== 'workday', label: Number(d.slice(5, 7)) + '/' + Number(d.slice(8, 10)), weekday: fmt.dateTime(at, { weekday: 'short' }), tip: t('chartTip', { date: fmt.dateTime(at, { month: 'long', day: 'numeric', weekday: 'short' }), n }) };
+  // PC 분석 영역: 최근 30일 추이 (현황판 판정과 따로 불러온다 — 미기록 판정은 14일 창을 그대로 쓴다)
+  const hist = await loadPeriod(addDays(today, -29), today, practiceView);
+  const md = (d: string) => `${Number(d.slice(5, 7))}/${Number(d.slice(8, 10))}`;
+  const longDay = (d: string) => fmt.dateTime(kstDateTime(d, '12:00'), { month: 'long', day: 'numeric', weekday: 'short' });
+  const daily = [...Array(30)].map((_, i) => addDays(today, -29 + i)).map((d) => {
+    const rule = hist.ruleAt(d);
+    const workday = (rule ? resolveDayType(d, rule, hist.holidays) : 'workday') === 'workday';
+    const firstIns = active
+      .map((p) => hist.events.filter((e) => e.employeeId === p.id && e.workDate === d && e.kind === 'in').map((e) => e.punchedAt.getTime()).sort((a, b) => a - b)[0])
+      .filter((x): x is number => x !== undefined);
+    const deadline = rule ? kstDateTime(d, rule.startTime).getTime() + rule.lateGraceMin * 60_000 : null;
+    return { d, workday, n: firstIns.length, late: workday && deadline !== null ? firstIns.filter((x) => x > deadline).length : 0 };
   });
+  const pct = (n: number) => (active.length > 0 ? Math.round((Math.min(n, active.length) / active.length) * 100) : 0);
+  const workdays = daily.filter((x) => x.workday);
+  const prev = workdays.filter((x) => today > x.d).at(-1);
+  const delta = rate !== null && prev ? rate - pct(prev.n) : null;
   // 내가 확인해 줘야 하는 권한 변경 (다른 관리자가 요청한 것, R-2의 8)
   const meId = (await getMe())!.id;
   const { data: roleReqs } = await createAdminClient().from('role_change_requests').select('target_id').eq('status', 'pending').neq('requested_by', meId).order('created_at');
@@ -138,6 +149,34 @@ export default async function AdminHome({ searchParams }: { searchParams: Promis
         </p>
       )}
 
+      <Analytics
+        kpis={[
+          { label: t('chartRate'), value: rate === null ? '–' : `${rate}%`, sub: delta === null ? undefined : t('kpiDelta', { d: `${delta > 0 ? '+' : ''}${delta}` }) },
+          { label: th('status.late'), value: String(board.late.length), warn: board.late.length > 0, sub: t('kpiToday') },
+          { label: th('status.absent'), value: String(board.absent.length), sub: t('kpiToday') },
+          { label: t('todo'), value: String(todo.reduce((a, x) => a + x.n, 0)), sub: t('kpiTodo'), href: '/admin/inbox' },
+        ]}
+        lineTitle={t('lineTitle')}
+        lineNote={t('lineNote', { n: active.length })}
+        lineEmpty={t('lineEmpty')}
+        points={workdays.map((x) => ({ key: x.d, label: md(x.d), value: pct(x.n), tip: t('pointTip', { date: longDay(x.d), n: x.n, p: pct(x.n) }) }))}
+        rate={rate}
+        rateTitle={t('chartRate')}
+        rateSub={rate === null ? t('chartNoTarget') : t('chartRateSub', { n: Math.min(inCount, target), target })}
+        lateTitle={t('lateTitle')}
+        unit={t('chartUnit')}
+        late={daily.slice(-14).map((x) => ({ key: x.d, label: md(x.d), sub: fmt.dateTime(kstDateTime(x.d, '12:00'), { weekday: 'short' }), n: x.late, tip: t('lateTip', { date: longDay(x.d), n: x.late }) }))}
+        statusTitle={t('statusTitle')}
+        status={[
+          { label: th('status.working'), n: board.working.length },
+          { label: th('status.late'), n: board.late.length, warn: true },
+          { label: th('status.absent'), n: board.absent.length },
+          { label: th('status.done'), n: board.done.length },
+          { label: th('status.overtime'), n: board.overtime.length, warn: true },
+        ]}
+        total={active.length}
+      />
+
       {/* PC: 왼쪽 = 오늘 출근 현황, 오른쪽 = 처리할 일·주 52시간·근무노트 (2026-10-06 의뢰인) · 폰: 한 칸 */}
       <div className="flex flex-col gap-3 lg:grid lg:grid-cols-5 lg:items-start lg:gap-4">
       <Card className="flex flex-col p-0 py-2 lg:col-span-2 lg:col-start-4 lg:row-start-1">
@@ -158,21 +197,6 @@ export default async function AdminHome({ searchParams }: { searchParams: Promis
       </Card>
 
       <div className="flex flex-col gap-3 lg:col-span-3 lg:col-start-1 lg:row-span-3 lg:row-start-1 lg:gap-4">
-      <TodayCharts
-        className="hidden lg:grid"
-        rate={rate}
-        rateTitle={t('chartRate')}
-        rateSub={rate === null ? t('chartNoTarget') : t('chartRateSub', { n: Math.min(inCount, target), target })}
-        rows={[
-          { label: th('status.late'), value: board.late.length, warn: true },
-          { label: th('status.absent'), value: board.absent.length },
-          { label: th('status.overtime'), value: board.overtime.length, warn: true },
-        ]}
-        trendTitle={t('chartTrend')}
-        trendUnit={t('chartUnit')}
-        trend={trend}
-        max={active.length}
-      />
       <BoardView board={board} total={active.length} limitMinutes={OFFICE.weeklyLimitHours * 60} cautionMinutes={OFFICE.weeklyCautionHours * 60} colored={OFFICE.workplaceSize === '5_or_more'} legend={legend} />
       </div>
 
