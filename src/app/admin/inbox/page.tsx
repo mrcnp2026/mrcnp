@@ -3,6 +3,7 @@
 // 누가·언제 처리했는지 항상 보인다 (R-2의 5).
 import { getFormatter, getTranslations } from 'next-intl/server';
 import { Pager, pageOf } from '@/components/Pager';
+import { Help } from '@/components/Help';
 import { Card, Chip, PageShell } from '@/components/ui';
 import { OFFICE } from '@/config/office';
 import { getMe } from '@/lib/auth';
@@ -95,11 +96,13 @@ export default async function InboxPage({ searchParams }: { searchParams: Promis
       {practice && <p className="rounded-card bg-primary-tint p-3 text-sm text-primary">{t('practiceBanner')}</p>}
 
       <section id="overtime" className="flex flex-col gap-3">
-        <h2 className="flex items-center gap-2 text-xl font-semibold">
+        <h2 className="flex flex-wrap items-center gap-x-2 text-xl font-semibold">
           {t('overtimeTitle')} <span className="num text-base text-faint">{ot?.length ?? 0}</span>
+          <Help>{t('overtimeHint')}</Help>
         </h2>
-        <p className="text-sm text-muted">{t('overtimeHint')}</p>
         {(ot ?? []).length === 0 && <p className="text-sm text-faint">{t('empty')}</p>}
+        {/* PC: 요청 카드를 두 칸으로 (2026-10-06 의뢰인) */}
+        <div className="flex flex-col gap-3 lg:grid lg:grid-cols-2 lg:items-start lg:gap-4">
         {otPage.items.map((o) => (
           <Card key={o.id} className="flex flex-col gap-2">
             <div className="flex items-start justify-between gap-2">
@@ -136,14 +139,16 @@ export default async function InboxPage({ searchParams }: { searchParams: Promis
             {ownBlocked && o.employee_id === me.id ? ownNote : <OvertimeDecision id={o.id} name={name.get(o.employee_id) ?? ''} facts={{ overtime: o.overtime_minutes, night: o.night_minutes, holiday: o.holiday_minutes }} />}
           </Card>
         ))}
+        </div>
         <Pager page={otPage.page} pages={otPage.pages} param="op" params={sp} anchor="overtime" label={tc('pages')} />
       </section>
 
       <section id="corrections" className="flex flex-col gap-3">
-        <h2 className="flex items-center gap-2 text-xl font-semibold">
+        <h2 className="flex flex-wrap items-center gap-x-2 text-xl font-semibold">
           {t('correctionsTitle')} <span className="num text-base text-faint">{co?.length ?? 0}</span>
         </h2>
         {(co ?? []).length === 0 && <p className="text-sm text-faint">{t('empty')}</p>}
+        <div className="flex flex-col gap-3 lg:grid lg:grid-cols-2 lg:items-start lg:gap-4">
         {coPage.items.map((c) => {
           const target = c.target_id ? evs?.find((e) => e.id === c.target_id) : null;
           return (
@@ -165,14 +170,16 @@ export default async function InboxPage({ searchParams }: { searchParams: Promis
             </Card>
           );
         })}
+        </div>
         <Pager page={coPage.page} pages={coPage.pages} param="cp" params={sp} anchor="corrections" label={tc('pages')} />
       </section>
 
       <section id="leave" className="flex scroll-mt-16 flex-col gap-3">
-        <h2 className="flex items-center gap-2 text-xl font-semibold">
+        <h2 className="flex flex-wrap items-center gap-x-2 text-xl font-semibold">
           {t('leaveTitle')} <span className="num text-base text-faint">{leavePending.length}</span>
         </h2>
         {leavePending.length === 0 && <p className="text-sm text-faint">{t('empty')}</p>}
+        <div className="flex flex-col gap-3 lg:grid lg:grid-cols-2 lg:items-start lg:gap-4">
         {lvPage.items.map((r) => {
           const bal = calcLeaveBalance({ grants: leaveGrants.filter((g) => g.employeeId === r.employeeId), requests: leaveAll.filter((x) => x.employeeId === r.employeeId), types: leaveTypes, asOf: r.startDate });
           const deducts = leaveTypes.find((x) => x.code === r.typeCode)?.deductsBalance;
@@ -204,6 +211,7 @@ export default async function InboxPage({ searchParams }: { searchParams: Promis
             </Card>
           );
         })}
+        </div>
         <Pager page={lvPage.page} pages={lvPage.pages} param="lp" params={sp} anchor="leave" label={tc('pages')} />
         <Link href="/admin/leave" className="inline-flex min-h-11 items-center self-start text-sm text-primary">
           {t('leaveManage')} ›
@@ -211,11 +219,12 @@ export default async function InboxPage({ searchParams }: { searchParams: Promis
       </section>
 
       <section id="work" className="flex scroll-mt-16 flex-col gap-3">
-        <h2 className="flex items-center gap-2 text-xl font-semibold">
+        <h2 className="flex flex-wrap items-center gap-x-2 text-xl font-semibold">
           {t('workTitle')} <span className="num text-base text-faint">{workPending.length}</span>
+          <Help>{t('workClashHint')}</Help>
         </h2>
-        <p className="text-sm text-muted">{t('workClashHint')}</p>
         {workPending.length === 0 && <p className="text-sm text-faint">{t('empty')}</p>}
+        <div className="flex flex-col gap-3 lg:grid lg:grid-cols-2 lg:items-start lg:gap-4">
         {wkPage.items.map((w) => {
           const range = w.startDate === w.endDate ? dayLabel(w.startDate) : `${dayLabel(w.startDate)} ~ ${dayLabel(w.endDate)}`;
           const when = `${range}${w.startTime ? ` ${w.startTime}~${w.endTime}` : ''}`;
@@ -236,6 +245,7 @@ export default async function InboxPage({ searchParams }: { searchParams: Promis
             </Card>
           );
         })}
+        </div>
         <Pager page={wkPage.page} pages={wkPage.pages} param="wp" params={sp} anchor="work" label={tc('pages')} />
       </section>
 

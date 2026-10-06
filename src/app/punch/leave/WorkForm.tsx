@@ -47,7 +47,6 @@ export function WorkForm({ today, initialDate }: { today: string; initialDate: s
           router.refresh();
         }}
       >
-        <p className="text-sm text-muted">{t('intro')}</p>
         <fieldset className="flex gap-2">
           <legend className="mb-1 text-sm text-muted">{t('kindLabel')}</legend>
           {KINDS.map((k) => (

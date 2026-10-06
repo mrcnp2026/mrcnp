@@ -3,6 +3,7 @@
 import { CalendarDays } from 'lucide-react';
 import { getFormatter, getTranslations } from 'next-intl/server';
 import { redirect } from 'next/navigation';
+import { Help } from '@/components/Help';
 import { Card, CardTitle, Chip, PageShell } from '@/components/ui';
 import { getMe } from '@/lib/auth';
 import { calcLeaveBalance } from '@/lib/leave';
@@ -28,8 +29,12 @@ export default async function LeavePage({ searchParams }: { searchParams: Promis
   const n = (v: number) => f.number(v, { maximumFractionDigits: 2 });
 
   return (
-    <PageShell>
+    <PageShell wide>
       <h1 className="text-2xl font-semibold text-primary-deep">{t('title')}</h1>
+
+      {/* PC: 왼쪽 = 휴가, 오른쪽 = 외근·출장·재택 (2026-10-06 의뢰인) · 폰: 한 칸 */}
+      <div className="flex flex-col gap-3 lg:grid lg:grid-cols-2 lg:items-start lg:gap-4">
+      <div className="flex flex-col gap-3">
 
       <Card className="flex flex-col gap-3 p-6">
         <CardTitle icon={CalendarDays} aside={bal.grant && <span className="text-sm text-faint">{bal.grant.periodLabel}</span>}>
@@ -79,9 +84,14 @@ export default async function LeavePage({ searchParams }: { searchParams: Promis
         ))}
       </section>
 
+      </div>
+
       {/* 외근·출장·재택 (②-3 7-11) — 연차와 같은 화면 */}
       <section id="work" className="flex scroll-mt-16 flex-col gap-3">
-        <h2 className="text-xl font-semibold">{tw('title')}</h2>
+        <div className="flex flex-wrap items-center gap-x-1">
+          <h2 className="text-xl font-semibold">{tw('title')}</h2>
+          <Help>{tw('intro')}</Help>
+        </div>
         <WorkForm today={today} initialDate={sp.workDate && /^\d{4}-\d{2}-\d{2}$/.test(sp.workDate) ? sp.workDate : null} />
         <h3 className="font-semibold">{tw('mine')}</h3>
         {works.length === 0 && <p className="text-sm text-faint">{tw('none')}</p>}
@@ -102,6 +112,7 @@ export default async function LeavePage({ searchParams }: { searchParams: Promis
           </Card>
         ))}
       </section>
+      </div>
     </PageShell>
   );
 }

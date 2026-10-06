@@ -16,9 +16,9 @@ export function Help({ children }: { children: ReactNode }) {
         <CircleHelp aria-hidden size={20} strokeWidth={1.75} />
       </button>
       {open && (
-        <p id={id} className="basis-full rounded-button bg-primary-tint p-3 text-sm font-normal text-muted">
+        <span id={id} className="order-last block basis-full rounded-button bg-primary-tint p-3 text-sm font-normal text-muted">
           {children}
-        </p>
+        </span>
       )}
     </>
   );

@@ -58,7 +58,7 @@ export default async function SettingsPage() {
       <h1 className="px-1 text-2xl font-extrabold tracking-tight">{t('title')}</h1>
 
       <Card className="flex flex-col gap-3">
-        <CardTitle>{t('ruleTitle')}</CardTitle>
+        <CardTitle help={t('ruleNote')}>{t('ruleTitle')}</CardTitle>
         {current ? (
           <>
             <p className="text-xs text-faint">{t('since', { date: day(current.effective_from) })}</p>
@@ -85,11 +85,10 @@ export default async function SettingsPage() {
             workdays: (base?.workdays as number[] | undefined) ?? [1, 2, 3, 4, 5], weeklyRestDay: base?.weekly_rest_day ?? 7,
           }}
         />
-        <p className="text-xs text-faint">{t('ruleNote')}</p>
       </Card>
 
       <Card className="flex flex-col gap-2">
-        <CardTitle aside={<span className="num text-sm text-faint">{holidays?.length ?? 0}</span>}>{t('holidayTitle')}</CardTitle>
+        <CardTitle help={t('holidayNote')} aside={<span className="num text-sm text-faint">{holidays?.length ?? 0}</span>}>{t('holidayTitle')}</CardTitle>
         {(holidays ?? []).length === 0 && <p className="text-sm text-faint">{t('holidayNone')}</p>}
         <ul className="divide-y divide-border">
           {(holidays ?? []).map((h) => (
@@ -104,11 +103,10 @@ export default async function SettingsPage() {
           ))}
         </ul>
         <HolidayForm monthStart={monthStart} />
-        <p className="text-xs text-faint">{t('holidayNote')}</p>
       </Card>
 
       <Card className="flex flex-col gap-2">
-        <CardTitle>{t('networkTitle')}</CardTitle>
+        <CardTitle help={t('networkNote')}>{t('networkTitle')}</CardTitle>
         <p className={`rounded-button p-3 text-sm ${here ? 'bg-ok-tint text-ok' : 'bg-warn-tint text-warn'}`}>
           {trace.ip ? t(here ? 'hereYes' : 'hereNo', { ip: trace.ip }) : t('hereUnknown')}
         </p>
@@ -137,11 +135,10 @@ export default async function SettingsPage() {
           ))}
         </ul>
         <NetworkForm currentIp={trace.ip} currentKnown={here} />
-        <p className="text-xs text-faint">{t('networkNote')}</p>
       </Card>
 
       <Card className="flex flex-col gap-2">
-        <CardTitle>{t('locationTitle')}</CardTitle>
+        <CardTitle help={t('locationNote')}>{t('locationTitle')}</CardTitle>
         <p className={`rounded-button p-3 text-sm ${locations.some((l) => l.active) ? 'bg-ok-tint text-ok' : 'bg-surface text-muted'}`}>{t(locations.some((l) => l.active) ? 'gpsOn' : 'gpsOff')}</p>
         <ul className="divide-y divide-border">
           {locations.map((l) => (
@@ -160,7 +157,6 @@ export default async function SettingsPage() {
           ))}
         </ul>
         <LocationForm />
-        <p className="text-xs text-faint">{t('locationNote')}</p>
       </Card>
       {/* 진단 — 사무실 확인이 이상할 때만 보는 화면이라 메뉴에서 빼고 여기에 둔다 (2026-10-06) */}
       <Link href="/admin/diag" className="inline-flex min-h-11 items-center self-start px-1 text-sm text-muted">

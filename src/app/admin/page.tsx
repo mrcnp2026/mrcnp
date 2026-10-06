@@ -187,7 +187,7 @@ export default async function AdminHome({ searchParams }: { searchParams: Promis
 
       <Card className="flex scroll-mt-16 flex-col gap-2">
         <span id="notes" />
-        <CardTitle icon={NotebookPen} aside={<span className="num text-sm text-faint">{notes.length}</span>}>
+        <CardTitle icon={NotebookPen} help={t('notesHint')} aside={<span className="num text-sm text-faint">{notes.length}</span>}>
           {t('notesTitle')}
         </CardTitle>
         {notes.length === 0 ? (
@@ -206,7 +206,6 @@ export default async function AdminHome({ searchParams }: { searchParams: Promis
           </ul>
         )}
         <Pager page={notePage.page} pages={notePage.pages} param="np" params={sp} anchor="notes" label={tc('pages')} />
-        <p className="text-xs text-faint">{t('notesHint')}</p>
       </Card>
       </div>
       </div>

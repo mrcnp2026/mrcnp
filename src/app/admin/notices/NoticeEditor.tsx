@@ -202,8 +202,9 @@ export function NoticeEditor({ people, initial }: { people: { id: string; name: 
 
       {initial && (
         <Card className="flex flex-col gap-3">
-          <CardTitle icon={Languages}>{t('translations')}</CardTitle>
-          <p className="text-sm text-muted">{t('translationsHint')}</p>
+          <CardTitle icon={Languages} help={t('translationsHint')}>
+            {t('translations')}
+          </CardTitle>
           <Button variant="outline" disabled={busy} onClick={translate} className="w-full">
             {t('translate')}
           </Button>

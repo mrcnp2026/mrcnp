@@ -2,6 +2,7 @@
 // 문장은 여기 쓰지 않는다 — 부르는 쪽이 번역 파일에서 읽어 넘긴다 (4-10).
 import { AlertTriangle, Check, type LucideIcon } from 'lucide-react';
 import type { ButtonHTMLAttributes, ReactNode } from 'react';
+import { Help } from './Help';
 
 export function Card({ children, className = '' }: { children: ReactNode; className?: string }) {
   // 토스풍: 테두리·그림자 없는 큰 흰 카드. 회색 바탕 위에서 흰색만으로 묶음이 보인다
@@ -56,11 +57,13 @@ export function Chip({ tone = 'neutral', children }: { tone?: Tone; children: Re
  * 카드 제목 — 토스풍: 아이콘 타일 없이 작은 회색 글자 한 줄 (2026-10-02 의뢰인: "AI로 뚝딱 만든 느낌" — 카드마다 같은 아이콘 타일을 반복하던 것을 없앰).
  * icon은 예전 호출과 맞추려고 받기만 하고 그리지 않는다.
  */
-export function CardTitle({ children, aside }: { icon?: LucideIcon; children: ReactNode; aside?: ReactNode }) {
+export function CardTitle({ children, aside, help }: { icon?: LucideIcon; children: ReactNode; aside?: ReactNode; help?: ReactNode }) {
+  // help: 한 번 읽으면 되는 설명은 ? 아이콘 뒤로 접는다 (2026-10-06 의뢰인)
   return (
-    <div className="flex items-center justify-between gap-2">
+    <div className="flex flex-wrap items-center gap-x-1">
       <h2 className="text-sm font-medium text-muted">{children}</h2>
-      {aside}
+      {help && <Help>{help}</Help>}
+      {aside && <span className="ml-auto flex items-center">{aside}</span>}
     </div>
   );
 }
