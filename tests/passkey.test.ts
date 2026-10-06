@@ -3,7 +3,7 @@
 import { readFileSync } from 'node:fs';
 import path from 'node:path';
 import { beforeEach, describe, expect, it } from 'vitest';
-import { createPasskeyService, hashToken, PasskeyError, type InviteInfo } from '@/lib/passkey';
+import { createPasskeyService, hashToken, isPhoneUserAgent, PasskeyError, type InviteInfo } from '@/lib/passkey';
 import { MemoryPasskeyStore } from './helpers/memory-passkey-store';
 import { SoftAuthenticator } from './helpers/soft-authenticator';
 
@@ -280,5 +280,15 @@ describe('짧은 등록 코드', () => {
     const phone = new SoftAuthenticator(RP.rpID, RP.origin);
     const r = await svc.finishRegistration('abcd 2345', phone.register(opts.challenge));
     expect(r.employeeId).toBe(EMP);
+  });
+});
+
+describe('출퇴근 기기는 폰에서만 등록 (2026-10-06 의뢰인)', () => {
+  it('폰·태블릿만 통과하고 PC는 거른다', () => {
+    expect(isPhoneUserAgent('Mozilla/5.0 (iPhone; CPU iPhone OS 17_5 like Mac OS X) AppleWebKit/605.1.15 Mobile/15E148 Safari/604.1')).toBe(true);
+    expect(isPhoneUserAgent('Mozilla/5.0 (Linux; Android 14; SM-S918N) AppleWebKit/537.36 Chrome/126.0.0.0 Mobile Safari/537.36')).toBe(true);
+    expect(isPhoneUserAgent('Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 Chrome/126.0.0.0 Safari/537.36')).toBe(false);
+    expect(isPhoneUserAgent('Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 Version/17.5 Safari/605.1.15')).toBe(false);
+    expect(isPhoneUserAgent(null)).toBe(false);
   });
 });

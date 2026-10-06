@@ -2,6 +2,7 @@
 // 하단 탭은 layout.tsx.
 import { getFormatter, getLocale, getTranslations } from 'next-intl/server';
 import { Bell, LayoutDashboard, UserRound } from 'lucide-react';
+import { headers } from 'next/headers';
 import Link from 'next/link';
 import { redirect } from 'next/navigation';
 import { AddToHomeIcon } from '@/components/AddToHome';
@@ -14,6 +15,7 @@ import { OFFICE } from '@/config/office';
 import { languageOptions } from '@/i18n/locales';
 import { loadEmployeeToday } from '@/lib/attendance-data';
 import { getMe } from '@/lib/auth';
+import { isPhoneUserAgent } from '@/lib/passkey';
 import { createAdminClient } from '@/lib/supabase/admin';
 import { loadEmployeeRecent } from '@/lib/employee-data';
 import { visibleNoticesNow } from '@/lib/notices';
@@ -89,6 +91,7 @@ export default async function PunchPage() {
           lateMinutes={today.lateMinutes}
           practice={today.practice}
           device={key ? { credentialId: key.credential_id, label: key.device_label } : null}
+          phone={isPhoneUserAgent((await headers()).get('user-agent'))}
         />
 
         {/* 사무실 밖에서 찍혔는데 승인된 외근이 없으면 신청 안내 (②-3 7-11) */}

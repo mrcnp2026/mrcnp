@@ -134,6 +134,11 @@ export function deviceLabelFrom(userAgent: string | null): string | null {
   return null;
 }
 
+/** 폰·태블릿인가 — 출퇴근 기기는 들고 다니는 본인 폰에만 등록한다 (2026-10-06 의뢰인: PC에 등록 버튼이 나오면 안 된다) */
+export function isPhoneUserAgent(userAgent: string | null): boolean {
+  return !!userAgent && /iPhone|iPad|iPod|Android/i.test(userAgent);
+}
+
 export function createPasskeyService(store: PasskeyStore, rp: RpConfig, clock: () => Date = () => new Date()) {
   const expiry = () => new Date(clock().getTime() + rp.challengeTtlMin * 60_000);
 

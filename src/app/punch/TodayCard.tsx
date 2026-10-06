@@ -64,6 +64,7 @@ export function TodayCard(props: {
   lateMinutes: number | null;
   practice: boolean;
   device: { credentialId: string; label: string | null } | null; // 등록한 출퇴근 기기. 없으면 null
+  phone: boolean; // 폰·태블릿에서 열었는가 — PC에서는 기기 등록을 받지 않는다 (2026-10-06 의뢰인)
 }) {
   const t = useTranslations('home');
   const tc = useTranslations('common');
@@ -213,7 +214,16 @@ export function TodayCard(props: {
         </p>
       )}
 
-      {!device ? (
+      {!device && !props.phone ? (
+        // PC: 출퇴근 기기가 될 수 없다 → 등록 버튼 없이 안내만
+        <div className="flex flex-col gap-2 rounded-button bg-surface p-4">
+          <p className="flex items-center gap-2 font-bold">
+            <Smartphone aria-hidden size={20} strokeWidth={1.75} className="shrink-0 text-primary" />
+            {t('device.pcTitle')}
+          </p>
+          <p className="text-sm text-muted">{t('device.pcExplain')}</p>
+        </div>
+      ) : !device ? (
         // 등록한 기기가 없다 → 본인이 지금 이 기기를 등록한다 (초대 코드 없음)
         <div className="flex flex-col gap-3 rounded-button bg-surface p-4">
           <p className="flex items-center gap-2 font-bold">

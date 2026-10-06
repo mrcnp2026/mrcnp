@@ -4,6 +4,9 @@
 import { randomBytes } from 'node:crypto';
 import type { Page } from 'playwright-core';
 
+/** 출퇴근 기기는 폰에서만 등록된다 (2026-10-06) — 검사 브라우저를 폰으로 보이게 하는 사용자 에이전트 */
+export const PHONE_UA = 'Mozilla/5.0 (Linux; Android 14; Pixel 8) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126.0.0.0 Mobile Safari/537.36';
+
 export async function createPassword(p: Page): Promise<void> {
   const password = randomBytes(12).toString('base64url');
   const fields = p.locator('input[type="password"]');
@@ -20,6 +23,7 @@ export async function createPassword(p: Page): Promise<void> {
  */
 export async function registerDevice(p: Page): Promise<void> {
   const cdp = await p.context().newCDPSession(p);
+  await cdp.send('Emulation.setUserAgentOverride', { userAgent: PHONE_UA }); // PC로 보이면 등록 버튼이 나오지 않는다
   await cdp.send('WebAuthn.enable');
   await cdp.send('WebAuthn.addVirtualAuthenticator', {
     options: { protocol: 'ctap2', transport: 'internal', hasResidentKey: true, hasUserVerification: true, isUserVerified: true, automaticPresenceSimulation: true },

@@ -127,7 +127,9 @@
       "otherTitle": "Không thể chấm công từ thiết bị này",
       "otherExplain": "Bạn chỉ có thể chấm công từ thiết bị đã đăng ký. Nếu đổi điện thoại, hãy nhờ quản lý gỡ thiết bị chấm công.",
       "otherExplainLabel": "Bạn chỉ có thể chấm công từ thiết bị đã đăng ký ({label}). Nếu đổi điện thoại, hãy nhờ quản lý gỡ thiết bị chấm công.",
-      "otherRetry": "Đây là thiết bị tôi đã đăng ký · kiểm tra lại"
+      "otherRetry": "Đây là thiết bị tôi đã đăng ký · kiểm tra lại",
+      "pcTitle": "Không thể chấm công trên máy tính",
+      "pcExplain": "Bạn chấm công bằng một điện thoại của mình. Hãy đăng nhập trên điện thoại, nút đăng ký sẽ hiện ở đây. Trên máy tính bạn có thể xem bản ghi và gửi yêu cầu."
     },
     "cancelled": "Việc kiểm tra đã bị hủy, hoặc đây không phải thiết bị chấm công đã đăng ký.",
     "passkey_unknown": "Thiết bị này chưa được đăng ký để chấm công.",
@@ -137,6 +139,7 @@
   "errors": {
     "invite_invalid": "Liên kết mời đã hết hạn hoặc đã được dùng. Hãy xin quản lý liên kết mới.",
     "employee_inactive": "Tài khoản này không hoạt động. Vui lòng liên hệ quản lý.",
+    "phone_only": "Chỉ có thể đăng ký thiết bị chấm công trên điện thoại. Hãy đăng nhập trên điện thoại của bạn để đăng ký.",
     "already_registered": "Bạn đã có thiết bị chấm công. Để đổi, quản lý phải gỡ thiết bị cũ trước.",
     "challenge_invalid": "Yêu cầu mất quá nhiều thời gian. Vui lòng thử lại.",
     "verification_failed": "Không thể xác nhận điện thoại của bạn. Vui lòng thử lại.",

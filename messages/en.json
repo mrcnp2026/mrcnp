@@ -131,7 +131,9 @@
       "otherTitle": "You cannot punch from this device",
       "otherExplain": "You can punch only from your registered device. If you changed phones, ask your manager to release the punch device.",
       "otherExplainLabel": "You can punch only from your registered device ({label}). If you changed phones, ask your manager to release the punch device.",
-      "otherRetry": "This is my registered device · check again"
+      "otherRetry": "This is my registered device · check again",
+      "pcTitle": "You cannot punch from a PC",
+      "pcExplain": "You clock in and out from one phone of your own. Sign in on your phone and a register button appears here. On a PC you can view records and send requests."
     },
     "cancelled": "The check was cancelled, or this is not your registered punch device.",
     "passkey_unknown": "This device is not registered as a punch device.",
@@ -141,6 +143,7 @@
   "errors": {
     "invite_invalid": "This invitation link has expired or was already used. Ask your manager for a new one.",
     "employee_inactive": "This account is not active. Please talk to your manager.",
+    "phone_only": "A punch device can only be registered on a phone. Please sign in on your own phone to register.",
     "already_registered": "You already have a registered punch device. To change it, a manager must release the current one first.",
     "challenge_invalid": "The request took too long. Please try again.",
     "verification_failed": "The device check failed. Please try again.",

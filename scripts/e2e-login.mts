@@ -7,7 +7,7 @@ import { config } from 'dotenv';
 import { createHash, randomBytes, randomInt } from 'node:crypto';
 import path from 'node:path';
 import { chromium, type BrowserContext } from 'playwright-core';
-import { registerDevice } from './lib/e2e-password.ts';
+import { PHONE_UA, registerDevice } from './lib/e2e-password.ts';
 
 config({ path: path.join(import.meta.dirname, '..', '.env.local'), quiet: true });
 const BASE = 'http://localhost:4123';
@@ -54,7 +54,7 @@ try {
   // ── ① 비밀번호 만들기 (초대 코드) ──
   const code = await freshInvite(empId);
   const pw1 = newPassword();
-  const phone = await browser.newContext({ viewport: { width: 360, height: 780 }, locale: 'en-US' });
+  const phone = await browser.newContext({ viewport: { width: 360, height: 780 }, locale: 'en-US', userAgent: PHONE_UA });
   const p = await phone.newPage();
   await p.goto(`${BASE}/login`);
   check(await p.getByLabel('Employee number or mobile number').isVisible(), '로그인 화면에 아이디 칸이 보임');
@@ -93,9 +93,21 @@ try {
   check(noDevice.status === 400 && noDevice.json.error === 'device_required', `등록한 기기 없이 출퇴근 시작 → 거부 (${noDevice.json.error})`);
   const sessionOnly = await postAs(phone, '/api/punch', { kind: 'in' });
   check(sessionOnly.status === 401, `로그인만으로(기기 확인 없이) 출퇴근 API → 거부 (${sessionOnly.status})`);
+  // PC에서 열면 등록 버튼 없이 "폰에서 등록" 안내만 (2026-10-06 의뢰인)
+  const pc0 = await browser.newContext({ viewport: { width: 1280, height: 800 }, locale: 'en-US' });
+  await postAs(pc0, '/api/auth/login', { id: 'e2e-audit', password: pw1 });
+  const q0 = await pc0.newPage();
+  await q0.goto(`${BASE}/punch`);
+  check((await q0.getByText('You cannot punch from a PC').count()) === 1 && (await q0.getByRole('button', { name: 'Register this device for punching' }).count()) === 0, '기기 등록 전 PC에는 등록 버튼 없이 「폰에서 등록」 안내만 보임');
+  await q0.screenshot({ path: path.join(SHOTS, '로그인_03b_PC-기기등록불가_1280.png'), fullPage: true });
+  const pcReg = await postAs(pc0, '/api/device/register/options');
+  check(pcReg.status === 400 && pcReg.json.error === 'phone_only', `기기 등록 전 PC에서 등록 요청 → 거부 (${pcReg.json.error})`);
+  await pc0.close();
   await registerDevice(p); // 가상 지문 인식기를 단 이 브라우저를 출퇴근 기기로
   const { data: reg } = await db.from('user_passkeys').select('id, device_label').eq('employee_id', empId).is('revoked_at', null);
   check(reg?.length === 1, '초대 코드 없이 본인이 직접 출퇴근 기기를 등록함 (1대)');
+  const twice = await postAs(phone, '/api/device/register/options');
+  check(twice.status === 400 && twice.json.error === 'already_registered', `이미 등록한 직원이 또 등록 → 거부 (${twice.json.error})`);
   const before = new Date().toISOString();
   await p.getByRole('button', { name: /Clock (in|out)/ }).click();
   await p.getByText(/Clock-(in|out) \d{2}:\d{2} recorded/).waitFor();
@@ -127,7 +139,7 @@ try {
   const otherPunch = await postAs(pc, '/api/punch', { kind: 'in' });
   check(otherPunch.status === 401, `다른 기기에서 기기 확인 없이 출퇴근 API → 거부 (${otherPunch.status})`);
   const second = await postAs(pc, '/api/device/register/options');
-  check(second.status === 400 && second.json.error === 'already_registered', `다른 기기를 두 번째 출퇴근 기기로 등록 → 거부 (${second.json.error})`);
+  check(second.status === 400 && second.json.error === 'phone_only', `PC를 출퇴근 기기로 등록 → 거부 (${second.json.error})`);
 
   // ── ④ 비밀번호 바꾸기 → 다른 기기는 로그아웃 ──
   const pw2 = newPassword();
@@ -171,7 +183,8 @@ try {
   const stillIn = await post('/api/auth/login', { id: 'e2e-audit', password: pw2 });
   check(stillIn.status === 200, `기기를 해제해도 비밀번호 로그인은 그대로 됨 (${stillIn.status})`);
   await q.goto(`${BASE}/punch`);
-  check((await q.getByRole('button', { name: 'Register this device for punching' }).count()) === 1, '해제 뒤에는 직원이 새 기기를 직접 등록할 수 있음');
+  check((await q.getByText('You cannot punch from a PC').count()) === 1 && (await q.getByRole('button', { name: 'Register this device for punching' }).count()) === 0, '해제 뒤 PC에는 등록 버튼 없이 「폰에서 등록」 안내만 보임');
+  await q.screenshot({ path: path.join(SHOTS, '로그인_06_PC-기기미등록_1280.png'), fullPage: true });
   const reset = await postAs(admCtx, `/api/admin/employees/${empId}/phone`, { reason: 'e2e login reset' });
   check(reset.status === 200, `관리자가 직원 로그인 초기화 (${reset.status})`);
   await q.goto(`${BASE}/punch`);

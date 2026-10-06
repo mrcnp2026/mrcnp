@@ -28,7 +28,7 @@ await db.from('invites').insert({ employee_id: emp!.id, token_hash: createHash('
 
 const browser = await chromium.launch({ channel: 'chrome', headless: true });
 try {
-  const ctx = await browser.newContext({ viewport: { width: 390, height: 844 }, deviceScaleFactor: 2 });
+  const ctx = await browser.newContext({ viewport: { width: Number(process.env.W ?? 390), height: Number(process.env.H ?? 844) }, deviceScaleFactor: process.env.W ? 1 : 2 }); // W=1440 H=900 으로 PC 화면도 찍는다
   const p = await ctx.newPage();
   await p.goto(`${BASE}/register?token=${token}`);
   await createPassword(p);
