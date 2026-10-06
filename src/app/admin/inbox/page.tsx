@@ -22,6 +22,8 @@ import { CorrectionDecision, LeaveDecision, OvertimeDecision, WorkDecision } fro
 
 const RECENT_DAYS = 30;
 const RECENT_PAGE = 7;
+// 요청은 종류마다 한 쪽에 5건까지 — 넘으면 아래에 쪽 번호 (2026-10-06 의뢰인)
+const REQUEST_PAGE = 5;
 const RECENT_MAX_PAGES = 5;
 
 export default async function InboxPage({ searchParams }: { searchParams: Promise<{ live?: string; op?: string; cp?: string; lp?: string; wp?: string; rp?: string }> }) {
@@ -69,8 +71,8 @@ export default async function InboxPage({ searchParams }: { searchParams: Promis
     (evs ?? []).filter((x) => x.employee_id === e && x.work_date === d).map((x) => `${x.kind === 'in' ? '↘' : '↗'} ${hm(x.punched_at)}`).join('  ');
 
   const tc = await getTranslations('common');
-  const otPage = pageOf(ot ?? [], sp.op);
-  const coPage = pageOf(co ?? [], sp.cp);
+  const otPage = pageOf(ot ?? [], sp.op, REQUEST_PAGE);
+  const coPage = pageOf(co ?? [], sp.cp, REQUEST_PAGE);
 
   // 연차·휴가 신청 (②-2 게이트 5): 남은 연차 + 그 날짜 출근 기록 충돌 경고 (자동으로 지우지 않는다, 요점 4)
   const tl = await getTranslations('leave');
@@ -87,9 +89,9 @@ export default async function InboxPage({ searchParams }: { searchParams: Promis
   ]);
   const leaveName = (code: string) => (tl.has(`type.${code}`) ? tl(`type.${code}`) : code);
   const nDays = (v: number) => f.number(v, { maximumFractionDigits: 2 });
-  const lvPage = pageOf(leavePending, sp.lp);
+  const lvPage = pageOf(leavePending, sp.lp, REQUEST_PAGE);
   const workPending = (await loadWorkRequests({ practice })).filter((w) => w.status === 'pending').sort((a, b) => (a.startDate < b.startDate ? -1 : 1));
-  const wkPage = pageOf(workPending, sp.wp);
+  const wkPage = pageOf(workPending, sp.wp, REQUEST_PAGE);
 
   // 표(PC)와 카드(폰)가 같은 값을 쓰도록 한 번만 계산한다
   const th = 'px-4 py-3 text-left text-xs font-medium whitespace-nowrap text-faint';

@@ -198,7 +198,7 @@ export default async function AdminHome({ searchParams }: { searchParams: Promis
         })}
       />
       <BarCard
-        className="hidden lg:flex"
+        className="flex"
         dense
         title={t('lateTitle')}
         unit={t('chartUnit')}
