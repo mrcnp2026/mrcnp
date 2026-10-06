@@ -27,7 +27,11 @@ export const POST = api<{ params: Promise<{ id: string }> }>('admin.notices.stat
       await draftTranslations(id);
       got = (await getNotice(id))!;
     }
-    const blockers = publishBlockers(got.notice, got.translations, translationLocales());
+    // 기계 번역의 숫자 대조는 게시를 막지 않는다 — "10월 7일"→"October 7"처럼 달 이름만 바뀌어도 걸려서, 자동 번역 흐름에서는 일반 공지가 번번이 막혔다 (2026-10-06).
+    // 사람이 고친 번역의 숫자가 원문과 다르면 지금처럼 막는다(「확인했음」 필요). 법적·급여 공지도 지금처럼 사람이 확인해야 게시된다.
+    // 편집 화면의 「숫자 확인 필요」 표시와 직원 화면의 「참고용 번역」 안내는 그대로 둔다
+    const machine = new Set(got.translations.filter((x) => x.source === 'machine').map((x) => x.locale));
+    const blockers = publishBlockers(got.notice, got.translations, translationLocales()).filter((b) => !(b.startsWith('numbers:') && machine.has(b.slice(8))));
     if (blockers.length) throw new ApiError(409, blockers[0].startsWith('legal') ? 'notice_legal_review' : 'notice_numbers_review');
     await setStatus(id, 'published', me.id);
   } else if (action === 'archive') {

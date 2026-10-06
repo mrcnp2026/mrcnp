@@ -21,7 +21,7 @@ import { buildTodayBoard, type BoardPerson } from '@/lib/today';
 import { weekLimitList } from '@/lib/week-limit';
 import { AutoRefresh } from './AutoRefresh';
 import { BoardView } from './BoardView';
-import { Analytics } from './Analytics';
+import { KpiRow, LateCard, TrendCard } from './Analytics';
 import { WeekLimitCard } from './WeekLimitCard';
 
 export default async function AdminHome({ searchParams }: { searchParams: Promise<{ live?: string; np?: string }> }) {
@@ -33,7 +33,7 @@ export default async function AdminHome({ searchParams }: { searchParams: Promis
   const practiceView = OFFICE.practiceMode && sp.live !== '1';
   const now = new Date();
   const today = toKstDate(now);
-  const data = await loadPeriod(addDays(today, -13), today, practiceView);
+  const [data, hist] = await Promise.all([loadPeriod(addDays(today, -13), today, practiceView), loadPeriod(addDays(today, -29), today, practiceView)]);
   await syncOvertimeRequests(data, today);
   const counts = await pendingCounts(practiceView);
   // 오늘 근무노트 — 같은 직원·같은 날은 가장 최근 것만 (고친 노트는 새 행, 이전은 기록으로 남음 — R-10-2)
@@ -93,8 +93,7 @@ export default async function AdminHome({ searchParams }: { searchParams: Promis
         end: hhmm(kstDateTime(today, data.rule.endTime)),
       }
     : null;
-  // PC 분석 영역: 최근 30일 추이 (현황판 판정과 따로 불러온다 — 미기록 판정은 14일 창을 그대로 쓴다)
-  const hist = await loadPeriod(addDays(today, -29), today, practiceView);
+  // PC 분석 영역: 최근 30일 추이 (hist — 현황판 판정과 따로 불러온 기록. 미기록 판정은 14일 창을 그대로 쓴다)
   const md = (d: string) => `${Number(d.slice(5, 7))}/${Number(d.slice(8, 10))}`;
   const longDay = (d: string) => fmt.dateTime(kstDateTime(d, '12:00'), { month: 'long', day: 'numeric', weekday: 'short' });
   const daily = [...Array(30)].map((_, i) => addDays(today, -29 + i)).map((d) => {
@@ -149,37 +148,18 @@ export default async function AdminHome({ searchParams }: { searchParams: Promis
         </p>
       )}
 
-      <Analytics
+      <KpiRow
         kpis={[
-          { label: t('chartRate'), value: rate === null ? '–' : `${rate}%`, sub: delta === null ? undefined : t('kpiDelta', { d: `${delta > 0 ? '+' : ''}${delta}` }) },
+          { label: t('chartRate'), value: rate === null ? '–' : `${rate}%`, sub: rate === null ? t('chartNoTarget') : delta === null ? t('chartRateSub', { n: Math.min(inCount, target), target }) : `${t('chartRateSub', { n: Math.min(inCount, target), target })} · ${t('kpiDelta', { d: `${delta > 0 ? '+' : ''}${delta}` })}` },
           { label: th('status.late'), value: String(board.late.length), warn: board.late.length > 0, sub: t('kpiToday') },
           { label: th('status.absent'), value: String(board.absent.length), sub: t('kpiToday') },
           { label: t('todo'), value: String(todo.reduce((a, x) => a + x.n, 0)), sub: t('kpiTodo'), href: '/admin/inbox' },
         ]}
-        lineTitle={t('lineTitle')}
-        lineNote={t('lineNote', { n: active.length })}
-        lineEmpty={t('lineEmpty')}
-        points={workdays.map((x) => ({ key: x.d, label: md(x.d), value: pct(x.n), tip: t('pointTip', { date: longDay(x.d), n: x.n, p: pct(x.n) }) }))}
-        rate={rate}
-        rateTitle={t('chartRate')}
-        rateSub={rate === null ? t('chartNoTarget') : t('chartRateSub', { n: Math.min(inCount, target), target })}
-        lateTitle={t('lateTitle')}
-        unit={t('chartUnit')}
-        late={daily.slice(-14).map((x) => ({ key: x.d, label: md(x.d), sub: fmt.dateTime(kstDateTime(x.d, '12:00'), { weekday: 'short' }), n: x.late, tip: t('lateTip', { date: longDay(x.d), n: x.late }) }))}
-        statusTitle={t('statusTitle')}
-        status={[
-          { label: th('status.working'), n: board.working.length },
-          { label: th('status.late'), n: board.late.length, warn: true },
-          { label: th('status.absent'), n: board.absent.length },
-          { label: th('status.done'), n: board.done.length },
-          { label: th('status.overtime'), n: board.overtime.length, warn: true },
-        ]}
-        total={active.length}
       />
 
-      {/* PC: 왼쪽 = 오늘 출근 현황, 오른쪽 = 처리할 일·주 52시간·근무노트 (2026-10-06 의뢰인) · 폰: 한 칸 */}
-      <div className="flex flex-col gap-3 lg:grid lg:grid-cols-5 lg:items-start lg:gap-4">
-      <Card className="flex flex-col p-0 py-2 lg:col-span-2 lg:col-start-4 lg:row-start-1">
+      {/* PC: ① 오늘 직원 현황(넓게) + 처리할 일 ② 30일 추이 + 14일 지각 ③ 주 52시간 + 근무노트 — 줄마다 높이를 맞춘다 (2026-10-06 의뢰인: 흩어져 난잡했다) · 폰: 한 칸 */}
+      <div className="flex flex-col gap-3 lg:grid lg:grid-cols-3 lg:gap-4">
+      <Card className="flex flex-col p-0 py-2 lg:col-start-3 lg:row-start-1">
         <div className="px-5 pt-2">
           <CardTitle icon={Inbox}>{t('todo')}</CardTitle>
         </div>
@@ -196,11 +176,24 @@ export default async function AdminHome({ searchParams }: { searchParams: Promis
         </ul>
       </Card>
 
-      <div className="flex flex-col gap-3 lg:col-span-3 lg:col-start-1 lg:row-span-3 lg:row-start-1 lg:gap-4">
+      <div className="flex flex-col gap-3 lg:col-span-2 lg:col-start-1 lg:row-start-1">
       <BoardView board={board} total={active.length} limitMinutes={OFFICE.weeklyLimitHours * 60} cautionMinutes={OFFICE.weeklyCautionHours * 60} colored={OFFICE.workplaceSize === '5_or_more'} legend={legend} />
       </div>
 
-      <div className="flex flex-col gap-3 lg:col-span-2 lg:col-start-4 lg:gap-4">
+      <TrendCard
+        className="hidden lg:col-span-2 lg:flex"
+        title={t('lineTitle')}
+        note={t('lineNote', { n: active.length })}
+        empty={t('lineEmpty')}
+        points={workdays.map((x) => ({ key: x.d, label: md(x.d), value: pct(x.n), tip: t('pointTip', { date: longDay(x.d), n: x.n, p: pct(x.n) }) }))}
+      />
+      <LateCard
+        className="hidden lg:flex"
+        title={t('lateTitle')}
+        unit={t('chartUnit')}
+        bars={daily.slice(-14).map((x) => ({ key: x.d, label: md(x.d), n: x.late, tip: t('lateTip', { date: longDay(x.d), n: x.late }) }))}
+      />
+      <div className="flex flex-col gap-3 lg:col-span-3 lg:grid lg:grid-cols-2 lg:gap-4">
       {data.rule && (
         <WeekLimitCard
           rows={weekLimitList(people, { regularMin: LABOR.weeklyRegularLimitMin, cautionMin: OFFICE.weeklyCautionHours * 60, limitMin: OFFICE.weeklyLimitHours * 60 })}

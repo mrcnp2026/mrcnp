@@ -7,6 +7,7 @@
 import { ChevronLeft, ChevronRight } from 'lucide-react';
 import { useFormatter, useTranslations } from 'next-intl';
 import { useState } from 'react';
+import { Help } from '@/components/Help';
 import { Card } from '@/components/ui';
 import type { BoardRow, DayStatus } from '@/lib/today';
 
@@ -64,10 +65,82 @@ export function BoardView({
   };
   const weekTone = (wm: number | null) => (wm === null || !colored ? '' : wm > limitMinutes ? 'text-danger' : wm >= cautionMinutes ? 'text-warn' : '');
 
+  const statusText = (r: BoardRow) => (r.status === 'off' && r.onLeave ? t('onLeave') : r.status === 'off' && r.work ? t(`work.${r.work}`) : th(`status.${r.status}`));
+  const pager = pages > 1 && (
+    <nav aria-label={t('pages')} className="flex items-center justify-center gap-1 pt-1">
+      <button type="button" disabled={cur === 1} onClick={() => setPage(cur - 1)} aria-label={t('prevPage')} className="flex size-11 items-center justify-center text-primary disabled:text-faint">
+        <ChevronLeft aria-hidden size={20} strokeWidth={2} />
+      </button>
+      {[...Array(pages)].map((_, i) => (
+        <button key={i} type="button" onClick={() => setPage(i + 1)} aria-current={cur === i + 1 ? 'page' : undefined} className={`num flex size-11 items-center justify-center rounded-button text-sm font-bold ${cur === i + 1 ? 'bg-primary text-on-primary' : 'text-muted'}`}>
+          {i + 1}
+        </button>
+      ))}
+      <button type="button" disabled={cur === pages} onClick={() => setPage(cur + 1)} aria-label={t('nextPage')} className="flex size-11 items-center justify-center text-primary disabled:text-faint">
+        <ChevronRight aria-hidden size={20} strokeWidth={2} />
+      </button>
+    </nav>
+  );
+
   return (
-    <div className="flex flex-col gap-3">
-      {/* 숫자 칸 5개 — 한 카드 안에 한 줄. 누르면 아래 명단이 걸러진다 */}
-      <Card className="p-2">
+    <div className="flex flex-col gap-3 lg:h-full">
+      {/* PC: 제목 + 걸러보기 단추 + 표 (2026-10-06 의뢰인: 직원 명단을 카드처럼 늘어놓지 말 것) */}
+      <Card className="hidden flex-1 flex-col gap-3 p-0 py-4 lg:flex">
+        <div className="flex flex-wrap items-center gap-x-1 gap-y-2 px-5">
+          <h2 className="font-bold">{t('listTitle')}</h2>
+          <Help>
+            {[t('basisToday'), legend && t('basisLate', { time: legend.deadline }), legend && t('basisOvertime', { time: legend.end }), t('basisAbsent'), t('basisOne'), t('basisPast')].filter(Boolean).map((x) => (
+              <span key={x as string} className="block">{x}</span>
+            ))}
+          </Help>
+          <div className="ml-auto flex flex-wrap gap-1" role="tablist" aria-label={t('statusTabs')}>
+            {(['all', ...ORDER] as const).map((k) => {
+              const on = filter === k;
+              const n = k === 'all' ? all.length : board[k].length;
+              return (
+                <button key={k} type="button" role="tab" aria-selected={on} onClick={() => { setFilter(k); setPage(1); }} className={`inline-flex min-h-9 items-center gap-1 rounded-button px-3 text-sm ${on ? 'bg-primary-tint font-bold text-primary' : 'text-muted'}`}>
+                  {k === 'all' ? t('everyone') : th(`status.${k}`)} <span className="num">{n}</span>
+                </button>
+              );
+            })}
+          </div>
+        </div>
+        {shown.length === 0 ? (
+          <p className="px-5 py-4 text-sm text-faint">{t('nobody')}</p>
+        ) : (
+          <table className="w-full text-sm">
+            <thead>
+              <tr className="border-y border-border">
+                {[t('colStaff'), t('colStatus'), t('colIn'), t('colOut'), t('colWeek'), t('colNote')].map((x) => (
+                  <th key={x} scope="col" className="px-5 py-2 text-left text-xs font-medium whitespace-nowrap text-faint">{x}</th>
+                ))}
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-border">
+              {shown.map((r) => (
+                <tr key={r.id}>
+                  <td className="px-5 py-3 font-medium whitespace-nowrap">{r.name}</td>
+                  <td className={`px-5 py-3 font-bold whitespace-nowrap ${(r.onLeave || r.work) && r.status === 'off' ? 'text-primary' : TONE[r.status]}`}>{statusText(r)}</td>
+                  <td className="num px-5 py-3">{time(r.firstIn) || '–'}</td>
+                  <td className="num px-5 py-3">{r.lastOut && r.status === 'done' ? time(r.lastOut) : '–'}</td>
+                  <td className={`num px-5 py-3 ${weekTone(r.weekMinutes)}`}>{r.weekMinutes === null ? '–' : t('weekShort', { h: Math.floor(r.weekMinutes / 60), m: r.weekMinutes % 60 })}</td>
+                  <td className="px-5 py-3 text-xs">
+                    <span className="flex flex-wrap gap-x-2">
+                      {r.late && <span className="num text-warn">{th('lateBy', { n: r.lateMinutes })}</span>}
+                      {r.firstInVerified === false && (r.work ? <span className="text-primary">{t('workApproved', { kind: t(`work.${r.work}`) })}</span> : <span className="text-warn">{th('outside')}</span>)}
+                      {r.adminEntered && <span className="text-faint">{t('adminEntered')}</span>}
+                    </span>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        )}
+        {pager}
+      </Card>
+
+      {/* 폰 — 숫자 칸 5개: 한 카드 안에 한 줄. 누르면 아래 명단이 걸러진다 */}
+      <Card className="p-2 lg:hidden">
         <div className="grid grid-cols-5" role="tablist" aria-label={t('statusTabs')}>
           {ORDER.map((k) => {
             const n = board[k].length;
@@ -91,7 +164,7 @@ export function BoardView({
       </Card>
 
       {/* 기준 — 무엇을 어떻게 셌는지 */}
-      <details className="rounded-card bg-bg px-5 text-sm">
+      <details className="rounded-card bg-bg px-5 text-sm lg:hidden">
         <summary className="flex min-h-11 cursor-pointer items-center justify-between text-muted">
           <span>{t('basis')}</span>
           <span className="text-faint">{t('basisOpen')}</span>
@@ -106,8 +179,8 @@ export function BoardView({
         </ul>
       </details>
 
-      {/* 명단 */}
-      <Card className="flex flex-col p-0 py-2">
+      {/* 명단 (폰) */}
+      <Card className="flex flex-col p-0 py-2 lg:hidden">
         <div className="flex min-h-11 items-center justify-between px-5">
           <h2 className="text-sm font-medium text-muted">
             {filter === 'all' ? t('everyone') : th(`status.${filter}`)} <span className="num">{list.length}</span>

@@ -3,7 +3,6 @@
 import { CalendarDays } from 'lucide-react';
 import { getFormatter, getTranslations } from 'next-intl/server';
 import { redirect } from 'next/navigation';
-import { Help } from '@/components/Help';
 import { Card, CardTitle, Chip, PageShell } from '@/components/ui';
 import { getMe } from '@/lib/auth';
 import { calcLeaveBalance } from '@/lib/leave';
@@ -32,11 +31,10 @@ export default async function LeavePage({ searchParams }: { searchParams: Promis
     <PageShell wide>
       <h1 className="text-2xl font-semibold text-primary-deep">{t('title')}</h1>
 
-      {/* PC: 왼쪽 = 휴가, 오른쪽 = 외근·출장·재택 (2026-10-06 의뢰인) · 폰: 한 칸 */}
-      <div className="flex flex-col gap-3 lg:grid lg:grid-cols-2 lg:items-start lg:gap-4">
-      <div className="flex flex-col gap-3">
+      {/* PC: 왼쪽 = 휴가, 오른쪽 = 외근·출장·재택. 줄마다 좌우 높이를 맞춘다 — ① 요약 ② 신청 ③ 내 신청 (2026-10-06 의뢰인: 위쪽이 어긋났다) · 폰: 휴가 3칸 뒤에 외근 3칸 (order) */}
+      <div className="flex flex-col gap-3 lg:grid lg:grid-cols-2 lg:gap-4">
 
-      <Card className="flex flex-col gap-3 p-6">
+      <Card className="order-1 flex flex-col gap-3 p-6">
         <CardTitle icon={CalendarDays} aside={bal.grant && <span className="text-sm text-faint">{bal.grant.periodLabel}</span>}>
           {t('balanceTitle')}
         </CardTitle>
@@ -64,13 +62,16 @@ export default async function LeavePage({ searchParams }: { searchParams: Promis
         )}
       </Card>
 
-      <LeaveForm today={today} types={types.map((x) => ({ code: x.code, name: nameOf(x.code), unit: x.dayUnit, deducts: x.deductsBalance }))} />
+      <div className="order-2 grid lg:order-3">
+        <LeaveForm today={today} types={types.map((x) => ({ code: x.code, name: nameOf(x.code), unit: x.dayUnit, deducts: x.deductsBalance }))} />
+      </div>
 
-      <section className="flex flex-col gap-2">
+      <section className="order-3 flex flex-col gap-2 lg:order-5">
         <h2 className="font-semibold">{t('mine')}</h2>
         {requests.length === 0 && <p className="text-sm text-faint">{t('none')}</p>}
+        <ul className="divide-y divide-border rounded-card bg-bg empty:hidden">
         {requests.map((r) => (
-          <Card key={r.id} className="flex flex-col gap-1">
+          <li key={r.id} className="flex flex-col gap-1 px-5 py-3">
             <div className="flex items-center justify-between gap-2">
               <span className="font-semibold">
                 {nameOf(r.typeCode)} · <span className="num">{t('days', { n: n(r.days) })}</span>
@@ -80,23 +81,37 @@ export default async function LeavePage({ searchParams }: { searchParams: Promis
             <p className="num text-sm">{r.startDate === r.endDate ? day(r.startDate) : `${day(r.startDate)} ~ ${day(r.endDate)}`}</p>
             {r.reason && <p className="text-sm text-muted">{r.reason}</p>}
             {r.status === 'pending' && <CancelLeave id={r.id} />}
-          </Card>
+          </li>
         ))}
+        </ul>
       </section>
 
+      {/* 외근·출장·재택 (②-3 7-11) — 연차와 같은 화면. 요약 칸은 왼쪽 「남은 연차」와 같은 줄·같은 높이 */}
+      <div id="work" className="order-4 grid scroll-mt-16 lg:order-2">
+        <Card className="flex flex-col gap-3 p-6">
+          <CardTitle help={tw('intro')}>{tw('title')}</CardTitle>
+          <dl className="num grid flex-1 grid-cols-2 content-center gap-2 text-center">
+            {(['pending', 'approved'] as const).map((k) => {
+              const v = works.filter((w) => w.status === k).length;
+              return (
+                <div key={k} className="rounded-button bg-surface p-2">
+                  <dt className="text-xs text-muted">{tw(`status.${k}`)}</dt>
+                  <dd className={`text-lg font-bold ${k === 'pending' && v > 0 ? 'text-warn' : ''}`}>{v}</dd>
+                </div>
+              );
+            })}
+          </dl>
+        </Card>
       </div>
-
-      {/* 외근·출장·재택 (②-3 7-11) — 연차와 같은 화면 */}
-      <section id="work" className="flex scroll-mt-16 flex-col gap-3">
-        <div className="flex flex-wrap items-center gap-x-1">
-          <h2 className="text-xl font-semibold">{tw('title')}</h2>
-          <Help>{tw('intro')}</Help>
-        </div>
+      <div className="order-5 grid lg:order-4">
         <WorkForm today={today} initialDate={sp.workDate && /^\d{4}-\d{2}-\d{2}$/.test(sp.workDate) ? sp.workDate : null} />
+      </div>
+      <section className="order-6 flex flex-col gap-2">
         <h3 className="font-semibold">{tw('mine')}</h3>
         {works.length === 0 && <p className="text-sm text-faint">{tw('none')}</p>}
+        <ul className="divide-y divide-border rounded-card bg-bg empty:hidden">
         {works.map((w) => (
-          <Card key={w.id} className="flex flex-col gap-1">
+          <li key={w.id} className="flex flex-col gap-1 px-5 py-3">
             <div className="flex items-center justify-between gap-2">
               <span className="font-semibold">
                 {tw(`kind.${w.kind}`)} · {w.place}
@@ -109,8 +124,9 @@ export default async function LeavePage({ searchParams }: { searchParams: Promis
             </p>
             {w.reason && <p className="text-sm text-muted">{w.reason}</p>}
             {w.status === 'pending' && <CancelWork id={w.id} />}
-          </Card>
+          </li>
         ))}
+        </ul>
       </section>
       </div>
     </PageShell>

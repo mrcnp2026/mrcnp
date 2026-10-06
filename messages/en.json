@@ -391,7 +391,14 @@
       "pointTip": "{date} · {n} in ({p}%)",
       "lateTitle": "Late arrivals, last 14 days",
       "lateTip": "{date} · {n} late",
-      "statusTitle": "Today's status"
+      "listTitle": "Staff today",
+      "colStaff": "Staff",
+      "colStatus": "Status",
+      "colIn": "In",
+      "colOut": "Out",
+      "colWeek": "This week",
+      "colNote": "Notes",
+      "weekShort": "{h}h {m}m"
     },
     "inbox": {
       "title": "Requests",
@@ -587,7 +594,11 @@
       "archiveAction": "Archive",
       "restore": "Restore",
       "trTitle": "Translated title ({lang})",
-      "trBody": "Translated body ({lang})"
+      "trBody": "Translated body ({lang})",
+      "colTitle": "Title",
+      "colState": "State",
+      "colStart": "Starts",
+      "colConfirmed": "Confirmed"
     },
     "payroll": {
       "title": "Payroll",

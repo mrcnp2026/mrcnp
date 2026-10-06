@@ -391,7 +391,14 @@
       "pointTip": "{date} · {n}명 출근 ({p}%)",
       "lateTitle": "최근 14일 지각",
       "lateTip": "{date} · 지각 {n}명",
-      "statusTitle": "오늘 근무 상태"
+      "listTitle": "오늘 직원 현황",
+      "colStaff": "직원",
+      "colStatus": "상태",
+      "colIn": "출근",
+      "colOut": "퇴근",
+      "colWeek": "이번 주",
+      "colNote": "비고",
+      "weekShort": "{h}시간 {m}분"
     },
     "inbox": {
       "title": "요청",
@@ -587,7 +594,11 @@
       "archiveAction": "보관",
       "restore": "되살리기",
       "trTitle": "번역 제목 ({lang})",
-      "trBody": "번역 본문 ({lang})"
+      "trBody": "번역 본문 ({lang})",
+      "colTitle": "제목",
+      "colState": "상태",
+      "colStart": "게시 시작",
+      "colConfirmed": "확인"
     },
     "payroll": {
       "title": "급여",

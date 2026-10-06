@@ -20,13 +20,19 @@ import {
   type LucideIcon,
 } from 'lucide-react';
 import { useTranslations } from 'next-intl';
-import Link from 'next/link';
+import Link, { useLinkStatus } from 'next/link';
 import { LanguageSwitcher } from './LanguageSwitcher';
 import { Logo } from './Logo';
 import { usePressedTab } from './NavTab';
 import { SignOutButton } from './SignOutButton';
 
 type Item = { href: string; key: string; icon: LucideIcon; badge?: number };
+
+/** 누른 메뉴의 다음 화면을 불러오는 동안 오른쪽 끝에 파란 막대 (2026-10-06 의뢰인: 눌러도 진행 중인지 모르겠다). 움직임 없이 나타났다 사라진다 */
+function Loading() {
+  const { pending } = useLinkStatus();
+  return <span aria-hidden className={`h-5 w-1 shrink-0 rounded-chip bg-primary ${pending ? 'opacity-100' : 'opacity-0'}`} />;
+}
 type Group = { key: string; items: Item[] };
 
 export function SideNav({ isAdmin, inboxCount = 0, languages }: { isAdmin: boolean; inboxCount?: number; languages: { code: string; name: string }[] }) {
@@ -107,6 +113,7 @@ export function SideNav({ isAdmin, inboxCount = 0, languages }: { isAdmin: boole
                   <Icon aria-hidden size={20} strokeWidth={on ? 2.25 : 1.75} className="shrink-0" />
                   <span className="flex-1">{t(key)}</span>
                   {!!badge && <span className="num min-w-5 rounded-chip bg-warn px-1.5 text-center text-xs leading-5 font-bold text-on-primary">{badge}</span>}
+                  <Loading />
                 </Link>
               );
             })}

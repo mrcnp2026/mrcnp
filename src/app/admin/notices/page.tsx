@@ -42,7 +42,40 @@ export default async function NoticesPage() {
         </Link>
       </header>
       {current.length === 0 && <p className="text-muted">{t('empty')}</p>}
-      <ul className="flex flex-col gap-3">{current.map(item)}</ul>
+      {/* PC: 공지 한 건 = 표 한 줄 (2026-10-06 의뢰인) · 폰: 카드 */}
+      {current.length > 0 && (
+        <Card className="hidden overflow-x-auto p-0 lg:block">
+          <table className="w-full text-sm">
+            <thead>
+              <tr className="border-b border-border">
+                {[t('colTitle'), t('colState'), t('colStart'), t('colConfirmed')].map((x) => (
+                  <th key={x} scope="col" className="px-4 py-3 text-left text-xs font-medium whitespace-nowrap text-faint">{x}</th>
+                ))}
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-border">
+              {current.map((r) => (
+                <tr key={r.notice.id}>
+                  <td className="px-4 py-3">
+                    <Link href={`/admin/notices/${r.notice.id}`} className="inline-flex min-h-9 items-center font-semibold break-words text-primary">
+                      {r.notice.title}
+                    </Link>
+                  </td>
+                  <td className="px-4 py-3">
+                    <span className="flex flex-wrap gap-1">
+                      <Chip tone={tone[r.state]}>{t(`state.${r.state}`)}</Chip>
+                      {r.notice.important && <Chip tone="warn">{t('important')}</Chip>}
+                    </span>
+                  </td>
+                  <td className="px-4 py-3 num whitespace-nowrap text-muted">{f.dateTime(r.notice.startsAt, { dateStyle: 'medium', timeStyle: 'short' })}</td>
+                  <td className="px-4 py-3 num text-muted">{r.notice.status === 'published' ? t('confirmed', { n: r.confirmed, total: r.total }) : '–'}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </Card>
+      )}
+      <ul className="flex flex-col gap-3 lg:hidden">{current.map(item)}</ul>
       {archived.length > 0 && (
         <details className="rounded-card border border-border px-4">
           <summary className="flex min-h-11 cursor-pointer items-center justify-between text-sm text-muted">
