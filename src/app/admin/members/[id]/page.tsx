@@ -1,6 +1,6 @@
 // 직원 상세 (2026-10-05 의뢰인: 샤플 대조) — 한 사람에 관한 일을 한 화면에서: 소속·연락처, 로그인(가입 여부), 기록 바로가기, 정보 수정.
 // 지우는 버튼은 없다 (4-6). 퇴사·권한·로그인 초기화는 아래 「관리」 묶음에서 사유와 함께 한다.
-import { CalendarDays, ChevronRight, KeyRound, Smartphone } from 'lucide-react';
+import { CalendarDays, KeyRound, Smartphone } from 'lucide-react';
 import { getFormatter, getTranslations } from 'next-intl/server';
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
@@ -66,11 +66,12 @@ export default async function MemberDetailPage({ params }: { params: Promise<{ i
       <Link href="/admin/members" className="-mb-2 inline-flex min-h-11 min-w-11 items-center self-start text-sm font-medium text-muted">
         ‹ {t('title')}
       </Link>
-      <header className="flex items-center gap-3 px-1">
+      {/* 머리: 누구인지(이름·소속·상태) + 가장 자주 가는 곳(날짜별 기록) — 한 카드 (2026-10-06 의뢰인: 상세 화면이 흩어져 보였다) */}
+      <header className="flex flex-wrap items-center gap-x-4 gap-y-3 rounded-card bg-bg p-5">
         <span aria-hidden className="flex size-14 shrink-0 items-center justify-center rounded-chip bg-primary-tint text-xl font-extrabold text-primary">
           {p.name.slice(0, 1)}
         </span>
-        <div className="min-w-0">
+        <div className="min-w-0 flex-1">
           <h1 className="truncate text-2xl font-extrabold tracking-tight">{p.name}</h1>
           <p className="truncate text-sm text-muted">{[p.job_title, path ?? t('unassigned')].filter(Boolean).join(' · ')}</p>
           <p className="mt-1 flex flex-wrap items-center gap-1.5">
@@ -81,13 +82,31 @@ export default async function MemberDetailPage({ params }: { params: Promise<{ i
             {p.active && (agreedAt ? <Chip tone="ok">{t('consentYes', { date: day(agreedAt) })}</Chip> : <Chip tone="warn">{t('consentNo')}</Chip>)}
           </p>
         </div>
+        <Link href={`/admin/records/${p.id}`} className="inline-flex min-h-11 w-full items-center justify-center gap-2 rounded-button bg-primary-tint px-4 text-sm font-bold text-primary lg:w-auto">
+          <CalendarDays aria-hidden size={18} strokeWidth={2} />
+          {t('toRecords')}
+        </Link>
       </header>
+
+      <dl className="grid grid-cols-2 gap-2 lg:grid-cols-4 lg:gap-4">
+        {[
+          { k: 'colNo', v: p.employee_no ?? '–' },
+          { k: 'colGroup', v: path ?? t('unassigned') },
+          { k: 'infoJoined', v: p.joined_on ? day(`${p.joined_on}T12:00:00+09:00`) : '–' },
+          { k: 'infoPhone', v: p.phone ?? '–' },
+        ].map((x) => (
+          <div key={x.k} className="flex min-w-0 flex-col gap-1 rounded-card bg-bg p-4">
+            <dt className="text-xs text-muted">{t(x.k)}</dt>
+            <dd className="num truncate font-bold">{x.v}</dd>
+          </div>
+        ))}
+      </dl>
 
       {pendingRole && <RoleRequestCard id={pendingRole.id} change={changeLabel} requester={requesterName} reason={pendingRole.reason} mine={pendingRole.requested_by === me.id} />}
 
-      {/* PC: 윗줄 = 로그인 | 기록 바로가기·관리, 아랫줄 = 정보 수정 (2026-10-06 의뢰인) · 폰: 한 칸 */}
-      <div className="flex flex-col gap-3 lg:grid lg:grid-cols-2 lg:gap-4">
-      <Card className="flex flex-col gap-3 lg:row-span-2">
+      {/* PC: 왼쪽(넓게) = 정보 수정, 오른쪽 = 로그인·출퇴근 기기 / 관리 · 폰: 로그인 → 정보 수정 → 관리 */}
+      <div className="flex flex-col gap-3 lg:grid lg:grid-cols-3 lg:items-start lg:gap-4">
+      <Card className="flex flex-col gap-3 lg:col-start-3 lg:row-start-1">
         <CardTitle>{t('loginCard')}</CardTitle>
         <div className="flex items-center gap-3">
           <KeyRound aria-hidden size={22} strokeWidth={1.75} className={`shrink-0 ${joined ? 'text-ok' : 'text-warn'}`} />
@@ -113,15 +132,7 @@ export default async function MemberDetailPage({ params }: { params: Promise<{ i
         </div>
       </Card>
 
-      <Card className="p-0 py-1">
-        <Link href={`/admin/records/${p.id}`} className="flex min-h-14 items-center gap-3 px-5">
-          <CalendarDays aria-hidden size={20} strokeWidth={1.75} className="shrink-0 text-muted" />
-          <span className="flex-1">{t('toRecords')}</span>
-          <ChevronRight aria-hidden size={18} strokeWidth={2} className="text-faint" />
-        </Link>
-      </Card>
-
-      <Card className="flex flex-col gap-4 lg:col-span-2 lg:row-start-3">
+      <Card className="flex flex-col gap-4 lg:col-span-2 lg:col-start-1 lg:row-span-2 lg:row-start-1">
         <CardTitle>{t('profileTitle')}</CardTitle>
         <ProfileForm
           employeeId={p.id}
@@ -132,7 +143,7 @@ export default async function MemberDetailPage({ params }: { params: Promise<{ i
         />
       </Card>
 
-      <Card className="p-0 py-1 lg:col-start-2 lg:row-start-2">
+      <Card className="p-0 py-1 lg:col-start-3 lg:row-start-2">
         <div className="px-5 pt-3 pb-1">
           <CardTitle>{tm('title')}</CardTitle>
         </div>

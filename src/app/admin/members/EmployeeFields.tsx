@@ -23,7 +23,7 @@ export function EmployeeFields({
   const t = useTranslations('admin.members');
   return (
     // PC: 묶음 3개를 가로로 (2026-10-06 의뢰인: 한 줄로 길게 늘어져 있었다) · 폰: 세로
-    <div className="flex flex-col gap-4 lg:grid lg:grid-cols-3 lg:items-start lg:gap-6">
+    <div className="flex flex-col gap-4 lg:grid lg:grid-cols-2 lg:items-start lg:gap-6 xl:grid-cols-3">
       <fieldset className="flex flex-col gap-3">
         <legend className="mb-2 text-sm font-bold text-primary">{t('secBasic')}</legend>
         <label className="flex flex-col gap-1 text-sm text-muted">

@@ -292,7 +292,9 @@
       "deviceSince": "Registered {date}",
       "deviceLast": "last used {date}",
       "roleChange": "Change",
-      "roleClose": "Close"
+      "roleClose": "Close",
+      "infoJoined": "Joined",
+      "infoPhone": "Mobile"
     },
     "more": {
       "title": "All menus",

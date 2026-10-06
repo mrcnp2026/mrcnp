@@ -292,7 +292,9 @@
       "deviceSince": "{date} 등록",
       "deviceLast": "마지막 사용 {date}",
       "roleChange": "변경",
-      "roleClose": "닫기"
+      "roleClose": "닫기",
+      "infoJoined": "입사일",
+      "infoPhone": "휴대폰"
     },
     "more": {
       "title": "전체 메뉴",
