@@ -64,7 +64,7 @@ export default async function EmployeeRecordsPage({ params, searchParams }: { pa
   const missingDays = details.filter((d) => d.missing).length;
 
   return (
-    <PageShell>
+    <PageShell wide>
       <Link href={`/admin/records${q(ym)}`} className="-mb-2 inline-flex min-h-11 items-center self-start text-sm font-medium text-muted">
         ‹ {t('backToList')}
       </Link>
@@ -95,8 +95,10 @@ export default async function EmployeeRecordsPage({ params, searchParams }: { pa
       {practice && <p className="rounded-card bg-primary-tint p-3 text-sm text-primary">{t('practiceBanner')}</p>}
       {!data.rule && <p className="rounded-card bg-warn-tint p-3 text-sm text-warn">{ta('noRule')}</p>}
 
+      {/* PC: 왼쪽 = 이 달 요약, 오른쪽 = 날짜별 기록 (2026-10-06 의뢰인) · 폰: 한 칸 */}
+      <div className="flex flex-col gap-3 lg:grid lg:grid-cols-3 lg:items-start lg:gap-4">
       {summary && (
-        <Card className="grid grid-cols-4 p-2 text-center">
+        <Card className="grid grid-cols-4 p-2 text-center lg:grid-cols-2 lg:gap-y-4 lg:p-5">
           {[
             { k: 'sumWorked', v: dur(summary.netMinutes), warn: false },
             { k: 'sumLate', v: String(summary.row.late_count), warn: Number(summary.row.late_count) > 0 },
@@ -111,6 +113,7 @@ export default async function EmployeeRecordsPage({ params, searchParams }: { pa
         </Card>
       )}
 
+      <div className="flex flex-col gap-3 lg:col-span-2">
       {data.rule && details.length === 0 && <p className="text-muted">{tr('emptyMonth')}</p>}
       <ul className="flex flex-col gap-2">
         {details.map((d) => {
@@ -202,6 +205,8 @@ export default async function EmployeeRecordsPage({ params, searchParams }: { pa
       )}
       {self && <p className="text-sm text-muted">{t('selfNote')}</p>}
       <p className="text-xs text-faint">{t('footNote')}</p>
+      </div>
+      </div>
     </PageShell>
   );
 }

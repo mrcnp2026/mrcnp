@@ -60,7 +60,7 @@ export default async function MemberDetailPage({ params }: { params: Promise<{ i
     : '';
 
   return (
-    <PageShell>
+    <PageShell wide>
       <Link href="/admin/members" className="-mb-2 inline-flex min-h-11 min-w-11 items-center self-start text-sm font-medium text-muted">
         ‹ {t('title')}
       </Link>
@@ -83,7 +83,9 @@ export default async function MemberDetailPage({ params }: { params: Promise<{ i
 
       {pendingRole && <RoleRequestCard id={pendingRole.id} change={changeLabel} requester={requesterName} reason={pendingRole.reason} mine={pendingRole.requested_by === me.id} />}
 
-      <Card className="flex flex-col gap-3">
+      {/* PC: 윗줄 = 로그인 | 기록 바로가기·관리, 아랫줄 = 정보 수정 (2026-10-06 의뢰인) · 폰: 한 칸 */}
+      <div className="flex flex-col gap-3 lg:grid lg:grid-cols-2 lg:gap-4">
+      <Card className="flex flex-col gap-3 lg:row-span-2">
         <CardTitle>{t('loginCard')}</CardTitle>
         <div className="flex items-center gap-3">
           <KeyRound aria-hidden size={22} strokeWidth={1.75} className={`shrink-0 ${joined ? 'text-ok' : 'text-warn'}`} />
@@ -117,7 +119,7 @@ export default async function MemberDetailPage({ params }: { params: Promise<{ i
         </Link>
       </Card>
 
-      <Card className="flex flex-col gap-4">
+      <Card className="flex flex-col gap-4 lg:col-span-2 lg:row-start-3">
         <CardTitle>{t('profileTitle')}</CardTitle>
         <ProfileForm
           employeeId={p.id}
@@ -128,7 +130,7 @@ export default async function MemberDetailPage({ params }: { params: Promise<{ i
         />
       </Card>
 
-      <Card className="p-0 py-1">
+      <Card className="p-0 py-1 lg:col-start-2 lg:row-start-2">
         <div className="px-5 pt-3 pb-1">
           <CardTitle>{tm('title')}</CardTitle>
         </div>
@@ -169,6 +171,7 @@ export default async function MemberDetailPage({ params }: { params: Promise<{ i
           </>
         )}
       </Card>
+      </div>
     </PageShell>
   );
 }

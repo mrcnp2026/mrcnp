@@ -48,7 +48,7 @@ export default async function NoticesPage() {
           <table className="w-full text-sm">
             <thead>
               <tr className="border-b border-border">
-                {[t('colTitle'), t('colState'), t('colStart'), t('colConfirmed')].map((x) => (
+                {[t('colTitle'), t('colState'), t('colAudience'), t('colStart'), t('colConfirmed')].map((x) => (
                   <th key={x} scope="col" className="px-4 py-3 text-left text-xs font-medium whitespace-nowrap text-faint">{x}</th>
                 ))}
               </tr>
@@ -67,6 +67,8 @@ export default async function NoticesPage() {
                       {r.notice.important && <Chip tone="warn">{t('important')}</Chip>}
                     </span>
                   </td>
+                  {/* 누구에게 보이는지 — 「직원 선택」 공지는 고른 사람에게만 보인다 (2026-10-06 의뢰인: 게시했는데 내 공지 탭에 없었다) */}
+                  <td className="px-4 py-3 whitespace-nowrap">{r.notice.audience === 'all' ? t('audAll') : <span className="num font-semibold text-warn">{t('audSelected', { n: r.total })}</span>}</td>
                   <td className="px-4 py-3 num whitespace-nowrap text-muted">{f.dateTime(r.notice.startsAt, { dateStyle: 'medium', timeStyle: 'short' })}</td>
                   <td className="px-4 py-3 num text-muted">{r.notice.status === 'published' ? t('confirmed', { n: r.confirmed, total: r.total }) : '–'}</td>
                 </tr>

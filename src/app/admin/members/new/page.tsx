@@ -15,7 +15,7 @@ export default async function NewMemberPage() {
   const groups = tree.flatMap((d) => [{ id: d.id, label: d.name }, ...d.teams.map((x) => ({ id: x.id, label: `${d.name} › ${x.name}` }))]);
   const localhost = new URL(OFFICE.appOrigin).hostname === 'localhost';
   return (
-    <PageShell>
+    <PageShell wide>
       <Link href="/admin/members" className="-mb-2 inline-flex min-h-11 items-center self-start text-sm font-medium text-muted">
         ‹ {t('title')}
       </Link>

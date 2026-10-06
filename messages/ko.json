@@ -598,7 +598,10 @@
       "colTitle": "제목",
       "colState": "상태",
       "colStart": "게시 시작",
-      "colConfirmed": "확인"
+      "colConfirmed": "확인",
+      "colAudience": "대상",
+      "audAll": "전체 직원",
+      "audSelected": "선택한 {n}명만"
     },
     "payroll": {
       "title": "급여",

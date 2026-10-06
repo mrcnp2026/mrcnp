@@ -51,12 +51,14 @@ export default async function SettingsPage() {
   const base = current ?? upcoming[0] ?? null;
 
   return (
-    <PageShell>
+    <PageShell wide>
       <Link href="/admin/more" className="-mb-2 inline-flex min-h-11 items-center self-start text-sm font-medium text-muted">
         ‹ {t('back')}
       </Link>
       <h1 className="px-1 text-2xl font-extrabold tracking-tight">{t('title')}</h1>
 
+      {/* PC: 왼쪽 = 근무시간·사무실 인터넷 주소·사무실 위치, 오른쪽 = 휴일 목록 (2026-10-06 의뢰인: 좁은 한 줄로 길게 늘어져 있었다) · 폰: 한 칸 */}
+      <div className="flex flex-col gap-3 lg:grid lg:grid-cols-2 lg:items-start lg:gap-4">
       <Card className="flex flex-col gap-3">
         <CardTitle help={t('ruleNote')}>{t('ruleTitle')}</CardTitle>
         {current ? (
@@ -87,10 +89,10 @@ export default async function SettingsPage() {
         />
       </Card>
 
-      <Card className="flex flex-col gap-2">
+      <Card className="flex flex-col gap-2 lg:col-start-2 lg:row-span-3 lg:row-start-1">
         <CardTitle help={t('holidayNote')} aside={<span className="num text-sm text-faint">{holidays?.length ?? 0}</span>}>{t('holidayTitle')}</CardTitle>
         {(holidays ?? []).length === 0 && <p className="text-sm text-faint">{t('holidayNone')}</p>}
-        <ul className="divide-y divide-border">
+        <ul className="divide-y divide-border lg:max-h-96 lg:overflow-y-auto lg:pr-2">
           {(holidays ?? []).map((h) => (
             <li key={h.the_date} className="flex min-h-12 items-center gap-2">
               <span className="min-w-0 flex-1">
@@ -158,6 +160,7 @@ export default async function SettingsPage() {
         </ul>
         <LocationForm />
       </Card>
+      </div>
       {/* 진단 — 사무실 확인이 이상할 때만 보는 화면이라 메뉴에서 빼고 여기에 둔다 (2026-10-06) */}
       <Link href="/admin/diag" className="inline-flex min-h-11 items-center self-start px-1 text-sm text-muted">
         {tm('diag')} · {tm('diagHint')} ›

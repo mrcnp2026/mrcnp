@@ -598,7 +598,10 @@
       "colTitle": "Title",
       "colState": "State",
       "colStart": "Starts",
-      "colConfirmed": "Confirmed"
+      "colConfirmed": "Confirmed",
+      "colAudience": "Audience",
+      "audAll": "All staff",
+      "audSelected": "Only {n} selected"
     },
     "payroll": {
       "title": "Payroll",

@@ -47,12 +47,20 @@ try {
   await shot('admin-leave', '/admin/leave');
   await shot('admin-org', '/admin/members/groups');
   await shot('admin-notice-new', '/admin/notices/new');
+  await shot('admin-notices', '/admin/notices');
+  await shot('admin-settings', '/admin/settings');
+  await shot('admin-payroll', '/admin/payroll');
+  await shot('admin-member-new', '/admin/members/new');
+  await shot('admin-member-detail', '/admin/members/' + emp!.id);
+  await shot('admin-record-detail', '/admin/records/' + emp!.id);
   await shot('admin-punch-home', '/punch', false);
   await db.from('profiles').update({ role: 'employee' }).eq('id', emp!.id);
   await shot('punch-home', '/punch');
   await shot('punch-records', '/punch/records');
   await shot('punch-corrections', '/punch/corrections');
   await shot('punch-leave', '/punch/leave');
+  await shot('punch-account', '/punch/account');
+  await shot('punch-notices', '/punch/notices');
 } finally {
   await browser.close();
   await db.from('profiles').update({ role: 'employee', locale: 'en', active: false }).eq('id', emp!.id);
