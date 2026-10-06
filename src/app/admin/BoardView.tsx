@@ -44,6 +44,7 @@ export function BoardView({
   // 'in' = 오늘 출근을 찍은 사람 전부 (지각·근무중·퇴근·야근중)
   const [filter, setFilter] = useState<DayStatus | 'all' | 'in'>('all');
   const listRef = useRef<HTMLDivElement>(null);
+  const phoneListRef = useRef<HTMLDivElement>(null);
   // 맨 위 숫자 칸(KpiRow)을 누르면 그 사람들로 거르고 명단으로 내려간다
   useEffect(() => {
     const on = (e: Event) => {
@@ -67,6 +68,8 @@ export function BoardView({
   const pick = (k: DayStatus | 'all' | 'in') => {
     setFilter(filter === k ? 'all' : k);
     setPage(1);
+    // 폰: 숫자 칸을 누르면 바로 아래 이름 목록이 보이게 내려간다 (2026-10-06 의뢰인: 눌러도 이름이 안 보였다 — 목록이 화면 아래에 있었다)
+    phoneListRef.current?.scrollIntoView({ block: 'start' });
   };
 
   const sub = (r: BoardRow) => {
@@ -177,24 +180,9 @@ export function BoardView({
         </div>
       </Card>
 
-      {/* 기준 — 무엇을 어떻게 셌는지 */}
-      <details className="rounded-card bg-bg px-5 text-sm lg:hidden">
-        <summary className="flex min-h-11 cursor-pointer items-center justify-between text-muted">
-          <span>{t('basis')}</span>
-          <span className="text-faint">{t('basisOpen')}</span>
-        </summary>
-        <ul className="flex flex-col gap-1.5 pb-4 text-muted">
-          <li>{t('basisToday')}</li>
-          {legend && <li>{t('basisLate', { time: legend.deadline })}</li>}
-          {legend && <li>{t('basisOvertime', { time: legend.end })}</li>}
-          <li>{t('basisAbsent')}</li>
-          <li>{t('basisOne')}</li>
-          <li>{t('basisPast')}</li>
-        </ul>
-      </details>
-
       {/* 명단 (폰) */}
-      <Card className="flex flex-col p-0 py-2 lg:hidden">
+      <div ref={phoneListRef} className="scroll-mt-16 lg:hidden">
+      <Card className="flex flex-col p-0 py-2">
         <div className="flex min-h-11 items-center justify-between px-5">
           <h2 className="text-sm font-medium text-muted">
             {filter === 'all' ? t('everyone') : filter === 'in' ? t('filterIn') : th(`status.${filter}`)} <span className="num">{list.length}</span>
@@ -253,6 +241,23 @@ export function BoardView({
           </nav>
         )}
       </Card>
+      </div>
+
+      {/* 기준 — 무엇을 어떻게 셌는지 */}
+      <details className="rounded-card bg-bg px-5 text-sm lg:hidden">
+        <summary className="flex min-h-11 cursor-pointer items-center justify-between text-muted">
+          <span>{t('basis')}</span>
+          <span className="text-faint">{t('basisOpen')}</span>
+        </summary>
+        <ul className="flex flex-col gap-1.5 pb-4 text-muted">
+          <li>{t('basisToday')}</li>
+          {legend && <li>{t('basisLate', { time: legend.deadline })}</li>}
+          {legend && <li>{t('basisOvertime', { time: legend.end })}</li>}
+          <li>{t('basisAbsent')}</li>
+          <li>{t('basisOne')}</li>
+          <li>{t('basisPast')}</li>
+        </ul>
+      </details>
     </div>
   );
 }
