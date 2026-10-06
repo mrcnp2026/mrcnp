@@ -28,7 +28,9 @@ function useDecide(url: string) {
   return { busy, err, done, send };
 }
 
-export function OvertimeDecision({ id, name, facts }: { id: string; name: string; facts: Facts }) {
+export function OvertimeDecision({ id, name, facts, compact = false }: { id: string; name: string; facts: Facts; compact?: boolean }) {
+  const size = compact ? 'sm' : 'md';
+  const grow = compact ? '' : 'flex-1';
   const t = useTranslations('admin.inbox');
   const { busy, err, done, send } = useDecide(`/api/admin/overtime/${id}/decide`);
   const [pending, setPending] = useState<Pending | null>(null);
@@ -50,6 +52,7 @@ export function OvertimeDecision({ id, name, facts }: { id: string; name: string
         {pending.decision === 'rejected' && <p className="text-xs text-muted">{t('rejectKeepsRecord')}</p>}
         <div className="flex gap-2">
           <Button
+            size={size}
             disabled={busy}
             className="flex-1"
             onClick={() =>
@@ -63,7 +66,7 @@ export function OvertimeDecision({ id, name, facts }: { id: string; name: string
           >
             {t('confirm')}
           </Button>
-          <Button variant="outline" className="flex-1" onClick={() => setPending(null)}>
+          <Button size={size} variant="outline" className="flex-1" onClick={() => setPending(null)}>
             {t('cancel')}
           </Button>
         </div>
@@ -91,10 +94,10 @@ export function OvertimeDecision({ id, name, facts }: { id: string; name: string
         <p className="text-sm text-muted">{t('partialHint')}</p>
         <div className="grid grid-cols-3 gap-2">{(['overtime', 'night', 'holiday'] as const).map(field)}</div>
         <div className="flex gap-2">
-          <Button className="flex-1" onClick={() => setPending({ decision: 'approved', partial })}>
+          <Button size={size} className="flex-1" onClick={() => setPending({ decision: 'approved', partial })}>
             {t('next')}
           </Button>
-          <Button variant="outline" className="flex-1" onClick={() => setPartial(null)}>
+          <Button size={size} variant="outline" className="flex-1" onClick={() => setPartial(null)}>
             {t('cancel')}
           </Button>
         </div>
@@ -104,13 +107,13 @@ export function OvertimeDecision({ id, name, facts }: { id: string; name: string
 
   return (
     <div className="flex flex-wrap gap-2">
-      <Button className="flex-1" onClick={() => setPending({ decision: 'approved' })}>
+      <Button size={size} className={grow} onClick={() => setPending({ decision: 'approved' })}>
         {t('approve')}
       </Button>
-      <Button variant="outline" className="flex-1" onClick={() => setPartial({ ...facts })}>
+      <Button size={size} variant="outline" className={grow} onClick={() => setPartial({ ...facts })}>
         {t('partial')}
       </Button>
-      <Button variant="outline" className="flex-1" onClick={() => setPending({ decision: 'rejected' })}>
+      <Button size={size} variant="outline" className={grow} onClick={() => setPending({ decision: 'rejected' })}>
         {t('reject')}
       </Button>
     </div>
@@ -118,8 +121,8 @@ export function OvertimeDecision({ id, name, facts }: { id: string; name: string
 }
 
 /** 외근 승인·거부 — 연차와 같은 모양 (②-3 7-11 요점 6) */
-export function WorkDecision({ id, name, summary }: { id: string; name: string; summary: string }) {
-  return <LeaveDecision id={id} name={name} summary={summary} url={`/api/admin/work/${id}/decide`} keys={['confirmWork', 'confirmWorkReject']} />;
+export function WorkDecision({ id, name, summary, compact = false }: { id: string; name: string; summary: string; compact?: boolean }) {
+  return <LeaveDecision compact={compact} id={id} name={name} summary={summary} url={`/api/admin/work/${id}/decide`} keys={['confirmWork', 'confirmWorkReject']} />;
 }
 
 /** 휴가 승인·거부. 출근 기록과 겹치면 경고만 — 자동으로 한쪽을 지우지 않는다 (②-2 7-3 요점 4) */
@@ -129,13 +132,17 @@ export function LeaveDecision({
   summary,
   url,
   keys = ['confirmLeave', 'confirmLeaveReject'],
+  compact = false,
 }: {
   id: string;
   name: string;
   summary: string;
   url?: string;
   keys?: [string, string];
+  compact?: boolean;
 }) {
+  const size = compact ? 'sm' : 'md';
+  const grow = compact ? '' : 'flex-1';
   const t = useTranslations('admin.inbox');
   const { busy, err, done, send } = useDecide(url ?? `/api/admin/leave/${id}/decide`);
   const [pending, setPending] = useState<'approved' | 'rejected' | null>(null);
@@ -145,10 +152,10 @@ export function LeaveDecision({
       <div className="flex flex-col gap-2 rounded-card border border-border p-3">
         <p className="text-sm">{t(pending === 'approved' ? keys[0] : keys[1], { name, summary })}</p>
         <div className="flex gap-2">
-          <Button disabled={busy} className="flex-1" onClick={() => send({ decision: pending })}>
+          <Button size={size} disabled={busy} className="flex-1" onClick={() => send({ decision: pending })}>
             {t('confirm')}
           </Button>
-          <Button variant="outline" className="flex-1" onClick={() => setPending(null)}>
+          <Button size={size} variant="outline" className="flex-1" onClick={() => setPending(null)}>
             {t('cancel')}
           </Button>
         </div>
@@ -158,10 +165,10 @@ export function LeaveDecision({
   }
   return (
     <div className="flex gap-2">
-      <Button className="flex-1" onClick={() => setPending('approved')}>
+      <Button size={size} className={grow} onClick={() => setPending('approved')}>
         {t('approve')}
       </Button>
-      <Button variant="outline" className="flex-1" onClick={() => setPending('rejected')}>
+      <Button size={size} variant="outline" className={grow} onClick={() => setPending('rejected')}>
         {t('reject')}
       </Button>
     </div>
@@ -196,7 +203,9 @@ export function LeaveCancel({ id, name }: { id: string; name: string }) {
   );
 }
 
-export function CorrectionDecision({ id, name }: { id: string; name: string }) {
+export function CorrectionDecision({ id, name, compact = false }: { id: string; name: string; compact?: boolean }) {
+  const size = compact ? 'sm' : 'md';
+  const grow = compact ? '' : 'flex-1';
   const t = useTranslations('admin.inbox');
   const { busy, err, done, send } = useDecide(`/api/admin/corrections/${id}/decide`);
   const [pending, setPending] = useState<'approved' | 'rejected' | null>(null);
@@ -207,10 +216,10 @@ export function CorrectionDecision({ id, name }: { id: string; name: string }) {
         <p className="text-sm">{t(pending === 'approved' ? 'confirmCorrection' : 'confirmCorrectionReject', { name })}</p>
         <p className="text-xs text-muted">{t('originalKept')}</p>
         <div className="flex gap-2">
-          <Button disabled={busy} className="flex-1" onClick={() => send({ decision: pending })}>
+          <Button size={size} disabled={busy} className="flex-1" onClick={() => send({ decision: pending })}>
             {t('confirm')}
           </Button>
-          <Button variant="outline" className="flex-1" onClick={() => setPending(null)}>
+          <Button size={size} variant="outline" className="flex-1" onClick={() => setPending(null)}>
             {t('cancel')}
           </Button>
         </div>
@@ -220,10 +229,10 @@ export function CorrectionDecision({ id, name }: { id: string; name: string }) {
   }
   return (
     <div className="flex gap-2">
-      <Button className="flex-1" onClick={() => setPending('approved')}>
+      <Button size={size} className={grow} onClick={() => setPending('approved')}>
         {t('approve')}
       </Button>
-      <Button variant="outline" className="flex-1" onClick={() => setPending('rejected')}>
+      <Button size={size} variant="outline" className={grow} onClick={() => setPending('rejected')}>
         {t('reject')}
       </Button>
     </div>

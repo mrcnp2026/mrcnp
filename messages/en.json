@@ -458,7 +458,18 @@
       "confirmWork": "Approve {summary} for {name}?",
       "confirmWorkReject": "Reject {summary} for {name}?",
       "selfBlocked": "Another admin handles your own request.",
-      "recentHint": "What admins approved, rejected or cancelled in the last {days} days."
+      "recentHint": "What admins approved, rejected or cancelled in the last {days} days.",
+      "tabs": "Request type",
+      "tabHelp": "How this is handled",
+      "colWho": "Staff",
+      "colDate": "Date",
+      "colPunch": "Punches",
+      "colType": "Type",
+      "colChange": "Requested change",
+      "colPeriod": "Period",
+      "colBalance": "Leave left",
+      "colReason": "Reason · note",
+      "colAction": "Decision"
     },
     "records": {
       "title": "Records",
@@ -627,7 +638,10 @@
       "addSuggested": "Enter leave: calculated {n} days",
       "updateSuggested": "Re-enter: calculated {n} days",
       "prefilled": "Filled with the calculated {n} days from the join date. Check and save.",
-      "invalid_date": "The join date must be today or earlier."
+      "invalid_date": "The join date must be today or earlier.",
+      "colName": "Staff",
+      "colHired": "Joined",
+      "manage": "Enter · edit"
     },
     "detail": {
       "backToList": "Records",

@@ -458,7 +458,18 @@
       "confirmWork": "{name}님의 {summary}을(를) 승인할까요?",
       "confirmWorkReject": "{name}님의 {summary}을(를) 거부할까요?",
       "selfBlocked": "본인 요청은 다른 관리자가 처리합니다.",
-      "recentHint": "최근 {days}일 동안 관리자가 승인·거부·취소한 내역입니다."
+      "recentHint": "최근 {days}일 동안 관리자가 승인·거부·취소한 내역입니다.",
+      "tabs": "요청 종류",
+      "tabHelp": "처리 기준",
+      "colWho": "직원",
+      "colDate": "날짜",
+      "colPunch": "출퇴근 기록",
+      "colType": "종류",
+      "colChange": "요청 내용",
+      "colPeriod": "기간",
+      "colBalance": "남은 연차",
+      "colReason": "사유 · 메모",
+      "colAction": "처리"
     },
     "records": {
       "title": "기록",
@@ -627,7 +638,10 @@
       "addSuggested": "계산값 {n}일로 연차 입력",
       "updateSuggested": "계산값 {n}일로 다시 입력",
       "prefilled": "입사일 기준 계산값({n}일)을 채웠습니다. 확인하고 저장하세요.",
-      "invalid_date": "입사일은 오늘 이전 날짜여야 합니다."
+      "invalid_date": "입사일은 오늘 이전 날짜여야 합니다.",
+      "colName": "직원",
+      "colHired": "입사일",
+      "manage": "입력 · 수정"
     },
     "detail": {
       "backToList": "기록",

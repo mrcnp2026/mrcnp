@@ -4,6 +4,7 @@
 import { getFormatter, getTranslations } from 'next-intl/server';
 import { Pager, pageOf } from '@/components/Pager';
 import { Help } from '@/components/Help';
+import { InboxTabs } from './InboxTabs';
 import { Card, Chip, PageShell } from '@/components/ui';
 import { OFFICE } from '@/config/office';
 import { getMe } from '@/lib/auth';
@@ -90,19 +91,90 @@ export default async function InboxPage({ searchParams }: { searchParams: Promis
   const workPending = (await loadWorkRequests({ practice })).filter((w) => w.status === 'pending').sort((a, b) => (a.startDate < b.startDate ? -1 : 1));
   const wkPage = pageOf(workPending, sp.wp);
 
-  return (
-    <PageShell wide>
-      <h1 className="text-2xl font-semibold text-primary-deep">{t('title')}</h1>
-      {practice && <p className="rounded-card bg-primary-tint p-3 text-sm text-primary">{t('practiceBanner')}</p>}
+  // 표(PC)와 카드(폰)가 같은 값을 쓰도록 한 번만 계산한다
+  const th = 'px-4 py-3 text-left text-xs font-medium whitespace-nowrap text-faint';
+  const td = 'px-4 py-3 align-top';
+  const who = (id: string, extra?: React.ReactNode) => (
+    <span className="flex flex-col items-start gap-1">
+      <span className="font-semibold whitespace-nowrap">{name.get(id)}</span>
+      {extra}
+      {id === me.id && <Chip>{t('self')}</Chip>}
+    </span>
+  );
+  const lvRows = lvPage.items.map((r) => {
+    const bal = calcLeaveBalance({ grants: leaveGrants.filter((g) => g.employeeId === r.employeeId), requests: leaveAll.filter((x) => x.employeeId === r.employeeId), types: leaveTypes, asOf: r.startDate });
+    const deducts = leaveTypes.find((x) => x.code === r.typeCode)?.deductsBalance;
+    const clash = [...new Set((leavePunches ?? []).filter((p) => p.employee_id === r.employeeId && p.work_date >= r.startDate && p.work_date <= r.endDate).map((p) => p.work_date))];
+    const range = r.startDate === r.endDate ? dayLabel(r.startDate) : `${dayLabel(r.startDate)} ~ ${dayLabel(r.endDate)}`;
+    const summary = `${leaveName(r.typeCode)} ${tl('days', { n: nDays(r.days) })} (${range})`;
+    const balance = deducts ? (bal.grant ? t('leaveBalance', { remaining: nDays(bal.remaining), pending: nDays(bal.pending) }) : t('leaveNoGrant')) : null;
+    return { r, clash, range, summary, balance };
+  });
+  const wkRows = wkPage.items.map((w) => {
+    const range = w.startDate === w.endDate ? dayLabel(w.startDate) : `${dayLabel(w.startDate)} ~ ${dayLabel(w.endDate)}`;
+    return { w, when: `${range}${w.startTime ? ` ${w.startTime}~${w.endTime}` : ''}` };
+  });
+  const coRows = coPage.items.map((c) => {
+    const target = c.target_id ? evs?.find((e) => e.id === c.target_id) : null;
+    const line =
+      c.correction_type === 'add_missing'
+        ? t('addMissingLine', { kind: t(`kind.${c.kind}`), time: hm(c.new_punched_at) })
+        : c.correction_type === 'modify'
+          ? t('modifyLine', { from: hm(target?.punched_at ?? null), to: hm(c.new_punched_at) })
+          : t('voidLine', { time: hm(target?.punched_at ?? null) });
+    return { c, line };
+  });
+  const empty = <p className="rounded-card bg-bg p-5 text-sm text-faint">{t('empty')}</p>;
+  const hint = (text: string) => (
+    <div className="flex flex-wrap items-center gap-x-1 text-sm text-muted">
+      {t('tabHelp')}
+      <Help>{text}</Help>
+    </div>
+  );
 
-      <section id="overtime" className="flex flex-col gap-3">
-        <h2 className="flex flex-wrap items-center gap-x-2 text-xl font-semibold">
-          {t('overtimeTitle')} <span className="num text-base text-faint">{ot?.length ?? 0}</span>
-          <Help>{t('overtimeHint')}</Help>
-        </h2>
-        {(ot ?? []).length === 0 && <p className="text-sm text-faint">{t('empty')}</p>}
-        {/* PC: 요청 카드를 두 칸으로 (2026-10-06 의뢰인) */}
-        <div className="flex flex-col gap-3 lg:grid lg:grid-cols-2 lg:items-start lg:gap-4">
+  const overtimeTab = (
+    <>
+      {hint(t('overtimeHint'))}
+      {(ot ?? []).length === 0 && empty}
+      {/* PC: 표 한 줄 = 요청 한 건 (2026-10-06 의뢰인: 카드·둥근 버튼 대신 표) */}
+      {otPage.items.length > 0 && (
+        <Card className="hidden overflow-x-auto p-0 lg:block">
+          <table className="w-full text-sm">
+            <thead>
+              <tr className="border-b border-border">
+                {[t('colWho'), t('colDate'), t('colPunch'), t('overtime'), t('night'), t('holiday'), t('colReason'), t('colAction')].map((x, i) => (
+                  <th key={x} scope="col" className={`${th} ${i >= 3 && i <= 5 ? 'text-right' : ''}`}>{x}</th>
+                ))}
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-border">
+              {otPage.items.map((o) => (
+                <tr key={o.id}>
+                  <td className={td}>{who(o.employee_id, o.needs_review && <Chip tone="warn">{t('needsReview')}</Chip>)}</td>
+                  <td className={`${td} num whitespace-nowrap`}>{dayLabel(o.work_date)}</td>
+                  <td className={`${td} num text-muted`}>{punchesOf(o.employee_id, o.work_date) || '–'}</td>
+                  {(['overtime', 'night', 'holiday'] as const).map((k) => (
+                    <td key={k} className={`${td} num text-right whitespace-nowrap`}>
+                      <span className="font-semibold">{t('min', { n: o[`${k}_minutes`] })}</span>
+                      {o.needs_review && o[`recomputed_${k}_minutes`] !== null && <span className="block text-xs text-warn">{t('nowCounted', { n: o[`recomputed_${k}_minutes`] })}</span>}
+                    </td>
+                  ))}
+                  <td className={`${td} text-muted`}>
+                    {o.reason && <span className="block text-text">{o.reason}</span>}
+                    {noteOf(o.employee_id, o.work_date) && <span className="block whitespace-pre-wrap break-words">{t('note')}: {noteOf(o.employee_id, o.work_date)}</span>}
+                    {o.status !== 'pending' && <span className="block text-xs">{t('decidedBy', { status: t(`status.${o.status}`), who: name.get(o.approved_by) ?? '—' })}</span>}
+                    {!o.reason && !noteOf(o.employee_id, o.work_date) && o.status === 'pending' && '–'}
+                  </td>
+                  <td className={`${td} w-72`}>
+                    {ownBlocked && o.employee_id === me.id ? ownNote : <OvertimeDecision compact id={o.id} name={name.get(o.employee_id) ?? ''} facts={{ overtime: o.overtime_minutes, night: o.night_minutes, holiday: o.holiday_minutes }} />}
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </Card>
+      )}
+      <div className="flex flex-col gap-3 lg:hidden">
         {otPage.items.map((o) => (
           <Card key={o.id} className="flex flex-col gap-2">
             <div className="flex items-start justify-between gap-2">
@@ -139,115 +211,184 @@ export default async function InboxPage({ searchParams }: { searchParams: Promis
             {ownBlocked && o.employee_id === me.id ? ownNote : <OvertimeDecision id={o.id} name={name.get(o.employee_id) ?? ''} facts={{ overtime: o.overtime_minutes, night: o.night_minutes, holiday: o.holiday_minutes }} />}
           </Card>
         ))}
-        </div>
-        <Pager page={otPage.page} pages={otPage.pages} param="op" params={sp} anchor="overtime" label={tc('pages')} />
-      </section>
+      </div>
+      <Pager page={otPage.page} pages={otPage.pages} param="op" params={sp} anchor="overtime" label={tc('pages')} />
+    </>
+  );
 
-      <section id="corrections" className="flex flex-col gap-3">
-        <h2 className="flex flex-wrap items-center gap-x-2 text-xl font-semibold">
-          {t('correctionsTitle')} <span className="num text-base text-faint">{co?.length ?? 0}</span>
-        </h2>
-        {(co ?? []).length === 0 && <p className="text-sm text-faint">{t('empty')}</p>}
-        <div className="flex flex-col gap-3 lg:grid lg:grid-cols-2 lg:items-start lg:gap-4">
-        {coPage.items.map((c) => {
-          const target = c.target_id ? evs?.find((e) => e.id === c.target_id) : null;
-          return (
-            <Card key={c.id} className="flex flex-col gap-2">
-              <div className="flex items-start justify-between gap-2">
-                <div>
-                  <p className="font-semibold">{name.get(c.employee_id)}</p>
-                  <p className="num text-sm text-muted">{dayLabel(c.work_date)} · {t(`type.${c.correction_type}`)}</p>
-                </div>
-                {c.employee_id === me.id && <Chip>{t('self')}</Chip>}
+  const correctionsTab = (
+    <>
+      {(co ?? []).length === 0 && empty}
+      {coRows.length > 0 && (
+        <Card className="hidden overflow-x-auto p-0 lg:block">
+          <table className="w-full text-sm">
+            <thead>
+              <tr className="border-b border-border">
+                {[t('colWho'), t('colDate'), t('colType'), t('colChange'), t('colReason'), t('colAction')].map((x) => (
+                  <th key={x} scope="col" className={th}>{x}</th>
+                ))}
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-border">
+              {coRows.map(({ c, line }) => (
+                <tr key={c.id}>
+                  <td className={td}>{who(c.employee_id)}</td>
+                  <td className={`${td} num whitespace-nowrap`}>{dayLabel(c.work_date)}</td>
+                  <td className={`${td} whitespace-nowrap`}>{t(`type.${c.correction_type}`)}</td>
+                  <td className={`${td} num font-semibold`}>{line}</td>
+                  <td className={td}>{c.reason}</td>
+                  <td className={`${td} w-64`}>{ownBlocked && c.employee_id === me.id ? ownNote : <CorrectionDecision compact id={c.id} name={name.get(c.employee_id) ?? ''} />}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </Card>
+      )}
+      <div className="flex flex-col gap-3 lg:hidden">
+        {coRows.map(({ c, line }) => (
+          <Card key={c.id} className="flex flex-col gap-2">
+            <div className="flex items-start justify-between gap-2">
+              <div>
+                <p className="font-semibold">{name.get(c.employee_id)}</p>
+                <p className="num text-sm text-muted">{dayLabel(c.work_date)} · {t(`type.${c.correction_type}`)}</p>
               </div>
-              <p className="num">
-                {c.correction_type === 'add_missing' && t('addMissingLine', { kind: t(`kind.${c.kind}`), time: hm(c.new_punched_at) })}
-                {c.correction_type === 'modify' && t('modifyLine', { from: hm(target?.punched_at ?? null), to: hm(c.new_punched_at) })}
-                {c.correction_type === 'void' && t('voidLine', { time: hm(target?.punched_at ?? null) })}
-              </p>
-              <p className="text-sm"><span className="text-muted">{t('reason')}: </span>{c.reason}</p>
-              {ownBlocked && c.employee_id === me.id ? ownNote : <CorrectionDecision id={c.id} name={name.get(c.employee_id) ?? ''} />}
-            </Card>
-          );
-        })}
-        </div>
-        <Pager page={coPage.page} pages={coPage.pages} param="cp" params={sp} anchor="corrections" label={tc('pages')} />
-      </section>
+              {c.employee_id === me.id && <Chip>{t('self')}</Chip>}
+            </div>
+            <p className="num">{line}</p>
+            <p className="text-sm"><span className="text-muted">{t('reason')}: </span>{c.reason}</p>
+            {ownBlocked && c.employee_id === me.id ? ownNote : <CorrectionDecision id={c.id} name={name.get(c.employee_id) ?? ''} />}
+          </Card>
+        ))}
+      </div>
+      <Pager page={coPage.page} pages={coPage.pages} param="cp" params={sp} anchor="corrections" label={tc('pages')} />
+    </>
+  );
 
-      <section id="leave" className="flex scroll-mt-16 flex-col gap-3">
-        <h2 className="flex flex-wrap items-center gap-x-2 text-xl font-semibold">
-          {t('leaveTitle')} <span className="num text-base text-faint">{leavePending.length}</span>
-        </h2>
-        {leavePending.length === 0 && <p className="text-sm text-faint">{t('empty')}</p>}
-        <div className="flex flex-col gap-3 lg:grid lg:grid-cols-2 lg:items-start lg:gap-4">
-        {lvPage.items.map((r) => {
-          const bal = calcLeaveBalance({ grants: leaveGrants.filter((g) => g.employeeId === r.employeeId), requests: leaveAll.filter((x) => x.employeeId === r.employeeId), types: leaveTypes, asOf: r.startDate });
-          const deducts = leaveTypes.find((x) => x.code === r.typeCode)?.deductsBalance;
-          const clash = [...new Set((leavePunches ?? []).filter((p) => p.employee_id === r.employeeId && p.work_date >= r.startDate && p.work_date <= r.endDate).map((p) => p.work_date))];
-          const range = r.startDate === r.endDate ? dayLabel(r.startDate) : `${dayLabel(r.startDate)} ~ ${dayLabel(r.endDate)}`;
-          const summary = `${leaveName(r.typeCode)} ${tl('days', { n: nDays(r.days) })} (${range})`;
-          return (
-            <Card key={r.id} className="flex flex-col gap-2">
-              <div className="flex items-start justify-between gap-2">
-                <div>
-                  <p className="font-semibold">{name.get(r.employeeId)}</p>
-                  <p className="num text-sm text-muted">{range}</p>
-                </div>
-                {r.employeeId === me.id && <Chip>{t('self')}</Chip>}
+  const leaveTab = (
+    <>
+      {leavePending.length === 0 && empty}
+      {lvRows.length > 0 && (
+        <Card className="hidden overflow-x-auto p-0 lg:block">
+          <table className="w-full text-sm">
+            <thead>
+              <tr className="border-b border-border">
+                {[t('colWho'), t('colPeriod'), t('colType'), t('colBalance'), t('colReason'), t('colAction')].map((x) => (
+                  <th key={x} scope="col" className={th}>{x}</th>
+                ))}
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-border">
+              {lvRows.map(({ r, clash, range, summary, balance }) => (
+                <tr key={r.id}>
+                  <td className={td}>{who(r.employeeId)}</td>
+                  <td className={`${td} num whitespace-nowrap`}>{range}</td>
+                  <td className={`${td} num font-semibold whitespace-nowrap`}>{leaveName(r.typeCode)} · {tl('days', { n: nDays(r.days) })}</td>
+                  <td className={`${td} num text-muted`}>{balance ?? '–'}</td>
+                  <td className={td}>
+                    {r.reason ?? (clash.length === 0 ? '–' : null)}
+                    {clash.length > 0 && <span className="mt-1 block rounded-button border border-warn bg-warn-tint p-2 text-warn">{t('leaveClash', { dates: clash.map(dayLabel).join(', ') })}</span>}
+                  </td>
+                  <td className={`${td} w-64`}>{ownBlocked && r.employeeId === me.id ? ownNote : <LeaveDecision compact id={r.id} name={name.get(r.employeeId) ?? ''} summary={summary} />}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </Card>
+      )}
+      <div className="flex flex-col gap-3 lg:hidden">
+        {lvRows.map(({ r, clash, range, summary, balance }) => (
+          <Card key={r.id} className="flex flex-col gap-2">
+            <div className="flex items-start justify-between gap-2">
+              <div>
+                <p className="font-semibold">{name.get(r.employeeId)}</p>
+                <p className="num text-sm text-muted">{range}</p>
               </div>
-              <p className="num font-semibold">
-                {leaveName(r.typeCode)} · {tl('days', { n: nDays(r.days) })}
-              </p>
-              {deducts && (
-                <p className="num text-sm text-muted">
-                  {bal.grant ? t('leaveBalance', { remaining: nDays(bal.remaining), pending: nDays(bal.pending) }) : t('leaveNoGrant')}
-                </p>
-              )}
-              {r.reason && <p className="text-sm"><span className="text-muted">{t('reason')}: </span>{r.reason}</p>}
-              {clash.length > 0 && (
-                <p className="rounded-button border border-warn bg-warn-tint p-2 text-sm text-warn">{t('leaveClash', { dates: clash.map(dayLabel).join(', ') })}</p>
-              )}
-              {ownBlocked && r.employeeId === me.id ? ownNote : <LeaveDecision id={r.id} name={name.get(r.employeeId) ?? ''} summary={summary} />}
-            </Card>
-          );
-        })}
-        </div>
-        <Pager page={lvPage.page} pages={lvPage.pages} param="lp" params={sp} anchor="leave" label={tc('pages')} />
-        <Link href="/admin/leave" className="inline-flex min-h-11 items-center self-start text-sm text-primary">
-          {t('leaveManage')} ›
-        </Link>
-      </section>
+              {r.employeeId === me.id && <Chip>{t('self')}</Chip>}
+            </div>
+            <p className="num font-semibold">
+              {leaveName(r.typeCode)} · {tl('days', { n: nDays(r.days) })}
+            </p>
+            {balance && <p className="num text-sm text-muted">{balance}</p>}
+            {r.reason && <p className="text-sm"><span className="text-muted">{t('reason')}: </span>{r.reason}</p>}
+            {clash.length > 0 && (
+              <p className="rounded-button border border-warn bg-warn-tint p-2 text-sm text-warn">{t('leaveClash', { dates: clash.map(dayLabel).join(', ') })}</p>
+            )}
+            {ownBlocked && r.employeeId === me.id ? ownNote : <LeaveDecision id={r.id} name={name.get(r.employeeId) ?? ''} summary={summary} />}
+          </Card>
+        ))}
+      </div>
+      <Pager page={lvPage.page} pages={lvPage.pages} param="lp" params={sp} anchor="leave" label={tc('pages')} />
+      <Link href="/admin/leave" className="inline-flex min-h-11 items-center self-start text-sm text-primary">
+        {t('leaveManage')} ›
+      </Link>
+    </>
+  );
 
-      <section id="work" className="flex scroll-mt-16 flex-col gap-3">
-        <h2 className="flex flex-wrap items-center gap-x-2 text-xl font-semibold">
-          {t('workTitle')} <span className="num text-base text-faint">{workPending.length}</span>
-          <Help>{t('workClashHint')}</Help>
-        </h2>
-        {workPending.length === 0 && <p className="text-sm text-faint">{t('empty')}</p>}
-        <div className="flex flex-col gap-3 lg:grid lg:grid-cols-2 lg:items-start lg:gap-4">
-        {wkPage.items.map((w) => {
-          const range = w.startDate === w.endDate ? dayLabel(w.startDate) : `${dayLabel(w.startDate)} ~ ${dayLabel(w.endDate)}`;
-          const when = `${range}${w.startTime ? ` ${w.startTime}~${w.endTime}` : ''}`;
-          return (
-            <Card key={w.id} className="flex flex-col gap-2">
-              <div className="flex items-start justify-between gap-2">
-                <div>
-                  <p className="font-semibold">{name.get(w.employeeId)}</p>
-                  <p className="num text-sm text-muted">{when}</p>
-                </div>
-                {w.employeeId === me.id && <Chip>{t('self')}</Chip>}
+  const workTab = (
+    <>
+      {hint(t('workClashHint'))}
+      {workPending.length === 0 && empty}
+      {wkRows.length > 0 && (
+        <Card className="hidden overflow-x-auto p-0 lg:block">
+          <table className="w-full text-sm">
+            <thead>
+              <tr className="border-b border-border">
+                {[t('colWho'), t('colPeriod'), t('colType'), t('place'), t('colReason'), t('colAction')].map((x) => (
+                  <th key={x} scope="col" className={th}>{x}</th>
+                ))}
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-border">
+              {wkRows.map(({ w, when }) => (
+                <tr key={w.id}>
+                  <td className={td}>{who(w.employeeId)}</td>
+                  <td className={`${td} num whitespace-nowrap`}>{when}</td>
+                  <td className={`${td} font-semibold whitespace-nowrap`}>{t(`workKind.${w.kind}`)}</td>
+                  <td className={td}>{w.place}</td>
+                  <td className={td}>{w.reason ?? '–'}</td>
+                  <td className={`${td} w-64`}>{ownBlocked && w.employeeId === me.id ? ownNote : <WorkDecision compact id={w.id} name={name.get(w.employeeId) ?? ''} summary={`${t(`workKind.${w.kind}`)} (${when})`} />}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </Card>
+      )}
+      <div className="flex flex-col gap-3 lg:hidden">
+        {wkRows.map(({ w, when }) => (
+          <Card key={w.id} className="flex flex-col gap-2">
+            <div className="flex items-start justify-between gap-2">
+              <div>
+                <p className="font-semibold">{name.get(w.employeeId)}</p>
+                <p className="num text-sm text-muted">{when}</p>
               </div>
-              <p className="font-semibold">
-                {t(`workKind.${w.kind}`)} · <span className="font-normal">{t('place')}: {w.place}</span>
-              </p>
-              {w.reason && <p className="text-sm"><span className="text-muted">{t('reason')}: </span>{w.reason}</p>}
-              {ownBlocked && w.employeeId === me.id ? ownNote : <WorkDecision id={w.id} name={name.get(w.employeeId) ?? ''} summary={`${t(`workKind.${w.kind}`)} (${when})`} />}
-            </Card>
-          );
-        })}
-        </div>
-        <Pager page={wkPage.page} pages={wkPage.pages} param="wp" params={sp} anchor="work" label={tc('pages')} />
-      </section>
+              {w.employeeId === me.id && <Chip>{t('self')}</Chip>}
+            </div>
+            <p className="font-semibold">
+              {t(`workKind.${w.kind}`)} · <span className="font-normal">{t('place')}: {w.place}</span>
+            </p>
+            {w.reason && <p className="text-sm"><span className="text-muted">{t('reason')}: </span>{w.reason}</p>}
+            {ownBlocked && w.employeeId === me.id ? ownNote : <WorkDecision id={w.id} name={name.get(w.employeeId) ?? ''} summary={`${t(`workKind.${w.kind}`)} (${when})`} />}
+          </Card>
+        ))}
+      </div>
+      <Pager page={wkPage.page} pages={wkPage.pages} param="wp" params={sp} anchor="work" label={tc('pages')} />
+    </>
+  );
+
+  return (
+    <PageShell wide>
+      <h1 className="text-2xl font-semibold text-primary-deep">{t('title')}</h1>
+      {practice && <p className="rounded-card bg-primary-tint p-3 text-sm text-primary">{t('practiceBanner')}</p>}
+
+      <InboxTabs
+        label={t('tabs')}
+        tabs={[
+          { key: 'overtime', label: t('overtimeTitle'), count: ot?.length ?? 0, content: overtimeTab },
+          { key: 'corrections', label: t('correctionsTitle'), count: co?.length ?? 0, content: correctionsTab },
+          { key: 'leave', label: t('leaveTitle'), count: leavePending.length, content: leaveTab },
+          { key: 'work', label: t('workTitle'), count: workPending.length, content: workTab },
+        ]}
+      />
 
       {recent.length > 0 && (
         <section id="recent" className="flex scroll-mt-16 flex-col gap-2">

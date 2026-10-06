@@ -26,6 +26,9 @@ export const COLORS = {
 
 // 8px 격자: 4·8·12·16·24·32·48 (Tailwind 1·2·3·4·6·8·12 단계만 쓴다)
 export const RADII = { card: '24px', button: '16px', punch: '16px', chip: '9999px' } as const;
+// PC(1024px~)는 업무용 화면답게 덜 둥글게 (2026-10-06 의뢰인: 둥근 버튼·카드가 전문적으로 보이지 않는다). 폰은 그대로
+export const RADII_PC = { card: '12px', button: '8px', punch: '8px' } as const;
+export const PC_MIN_WIDTH = '1024px'; // Tailwind lg와 같게
 // 글자 크기 12/14/16/20/24/32 — 본문 16 (외국인 직원, R-10-8)
 // 큰 숫자(지금 시각·근무 시간)만 4xl 44px — 화면에서 가장 먼저 읽혀야 하는 것 하나
 export const FONT_SIZES = { xs: '12px', sm: '14px', base: '16px', lg: '18px', xl: '20px', '2xl': '24px', '3xl': '32px', '4xl': '44px' } as const;
@@ -39,5 +42,6 @@ export function themeCssVariables(): string {
   for (const [k, v] of Object.entries(RADII)) lines.push(`--t-radius-${k}:${v}`);
   for (const [k, v] of Object.entries(FONT_SIZES)) lines.push(`--t-text-${k}:${v}`);
   lines.push(`--t-shadow-card:${SHADOW_CARD}`, `--t-motion:${MOTION_MS}ms`);
-  return `:root{${lines.join(';')}}`;
+  const pc = Object.entries(RADII_PC).map(([k, v]) => `--t-radius-${k}:${v}`);
+  return `:root{${lines.join(';')}}@media (min-width:${PC_MIN_WIDTH}){:root{${pc.join(';')}}}`;
 }

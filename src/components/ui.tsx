@@ -22,14 +22,18 @@ const VARIANT: Record<Variant, string> = {
   danger: 'bg-danger text-on-primary',
 };
 
+// sm: 표 안·한 줄에 여러 개 놓이는 버튼 (PC 요청 표, 2026-10-06 의뢰인)
+const SIZE = { md: 'min-h-12 px-4 py-2 text-base', sm: 'min-h-9 px-3 py-1 text-sm' } as const;
+
 export function Button({
   variant = 'primary',
+  size = 'md',
   className = '',
   ...rest
-}: ButtonHTMLAttributes<HTMLButtonElement> & { variant?: Variant }) {
+}: ButtonHTMLAttributes<HTMLButtonElement> & { variant?: Variant; size?: keyof typeof SIZE }) {
   return (
     <button
-      className={`inline-flex min-h-12 items-center justify-center gap-2 rounded-button px-4 py-2 text-base font-bold disabled:opacity-60 ${VARIANT[variant]} ${className}`}
+      className={`inline-flex items-center justify-center gap-2 rounded-button font-bold disabled:opacity-60 ${SIZE[size]} ${VARIANT[variant]} ${className}`}
       {...rest}
     />
   );
@@ -45,7 +49,7 @@ export function Chip({ tone = 'neutral', children }: { tone?: Tone; children: Re
     info: 'bg-primary-tint text-primary',
   };
   return (
-    <span className={`inline-flex items-center gap-1 rounded-chip px-2.5 py-1 text-xs font-bold ${cls[tone]}`}>
+    <span className={`inline-flex items-center gap-1 rounded-chip px-2.5 py-1 text-xs font-bold whitespace-nowrap ${cls[tone]}`}>
       {tone === 'ok' && <Check aria-hidden size={14} strokeWidth={1.75} />}
       {tone === 'warn' && <AlertTriangle aria-hidden size={14} strokeWidth={1.75} />}
       {children}
