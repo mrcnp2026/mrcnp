@@ -21,7 +21,7 @@ import { buildTodayBoard, type BoardPerson } from '@/lib/today';
 import { weekLimitList } from '@/lib/week-limit';
 import { AutoRefresh } from './AutoRefresh';
 import { BoardView } from './BoardView';
-import { LateCard, TrendCard } from './Analytics';
+import { BarCard } from './Analytics';
 import { KpiRow } from './KpiRow';
 import { WeekLimitCard } from './WeekLimitCard';
 
@@ -34,7 +34,7 @@ export default async function AdminHome({ searchParams }: { searchParams: Promis
   const practiceView = OFFICE.practiceMode && sp.live !== '1';
   const now = new Date();
   const today = toKstDate(now);
-  const [data, hist] = await Promise.all([loadPeriod(addDays(today, -13), today, practiceView), loadPeriod(addDays(today, -29), today, practiceView)]);
+  const data = await loadPeriod(addDays(today, -13), today, practiceView);
   await syncOvertimeRequests(data, today);
   const counts = await pendingCounts(practiceView);
   // 오늘 근무노트 — 같은 직원·같은 날은 가장 최근 것만 (고친 노트는 새 행, 이전은 기록으로 남음 — R-10-2)
@@ -54,12 +54,15 @@ export default async function AdminHome({ searchParams }: { searchParams: Promis
   );
 
   let missingPeople = 0;
+  // PC 그래프: 이번 주 요일별 연장근로(연장 + 휴일 근로) 분 — 직원별 하루 집계를 날짜로 더한다
+  const overtimeByDay = new Map<string, number>();
   const people: BoardPerson[] = active.map((p) => {
     const evs = data.events.filter((e) => e.employeeId === p.id);
     const fullLeave = fullLeaveSet(leaveDaysFor(data, p.id));
     const work = workDaysFor(data, p.id);
     const todays = evs.filter((e) => e.workDate === today);
     const days = daysFor(data, p.id, weekStart, today);
+    for (const d of days) overtimeByDay.set(d.workDate, (overtimeByDay.get(d.workDate) ?? 0) + d.overtimeMinutes + d.holidayMinutes);
     const todayRow = days.find((d) => d.workDate === today);
     if (data.rule) {
       const miss = findMissingPunches({
@@ -94,14 +97,14 @@ export default async function AdminHome({ searchParams }: { searchParams: Promis
         end: hhmm(kstDateTime(today, data.rule.endTime)),
       }
     : null;
-  // PC 분석 영역: 최근 30일 추이 (hist — 현황판 판정과 따로 불러온 기록. 미기록 판정은 14일 창을 그대로 쓴다)
+  // PC 분석 영역: 최근 14일 (지각 막대 · 전 근무일 대비 출근율)
   const md = (d: string) => `${Number(d.slice(5, 7))}/${Number(d.slice(8, 10))}`;
   const longDay = (d: string) => fmt.dateTime(kstDateTime(d, '12:00'), { month: 'long', day: 'numeric', weekday: 'short' });
-  const daily = [...Array(30)].map((_, i) => addDays(today, -29 + i)).map((d) => {
-    const rule = hist.ruleAt(d);
-    const workday = (rule ? resolveDayType(d, rule, hist.holidays) : 'workday') === 'workday';
+  const daily = [...Array(14)].map((_, i) => addDays(today, -13 + i)).map((d) => {
+    const rule = data.ruleAt(d);
+    const workday = (rule ? resolveDayType(d, rule, data.holidays) : 'workday') === 'workday';
     const firstIns = active
-      .map((p) => hist.events.filter((e) => e.employeeId === p.id && e.workDate === d && e.kind === 'in').map((e) => e.punchedAt.getTime()).sort((a, b) => a - b)[0])
+      .map((p) => data.events.filter((e) => e.employeeId === p.id && e.workDate === d && e.kind === 'in').map((e) => e.punchedAt.getTime()).sort((a, b) => a - b)[0])
       .filter((x): x is number => x !== undefined);
     const deadline = rule ? kstDateTime(d, rule.startTime).getTime() + rule.lateGraceMin * 60_000 : null;
     return { d, workday, n: firstIns.length, late: workday && deadline !== null ? firstIns.filter((x) => x > deadline).length : 0 };
@@ -182,18 +185,24 @@ export default async function AdminHome({ searchParams }: { searchParams: Promis
       <BoardView board={board} total={active.length} limitMinutes={OFFICE.weeklyLimitHours * 60} cautionMinutes={OFFICE.weeklyCautionHours * 60} colored={OFFICE.workplaceSize === '5_or_more'} legend={legend} />
       </div>
 
-      <TrendCard
+      {/* 이번 주 요일별 연장근로 시간 (2026-10-06 의뢰인: 30일 출근 비율 선 그래프는 볼 것이 없었다 → 샤플처럼 이번 주 초과근무) */}
+      <BarCard
         className="hidden lg:col-span-2 lg:flex"
-        title={t('lineTitle')}
-        note={t('lineNote', { n: active.length })}
-        empty={t('lineEmpty')}
-        points={workdays.map((x) => ({ key: x.d, label: md(x.d), value: pct(x.n), tip: t('pointTip', { date: longDay(x.d), n: x.n, p: pct(x.n) }) }))}
+        title={t('otWeekTitle')}
+        unit={t('otWeekUnit')}
+        empty={t('otWeekNone')}
+        bars={[...Array(7)].map((_, i) => addDays(weekStart, i)).map((d) => {
+          const m = overtimeByDay.get(d) ?? 0;
+          const text = `${Math.floor(m / 60)}:${String(m % 60).padStart(2, '0')}`;
+          return { key: d, label: md(d), sub: fmt.dateTime(kstDateTime(d, '12:00'), { weekday: 'short' }), n: m, text, tip: t('otWeekTip', { date: longDay(d), time: text }) };
+        })}
       />
-      <LateCard
+      <BarCard
         className="hidden lg:flex"
+        dense
         title={t('lateTitle')}
         unit={t('chartUnit')}
-        bars={daily.slice(-14).map((x) => ({ key: x.d, label: md(x.d), n: x.late, tip: t('lateTip', { date: longDay(x.d), n: x.late }) }))}
+        bars={daily.map((x) => ({ key: x.d, label: md(x.d), n: x.late, tip: t('lateTip', { date: longDay(x.d), n: x.late }) }))}
       />
       <div className="flex flex-col gap-3 lg:col-span-3 lg:grid lg:grid-cols-2 lg:gap-4">
       {data.rule && (

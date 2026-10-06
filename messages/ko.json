@@ -387,10 +387,6 @@
       "kpiDelta": "전 근무일 대비 {d}%p",
       "kpiToday": "오늘 기준",
       "kpiTodo": "눌러서 처리하러 가기",
-      "lineTitle": "최근 30일 출근 인원 비율",
-      "lineNote": "근무일만 · 재직 {n}명 기준",
-      "lineEmpty": "아직 보여 줄 기록이 없습니다",
-      "pointTip": "{date} · {n}명 출근 ({p}%)",
       "lateTitle": "최근 14일 지각",
       "lateTip": "{date} · 지각 {n}명",
       "listTitle": "오늘 직원 현황",
@@ -403,7 +399,11 @@
       "weekShort": "{h}시간 {m}분",
       "todoNone": "지금 처리할 일이 없습니다.",
       "filterIn": "출근",
-      "kpiNames": "눌러서 이름 보기"
+      "kpiNames": "눌러서 이름 보기",
+      "otWeekTitle": "이번 주 연장근로 (요일별 합계)",
+      "otWeekUnit": "연장 + 휴일 근로 · 시간:분",
+      "otWeekNone": "이번 주에는 연장근로가 없습니다.",
+      "otWeekTip": "{date} · 연장근로 {time}"
     },
     "inbox": {
       "title": "요청",

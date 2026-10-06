@@ -387,10 +387,6 @@
       "kpiDelta": "{d}%p vs previous workday",
       "kpiToday": "Today",
       "kpiTodo": "Open requests",
-      "lineTitle": "Share of staff in, last 30 days",
-      "lineNote": "Workdays only · of {n} staff",
-      "lineEmpty": "No records to show yet",
-      "pointTip": "{date} · {n} in ({p}%)",
       "lateTitle": "Late arrivals, last 14 days",
       "lateTip": "{date} · {n} late",
       "listTitle": "Staff today",
@@ -403,7 +399,11 @@
       "weekShort": "{h}h {m}m",
       "todoNone": "Nothing to handle right now.",
       "filterIn": "In",
-      "kpiNames": "Tap to see names"
+      "kpiNames": "Tap to see names",
+      "otWeekTitle": "Overtime this week (by day)",
+      "otWeekUnit": "Overtime + holiday work · h:mm",
+      "otWeekNone": "No overtime this week.",
+      "otWeekTip": "{date} · overtime {time}"
     },
     "inbox": {
       "title": "Requests",
