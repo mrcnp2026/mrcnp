@@ -400,7 +400,8 @@
       "colOut": "퇴근",
       "colWeek": "이번 주",
       "colNote": "비고",
-      "weekShort": "{h}시간 {m}분"
+      "weekShort": "{h}시간 {m}분",
+      "todoNone": "지금 처리할 일이 없습니다."
     },
     "inbox": {
       "title": "요청",

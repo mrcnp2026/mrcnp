@@ -88,9 +88,9 @@ export default async function LeavePage({ searchParams }: { searchParams: Promis
 
       {/* 외근·출장·재택 (②-3 7-11) — 연차와 같은 화면. 요약 칸은 왼쪽 「남은 연차」와 같은 줄·같은 높이 */}
       <div id="work" className="order-4 grid scroll-mt-16 lg:order-2">
-        <Card className="flex flex-col gap-3 p-6">
+        <div className="flex flex-col gap-3 px-1 pt-2 lg:rounded-card lg:bg-bg lg:p-6">
           <CardTitle help={tw('intro')}>{tw('title')}</CardTitle>
-          <dl className="num grid flex-1 grid-cols-2 content-center gap-2 text-center">
+          <dl className="num hidden flex-1 grid-cols-2 content-center gap-2 text-center lg:grid">
             {(['pending', 'approved'] as const).map((k) => {
               const v = works.filter((w) => w.status === k).length;
               return (
@@ -101,7 +101,7 @@ export default async function LeavePage({ searchParams }: { searchParams: Promis
               );
             })}
           </dl>
-        </Card>
+        </div>
       </div>
       <div className="order-5 grid lg:order-4">
         <WorkForm today={today} initialDate={sp.workDate && /^\d{4}-\d{2}-\d{2}$/.test(sp.workDate) ? sp.workDate : null} />

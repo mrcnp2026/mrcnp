@@ -24,6 +24,7 @@ export default async function NoticesPage() {
           <div className="flex flex-wrap items-center gap-2">
             <Chip tone={tone[r.state]}>{t(`state.${r.state}`)}</Chip>
             {r.notice.important && <Chip tone="warn">{t('important')}</Chip>}
+            <span className={`text-xs ${r.notice.audience === 'all' ? 'text-muted' : 'font-semibold text-warn'}`}>{r.notice.audience === 'all' ? t('audAll') : t('audSelected', { n: r.total })}</span>
             {r.notice.status === 'published' && <span className="num text-sm text-muted">{t('confirmed', { n: r.confirmed, total: r.total })}</span>}
             <span className="num text-xs text-faint">{f.dateTime(r.notice.startsAt, { dateStyle: 'medium', timeStyle: 'short' })}</span>
           </div>
@@ -41,16 +42,16 @@ export default async function NoticesPage() {
           {t('new')}
         </Link>
       </header>
-      <dl className="grid grid-cols-2 gap-2 lg:grid-cols-4 lg:gap-4">
+      <dl className="grid grid-cols-4 gap-2 lg:gap-4">
         {(['live', 'scheduled', 'draft'] as const).map((k) => (
-          <div key={k} className="flex flex-col gap-2 rounded-card bg-bg p-4 lg:p-5">
-            <dt className="text-sm text-muted">{t(`state.${k}`)}</dt>
-            <dd className="num text-2xl leading-none font-extrabold lg:text-3xl">{current.filter((r) => r.state === k).length}</dd>
+          <div key={k} className="flex flex-col gap-1 rounded-card bg-bg p-3 lg:gap-2 lg:p-5">
+            <dt className="text-xs text-muted lg:text-sm">{t(`state.${k}`)}</dt>
+            <dd className="num text-xl leading-none font-extrabold lg:text-3xl">{current.filter((r) => r.state === k).length}</dd>
           </div>
         ))}
-        <div className="flex flex-col gap-2 rounded-card bg-bg p-4 lg:p-5">
-          <dt className="text-sm text-muted">{t('archive')}</dt>
-          <dd className="num text-2xl leading-none font-extrabold text-faint lg:text-3xl">{archived.length}</dd>
+        <div className="flex flex-col gap-1 rounded-card bg-bg p-3 lg:gap-2 lg:p-5">
+          <dt className="text-xs text-muted lg:text-sm">{t('archive')}</dt>
+          <dd className="num text-xl leading-none font-extrabold text-faint lg:text-3xl">{archived.length}</dd>
         </div>
       </dl>
       {current.length === 0 && <p className="rounded-card bg-bg p-5 text-muted">{t('empty')}</p>}

@@ -163,8 +163,9 @@ export default async function AdminHome({ searchParams }: { searchParams: Promis
         <div className="px-5 pt-2">
           <CardTitle icon={Inbox}>{t('todo')}</CardTitle>
         </div>
+        {todo.every((x) => x.n === 0) && <p className="px-5 py-3 text-sm text-faint">{t('todoNone')}</p>}
         <ul>
-          {todo.map((x) => (
+          {todo.filter((x) => x.n > 0).map((x) => (
             <li key={x.key}>
               <Link href={!practiceView && OFFICE.practiceMode && x.href.startsWith('/admin/inbox') ? x.href.replace('/admin/inbox', '/admin/inbox?live=1') : x.href} className="flex min-h-14 items-center gap-3 px-5">
                 <span className="flex-1">{t(x.key)}</span>

@@ -400,7 +400,8 @@
       "colOut": "Out",
       "colWeek": "This week",
       "colNote": "Notes",
-      "weekShort": "{h}h {m}m"
+      "weekShort": "{h}h {m}m",
+      "todoNone": "Nothing to handle right now."
     },
     "inbox": {
       "title": "Requests",
