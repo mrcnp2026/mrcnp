@@ -38,11 +38,15 @@ export async function listNoticesForAdmin(now: Date) {
   const [{ data: ns }, { data: reads }, { data: people }, { data: targets }] = await Promise.all([
     db.from('notices').select('*').order('created_at', { ascending: false }).limit(100),
     db.from('notice_reads').select('notice_id, employee_id, version'),
-    db.from('profiles').select('id, name, active'),
+    db.from('profiles').select('id, name, active, employee_no'),
     db.from('notice_targets').select('notice_id, employee_id'),
   ]);
   const active = (people ?? []).filter((p) => p.active);
-  return (ns ?? []).map((r) => {
+  // 보관함에서 점검용 공지는 뺀다 (2026-10-06 의뢰인: 보관함 18건이 전부 자동 검사·점검 흔적이었다 — 공지는 지울 수 없어 보관함에 쌓인다).
+  // 자동 검사 계정(e2e-audit…)이 만든 것, 제목이 [점검]으로 시작하는 것, 글자가 깨진 채 저장된 점검 글. 게시 중·임시 저장은 그대로 보인다
+  const checkAccounts = new Set((people ?? []).filter((p) => p.employee_no?.startsWith('e2e-audit')).map((p) => p.id));
+  const isCheck = (r: { status: string; created_by: string; title: string }) => r.status === 'archived' && (checkAccounts.has(r.created_by) || r.title.startsWith('[점검]') || r.title.includes(String.fromCharCode(0xfffd)));
+  return (ns ?? []).filter((r) => !isCheck(r)).map((r) => {
     const n = toNotice(r);
     // 확인 현황: 현재 판 기준 · 대상 재직자 기준 (요점 17)
     const audience = n.audience === 'all' ? active : active.filter((p) => (targets ?? []).some((t) => t.notice_id === n.id && t.employee_id === p.id));

@@ -185,9 +185,9 @@ export default async function AdminHome({ searchParams }: { searchParams: Promis
       <BoardView board={board} total={active.length} limitMinutes={OFFICE.weeklyLimitHours * 60} cautionMinutes={OFFICE.weeklyCautionHours * 60} colored={OFFICE.workplaceSize === '5_or_more'} legend={legend} />
       </div>
 
-      {/* 이번 주 요일별 연장근로 시간 (2026-10-06 의뢰인: 30일 출근 비율 선 그래프는 볼 것이 없었다 → 샤플처럼 이번 주 초과근무) */}
+      {/* 이번 주 요일별 연장근로 시간 (2026-10-06 의뢰인: 30일 출근 비율 선 그래프는 볼 것이 없었다 → 샤플처럼 이번 주 초과근무). 폰에서도 보인다 — 칸이 화면 폭에 맞춰 줄어들어 가로 스크롤이 생기지 않는다 */}
       <BarCard
-        className="hidden lg:col-span-2 lg:flex"
+        className="flex lg:col-span-2"
         title={t('otWeekTitle')}
         unit={t('otWeekUnit')}
         empty={t('otWeekNone')}

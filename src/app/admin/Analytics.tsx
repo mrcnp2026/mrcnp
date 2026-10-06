@@ -15,7 +15,7 @@ export function BarCard({ title, unit, bars, empty, dense = false, className = '
     <Card className={`flex flex-col gap-3 ${className}`}>
       <CardTitle aside={<span className="text-xs text-faint">{unit}</span>}>{title}</CardTitle>
       {none && empty && <p className="text-sm text-faint">{empty}</p>}
-      <ul className={`flex min-h-36 flex-1 items-stretch ${dense ? 'gap-1' : 'gap-3'}`}>
+      <ul className={`flex min-h-36 flex-1 items-stretch ${dense ? 'gap-1' : 'gap-1 lg:gap-3'}`}>
         {bars.map((d, i) => (
           <li key={d.key} title={d.tip} className="flex min-w-0 flex-1 flex-col items-center gap-1">
             <span className="flex w-full flex-1 flex-col items-center justify-end gap-1 border-b border-border">
