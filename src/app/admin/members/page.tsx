@@ -5,7 +5,7 @@ import { Check, ChevronRight, Network, UserPlus } from 'lucide-react';
 import { getTranslations } from 'next-intl/server';
 import Link from 'next/link';
 import { Card, Chip, PageShell } from '@/components/ui';
-import { groupPeople } from '@/lib/org';
+import { groupPath, groupPeople } from '@/lib/org';
 import { loadOrgGroups } from '@/lib/org-data';
 import { createAdminClient } from '@/lib/supabase/admin';
 import { NewInviteButton } from './NewInviteButton';
@@ -123,6 +123,53 @@ export default async function MembersPage({ searchParams }: { searchParams: Prom
         <p className="rounded-card bg-primary-tint p-3 text-sm text-primary">{t('orgEmptyHint')}</p>
       )}
 
+      {/* PC: 한 표로 (2026-10-06 의뢰인) · 폰: 부서별 카드 */}
+      {list.length > 0 && (
+        <Card className="hidden p-0 py-2 lg:block">
+          <table className="w-full text-left text-sm">
+            <thead>
+              <tr className="text-xs text-faint">
+                {(['colName', 'colNo', 'colGroup', 'colTitle', 'colRole', 'colStatus'] as const).map((k) => (
+                  <th key={k} scope="col" className="px-5 py-3 font-medium">
+                    {t(k)}
+                  </th>
+                ))}
+                <th scope="col" className="px-5 py-3" />
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-border border-t border-border">
+              {list.map((p) => {
+                const ok = withPhone.has(p.id);
+                return (
+                  <tr key={p.id}>
+                    <td className="px-5 py-2">
+                      <Link href={`/admin/members/${p.id}`} className="flex min-h-11 items-center gap-3 font-medium">
+                        <span aria-hidden className={`flex size-9 shrink-0 items-center justify-center rounded-chip font-bold ${ok ? 'bg-primary-tint text-primary' : 'bg-warn-tint text-warn'}`}>
+                          {p.name.slice(0, 1)}
+                        </span>
+                        {p.name}
+                      </Link>
+                    </td>
+                    <td className="num px-5 py-2 text-muted">{p.employeeNo}</td>
+                    <td className="px-5 py-2 text-muted">{groupPath(groups, p.groupId) ?? t('unassigned')}</td>
+                    <td className="px-5 py-2 text-muted">{p.jobTitle ?? '–'}</td>
+                    <td className="px-5 py-2">
+                      <span className="flex flex-wrap items-center gap-1">
+                        {p.role === 'admin' ? <Chip tone="info">{t('adminChip')}</Chip> : <span className="text-muted">{t('roleEmployee')}</span>}
+                        {roleWaiting.has(p.id) && <Chip tone="warn">{t('roleWaiting')}</Chip>}
+                      </span>
+                    </td>
+                    <td className="px-5 py-2">{ok ? <Chip tone="ok">{t('joined')}</Chip> : <Chip tone="warn">{t('notJoined')}</Chip>}</td>
+                    <td className="px-5 py-2 text-right">{!ok && <NewInviteButton employeeId={p.id} name={p.name} compact />}</td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
+        </Card>
+      )}
+
+      <div className="flex flex-col gap-3 lg:hidden">
       {sections.map((s) => (
         <Card key={s.dept?.id ?? 'none'} className="p-0 py-1">
           <h2 className="flex min-h-11 items-center justify-between px-5 pt-1">
@@ -144,6 +191,7 @@ export default async function MembersPage({ searchParams }: { searchParams: Prom
             ))}
         </Card>
       ))}
+      </div>
 
       {filter === 'all' && inactive.length > 0 && (
         <details className="rounded-card bg-bg">

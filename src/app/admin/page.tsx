@@ -21,10 +21,12 @@ import { buildTodayBoard, type BoardPerson } from '@/lib/today';
 import { weekLimitList } from '@/lib/week-limit';
 import { AutoRefresh } from './AutoRefresh';
 import { BoardView } from './BoardView';
+import { TodayCharts } from './TodayCharts';
 import { WeekLimitCard } from './WeekLimitCard';
 
 export default async function AdminHome({ searchParams }: { searchParams: Promise<{ live?: string; np?: string }> }) {
   const t = await getTranslations('admin.home');
+  const th = await getTranslations('home');
   const fmt = await getFormatter();
   const sp = await searchParams;
 // ★ 연습 모드에서는 모든 기록이 연습 기록이다 — 관리자 화면도 기본으로 연습 기록을 본다 (2026-10-02: 시험직원 정정 요청이 관리자에게 0건으로 보이던 문제). ?live=1이면 실제 기록
@@ -91,6 +93,12 @@ export default async function AdminHome({ searchParams }: { searchParams: Promis
         end: hhmm(kstDateTime(today, data.rule.endTime)),
       }
     : null;
+  // PC 그래프: 최근 7일 출근 인원 (그날 출근을 한 번이라도 찍은 재직 직원 수)
+  const trend = [...Array(7)].map((_, i) => addDays(today, -6 + i)).map((d) => {
+    const n = active.filter((p) => data.events.some((e) => e.employeeId === p.id && e.workDate === d && e.kind === 'in')).length;
+    const at = kstDateTime(d, '12:00');
+    return { key: d, n, off: dayTypes[d] !== 'workday', label: Number(d.slice(5, 7)) + '/' + Number(d.slice(8, 10)), weekday: fmt.dateTime(at, { weekday: 'short' }), tip: t('chartTip', { date: fmt.dateTime(at, { month: 'long', day: 'numeric', weekday: 'short' }), n }) };
+  });
   // 내가 확인해 줘야 하는 권한 변경 (다른 관리자가 요청한 것, R-2의 8)
   const meId = (await getMe())!.id;
   const { data: roleReqs } = await createAdminClient().from('role_change_requests').select('target_id').eq('status', 'pending').neq('requested_by', meId).order('created_at');
@@ -150,6 +158,21 @@ export default async function AdminHome({ searchParams }: { searchParams: Promis
       </Card>
 
       <div className="flex flex-col gap-3 lg:col-span-3 lg:col-start-1 lg:row-span-3 lg:row-start-1 lg:gap-4">
+      <TodayCharts
+        className="hidden lg:grid"
+        rate={rate}
+        rateTitle={t('chartRate')}
+        rateSub={rate === null ? t('chartNoTarget') : t('chartRateSub', { n: Math.min(inCount, target), target })}
+        rows={[
+          { label: th('status.late'), value: board.late.length, warn: true },
+          { label: th('status.absent'), value: board.absent.length },
+          { label: th('status.overtime'), value: board.overtime.length, warn: true },
+        ]}
+        trendTitle={t('chartTrend')}
+        trendUnit={t('chartUnit')}
+        trend={trend}
+        max={active.length}
+      />
       <BoardView board={board} total={active.length} limitMinutes={OFFICE.weeklyLimitHours * 60} cautionMinutes={OFFICE.weeklyCautionHours * 60} colored={OFFICE.workplaceSize === '5_or_more'} legend={legend} />
       </div>
 

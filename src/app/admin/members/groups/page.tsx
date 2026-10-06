@@ -3,10 +3,12 @@
 import { getTranslations } from 'next-intl/server';
 import Link from 'next/link';
 import { PageShell } from '@/components/ui';
+import { BRAND } from '@/config/brand';
 import { buildOrgTree, groupPath } from '@/lib/org';
 import { loadOrgGroups } from '@/lib/org-data';
 import { createAdminClient } from '@/lib/supabase/admin';
 import { GroupManager } from './GroupManager';
+import { OrgDiagram } from './OrgDiagram';
 
 export default async function OrgPage() {
   const t = await getTranslations('admin.org');
@@ -25,12 +27,13 @@ export default async function OrgPage() {
   const hidden = groups.filter((g) => !g.active && !g.name.startsWith('e2e-')).map((g) => ({ id: g.id, name: g.name, active: false, count: 0, path: groupPath(groups, g.id) ?? g.name }));
 
   return (
-    <PageShell>
+    <PageShell wide>
       <Link href="/admin/members" className="-mb-2 inline-flex min-h-11 items-center self-start text-sm font-medium text-muted">
         ‹ {t('back')}
       </Link>
       <h1 className="px-1 text-2xl font-extrabold tracking-tight">{t('title')}</h1>
       <p className="px-1 text-sm text-muted">{t('intro')}</p>
+      <OrgDiagram root={BRAND.name} depts={depts.filter((d) => d.active).map((d) => ({ ...d, teams: d.teams.filter((x) => x.active) }))} countLabel={(n) => t('count', { n })} />
       <GroupManager depts={depts} hidden={hidden} />
     </PageShell>
   );

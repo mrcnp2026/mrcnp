@@ -45,6 +45,8 @@ try {
   await shot('admin-inbox', '/admin/inbox');
   await shot('admin-more', '/admin/more');
   await shot('admin-leave', '/admin/leave');
+  await shot('admin-org', '/admin/members/groups');
+  await shot('admin-notice-new', '/admin/notices/new');
   await shot('admin-punch-home', '/punch', false);
   await db.from('profiles').update({ role: 'employee' }).eq('id', emp!.id);
   await shot('punch-home', '/punch');

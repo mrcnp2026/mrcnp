@@ -136,7 +136,7 @@ export function NoticeEditor({ people, initial }: { people: { id: string; name: 
         </label>
         <label className="flex flex-col gap-1 text-sm text-muted">
           {t('bodyLabel')}
-          <textarea value={f.body} maxLength={4000} rows={7} onChange={(e) => upd({ body: e.target.value })} className="w-full rounded-button border border-border bg-bg p-3 text-base text-text" />
+          <textarea value={f.body} maxLength={4000} rows={7} onChange={(e) => upd({ body: e.target.value })} className="w-full rounded-button border border-border bg-bg p-3 text-base text-text lg:min-h-96" />
           <span className="text-xs text-faint">{t('bodyHint')}</span>
         </label>
         <label className="flex min-h-11 items-center gap-2">

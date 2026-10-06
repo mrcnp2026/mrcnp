@@ -36,7 +36,8 @@ export default async function AdminLeavePage({ searchParams }: { searchParams: P
       <p className="text-sm text-muted">{t('intro')}</p>
       {practice && <p className="rounded-card bg-primary-tint p-3 text-sm text-primary">{t('practiceBanner')}</p>}
 
-      <section className="flex flex-col gap-3">
+      {/* PC: 직원 카드를 두 칸으로 (2026-10-06 의뢰인) */}
+      <section className="flex flex-col gap-3 lg:grid lg:grid-cols-2 lg:items-start lg:gap-4">
         {(ppl ?? []).map((p) => {
           const mine = grants.filter((g) => g.employeeId === p.id);
           const bal = calcLeaveBalance({ grants: mine, requests: requests.filter((r) => r.employeeId === p.id), types, asOf: today });
