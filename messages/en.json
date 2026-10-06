@@ -616,7 +616,13 @@
       "holiday": "Holiday",
       "download": "Download payroll file",
       "empty": "No records this month.",
-      "noAccessNone": "none"
+      "noAccessNone": "none",
+      "staff": "Staff",
+      "people": "People",
+      "peopleN": "{n}",
+      "totalWorked": "Total hours",
+      "totalOvertime": "Approved overtime",
+      "totalNightHoliday": "Night · holiday"
     },
     "weekLimit": {
       "title": "52-hour weekly limit",
@@ -1055,7 +1061,9 @@
     "confirm": "OK",
     "empty": "No notices right now.",
     "confirmed": "Read",
-    "new": "New"
+    "new": "New",
+    "countAll": "Current notices",
+    "countNew": "Not confirmed yet"
   },
   "leave": {
     "title": "Leave & off-site",

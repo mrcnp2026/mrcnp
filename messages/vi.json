@@ -318,7 +318,9 @@
     "confirm": "Đã xem",
     "empty": "Hiện không có thông báo.",
     "confirmed": "Đã xem",
-    "new": "Mới"
+    "new": "Mới",
+    "countAll": "Thông báo hiện có",
+    "countNew": "Chưa xác nhận"
   },
   "account": {
     "title": "Tài khoản của tôi",

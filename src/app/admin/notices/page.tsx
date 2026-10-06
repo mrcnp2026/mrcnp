@@ -41,7 +41,19 @@ export default async function NoticesPage() {
           {t('new')}
         </Link>
       </header>
-      {current.length === 0 && <p className="text-muted">{t('empty')}</p>}
+      <dl className="grid grid-cols-2 gap-2 lg:grid-cols-4 lg:gap-4">
+        {(['live', 'scheduled', 'draft'] as const).map((k) => (
+          <div key={k} className="flex flex-col gap-2 rounded-card bg-bg p-4 lg:p-5">
+            <dt className="text-sm text-muted">{t(`state.${k}`)}</dt>
+            <dd className="num text-2xl leading-none font-extrabold lg:text-3xl">{current.filter((r) => r.state === k).length}</dd>
+          </div>
+        ))}
+        <div className="flex flex-col gap-2 rounded-card bg-bg p-4 lg:p-5">
+          <dt className="text-sm text-muted">{t('archive')}</dt>
+          <dd className="num text-2xl leading-none font-extrabold text-faint lg:text-3xl">{archived.length}</dd>
+        </div>
+      </dl>
+      {current.length === 0 && <p className="rounded-card bg-bg p-5 text-muted">{t('empty')}</p>}
       {/* PC: 공지 한 건 = 표 한 줄 (2026-10-06 의뢰인) · 폰: 카드 */}
       {current.length > 0 && (
         <Card className="hidden overflow-x-auto p-0 lg:block">
