@@ -401,7 +401,9 @@
       "colWeek": "This week",
       "colNote": "Notes",
       "weekShort": "{h}h {m}m",
-      "todoNone": "Nothing to handle right now."
+      "todoNone": "Nothing to handle right now.",
+      "filterIn": "In",
+      "kpiNames": "Tap to see names"
     },
     "inbox": {
       "title": "Requests",

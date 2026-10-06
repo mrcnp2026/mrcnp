@@ -1,46 +1,18 @@
 // PC 현황판 분석 조각 (2026-10-06 의뢰인: 그래프는 좋지만 화면이 흩어져 난잡하다 → 한 화면에 역할이 겹치는 것을 빼고 줄을 맞춘다).
-//  · KpiRow: 맨 위 숫자 칸 4개 — 같은 크기, 가장 먼저 읽히는 것
+//  · (맨 위 숫자 칸 4개는 KpiRow.tsx)
 //  · TrendCard: 최근 30일 출근 인원 비율 (선)
 //  · LateCard: 최근 14일 지각 (막대)
 // 색: 한 가지 계열(파랑)만 쓴다 — 상태별 색 5가지는 색각 구분 검사를 통과하지 못해, 상태는 글자·숫자로 구분한다.
 // 글자·숫자는 글자 색, 도형만 파랑. 막대·점에 마우스를 올리면 그날 값이 뜬다 (title).
 // 문장은 부르는 쪽이 번역해서 넘긴다 (4-10).
-import Link from 'next/link';
 import { Card, CardTitle } from '@/components/ui';
 
-export type Kpi = { label: string; value: string; sub?: string; warn?: boolean; href?: string };
 export type Point = { key: string; label: string; value: number; tip: string }; // value: 0~100 (%)
 export type Bar = { key: string; label: string; sub?: string; n: number; tip: string };
 
 const W = 640;
 const H = 200;
 const PAD = { l: 36, r: 16, t: 12, b: 28 };
-
-export function KpiRow({ kpis }: { kpis: Kpi[] }) {
-  return (
-    <div className="hidden grid-cols-4 gap-4 lg:grid">
-      {kpis.map((k) => {
-        const body = (
-          <>
-            <span className="text-sm text-muted">{k.label}</span>
-            <span className={`num text-3xl leading-none font-extrabold ${k.warn ? 'text-warn' : 'text-text'}`}>{k.value}</span>
-            <span className="num min-h-4 text-xs text-faint">{k.sub}</span>
-          </>
-        );
-        const cls = 'flex flex-col gap-2 rounded-card bg-bg p-5';
-        return k.href ? (
-          <Link key={k.label} href={k.href} className={cls}>
-            {body}
-          </Link>
-        ) : (
-          <div key={k.label} className={cls}>
-            {body}
-          </div>
-        );
-      })}
-    </div>
-  );
-}
 
 export function TrendCard({ title, note, empty, points, className = '' }: { title: string; note: string; empty: string; points: Point[]; className?: string }) {
   const iw = W - PAD.l - PAD.r;

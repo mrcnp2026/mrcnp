@@ -6,10 +6,11 @@
 // 명단은 10명씩 페이지 — 20명이어도 길게 내리지 않게.
 import { ChevronLeft, ChevronRight } from 'lucide-react';
 import { useFormatter, useTranslations } from 'next-intl';
-import { useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { Help } from '@/components/Help';
 import { Card } from '@/components/ui';
 import type { BoardRow, DayStatus } from '@/lib/today';
+import { BOARD_FILTER_EVENT } from './KpiRow';
 
 const ORDER: Exclude<DayStatus, 'off'>[] = ['working', 'late', 'absent', 'done', 'overtime'];
 const PER_PAGE = 10;
@@ -40,17 +41,30 @@ export function BoardView({
   const t = useTranslations('admin.home');
   const th = useTranslations('home');
   const f = useFormatter();
-  const [filter, setFilter] = useState<DayStatus | 'all'>('all');
+  // 'in' = 오늘 출근을 찍은 사람 전부 (지각·근무중·퇴근·야근중)
+  const [filter, setFilter] = useState<DayStatus | 'all' | 'in'>('all');
+  const listRef = useRef<HTMLDivElement>(null);
+  // 맨 위 숫자 칸(KpiRow)을 누르면 그 사람들로 거르고 명단으로 내려간다
+  useEffect(() => {
+    const on = (e: Event) => {
+      setFilter((e as CustomEvent<DayStatus | 'in'>).detail);
+      setPage(1);
+      listRef.current?.scrollIntoView({ block: 'nearest' });
+    };
+    window.addEventListener(BOARD_FILTER_EVENT, on);
+    return () => window.removeEventListener(BOARD_FILTER_EVENT, on);
+  }, []);
   const [page, setPage] = useState(1);
   const time = (d: Date | null) => (d ? f.dateTime(new Date(d), { hour: '2-digit', minute: '2-digit', hourCycle: 'h23' }) : '');
 
   // "전체"는 확인이 필요한 사람부터: 지각·야근 → 미출근 → 근무 중 → 퇴근 → 휴무
   const all = [...board.late, ...board.overtime, ...board.absent, ...board.working, ...board.done, ...board.off];
-  const list = filter === 'all' ? all : board[filter];
+  const cameIn = [...board.late, ...board.overtime, ...board.working, ...board.done];
+  const list = filter === 'all' ? all : filter === 'in' ? cameIn : board[filter];
   const pages = Math.max(1, Math.ceil(list.length / PER_PAGE));
   const cur = Math.min(page, pages);
   const shown = list.slice((cur - 1) * PER_PAGE, cur * PER_PAGE);
-  const pick = (k: DayStatus | 'all') => {
+  const pick = (k: DayStatus | 'all' | 'in') => {
     setFilter(filter === k ? 'all' : k);
     setPage(1);
   };
@@ -83,7 +97,7 @@ export function BoardView({
   );
 
   return (
-    <div className="flex flex-col gap-3 lg:h-full">
+    <div ref={listRef} className="flex scroll-mt-4 flex-col gap-3 lg:h-full">
       {/* PC: 제목 + 걸러보기 단추 + 표 (2026-10-06 의뢰인: 직원 명단을 카드처럼 늘어놓지 말 것) */}
       <Card className="hidden flex-1 flex-col gap-3 p-0 py-4 lg:flex">
         <div className="flex flex-wrap items-center gap-x-1 gap-y-2 px-5">
@@ -94,12 +108,12 @@ export function BoardView({
             ))}
           </Help>
           <div className="ml-auto flex flex-wrap gap-1" role="tablist" aria-label={t('statusTabs')}>
-            {(['all', ...ORDER] as const).map((k) => {
+            {(['all', 'in', ...ORDER] as const).map((k) => {
               const on = filter === k;
-              const n = k === 'all' ? all.length : board[k].length;
+              const n = k === 'all' ? all.length : k === 'in' ? cameIn.length : board[k].length;
               return (
                 <button key={k} type="button" role="tab" aria-selected={on} onClick={() => { setFilter(k); setPage(1); }} className={`inline-flex min-h-9 items-center gap-1 rounded-button px-3 text-sm ${on ? 'bg-primary-tint font-bold text-primary' : 'text-muted'}`}>
-                  {k === 'all' ? t('everyone') : th(`status.${k}`)} <span className="num">{n}</span>
+                  {k === 'all' ? t('everyone') : k === 'in' ? t('filterIn') : th(`status.${k}`)} <span className="num">{n}</span>
                 </button>
               );
             })}
@@ -183,7 +197,7 @@ export function BoardView({
       <Card className="flex flex-col p-0 py-2 lg:hidden">
         <div className="flex min-h-11 items-center justify-between px-5">
           <h2 className="text-sm font-medium text-muted">
-            {filter === 'all' ? t('everyone') : th(`status.${filter}`)} <span className="num">{list.length}</span>
+            {filter === 'all' ? t('everyone') : filter === 'in' ? t('filterIn') : th(`status.${filter}`)} <span className="num">{list.length}</span>
           </h2>
           {filter !== 'all' && (
             <button type="button" onClick={() => pick('all')} className="min-h-11 text-sm font-medium text-primary">

@@ -77,13 +77,13 @@ export default async function MembersPage({ searchParams }: { searchParams: Prom
               )}
             </span>
           </span>
+          {/* > 까지 링크 안에 둔다 — 화살표를 눌러도 상세로 간다 (2026-10-06 의뢰인) */}
+          {!(p.active && !ok) && <ChevronRight aria-hidden size={18} strokeWidth={2} className="mr-2 shrink-0 text-faint" />}
         </Link>
-        {p.active && !ok ? (
+        {p.active && !ok && (
           <span className="shrink-0">
             <NewInviteButton employeeId={p.id} name={p.name} compact />
           </span>
-        ) : (
-          <ChevronRight aria-hidden size={18} strokeWidth={2} className="mr-2 shrink-0 text-faint" />
         )}
       </li>
     );

@@ -21,7 +21,8 @@ import { buildTodayBoard, type BoardPerson } from '@/lib/today';
 import { weekLimitList } from '@/lib/week-limit';
 import { AutoRefresh } from './AutoRefresh';
 import { BoardView } from './BoardView';
-import { KpiRow, LateCard, TrendCard } from './Analytics';
+import { LateCard, TrendCard } from './Analytics';
+import { KpiRow } from './KpiRow';
 import { WeekLimitCard } from './WeekLimitCard';
 
 export default async function AdminHome({ searchParams }: { searchParams: Promise<{ live?: string; np?: string }> }) {
@@ -150,9 +151,9 @@ export default async function AdminHome({ searchParams }: { searchParams: Promis
 
       <KpiRow
         kpis={[
-          { label: t('chartRate'), value: rate === null ? '–' : `${rate}%`, sub: rate === null ? t('chartNoTarget') : delta === null ? t('chartRateSub', { n: Math.min(inCount, target), target }) : `${t('chartRateSub', { n: Math.min(inCount, target), target })} · ${t('kpiDelta', { d: `${delta > 0 ? '+' : ''}${delta}` })}` },
-          { label: th('status.late'), value: String(board.late.length), warn: board.late.length > 0, sub: t('kpiToday') },
-          { label: th('status.absent'), value: String(board.absent.length), sub: t('kpiToday') },
+          { label: t('chartRate'), filter: 'in', value: rate === null ? '–' : `${rate}%`, sub: rate === null ? t('chartNoTarget') : delta === null ? t('chartRateSub', { n: Math.min(inCount, target), target }) : `${t('chartRateSub', { n: Math.min(inCount, target), target })} · ${t('kpiDelta', { d: `${delta > 0 ? '+' : ''}${delta}` })}` },
+          { label: th('status.late'), filter: 'late', value: String(board.late.length), warn: board.late.length > 0, sub: t('kpiNames') },
+          { label: th('status.absent'), filter: 'absent', value: String(board.absent.length), sub: t('kpiNames') },
           { label: t('todo'), value: String(todo.reduce((a, x) => a + x.n, 0)), sub: t('kpiTodo'), href: '/admin/inbox' },
         ]}
       />
