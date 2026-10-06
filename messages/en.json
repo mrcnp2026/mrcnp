@@ -290,7 +290,9 @@
       "deviceNone": "No punch device",
       "deviceNoneHint": "The employee signs in on their own phone and registers it from the home screen.",
       "deviceSince": "Registered {date}",
-      "deviceLast": "last used {date}"
+      "deviceLast": "last used {date}",
+      "roleChange": "Change",
+      "roleClose": "Close"
     },
     "more": {
       "title": "All menus",
@@ -606,14 +608,15 @@
     "payroll": {
       "title": "Payroll",
       "subtitle": "Monthly hours summary · payroll file",
-      "noAccess": "Only payroll staff can see this. Assign payroll staff in the Staff tab.",
+      "noAccess": "Only payroll managers can see this screen. Current payroll managers: {names}. A payroll manager can give this permission to another admin in the Role column of the staff list.",
       "building": "Payslips (base pay, allowances, insurance, tax) are being built. For now: hours summary and the payroll file.",
       "worked": "Worked",
       "overtime": "Overtime",
       "night": "Night",
       "holiday": "Holiday",
       "download": "Download payroll file",
-      "empty": "No records this month."
+      "empty": "No records this month.",
+      "noAccessNone": "none"
     },
     "weekLimit": {
       "title": "52-hour weekly limit",
@@ -965,7 +968,13 @@
     "lateTotal": "Late",
     "lateValue": "{n}× · {m} min",
     "leaveUsed": "Leave used",
-    "leaveSoon": "Coming soon"
+    "leaveSoon": "Coming soon",
+    "colDate": "Date",
+    "colIn": "In",
+    "colOut": "Out",
+    "colWorked": "Hours",
+    "colOver": "Overtime · night · holiday",
+    "colNote": "Notes"
   },
   "corrections": {
     "title": "Corrections",

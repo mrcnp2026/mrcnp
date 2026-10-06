@@ -233,7 +233,13 @@
     "lateTotal": "มาสาย",
     "lateValue": "{n} ครั้ง · {m} นาที",
     "leaveUsed": "ลาที่ใช้แล้ว",
-    "leaveSoon": "เร็ว ๆ นี้"
+    "leaveSoon": "เร็ว ๆ นี้",
+    "colDate": "วันที่",
+    "colIn": "เข้า",
+    "colOut": "ออก",
+    "colWorked": "ชั่วโมงทำงาน",
+    "colOver": "ล่วงเวลา · กลางคืน · วันหยุด",
+    "colNote": "หมายเหตุ"
   },
   "corrections": {
     "title": "ขอแก้ไข",

@@ -7,6 +7,7 @@ import { Card, PageShell } from '@/components/ui';
 import { OFFICE } from '@/config/office';
 import { getMe } from '@/lib/auth';
 import { buildMonth, isYearMonth } from '@/lib/month-data';
+import { createAdminClient } from '@/lib/supabase/admin';
 import { toKstDate } from '@/lib/time';
 
 function shift(ym: string, n: number) {
@@ -17,6 +18,7 @@ function shift(ym: string, n: number) {
 export default async function PayrollPage({ searchParams }: { searchParams: Promise<{ m?: string; live?: string }> }) {
   const t = await getTranslations('admin.payroll');
   const tr = await getTranslations('admin.records');
+  const tn = await getTranslations('side');
   const me = (await getMe())!;
   const sp = await searchParams;
   const ym = isYearMonth(sp.m) ? sp.m : toKstDate(new Date()).slice(0, 7);
@@ -26,11 +28,17 @@ export default async function PayrollPage({ searchParams }: { searchParams: Prom
   const hm = (min: number) => tr('hm', { h: Math.floor(min / 60), m: String(min % 60).padStart(2, '0') });
 
   if (!me.canViewPayroll) {
+    // 누가 급여 담당인지 알려 준다 (2026-10-06 의뢰인: 급여 담당이 있다는데 왜 못 보는지 알 수 없었다)
+    const { data: viewers } = await createAdminClient().from('profiles').select('name').eq('active', true).eq('role', 'admin').eq('can_view_payroll', true).order('name');
+    const names = (viewers ?? []).map((v) => v.name).join(', ') || t('noAccessNone');
     return (
       <PageShell>
         <h1 className="px-1 pt-2 text-2xl font-extrabold tracking-tight">{t('title')}</h1>
-        <Card>
-          <p className="text-muted">{t('noAccess')}</p>
+        <Card className="flex flex-col gap-3">
+          <p className="text-muted">{t('noAccess', { names })}</p>
+          <Link href="/admin/members" className="inline-flex min-h-11 items-center self-start rounded-button bg-primary-tint px-4 text-sm font-bold text-primary">
+            {tn('members')} ›
+          </Link>
         </Card>
       </PageShell>
     );

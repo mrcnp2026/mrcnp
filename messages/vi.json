@@ -233,7 +233,13 @@
     "lateTotal": "Đi muộn",
     "lateValue": "{n} lần · {m} phút",
     "leaveUsed": "Nghỉ phép đã dùng",
-    "leaveSoon": "Sắp có"
+    "leaveSoon": "Sắp có",
+    "colDate": "Ngày",
+    "colIn": "Vào",
+    "colOut": "Ra",
+    "colWorked": "Giờ làm",
+    "colOver": "Tăng ca · đêm · ngày nghỉ",
+    "colNote": "Ghi chú"
   },
   "corrections": {
     "title": "Yêu cầu sửa",

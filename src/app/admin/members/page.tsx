@@ -7,19 +7,22 @@ import Link from 'next/link';
 import { Card, Chip, PageShell } from '@/components/ui';
 import { groupPath, groupPeople } from '@/lib/org';
 import { loadOrgGroups } from '@/lib/org-data';
+import { getMe } from '@/lib/auth';
 import { createAdminClient } from '@/lib/supabase/admin';
 import { NewInviteButton } from './NewInviteButton';
+import { RoleCell } from './RoleCell';
 
 type Filter = 'all' | 'joined' | 'pending';
-type Row = { id: string; name: string; employeeNo: string | null; role: string; active: boolean; groupId: string | null; jobTitle: string | null };
+type Row = { id: string; name: string; employeeNo: string | null; role: string; active: boolean; groupId: string | null; jobTitle: string | null; canViewPayroll: boolean };
 
 export default async function MembersPage({ searchParams }: { searchParams: Promise<{ f?: string }> }) {
   const t = await getTranslations('admin.members');
   const sp = await searchParams;
   const filter: Filter = sp.f === 'joined' || sp.f === 'pending' ? sp.f : 'all';
   const db = createAdminClient();
+  const me = (await getMe())!;
   const [{ data: people }, { data: keys }, groups, { data: roleReqs }] = await Promise.all([
-    db.from('profiles').select('id, name, employee_no, role, active, group_id, job_title, password_set_at').order('name'),
+    db.from('profiles').select('id, name, employee_no, role, active, group_id, job_title, password_set_at, can_view_payroll').order('name'),
     db.from('user_passkeys').select('employee_id').is('revoked_at', null),
     loadOrgGroups(),
     db.from('role_change_requests').select('target_id').eq('status', 'pending'),
@@ -30,7 +33,7 @@ export default async function MembersPage({ searchParams }: { searchParams: Prom
   // 검사 전용 계정(e2e-audit, e2e-audit2)은 검사 중에만 켜진다 — 꺼져 있으면 목록에 안 보이게
   const all: Row[] = (people ?? [])
     .filter((p) => p.active || !p.employee_no?.startsWith('e2e-audit'))
-    .map((p) => ({ id: p.id, name: p.name, employeeNo: p.employee_no, role: p.role, active: p.active, groupId: p.group_id, jobTitle: p.job_title }));
+    .map((p) => ({ id: p.id, name: p.name, employeeNo: p.employee_no, role: p.role, active: p.active, groupId: p.group_id, jobTitle: p.job_title, canViewPayroll: p.can_view_payroll }));
   const active = all.filter((p) => p.active);
   const inactive = all.filter((p) => !p.active);
   const joined = active.filter((p) => withPhone.has(p.id));
@@ -56,6 +59,7 @@ export default async function MembersPage({ searchParams }: { searchParams: Prom
               <span className="truncate font-medium">{p.name}</span>
               {p.jobTitle && <span className="shrink-0 text-xs text-muted">{p.jobTitle}</span>}
               {p.role === 'admin' && <Chip tone="info">{t('adminChip')}</Chip>}
+              {p.canViewPayroll && <Chip tone="info">{t('payrollChip')}</Chip>}
               {roleWaiting.has(p.id) && <Chip tone="warn">{t('roleWaiting')}</Chip>}
             </span>
             <span className="num flex items-center gap-1 truncate text-xs">
@@ -158,10 +162,7 @@ export default async function MembersPage({ searchParams }: { searchParams: Prom
                     <td className="px-5 py-2 text-muted">{groupPath(groups, p.groupId) ?? t('unassigned')}</td>
                     <td className="px-5 py-2 text-muted">{p.jobTitle ?? '–'}</td>
                     <td className="px-5 py-2">
-                      <span className="flex flex-wrap items-center gap-1">
-                        {p.role === 'admin' ? <Chip tone="info">{t('adminChip')}</Chip> : <span className="text-muted">{t('roleEmployee')}</span>}
-                        {roleWaiting.has(p.id) && <Chip tone="warn">{t('roleWaiting')}</Chip>}
-                      </span>
+                      <RoleCell employeeId={p.id} role={p.role} canViewPayroll={p.canViewPayroll} self={p.id === me.id} waiting={roleWaiting.has(p.id)} actorCanPayroll={me.canViewPayroll} />
                     </td>
                     <td className="px-5 py-2">{ok ? <Chip tone="ok">{t('joined')}</Chip> : <Chip tone="warn">{t('notJoined')}</Chip>}</td>
                     <td className="px-5 py-2 text-right">{!ok && <NewInviteButton employeeId={p.id} name={p.name} compact />}</td>

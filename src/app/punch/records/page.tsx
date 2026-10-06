@@ -58,6 +58,20 @@ export default async function MyRecordsPage({ searchParams }: { searchParams: Pr
     if (l.verdict === 'late') lateOf.set(d.workDate, l.lateMinutes);
   }
   const lateMin = [...lateOf.values()].reduce((a, b) => a + b, 0);
+  // 표(PC)와 카드(폰)가 같은 값을 쓰도록 날짜별 값을 한 번만 계산한다
+  const rows = shown.map((d) => {
+    const ins = d.pairs.map((p) => p.in).filter((x): x is Date => !!x).sort((a, b) => a.getTime() - b.getTime());
+    const outs = d.pairs.map((p) => p.out).filter((x): x is Date => !!x).sort((a, b) => a.getTime() - b.getTime());
+    return {
+      d,
+      firstIn: ins[0],
+      lastOut: outs[outs.length - 1],
+      open: d.pairs.some((p) => p.in && !p.out),
+      req: overtime.find((o) => o.workDate === d.workDate),
+      corrected: corrections.some((c) => c.workDate === d.workDate && c.status === 'approved'),
+      pendingCorr: corrections.some((c) => c.workDate === d.workDate && c.status === 'pending'),
+    };
+  });
 
   return (
     <PageShell wide>
@@ -84,77 +98,110 @@ export default async function MyRecordsPage({ searchParams }: { searchParams: Pr
 
       {!data.rule && <p className="text-sm text-faint">{th('noRule')}</p>}
 
-      {/* PC: 왼쪽 = 이 달 요약, 오른쪽 = 날짜별 기록 (2026-10-06 의뢰인) · 폰: 한 칸 */}
-      <div className="flex flex-col gap-3 lg:grid lg:grid-cols-3 lg:items-start lg:gap-4">
-      {/* 이 달 요약 — 근무 시간을 크게, 나머지는 2×2 (토스풍) */}
-      <Card className="flex flex-col gap-4 p-6">
+      {/* PC: 숫자 칸 4개(같은 크기) → 날짜별 표 (2026-10-06 의뢰인: 왼쪽 요약 + 오른쪽 카드 더미는 보기 나빴다) */}
+      <dl className="hidden grid-cols-4 gap-4 lg:grid">
+        {[
+          { k: 'totalWorked', v: dur(total), warn: false },
+          { k: 'daysWorked', v: t('days', { n: worked.length }), warn: false },
+          { k: 'lateTotal', v: t('lateValue', { n: lateOf.size, m: lateMin }), warn: lateOf.size > 0 },
+          { k: 'overtimeTotal', v: dur(overtimeTotal), warn: false },
+        ].map((x) => (
+          <div key={x.k} className="flex flex-col gap-2 rounded-card bg-bg p-5">
+            <dt className="text-sm text-muted">{t(x.k)}</dt>
+            <dd className={`num text-3xl leading-none font-extrabold ${x.warn ? 'text-warn' : ''}`}>{x.v}</dd>
+          </div>
+        ))}
+      </dl>
+      {rows.length > 0 && (
+        <Card className="hidden overflow-x-auto p-0 lg:block">
+          <table className="w-full text-sm">
+            <thead>
+              <tr className="border-b border-border">
+                {[t('colDate'), t('colIn'), t('colOut'), t('colWorked'), t('colOver'), t('colNote')].map((x, i) => (
+                  <th key={x} scope="col" className={`px-5 py-3 text-xs font-medium whitespace-nowrap text-faint ${i >= 1 && i <= 3 ? 'text-right' : 'text-left'}`}>{x}</th>
+                ))}
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-border">
+              {rows.map(({ d, firstIn, lastOut, open, req, corrected, pendingCorr }) => (
+                <tr key={d.workDate}>
+                  <td className="px-5 py-3 font-semibold whitespace-nowrap">{f.dateTime(new Date(`${d.workDate}T12:00:00+09:00`), { month: 'short', day: 'numeric', weekday: 'short' })}</td>
+                  <td className="num px-5 py-3 text-right">{firstIn ? hm(firstIn) : '–'}</td>
+                  <td className="num px-5 py-3 text-right">
+                    {open ? (d.workDate === today ? <span className="text-muted">{th('status.working')}</span> : <span className="text-warn">{t('noOut')}</span>) : lastOut ? hm(lastOut) : '–'}
+                  </td>
+                  <td className="num px-5 py-3 text-right font-semibold whitespace-nowrap">{open && d.workDate === today ? '–' : dur(d.netMinutes)}</td>
+                  <td className="num px-5 py-3 text-xs text-muted">{d.overtimeMinutes + d.holidayMinutes > 0 ? t('overtimeLine', { o: dur(d.overtimeMinutes), n: dur(d.nightMinutes), h: dur(d.holidayMinutes) }) : '–'}</td>
+                  <td className="px-5 py-3">
+                    <span className="flex flex-col gap-2">
+                      <span className="flex flex-wrap items-center gap-1">
+                        {lateOf.has(d.workDate) && <Chip tone="warn">{th('lateBy', { n: lateOf.get(d.workDate)! })}</Chip>}
+                        {corrected && <Chip tone="info">{t('corrected')}</Chip>}
+                        {pendingCorr && <Chip>{t('correctionPending')}</Chip>}
+                        {req && <Chip tone={req.status === 'approved' ? 'ok' : req.status === 'rejected' ? 'neutral' : 'warn'}>{t(`overtime.${req.status}`)}</Chip>}
+                      </span>
+                      {req?.status === 'pending' && <ReasonForm id={req.id} initial={req.reason} />}
+                    </span>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </Card>
+      )}
+
+      {/* 폰: 이 달 요약 — 근무 시간을 크게, 나머지는 2×2 (토스풍) */}
+      <Card className="flex flex-col gap-4 p-6 lg:hidden">
         <div>
           <p className="text-sm font-medium text-muted">{t('totalWorked')}</p>
           <p className="num text-3xl font-extrabold tracking-tight">{dur(total)}</p>
         </div>
-        <dl className="grid grid-cols-2 gap-2">
-          <div className="rounded-button bg-surface px-4 py-3">
+        <dl className="grid grid-cols-3 gap-2">
+          <div className="rounded-button bg-surface px-3 py-3">
             <dt className="text-xs text-muted">{t('daysWorked')}</dt>
-            <dd className="num text-lg font-extrabold">{t('days', { n: worked.length })}</dd>
+            <dd className="num text-base font-extrabold">{t('days', { n: worked.length })}</dd>
           </div>
-          <div className="rounded-button bg-surface px-4 py-3">
+          <div className="rounded-button bg-surface px-3 py-3">
             <dt className="text-xs text-muted">{t('lateTotal')}</dt>
-            <dd className={`num text-lg font-extrabold ${lateOf.size > 0 ? 'text-warn' : ''}`}>{t('lateValue', { n: lateOf.size, m: lateMin })}</dd>
+            <dd className={`num text-base font-extrabold ${lateOf.size > 0 ? 'text-warn' : ''}`}>{t('lateValue', { n: lateOf.size, m: lateMin })}</dd>
           </div>
-          <div className="rounded-button bg-surface px-4 py-3">
+          <div className="rounded-button bg-surface px-3 py-3">
             <dt className="text-xs text-muted">{t('overtimeTotal')}</dt>
-            <dd className="num text-lg font-extrabold">{dur(overtimeTotal)}</dd>
-          </div>
-          <div className="rounded-button bg-surface px-4 py-3">
-            <dt className="text-xs text-muted">{t('leaveUsed')}</dt>
-            <dd className="text-sm font-bold text-faint">{t('leaveSoon')}</dd>
+            <dd className="num text-base font-extrabold">{dur(overtimeTotal)}</dd>
           </div>
         </dl>
       </Card>
 
-      <div className="flex flex-col gap-3 lg:col-span-2">
-      {shown.length === 0 && <p className="text-muted">{t('emptyMonth')}</p>}
-      <ul className="flex flex-col gap-2">
-        {shown.map((d) => {
-          const ins = d.pairs.map((p) => p.in).filter((x): x is Date => !!x).sort((a, b) => a.getTime() - b.getTime());
-          const outs = d.pairs.map((p) => p.out).filter((x): x is Date => !!x).sort((a, b) => a.getTime() - b.getTime());
-          const open = d.pairs.some((p) => p.in && !p.out);
-          const firstIn = ins[0];
-          const lastOut = outs[outs.length - 1];
-          const req = overtime.find((o) => o.workDate === d.workDate);
-          const corrected = corrections.some((c) => c.workDate === d.workDate && c.status === 'approved');
-          const pendingCorr = corrections.some((c) => c.workDate === d.workDate && c.status === 'pending');
-          return (
-            <li key={d.workDate}>
-              <Card className="flex flex-col gap-2 py-3">
-                <div className="flex items-baseline justify-between gap-2">
-                  <span className="font-semibold">{f.dateTime(new Date(`${d.workDate}T12:00:00+09:00`), { month: 'short', day: 'numeric', weekday: 'short' })}</span>
-                  <span className="num text-sm text-muted">{open && d.workDate === today ? th('status.working') : dur(d.netMinutes)}</span>
+      {rows.length === 0 && <p className="text-muted">{t('emptyMonth')}</p>}
+      <ul className="flex flex-col gap-2 lg:hidden">
+        {rows.map(({ d, firstIn, lastOut, open, req, corrected, pendingCorr }) => (
+          <li key={d.workDate}>
+            <Card className="flex flex-col gap-2 py-3">
+              <div className="flex items-baseline justify-between gap-2">
+                <span className="font-semibold">{f.dateTime(new Date(`${d.workDate}T12:00:00+09:00`), { month: 'short', day: 'numeric', weekday: 'short' })}</span>
+                <span className="num text-sm text-muted">{open && d.workDate === today ? th('status.working') : dur(d.netMinutes)}</span>
+              </div>
+              <p className="num text-base">
+                {firstIn ? t('inLine', { time: hm(firstIn) }) : t('noIn')}
+                <span className="mx-2 text-faint">→</span>
+                {open ? (d.workDate === today ? <span className="text-muted">{th('status.working')}</span> : <span className="text-warn">{t('noOut')}</span>) : lastOut ? t('outLine', { time: hm(lastOut) }) : t('noOut')}
+              </p>
+              {(corrected || pendingCorr || req || lateOf.has(d.workDate) || d.overtimeMinutes + d.holidayMinutes > 0) && (
+                <div className="flex flex-wrap items-center gap-2">
+                  {lateOf.has(d.workDate) && <Chip tone="warn">{th('lateBy', { n: lateOf.get(d.workDate)! })}</Chip>}
+                  {corrected && <Chip tone="info">{t('corrected')}</Chip>}
+                  {pendingCorr && <Chip>{t('correctionPending')}</Chip>}
+                  {d.overtimeMinutes + d.holidayMinutes > 0 && (
+                    <span className="num text-xs text-muted">{t('overtimeLine', { o: dur(d.overtimeMinutes), n: dur(d.nightMinutes), h: dur(d.holidayMinutes) })}</span>
+                  )}
+                  {req && <Chip tone={req.status === 'approved' ? 'ok' : req.status === 'rejected' ? 'neutral' : 'warn'}>{t(`overtime.${req.status}`)}</Chip>}
                 </div>
-                <p className="num text-base">
-                  {firstIn ? t('inLine', { time: hm(firstIn) }) : t('noIn')}
-                  <span className="mx-2 text-faint">→</span>
-                  {open ? (d.workDate === today ? <span className="text-muted">{th('status.working')}</span> : <span className="text-warn">{t('noOut')}</span>) : lastOut ? t('outLine', { time: hm(lastOut) }) : t('noOut')}
-                </p>
-                {(corrected || pendingCorr || req || lateOf.has(d.workDate) || d.overtimeMinutes + d.holidayMinutes > 0) && (
-                  <div className="flex flex-wrap items-center gap-2">
-                    {lateOf.has(d.workDate) && <Chip tone="warn">{th('lateBy', { n: lateOf.get(d.workDate)! })}</Chip>}
-                    {corrected && <Chip tone="info">{t('corrected')}</Chip>}
-                    {pendingCorr && <Chip>{t('correctionPending')}</Chip>}
-                    {d.overtimeMinutes + d.holidayMinutes > 0 && (
-                      <span className="num text-xs text-muted">{t('overtimeLine', { o: dur(d.overtimeMinutes), n: dur(d.nightMinutes), h: dur(d.holidayMinutes) })}</span>
-                    )}
-                    {req && <Chip tone={req.status === 'approved' ? 'ok' : req.status === 'rejected' ? 'neutral' : 'warn'}>{t(`overtime.${req.status}`)}</Chip>}
-                  </div>
-                )}
-                {req?.status === 'pending' && <ReasonForm id={req.id} initial={req.reason} />}
-              </Card>
-            </li>
-          );
-        })}
+              )}
+              {req?.status === 'pending' && <ReasonForm id={req.id} initial={req.reason} />}
+            </Card>
+          </li>
+        ))}
       </ul>
-      </div>
-      </div>
       <p className="text-center text-xs text-faint">{t('olderHint', { n: MONTHS_BACK })}</p>
     </PageShell>
   );

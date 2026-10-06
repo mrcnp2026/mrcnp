@@ -290,7 +290,9 @@
       "deviceNone": "출퇴근 기기 미등록",
       "deviceNoneHint": "직원이 자기 폰에서 로그인한 뒤 홈 화면에서 직접 등록합니다.",
       "deviceSince": "{date} 등록",
-      "deviceLast": "마지막 사용 {date}"
+      "deviceLast": "마지막 사용 {date}",
+      "roleChange": "변경",
+      "roleClose": "닫기"
     },
     "more": {
       "title": "전체 메뉴",
@@ -606,14 +608,15 @@
     "payroll": {
       "title": "급여",
       "subtitle": "이 달 근무 시간 요약 · 급여 계산용 파일",
-      "noAccess": "급여 담당자만 볼 수 있습니다. 직원 탭에서 급여 담당자를 지정하세요.",
+      "noAccess": "이 화면은 급여 담당자만 볼 수 있습니다. 지금 급여 담당자: {names}. 급여 담당자가 「직원 목록」의 권한 칸에서 다른 관리자를 급여 담당으로 지정할 수 있습니다.",
       "building": "급여 명세서(기본급·수당·4대보험·소득세)는 만드는 중입니다. 지금은 근무 시간 요약과 계산용 파일만 있습니다.",
       "worked": "근무",
       "overtime": "연장",
       "night": "야간",
       "holiday": "휴일",
       "download": "급여 계산용 파일 내려받기",
-      "empty": "이 달 기록이 없습니다."
+      "empty": "이 달 기록이 없습니다.",
+      "noAccessNone": "없음"
     },
     "weekLimit": {
       "title": "주 52시간 관리",
@@ -965,7 +968,13 @@
     "lateTotal": "지각",
     "lateValue": "{n}회 · {m}분",
     "leaveUsed": "연차 사용",
-    "leaveSoon": "연차 기능 준비 중"
+    "leaveSoon": "연차 기능 준비 중",
+    "colDate": "날짜",
+    "colIn": "출근",
+    "colOut": "퇴근",
+    "colWorked": "근로시간",
+    "colOver": "연장 · 야간 · 휴일",
+    "colNote": "비고"
   },
   "corrections": {
     "title": "정정 요청",
