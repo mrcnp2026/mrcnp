@@ -13,7 +13,8 @@
       "time": "HH:MM",
       "dateTime": "YYYY-MM-DD HH:MM"
     },
-    "account": "บัญชีของฉัน · รหัสผ่าน"
+    "account": "บัญชีของฉัน · รหัสผ่าน",
+    "help": "ดูคำอธิบาย"
   },
   "login": {
     "title": "เข้าสู่ระบบ",

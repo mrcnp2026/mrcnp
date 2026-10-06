@@ -13,7 +13,8 @@
       "time": "HH:MM",
       "dateTime": "YYYY-MM-DD HH:MM"
     },
-    "account": "Tài khoản · mật khẩu"
+    "account": "Tài khoản · mật khẩu",
+    "help": "Xem giải thích"
   },
   "login": {
     "title": "Đăng nhập",

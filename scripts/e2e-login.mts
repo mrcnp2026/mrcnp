@@ -49,6 +49,8 @@ const fakeId = `nobody-${randomBytes(4).toString('hex')}`;
 const browser = await chromium.launch({ channel: 'chrome', headless: true });
 try {
   await db.from('profiles').update({ active: true }).eq('id', empId);
+  // 퇴사 처리(비활성)는 로그인 계정도 차단한다 (staff-data.setLoginBlocked) — 다른 검사가 차단해 둔 채 끝났을 수 있으니 풀고 시작한다
+  for (const id of [empId, admId]) await db.auth.admin.updateUserById(id, { ban_duration: 'none' });
   await db.from('profiles').update({ active: true, role: 'admin' }).eq('id', admId);
 
   // ── ① 비밀번호 만들기 (초대 코드) ──

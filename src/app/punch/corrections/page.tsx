@@ -20,11 +20,13 @@ export default async function CorrectionsPage({ searchParams }: { searchParams: 
   const day = (d: string) => f.dateTime(new Date(`${d}T12:00:00+09:00`), { month: 'short', day: 'numeric', weekday: 'short' });
 
   return (
-    <PageShell>
+    <PageShell wide>
       <div className="flex flex-wrap items-center gap-x-1">
         <h1 className="text-2xl font-semibold text-primary-deep">{t('title')}</h1>
         <Help>{t('intro')}</Help>
       </div>
+      {/* PC: 왼쪽 = 요청 쓰기, 오른쪽 = 내 요청 (2026-10-06 의뢰인) · 폰: 한 칸 */}
+      <div className="flex flex-col gap-3 lg:grid lg:grid-cols-2 lg:items-start lg:gap-4">
       <CorrectionForm
         today={toKstDate(new Date())}
         initialDate={sp.date && /^\d{4}-\d{2}-\d{2}$/.test(sp.date) ? sp.date : null}
@@ -45,6 +47,7 @@ export default async function CorrectionsPage({ searchParams }: { searchParams: 
           </Card>
         ))}
       </section>
+      </div>
     </PageShell>
   );
 }

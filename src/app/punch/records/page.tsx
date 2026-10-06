@@ -84,6 +84,8 @@ export default async function MyRecordsPage({ searchParams }: { searchParams: Pr
 
       {!data.rule && <p className="text-sm text-faint">{th('noRule')}</p>}
 
+      {/* PC: 왼쪽 = 이 달 요약, 오른쪽 = 날짜별 기록 (2026-10-06 의뢰인) · 폰: 한 칸 */}
+      <div className="flex flex-col gap-3 lg:grid lg:grid-cols-3 lg:items-start lg:gap-4">
       {/* 이 달 요약 — 근무 시간을 크게, 나머지는 2×2 (토스풍) */}
       <Card className="flex flex-col gap-4 p-6">
         <div>
@@ -110,6 +112,7 @@ export default async function MyRecordsPage({ searchParams }: { searchParams: Pr
         </dl>
       </Card>
 
+      <div className="flex flex-col gap-3 lg:col-span-2">
       {shown.length === 0 && <p className="text-muted">{t('emptyMonth')}</p>}
       <ul className="flex flex-col gap-2">
         {shown.map((d) => {
@@ -150,6 +153,8 @@ export default async function MyRecordsPage({ searchParams }: { searchParams: Pr
           );
         })}
       </ul>
+      </div>
+      </div>
       <p className="text-center text-xs text-faint">{t('olderHint', { n: MONTHS_BACK })}</p>
     </PageShell>
   );
