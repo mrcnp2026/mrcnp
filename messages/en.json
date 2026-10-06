@@ -3,6 +3,7 @@
     "appName": "Attendance",
     "language": "Language",
     "signOut": "Sign out",
+    "help": "Show help",
     "working": "Please wait…",
     "back": "Back",
     "practiceBadge": "Practice",
@@ -189,7 +190,7 @@
       "inbox": "Requests",
       "records": "Records",
       "members": "Staff",
-      "more": "More",
+      "more": "All",
       "payroll": "Payroll"
     },
     "members": {
@@ -245,6 +246,7 @@
       "colRole": "Role",
       "colStatus": "Sign-up",
       "roleEmployee": "Staff",
+      "leaveShort": "Leave",
       "orgShort": "Org chart",
       "orgEmptyHint": "No departments or teams yet. Create them in \"Org chart\" to group staff by department.",
       "unassigned": "Unassigned",
@@ -291,7 +293,7 @@
       "deviceLast": "last used {date}"
     },
     "more": {
-      "title": "More",
+      "title": "All menus",
       "diag": "Diagnostics",
       "diagHint": "Check what internet address the server sees",
       "notices": "Notices",

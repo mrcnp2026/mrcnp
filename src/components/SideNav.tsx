@@ -14,7 +14,6 @@ import {
   Network,
   PencilLine,
   Settings,
-  Stethoscope,
   UserRound,
   Users,
   Wallet,
@@ -75,10 +74,7 @@ export function SideNav({ isAdmin, inboxCount = 0, languages }: { isAdmin: boole
       key: 'settings',
       items: [
         ...(isAdmin
-          ? [
-              { href: '/admin/settings', key: 'config', icon: Settings },
-              { href: '/admin/diag', key: 'diag', icon: Stethoscope },
-            ]
+          ? [{ href: '/admin/settings', key: 'config', icon: Settings }]
           : []),
         { href: '/punch/account', key: 'account', icon: UserRound },
       ],

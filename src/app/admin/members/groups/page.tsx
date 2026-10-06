@@ -2,6 +2,7 @@
 // 숫자는 그 그룹에 속한 재직 직원 수 (부서 줄은 소속 팀 직원까지 더한 수).
 import { getTranslations } from 'next-intl/server';
 import Link from 'next/link';
+import { Help } from '@/components/Help';
 import { PageShell } from '@/components/ui';
 import { BRAND } from '@/config/brand';
 import { buildOrgTree, groupPath } from '@/lib/org';
@@ -31,8 +32,10 @@ export default async function OrgPage() {
       <Link href="/admin/members" className="-mb-2 inline-flex min-h-11 items-center self-start text-sm font-medium text-muted">
         ‹ {t('back')}
       </Link>
-      <h1 className="px-1 text-2xl font-extrabold tracking-tight">{t('title')}</h1>
-      <p className="px-1 text-sm text-muted">{t('intro')}</p>
+      <div className="flex flex-wrap items-center gap-x-1 px-1">
+        <h1 className="text-2xl font-extrabold tracking-tight">{t('title')}</h1>
+        <Help>{t('intro')}</Help>
+      </div>
       <OrgDiagram root={BRAND.name} depts={depts.filter((d) => d.active).map((d) => ({ ...d, teams: d.teams.filter((x) => x.active) }))} countLabel={(n) => t('count', { n })} />
       <GroupManager depts={depts} hidden={hidden} />
     </PageShell>

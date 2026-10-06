@@ -2,6 +2,7 @@
 // 원본은 그대로 남고, 관리자가 승인한 정정만 집계에 쓰인다. 배너에서 오면 날짜·종류가 미리 채워진다.
 import { getFormatter, getTranslations } from 'next-intl/server';
 import { redirect } from 'next/navigation';
+import { Help } from '@/components/Help';
 import { Card, Chip, PageShell } from '@/components/ui';
 import { getMe } from '@/lib/auth';
 import { loadEmployeeRecent } from '@/lib/employee-data';
@@ -20,8 +21,10 @@ export default async function CorrectionsPage({ searchParams }: { searchParams: 
 
   return (
     <PageShell>
-      <h1 className="text-2xl font-semibold text-primary-deep">{t('title')}</h1>
-      <p className="text-sm text-muted">{t('intro')}</p>
+      <div className="flex flex-wrap items-center gap-x-1">
+        <h1 className="text-2xl font-semibold text-primary-deep">{t('title')}</h1>
+        <Help>{t('intro')}</Help>
+      </div>
       <CorrectionForm
         today={toKstDate(new Date())}
         initialDate={sp.date && /^\d{4}-\d{2}-\d{2}$/.test(sp.date) ? sp.date : null}

@@ -1,6 +1,7 @@
 // 관리자 「연차 관리」 (②-2 게이트 5). 직원별 잔여 + 부여 입력 + 승인된 휴가 취소.
 // ★ 4-7: 발생일수는 관리자가 직접 입력. 참고 계산값은 옆에 "참고용"으로만 보여 주고 입력 칸에 미리 채우지 않는다.
 import { getFormatter, getTranslations } from 'next-intl/server';
+import { Help } from '@/components/Help';
 import { Card, Chip, PageShell } from '@/components/ui';
 import { OFFICE } from '@/config/office';
 import { addDays } from '@/lib/calendar';
@@ -32,8 +33,10 @@ export default async function AdminLeavePage({ searchParams }: { searchParams: P
 
   return (
     <PageShell wide>
-      <h1 className="text-2xl font-semibold text-primary-deep">{t('title')}</h1>
-      <p className="text-sm text-muted">{t('intro')}</p>
+      <div className="flex flex-wrap items-center gap-x-1">
+        <h1 className="text-2xl font-semibold text-primary-deep">{t('title')}</h1>
+        <Help>{t('intro')}</Help>
+      </div>
       {practice && <p className="rounded-card bg-primary-tint p-3 text-sm text-primary">{t('practiceBanner')}</p>}
 
       {/* PC: 직원 카드를 두 칸으로 (2026-10-06 의뢰인) */}
@@ -91,8 +94,10 @@ export default async function AdminLeavePage({ searchParams }: { searchParams: P
       </section>
 
       <section className="flex flex-col gap-2">
-        <h2 className="font-semibold">{t('approvedTitle')}</h2>
-        <p className="text-sm text-muted">{t('approvedHint')}</p>
+        <div className="flex flex-wrap items-center gap-x-1">
+          <h2 className="font-semibold">{t('approvedTitle')}</h2>
+          <Help>{t('approvedHint')}</Help>
+        </div>
         {approved.length === 0 && <p className="text-sm text-faint">{t('approvedNone')}</p>}
         {approved.map((r) => (
           <Card key={r.id} className="flex flex-col gap-2">

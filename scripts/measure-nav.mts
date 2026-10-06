@@ -59,7 +59,7 @@ try {
   }
   for (let round = 1; round <= 2; round++) {
     out.push(`── 관리자 ${round}회차`);
-    for (const [l, h] of [['처리함', '/admin/inbox'], ['기록', '/admin/records'], ['직원', '/admin/members'], ['더보기', '/admin/more'], ['홈', '/admin']]) await tap(l, h);
+    for (const [l, h] of [['요청', '/admin/inbox'], ['직원', '/admin/members'], ['전체', '/admin/more'], ['현황', '/admin']]) await tap(l, h);
   }
   await db.from('profiles').update({ role: 'employee' }).eq('id', emp!.id);
   await p.goto(`${BASE}/punch`);

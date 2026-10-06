@@ -1,7 +1,7 @@
 // ④ 직원 탭 — 조직도(부서 › 팀)로 묶어 본다 (2026-10-05 의뢰인: 샤플 대조). 누가 가입(비밀번호를 만듦)했고 누가 아직인지도 한눈에.
 // 위: 전체·가입·미가입 걸러보기 / 가운데: 부서별 묶음 → 팀 → 직원 한 줄 (이름·직급·사번·가입 상태·초대 링크).
 // 이름을 누르면 직원 상세(정보 수정·로그인·기록). 직원 추가와 조직도 관리는 각각 따로 화면이 있다.
-import { Check, ChevronRight, Network, UserPlus } from 'lucide-react';
+import { CalendarCheck, Check, ChevronRight, Network, UserPlus } from 'lucide-react';
 import { getTranslations } from 'next-intl/server';
 import Link from 'next/link';
 import { Card, Chip, PageShell } from '@/components/ui';
@@ -90,7 +90,11 @@ export default async function MembersPage({ searchParams }: { searchParams: Prom
       <header className="flex items-center justify-between gap-2 px-1 pt-2">
         <h1 className="text-2xl font-extrabold tracking-tight">{t('title')}</h1>
         <div className="flex shrink-0 items-center gap-2">
-          <Link href="/admin/members/groups" className="inline-flex min-h-11 items-center gap-1 rounded-button bg-primary-tint px-3 text-sm font-bold text-primary">
+          <Link href="/admin/leave" className="inline-flex min-h-11 items-center gap-1 rounded-button bg-primary-tint px-3 text-sm font-bold text-primary lg:hidden">
+            <CalendarCheck aria-hidden size={18} strokeWidth={2} />
+            {t('leaveShort')}
+          </Link>
+          <Link href="/admin/members/groups" className="inline-flex min-h-11 items-center gap-1 rounded-button bg-primary-tint px-3 text-sm font-bold text-primary lg:hidden">
             <Network aria-hidden size={18} strokeWidth={2} />
             {t('orgShort')}
           </Link>

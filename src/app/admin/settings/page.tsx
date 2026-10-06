@@ -14,6 +14,7 @@ import { ConfirmButton, HolidayForm, LocationForm, NetworkForm, RuleForm } from 
 
 export default async function SettingsPage() {
   const t = await getTranslations('admin.settings');
+  const tm = await getTranslations('admin.more');
   const f = await getFormatter();
   const today = toKstDate(new Date());
   const monthStart = `${today.slice(0, 7)}-01`;
@@ -161,6 +162,10 @@ export default async function SettingsPage() {
         <LocationForm />
         <p className="text-xs text-faint">{t('locationNote')}</p>
       </Card>
+      {/* 진단 — 사무실 확인이 이상할 때만 보는 화면이라 메뉴에서 빼고 여기에 둔다 (2026-10-06) */}
+      <Link href="/admin/diag" className="inline-flex min-h-11 items-center self-start px-1 text-sm text-muted">
+        {tm('diag')} · {tm('diagHint')} ›
+      </Link>
     </PageShell>
   );
 }

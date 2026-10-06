@@ -3,6 +3,7 @@
     "appName": "근태관리",
     "language": "언어",
     "signOut": "로그아웃",
+    "help": "설명 보기",
     "working": "처리하는 중…",
     "back": "뒤로",
     "practiceBadge": "연습",
@@ -189,7 +190,7 @@
       "inbox": "요청",
       "records": "기록",
       "members": "직원",
-      "more": "더보기",
+      "more": "전체",
       "payroll": "급여"
     },
     "members": {
@@ -245,6 +246,7 @@
       "colRole": "권한",
       "colStatus": "가입",
       "roleEmployee": "직원",
+      "leaveShort": "연차",
       "orgShort": "조직도",
       "orgEmptyHint": "아직 부서·팀이 없습니다. 「조직도」에서 만들면 직원을 부서별로 묶어 볼 수 있습니다.",
       "unassigned": "미배정",
@@ -291,7 +293,7 @@
       "deviceLast": "마지막 사용 {date}"
     },
     "more": {
-      "title": "더보기",
+      "title": "전체 메뉴",
       "diag": "진단",
       "diagHint": "서버가 보는 인터넷 주소 확인",
       "notices": "공지",
