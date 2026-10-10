@@ -19,7 +19,7 @@ import { toKstDate } from '@/lib/time';
 import type { HolidayRow, PunchCorrection, PunchEvent, WorkRule } from '@/lib/types';
 
 // startsOn: 입사일(joined_on), 비어 있으면 계정을 만든 날 — 그 전 날짜는 미기록·결근으로 세지 않는다 (7-8 요점 3)
-export type Person = { id: string; name: string; employeeNo: string | null; role: 'admin' | 'employee'; active: boolean; joinedOn: string | null; startsOn: string; groupId: string | null; shiftTemplateId: string | null };
+export type Person = { id: string; name: string; employeeNo: string | null; role: 'admin' | 'employee'; active: boolean; joinedOn: string | null; startsOn: string; groupId: string | null; shiftTemplateId: string | null; jobId: string | null };
 
 export type EventRow = PunchEvent & { ipVerified: boolean; verifiedBy: 'ip' | 'gps' | null; source: 'web' | 'qr' | 'admin'; note: string | null; clientIp: string | null };
 
@@ -99,7 +99,7 @@ export async function loadPeriod(from: string, to: string, practice = OFFICE.pra
   const [versions, holidays, { data: ppl }, { data: ev }, { data: co }, { data: ot }, leaveRequests, leaveTypes, workRequests, templates, shifts] = await Promise.all([
     loadRuleVersions(),
     loadHolidays(readFrom, to),
-    db.from('profiles').select('id, name, employee_no, role, active, joined_on, created_at, group_id, shift_template_id').order('name'),
+    db.from('profiles').select('id, name, employee_no, role, active, joined_on, created_at, group_id, shift_template_id, job_id').order('name'),
     db.from('punch_events')
       .select('id, employee_id, kind, punched_at, work_date, ip_verified, verified_by, source, note, client_ip')
       .eq('is_test', practice).gte('work_date', readFrom).lte('work_date', to).order('punched_at'),
@@ -149,6 +149,7 @@ export async function loadPeriod(from: string, to: string, practice = OFFICE.pra
       startsOn: p.joined_on ?? toKstDate(new Date(p.created_at)),
       groupId: p.group_id,
       shiftTemplateId: p.shift_template_id,
+      jobId: p.job_id,
     })),
     events: (ev ?? []).map((e) => ({
       id: e.id, employeeId: e.employee_id, kind: e.kind, punchedAt: new Date(e.punched_at), workDate: e.work_date,

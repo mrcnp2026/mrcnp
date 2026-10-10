@@ -1,5 +1,5 @@
 // 근무일정 — 전체 (의뢰인 2026-10-10 2단계: 시프티의 「근무일정」 탭처럼) — 하루를 골라 누가 몇 시부터 몇 시까지인지 본다.
-// 한 줄 = 시작/끝 시각 · 틀 색 막대 · 이름 · 지점 · 유형 배지. 하루 전부 휴가인 사람은 맨 위에 따로.
+// 한 줄 = 시작/끝 시각 · 직무 색 막대(직무가 없으면 틀 색) · 이름 · 지점 / 직무 · 유형 배지. 하루 전부 휴가인 사람은 맨 위에 따로.
 // 그날 일정 = 날짜별로 넣은 일정(특근·잔업·하루만 다른 시각) → 없으면 평소 틀 → 없으면 회사 규칙 (lib/shifts planDay).
 // + 버튼: 날짜별 일정 넣기 (여러 명 한 번에). 날짜별로 넣은 일정만 ✕로 취소할 수 있다 — 평소 틀은 「근무일정 틀」에서 바꾼다.
 import { ChevronLeft, ChevronRight, Plane } from 'lucide-react';
@@ -13,6 +13,7 @@ import { ScopeSwitch } from '@/components/ScopeSwitch';
 import { Card, Chip, PageShell } from '@/components/ui';
 import { addDays } from '@/lib/calendar';
 import { isFullDayLeave } from '@/lib/leave';
+import { loadJobs } from '@/lib/job-data';
 import { groupPath } from '@/lib/org';
 import { loadOrgGroups } from '@/lib/org-data';
 import { leaveDaysFor, loadPeriod } from '@/lib/period-data';
@@ -24,7 +25,8 @@ export default async function AdminSchedulePage({ searchParams }: { searchParams
   const [t, tk, f, sp] = await Promise.all([getTranslations('admin.schedule'), getTranslations('admin.shifts.kinds'), getFormatter(), searchParams]);
   const today = toKstDate(new Date());
   const d = sp.d && /^\d{4}-\d{2}-\d{2}$/.test(sp.d) && !Number.isNaN(Date.parse(`${sp.d}T00:00:00Z`)) ? sp.d : today;
-  const [data, groups] = await Promise.all([loadPeriod(d, d), loadOrgGroups()]);
+  const [data, groups, jobs] = await Promise.all([loadPeriod(d, d), loadOrgGroups(), loadJobs()]);
+  const jobOf = new Map(jobs.map((j) => [j.id, j]));
   // 검사 전용 계정(e2e-…)은 그날 넣은 일정이 있을 때만 보인다
   const people = data.people.filter((p) => p.active && (!p.employeeNo?.startsWith('e2e-') || data.shifts.some((s) => s.employeeId === p.id && s.workDate === d)));
   const onLeave = people.filter((p) => isFullDayLeave(leaveDaysFor(data, p.id).get(d)));
@@ -80,23 +82,27 @@ export default async function AdminSchedulePage({ searchParams }: { searchParams
           )}
           {rows.length === 0 && <p className="rounded-card bg-bg p-5 text-sm text-faint">{t(data.rule ? 'empty' : 'noRule')}</p>}
           <RowList>
-            {rows.map(({ p, it }) => (
+            {rows.map(({ p, it }) => {
+              const job = p.jobId ? jobOf.get(p.jobId) : undefined;
+              const color = job?.color ?? it.color;
+              return (
               <li key={`${p.id}${it.shiftId ?? it.source}${it.startTime}`} className="flex min-h-16 items-center gap-3 py-2 pr-2 pl-5">
                 <span className="num flex w-14 shrink-0 flex-col text-sm leading-snug">
                   <span className="font-semibold">{it.startTime}</span>
                   <span className="text-muted">{it.endTime}</span>
                 </span>
-                <span aria-hidden className={`w-1 shrink-0 self-stretch rounded-chip ${it.color ? SHIFT_COLOR_CLASS[it.color] : 'bg-border'}`} />
+                <span aria-hidden className={`w-1 shrink-0 self-stretch rounded-chip ${color ? SHIFT_COLOR_CLASS[color] : 'bg-border'}`} />
                 <span className="flex min-w-0 flex-1 flex-col">
                   <Link href={`/admin/records/${p.id}`} className="font-bold">
                     {p.name}
                   </Link>
-                  <span className="truncate text-sm text-muted">{[groupPath(groups, p.groupId), it.name ?? (it.source === 'rule' ? t('byRule') : null), it.note].filter(Boolean).join(' / ')}</span>
+                  <span className="truncate text-sm text-muted">{[groupPath(groups, p.groupId), job?.name, it.name ?? (it.source === 'rule' ? t('byRule') : null), it.note].filter(Boolean).join(' / ')}</span>
                 </span>
                 {it.kind !== 'none' && <Chip tone={it.kind === 'holiday' ? 'warn' : it.kind === 'deemed' ? 'neutral' : 'info'}>{tk(it.kind)}</Chip>}
                 {it.shiftId ? <CancelShift id={it.shiftId} label={t('cancelOf', { name: p.name })} /> : <span aria-hidden className="w-2 shrink-0" />}
               </li>
-            ))}
+              );
+            })}
           </RowList>
         </div>
         <AddSheet id="schedule" title={t('add')} className="lg:col-span-2">

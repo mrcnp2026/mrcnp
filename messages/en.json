@@ -297,7 +297,9 @@
       "infoJoined": "Joined",
       "infoPhone": "Mobile",
       "colShift": "Shift template",
-      "shiftNone": "None (company rule)"
+      "shiftNone": "None (company rule)",
+      "colJob": "Job",
+      "jobNone": "None"
     },
     "more": {
       "title": "All menus",
@@ -1142,6 +1144,35 @@
       "invalid_hours": "Choose 0.5–8 hours in 30-minute steps.",
       "invalid_time": "End time must be later than start time.",
       "duplicate_type": "A type with the same name already exists."
+    },
+    "jobs": {
+      "title": "Jobs",
+      "intro": "Labels that group staff by pay type or rank (e.g. 1. Hourly, 2. Salaried, 3. Manager: team lead). Each person has one, and the color bar in the schedule list uses this color. Not used in pay calculation yet.",
+      "tabOn": "Active",
+      "tabOff": "Inactive",
+      "empty": "No jobs yet. Add one with the + button.",
+      "emptyOff": "Nothing turned off.",
+      "noneCount": "{n} staff without a job",
+      "people": "{n} people",
+      "add": "Add job",
+      "edit": "Edit",
+      "name": "Job name",
+      "namePlaceholder": "e.g. 1. Hourly",
+      "color": "Color",
+      "save": "Save",
+      "offChip": "Off",
+      "assignTitle": "Staff in this job",
+      "assignOff": "Staff cannot be added to a job that is off.",
+      "pickedCount": "{n} selected",
+      "noPeople": "No staff.",
+      "assignSave": "Save staff",
+      "assignSaved": "Saved.",
+      "turnOff": "Turn this job off",
+      "turnOn": "Turn back on",
+      "invalid_job_name": "Enter a name of 1–40 characters.",
+      "duplicate_job": "A job with the same name already exists.",
+      "job_in_use": "Some staff have this job. Move them to another job first.",
+      "job_off": "This job is turned off."
     }
   },
   "side": {
@@ -1174,7 +1205,8 @@
     "places": "Work locations",
     "shifts": "Shift templates",
     "mySchedule": "My schedule",
-    "adminSchedule": "Schedule"
+    "adminSchedule": "Schedule",
+    "jobs": "Jobs"
   },
   "nav": {
     "home": "Home",

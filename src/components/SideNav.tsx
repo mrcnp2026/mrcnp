@@ -3,6 +3,7 @@
 // 폰에서는 보이지 않는다 — 폰은 하단 탭(EmployeeNav·AdminNav)을 그대로 쓴다.
 // 「더보기」에 접혀 있던 화면(연차 관리·공지·설정·진단·내 계정)을 PC에서는 전부 펼쳐 보인다.
 import {
+  BriefcaseBusiness,
   CalendarClock,
   CalendarRange,
   MapPin,
@@ -71,6 +72,7 @@ export function SideNav({ isAdmin, inboxCount = 0, languages }: { isAdmin: boole
               { href: '/admin/members', key: 'members', icon: Users },
               { href: '/admin/branches', key: 'branches', icon: Network },
               { href: '/admin/places', key: 'places', icon: MapPin },
+              { href: '/admin/jobs', key: 'jobs', icon: BriefcaseBusiness },
               { href: '/admin/shifts', key: 'shifts', icon: CalendarClock },
             ],
           },

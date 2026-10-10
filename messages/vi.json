@@ -203,7 +203,8 @@
     "places": "Địa điểm chấm công",
     "shifts": "Mẫu ca làm việc",
     "mySchedule": "Lịch làm của tôi",
-    "adminSchedule": "Lịch làm việc"
+    "adminSchedule": "Lịch làm việc",
+    "jobs": "Chức danh"
   },
   "nav": {
     "home": "Trang chủ",
