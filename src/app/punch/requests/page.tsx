@@ -16,7 +16,7 @@ import { splitRequests, type ReqItem } from '@/lib/requests';
 import { createAdminClient } from '@/lib/supabase/admin';
 
 const PAGE = 20;
-const hrefOf = (r: ReqItem) => (r.kind === 'punch' ? `/punch/records?m=${r.date.slice(0, 7)}` : r.kind === 'correction' ? '/punch/corrections' : r.kind === 'overtime' ? `/punch/records?m=${r.date.slice(0, 7)}` : r.kind === 'leave' ? '/punch/leave' : '/punch/leave#work');
+const hrefOf = (r: ReqItem) => (r.kind === 'punch' ? `/punch/records?m=${r.date.slice(0, 7)}` : r.kind === 'correction' ? '/punch/corrections' : r.kind === 'overtime' ? `/punch/records?m=${r.date.slice(0, 7)}` : r.kind === 'leave' ? '/punch/leave' : r.kind === 'shift' ? '/punch/schedule/request' : '/punch/leave#work');
 
 export default async function MyRequestsPage({ searchParams }: { searchParams: Promise<{ tab?: string; p?: string; q?: string }> }) {
   const me = await getMe();
@@ -32,6 +32,7 @@ export default async function MyRequestsPage({ searchParams }: { searchParams: P
   const page = pageOf(admin ? [...split.pending, ...split.done] : done ? split.done : split.pending, sp.p, PAGE);
   const names = new Map((staff ?? []).map((p) => [p.id as string, p.name as string]));
   const fresh = [
+    { id: 'shift', label: t('newShift'), href: '/punch/schedule/request' },
     { id: 'correction', label: t('newCorrection'), href: '/punch/corrections?new=1' },
     { id: 'leave', label: t('newLeave'), href: '/punch/leave?new=leave' },
     { id: 'work', label: t('newWork'), href: '/punch/leave?new=work' },

@@ -1,6 +1,6 @@
 // 요청 통합 (의뢰인 2026-10-10: 시프티의 「요청」 탭처럼 — 종류가 달라도 한 목록, 대기중/완료로 나눈다). 순수함수.
 // 정정 · 연장근로 확인 · 휴가 · 외근/출장/재택은 표가 따로다 — 여기서 같은 모양(ReqItem)으로 맞춘다. 처리(승인·거절)는 기존 길 그대로다.
-export type ReqKind = 'correction' | 'overtime' | 'leave' | 'work' | 'punch';
+export type ReqKind = 'correction' | 'overtime' | 'leave' | 'work' | 'punch' | 'shift';
 export type ReqStatus = 'pending' | 'approved' | 'rejected' | 'cancelled';
 export type ReqItem = {
   key: string; // 종류 + id (목록 키)
@@ -41,6 +41,9 @@ export const fromWork = (r: Row): ReqItem => ({ ...base('work', r, String(r.star
 
 /** 반경 밖 출근/퇴근 요청 — sub = 확인하지 못한 이유, newAt = 요청한 시각(승인하면 이 시각으로 기록) */
 export const fromPunchRequest = (r: Row): ReqItem => ({ ...base('punch', r, String(r.work_date)), sub: s(r.geo_reason), punchKind: r.kind === 'in' || r.kind === 'out' ? r.kind : null, newAt: s(r.requested_at), meters: typeof r.nearest_m === 'number' ? r.nearest_m : null });
+
+/** 직원이 낸 근무일정 생성 요청 — sub = 근무일정 유형 */
+export const fromShiftRequest = (r: Row): ReqItem => ({ ...base('shift', r, String(r.work_date)), sub: s(r.kind), startTime: hm(r.start_time), endTime: hm(r.end_time) });
 
 const desc = (a: string | null, b: string | null) => (a === b ? 0 : (a ?? '') < (b ?? '') ? 1 : -1);
 

@@ -10,7 +10,7 @@ import { Card, Chip, PageShell } from '@/components/ui';
 import { OFFICE } from '@/config/office';
 import { getMe } from '@/lib/auth';
 import { addDays } from '@/lib/calendar';
-import { loadPeriod, pendingCounts, syncOvertimeRequests } from '@/lib/period-data';
+import { hiddenTestIds, loadPeriod, pendingCounts, syncOvertimeRequests } from '@/lib/period-data';
 import { loadStaff } from '@/lib/staff-data';
 import { selfDecisionBlocked } from '@/lib/staff-rules';
 import { createAdminClient } from '@/lib/supabase/admin';
@@ -51,7 +51,8 @@ export default async function InboxPage({ searchParams }: { searchParams: Promis
   const name = new Map((staff ?? []).map((p) => [p.id, p.name]));
   // 이름 검색 (?q) — 모든 종류의 대기 요청에 같이 적용한다
   const q = (sp.q ?? '').trim().slice(0, 40).toLowerCase();
-  const hit = (id: string) => !q || (name.get(id) ?? '').toLowerCase().includes(q);
+  const hidden = new Set(await hiddenTestIds()); // 꺼져 있는 검사 전용 계정의 요청은 보이지 않는다
+  const hit = (id: string) => !hidden.has(id) && (!q || (name.get(id) ?? '').toLowerCase().includes(q));
   const ot = (otAll ?? []).filter((o) => hit(o.employee_id));
   const co = (coAll ?? []).filter((c) => hit(c.employee_id));
   const keys = [...(ot ?? []).map((o) => [o.employee_id, o.work_date]), ...(co ?? []).map((c) => [c.employee_id, c.work_date])];
@@ -73,6 +74,8 @@ export default async function InboxPage({ searchParams }: { searchParams: Promis
 
   const { data: punchRows } = await db.from('punch_requests').select('id, employee_id, kind, requested_at, work_date, nearest_m, geo_reason').eq('is_test', practice).eq('status', 'pending').order('requested_at');
   const punchPending = ((punchRows ?? []) as { id: string; employee_id: string; kind: 'in' | 'out'; requested_at: string; work_date: string; nearest_m: number | null; geo_reason: string }[]).filter((r) => hit(r.employee_id));
+  const { data: shiftRows } = await db.from('shift_requests').select('id, employee_id, work_date, start_time, end_time, kind, reason').eq('is_test', practice).eq('status', 'pending').order('work_date');
+  const shiftPending = ((shiftRows ?? []) as { id: string; employee_id: string; work_date: string; start_time: string; end_time: string; kind: string; reason: string | null }[]).filter((r) => hit(r.employee_id));
   const tc = await getTranslations('common');
   const otPage = pageOf(ot ?? [], sp.op, REQUEST_PAGE);
   const coPage = pageOf(co ?? [], sp.cp, REQUEST_PAGE);
@@ -383,7 +386,7 @@ export default async function InboxPage({ searchParams }: { searchParams: Promis
   return (
     <PageShell wide>
       <h1 className="sr-only">{t('title')}</h1>
-      <RequestTabs admin active="pending" live={sp.live === '1'} q={q} counts={{ pending: (ot?.length ?? 0) + (co?.length ?? 0) + leavePending.length + workPending.length + punchPending.length }} />
+      <RequestTabs admin active="pending" live={sp.live === '1'} q={q} counts={{ pending: (ot?.length ?? 0) + (co?.length ?? 0) + leavePending.length + workPending.length + punchPending.length + shiftPending.length }} />
       {practice && <p className="rounded-card bg-primary-tint p-3 text-sm text-primary">{t('practiceBanner')}</p>}
 
       {/* 반경 밖 출근/퇴근 요청 (2026-10-10 의뢰인: 시프티 방식) — 승인해야 기록이 되므로 맨 위에 둔다 */}
@@ -406,6 +409,33 @@ export default async function InboxPage({ searchParams }: { searchParams: Promis
                   </div>
                   <p className="num text-sm text-muted">{r.geo_reason === 'outside' && r.nearest_m !== null ? t('punchFar', { m: r.nearest_m }) : t(`punchWhy.${r.geo_reason}`)}</p>
                   {r.employee_id === me.id && ownBlocked ? ownNote : <LeaveDecision id={r.id} name={who} summary={what} url={`/api/admin/punch-requests/${r.id}/decide`} keys={['confirmPunch', 'confirmPunchReject']} />}
+                </li>
+              );
+            })}
+          </ul>
+        </section>
+      )}
+
+      {/* 근무일정 생성 요청 (2026-10-11 의뢰인: 시프티의 근무일정 요청) — 승인하면 그 날짜에 일정이 만들어진다 */}
+      {shiftPending.length > 0 && (
+        <section id="shift" className="flex scroll-mt-16 flex-col gap-2">
+          <h2 className="px-1 font-bold">
+            {t('shiftTitle')} <span className="num text-warn">{shiftPending.length}</span>
+          </h2>
+          <ul className="-mx-4 divide-y divide-border border-y border-border bg-bg lg:mx-0 lg:rounded-card lg:border">
+            {shiftPending.map((r) => {
+              const who = name.get(r.employee_id) ?? '';
+              const what = `${dayLabel(r.work_date)} ${r.start_time.slice(0, 5)} - ${r.end_time.slice(0, 5)}`;
+              return (
+                <li key={r.id} className="flex flex-col gap-2 px-5 py-3">
+                  <div className="flex flex-wrap items-baseline justify-between gap-x-3">
+                    <span className="font-bold">
+                      {t('shiftOne')} · {who}
+                    </span>
+                    <span className="num text-sm">{what}</span>
+                  </div>
+                  {r.reason && <p className="text-sm text-muted">{r.reason}</p>}
+                  {r.employee_id === me.id && ownBlocked ? ownNote : <LeaveDecision id={r.id} name={who} summary={what} url={`/api/admin/schedule-requests/${r.id}/decide`} keys={['confirmShift', 'confirmShiftReject']} />}
                 </li>
               );
             })}
@@ -441,7 +471,7 @@ async function DoneTab({ sp, practice }: { sp: { live?: string; tab?: string; dp
       <RequestTabs admin active="done" live={sp.live === '1'} q={q} counts={{ pending: (await pendingCounts(practice)).total }} />
       {practice && <p className="rounded-card bg-primary-tint p-3 text-sm text-primary">{t('practiceBanner')}</p>}
       {page.items.length === 0 && <p className="rounded-card bg-bg p-5 text-sm text-faint">{tr('emptyDone', { days: REQUEST_WINDOW_DAYS })}</p>}
-      <RequestRows items={page.items} leaveTypes={leaveTypes} names={names} showName hrefOf={(r) => (r.kind === 'leave' ? `/admin/leave/req/${r.key.split(':')[1]}` : `/admin/records/${r.employeeId}?m=${r.date.slice(0, 7)}`)} />
+      <RequestRows items={page.items} leaveTypes={leaveTypes} names={names} showName hrefOf={(r) => (r.kind === 'leave' ? `/admin/leave/req/${r.key.split(':')[1]}` : r.kind === 'shift' ? `/admin/schedule?d=${r.date}` : `/admin/records/${r.employeeId}?m=${r.date.slice(0, 7)}`)} />
       <Pager page={page.page} pages={page.pages} param="dp" params={sp} label={tc('pages')} />
       {page.items.length > 0 && <p className="text-sm text-faint">{tr('doneHint', { days: REQUEST_WINDOW_DAYS })}</p>}
     </PageShell>

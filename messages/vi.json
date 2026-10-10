@@ -545,7 +545,8 @@
     "none": "Không có lịch",
     "noRule": "Chưa có quy định giờ làm của công ty.",
     "hint": "Thời gian kế hoạch tính từ lúc bắt đầu đến lúc kết thúc, gồm cả giờ nghỉ. Nếu lịch sai, hãy báo quản lý.",
-    "mine": "Lịch của tôi"
+    "mine": "Lịch của tôi",
+    "request": "Yêu cầu lịch làm việc"
   },
   "requests": {
     "title": "Yêu cầu",
@@ -560,7 +561,8 @@
       "overtime": "Xác nhận tăng ca",
       "leave": "Nghỉ phép",
       "work": "Làm ngoài / công tác / từ xa",
-      "punch": "Yêu cầu chấm công"
+      "punch": "Yêu cầu chấm công",
+      "shift": "Yêu cầu lịch làm việc"
     },
     "status": {
       "pending": "Đang chờ",
@@ -598,6 +600,36 @@
     "punchFar": "Cách nơi làm việc gần nhất {m} m",
     "tabMine": "Yêu cầu của tôi",
     "emptyMine": "Bạn không có yêu cầu nào trong {days} ngày qua.",
-    "search": "Tìm kiếm"
+    "search": "Tìm kiếm",
+    "newShift": "Yêu cầu lịch làm việc",
+    "shiftKind": {
+      "normal": "Làm việc bình thường",
+      "deemed": "Làm việc mặc định",
+      "outside": "Làm ngoài",
+      "remote": "Làm từ xa",
+      "holiday": "Làm ngày nghỉ",
+      "extra": "Làm thêm"
+    }
+  },
+  "scheduleRequest": {
+    "title": "Yêu cầu lịch làm việc",
+    "back": "Danh sách yêu cầu",
+    "intro": "Yêu cầu lịch làm việc khác với thường ngày, như làm ngày nghỉ hoặc làm thêm. Sau khi quản trị viên duyệt, đó sẽ là lịch của ngày đó.",
+    "date": "Ngày",
+    "template": "Mẫu lịch",
+    "templateNone": "Tự nhập",
+    "start": "Bắt đầu",
+    "end": "Kết thúc",
+    "kind": "Loại lịch",
+    "kindNone": "(Không)",
+    "reason": "Lý do",
+    "send": "Gửi yêu cầu",
+    "pending": "Yêu cầu đang chờ của tôi",
+    "cancel": "Hủy",
+    "invalid_date": "Vui lòng kiểm tra ngày.",
+    "invalid_time": "Giờ kết thúc phải sau giờ bắt đầu.",
+    "past_date": "Không thể yêu cầu ngày đã qua.",
+    "reason_required": "Vui lòng nhập lý do (tối đa 200 ký tự).",
+    "duplicate_request": "Đã có yêu cầu cùng ngày giờ đang chờ."
   }
 }

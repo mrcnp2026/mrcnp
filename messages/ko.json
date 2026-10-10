@@ -531,7 +531,11 @@
         "no_office": "등록된 출퇴근 장소 없음",
         "no_consent": "위치 수집 동의 없음"
       },
-      "punchFar": "가장 가까운 출퇴근 장소에서 {m}m"
+      "punchFar": "가장 가까운 출퇴근 장소에서 {m}m",
+      "shiftTitle": "근무일정 생성 요청",
+      "shiftOne": "근무일정 생성",
+      "confirmShift": "{name}님의 근무일정 요청({summary})을 승인할까요? 그 날짜에 일정이 만들어집니다.",
+      "confirmShiftReject": "{name}님의 근무일정 요청({summary})을 거절할까요?"
     },
     "records": {
       "title": "기록",
@@ -1335,7 +1339,14 @@
       "records": "출퇴근기록",
       "none": "X",
       "hint": "평소 일정입니다. 템플릿이나 회사 규칙을 바꾸면 이 직원의 다른 날 일정도 함께 바뀝니다.",
-      "hintShift": "이 날짜에만 넣은 일정입니다. 취소는 근무일정 목록의 ✕로 합니다."
+      "hintShift": "이 날짜에만 넣은 일정입니다. 취소는 근무일정 목록의 ✕로 합니다.",
+      "editTitle": "일정 수정",
+      "start": "시작",
+      "end": "끝",
+      "save": "저장",
+      "cancelEdit": "닫기",
+      "onlyThisDay": "평소 일정입니다. 여기서 저장하면 이 날짜에만 다른 일정이 들어가고, 평소 일정은 그대로입니다.",
+      "addNote": "추가하기"
     },
     "leaveDetail": {
       "title": "휴가",
@@ -1705,7 +1716,8 @@
     "none": "일정 없음",
     "noRule": "회사 근무규칙이 아직 없어 일정을 보여 드릴 수 없습니다.",
     "hint": "계획 시간은 일정의 시작부터 끝까지 길이입니다(휴게 포함). 일정이 다르면 관리자에게 알려 주세요.",
-    "mine": "내 일정"
+    "mine": "내 일정",
+    "request": "근무일정 요청"
   },
   "requests": {
     "title": "요청",
@@ -1720,7 +1732,8 @@
       "overtime": "연장근로 확인",
       "leave": "휴가",
       "work": "외근·출장·재택",
-      "punch": "출근/퇴근 요청"
+      "punch": "출근/퇴근 요청",
+      "shift": "근무일정 생성"
     },
     "status": {
       "pending": "대기",
@@ -1758,6 +1771,36 @@
     "punchFar": "가장 가까운 출퇴근 장소에서 {m}m",
     "tabMine": "내 요청",
     "emptyMine": "최근 {days}일 동안 낸 요청이 없습니다.",
-    "search": "검색"
+    "search": "검색",
+    "newShift": "근무일정 요청",
+    "shiftKind": {
+      "normal": "정상 근무",
+      "deemed": "간주 근무",
+      "outside": "외근",
+      "remote": "원격 근무",
+      "holiday": "휴일 근무(특근)",
+      "extra": "잔업"
+    }
+  },
+  "scheduleRequest": {
+    "title": "근무일정 요청",
+    "back": "요청 목록",
+    "intro": "특근·잔업처럼 평소와 다른 근무일정을 요청합니다. 관리자가 승인하면 그 날짜의 일정이 됩니다.",
+    "date": "날짜",
+    "template": "근무일정 템플릿",
+    "templateNone": "직접 입력",
+    "start": "시작",
+    "end": "끝",
+    "kind": "근무일정 유형",
+    "kindNone": "(없음)",
+    "reason": "사유",
+    "send": "요청 보내기",
+    "pending": "대기 중인 내 요청",
+    "cancel": "취소",
+    "invalid_date": "날짜를 확인해 주세요.",
+    "invalid_time": "끝 시각은 시작 시각보다 늦어야 합니다.",
+    "past_date": "지난 날짜는 요청할 수 없습니다.",
+    "reason_required": "사유를 적어 주세요 (200자 이내).",
+    "duplicate_request": "같은 날 같은 시각의 요청이 이미 대기 중입니다."
   }
 }

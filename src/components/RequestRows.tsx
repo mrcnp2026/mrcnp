@@ -1,6 +1,6 @@
 // 요청 한 줄 (의뢰인 2026-10-10: 시프티의 요청 목록처럼) — 종류 아이콘 · 「종류 · 구분」 · 내용 · 상태 배지 · 처리한 사람·시각 · 「2일 전」.
 // 직원의 「내 요청」과 관리자의 「완료」가 같이 쓴다 (관리자 쪽은 누구의 요청인지 이름이 붙는다).
-import { CalendarDays, Clock, MapPin, MapPinOff, PencilLine, type LucideIcon } from 'lucide-react';
+import { CalendarDays, CalendarRange, Clock, MapPin, MapPinOff, PencilLine, type LucideIcon } from 'lucide-react';
 import { getFormatter, getTranslations } from 'next-intl/server';
 import Link from 'next/link';
 import { RowList } from '@/components/list';
@@ -8,7 +8,7 @@ import { Chip } from '@/components/ui';
 import { leaveTypeName } from '@/lib/leave';
 import { ago, type ReqItem, type ReqKind } from '@/lib/requests';
 
-const ICON: Record<ReqKind, LucideIcon> = { correction: PencilLine, overtime: Clock, leave: CalendarDays, work: MapPin, punch: MapPinOff };
+const ICON: Record<ReqKind, LucideIcon> = { correction: PencilLine, overtime: Clock, leave: CalendarDays, work: MapPin, punch: MapPinOff, shift: CalendarRange };
 
 export async function RequestRows({ items, leaveTypes, names, showName = false, hrefOf }: {
   items: ReqItem[];
@@ -18,6 +18,7 @@ export async function RequestRows({ items, leaveTypes, names, showName = false, 
   hrefOf: (r: ReqItem) => string;
 }) {
   const [t, tco, tl, tw, f] = await Promise.all([getTranslations('requests'), getTranslations('corrections'), getTranslations('leave'), getTranslations('work'), getFormatter()]);
+  const SHIFT_KIND = new Set(['normal', 'deemed', 'outside', 'remote', 'holiday', 'extra']);
   const now = new Date();
   const thisYear = String(now.getFullYear());
   const day = (d: string) => f.dateTime(new Date(`${d}T12:00:00+09:00`), { year: d.slice(0, 4) === thisYear ? undefined : 'numeric', month: 'numeric', day: 'numeric', weekday: 'short' });
@@ -25,7 +26,7 @@ export async function RequestRows({ items, leaveTypes, names, showName = false, 
   const stamp = (iso: string) => f.dateTime(new Date(iso), { month: 'numeric', day: 'numeric', hour: '2-digit', minute: '2-digit', hourCycle: 'h23' });
   const range = (r: ReqItem) => `${r.date === r.endDate ? day(r.date) : `${day(r.date)} ~ ${day(r.endDate)}`}${r.startTime ? ` ${r.startTime} - ${r.endTime}` : ''}`;
   const sub = (r: ReqItem) =>
-    r.kind === 'punch' ? null : r.kind === 'correction' ? (r.sub ? tco(`type.${r.sub}`) : null) : r.kind === 'leave' ? (r.sub ? leaveTypeName(leaveTypes, r.sub, tl) : null) : r.kind === 'work' ? (r.sub ? tw(`kind.${r.sub}`) : null) : null;
+    r.kind === 'punch' ? null : r.kind === 'shift' ? (r.sub && SHIFT_KIND.has(r.sub) ? t(`shiftKind.${r.sub}`) : null) : r.kind === 'correction' ? (r.sub ? tco(`type.${r.sub}`) : null) : r.kind === 'leave' ? (r.sub ? leaveTypeName(leaveTypes, r.sub, tl) : null) : r.kind === 'work' ? (r.sub ? tw(`kind.${r.sub}`) : null) : null;
   const detail = (r: ReqItem) =>
     r.kind === 'punch'
       ? `${day(r.date)}${r.newAt ? ` ${clock(r.newAt)}` : ''} · ${r.meters !== null && r.sub === 'outside' ? t('punchFar', { m: r.meters }) : t(`punchWhy.${r.sub ?? 'no_fix'}`)}`

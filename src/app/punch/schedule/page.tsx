@@ -3,6 +3,7 @@
 // 보기만 한다 — 일정을 바꿔 달라는 요청은 요청 통합(할일 7번) 때 붙인다.
 import { Plane } from 'lucide-react';
 import { getFormatter, getTranslations } from 'next-intl/server';
+import Link from 'next/link';
 import { redirect } from 'next/navigation';
 import { RowList } from '@/components/list';
 import { MineBar } from '@/components/MineBar';
@@ -68,6 +69,9 @@ export default async function MySchedulePage() {
           </RowList>
         </section>
       ))}
+      <Link href="/punch/schedule/request" className="inline-flex min-h-11 items-center justify-center rounded-button border border-primary bg-bg px-4 text-sm font-bold text-primary">
+        {t('request')}
+      </Link>
       <p className="px-1 text-sm text-faint">{t('hint')}</p>
     </PageShell>
   );

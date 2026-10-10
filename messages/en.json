@@ -531,7 +531,11 @@
         "no_office": "No work place registered",
         "no_consent": "No location consent"
       },
-      "punchFar": "{m} m from the nearest work place"
+      "punchFar": "{m} m from the nearest work place",
+      "shiftTitle": "Schedule requests",
+      "shiftOne": "Schedule request",
+      "confirmShift": "Approve {name}'s schedule request ({summary})? A schedule will be created for that date.",
+      "confirmShiftReject": "Reject {name}'s schedule request ({summary})?"
     },
     "records": {
       "title": "Records",
@@ -1335,7 +1339,14 @@
       "records": "Attendance record",
       "none": "X",
       "hint": "This is the regular schedule. Changing the template or company rule changes other days too.",
-      "hintShift": "This schedule was added for this date only. Cancel it with ✕ in the schedule list."
+      "hintShift": "This schedule was added for this date only. Cancel it with ✕ in the schedule list.",
+      "editTitle": "Edit schedule",
+      "start": "Start",
+      "end": "End",
+      "save": "Save",
+      "cancelEdit": "Close",
+      "onlyThisDay": "This is the regular schedule. Saving here adds a different schedule for this date only; the regular schedule stays the same.",
+      "addNote": "Add"
     },
     "leaveDetail": {
       "title": "Leave",
@@ -1705,7 +1716,8 @@
     "none": "No shift",
     "noRule": "There is no company work rule yet, so the schedule cannot be shown.",
     "hint": "Planned time is the length from start to end, breaks included. If your schedule looks wrong, tell your manager.",
-    "mine": "My schedule"
+    "mine": "My schedule",
+    "request": "Schedule request"
   },
   "requests": {
     "title": "Requests",
@@ -1720,7 +1732,8 @@
       "overtime": "Overtime review",
       "leave": "Leave",
       "work": "Off-site / trip / remote",
-      "punch": "Punch request"
+      "punch": "Punch request",
+      "shift": "Schedule request"
     },
     "status": {
       "pending": "Pending",
@@ -1758,6 +1771,36 @@
     "punchFar": "{m} m from the nearest work place",
     "tabMine": "My requests",
     "emptyMine": "You have made no requests in the last {days} days.",
-    "search": "Search"
+    "search": "Search",
+    "newShift": "Schedule request",
+    "shiftKind": {
+      "normal": "Regular work",
+      "deemed": "Deemed work",
+      "outside": "Off-site",
+      "remote": "Remote work",
+      "holiday": "Holiday work",
+      "extra": "Extra hours"
+    }
+  },
+  "scheduleRequest": {
+    "title": "Schedule request",
+    "back": "Requests",
+    "intro": "Request a schedule that differs from your usual one, such as holiday work or extra hours. It becomes your schedule for that date once an admin approves it.",
+    "date": "Date",
+    "template": "Schedule template",
+    "templateNone": "Enter manually",
+    "start": "Start",
+    "end": "End",
+    "kind": "Schedule type",
+    "kindNone": "(None)",
+    "reason": "Reason",
+    "send": "Send request",
+    "pending": "My pending requests",
+    "cancel": "Cancel",
+    "invalid_date": "Check the date.",
+    "invalid_time": "The end time must be later than the start time.",
+    "past_date": "You cannot request a past date.",
+    "reason_required": "Enter a reason (up to 200 characters).",
+    "duplicate_request": "A request for the same date and time is already pending."
   }
 }
