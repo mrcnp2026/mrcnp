@@ -1066,6 +1066,38 @@
         "text": "Black",
         "muted": "Gray"
       }
+    },
+    "schedule": {
+      "title": "Schedule",
+      "intro": "Pick a day to see who works from when to when. A shift entered for that date (holiday work, overtime block, a one-day change) comes first, then the usual template, then the company work rule. Lateness and missing punches follow this schedule.",
+      "toTemplates": "Shift templates",
+      "date": "Date",
+      "prevDay": "Previous day",
+      "nextDay": "Next day",
+      "today": "Today",
+      "summary": "{work} working · {leave} on leave",
+      "onLeave": "On leave",
+      "empty": "No schedule on this day (a day off, or no staff).",
+      "noRule": "There is no company work rule yet. Set it in company settings first.",
+      "byRule": "Company rule",
+      "add": "Add shift",
+      "template": "Shift template",
+      "templateNone": "Enter times directly",
+      "start": "Start",
+      "end": "End",
+      "kind": "Shift type",
+      "note": "Memo",
+      "people": "{n} staff selected",
+      "pickAll": "All",
+      "pickNone": "Clear",
+      "save": "Add shift",
+      "extraNote": "Overtime block: the usual schedule for that day stays, and only its end time is extended to the end of this block.",
+      "cancelOf": "Cancel shift of {name}",
+      "cancelConfirm": "Cancel it",
+      "keep": "Keep",
+      "invalid_date": "Check the date.",
+      "invalid_time": "End time must be later than start time. Shifts past midnight are not supported yet.",
+      "no_people": "Select at least one person."
     }
   },
   "side": {
@@ -1096,7 +1128,9 @@
     "close": "Close menu",
     "branches": "Branches",
     "places": "Work locations",
-    "shifts": "Shift templates"
+    "shifts": "Shift templates",
+    "mySchedule": "My schedule",
+    "adminSchedule": "Schedule"
   },
   "nav": {
     "home": "Home",
@@ -1119,8 +1153,13 @@
       "leave": {
         "mine": "My leave",
         "all": "All staff"
+      },
+      "schedule": {
+        "mine": "My schedule",
+        "all": "All schedules"
       }
-    }
+    },
+    "schedule": "Schedule"
   },
   "records": {
     "title": "My records",
@@ -1379,5 +1418,15 @@
     "hint": "At least 8 characters. Changing it signs you out on all other devices.",
     "save": "Save",
     "saved": "Your password was saved."
+  },
+  "schedule": {
+    "title": "Schedule",
+    "thisWeek": "This week",
+    "nextWeek": "Next week",
+    "planned": "Planned {h} h {m} min",
+    "onLeave": "On leave",
+    "none": "No shift",
+    "noRule": "There is no company work rule yet, so the schedule cannot be shown.",
+    "hint": "Planned time is the length from start to end, breaks included. If your schedule looks wrong, tell your manager."
   }
 }

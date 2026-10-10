@@ -12,8 +12,8 @@ import { addDays, weekStartOf } from '@/lib/calendar';
 import { buildOvertimeRequest } from '@/lib/overtime';
 import { computeEmployeeDays, type DayRow } from '@/lib/period';
 import { ruleAt } from '@/lib/rule-at';
-import { loadShiftTemplates } from '@/lib/shift-data';
-import { applyTemplate, deemedPair, type ShiftTemplate } from '@/lib/shifts';
+import { loadShifts, loadShiftTemplates } from '@/lib/shift-data';
+import { applyTemplate, deemedPair, planDay, type DayPlan, type DayShift, type ShiftTemplate } from '@/lib/shifts';
 import { createAdminClient } from '@/lib/supabase/admin';
 import { toKstDate } from '@/lib/time';
 import type { HolidayRow, PunchCorrection, PunchEvent, WorkRule } from '@/lib/types';
@@ -62,6 +62,8 @@ export type PeriodData = {
   templates: ShiftTemplate[];
   templateOf: (employeeId: string) => ShiftTemplate | null;
   ruleFor: (employeeId: string, date: string) => WorkRule | null;
+  shifts: DayShift[]; // 날짜별 일정 (특근·잔업 등, 2단계)
+  planFor: (employeeId: string, date: string) => DayPlan; // 그 직원의 그날 일정: 날짜별 일정 → 평소 틀 → 회사 규칙
   holidays: HolidayRow[];
   people: Person[];
   events: EventRow[];
@@ -94,7 +96,7 @@ export function leaveDaysFor(data: PeriodData, employeeId: string): Map<string, 
 export async function loadPeriod(from: string, to: string, practice = OFFICE.practiceMode): Promise<PeriodData> {
   const db = createAdminClient();
   const readFrom = addDays(weekStartOf(from), -1); // 자정 넘긴 퇴근의 근무일 상속 여유
-  const [versions, holidays, { data: ppl }, { data: ev }, { data: co }, { data: ot }, leaveRequests, leaveTypes, workRequests, templates] = await Promise.all([
+  const [versions, holidays, { data: ppl }, { data: ev }, { data: co }, { data: ot }, leaveRequests, leaveTypes, workRequests, templates, shifts] = await Promise.all([
     loadRuleVersions(),
     loadHolidays(readFrom, to),
     db.from('profiles').select('id, name, employee_no, role, active, joined_on, created_at, group_id, shift_template_id').order('name'),
@@ -108,10 +110,18 @@ export async function loadPeriod(from: string, to: string, practice = OFFICE.pra
     loadLeaveRequests({ from: readFrom, to, practice }),
     loadLeaveTypes(),
     loadWorkRequests({ from: readFrom, to, practice }),
-    loadShiftTemplates(),
+    loadShiftTemplates(true),
+    loadShifts(readFrom, to),
   ]);
   const tplById = new Map(templates.map((t) => [t.id, t]));
-  const tplOfPerson = new Map((ppl ?? []).map((p) => [p.id as string, p.shift_template_id ? (tplById.get(p.shift_template_id) ?? null) : null]));
+  // 꺼 둔 틀은 적용되지 않은 것으로 본다 (이름·색은 지난 일정 표시에 계속 쓴다)
+  const tplOfPerson = new Map((ppl ?? []).map((p) => [p.id as string, p.shift_template_id ? (tplById.get(p.shift_template_id)?.active ? tplById.get(p.shift_template_id)! : null) : null]));
+  const shiftsOf = new Map<string, DayShift[]>();
+  for (const s of shifts) shiftsOf.set(`${s.employeeId}|${s.workDate}`, [...(shiftsOf.get(`${s.employeeId}|${s.workDate}`) ?? []), s]);
+  const planFor = (employeeId: string, date: string): DayPlan => {
+    const rule = ruleAt(versions, date);
+    return planDay({ rule, tpl: tplOfPerson.get(employeeId) ?? null, shifts: shiftsOf.get(`${employeeId}|${date}`) ?? [], isWorkday: rule ? resolveDayType(date, rule, holidays) === 'workday' : false, templates: tplById });
+  };
   const templateOf = (employeeId: string) => tplOfPerson.get(employeeId) ?? null;
   return {
     from,
@@ -119,9 +129,11 @@ export async function loadPeriod(from: string, to: string, practice = OFFICE.pra
     practice,
     rule: ruleAt(versions, to),
     ruleAt: (date: string) => ruleAt(versions, date),
-    templates,
+    templates: templates.filter((t) => t.active),
     templateOf,
-    ruleFor: (employeeId: string, date: string) => applyTemplate(ruleAt(versions, date), templateOf(employeeId)),
+    ruleFor: (employeeId: string, date: string) => planFor(employeeId, date).rule,
+    shifts,
+    planFor,
     holidays,
     people: (ppl ?? []).map((p) => ({
       id: p.id, name: p.name, employeeNo: p.employee_no, role: p.role, active: p.active, joinedOn: p.joined_on,
@@ -164,13 +176,21 @@ export function daysFor(data: PeriodData, employeeId: string, from = data.from, 
   // 간주 근무: 입사 전 날짜와 하루 전부 휴가인 날은 빼고, 찍지 않은 근무일을 근무로 본다 (now는 여기서 한 번만 읽는다)
   const now = new Date();
   const startsOn = data.people.find((p) => p.id === employeeId)?.startsOn ?? null;
-  const fullLeave = tpl?.kind === 'deemed' ? fullLeaveSet(leaveDaysFor(data, employeeId)) : null;
+  // 간주 근무가 있을 수 있는가: 평소 틀이 간주이거나, 이 기간에 그날 일정으로 넣은 간주 근무가 있다
+  const mayDeem = tpl?.kind === 'deemed' || data.shifts.some((s) => s.employeeId === employeeId && s.kind === 'deemed');
+  const fullLeave = mayDeem ? fullLeaveSet(leaveDaysFor(data, employeeId)) : null;
   return computeEmployeeDays({
     events: data.events.filter((e) => e.employeeId === employeeId),
     approvedCorrections: data.corrections.filter((c) => c.employeeId === employeeId && c.status === 'approved'),
     rule: applyTemplate(data.rule, tpl) ?? data.rule,
     ruleAt: (d) => data.ruleFor(employeeId, d),
-    deemed: tpl?.kind === 'deemed' ? (d) => (fullLeave!.has(d) || (startsOn !== null && d < startsOn) ? null : deemedPair(tpl, d, now)) : undefined,
+    deemed: mayDeem
+      ? (d) => {
+          if (fullLeave!.has(d) || (startsOn !== null && d < startsOn)) return null;
+          const plan = data.planFor(employeeId, d); // 근무일인지·그날 일정이 있는지는 planDay가 이미 봤다
+          return plan.deemed ? deemedPair(plan.deemed, d, now) : null;
+        }
+      : undefined,
     holidays: data.holidays,
     from,
     to,

@@ -1,16 +1,16 @@
 'use client';
 // 폰(< 1024px) 하단 탭 — 직원·관리자 모두 같은 탭 (2026-10-10 의뢰인: 시프티처럼. 관리자만 다른 탭 묶음을 오가던 것을 없앰).
-// 홈 · 요청 · 출퇴근기록 · 휴가. 관리자는 같은 탭에서 「전체」 화면이 먼저 열리고, 화면 위 보기 범위(ScopeSwitch)로 「내 것」을 본다.
+// 홈 · 요청 · 근무일정 · 출퇴근기록 · 휴가 (근무일정은 2026-10-10 2단계에 붙였다). 관리자는 같은 탭에서 「전체」 화면이 먼저 열리고, 화면 위 보기 범위(ScopeSwitch)로 「내 것」을 본다.
 // 탭에 없는 화면(현황·직원·급여·공지·설정·내 계정)은 왼쪽 위 메뉴(MenuDrawer). 넓은 화면은 왼쪽 메뉴(SideNav)가 맡는다.
-// 「근무일정」 탭은 그 화면을 만들 때 붙인다 — 아직 없는 기능의 탭은 보이지 않는다 (마스터 5장 규칙 3).
-import { BellRing, CalendarDays, House, ListChecks, type LucideIcon } from 'lucide-react';
+import { BellRing, CalendarDays, CalendarRange, House, ListChecks, type LucideIcon } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 import { NavTab, usePressedTab } from './NavTab';
 
-type Tab = { key: 'home' | 'requests' | 'attendance' | 'leave'; icon: LucideIcon; mine: string; all?: string };
+type Tab = { key: 'home' | 'requests' | 'schedule' | 'attendance' | 'leave'; icon: LucideIcon; mine: string; all?: string };
 const TABS: Tab[] = [
   { key: 'home', icon: House, mine: '/punch' },
   { key: 'requests', icon: BellRing, mine: '/punch/corrections', all: '/admin/inbox' },
+  { key: 'schedule', icon: CalendarRange, mine: '/punch/schedule', all: '/admin/schedule' },
   { key: 'attendance', icon: ListChecks, mine: '/punch/records', all: '/admin/records' },
   { key: 'leave', icon: CalendarDays, mine: '/punch/leave', all: '/admin/leave' },
 ];

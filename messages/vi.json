@@ -201,7 +201,9 @@
     "close": "Đóng menu",
     "branches": "Chi nhánh",
     "places": "Địa điểm chấm công",
-    "shifts": "Mẫu ca làm việc"
+    "shifts": "Mẫu ca làm việc",
+    "mySchedule": "Lịch làm của tôi",
+    "adminSchedule": "Lịch làm việc"
   },
   "nav": {
     "home": "Trang chủ",
@@ -224,8 +226,13 @@
       "leave": {
         "mine": "Nghỉ phép của tôi",
         "all": "Tất cả nhân viên"
+      },
+      "schedule": {
+        "mine": "Lịch của tôi",
+        "all": "Tất cả lịch"
       }
-    }
+    },
+    "schedule": "Lịch làm"
   },
   "records": {
     "title": "Lịch sử của tôi",
@@ -504,5 +511,15 @@
         "muted": "Xám"
       }
     }
+  },
+  "schedule": {
+    "title": "Lịch làm việc",
+    "thisWeek": "Tuần này",
+    "nextWeek": "Tuần sau",
+    "planned": "Kế hoạch {h} giờ {m} phút",
+    "onLeave": "Nghỉ phép",
+    "none": "Không có lịch",
+    "noRule": "Chưa có quy định giờ làm của công ty.",
+    "hint": "Thời gian kế hoạch tính từ lúc bắt đầu đến lúc kết thúc, gồm cả giờ nghỉ. Nếu lịch sai, hãy báo quản lý."
   }
 }

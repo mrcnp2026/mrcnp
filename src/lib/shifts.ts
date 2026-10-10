@@ -56,3 +56,73 @@ export function spanMinutes(tpl: Pick<ShiftTemplate, 'startTime' | 'endTime'>): 
   const m = (t: string) => Number(t.slice(0, 2)) * 60 + Number(t.slice(3, 5));
   return m(tpl.endTime) - m(tpl.startTime);
 }
+
+// ── 날짜별 근무일정 (2026-10-10 2단계) ──
+export type DayShift = { id: string; employeeId: string; workDate: string; startTime: string; endTime: string; kind: ShiftKind; templateId: string | null; note: string | null };
+export type PlanItem = { startTime: string; endTime: string; kind: ShiftKind; name: string | null; color: ShiftColor | null; shiftId: string | null; note: string | null; source: 'shift' | 'template' | 'rule' };
+export type DayPlan = {
+  rule: WorkRule | null; // 그날 판정에 쓰는 규칙 (시작·끝 시각이 그날 일정으로 바뀐 것)
+  deemed: { startTime: string; endTime: string } | null; // 간주 근무로 볼 시간 (찍은 기록이 없을 때만 쓴다)
+  items: PlanItem[]; // 화면에 보일 그날 일정 줄 (시작 시각 순)
+};
+
+const minT = (a: string, b: string) => (a <= b ? a : b);
+const maxT = (a: string, b: string) => (a >= b ? a : b);
+
+/**
+ * 한 직원의 하루 일정.
+ *   1) 그날 넣은 일정(잔업 제외)이 있으면 그것이 그날의 일정이다 — 여러 건이면 가장 이른 시작 ~ 가장 늦은 끝
+ *   2) 없으면 근무일에 한해 평소 틀, 틀도 없으면 회사 규칙
+ *   3) 유형 「잔업」은 위 일정에 끝 시각만 늘린다 (일정이 없는 날의 잔업은 그 자체가 일정)
+ * 간주 근무: 그날 일정에 「간주 근무」가 있거나, 그날 일정이 없는 근무일에 평소 틀이 간주 근무일 때.
+ */
+export function planDay(args: { rule: WorkRule | null; tpl: ShiftTemplate | null; shifts: readonly DayShift[]; isWorkday: boolean; templates?: ReadonlyMap<string, ShiftTemplate> }): DayPlan {
+  const { rule, tpl, isWorkday } = args;
+  const dated = [...args.shifts].sort((a, b) => a.startTime.localeCompare(b.startTime));
+  const main = dated.filter((s) => s.kind !== 'extra');
+  const extra = dated.filter((s) => s.kind === 'extra');
+  const items: PlanItem[] = dated.map((s) => {
+    const t = s.templateId ? args.templates?.get(s.templateId) : undefined;
+    return { startTime: s.startTime, endTime: s.endTime, kind: s.kind, name: t?.name ?? null, color: t?.color ?? null, shiftId: s.id, note: s.note, source: 'shift' };
+  });
+
+  let span: { startTime: string; endTime: string } | null = null;
+  let deemed: DayPlan['deemed'] = null;
+  if (main.length) {
+    span = { startTime: main.map((s) => s.startTime).reduce(minT), endTime: main.map((s) => s.endTime).reduce(maxT) };
+    const d = main.filter((s) => s.kind === 'deemed');
+    if (d.length) deemed = { startTime: d.map((s) => s.startTime).reduce(minT), endTime: d.map((s) => s.endTime).reduce(maxT) };
+  } else if (isWorkday) {
+    if (tpl) {
+      span = { startTime: tpl.startTime, endTime: tpl.endTime };
+      if (tpl.kind === 'deemed') deemed = { ...span };
+      items.push({ startTime: tpl.startTime, endTime: tpl.endTime, kind: tpl.kind, name: tpl.name, color: tpl.color, shiftId: null, note: null, source: 'template' });
+    } else if (rule) {
+      span = { startTime: hhmm(rule.startTime), endTime: hhmm(rule.endTime) };
+      items.push({ startTime: span.startTime, endTime: span.endTime, kind: 'none', name: null, color: null, shiftId: null, note: null, source: 'rule' });
+    }
+  }
+  for (const e of extra) span = span ? { startTime: span.startTime, endTime: maxT(span.endTime, e.endTime) } : { startTime: e.startTime, endTime: e.endTime };
+  items.sort((a, b) => a.startTime.localeCompare(b.startTime));
+  return { rule: rule && span ? { ...rule, startTime: span.startTime, endTime: span.endTime } : applyTemplate(rule, tpl), deemed, items };
+}
+
+export type ShiftInput = { date: string; startTime: string; endTime: string; kind: ShiftKind; templateId: string | null; note: string | null; employeeIds: string[] };
+
+/** 날짜별 일정 입력값 검사 */
+export function validateShift(b: Record<string, unknown>): { ok: true; value: ShiftInput } | { ok: false; code: 'invalid_date' | 'invalid_time' | 'invalid_input' | 'no_people' } {
+  const UUID = /^[0-9a-f-]{36}$/i;
+  if (typeof b.date !== 'string' || !/^\d{4}-\d{2}-\d{2}$/.test(b.date) || Number.isNaN(Date.parse(`${b.date}T00:00:00Z`))) return { ok: false, code: 'invalid_date' };
+  const { startTime, endTime } = b;
+  if (typeof startTime !== 'string' || typeof endTime !== 'string' || !TIME.test(startTime) || !TIME.test(endTime) || startTime >= endTime) return { ok: false, code: 'invalid_time' };
+  const kind = (SHIFT_KINDS as readonly unknown[]).includes(b.kind) ? (b.kind as ShiftKind) : null;
+  if (!kind) return { ok: false, code: 'invalid_input' };
+  const templateId = b.templateId === undefined || b.templateId === null || b.templateId === '' ? null : typeof b.templateId === 'string' && UUID.test(b.templateId) ? b.templateId : undefined;
+  if (templateId === undefined) return { ok: false, code: 'invalid_input' };
+  const noteRaw = typeof b.note === 'string' ? b.note.trim() : b.note === undefined || b.note === null ? '' : null;
+  if (noteRaw === null || noteRaw.length > 200) return { ok: false, code: 'invalid_input' };
+  if (!Array.isArray(b.employeeIds) || b.employeeIds.some((x) => typeof x !== 'string' || !UUID.test(x)) || b.employeeIds.length > 500) return { ok: false, code: 'invalid_input' };
+  const employeeIds = [...new Set(b.employeeIds as string[])];
+  if (employeeIds.length === 0) return { ok: false, code: 'no_people' };
+  return { ok: true, value: { date: b.date, startTime, endTime, kind, templateId, note: noteRaw === '' ? null : noteRaw, employeeIds } };
+}

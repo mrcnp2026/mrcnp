@@ -16,7 +16,7 @@ export function computeEmployeeDays(args: {
   approvedCorrections: PunchCorrection[];
   rule: WorkRule; // 기본 규칙 (그날 규칙이 없을 때)
   ruleAt?: (date: string) => WorkRule | null; // ② 4-1: 날짜마다 그날 유효한 규칙
-  deemed?: (date: string) => PunchPair | null; // 간주 근무 (2026-10-10): 찍은 기록이 없는 근무일에 근무로 볼 시간. 없으면 null
+  deemed?: (date: string, dayType: DayType) => PunchPair | null; // 간주 근무 (2026-10-10): 찍은 기록이 없는 근무일에 근무로 볼 시간. 없으면 null
   holidays: HolidayRow[];
   from: string;
   to: string;
@@ -28,9 +28,9 @@ export function computeEmployeeDays(args: {
     const days = [...Array(7)].map((_, i) => addDays(ws, i)).map((d) => {
       const dayType = resolveDayType(d, ruleOf(d), args.holidays);
       let pairs = byDate.get(d)?.pairs ?? [];
-      // 간주 근무: 근무일에 찍은 기록이 하나도 없을 때만. 기록이 있으면 기록이 먼저다
-      if (pairs.length === 0 && dayType === 'workday') {
-        const v = args.deemed?.(d);
+      // 간주 근무: 찍은 기록이 하나도 없을 때만 (근무일인지는 부르는 쪽이 본다). 기록이 있으면 기록이 먼저다
+      if (pairs.length === 0) {
+        const v = args.deemed?.(d, dayType);
         if (v) pairs = [v];
       }
       return { workDate: d, pairs, flags: byDate.get(d)?.flags ?? [], dayType };

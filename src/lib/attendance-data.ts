@@ -6,8 +6,8 @@ import { OFFICE } from '@/config/office';
 import { addDays, weekStartOf } from '@/lib/calendar';
 import { pairsByWorkDate } from '@/lib/pairs';
 import { ruleAt, type RuleVersion } from '@/lib/rule-at';
-import { loadTemplateOf } from '@/lib/shift-data';
-import { applyTemplate, deemedPair } from '@/lib/shifts';
+import { loadShifts, loadTemplateOf } from '@/lib/shift-data';
+import { deemedPair, planDay } from '@/lib/shifts';
 import { createAdminClient } from '@/lib/supabase/admin';
 import { toKstDate } from '@/lib/time';
 import { classifyDay } from '@/lib/today';
@@ -117,13 +117,16 @@ export async function loadEmployeeToday(employeeId: string, now: Date): Promise<
   const workDate = openShift ? last.work_date : today;
 
   // 근무일정 틀 (2026-10-10): 그 직원의 시작·끝 시각으로. 틀이 없으면 회사 규칙 그대로
-  const rule = applyTemplate(ruleAt(versions, workDate), tpl);
+  const base = ruleAt(versions, workDate);
+  const dayType = base ? resolveDayType(workDate, base, holidays) : 'workday';
+  // 그날 일정: 날짜별 일정(특근·잔업) → 평소 틀 → 회사 규칙
+  const plan = planDay({ rule: base, tpl, shifts: await loadShifts(workDate, workDate, employeeId), isWorkday: !!base && dayType === 'workday' });
+  const rule = plan.rule;
   const byDate = pairsByWorkDate(events, corrections);
-  const dayType = rule ? resolveDayType(workDate, rule, holidays) : 'workday';
   let pairs = byDate.get(workDate)?.pairs ?? [];
-  // 간주 근무: 찍지 않은 근무일은 일정 시간만큼 근무로 본다
-  if (pairs.length === 0 && tpl?.kind === 'deemed' && rule && dayType === 'workday') {
-    const v = deemedPair(tpl, workDate, now);
+  // 간주 근무: 찍지 않은 날은 일정 시간만큼 근무로 본다
+  if (pairs.length === 0 && plan.deemed) {
+    const v = deemedPair(plan.deemed, workDate, now);
     if (v) pairs = [v];
   }
   const c = classifyDay({ pairs, rule, dayType, workDate, now });

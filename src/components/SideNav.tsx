@@ -4,6 +4,7 @@
 // 「더보기」에 접혀 있던 화면(연차 관리·공지·설정·진단·내 계정)을 PC에서는 전부 펼쳐 보인다.
 import {
   CalendarClock,
+  CalendarRange,
   MapPin,
   BellRing,
   CalendarCheck,
@@ -45,6 +46,7 @@ export function SideNav({ isAdmin, inboxCount = 0, languages }: { isAdmin: boole
       key: 'my',
       items: [
         { href: '/punch', key: 'home', icon: House },
+        { href: '/punch/schedule', key: 'mySchedule', icon: CalendarRange },
         { href: '/punch/records', key: 'records', icon: ListChecks },
         { href: '/punch/corrections', key: 'corrections', icon: PencilLine },
         { href: '/punch/leave', key: 'leave', icon: CalendarDays },
@@ -58,6 +60,7 @@ export function SideNav({ isAdmin, inboxCount = 0, languages }: { isAdmin: boole
             items: [
               { href: '/admin', key: 'board', icon: LayoutDashboard },
               { href: '/admin/inbox', key: 'inbox', icon: BellRing, badge: inboxCount },
+              { href: '/admin/schedule', key: 'adminSchedule', icon: CalendarRange },
               { href: '/admin/records', key: 'adminRecords', icon: ClipboardList },
               { href: '/admin/leave', key: 'adminLeave', icon: CalendarCheck },
             ],
