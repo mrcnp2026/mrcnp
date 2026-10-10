@@ -3,10 +3,7 @@
 import { UserRound } from 'lucide-react';
 import { getTranslations } from 'next-intl/server';
 import { redirect } from 'next/navigation';
-import { LanguageSwitcher } from '@/components/LanguageSwitcher';
-import { TopBar } from '@/components/TopBar';
 import { Card, CardTitle, PageShell } from '@/components/ui';
-import { languageOptions } from '@/i18n/locales';
 import { getMe } from '@/lib/auth';
 import { createAdminClient } from '@/lib/supabase/admin';
 import { PasswordForm } from './PasswordForm';
@@ -19,7 +16,6 @@ export default async function AccountPage() {
   const hasPassword = !!p?.password_set_at;
   return (
     <>
-      <TopBar right={<LanguageSwitcher options={languageOptions()} />} />
       <PageShell>
         <h1 className="flex items-center gap-2 text-2xl font-semibold text-primary-deep">
           <UserRound aria-hidden size={24} strokeWidth={1.75} />

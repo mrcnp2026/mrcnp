@@ -7,6 +7,7 @@ import { getTranslations } from 'next-intl/server';
 import Link from 'next/link';
 import { GroupFilter } from '@/components/GroupFilter';
 import { Pager, pageOf } from '@/components/Pager';
+import { ScopeSwitch } from '@/components/ScopeSwitch';
 import { Card, Chip, PageShell } from '@/components/ui';
 import { OFFICE } from '@/config/office';
 import { getMe } from '@/lib/auth';
@@ -53,6 +54,7 @@ export default async function RecordsPage({ searchParams }: { searchParams: Prom
 
   return (
     <PageShell wide>
+      <ScopeSwitch kind="attendance" current="all" />
       <header className="flex flex-wrap items-center justify-between gap-2">
         <h1 className="text-2xl font-extrabold tracking-tight">{t('title')}</h1>
         <nav className="flex items-center gap-1" aria-label={t('month')}>

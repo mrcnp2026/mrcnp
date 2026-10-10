@@ -1,24 +1,17 @@
-// 직원 홈 (PWA 진입점, 부록 R-10-1): 상단 바 → 인사 + 지금 시각 → 미기록 배너 → "오늘 근무" 카드(큰 버튼) → 이번 주 막대 → 근무노트.
-// 하단 탭은 layout.tsx.
-import { getFormatter, getLocale, getTranslations } from 'next-intl/server';
-import { Bell, LayoutDashboard, UserRound } from 'lucide-react';
+// 직원 홈 (PWA 진입점, 부록 R-10-1): 날짜 → 미기록 배너 → "오늘 근무" 카드(큰 버튼) → 이번 주 막대 → 근무노트.
+// 상단 바·하단 탭은 layout.tsx(components/AppFrame).
+import { getFormatter, getTranslations } from 'next-intl/server';
 import { headers } from 'next/headers';
 import Link from 'next/link';
 import { redirect } from 'next/navigation';
-import { AddToHomeIcon } from '@/components/AddToHome';
-import { LanguageSwitcher } from '@/components/LanguageSwitcher';
-import { SignOutButton } from '@/components/SignOutButton';
-import { TopBar } from '@/components/TopBar';
 import { PageShell } from '@/components/ui';
 import { LABOR } from '@/config/labor-rules';
 import { OFFICE } from '@/config/office';
-import { languageOptions } from '@/i18n/locales';
 import { loadEmployeeToday } from '@/lib/attendance-data';
 import { getMe } from '@/lib/auth';
 import { isPhoneUserAgent } from '@/lib/passkey';
 import { createAdminClient } from '@/lib/supabase/admin';
 import { loadEmployeeRecent } from '@/lib/employee-data';
-import { visibleNoticesNow } from '@/lib/notices';
 import { kstDateTime } from '@/lib/time';
 import { loadWorkRequests } from '@/lib/work-data';
 import { workStatusOn } from '@/lib/work-requests';
@@ -32,51 +25,20 @@ export default async function PunchPage() {
   if (!me) redirect('/login');
   const t = await getTranslations('home');
   const tw = await getTranslations('work');
-  const tc = await getTranslations('common');
   const f = await getFormatter();
   const now = new Date();
-  const [today, recent, notices, { data: key }] = await Promise.all([
+  const [today, recent, { data: key }] = await Promise.all([
     loadEmployeeToday(me.id, now),
     loadEmployeeRecent(me.id, now),
-    visibleNoticesNow(me.id, await getLocale()),
     // 출퇴근 기기 (등록한 1대). 없으면 홈의 버튼 자리에 등록 안내가 나온다
     createAdminClient().from('user_passkeys').select('credential_id, device_label').eq('employee_id', me.id).is('revoked_at', null).maybeSingle(),
   ]);
-  const unread = notices.filter((n) => !n.confirmed).length;
   const hm = (time: string) => f.dateTime(kstDateTime(today.workDate, time), { hour: '2-digit', minute: '2-digit', hourCycle: 'h23' });
 
   return (
-    <>
-      <TopBar
-        right={
-          <>
-            {me.role === 'admin' && (
-              <Link href="/admin" aria-label={t('toAdmin')} className="flex min-h-11 min-w-11 items-center justify-center gap-1 rounded-button text-sm font-semibold text-primary">
-                <LayoutDashboard aria-hidden size={18} strokeWidth={1.75} />
-                <span className="hidden sm:inline">{t('toAdmin')}</span>
-              </Link>
-            )}
-            <Link href="/punch/notices" aria-label={t('notices', { n: unread })} className="relative flex min-h-11 min-w-11 shrink-0 items-center justify-center rounded-button text-primary">
-              <Bell aria-hidden size={20} strokeWidth={1.75} />
-              {unread > 0 && (
-                <span className="num absolute top-0.5 right-0.5 flex min-w-5 items-center justify-center rounded-chip bg-primary px-1 text-xs leading-5 font-semibold text-on-primary">{unread}</span>
-              )}
-            </Link>
-            <AddToHomeIcon />
-            <LanguageSwitcher options={languageOptions()} />
-          </>
-        }
-      />
       <PageShell wide>
-        {/* 인사 — 토스풍: 날짜는 작게, 인사는 두 줄로 크게 (2026-10-02 의뢰인 선택 시안) */}
-        <section className="px-1 pt-2 pb-2">
-          <p className="text-sm text-muted">{f.dateTime(kstDateTime(today.workDate, '12:00'), { dateStyle: 'full' })}</p>
-          <h1 className="mt-1 text-2xl leading-snug font-extrabold tracking-tight">
-            {t('helloName', { name: me.name })}
-            <br />
-            {t(today.status === 'off' ? 'greetOff' : today.isOpen ? 'greetWorking' : today.lastOut ? 'greetDone' : 'greetBefore')}
-          </h1>
-        </section>
+        {/* 날짜 한 줄 — 인사말·내 계정·로그아웃은 왼쪽 위 메뉴로 옮겼다 (2026-10-10 의뢰인: 시프티처럼 간결하게) */}
+        <p className="px-1 pt-1 text-sm text-muted">{f.dateTime(kstDateTime(today.workDate, '12:00'), { dateStyle: 'full' })}</p>
 
         {/* PC: 왼쪽 = 오늘 근무, 오른쪽 = 이번 주·근무노트 (2026-10-06 의뢰인) · 폰: 한 칸 */}
         <div className="flex flex-col gap-3 lg:grid lg:grid-cols-2 lg:items-start lg:gap-4">
@@ -113,14 +75,6 @@ export default async function PunchPage() {
         </div>
         </div>
 
-        <div className="flex flex-col gap-3 lg:hidden">
-        <Link href="/punch/account" className="inline-flex min-h-11 w-full items-center justify-center gap-2 rounded-button border border-border bg-bg px-4 text-sm text-muted">
-          <UserRound aria-hidden size={18} strokeWidth={1.75} />
-          {tc('account')}
-        </Link>
-        <SignOutButton />
-        </div>
       </PageShell>
-    </>
   );
 }

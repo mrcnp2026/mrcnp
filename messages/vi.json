@@ -194,14 +194,34 @@
     "adminNotices": "Quản lý thông báo",
     "config": "Cài đặt công ty",
     "diag": "Chẩn đoán",
-    "account": "Tài khoản của tôi"
+    "account": "Tài khoản của tôi",
+    "roleAdmin": "Quản trị viên",
+    "roleEmployee": "Nhân viên",
+    "close": "Đóng menu"
   },
   "nav": {
     "home": "Trang chủ",
     "records": "Lịch sử",
     "corrections": "Yêu cầu sửa",
     "manage": "Quản lý",
-    "leave": "Nghỉ phép"
+    "leave": "Nghỉ phép",
+    "requests": "Yêu cầu",
+    "attendance": "Chấm công",
+    "scope": {
+      "label": "Phạm vi xem",
+      "requests": {
+        "mine": "Yêu cầu của tôi",
+        "all": "Chờ duyệt"
+      },
+      "attendance": {
+        "mine": "Bản ghi của tôi",
+        "all": "Tất cả nhân viên"
+      },
+      "leave": {
+        "mine": "Nghỉ phép của tôi",
+        "all": "Tất cả nhân viên"
+      }
+    }
   },
   "records": {
     "title": "Lịch sử của tôi",

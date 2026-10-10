@@ -1,12 +1,9 @@
-// 직원 「공지」 목록 — 대상이고 게시 중인 공지 전부 (②-5 7-15). 언어는 상단 언어 버튼을 따른다.
+// 직원 「공지」 목록 — 대상이고 게시 중인 공지 전부 (②-5 7-15). 언어는 메뉴의 언어 버튼을 따른다.
 import { Megaphone } from 'lucide-react';
 import { getFormatter, getLocale, getTranslations } from 'next-intl/server';
 import { redirect } from 'next/navigation';
-import { LanguageSwitcher } from '@/components/LanguageSwitcher';
 import { NoticeBody } from '@/components/NoticeBody';
-import { TopBar } from '@/components/TopBar';
 import { Card, Chip, PageShell } from '@/components/ui';
-import { languageOptions } from '@/i18n/locales';
 import { getMe } from '@/lib/auth';
 import { visibleNoticesFor } from '@/lib/notices';
 import { ConfirmButton } from './ConfirmButton';
@@ -20,10 +17,6 @@ export default async function EmployeeNoticesPage() {
   const list = await visibleNoticesFor(me.id, await getLocale(), new Date());
   return (
     <>
-      {/* PC는 왼쪽 메뉴에 언어 버튼이 있다 */}
-      <div className="lg:hidden">
-        <TopBar right={<LanguageSwitcher options={languageOptions()} />} />
-      </div>
       <PageShell wide>
         <h1 className="flex items-center gap-2 text-2xl font-semibold text-primary-deep">
           <Megaphone aria-hidden size={24} strokeWidth={1.75} />

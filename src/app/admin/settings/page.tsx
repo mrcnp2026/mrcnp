@@ -52,9 +52,6 @@ export default async function SettingsPage() {
 
   return (
     <PageShell wide>
-      <Link href="/admin/more" className="-mb-2 inline-flex min-h-11 items-center self-start text-sm font-medium text-muted">
-        ‹ {t('back')}
-      </Link>
       <h1 className="px-1 text-2xl font-extrabold tracking-tight">{t('title')}</h1>
 
       {/* PC: 왼쪽 = 근무시간·사무실 인터넷 주소·사무실 위치, 오른쪽 = 휴일 목록 (2026-10-06 의뢰인: 좁은 한 줄로 길게 늘어져 있었다) · 폰: 한 칸 */}

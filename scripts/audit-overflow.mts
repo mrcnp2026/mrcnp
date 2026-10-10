@@ -124,12 +124,15 @@ try {
     await run(`관리자가 본 출퇴근 화면(${loc})`, '/punch');
     await run(`관리자가 본 내 기록(${loc})`, '/punch/records');
     await run(`관리자 홈(${loc})`, '/admin?practice=1', async (pg) => {
-      await pg.locator('[role=tablist] button').nth(1).click();
+      await pg.locator('[role=tablist] button:visible').nth(1).click(); // 폰·PC 탭 목록이 따로 있어 보이는 것만
     });
     await run(`처리함(${loc})`, '/admin/inbox?practice=1');
     await run(`기록(${loc})`, '/admin/records?practice=1');
     await run(`직원(${loc})`, '/admin/members');
-    await run(`더보기(${loc})`, '/admin/more');
+    await run(`메뉴(${loc})`, '/admin/members', async (pg) => {
+      const open = pg.locator('[data-menu-open]'); // 폰 폭에만 있다 (PC는 왼쪽 메뉴)
+      if (await open.isVisible()) await open.click();
+    });
     await run(`진단(${loc})`, '/admin/diag');
   }
   // 초대 창 (직원 카드의 "초대 링크 보내기" → 확인)

@@ -47,7 +47,7 @@ try {
   await p.goto(`${BASE}/admin`);
   await p.waitForLoadState('networkidle');
   // 서버 응답만 따로: 화면 이동 때 브라우저가 받는 RSC 응답 시간 (서버 처리 + 왕복)
-  for (const h of ['/login', '/login', '/brand/x', '/admin/more', '/admin/more', '/punch/corrections']) {
+  for (const h of ['/login', '/login', '/brand/x', '/admin/members', '/admin/members', '/punch/corrections']) {
     const ms = await p.evaluate(
       (href) => fetch(href, { headers: { RSC: '1' } }).then(async (r) => { const t = performance.now(); await r.text(); return `${r.status} ${Math.round(performance.now() - t)}`; }),
       h,
@@ -59,14 +59,14 @@ try {
   }
   for (let round = 1; round <= 2; round++) {
     out.push(`── 관리자 ${round}회차`);
-    for (const [l, h] of [['요청', '/admin/inbox'], ['직원', '/admin/members'], ['전체', '/admin/more'], ['현황', '/admin']]) await tap(l, h);
+    for (const [l, h] of [['요청', '/admin/inbox'], ['출퇴근기록', '/admin/records'], ['휴가', '/admin/leave'], ['홈', '/punch']]) await tap(l, h);
   }
   await db.from('profiles').update({ role: 'employee' }).eq('id', emp!.id);
   await p.goto(`${BASE}/punch`);
   await p.waitForLoadState('networkidle');
   for (let round = 1; round <= 2; round++) {
     out.push(`── 직원 ${round}회차`);
-    for (const [l, h] of [['내 기록', '/punch/records'], ['정정 요청', '/punch/corrections'], ['홈', '/punch']]) await tap(l, h);
+    for (const [l, h] of [['출퇴근기록', '/punch/records'], ['요청', '/punch/corrections'], ['홈', '/punch']]) await tap(l, h);
   }
 } catch (e) {
   out.push(`중단: ${(e as Error).message.split('\n')[0]}`);

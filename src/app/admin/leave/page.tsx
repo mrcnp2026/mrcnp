@@ -3,6 +3,7 @@
 import { getFormatter, getTranslations } from 'next-intl/server';
 import Link from 'next/link';
 import { Help } from '@/components/Help';
+import { ScopeSwitch } from '@/components/ScopeSwitch';
 import { Card, Chip, PageShell } from '@/components/ui';
 import { OFFICE } from '@/config/office';
 import { addDays } from '@/lib/calendar';
@@ -34,6 +35,7 @@ export default async function AdminLeavePage({ searchParams }: { searchParams: P
 
   return (
     <PageShell wide>
+      <ScopeSwitch kind="leave" current="all" />
       <div className="flex flex-wrap items-center gap-x-1">
         <h1 className="text-2xl font-semibold text-primary-deep">{t('title')}</h1>
         <Help>{t('intro')}</Help>

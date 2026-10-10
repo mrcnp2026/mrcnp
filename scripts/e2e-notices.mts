@@ -69,9 +69,10 @@ try {
   await createPassword(p);
   await p.waitForTimeout(1500);
 
-  // ── 관리자: 더보기 › 공지 › 새 공지 ──
-  await p.goto(`${BASE}/admin/more`);
-  check(await p.getByRole('link', { name: /공지/ }).isVisible(), '더보기에 「공지」가 있다');
+  // ── 관리자: 왼쪽 위 메뉴 › 공지 관리 › 새 공지 ──
+  await p.goto(`${BASE}/admin`);
+  await p.locator('[data-menu-open]').click();
+  check(await p.getByRole('dialog').getByRole('link', { name: '공지 관리' }).isVisible(), '메뉴에 「공지 관리」가 있다');
   await scanAll(p, '공지 목록', '/admin/notices');
   await p.goto(`${BASE}/admin/notices/new`);
   await scanAll(p, '새 공지', '/admin/notices/new');

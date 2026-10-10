@@ -5,6 +5,7 @@ import { ChevronLeft, ChevronRight } from 'lucide-react';
 import { getFormatter, getTranslations } from 'next-intl/server';
 import Link from 'next/link';
 import { redirect } from 'next/navigation';
+import { ScopeSwitch } from '@/components/ScopeSwitch';
 import { Card, Chip, PageShell } from '@/components/ui';
 import { OFFICE } from '@/config/office';
 import { getMe } from '@/lib/auth';
@@ -75,6 +76,7 @@ export default async function MyRecordsPage({ searchParams }: { searchParams: Pr
 
   return (
     <PageShell wide>
+      {me.role === 'admin' && <ScopeSwitch kind="attendance" current="mine" />}
       <header className="flex items-center justify-between gap-2">
         <h1 className="text-2xl font-extrabold tracking-tight">{t('title')}</h1>
         <nav className="flex shrink-0 items-center" aria-label={t('month')}>

@@ -50,8 +50,9 @@ try {
   const rule = (over: Record<string, unknown> = {}) => ({ action: 'rule.add', startTime: '09:30', endTime: '18:30', lateGraceMin: 5, breakStart: '12:00', breakEnd: '13:00', workdays: [1, 2, 3, 4, 5], weeklyRestDay: 7, effectiveFrom: RULE_DAY, ...over });
 
   // ── 근무시간 ──
-  await p.goto(`${BASE}/admin/more`);
-  await p.getByRole('link', { name: /설정/ }).click();
+  await p.goto(`${BASE}/admin`);
+  await p.locator('[data-menu-open]').click();
+  await p.getByRole('dialog').getByRole('link', { name: '회사 설정' }).click();
   await p.getByRole('heading', { name: '설정' }).waitFor();
   check((await p.getByText(/부터 적용 중/).count()) === 1, '지금 적용 중인 근무시간이 보임');
   let r = await post(rule({ effectiveFrom: '2020-01-01' }));

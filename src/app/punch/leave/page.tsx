@@ -3,6 +3,7 @@
 import { CalendarDays } from 'lucide-react';
 import { getFormatter, getTranslations } from 'next-intl/server';
 import { redirect } from 'next/navigation';
+import { ScopeSwitch } from '@/components/ScopeSwitch';
 import { Card, CardTitle, Chip, PageShell } from '@/components/ui';
 import { getMe } from '@/lib/auth';
 import { calcLeaveBalance } from '@/lib/leave';
@@ -29,6 +30,7 @@ export default async function LeavePage({ searchParams }: { searchParams: Promis
 
   return (
     <PageShell wide>
+      {me.role === 'admin' && <ScopeSwitch kind="leave" current="mine" />}
       <h1 className="text-2xl font-semibold text-primary-deep">{t('title')}</h1>
 
       {/* PC: 왼쪽 = 휴가, 오른쪽 = 외근·출장·재택. 줄마다 좌우 높이를 맞춘다 — ① 요약 ② 신청 ③ 내 신청 (2026-10-06 의뢰인: 위쪽이 어긋났다) · 폰: 휴가 3칸 뒤에 외근 3칸 (order) */}

@@ -39,11 +39,22 @@ try {
     await p.screenshot({ path: path.join(OUT, `${name}.png`), fullPage: full });
     console.log('찍음', name);
   };
+  // 왼쪽 위 메뉴를 연 모습 (폰 폭에서만 있다)
+  const menu = async (name: string, url: string) => {
+    await p.goto(BASE + url);
+    await p.waitForLoadState('networkidle');
+    const open = p.locator('[data-menu-open]');
+    if (!(await open.isVisible())) return;
+    await open.click();
+    await p.getByRole('dialog').waitFor();
+    await p.screenshot({ path: path.join(OUT, `${name}.png`) });
+    console.log('찍음', name);
+  };
   await shot('admin-home', '/admin');
+  await menu('admin-menu', '/admin');
   await shot('admin-members', '/admin/members');
   await shot('admin-records', '/admin/records');
   await shot('admin-inbox', '/admin/inbox');
-  await shot('admin-more', '/admin/more');
   await shot('admin-leave', '/admin/leave');
   await shot('admin-org', '/admin/members/groups');
   await shot('admin-notice-new', '/admin/notices/new');
@@ -56,6 +67,7 @@ try {
   await shot('admin-punch-home', '/punch', false);
   await db.from('profiles').update({ role: 'employee' }).eq('id', emp!.id);
   await shot('punch-home', '/punch');
+  await menu('punch-menu', '/punch');
   await shot('punch-records', '/punch/records');
   await shot('punch-corrections', '/punch/corrections');
   await shot('punch-leave', '/punch/leave');

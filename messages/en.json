@@ -941,14 +941,34 @@
     "adminNotices": "Manage notices",
     "config": "Company settings",
     "diag": "Diagnostics",
-    "account": "My account"
+    "account": "My account",
+    "roleAdmin": "Admin",
+    "roleEmployee": "Staff",
+    "close": "Close menu"
   },
   "nav": {
     "home": "Home",
     "records": "My records",
     "corrections": "Corrections",
     "manage": "Manage",
-    "leave": "Leave/Out"
+    "leave": "Leave/Out",
+    "requests": "Requests",
+    "attendance": "Attendance",
+    "scope": {
+      "label": "View",
+      "requests": {
+        "mine": "My requests",
+        "all": "To approve"
+      },
+      "attendance": {
+        "mine": "My records",
+        "all": "All staff"
+      },
+      "leave": {
+        "mine": "My leave",
+        "all": "All staff"
+      }
+    }
   },
   "records": {
     "title": "My records",

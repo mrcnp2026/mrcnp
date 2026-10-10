@@ -5,6 +5,7 @@ import { getFormatter, getTranslations } from 'next-intl/server';
 import { Pager, pageOf } from '@/components/Pager';
 import { Help } from '@/components/Help';
 import { InboxTabs } from './InboxTabs';
+import { ScopeSwitch } from '@/components/ScopeSwitch';
 import { Card, Chip, PageShell } from '@/components/ui';
 import { OFFICE } from '@/config/office';
 import { getMe } from '@/lib/auth';
@@ -379,6 +380,7 @@ export default async function InboxPage({ searchParams }: { searchParams: Promis
 
   return (
     <PageShell wide>
+      <ScopeSwitch kind="requests" current="all" />
       <h1 className="text-2xl font-semibold text-primary-deep">{t('title')}</h1>
       {practice && <p className="rounded-card bg-primary-tint p-3 text-sm text-primary">{t('practiceBanner')}</p>}
 

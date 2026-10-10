@@ -3,6 +3,7 @@
 import { getFormatter, getTranslations } from 'next-intl/server';
 import { redirect } from 'next/navigation';
 import { Help } from '@/components/Help';
+import { ScopeSwitch } from '@/components/ScopeSwitch';
 import { Card, Chip, PageShell } from '@/components/ui';
 import { getMe } from '@/lib/auth';
 import { loadEmployeeRecent } from '@/lib/employee-data';
@@ -21,6 +22,7 @@ export default async function CorrectionsPage({ searchParams }: { searchParams: 
 
   return (
     <PageShell wide>
+      {me.role === 'admin' && <ScopeSwitch kind="requests" current="mine" />}
       <div className="flex flex-wrap items-center gap-x-1">
         <h1 className="text-2xl font-semibold text-primary-deep">{t('title')}</h1>
         <Help>{t('intro')}</Help>
