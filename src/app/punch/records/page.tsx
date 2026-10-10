@@ -5,6 +5,8 @@ import { ChevronLeft, ChevronRight } from 'lucide-react';
 import { getFormatter, getTranslations } from 'next-intl/server';
 import Link from 'next/link';
 import { redirect } from 'next/navigation';
+import { Fab } from '@/components/Fab';
+import { Row, RowList } from '@/components/list';
 import { ScopeSwitch } from '@/components/ScopeSwitch';
 import { Card, Chip, PageShell } from '@/components/ui';
 import { OFFICE } from '@/config/office';
@@ -27,6 +29,7 @@ export default async function MyRecordsPage({ searchParams }: { searchParams: Pr
   if (!me) redirect('/login');
   const t = await getTranslations('records');
   const th = await getTranslations('home');
+  const tc = await getTranslations('corrections');
   const f = await getFormatter();
   const now = new Date();
   const today = toKstDate(now);
@@ -175,36 +178,36 @@ export default async function MyRecordsPage({ searchParams }: { searchParams: Pr
       </Card>
 
       {rows.length === 0 && <p className="text-muted">{t('emptyMonth')}</p>}
-      <ul className="flex flex-col gap-2 lg:hidden">
+      {/* 폰: 하루 = 한 줄 (2026-10-10 의뢰인: 시프티처럼 한 줄 목록). 왼쪽 날짜 · 가운데 출근 → 퇴근 · 오른쪽 그날 근무시간 */}
+      <RowList className="lg:hidden">
         {rows.map(({ d, firstIn, lastOut, open, req, corrected, pendingCorr }) => (
-          <li key={d.workDate}>
-            <Card className="flex flex-col gap-2 py-3">
-              <div className="flex items-baseline justify-between gap-2">
-                <span className="font-semibold">{f.dateTime(new Date(`${d.workDate}T12:00:00+09:00`), { month: 'short', day: 'numeric', weekday: 'short' })}</span>
-                <span className="num text-sm text-muted">{open && d.workDate === today ? th('status.working') : dur(d.netMinutes)}</span>
-              </div>
-              <p className="num text-base">
-                {firstIn ? t('inLine', { time: hm(firstIn) }) : t('noIn')}
-                <span className="mx-2 text-faint">→</span>
-                {open ? (d.workDate === today ? <span className="text-muted">{th('status.working')}</span> : <span className="text-warn">{t('noOut')}</span>) : lastOut ? t('outLine', { time: hm(lastOut) }) : t('noOut')}
-              </p>
-              {(corrected || pendingCorr || req || lateOf.has(d.workDate) || d.overtimeMinutes + d.holidayMinutes > 0) && (
-                <div className="flex flex-wrap items-center gap-2">
-                  {lateOf.has(d.workDate) && <Chip tone="warn">{th('lateBy', { n: lateOf.get(d.workDate)! })}</Chip>}
-                  {corrected && <Chip tone="info">{t('corrected')}</Chip>}
-                  {pendingCorr && <Chip>{t('correctionPending')}</Chip>}
-                  {d.overtimeMinutes + d.holidayMinutes > 0 && (
-                    <span className="num text-xs text-muted">{t('overtimeLine', { o: dur(d.overtimeMinutes), n: dur(d.nightMinutes), h: dur(d.holidayMinutes) })}</span>
-                  )}
-                  {req && <Chip tone={req.status === 'approved' ? 'ok' : req.status === 'rejected' ? 'neutral' : 'warn'}>{t(`overtime.${req.status}`)}</Chip>}
-                </div>
-              )}
-              {req?.status === 'pending' && <ReasonForm id={req.id} initial={req.reason} />}
-            </Card>
-          </li>
+          <Row
+            key={d.workDate}
+            lead={f.dateTime(new Date(`${d.workDate}T12:00:00+09:00`), { month: 'numeric', day: 'numeric', weekday: 'short' })}
+            aside={<span className="num text-sm font-semibold">{open && d.workDate === today ? th('status.working') : dur(d.netMinutes)}</span>}
+          >
+            <span className="num">
+              {firstIn ? hm(firstIn) : <span className="text-warn">{t('noIn')}</span>}
+              <span className="mx-2 text-faint">→</span>
+              {open ? (d.workDate === today ? <span className="text-muted">{th('status.working')}</span> : <span className="text-warn">{t('noOut')}</span>) : lastOut ? hm(lastOut) : <span className="text-warn">{t('noOut')}</span>}
+            </span>
+            {(corrected || pendingCorr || req || lateOf.has(d.workDate) || d.overtimeMinutes + d.holidayMinutes > 0) && (
+              <span className="flex flex-wrap items-center gap-2">
+                {lateOf.has(d.workDate) && <Chip tone="warn">{th('lateBy', { n: lateOf.get(d.workDate)! })}</Chip>}
+                {corrected && <Chip tone="info">{t('corrected')}</Chip>}
+                {pendingCorr && <Chip>{t('correctionPending')}</Chip>}
+                {d.overtimeMinutes + d.holidayMinutes > 0 && (
+                  <span className="num text-xs text-muted">{t('overtimeLine', { o: dur(d.overtimeMinutes), n: dur(d.nightMinutes), h: dur(d.holidayMinutes) })}</span>
+                )}
+                {req && <Chip tone={req.status === 'approved' ? 'ok' : req.status === 'rejected' ? 'neutral' : 'warn'}>{t(`overtime.${req.status}`)}</Chip>}
+              </span>
+            )}
+            {req?.status === 'pending' && <ReasonForm id={req.id} initial={req.reason} />}
+          </Row>
         ))}
-      </ul>
+      </RowList>
       <p className="text-center text-xs text-faint">{t('olderHint', { n: MONTHS_BACK })}</p>
+      <Fab label={tc('title')} href="/punch/corrections?new=1" />
     </PageShell>
   );
 }

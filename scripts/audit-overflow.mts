@@ -113,7 +113,8 @@ try {
     await run(`내 기록(${loc})`, '/punch/records');
     await run(`정정 요청(${loc})`, '/punch/corrections');
     await run(`내 계정(${loc})`, '/punch/account');
-    await run(`정정 요청-시각수정(${loc})`, '/punch/corrections', async (pg) => {
+    await run(`정정 요청-쓰기(${loc})`, '/punch/corrections?new=1');
+    await run(`정정 요청-시각수정(${loc})`, '/punch/corrections?new=1', async (pg) => {
       await pg.locator('input[type=radio]').nth(1).check();
     });
   }

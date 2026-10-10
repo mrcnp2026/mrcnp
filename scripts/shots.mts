@@ -70,7 +70,9 @@ try {
   await menu('punch-menu', '/punch');
   await shot('punch-records', '/punch/records');
   await shot('punch-corrections', '/punch/corrections');
+  await shot('punch-corrections-new', '/punch/corrections?new=1', false);
   await shot('punch-leave', '/punch/leave');
+  await shot('punch-leave-new', '/punch/leave?new=leave', false);
   await shot('punch-account', '/punch/account');
   await shot('punch-notices', '/punch/notices');
 } finally {

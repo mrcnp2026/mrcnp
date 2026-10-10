@@ -1,5 +1,6 @@
 // 관리자 「연차 관리」 (②-2 게이트 5). 직원별 잔여 + 부여 입력 + 승인된 휴가 취소.
 // ★ 4-7: 발생일수는 관리자가 직접 입력. 참고 계산값은 옆에 "참고용"으로만 보여 주고 입력 칸에 미리 채우지 않는다.
+import { ChevronRight } from 'lucide-react';
 import { getFormatter, getTranslations } from 'next-intl/server';
 import Link from 'next/link';
 import { Help } from '@/components/Help';
@@ -86,6 +87,38 @@ export default async function AdminLeavePage({ searchParams }: { searchParams: P
         </table>
       </Card>
 
+      {/* 폰: 직원 한 명 = 한 줄 (받은 · 사용 · 잔여). 누르면 그 직원의 입력 칸이 아래에 열린다 (2026-10-10 의뢰인: 시프티의 휴가 「전체」처럼) */}
+      <div className="overflow-hidden rounded-card bg-bg lg:hidden">
+        <div className="num flex items-center gap-2 border-b border-border bg-surface px-5 py-2 text-xs font-medium text-faint">
+          <span className="flex-1">{t('colName')}</span>
+          {(['granted', 'used', 'remaining'] as const).map((k) => (
+            <span key={k} className="w-11 text-right">{t(k)}</span>
+          ))}
+          <span className="w-5" />
+        </div>
+        <ul className="divide-y divide-border">
+          {(ppl ?? []).map((p) => {
+            const bal = calcLeaveBalance({ grants: grants.filter((g) => g.employeeId === p.id), requests: requests.filter((r) => r.employeeId === p.id), types, asOf: today });
+            const on = sp.e === p.id;
+            return (
+              <li key={p.id}>
+                <Link href={`?e=${p.id}${sp.live === '1' ? '&live=1' : ''}#edit`} scroll={false} aria-current={on ? 'true' : undefined} className={`num flex min-h-14 items-center gap-2 px-5 ${on ? 'bg-primary-tint' : ''}`}>
+                  <span className="min-w-0 flex-1 truncate font-semibold">{p.name}</span>
+                  {bal.grant ? (
+                    ([bal.granted, bal.used, bal.remaining] as const).map((v, i) => (
+                      <span key={i} className={`w-11 text-right ${i === 2 ? 'font-bold text-primary' : ''}`}>{n(v)}</span>
+                    ))
+                  ) : (
+                    <Chip tone="warn">{t('noGrant')}</Chip>
+                  )}
+                  <ChevronRight aria-hidden size={20} strokeWidth={1.75} className="w-5 shrink-0 text-faint" />
+                </Link>
+              </li>
+            );
+          })}
+        </ul>
+      </div>
+
       <section id="edit" className="flex scroll-mt-16 flex-col gap-3">
         {(ppl ?? []).map((p) => {
           const mine = grants.filter((g) => g.employeeId === p.id);
@@ -93,7 +126,7 @@ export default async function AdminLeavePage({ searchParams }: { searchParams: P
           const hiredOn = p.joined_on as string | null;
           const ref = hiredOn ? suggestGrant(hiredOn, today) : null;
           return (
-            <Card key={p.id} className={`flex flex-col gap-3 ${sp.e === p.id ? '' : 'lg:hidden'}`}>
+            <Card key={p.id} className={`flex flex-col gap-3 ${sp.e === p.id ? '' : 'hidden'}`}>
               <div className="flex items-baseline justify-between gap-2">
                 <span className="font-semibold">
                   {p.name} <span className="num text-xs font-normal text-faint">{p.employee_no}</span>

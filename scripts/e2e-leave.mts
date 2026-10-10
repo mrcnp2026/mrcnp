@@ -125,7 +125,7 @@ try {
   check(r.status === 200, '입사일 저장', JSON.stringify(r.json));
   r = await post(`/api/admin/employees/${emp!.id}/joined-on`, { joinedOn: '2999-01-01' });
   check(r.status === 400 && r.json.error === 'invalid_date', '미래 입사일 거절', r.json.error);
-  await p.goto(`${BASE}/admin/leave`);
+  await p.goto(`${BASE}/admin/leave?e=${emp!.id}`); // 폰에서는 고른 직원의 입력 칸만 열린다
   const btn = p.getByRole('button', { name: /계산값 16일/ }).first();
   check(await btn.waitFor({ timeout: 15000 }).then(() => true, () => false), '계산값 16일 버튼 표시');
   await btn.click();

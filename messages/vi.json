@@ -14,7 +14,8 @@
       "dateTime": "YYYY-MM-DD HH:MM"
     },
     "account": "Tài khoản · mật khẩu",
-    "help": "Xem giải thích"
+    "help": "Xem giải thích",
+    "add": "Tạo mới"
   },
   "login": {
     "title": "Đăng nhập",

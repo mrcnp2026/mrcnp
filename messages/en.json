@@ -14,7 +14,8 @@
       "time": "HH:MM",
       "dateTime": "YYYY-MM-DD HH:MM"
     },
-    "account": "My account · password"
+    "account": "My account · password",
+    "add": "New"
   },
   "login": {
     "title": "Sign in",

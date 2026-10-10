@@ -4,6 +4,9 @@ import { CalendarDays } from 'lucide-react';
 import { getFormatter, getTranslations } from 'next-intl/server';
 import { redirect } from 'next/navigation';
 import { ScopeSwitch } from '@/components/ScopeSwitch';
+import { AddSheet } from '@/components/AddSheet';
+import { Fab } from '@/components/Fab';
+import { Row, RowList } from '@/components/list';
 import { Card, CardTitle, Chip, PageShell } from '@/components/ui';
 import { getMe } from '@/lib/auth';
 import { calcLeaveBalance } from '@/lib/leave';
@@ -13,11 +16,12 @@ import { loadWorkRequests } from '@/lib/work-data';
 import { CancelLeave, LeaveForm } from './LeaveForm';
 import { CancelWork, WorkForm } from './WorkForm';
 
-export default async function LeavePage({ searchParams }: { searchParams: Promise<{ workDate?: string }> }) {
+export default async function LeavePage({ searchParams }: { searchParams: Promise<{ workDate?: string; new?: string }> }) {
   const me = await getMe();
   if (!me) redirect('/login');
   const t = await getTranslations('leave');
   const tw = await getTranslations('work');
+  const tc = await getTranslations('common');
   const f = await getFormatter();
   const sp = await searchParams;
   const today = toKstDate(new Date());
@@ -64,28 +68,26 @@ export default async function LeavePage({ searchParams }: { searchParams: Promis
         )}
       </Card>
 
-      <div className="order-2 grid lg:order-3">
+      {/* 폰: 양식은 + 버튼을 누르면 올라온다 (2026-10-10 의뢰인) · PC: 제자리에 펼쳐 둔다 */}
+      <AddSheet id="leave" title={t('request')} defaultOpen={sp.new === 'leave'} className="order-2 lg:order-3 lg:grid">
         <LeaveForm today={today} types={types.map((x) => ({ code: x.code, name: nameOf(x.code), unit: x.dayUnit, deducts: x.deductsBalance }))} />
-      </div>
+      </AddSheet>
 
       <section className="order-3 flex flex-col gap-2 lg:order-5">
         <h2 className="font-semibold">{t('mine')}</h2>
         {requests.length === 0 && <p className="text-sm text-faint">{t('none')}</p>}
-        <ul className="divide-y divide-border rounded-card bg-bg empty:hidden">
+        <RowList>
         {requests.map((r) => (
-          <li key={r.id} className="flex flex-col gap-1 px-5 py-3">
-            <div className="flex items-center justify-between gap-2">
-              <span className="font-semibold">
-                {nameOf(r.typeCode)} · <span className="num">{t('days', { n: n(r.days) })}</span>
-              </span>
-              <Chip tone={r.status === 'approved' ? 'ok' : r.status === 'pending' ? 'warn' : 'neutral'}>{t(`status.${r.status}`)}</Chip>
-            </div>
-            <p className="num text-sm">{r.startDate === r.endDate ? day(r.startDate) : `${day(r.startDate)} ~ ${day(r.endDate)}`}</p>
-            {r.reason && <p className="text-sm text-muted">{r.reason}</p>}
+          <Row key={r.id} aside={<Chip tone={r.status === 'approved' ? 'ok' : r.status === 'pending' ? 'warn' : 'neutral'}>{t(`status.${r.status}`)}</Chip>}>
+            <span className="font-semibold">
+              {nameOf(r.typeCode)} · <span className="num">{t('days', { n: n(r.days) })}</span>
+            </span>
+            <span className="num text-sm">{r.startDate === r.endDate ? day(r.startDate) : `${day(r.startDate)} ~ ${day(r.endDate)}`}</span>
+            {r.reason && <span className="text-sm text-muted">{r.reason}</span>}
             {r.status === 'pending' && <CancelLeave id={r.id} />}
-          </li>
+          </Row>
         ))}
-        </ul>
+        </RowList>
       </section>
 
       {/* 외근·출장·재택 (②-3 7-11) — 연차와 같은 화면. 요약 칸은 왼쪽 「남은 연차」와 같은 줄·같은 높이 */}
@@ -105,32 +107,31 @@ export default async function LeavePage({ searchParams }: { searchParams: Promis
           </dl>
         </div>
       </div>
-      <div className="order-5 grid lg:order-4">
+      {/* 홈의 "사무실 밖" 안내에서 날짜를 채워 넘어오면 열린 채로 시작한다 */}
+      <AddSheet id="work" title={tw('title')} defaultOpen={!!sp.workDate || sp.new === 'work'} className="order-5 lg:order-4 lg:grid">
         <WorkForm today={today} initialDate={sp.workDate && /^\d{4}-\d{2}-\d{2}$/.test(sp.workDate) ? sp.workDate : null} />
-      </div>
+      </AddSheet>
       <section className="order-6 flex flex-col gap-2">
         <h3 className="font-semibold">{tw('mine')}</h3>
         {works.length === 0 && <p className="text-sm text-faint">{tw('none')}</p>}
-        <ul className="divide-y divide-border rounded-card bg-bg empty:hidden">
+        <RowList>
         {works.map((w) => (
-          <li key={w.id} className="flex flex-col gap-1 px-5 py-3">
-            <div className="flex items-center justify-between gap-2">
-              <span className="font-semibold">
-                {tw(`kind.${w.kind}`)} · {w.place}
-              </span>
-              <Chip tone={w.status === 'approved' ? 'ok' : w.status === 'pending' ? 'warn' : 'neutral'}>{tw(`status.${w.status}`)}</Chip>
-            </div>
-            <p className="num text-sm">
+          <Row key={w.id} aside={<Chip tone={w.status === 'approved' ? 'ok' : w.status === 'pending' ? 'warn' : 'neutral'}>{tw(`status.${w.status}`)}</Chip>}>
+            <span className="font-semibold">
+              {tw(`kind.${w.kind}`)} · {w.place}
+            </span>
+            <span className="num text-sm">
               {w.startDate === w.endDate ? day(w.startDate) : `${day(w.startDate)} ~ ${day(w.endDate)}`}
               {w.startTime && ` · ${w.startTime}~${w.endTime}`}
-            </p>
-            {w.reason && <p className="text-sm text-muted">{w.reason}</p>}
+            </span>
+            {w.reason && <span className="text-sm text-muted">{w.reason}</span>}
             {w.status === 'pending' && <CancelWork id={w.id} />}
-          </li>
+          </Row>
         ))}
-        </ul>
+        </RowList>
       </section>
       </div>
+      <Fab label={tc('add')} items={[{ id: 'leave', label: t('request') }, { id: 'work', label: tw('title') }]} />
     </PageShell>
   );
 }

@@ -11,6 +11,7 @@
 import { browserSupportsWebAuthn, startAuthentication, startRegistration } from '@simplewebauthn/browser';
 import { Check, Clock, Fingerprint, LogIn, LogOut, ShieldCheck, Smartphone } from 'lucide-react';
 import { useFormatter, useTranslations } from 'next-intl';
+import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useEffect, useState } from 'react';
 import { PUNCHED_EVENT, PUNCHING_EVENT } from '@/components/NoticeSheet';
@@ -68,6 +69,7 @@ export function TodayCard(props: {
 }) {
   const t = useTranslations('home');
   const tc = useTranslations('common');
+  const tn = useTranslations('nav');
   const f = useFormatter();
   const router = useRouter();
   const [busy, setBusy] = useState(false);
@@ -254,18 +256,24 @@ export function TodayCard(props: {
           </button>
         </div>
       ) : (
-        // 출근은 파랑, 퇴근은 거의 검정 — 색 + 글자 + 아이콘 셋으로 구분 (색만 X). 정정 요청은 하단 탭에 있다
+        // 출근은 파랑, 퇴근은 거의 검정 — 색 + 글자 + 아이콘 셋으로 구분 (색만 X).
+        // 왼쪽 「요청」 = 정정 요청 쓰기로 바로 간다 (2026-10-10 의뢰인: 시프티처럼 출근 버튼 옆에)
+        <div className="flex gap-2">
+        <Link href="/punch/corrections?new=1" className="flex min-h-14 shrink-0 items-center justify-center rounded-punch bg-primary-tint px-5 text-base font-bold text-primary">
+          {tn('requests')}
+        </Link>
         <button
           type="button"
           onClick={punch}
           disabled={busy || thisDevice === null}
-          className={`flex min-h-14 w-full items-center justify-center gap-2 rounded-punch px-4 text-lg font-bold text-on-primary disabled:opacity-60 ${
+          className={`flex min-h-14 flex-1 items-center justify-center gap-2 rounded-punch px-4 text-lg font-bold text-on-primary disabled:opacity-60 ${
             kind === 'in' ? 'bg-primary' : 'bg-primary-deep'
           }`}
         >
           {busy ? <Clock aria-hidden size={22} strokeWidth={2} /> : <Icon aria-hidden size={22} strokeWidth={2} />}
           {busy ? t('recording') : t(kind === 'in' ? 'clockIn' : 'clockOut')}
         </button>
+        </div>
       )}
 
       {err && <ErrorNote code={err.code} requestId={err.requestId} namespace="home" />}
