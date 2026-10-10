@@ -1,7 +1,7 @@
 // 「이번주 근무」 카드 (2026-10-10 의뢰인: 시프티 홈처럼) — 요일 7칸(그날 일정) + 막대(실제 / 계획) + 40·52시간 눈금.
 // 서버가 계산한 값만 그린다 — 화면이 다시 계산하지 않는다. 막대 길이는 52시간 = 100%, 넘으면 끝에서 멈춘다.
 // 색만 쓰지 않고 숫자와 상태 글자를 함께. 알림은 보내지 않는다 (7-13 요점 3). 5인 미만이면 색 없이 숫자만 (요점 4).
-import { AlertTriangle, CalendarDays } from 'lucide-react';
+import { AlertTriangle, CalendarDays, ChevronLeft, ChevronRight } from 'lucide-react';
 import { getTranslations } from 'next-intl/server';
 import Link from 'next/link';
 import { Card } from '@/components/ui';
@@ -16,6 +16,7 @@ export async function WeekBar({
   cells,
   planMinutes,
   range,
+  nav,
 }: {
   week: ReturnType<typeof weeklyHours> | null;
   regularHours: number;
@@ -23,6 +24,7 @@ export async function WeekBar({
   cells: WeekCell[];
   planMinutes: number;
   range: string;
+  nav?: { prev: string | null; next: string | null; thisWeek: boolean }; // 주 고르기 (지난 주 · 다음 주). 이번 주가 아니면 제목이 「주간 근무」
 }) {
   const t = await getTranslations('home.week');
   if (!week) {
@@ -44,11 +46,29 @@ export async function WeekBar({
   return (
     <Card className="flex flex-col gap-3">
       <div className="flex items-center justify-between gap-2">
-        <h2 className="text-lg font-bold">{t('title')}</h2>
-        <Link href="/punch/schedule" className="num inline-flex min-h-11 items-center gap-1 text-sm text-muted">
-          <CalendarDays aria-hidden size={18} strokeWidth={1.75} />
-          {range}
-        </Link>
+        <h2 className="text-lg font-bold">{t(nav && !nav.thisWeek ? 'titleOther' : 'title')}</h2>
+        <span className="flex items-center">
+          {nav &&
+            (nav.prev ? (
+              <Link href={nav.prev} scroll={false} aria-label={t('prev')} className="flex size-11 items-center justify-center text-muted">
+                <ChevronLeft aria-hidden size={20} />
+              </Link>
+            ) : (
+              <span className="size-11" />
+            ))}
+          <Link href={nav && !nav.thisWeek ? '/punch' : '/punch/schedule'} scroll={false} className="num inline-flex min-h-11 items-center gap-1 text-sm text-muted">
+            <CalendarDays aria-hidden size={18} strokeWidth={1.75} />
+            {range}
+          </Link>
+          {nav &&
+            (nav.next ? (
+              <Link href={nav.next} scroll={false} aria-label={t('next')} className="flex size-11 items-center justify-center text-muted">
+                <ChevronRight aria-hidden size={20} />
+              </Link>
+            ) : (
+              <span className="size-11" />
+            ))}
+        </span>
       </div>
       <ol className="-mx-2 grid grid-cols-7 gap-1">
         {cells.map((c) => (

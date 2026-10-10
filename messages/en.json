@@ -92,7 +92,10 @@
       "plan": "Plan",
       "none": "No shift",
       "leave": "Leave",
-      "today": "Today"
+      "today": "Today",
+      "titleOther": "Weekly work",
+      "prev": "Previous week",
+      "next": "Next week"
     },
     "note": {
       "title": "Work note",
@@ -158,7 +161,32 @@
     "requestedExplain": "You are outside the work place radius. Nothing is recorded yet; once a manager approves, it is recorded at this time.",
     "requestedNoLocation": "Your location could not be confirmed. Nothing is recorded yet; once a manager approves, it is recorded at this time. Allow location access to be recorded right away inside the radius.",
     "requestWaitIn": "Punch-in request awaiting approval · {time}",
-    "requestWaitOut": "Punch-out request awaiting approval · {time}"
+    "requestWaitOut": "Punch-out request awaiting approval · {time}",
+    "settingsLink": "Home settings",
+    "situation": {
+      "title": "Current work status",
+      "people": "{n} people",
+      "working": "Working",
+      "unscheduled": "Unscheduled",
+      "deemed": "Deemed work",
+      "late": "Late",
+      "leave": "On leave",
+      "updated": "As of {time}",
+      "refresh": "Refresh",
+      "more": "See details"
+    },
+    "settings": {
+      "title": "Home settings",
+      "back": "Home",
+      "hint": "Only the cards you turn on appear on Home. The Today card (clock in/out) cannot be turned off. This setting is saved on this device only.",
+      "card": {
+        "report": "Status · report card",
+        "missing": "Missing clock-in/out card",
+        "situation": "Current work status card",
+        "week": "This week card",
+        "note": "Work note card"
+      }
+    }
   },
   "errors": {
     "invite_invalid": "This invitation link has expired or was already used. Ask your manager for a new one.",

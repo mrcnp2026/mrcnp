@@ -111,8 +111,12 @@ export function SideNav({ isAdmin, inboxCount = 0, languages }: { isAdmin: boole
       </div>
       <div className="flex flex-1 flex-col gap-4 overflow-y-auto px-3 pb-4">
         {groups.map((g) => (
-          <div key={g.key} className="flex flex-col gap-0.5">
-            <p className="px-3 pt-1 pb-1 text-xs font-medium text-faint">{t(g.key)}</p>
+          // 대분류: 굵은 글자 + 왼쪽 색 막대 + 묶음 사이 선 (2026-10-11 의뢰인: 묶음이 눈에 안 들어온다)
+          <div key={g.key} className="flex flex-col gap-0.5 border-t border-border pt-3 first:border-t-0 first:pt-0">
+            <p className="flex items-center gap-2 px-2 pb-1 text-sm font-extrabold tracking-tight text-text">
+              <span aria-hidden className="h-4 w-1 shrink-0 rounded-chip bg-primary" />
+              {t(g.key)}
+            </p>
             {g.items.map(({ href, key, icon: Icon, badge }) => {
               const on = active === href;
               return (
@@ -121,7 +125,7 @@ export function SideNav({ isAdmin, inboxCount = 0, languages }: { isAdmin: boole
                   href={href}
                   aria-current={on ? 'page' : undefined}
                   onClick={() => setPressed(href)}
-                  className={`flex min-h-11 items-center gap-3 rounded-button px-3 text-sm ${on ? 'bg-primary-tint font-bold text-primary' : 'text-text'}`}
+                  className={`ml-3 flex min-h-11 items-center gap-3 rounded-button border-l-4 px-3 text-sm ${on ? 'border-primary bg-primary-tint font-bold text-primary' : 'border-transparent text-text hover:bg-surface active:bg-primary-tint active:text-primary'}`}
                 >
                   <Icon aria-hidden size={20} strokeWidth={on ? 2.25 : 1.75} className="shrink-0" />
                   <span className="flex-1">{t(key)}</span>

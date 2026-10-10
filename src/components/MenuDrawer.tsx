@@ -95,8 +95,11 @@ export function MenuDrawer({ name, isAdmin, languages }: { name: string; isAdmin
             </div>
             <div className="flex flex-1 flex-col gap-3 overflow-y-auto px-2 py-3">
               {groups.map((g) => (
-                <div key={g.key} className="flex flex-col">
-                  <p className="px-3 pb-1 text-xs font-medium text-faint">{t(g.key)}</p>
+                <div key={g.key} className="flex flex-col border-t border-border pt-3 first:border-t-0 first:pt-0">
+                  <p className="flex items-center gap-2 px-2 pb-1 text-sm font-extrabold tracking-tight text-text">
+                    <span aria-hidden className="h-4 w-1 shrink-0 rounded-chip bg-primary" />
+                    {t(g.key)}
+                  </p>
                   {g.items.map(({ href, key, icon: Icon }) => {
                     const on = here === href;
                     return (
@@ -105,7 +108,7 @@ export function MenuDrawer({ name, isAdmin, languages }: { name: string; isAdmin
                         href={href}
                         aria-current={on ? 'page' : undefined}
                         onClick={() => setOpen(false)}
-                        className={`flex min-h-12 items-center gap-4 rounded-button px-3 ${on ? 'bg-primary-tint font-bold text-primary' : 'text-text'}`}
+                        className={`ml-3 flex min-h-12 items-center gap-4 rounded-button border-l-4 px-3 ${on ? 'border-primary bg-primary-tint font-bold text-primary' : 'border-transparent text-text active:bg-primary-tint active:text-primary'}`}
                       >
                         <Icon aria-hidden size={22} strokeWidth={on ? 2.25 : 1.75} className={`shrink-0 ${on ? '' : 'text-muted'}`} />
                         {t(key)}

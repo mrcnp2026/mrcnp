@@ -90,7 +90,10 @@
       "plan": "Kế hoạch",
       "none": "Không có lịch",
       "leave": "Nghỉ",
-      "today": "Hôm nay"
+      "today": "Hôm nay",
+      "titleOther": "Làm việc trong tuần",
+      "prev": "Tuần trước",
+      "next": "Tuần sau"
     },
     "note": {
       "title": "Ghi chú công việc",
@@ -154,7 +157,32 @@
     "requestedExplain": "Bạn đang ở ngoài phạm vi nơi làm việc. Chưa được ghi nhận; khi quản lý duyệt sẽ ghi theo giờ này.",
     "requestedNoLocation": "Không xác định được vị trí. Chưa được ghi nhận; khi quản lý duyệt sẽ ghi theo giờ này.",
     "requestWaitIn": "Yêu cầu chấm vào đang chờ duyệt · {time}",
-    "requestWaitOut": "Yêu cầu chấm ra đang chờ duyệt · {time}"
+    "requestWaitOut": "Yêu cầu chấm ra đang chờ duyệt · {time}",
+    "settingsLink": "Cài đặt trang chủ",
+    "situation": {
+      "title": "Tình hình làm việc",
+      "people": "{n} người",
+      "working": "Đang làm",
+      "unscheduled": "Không có lịch",
+      "deemed": "Làm việc mặc định",
+      "late": "Đi muộn",
+      "leave": "Nghỉ phép",
+      "updated": "Lúc {time}",
+      "refresh": "Làm mới",
+      "more": "Xem chi tiết"
+    },
+    "settings": {
+      "title": "Cài đặt trang chủ",
+      "back": "Trang chủ",
+      "hint": "Chỉ các thẻ đang bật mới hiện ở trang chủ. Không thể tắt thẻ Hôm nay (chấm công). Cài đặt này chỉ lưu trên thiết bị này.",
+      "card": {
+        "report": "Thẻ báo cáo",
+        "missing": "Thẻ thiếu chấm công",
+        "situation": "Thẻ tình hình làm việc",
+        "week": "Thẻ tuần này",
+        "note": "Thẻ ghi chú công việc"
+      }
+    }
   },
   "errors": {
     "invite_invalid": "Liên kết mời đã hết hạn hoặc đã được dùng. Hãy xin quản lý liên kết mới.",
