@@ -34,6 +34,7 @@ const check = (ok: boolean, what: string, extra = '') => {
   if (!ok) fails++;
 };
 
+const SHOTS = process.argv[2]; // 사진 폴더 (선택)
 const browser = await chromium.launch({ channel: 'chrome', headless: true });
 try {
   const ctx = await browser.newContext({ viewport: { width: 390, height: 844 } });
@@ -97,6 +98,16 @@ try {
   check(r.json.result === 'already', '두 번째 결정은 이미 처리됨', JSON.stringify(r.json));
   await p.goto(`${BASE}/admin/leave`);
   check(await p.getByRole('heading', { name: '연차 관리' }).waitFor({ timeout: 15000 }).then(() => true, () => false), '연차 관리 화면 열림');
+  await p.getByRole('search').waitFor({ timeout: 20000 });
+  check((await p.getByRole('button', { name: '기준일' }).count()) === 1 && (await p.getByRole('link', { name: '내 휴가', exact: true }).count()) === 1, '위 줄: 검색 · 기준일 · [내 휴가]');
+  check((await p.getByRole('heading', { name: /^관리자 \d+/ }).locator('visible=true').count()) === 1, '폰 목록은 권한별 묶음 (관리자 ○명)');
+  if (SHOTS) await p.screenshot({ path: path.join(SHOTS, '10-휴가-전체.png'), fullPage: true });
+  await p.goto(`${BASE}/admin/leave?to=2020-01-01`);
+  await p.getByRole('search').waitFor({ timeout: 20000 });
+  check(((await p.getByRole('button', { name: '기준일' }).textContent()) ?? '').includes('2020.01.01') && (await p.getByText('연차 미입력').locator('visible=true').count()) >= 1, '기준일을 옛날로 바꾸면 그날 기준 (부여 전이라 미입력)');
+  await p.goto(`${BASE}/admin/leave?q=${encodeURIComponent('없는이름zz')}`);
+  await p.getByRole('search').waitFor({ timeout: 20000 });
+  check((await p.getByText('맞는 직원이 없습니다.').count()) === 1, '이름 검색에 맞는 직원이 없으면 빈 안내');
   // 7. 승인 취소
   r = await decide(`/api/admin/leave/${halfId}/decide`, { decision: 'cancelled' });
   check(r.json.result === 'ok', '승인된 휴가 취소', JSON.stringify(r.json));

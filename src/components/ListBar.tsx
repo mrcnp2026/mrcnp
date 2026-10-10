@@ -19,6 +19,7 @@ export function ListBar({
   groups,
   keep = {},
   side,
+  single = false,
   labels,
 }: {
   q: string;
@@ -29,6 +30,7 @@ export function ListBar({
   groups: { id: string; label: string }[];
   keep?: Record<string, string | undefined>; // 그대로 둘 다른 주소 값 (연습 보기 등)
   side?: { href: string; label: string }; // 오른쪽 단추 ([내 기록])
+  single?: boolean; // 기간 대신 기준일 하나 (휴가 잔여) — 값은 to에 둔다
   labels: { search: string; filter: string; period: string; from: string; to: string; apply: string; groupAll: string };
 }) {
   const router = useRouter();
@@ -76,7 +78,7 @@ export function ListBar({
       <div className="flex items-center justify-between gap-2">
         <button type="button" aria-label={labels.period} aria-expanded={open === 'period'} onClick={() => setOpen(open === 'period' ? null : 'period')} className="num flex min-h-11 items-center gap-2 text-base font-medium text-muted">
           <CalendarDays aria-hidden size={20} strokeWidth={1.75} />
-          {md(from)} - {md(to)}
+          {single ? `${labels.period} ${to.replaceAll('-', '.')}` : `${md(from)} - ${md(to)}`}
           <ChevronDown aria-hidden size={18} />
         </button>
         {side && (
@@ -90,14 +92,16 @@ export function ListBar({
           className="flex flex-col gap-2 pb-1"
           onSubmit={(e) => {
             e.preventDefault();
-            go({ from: a, to: b });
+            go(single ? { from: '', to: b } : { from: a, to: b });
           }}
         >
-          <div className="grid grid-cols-2 gap-2">
-            <label className="flex min-w-0 flex-col gap-1 text-sm text-muted">
-              {labels.from}
-              <DateTimeInput type="date" value={a} onChange={setA} max={max} required className={field} />
-            </label>
+          <div className={single ? 'grid gap-2' : 'grid grid-cols-2 gap-2'}>
+            {!single && (
+              <label className="flex min-w-0 flex-col gap-1 text-sm text-muted">
+                {labels.from}
+                <DateTimeInput type="date" value={a} onChange={setA} max={max} required className={field} />
+              </label>
+            )}
             <label className="flex min-w-0 flex-col gap-1 text-sm text-muted">
               {labels.to}
               <DateTimeInput type="date" value={b} onChange={setB} max={max} required className={field} />

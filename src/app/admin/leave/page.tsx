@@ -1,33 +1,53 @@
 // 관리자 「연차 관리」 (②-2 게이트 5). 직원별 잔여 + 부여 입력 + 승인된 휴가 취소.
+// 위 줄(2026-10-11 의뢰인: 시프티의 휴가 「전체」처럼): 이름 검색 · 부서로 거르기 · 기준일 · [내 휴가]. 폰 목록은 권한(관리자 · 직원)별 묶음.
+// 기준일을 바꾸면 그날 적용되는 부여 기준의 받은 · 사용 · 잔여를 본다. 입력 칸의 계산값은 언제나 오늘 기준이다.
 // ★ 4-7: 발생일수는 관리자가 직접 입력. 참고 계산값은 옆에 "참고용"으로만 보여 주고 입력 칸에 미리 채우지 않는다.
 import { ChevronRight } from 'lucide-react';
 import { getFormatter, getTranslations } from 'next-intl/server';
 import Link from 'next/link';
 import { Help } from '@/components/Help';
-import { ScopeSwitch } from '@/components/ScopeSwitch';
+import { ListBar } from '@/components/ListBar';
 import { Card, Chip, PageShell } from '@/components/ui';
 import { OFFICE } from '@/config/office';
 import { addDays } from '@/lib/calendar';
 import { leaveTypeName, calcLeaveBalance, suggestGrant } from '@/lib/leave';
 import { loadAllLeaveTypes, loadLeaveGrants, loadLeaveRequests } from '@/lib/leave-data';
+import { buildOrgTree, groupPath, groupScope } from '@/lib/org';
+import { loadOrgGroups } from '@/lib/org-data';
 import { createAdminClient } from '@/lib/supabase/admin';
 import { toKstDate } from '@/lib/time';
 import { LeaveCancel } from '../inbox/Decisions';
 import { GrantForm, JoinedOnForm } from './GrantForm';
 
-export default async function AdminLeavePage({ searchParams }: { searchParams: Promise<{ live?: string; e?: string }> }) {
+export default async function AdminLeavePage({ searchParams }: { searchParams: Promise<{ live?: string; e?: string; q?: string; g?: string; to?: string }> }) {
   const t = await getTranslations('admin.leave');
   const tl = await getTranslations('leave');
   const f = await getFormatter();
   const sp = await searchParams;
   const practice = OFFICE.practiceMode && sp.live !== '1';
   const today = toKstDate(new Date());
-  const [{ data: ppl }, types, grants, requests] = await Promise.all([
-    createAdminClient().from('profiles').select('id, name, employee_no, joined_on, created_at').eq('active', true).order('name'),
+  const [{ data: ppl }, groups, types, grants, requests] = await Promise.all([
+    createAdminClient().from('profiles').select('id, name, employee_no, joined_on, created_at, role, group_id').eq('active', true).order('name'),
+    loadOrgGroups(),
     loadAllLeaveTypes(), // 꺼 둔 종류로 쓴 휴가도 잔여에서 빠진다
     loadLeaveGrants(),
     loadLeaveRequests({ practice }),
   ]);
+  // 기준일 (없거나 잘못되면 오늘)
+  const asOf = sp.to && /^\d{4}-\d{2}-\d{2}$/.test(sp.to) && !Number.isNaN(Date.parse(`${sp.to}T00:00:00Z`)) ? sp.to : today;
+  const groupOptions = buildOrgTree(groups).flatMap((d) => [{ id: d.id, label: d.name }, ...d.teams.map((x) => ({ id: x.id, label: `${d.name} › ${x.name}` }))]);
+  const g = groupOptions.some((o) => o.id === sp.g) ? sp.g! : '';
+  const scope = g ? groupScope(groups, g) : null;
+  const q = (sp.q ?? '').trim().slice(0, 40);
+  const shown = (ppl ?? []).filter((p) => (!scope || (p.group_id && scope.has(p.group_id as string))) && (!q || (p.name as string).toLowerCase().includes(q.toLowerCase())));
+  const byRole = (['admin', 'employee'] as const).map((role) => ({ role, list: shown.filter((p) => (p.role === 'admin') === (role === 'admin')) })).filter((x) => x.list.length > 0);
+  const balOf = (id: string) => calcLeaveBalance({ grants: grants.filter((x) => x.employeeId === id), requests: requests.filter((r) => r.employeeId === id), types, asOf });
+  // 직원을 눌러도 검색 · 거르기 · 기준일은 그대로 둔다
+  const pick = (id: string) => {
+    const u = new URLSearchParams({ e: id });
+    for (const [k, v] of Object.entries({ q, g, to: asOf === today ? '' : asOf, live: sp.live === '1' ? '1' : '' })) if (v) u.set(k, v);
+    return `?${u}#edit`;
+  };
   const n = (v: number) => f.number(v, { maximumFractionDigits: 4 });
   const day = (d: string) => f.dateTime(new Date(`${d}T12:00:00+09:00`), { year: d.slice(0, 4) === today.slice(0, 4) ? undefined : 'numeric', month: 'short', day: 'numeric', weekday: 'short' });
   const name = new Map((ppl ?? []).map((p) => [p.id, p.name]));
@@ -36,9 +56,21 @@ export default async function AdminLeavePage({ searchParams }: { searchParams: P
 
   return (
     <PageShell wide>
-      <ScopeSwitch kind="leave" current="all" />
-      <div className="flex flex-wrap items-center gap-x-1">
-        <h1 className="text-2xl font-semibold text-primary-deep">{t('title')}</h1>
+      <h1 className="sr-only">{t('title')}</h1>
+      <ListBar
+        key={`${q}|${g}|${asOf}`}
+        single
+        q={q}
+        from=""
+        to={asOf}
+        group={g}
+        groups={groupOptions}
+        keep={{ live: sp.live === '1' ? '1' : undefined }}
+        side={{ href: '/punch/leave', label: t('mine') }}
+        labels={{ search: t('search'), filter: t('filter'), period: t('asOf'), from: '', to: t('asOf'), apply: t('apply'), groupAll: t('groupAll') }}
+      />
+      <div className="flex flex-wrap items-center gap-x-1 px-1">
+        <span className="text-sm text-muted">{t('title')}</span>
         <Help>{t('intro')}</Help>
         <Link href="/admin/leave/types" className="ml-auto inline-flex min-h-11 items-center text-sm font-medium text-primary">
           {t('toTypes')} ›
@@ -60,8 +92,8 @@ export default async function AdminLeavePage({ searchParams }: { searchParams: P
             </tr>
           </thead>
           <tbody className="divide-y divide-border">
-            {(ppl ?? []).map((p) => {
-              const bal = calcLeaveBalance({ grants: grants.filter((g) => g.employeeId === p.id), requests: requests.filter((r) => r.employeeId === p.id), types, asOf: today });
+            {shown.map((p) => {
+              const bal = balOf(p.id);
               const on = sp.e === p.id;
               return (
                 <tr key={p.id} className={on ? 'bg-primary-tint' : ''}>
@@ -79,7 +111,7 @@ export default async function AdminLeavePage({ searchParams }: { searchParams: P
                     </td>
                   )}
                   <td className="px-4 py-3 text-right">
-                    <Link href={`?e=${p.id}${sp.live === '1' ? '&live=1' : ''}#edit`} scroll={false} className="inline-flex min-h-9 items-center rounded-button bg-primary-tint px-3 text-sm font-bold whitespace-nowrap text-primary">
+                    <Link href={pick(p.id)} scroll={false} className="inline-flex min-h-9 items-center rounded-button bg-primary-tint px-3 text-sm font-bold whitespace-nowrap text-primary">
                       {t('manage')}
                     </Link>
                   </td>
@@ -91,35 +123,46 @@ export default async function AdminLeavePage({ searchParams }: { searchParams: P
       </Card>
 
       {/* 폰: 직원 한 명 = 한 줄 (받은 · 사용 · 잔여). 누르면 그 직원의 입력 칸이 아래에 열린다 (2026-10-10 의뢰인: 시프티의 휴가 「전체」처럼) */}
-      <div className="overflow-hidden rounded-card bg-bg lg:hidden">
-        <div className="num flex items-center gap-2 border-b border-border bg-surface px-5 py-2 text-xs font-medium text-faint">
-          <span className="flex-1">{t('colName')}</span>
-          {(['granted', 'used', 'remaining'] as const).map((k) => (
-            <span key={k} className="w-11 text-right">{t(k)}</span>
-          ))}
-          <span className="w-5" />
-        </div>
-        <ul className="divide-y divide-border">
-          {(ppl ?? []).map((p) => {
-            const bal = calcLeaveBalance({ grants: grants.filter((g) => g.employeeId === p.id), requests: requests.filter((r) => r.employeeId === p.id), types, asOf: today });
-            const on = sp.e === p.id;
-            return (
-              <li key={p.id}>
-                <Link href={`?e=${p.id}${sp.live === '1' ? '&live=1' : ''}#edit`} scroll={false} aria-current={on ? 'true' : undefined} className={`num flex min-h-14 items-center gap-2 px-5 ${on ? 'bg-primary-tint' : ''}`}>
-                  <span className="min-w-0 flex-1 truncate font-semibold">{p.name}</span>
-                  {bal.grant ? (
-                    ([bal.granted, bal.used, bal.remaining] as const).map((v, i) => (
-                      <span key={i} className={`w-11 text-right ${i === 2 ? 'font-bold text-primary' : ''}`}>{n(v)}</span>
-                    ))
-                  ) : (
-                    <Chip tone="warn">{t('noGrant')}</Chip>
-                  )}
-                  <ChevronRight aria-hidden size={20} strokeWidth={1.75} className="w-5 shrink-0 text-faint" />
-                </Link>
-              </li>
-            );
-          })}
-        </ul>
+      {shown.length === 0 && <p className="rounded-card bg-bg p-5 text-sm text-faint">{t('emptyPeople')}</p>}
+      <div className="-mx-4 flex flex-col lg:hidden">
+        {byRole.map(({ role, list }) => (
+          <section key={role}>
+            <h2 className="num flex items-center gap-2 border-b border-border bg-surface px-5 py-3 text-sm font-bold">
+              <span className="flex-1">
+                {t(role === 'admin' ? 'roleAdmin' : 'roleEmployee')} <span className="font-medium text-muted">{list.length}</span>
+              </span>
+              {(['granted', 'used', 'remaining'] as const).map((k) => (
+                <span key={k} className="w-11 text-right text-xs font-medium text-faint">{t(k)}</span>
+              ))}
+              <span className="w-5" />
+            </h2>
+            <ul className="divide-y divide-border border-b border-border bg-bg">
+              {list.map((p) => {
+                const bal = balOf(p.id);
+                const on = sp.e === p.id;
+                const sub = groupPath(groups, p.group_id as string | null);
+                return (
+                  <li key={p.id}>
+                    <Link href={pick(p.id)} scroll={false} aria-current={on ? 'true' : undefined} className={`num flex min-h-14 items-center gap-2 px-5 py-2 ${on ? 'bg-primary-tint' : ''}`}>
+                      <span className="flex min-w-0 flex-1 flex-col">
+                        <span className="truncate font-bold">{p.name}</span>
+                        {sub && <span className="truncate text-sm text-muted">{sub}</span>}
+                      </span>
+                      {bal.grant ? (
+                        ([bal.granted, bal.used, bal.remaining] as const).map((v, i) => (
+                          <span key={i} className={`w-11 text-right ${i === 2 ? 'font-bold text-primary' : ''}`}>{n(v)}</span>
+                        ))
+                      ) : (
+                        <Chip tone="warn">{t('noGrant')}</Chip>
+                      )}
+                      <ChevronRight aria-hidden size={20} strokeWidth={1.75} className="w-5 shrink-0 text-faint" />
+                    </Link>
+                  </li>
+                );
+              })}
+            </ul>
+          </section>
+        ))}
       </div>
 
       <section id="edit" className="flex scroll-mt-16 flex-col gap-3">

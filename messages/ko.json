@@ -717,7 +717,16 @@
       "colName": "직원",
       "colHired": "입사일",
       "manage": "입력 · 수정",
-      "toTypes": "휴가 종류"
+      "toTypes": "휴가 종류",
+      "mine": "내 휴가",
+      "search": "이름 검색",
+      "filter": "부서로 거르기",
+      "asOf": "기준일",
+      "apply": "이 날짜로 보기",
+      "groupAll": "전체 부서",
+      "roleAdmin": "관리자",
+      "roleEmployee": "직원",
+      "emptyPeople": "맞는 직원이 없습니다."
     },
     "detail": {
       "backToList": "기록",

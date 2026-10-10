@@ -717,7 +717,16 @@
       "colName": "Staff",
       "colHired": "Joined",
       "manage": "Enter · edit",
-      "toTypes": "Leave types"
+      "toTypes": "Leave types",
+      "mine": "My leave",
+      "search": "Search by name",
+      "filter": "Filter by department",
+      "asOf": "As of",
+      "apply": "Show this date",
+      "groupAll": "All departments",
+      "roleAdmin": "Admins",
+      "roleEmployee": "Employees",
+      "emptyPeople": "No matching employees."
     },
     "detail": {
       "backToList": "Records",
