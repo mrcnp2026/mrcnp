@@ -8,8 +8,8 @@ import { ScopeSwitch } from '@/components/ScopeSwitch';
 import { Card, Chip, PageShell } from '@/components/ui';
 import { OFFICE } from '@/config/office';
 import { addDays } from '@/lib/calendar';
-import { calcLeaveBalance, suggestGrant } from '@/lib/leave';
-import { loadLeaveGrants, loadLeaveRequests, loadLeaveTypes } from '@/lib/leave-data';
+import { leaveTypeName, calcLeaveBalance, suggestGrant } from '@/lib/leave';
+import { loadAllLeaveTypes, loadLeaveGrants, loadLeaveRequests } from '@/lib/leave-data';
 import { createAdminClient } from '@/lib/supabase/admin';
 import { toKstDate } from '@/lib/time';
 import { LeaveCancel } from '../inbox/Decisions';
@@ -24,14 +24,14 @@ export default async function AdminLeavePage({ searchParams }: { searchParams: P
   const today = toKstDate(new Date());
   const [{ data: ppl }, types, grants, requests] = await Promise.all([
     createAdminClient().from('profiles').select('id, name, employee_no, joined_on, created_at').eq('active', true).order('name'),
-    loadLeaveTypes(),
+    loadAllLeaveTypes(), // 꺼 둔 종류로 쓴 휴가도 잔여에서 빠진다
     loadLeaveGrants(),
     loadLeaveRequests({ practice }),
   ]);
-  const n = (v: number) => f.number(v, { maximumFractionDigits: 2 });
+  const n = (v: number) => f.number(v, { maximumFractionDigits: 4 });
   const day = (d: string) => f.dateTime(new Date(`${d}T12:00:00+09:00`), { year: d.slice(0, 4) === today.slice(0, 4) ? undefined : 'numeric', month: 'short', day: 'numeric', weekday: 'short' });
   const name = new Map((ppl ?? []).map((p) => [p.id, p.name]));
-  const leaveName = (code: string) => (tl.has(`type.${code}`) ? tl(`type.${code}`) : code);
+  const leaveName = (code: string) => leaveTypeName(types, code, tl);
   const approved = requests.filter((r) => r.status === 'approved' && r.endDate >= addDays(today, -31)).sort((a, b) => (a.startDate < b.startDate ? -1 : 1));
 
   return (
@@ -40,6 +40,9 @@ export default async function AdminLeavePage({ searchParams }: { searchParams: P
       <div className="flex flex-wrap items-center gap-x-1">
         <h1 className="text-2xl font-semibold text-primary-deep">{t('title')}</h1>
         <Help>{t('intro')}</Help>
+        <Link href="/admin/leave/types" className="ml-auto inline-flex min-h-11 items-center text-sm font-medium text-primary">
+          {t('toTypes')} ›
+        </Link>
       </div>
       {practice && <p className="rounded-card bg-primary-tint p-3 text-sm text-primary">{t('practiceBanner')}</p>}
 
@@ -185,7 +188,7 @@ export default async function AdminLeavePage({ searchParams }: { searchParams: P
                 {approved.map((r) => (
                   <tr key={r.id}>
                     <td className="px-4 py-3 font-semibold whitespace-nowrap">{name.get(r.employeeId)}</td>
-                    <td className="px-4 py-3 num whitespace-nowrap">{leaveName(r.typeCode)} · {tl('days', { n: n(r.days) })}</td>
+                    <td className="px-4 py-3 num whitespace-nowrap">{leaveName(r.typeCode)} · {tl('days', { n: n(r.days) })}{r.startTime && ` · ${r.startTime}-${r.endTime}`}</td>
                     <td className="px-4 py-3 num text-muted">{r.startDate === r.endDate ? day(r.startDate) : `${day(r.startDate)} ~ ${day(r.endDate)}`}</td>
                     <td className="px-4 py-3">
                       <span className="flex flex-col items-end">
@@ -203,7 +206,7 @@ export default async function AdminLeavePage({ searchParams }: { searchParams: P
             <div className="flex items-baseline justify-between gap-2">
               <span className="font-semibold">{name.get(r.employeeId)}</span>
               <span className="num text-sm text-muted">
-                {leaveName(r.typeCode)} · {tl('days', { n: n(r.days) })}
+                {leaveName(r.typeCode)} · {tl('days', { n: n(r.days) })}{r.startTime && ` · ${r.startTime}-${r.endTime}`}
               </span>
             </div>
             <p className="num text-sm">{r.startDate === r.endDate ? day(r.startDate) : `${day(r.startDate)} ~ ${day(r.endDate)}`}</p>

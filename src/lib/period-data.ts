@@ -4,8 +4,8 @@ import 'server-only';
 import { resolveDayType } from '@/config/labor-rules';
 import { OFFICE } from '@/config/office';
 import { loadHolidays, loadRuleVersions } from '@/lib/attendance-data';
-import { fullLeaveSet, leaveByDate, type LeaveOnDay, type LeaveRequest, type LeaveType } from '@/lib/leave';
-import { loadLeaveRequests, loadLeaveTypes } from '@/lib/leave-data';
+import { fullLeaveSet, leaveByDate, trimRuleByLeave, type LeaveOnDay, type LeaveRequest, type LeaveType } from '@/lib/leave';
+import { loadAllLeaveTypes, loadLeaveRequests } from '@/lib/leave-data';
 import { loadWorkRequests } from '@/lib/work-data';
 import { workByDate, type WorkKind, type WorkRequest } from '@/lib/work-requests';
 import { addDays, weekStartOf } from '@/lib/calendar';
@@ -108,7 +108,7 @@ export async function loadPeriod(from: string, to: string, practice = OFFICE.pra
       .eq('is_test', practice).gte('work_date', readFrom).lte('work_date', to).order('created_at'),
     db.from('overtime_requests').select('*').eq('is_test', practice).gte('work_date', from).lte('work_date', to),
     loadLeaveRequests({ from: readFrom, to, practice }),
-    loadLeaveTypes(),
+    loadAllLeaveTypes(), // 꺼 둔 종류로 승인된 지난 휴가도 결근이 아니다
     loadWorkRequests({ from: readFrom, to, practice }),
     loadShiftTemplates(true),
     loadShifts(readFrom, to),
@@ -118,9 +118,18 @@ export async function loadPeriod(from: string, to: string, practice = OFFICE.pra
   const tplOfPerson = new Map((ppl ?? []).map((p) => [p.id as string, p.shift_template_id ? (tplById.get(p.shift_template_id)?.active ? tplById.get(p.shift_template_id)! : null) : null]));
   const shiftsOf = new Map<string, DayShift[]>();
   for (const s of shifts) shiftsOf.set(`${s.employeeId}|${s.workDate}`, [...(shiftsOf.get(`${s.employeeId}|${s.workDate}`) ?? []), s]);
+  const timedLeaveOf = new Map<string, { startTime: string; endTime: string }[]>();
+  for (const r of leaveRequests) {
+    if (r.status !== 'approved' || !r.startTime || !r.endTime || r.startDate !== r.endDate) continue;
+    const k = `${r.employeeId}|${r.startDate}`;
+    timedLeaveOf.set(k, [...(timedLeaveOf.get(k) ?? []), { startTime: r.startTime, endTime: r.endTime }]);
+  }
   const planFor = (employeeId: string, date: string): DayPlan => {
     const rule = ruleAt(versions, date);
-    return planDay({ rule, tpl: tplOfPerson.get(employeeId) ?? null, shifts: shiftsOf.get(`${employeeId}|${date}`) ?? [], isWorkday: rule ? resolveDayType(date, rule, holidays) === 'workday' : false, templates: tplById });
+    const plan = planDay({ rule, tpl: tplOfPerson.get(employeeId) ?? null, shifts: shiftsOf.get(`${employeeId}|${date}`) ?? [], isWorkday: rule ? resolveDayType(date, rule, holidays) === 'workday' : false, templates: tplById });
+    // 시각이 있는 승인 휴가(오전 반차 등)는 그날 판정의 시작·끝 시각을 옮긴다 — 반차 낸 사람이 지각으로 잡히지 않게
+    const timed = timedLeaveOf.get(`${employeeId}|${date}`);
+    return timed && plan.rule ? { ...plan, rule: trimRuleByLeave(plan.rule, timed) } : plan;
   };
   const templateOf = (employeeId: string) => tplOfPerson.get(employeeId) ?? null;
   return {

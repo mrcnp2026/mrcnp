@@ -16,8 +16,8 @@ import { selfDecisionBlocked } from '@/lib/staff-rules';
 import { createAdminClient } from '@/lib/supabase/admin';
 import { toKstDate } from '@/lib/time';
 import Link from 'next/link';
-import { calcLeaveBalance } from '@/lib/leave';
-import { loadLeaveGrants, loadLeaveRequests, loadLeaveTypes } from '@/lib/leave-data';
+import { leaveTypeName, calcLeaveBalance } from '@/lib/leave';
+import { loadAllLeaveTypes, loadLeaveGrants, loadLeaveRequests } from '@/lib/leave-data';
 import { loadWorkRequests } from '@/lib/work-data';
 import { CorrectionDecision, LeaveDecision, OvertimeDecision, WorkDecision } from './Decisions';
 
@@ -77,7 +77,7 @@ export default async function InboxPage({ searchParams }: { searchParams: Promis
 
   // 연차·휴가 신청 (②-2 게이트 5): 남은 연차 + 그 날짜 출근 기록 충돌 경고 (자동으로 지우지 않는다, 요점 4)
   const tl = await getTranslations('leave');
-  const [leaveTypes, leavePending] = await Promise.all([loadLeaveTypes(), loadLeaveRequests({ practice }).then((rs) => rs.filter((r) => r.status === 'pending'))]);
+  const [leaveTypes, leavePending] = await Promise.all([loadAllLeaveTypes(), loadLeaveRequests({ practice }).then((rs) => rs.filter((r) => r.status === 'pending'))]);
   const leaveEmp = [...new Set(leavePending.map((r) => r.employeeId))];
   const [leaveGrants, leaveAll, { data: leavePunches }] = await Promise.all([
     Promise.all(leaveEmp.map((e) => loadLeaveGrants(e))).then((x) => x.flat()),
@@ -88,8 +88,8 @@ export default async function InboxPage({ searchParams }: { searchParams: Promis
           .lte('work_date', leavePending.reduce((a, r) => (r.endDate > a ? r.endDate : a), '0000-01-01'))
       : Promise.resolve({ data: [] as { employee_id: string; work_date: string }[] }),
   ]);
-  const leaveName = (code: string) => (tl.has(`type.${code}`) ? tl(`type.${code}`) : code);
-  const nDays = (v: number) => f.number(v, { maximumFractionDigits: 2 });
+  const leaveName = (code: string) => leaveTypeName(leaveTypes, code, tl);
+  const nDays = (v: number) => f.number(v, { maximumFractionDigits: 4 });
   const lvPage = pageOf(leavePending, sp.lp, REQUEST_PAGE);
   const workPending = (await loadWorkRequests({ practice })).filter((w) => w.status === 'pending').sort((a, b) => (a.startDate < b.startDate ? -1 : 1));
   const wkPage = pageOf(workPending, sp.wp, REQUEST_PAGE);
@@ -108,7 +108,7 @@ export default async function InboxPage({ searchParams }: { searchParams: Promis
     const bal = calcLeaveBalance({ grants: leaveGrants.filter((g) => g.employeeId === r.employeeId), requests: leaveAll.filter((x) => x.employeeId === r.employeeId), types: leaveTypes, asOf: r.startDate });
     const deducts = leaveTypes.find((x) => x.code === r.typeCode)?.deductsBalance;
     const clash = [...new Set((leavePunches ?? []).filter((p) => p.employee_id === r.employeeId && p.work_date >= r.startDate && p.work_date <= r.endDate).map((p) => p.work_date))];
-    const range = r.startDate === r.endDate ? dayLabel(r.startDate) : `${dayLabel(r.startDate)} ~ ${dayLabel(r.endDate)}`;
+    const range = r.startDate === r.endDate ? `${dayLabel(r.startDate)}${r.startTime ? ` ${r.startTime}-${r.endTime}` : ''}` : `${dayLabel(r.startDate)} ~ ${dayLabel(r.endDate)}`;
     const summary = `${leaveName(r.typeCode)} ${tl('days', { n: nDays(r.days) })} (${range})`;
     const balance = deducts ? (bal.grant ? t('leaveBalance', { remaining: nDays(bal.remaining), pending: nDays(bal.pending) }) : t('leaveNoGrant')) : null;
     return { r, clash, range, summary, balance };

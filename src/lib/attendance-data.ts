@@ -4,6 +4,8 @@ import { cache } from 'react';
 import { resolveDayType } from '@/config/labor-rules';
 import { OFFICE } from '@/config/office';
 import { addDays, weekStartOf } from '@/lib/calendar';
+import { trimRuleByLeave } from '@/lib/leave';
+import { loadLeaveRequests } from '@/lib/leave-data';
 import { pairsByWorkDate } from '@/lib/pairs';
 import { ruleAt, type RuleVersion } from '@/lib/rule-at';
 import { loadShifts, loadTemplateOf } from '@/lib/shift-data';
@@ -121,7 +123,9 @@ export async function loadEmployeeToday(employeeId: string, now: Date): Promise<
   const dayType = base ? resolveDayType(workDate, base, holidays) : 'workday';
   // 그날 일정: 날짜별 일정(특근·잔업) → 평소 틀 → 회사 규칙
   const plan = planDay({ rule: base, tpl, shifts: await loadShifts(workDate, workDate, employeeId), isWorkday: !!base && dayType === 'workday' });
-  const rule = plan.rule;
+  // 시각이 있는 승인 휴가(오전 반차 등)는 오늘 판정의 시작·끝 시각을 옮긴다
+  const timedLeave = (await loadLeaveRequests({ employeeId, from: workDate, to: workDate, practice })).filter((r) => r.status === 'approved' && r.startTime && r.startDate === r.endDate);
+  const rule = plan.rule && timedLeave.length ? trimRuleByLeave(plan.rule, timedLeave) : plan.rule;
   const byDate = pairsByWorkDate(events, corrections);
   let pairs = byDate.get(workDate)?.pairs ?? [];
   // 간주 근무: 찍지 않은 날은 일정 시간만큼 근무로 본다

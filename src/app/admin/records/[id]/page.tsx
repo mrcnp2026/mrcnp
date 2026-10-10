@@ -4,6 +4,7 @@
 // 색은 예외에만(지각·기록 없음·사무실 밖) + 글자를 함께 (R-10-5).
 import { ChevronLeft, ChevronRight } from 'lucide-react';
 import { getFormatter, getTranslations } from 'next-intl/server';
+import { leaveTypeName } from '@/lib/leave';
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import { Card, Chip, PageShell } from '@/components/ui';
@@ -145,7 +146,7 @@ export default async function EmployeeRecordsPage({ params, searchParams }: { pa
                   <div className="flex flex-wrap items-center gap-2">
                     {d.lateMinutes > 0 && <Chip tone="warn">{th('lateBy', { n: d.lateMinutes })}</Chip>}
                     {d.outside && <Chip tone="warn">{th('outside')}</Chip>}
-                    {d.leave.map((l) => <Chip key={l.requestId} tone="info">{tl.has(`type.${l.typeCode}`) ? tl(`type.${l.typeCode}`) : l.typeCode}</Chip>)}
+                    {d.leave.map((l) => <Chip key={l.requestId} tone="info">{leaveTypeName(data.leaveTypes, l.typeCode, tl)}{l.startTime ? ` ${l.startTime}-${l.endTime}` : ''}</Chip>)}
                     {d.work && <Chip tone="info">{ta(`work.${d.work}`)}</Chip>}
                     {d.proxy && <Chip>{ta('adminEntered')}</Chip>}
                     {d.corrected && <Chip tone="info">{tr('corrected')}</Chip>}

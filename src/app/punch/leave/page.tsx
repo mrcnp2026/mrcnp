@@ -9,8 +9,8 @@ import { Fab } from '@/components/Fab';
 import { Row, RowList } from '@/components/list';
 import { Card, CardTitle, Chip, PageShell } from '@/components/ui';
 import { getMe } from '@/lib/auth';
-import { calcLeaveBalance } from '@/lib/leave';
-import { loadLeaveGrants, loadLeaveRequests, loadLeaveTypes } from '@/lib/leave-data';
+import { calcLeaveBalance, leaveTypeName } from '@/lib/leave';
+import { loadAllLeaveTypes, loadLeaveGrants, loadLeaveRequests } from '@/lib/leave-data';
 import { toKstDate } from '@/lib/time';
 import { loadWorkRequests } from '@/lib/work-data';
 import { CancelLeave, LeaveForm } from './LeaveForm';
@@ -25,12 +25,12 @@ export default async function LeavePage({ searchParams }: { searchParams: Promis
   const f = await getFormatter();
   const sp = await searchParams;
   const today = toKstDate(new Date());
-  const [types, grants, requests, works] = await Promise.all([loadLeaveTypes(), loadLeaveGrants(me.id), loadLeaveRequests({ employeeId: me.id }), loadWorkRequests({ employeeId: me.id })]);
+  const [types, grants, requests, works] = await Promise.all([loadAllLeaveTypes(), loadLeaveGrants(me.id), loadLeaveRequests({ employeeId: me.id }), loadWorkRequests({ employeeId: me.id })]);
   const bal = calcLeaveBalance({ grants, requests, types, asOf: today });
-  const nameOf = (code: string) => (t.has(`type.${code}`) ? t(`type.${code}`) : (types.find((x) => x.code === code)?.name ?? code));
+  const nameOf = (code: string) => leaveTypeName(types, code, t);
   // 올해가 아니면 연도도 (지난해·먼 미래 신청이 올해로 읽히지 않게)
   const day = (d: string) => f.dateTime(new Date(`${d}T12:00:00+09:00`), { year: d.slice(0, 4) === today.slice(0, 4) ? undefined : 'numeric', month: 'short', day: 'numeric', weekday: 'short' });
-  const n = (v: number) => f.number(v, { maximumFractionDigits: 2 });
+  const n = (v: number) => f.number(v, { maximumFractionDigits: 4 });
 
   return (
     <PageShell wide>
@@ -70,7 +70,7 @@ export default async function LeavePage({ searchParams }: { searchParams: Promis
 
       {/* 폰: 양식은 + 버튼을 누르면 올라온다 (2026-10-10 의뢰인) · PC: 제자리에 펼쳐 둔다 */}
       <AddSheet id="leave" title={t('request')} defaultOpen={sp.new === 'leave'} className="order-2 lg:order-3 lg:grid">
-        <LeaveForm today={today} types={types.map((x) => ({ code: x.code, name: nameOf(x.code), unit: x.dayUnit, deducts: x.deductsBalance }))} />
+        <LeaveForm today={today} types={types.filter((x) => x.active).map((x) => ({ code: x.code, name: nameOf(x.code), unit: x.dayUnit, deducts: x.deductsBalance, hours: x.hours ?? x.dayUnit * 8, startTime: x.startTime ?? null, endTime: x.endTime ?? null, group: x.groupName ?? null }))} />
       </AddSheet>
 
       <section className="order-3 flex flex-col gap-2 lg:order-5">
@@ -82,7 +82,10 @@ export default async function LeavePage({ searchParams }: { searchParams: Promis
             <span className="font-semibold">
               {nameOf(r.typeCode)} · <span className="num">{t('days', { n: n(r.days) })}</span>
             </span>
-            <span className="num text-sm">{r.startDate === r.endDate ? day(r.startDate) : `${day(r.startDate)} ~ ${day(r.endDate)}`}</span>
+            <span className="num text-sm">
+              {r.startDate === r.endDate ? day(r.startDate) : `${day(r.startDate)} ~ ${day(r.endDate)}`}
+              {r.startTime && ` · ${r.startTime} - ${r.endTime}`}
+            </span>
             {r.reason && <span className="text-sm text-muted">{r.reason}</span>}
             {r.status === 'pending' && <CancelLeave id={r.id} />}
           </Row>

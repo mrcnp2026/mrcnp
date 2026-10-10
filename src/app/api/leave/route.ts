@@ -4,8 +4,8 @@ import { OFFICE } from '@/config/office';
 import { api, ApiError, readJson } from '@/lib/api';
 import { getMe } from '@/lib/auth';
 import { addDays } from '@/lib/calendar';
-import { calcLeaveBalance, countLeaveDays, roundDays } from '@/lib/leave';
-import { dayTypeResolver, loadLeaveGrants, loadLeaveRequests, loadLeaveTypes } from '@/lib/leave-data';
+import { calcLeaveBalance, countLeaveDays, leaveWindow, roundDays } from '@/lib/leave';
+import { dayTypeResolver, loadAllLeaveTypes, loadLeaveGrants, loadLeaveRequests, loadLeaveTypes } from '@/lib/leave-data';
 import { createAdminClient } from '@/lib/supabase/admin';
 import { cleanText } from '@/lib/text';
 import { toKstDate } from '@/lib/time';
@@ -26,6 +26,9 @@ export const POST = api('leave.create', async (req) => {
   if (end > addDays(start, MAX_RANGE_DAYS - 1)) throw new ApiError(400, 'range_too_long');
   const today = toKstDate(new Date());
   if (start < addDays(today, -PAST_LIMIT_DAYS)) throw new ApiError(400, 'too_old');
+  // 시각: 종류에 정해져 있으면 그것, 아니면 하루보다 짧은 종류에 한해 직원이 적은 시작 시각 (안 적어도 된다)
+  const win = leaveWindow(type, b.startTime);
+  if (!win.ok) throw new ApiError(400, 'invalid_time');
   const reason = cleanText(b.reason);
   if (reason.length > 200) throw new ApiError(400, 'invalid_input');
 
@@ -36,7 +39,7 @@ export const POST = api('leave.create', async (req) => {
 
   const mine = await loadLeaveRequests({ employeeId: me.id, from: start, to: end });
   // 겹침: 같은 날 대기·승인 휴가의 단위 합이 하루를 넘으면 막는다 (반차 두 번 = 하루는 허용)
-  const types = await loadLeaveTypes();
+  const types = await loadAllLeaveTypes(); // 꺼 둔 종류로 낸 휴가도 겹침·잔여에 든다
   const unitOf = (code: string) => types.find((t) => t.code === code)?.dayUnit ?? 1;
   for (let d = start; d <= end; d = addDays(d, 1)) {
     if (dayTypeOf(d) !== 'workday') continue;
@@ -54,7 +57,7 @@ export const POST = api('leave.create', async (req) => {
   const { data, error } = await createAdminClient()
     .from('leave_requests')
     .insert({
-      employee_id: me.id, type_code: type.code, start_date: start, end_date: end, days, reason: reason || null,
+      employee_id: me.id, type_code: type.code, start_date: start, end_date: end, days, reason: reason || null, start_time: win.startTime, end_time: win.endTime,
       status: 'pending', requested_by: me.id, is_test: OFFICE.practiceMode,
     })
     .select('id')

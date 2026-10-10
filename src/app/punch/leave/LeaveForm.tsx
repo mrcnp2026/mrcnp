@@ -10,14 +10,21 @@ import { Button, Card } from '@/components/ui';
 
 const field = 'min-h-11 w-full rounded-button border border-border bg-bg px-3 text-base text-text';
 
-export function LeaveForm({ today, types }: { today: string; types: { code: string; name: string; unit: number; deducts: boolean }[] }) {
+export function LeaveForm({ today, types }: { today: string; types: { code: string; name: string; unit: number; deducts: boolean; hours: number; startTime: string | null; endTime: string | null; group: string | null }[] }) {
   const t = useTranslations('leave');
   const router = useRouter();
   const [code, setCode] = useState(types[0]?.code ?? 'annual');
   const [busy, setBusy] = useState(false);
   const [sent, setSent] = useState<number | null>(null);
   const [err, setErr] = useState<{ code: string; requestId?: string } | null>(null);
-  const oneDay = (types.find((x) => x.code === code)?.unit ?? 1) < 1;
+  const cur = types.find((x) => x.code === code);
+  const oneDay = (cur?.unit ?? 1) < 1;
+  const groups = [...new Set(types.map((x) => x.group))];
+  const option = (x: (typeof types)[number]) => (
+    <option key={x.code} value={x.code}>
+      {x.name}
+    </option>
+  );
 
   return (
     <Card>
@@ -34,6 +41,7 @@ export function LeaveForm({ today, types }: { today: string; types: { code: stri
             typeCode: code,
             startDate: fd.get('startDate'),
             endDate: oneDay ? fd.get('startDate') : fd.get('endDate'),
+            startTime: oneDay && !cur?.startTime ? fd.get('startTime') : null,
             reason: fd.get('reason'),
           });
           setBusy(false);
@@ -47,13 +55,27 @@ export function LeaveForm({ today, types }: { today: string; types: { code: stri
         <label className="flex flex-col gap-1 text-sm text-muted">
           {t('typeLabel')}
           <select value={code} onChange={(e) => setCode(e.target.value)} className={field}>
-            {types.map((x) => (
-              <option key={x.code} value={x.code}>
-                {x.name}
-              </option>
-            ))}
+            {groups.length <= 1
+              ? types.map(option)
+              : groups.map((g) =>
+                  g ? (
+                    <optgroup key={g} label={g}>
+                      {types.filter((x) => x.group === g).map(option)}
+                    </optgroup>
+                  ) : (
+                    types.filter((x) => !x.group).map(option)
+                  ),
+                )}
           </select>
         </label>
+        {cur && (
+          <p className="num rounded-button bg-surface p-3 text-sm text-muted">
+            {t('typeInfo', { h: cur.hours })}
+            {cur.startTime && ` · ${cur.startTime} - ${cur.endTime}`}
+            {' · '}
+            {cur.deducts ? t('typeDeducts', { d: cur.unit }) : t('typeNoDeduct')}
+          </p>
+        )}
         <div className={`grid gap-3 ${oneDay ? '' : 'grid-cols-2'}`}>
           <label className="flex flex-col gap-1 text-sm text-muted">
             {oneDay ? t('date') : t('start')}
@@ -66,6 +88,13 @@ export function LeaveForm({ today, types }: { today: string; types: { code: stri
             </label>
           )}
         </div>
+        {oneDay && !cur?.startTime && (
+          <label className="flex flex-col gap-1 text-sm text-muted">
+            {t('startTime')}
+            <DateTimeInput name="startTime" type="time" className={`num ${field}`} />
+            <span className="text-xs text-faint">{t('startTimeHint', { h: cur?.hours ?? 0 })}</span>
+          </label>
+        )}
         <p className="text-xs text-faint">{t('workdaysOnly')}</p>
         <label className="flex flex-col gap-1 text-sm text-muted">
           {t('reason')}
