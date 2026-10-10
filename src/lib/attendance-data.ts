@@ -6,6 +6,8 @@ import { OFFICE } from '@/config/office';
 import { addDays, weekStartOf } from '@/lib/calendar';
 import { pairsByWorkDate } from '@/lib/pairs';
 import { ruleAt, type RuleVersion } from '@/lib/rule-at';
+import { loadTemplateOf } from '@/lib/shift-data';
+import { applyTemplate, deemedPair } from '@/lib/shifts';
 import { createAdminClient } from '@/lib/supabase/admin';
 import { toKstDate } from '@/lib/time';
 import { classifyDay } from '@/lib/today';
@@ -91,7 +93,7 @@ export async function loadEmployeeToday(employeeId: string, now: Date): Promise<
   const weekStart = weekStartOf(today);
   const from = addDays(weekStart, -1);
 
-  const [{ data: ev }, { data: corr }, versions, holidays] = await Promise.all([
+  const [{ data: ev }, { data: corr }, versions, holidays, tpl] = await Promise.all([
     db.from('punch_events')
       .select('id, employee_id, kind, punched_at, work_date, ip_verified, is_test, note')
       .eq('employee_id', employeeId).eq('is_test', practice).gte('work_date', from).order('punched_at'),
@@ -100,6 +102,7 @@ export async function loadEmployeeToday(employeeId: string, now: Date): Promise<
       .eq('employee_id', employeeId).eq('status', 'approved').gte('work_date', from),
     loadRuleVersions(),
     loadHolidays(from, addDays(weekStart, 6)),
+    loadTemplateOf(employeeId),
   ]);
   const rows = (ev ?? []) as EventRow[];
   const events = rows.map(toEvent);
@@ -113,10 +116,16 @@ export async function loadEmployeeToday(employeeId: string, now: Date): Promise<
   const openShift = last && last.kind === 'in' && now.getTime() - new Date(last.punched_at).getTime() < OFFICE.openShiftMaxHours * 3_600_000;
   const workDate = openShift ? last.work_date : today;
 
-  const rule = ruleAt(versions, workDate);
+  // 근무일정 틀 (2026-10-10): 그 직원의 시작·끝 시각으로. 틀이 없으면 회사 규칙 그대로
+  const rule = applyTemplate(ruleAt(versions, workDate), tpl);
   const byDate = pairsByWorkDate(events, corrections);
-  const pairs = byDate.get(workDate)?.pairs ?? [];
   const dayType = rule ? resolveDayType(workDate, rule, holidays) : 'workday';
+  let pairs = byDate.get(workDate)?.pairs ?? [];
+  // 간주 근무: 찍지 않은 근무일은 일정 시간만큼 근무로 본다
+  if (pairs.length === 0 && tpl?.kind === 'deemed' && rule && dayType === 'workday') {
+    const v = deemedPair(tpl, workDate, now);
+    if (v) pairs = [v];
+  }
   const c = classifyDay({ pairs, rule, dayType, workDate, now });
   const firstInRow = rows.find((r) => r.work_date === workDate && r.kind === 'in');
 

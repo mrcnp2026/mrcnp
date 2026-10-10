@@ -54,7 +54,7 @@ export default async function EmployeeRecordsPage({ params, searchParams }: { pa
   const details = data.rule
     ? buildDayDetails({
         days: daysFor(data, id, from, upTo), events, corrections, leave: leaveDaysFor(data, id), work: workDaysFor(data, id),
-        ruleAt: data.ruleAt, today, startsOn: person.startsOn,
+        ruleAt: (d) => data.ruleFor(id, d), today, startsOn: person.startsOn,
       }).reverse()
     : [];
 

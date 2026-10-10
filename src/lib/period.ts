@@ -16,6 +16,7 @@ export function computeEmployeeDays(args: {
   approvedCorrections: PunchCorrection[];
   rule: WorkRule; // 기본 규칙 (그날 규칙이 없을 때)
   ruleAt?: (date: string) => WorkRule | null; // ② 4-1: 날짜마다 그날 유효한 규칙
+  deemed?: (date: string) => PunchPair | null; // 간주 근무 (2026-10-10): 찍은 기록이 없는 근무일에 근무로 볼 시간. 없으면 null
   holidays: HolidayRow[];
   from: string;
   to: string;
@@ -24,16 +25,21 @@ export function computeEmployeeDays(args: {
   const byDate = pairsByWorkDate(args.events, args.approvedCorrections.filter((c) => c.status === 'approved'));
   const out: DayRow[] = [];
   for (let ws = weekStartOf(args.from); ws <= args.to; ws = addDays(ws, 7)) {
-    const days = [...Array(7)].map((_, i) => addDays(ws, i)).map((d) => ({
-      workDate: d,
-      pairs: byDate.get(d)?.pairs ?? [],
-      flags: byDate.get(d)?.flags ?? [],
-      dayType: resolveDayType(d, ruleOf(d), args.holidays),
-    }));
+    const days = [...Array(7)].map((_, i) => addDays(ws, i)).map((d) => {
+      const dayType = resolveDayType(d, ruleOf(d), args.holidays);
+      let pairs = byDate.get(d)?.pairs ?? [];
+      // 간주 근무: 근무일에 찍은 기록이 하나도 없을 때만. 기록이 있으면 기록이 먼저다
+      if (pairs.length === 0 && dayType === 'workday') {
+        const v = args.deemed?.(d);
+        if (v) pairs = [v];
+      }
+      return { workDate: d, pairs, flags: byDate.get(d)?.flags ?? [], dayType };
+    });
+    const pairsOf = new Map(days.map((d) => [d.workDate, d.pairs]));
     const calc = calcWeek(days, ruleOf);
     for (const r of calc) {
       if (r.workDate < args.from || r.workDate > args.to) continue;
-      out.push({ ...r, pairs: byDate.get(r.workDate)?.pairs ?? [] });
+      out.push({ ...r, pairs: pairsOf.get(r.workDate) ?? [] });
     }
   }
   return out;

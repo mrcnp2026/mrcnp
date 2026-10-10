@@ -56,7 +56,7 @@ export default async function MyRecordsPage({ searchParams }: { searchParams: Pr
   const lateOf = new Map<string, number>();
   for (const d of days) {
     const firstIn = d.pairs.map((x) => x.in).filter((x): x is Date => !!x).sort((a, b) => a.getTime() - b.getTime())[0];
-    const rule = data.ruleAt(d.workDate);
+    const rule = data.ruleFor(me.id, d.workDate);
     if (!firstIn || d.dayType !== 'workday' || !rule) continue;
     const l = judgeLateness({ punchedAt: firstIn, workDate: d.workDate, rule, isHoliday: false });
     if (l.verdict === 'late') lateOf.set(d.workDate, l.lateMinutes);

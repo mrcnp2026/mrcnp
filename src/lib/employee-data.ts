@@ -26,7 +26,7 @@ export async function loadEmployeeRecent(employeeId: string, now: Date, lookback
   const corrections = data.corrections.filter((c) => c.employeeId === employeeId);
   const me = data.people.find((p) => p.id === employeeId);
   let missing: MissingPunch[] = [];
-  if (data.rule) {
+  if (data.rule && data.templateOf(employeeId)?.kind !== 'deemed') {
     const dayTypes = Object.fromEntries(
       [...Array(lookback)].map((_, i) => addDays(from, i)).map((d) => [d, resolveDayType(d, data.rule!, data.holidays)]),
     );
@@ -36,7 +36,7 @@ export async function loadEmployeeRecent(employeeId: string, now: Date, lookback
       events,
       approvedCorrections: corrections.filter((c) => c.status === 'approved'),
       pendingCorrections: corrections.filter((c) => c.status === 'pending'),
-      rule: data.rule,
+      rule: data.ruleFor(employeeId, today) ?? data.rule,
       dayTypes,
       now,
       outGraceHours: OFFICE.missingOutGraceHours,

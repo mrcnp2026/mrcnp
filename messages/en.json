@@ -295,7 +295,9 @@
       "roleChange": "Change",
       "roleClose": "Close",
       "infoJoined": "Joined",
-      "infoPhone": "Mobile"
+      "infoPhone": "Mobile",
+      "colShift": "Shift template",
+      "shiftNone": "None (company rule)"
     },
     "more": {
       "title": "All menus",
@@ -1001,6 +1003,69 @@
       "group_in_use": "This branch still has staff or sub-branches. Move them first.",
       "parent_hidden": "The parent branch is hidden. Restore it first.",
       "invalid_group": "This branch cannot be used as a parent."
+    },
+    "shifts": {
+      "title": "Shift templates",
+      "intro": "Create templates for different start and end times and apply them to staff. Lateness, missing punches and today’s schedule on the home screen follow each person’s template. Grace period, break and workdays still come from the company work rule. Templates are turned off, never deleted.",
+      "tabOn": "Active",
+      "tabOff": "Turned off",
+      "empty": "No templates yet. Add one with the + button.",
+      "emptyOff": "No templates are turned off.",
+      "baseRule": "{n} staff without a template use the company rule {start} - {end}.",
+      "noRule": "There is no company work rule yet. Set it first so templates can apply.",
+      "toSettings": "Company settings",
+      "add": "Add shift template",
+      "edit": "Edit",
+      "save": "Save",
+      "cancel": "Cancel",
+      "name": "Template name",
+      "namePlaceholder": "Early 07:30 + regular",
+      "start": "Start",
+      "end": "End",
+      "time": "Time",
+      "span": "Length",
+      "spanHm": "{h} h {m} min",
+      "kind": "Shift type",
+      "color": "Color",
+      "memo": "Memo",
+      "memoNone": "None",
+      "people": "{n} people",
+      "offChip": "Off",
+      "deemedNote": "Deemed work: staff on this template are counted as having worked these hours on every workday even without punching. Days with punches are calculated from the punches.",
+      "assignTitle": "Staff on this template",
+      "assignOff": "A template that is turned off cannot be applied. Turn it back on first.",
+      "assignSave": "Save assignment",
+      "assignSaved": "Applied. Judgements use this template from today.",
+      "pickedCount": "{n} selected",
+      "pickAll": "All",
+      "pickNone": "Clear",
+      "noPeople": "No active staff.",
+      "usingOther": "Now: {name}",
+      "turnOff": "Turn this template off",
+      "turnOffConfirm": "Turn off",
+      "turnOn": "Turn back on",
+      "invalid_template_name": "Template name must be 1–40 characters.",
+      "invalid_time": "End time must be later than start time. Shifts past midnight are not supported yet.",
+      "duplicate_template": "A template with this name already exists.",
+      "template_in_use": "Staff are still on this template. Move them to another template first.",
+      "template_off": "This template is turned off. Turn it on before applying.",
+      "kinds": {
+        "none": "(none)",
+        "normal": "Regular",
+        "deemed": "Deemed work",
+        "outside": "Off-site",
+        "remote": "Remote",
+        "holiday": "Holiday work",
+        "extra": "Overtime block"
+      },
+      "colors": {
+        "primary": "Blue",
+        "ok": "Green",
+        "warn": "Orange",
+        "danger": "Red",
+        "text": "Black",
+        "muted": "Gray"
+      }
     }
   },
   "side": {
@@ -1030,7 +1095,8 @@
     "roleEmployee": "Staff",
     "close": "Close menu",
     "branches": "Branches",
-    "places": "Work locations"
+    "places": "Work locations",
+    "shifts": "Shift templates"
   },
   "nav": {
     "home": "Home",

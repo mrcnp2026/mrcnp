@@ -17,6 +17,7 @@ import { toKstDate } from '@/lib/time';
 import { NewInviteButton } from '../NewInviteButton';
 import { ManageAction } from './ManageAction';
 import { RoleRequestCard } from './RoleRequestCard';
+import { loadShiftTemplates } from '@/lib/shift-data';
 import { ProfileForm } from './ProfileForm';
 
 export default async function MemberDetailPage({ params }: { params: Promise<{ id: string }> }) {
@@ -28,7 +29,7 @@ export default async function MemberDetailPage({ params }: { params: Promise<{ i
   if (!/^[0-9a-f-]{36}$/i.test(id)) notFound();
   const db = createAdminClient();
   const [{ data: p }, { data: keys }, groups] = await Promise.all([
-    db.from('profiles').select('id, name, employee_no, role, active, joined_on, locale, can_view_payroll, group_id, phone, job_title, password_set_at').eq('id', id).maybeSingle(),
+    db.from('profiles').select('id, name, employee_no, role, active, joined_on, locale, can_view_payroll, group_id, phone, job_title, password_set_at, shift_template_id').eq('id', id).maybeSingle(),
     db.from('user_passkeys').select('id, device_label, created_at, last_used_at').eq('employee_id', id).is('revoked_at', null),
     loadOrgGroups(),
   ]);
@@ -40,6 +41,8 @@ export default async function MemberDetailPage({ params }: { params: Promise<{ i
   const tree = buildOrgTree(groups);
   const options = tree.flatMap((d) => [{ id: d.id, label: d.name }, ...d.teams.map((x) => ({ id: x.id, label: `${d.name} › ${x.name}` }))]);
   const path = groupPath(groups, p.group_id);
+  // 적용된 근무일정 틀 (2026-10-10) — 바꾸는 곳은 「근무일정 틀」 화면
+  const shiftName = p.shift_template_id ? ((await loadShiftTemplates(true)).find((x) => x.id === p.shift_template_id)?.name ?? null) : null;
   const day = (s: string) => f.dateTime(new Date(s), { dateStyle: 'medium' });
   const agreedAt = await consentAt(p.id);
   // 관리 동작: 본인 것은 스스로 못 바꾼다 (R-2). 퇴사 처리 전에 남은 일을 보여 준다 (②-2 7-2 요점 3)
@@ -92,6 +95,7 @@ export default async function MemberDetailPage({ params }: { params: Promise<{ i
         {[
           { k: 'colNo', v: p.employee_no ?? '–' },
           { k: 'colGroup', v: path ?? t('unassigned') },
+          { k: 'colShift', v: shiftName ?? t('shiftNone') },
           { k: 'infoJoined', v: p.joined_on ? day(`${p.joined_on}T12:00:00+09:00`) : '–' },
           { k: 'infoPhone', v: p.phone ?? '–' },
         ].map((x) => (

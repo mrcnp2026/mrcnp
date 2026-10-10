@@ -17,6 +17,7 @@ export type BoardPerson = {
   adminEntered: boolean; // 대리 등록 기록이 있는가 (요점 7, ②)
   weekMinutes: number | null; // 이번 주 누적 (요점 6)
   onLeave?: boolean; // 오늘 하루 전부 승인된 휴가 — 출근 기록이 없으면 미출근이 아니라 휴무 칸 (②-2 B-2)
+  rule?: WorkRule | null; // 그 직원의 근무일정 틀을 끼운 규칙 (2026-10-10). 없으면 회사 규칙
   work?: WorkKind | null; // 오늘 승인된 외근·출장·재택 — 기록이 없어도 미출근이 아니고, 사무실 밖 경고 대신 "승인된 외근" (②-3 7-11)
 };
 
@@ -41,7 +42,7 @@ export function buildTodayBoard(args: {
 }): Record<DayStatus, BoardRow[]> {
   const board: Record<DayStatus, BoardRow[]> = { working: [], late: [], absent: [], done: [], overtime: [], off: [] };
   for (const p of args.people) {
-    const c = classifyDay({ pairs: p.pairs, rule: args.rule, dayType: args.dayType, workDate: args.workDate, now: args.now });
+    const c = classifyDay({ pairs: p.pairs, rule: p.rule ?? args.rule, dayType: args.dayType, workDate: args.workDate, now: args.now });
     const { pairs: _pairs, ...rest } = p;
     void _pairs;
     const status: DayStatus = c.status === 'absent' && (p.onLeave || p.work) ? 'off' : c.status;

@@ -64,10 +64,11 @@ export default async function AdminHome({ searchParams }: { searchParams: Promis
     const days = daysFor(data, p.id, weekStart, today);
     for (const d of days) overtimeByDay.set(d.workDate, (overtimeByDay.get(d.workDate) ?? 0) + d.overtimeMinutes + d.holidayMinutes);
     const todayRow = days.find((d) => d.workDate === today);
-    if (data.rule) {
+    // 간주 근무인 사람은 찍지 않아도 되므로 미기록을 세지 않는다
+    if (data.rule && data.templateOf(p.id)?.kind !== 'deemed') {
       const miss = findMissingPunches({
         employeeId: p.id, events: evs, approvedCorrections: data.corrections.filter((c) => c.status === 'approved'),
-        pendingCorrections: data.corrections.filter((c) => c.status === 'pending'), rule: data.rule, dayTypes, now,
+        pendingCorrections: data.corrections.filter((c) => c.status === 'pending'), rule: data.ruleFor(p.id, today) ?? data.rule, dayTypes, now,
         outGraceHours: OFFICE.missingOutGraceHours, inGraceMin: OFFICE.missingInGraceMin, joinedOn: p.startsOn,
         fullLeaveDates: new Set([...fullLeave, ...work.keys()]),
       });
@@ -82,6 +83,7 @@ export default async function AdminHome({ searchParams }: { searchParams: Promis
       adminEntered: todays.some((e) => e.source === 'admin') || data.corrections.some((c) => c.employeeId === p.id && c.workDate === today && isProxyCorrection(c)),
       weekMinutes: data.rule ? weekTotalMinutes(days) : null,
       onLeave: fullLeave.has(today),
+      rule: data.ruleFor(p.id, today),
       work: work.get(today) ?? null,
     };
   });
@@ -103,11 +105,15 @@ export default async function AdminHome({ searchParams }: { searchParams: Promis
   const daily = [...Array(14)].map((_, i) => addDays(today, -13 + i)).map((d) => {
     const rule = data.ruleAt(d);
     const workday = (rule ? resolveDayType(d, rule, data.holidays) : 'workday') === 'workday';
+    // 지각 기준은 사람마다 다를 수 있다 (근무일정 틀) — 각자의 시작 시각 + 유예
     const firstIns = active
-      .map((p) => data.events.filter((e) => e.employeeId === p.id && e.workDate === d && e.kind === 'in').map((e) => e.punchedAt.getTime()).sort((a, b) => a - b)[0])
-      .filter((x): x is number => x !== undefined);
-    const deadline = rule ? kstDateTime(d, rule.startTime).getTime() + rule.lateGraceMin * 60_000 : null;
-    return { d, workday, n: firstIns.length, late: workday && deadline !== null ? firstIns.filter((x) => x > deadline).length : 0 };
+      .map((p) => ({ p, t: data.events.filter((e) => e.employeeId === p.id && e.workDate === d && e.kind === 'in').map((e) => e.punchedAt.getTime()).sort((a, b) => a - b)[0] }))
+      .filter((x): x is { p: (typeof active)[number]; t: number } => x.t !== undefined);
+    const lateOf = (x: { p: (typeof active)[number]; t: number }) => {
+      const r = data.ruleFor(x.p.id, d);
+      return !!r && x.t > kstDateTime(d, r.startTime).getTime() + r.lateGraceMin * 60_000;
+    };
+    return { d, workday, n: firstIns.length, late: workday && rule ? firstIns.filter(lateOf).length : 0 };
   });
   const pct = (n: number) => (active.length > 0 ? Math.round((Math.min(n, active.length) / active.length) * 100) : 0);
   const workdays = daily.filter((x) => x.workday);

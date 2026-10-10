@@ -4,7 +4,7 @@ import 'server-only';
 import { resolveDayType } from '@/config/labor-rules';
 import { OFFICE } from '@/config/office';
 import { loadHolidays, loadRuleVersions } from '@/lib/attendance-data';
-import { leaveByDate, type LeaveOnDay, type LeaveRequest, type LeaveType } from '@/lib/leave';
+import { fullLeaveSet, leaveByDate, type LeaveOnDay, type LeaveRequest, type LeaveType } from '@/lib/leave';
 import { loadLeaveRequests, loadLeaveTypes } from '@/lib/leave-data';
 import { loadWorkRequests } from '@/lib/work-data';
 import { workByDate, type WorkKind, type WorkRequest } from '@/lib/work-requests';
@@ -12,12 +12,14 @@ import { addDays, weekStartOf } from '@/lib/calendar';
 import { buildOvertimeRequest } from '@/lib/overtime';
 import { computeEmployeeDays, type DayRow } from '@/lib/period';
 import { ruleAt } from '@/lib/rule-at';
+import { loadShiftTemplates } from '@/lib/shift-data';
+import { applyTemplate, deemedPair, type ShiftTemplate } from '@/lib/shifts';
 import { createAdminClient } from '@/lib/supabase/admin';
 import { toKstDate } from '@/lib/time';
 import type { HolidayRow, PunchCorrection, PunchEvent, WorkRule } from '@/lib/types';
 
 // startsOn: 입사일(joined_on), 비어 있으면 계정을 만든 날 — 그 전 날짜는 미기록·결근으로 세지 않는다 (7-8 요점 3)
-export type Person = { id: string; name: string; employeeNo: string | null; role: 'admin' | 'employee'; active: boolean; joinedOn: string | null; startsOn: string; groupId: string | null };
+export type Person = { id: string; name: string; employeeNo: string | null; role: 'admin' | 'employee'; active: boolean; joinedOn: string | null; startsOn: string; groupId: string | null; shiftTemplateId: string | null };
 
 export type EventRow = PunchEvent & { ipVerified: boolean; verifiedBy: 'ip' | 'gps' | null; source: 'web' | 'qr' | 'admin'; note: string | null; clientIp: string | null };
 
@@ -56,6 +58,10 @@ export type PeriodData = {
   practice: boolean;
   rule: WorkRule | null; // 기간 끝 날짜의 규칙 — 화면 안내용. 판정은 ruleAt(날짜)로 한다 (② 4-1)
   ruleAt: (date: string) => WorkRule | null;
+  // 근무일정 틀 (2026-10-10): 직원마다 시작·끝 시각이 다를 수 있다. 판정은 ruleFor(직원, 날짜)로 한다 — 틀이 없는 직원은 ruleAt과 같다
+  templates: ShiftTemplate[];
+  templateOf: (employeeId: string) => ShiftTemplate | null;
+  ruleFor: (employeeId: string, date: string) => WorkRule | null;
   holidays: HolidayRow[];
   people: Person[];
   events: EventRow[];
@@ -88,10 +94,10 @@ export function leaveDaysFor(data: PeriodData, employeeId: string): Map<string, 
 export async function loadPeriod(from: string, to: string, practice = OFFICE.practiceMode): Promise<PeriodData> {
   const db = createAdminClient();
   const readFrom = addDays(weekStartOf(from), -1); // 자정 넘긴 퇴근의 근무일 상속 여유
-  const [versions, holidays, { data: ppl }, { data: ev }, { data: co }, { data: ot }, leaveRequests, leaveTypes, workRequests] = await Promise.all([
+  const [versions, holidays, { data: ppl }, { data: ev }, { data: co }, { data: ot }, leaveRequests, leaveTypes, workRequests, templates] = await Promise.all([
     loadRuleVersions(),
     loadHolidays(readFrom, to),
-    db.from('profiles').select('id, name, employee_no, role, active, joined_on, created_at, group_id').order('name'),
+    db.from('profiles').select('id, name, employee_no, role, active, joined_on, created_at, group_id, shift_template_id').order('name'),
     db.from('punch_events')
       .select('id, employee_id, kind, punched_at, work_date, ip_verified, verified_by, source, note, client_ip')
       .eq('is_test', practice).gte('work_date', readFrom).lte('work_date', to).order('punched_at'),
@@ -102,18 +108,26 @@ export async function loadPeriod(from: string, to: string, practice = OFFICE.pra
     loadLeaveRequests({ from: readFrom, to, practice }),
     loadLeaveTypes(),
     loadWorkRequests({ from: readFrom, to, practice }),
+    loadShiftTemplates(),
   ]);
+  const tplById = new Map(templates.map((t) => [t.id, t]));
+  const tplOfPerson = new Map((ppl ?? []).map((p) => [p.id as string, p.shift_template_id ? (tplById.get(p.shift_template_id) ?? null) : null]));
+  const templateOf = (employeeId: string) => tplOfPerson.get(employeeId) ?? null;
   return {
     from,
     to,
     practice,
     rule: ruleAt(versions, to),
     ruleAt: (date: string) => ruleAt(versions, date),
+    templates,
+    templateOf,
+    ruleFor: (employeeId: string, date: string) => applyTemplate(ruleAt(versions, date), templateOf(employeeId)),
     holidays,
     people: (ppl ?? []).map((p) => ({
       id: p.id, name: p.name, employeeNo: p.employee_no, role: p.role, active: p.active, joinedOn: p.joined_on,
       startsOn: p.joined_on ?? toKstDate(new Date(p.created_at)),
       groupId: p.group_id,
+      shiftTemplateId: p.shift_template_id,
     })),
     events: (ev ?? []).map((e) => ({
       id: e.id, employeeId: e.employee_id, kind: e.kind, punchedAt: new Date(e.punched_at), workDate: e.work_date,
@@ -146,11 +160,17 @@ function toOvertimeRow(o: any): OvertimeRow {
 /** 한 직원의 기간 날짜별 계산. 근무규칙이 없으면 빈 배열 (계산 근거가 없다 — 추측하지 않음) */
 export function daysFor(data: PeriodData, employeeId: string, from = data.from, to = data.to): DayRow[] {
   if (!data.rule) return [];
+  const tpl = data.templateOf(employeeId);
+  // 간주 근무: 입사 전 날짜와 하루 전부 휴가인 날은 빼고, 찍지 않은 근무일을 근무로 본다 (now는 여기서 한 번만 읽는다)
+  const now = new Date();
+  const startsOn = data.people.find((p) => p.id === employeeId)?.startsOn ?? null;
+  const fullLeave = tpl?.kind === 'deemed' ? fullLeaveSet(leaveDaysFor(data, employeeId)) : null;
   return computeEmployeeDays({
     events: data.events.filter((e) => e.employeeId === employeeId),
     approvedCorrections: data.corrections.filter((c) => c.employeeId === employeeId && c.status === 'approved'),
-    rule: data.rule,
-    ruleAt: data.ruleAt,
+    rule: applyTemplate(data.rule, tpl) ?? data.rule,
+    ruleAt: (d) => data.ruleFor(employeeId, d),
+    deemed: tpl?.kind === 'deemed' ? (d) => (fullLeave!.has(d) || (startsOn !== null && d < startsOn) ? null : deemedPair(tpl, d, now)) : undefined,
     holidays: data.holidays,
     from,
     to,
