@@ -81,7 +81,7 @@ try {
   await p.goto(`${BASE}/punch/requests`);
   await p.waitForLoadState('networkidle');
   check((await p.getByText(`${word} 요청`, { exact: true }).count()) >= 1 && (await p.getByText(/가장 가까운 출퇴근 장소에서 \d+m/).count()) >= 1, `내 요청 목록에 「${word} 요청」과 거리`);
-  await p.goto(`${BASE}/admin/inbox`);
+  await p.goto(`${BASE}/admin/inbox?k=punch&id=${reqs[0].id}`); // 한 건 처리 화면 (2026-10-11: 대기중은 한 목록, 눌러서 처리)
   await p.getByRole('heading', { name: /출근\/퇴근 요청/ }).waitFor({ timeout: 30000 });
   check((await p.locator('#punch').getByText(new RegExp(`${word} 요청 · `)).count()) >= 1, '관리자 요청함 맨 위에 「출근/퇴근 요청」');
   check((await p.locator('#punch').getByText('본인 요청은 다른 관리자가 처리합니다.').count()) >= 1, '본인 요청에는 승인 버튼 대신 안내');
@@ -107,7 +107,7 @@ try {
   reqs = await myRequests();
   const second = reqs[reqs.length - 1];
   check(reqs.length === 2 && second.status === 'pending', '거절된 뒤 다시 찍으면 새 요청');
-  await p2.goto(`${BASE}/admin/inbox`);
+  await p2.goto(`${BASE}/admin/inbox?k=punch&id=${second.id}`);
   // 두 번째 검사 계정이 개인정보 동의를 아직 안 했으면 동의 창이 화면을 가린다
   const agree = p2.getByRole('button', { name: '동의합니다' });
   if (await agree.isVisible().catch(() => false)) {

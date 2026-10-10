@@ -15,6 +15,7 @@ export type ReqItem = {
   endTime: string | null;
   punchKind: 'in' | 'out' | null; // 정정: 출근/퇴근
   newAt: string | null; // 정정: 새 시각
+  oldAt: string | null; // 정정(시각 수정·무효): 원래 찍은 시각 — 목록에서 취소선으로 보인다
   minutes: number | null; // 연장근로: 분
   days: number | null; // 휴가: 일수
   place: string | null; // 외근: 장소
@@ -30,11 +31,11 @@ const s = (v: unknown) => (typeof v === 'string' && v !== '' ? v : null);
 const hm = (v: unknown) => (typeof v === 'string' ? v.slice(0, 5) : null);
 const base = (kind: ReqKind, r: Row, date: string, endDate = date): ReqItem => ({
   key: `${kind}:${r.id}`, kind, id: String(r.id), employeeId: String(r.employee_id), status: r.status as ReqStatus, date, endDate,
-  sub: null, startTime: null, endTime: null, punchKind: null, newAt: null, minutes: null, days: null, place: null, meters: null,
+  sub: null, startTime: null, endTime: null, punchKind: null, newAt: null, oldAt: null, minutes: null, days: null, place: null, meters: null,
   reason: s(r.reason), createdAt: s(r.created_at), decidedAt: s(r.decided_at), decidedBy: s(r.approved_by),
 });
 
-export const fromCorrection = (r: Row): ReqItem => ({ ...base('correction', r, String(r.work_date)), sub: s(r.correction_type), punchKind: r.kind === 'in' || r.kind === 'out' ? r.kind : null, newAt: s(r.new_punched_at) });
+export const fromCorrection = (r: Row): ReqItem => ({ ...base('correction', r, String(r.work_date)), sub: s(r.correction_type), punchKind: r.kind === 'in' || r.kind === 'out' ? r.kind : null, newAt: s(r.new_punched_at), oldAt: s(r.old_punched_at) });
 export const fromOvertime = (r: Row): ReqItem => ({ ...base('overtime', r, String(r.work_date)), minutes: Number(r.overtime_minutes ?? 0) + Number(r.holiday_minutes ?? 0) });
 export const fromLeave = (r: Row): ReqItem => ({ ...base('leave', r, String(r.start_date), String(r.end_date)), sub: s(r.type_code), days: Number(r.days), startTime: hm(r.start_time), endTime: hm(r.end_time) });
 export const fromWork = (r: Row): ReqItem => ({ ...base('work', r, String(r.start_date), String(r.end_date)), sub: s(r.kind), place: s(r.place), startTime: hm(r.start_time), endTime: hm(r.end_time) });

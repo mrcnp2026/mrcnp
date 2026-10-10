@@ -19,7 +19,7 @@ export async function loadRequests(opts: { employeeId?: string; practice?: boole
     return (data ?? []) as unknown as Record<string, unknown>[];
   };
   const [co, ot, lv, wk, pr, sh, lc] = await Promise.all([
-    read('punch_corrections', 'id, employee_id, work_date, correction_type, kind, new_punched_at, status, reason, approved_by, created_at, decided_at'),
+    read('punch_corrections', 'id, employee_id, work_date, correction_type, target_id, kind, new_punched_at, status, reason, approved_by, created_at, decided_at'),
     read('overtime_requests', 'id, employee_id, work_date, overtime_minutes, holiday_minutes, status, reason, approved_by, created_at, decided_at'),
     read('leave_requests', 'id, employee_id, type_code, start_date, end_date, days, start_time, end_time, status, reason, approved_by, created_at, decided_at'),
     read('work_requests', 'id, employee_id, kind, start_date, end_date, start_time, end_time, place, status, reason, approved_by, created_at, decided_at'),
@@ -27,5 +27,12 @@ export async function loadRequests(opts: { employeeId?: string; practice?: boole
     read('shift_requests', 'id, employee_id, work_date, start_time, end_time, kind, reason, status, approved_by, created_at, decided_at'),
     read('leave_change_requests', 'id, employee_id, kind, reason, status, approved_by, created_at, decided_at, leave_requests(type_code, start_date, end_date, days, start_time, end_time)'),
   ]);
+  // 시각 수정·무효 요청이 가리키는 원래 기록의 시각 (목록에서 「11:05 → 07:03」처럼 보이게)
+  const targets = [...new Set(co.map((c) => c.target_id).filter((x): x is string => typeof x === 'string'))];
+  if (targets.length) {
+    const { data: evs } = await db.from('punch_events').select('id, punched_at').in('id', targets);
+    const at = new Map((evs ?? []).map((e) => [e.id as string, e.punched_at as string]));
+    for (const c of co) if (typeof c.target_id === 'string') c.old_punched_at = at.get(c.target_id) ?? null;
+  }
   return [...pr.map(fromPunchRequest), ...sh.map(fromShiftRequest), ...lc.map(fromLeaveChange), ...co.map(fromCorrection), ...ot.map(fromOvertime), ...lv.map(fromLeave), ...wk.map(fromWork)];
 }

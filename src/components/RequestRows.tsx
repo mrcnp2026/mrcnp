@@ -60,7 +60,17 @@ export async function RequestRows({ items, leaveTypes, names, showName = false, 
                   </span>
                   {a && <span className="num shrink-0 text-sm text-muted">{a.unit === 'now' ? t('ago.now') : t(`ago.${a.unit}`, { n: a.n })}</span>}
                 </span>
-                <span className="num text-sm">{detail(r)}</span>
+                {r.kind === 'correction' && r.oldAt ? (
+                  <span className="num text-sm">
+                    {day(r.date)}
+                    {r.punchKind ? ` · ${t(`punch.${r.punchKind}`)} ` : ' '}
+                    <s className="text-muted">{clock(r.oldAt)}</s>
+                    {' → '}
+                    <span className="font-bold text-primary">{r.newAt ? clock(r.newAt) : 'X'}</span>
+                  </span>
+                ) : (
+                  <span className="num text-sm">{detail(r)}</span>
+                )}
                 {r.reason && <span className="truncate text-sm text-muted">{r.reason}</span>}
                 <span className="num flex flex-wrap items-center gap-x-2 gap-y-1 text-sm">
                   <Chip tone={r.status === 'approved' ? 'ok' : r.status === 'pending' ? 'warn' : 'neutral'}>{t(`status.${r.status}`)}</Chip>

@@ -63,6 +63,17 @@ try {
   const nA = await p.getByRole('link', { name: /^대기중/ }).count(); const nB = await p.getByRole('link', { name: '완료', exact: true }).count();
   check(nA === 1 && nB === 1, '관리자 요청 화면 맨 위에 「대기중 · 내 요청 · 완료」 탭', `${nA} ${nB}`);
   check((await p.getByText('최근 처리').count()) === 0, '아래에 따로 있던 「최근 처리」 목록은 없어짐 (완료 탭이 대신함)');
+  // 대기중은 종류별 숫자 칸 없이 한 목록 (폰) — 줄을 누르면 한 건 처리 화면 (2026-10-11)
+  check((await p.getByRole('tablist').locator('visible=true').count()) === 0, '폰의 대기중에는 종류별 숫자 칸이 없음 (한 목록)');
+  const firstRow = p.locator('main li a[href*="/admin/inbox?k="]').locator('visible=true').first();
+  if ((await firstRow.count()) > 0) {
+    await firstRow.click();
+    await p.waitForURL(/k=\w+&id=/);
+    check(await p.getByRole('link', { name: '요청 목록으로' }).first().waitFor({ timeout: 20000 }).then(() => true, () => false), '줄을 누르면 한 건 처리 화면 (← 요청)');
+    if (SHOTS) await p.screenshot({ path: path.join(SHOTS, '00-관리자-한건.png'), fullPage: true });
+    await p.goto(`${BASE}/admin/inbox`);
+    await p.waitForLoadState('networkidle');
+  }
   await p.getByRole('link', { name: '완료', exact: true }).click();
   await p.waitForURL(/tab=done/);
   await p.waitForLoadState('networkidle');

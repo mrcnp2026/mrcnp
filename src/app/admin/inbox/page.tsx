@@ -3,6 +3,7 @@
 // 누가·언제 처리했는지 항상 보인다 (R-2의 5).
 import { getFormatter, getTranslations } from 'next-intl/server';
 import { Pager, pageOf } from '@/components/Pager';
+import { DetailBar } from '@/components/detail';
 import { Help } from '@/components/Help';
 import { InboxTabs } from './InboxTabs';
 import { RequestTabs } from '@/components/RequestTabs';
@@ -19,7 +20,7 @@ import Link from 'next/link';
 import { leaveTypeName, calcLeaveBalance } from '@/lib/leave';
 import { loadAllLeaveTypes, loadLeaveGrants, loadLeaveRequests } from '@/lib/leave-data';
 import { loadRequests, REQUEST_WINDOW_DAYS } from '@/lib/request-data';
-import { splitRequests } from '@/lib/requests';
+import { fromOvertime, splitRequests } from '@/lib/requests';
 import { RequestRows } from '@/components/RequestRows';
 import { loadWorkRequests } from '@/lib/work-data';
 import { CorrectionDecision, LeaveDecision, OvertimeDecision, WorkDecision } from './Decisions';
@@ -27,7 +28,7 @@ import { CorrectionDecision, LeaveDecision, OvertimeDecision, WorkDecision } fro
 // 요청은 종류마다 한 쪽에 5건까지 — 넘으면 아래에 쪽 번호 (2026-10-06 의뢰인)
 const REQUEST_PAGE = 5;
 
-export default async function InboxPage({ searchParams }: { searchParams: Promise<{ live?: string; op?: string; cp?: string; lp?: string; wp?: string; tab?: string; dp?: string; q?: string }> }) {
+export default async function InboxPage({ searchParams }: { searchParams: Promise<{ live?: string; op?: string; cp?: string; lp?: string; wp?: string; tab?: string; dp?: string; q?: string; k?: string; id?: string; pp?: string }> }) {
   const t = await getTranslations('admin.inbox');
   const f = await getFormatter();
   const me = (await getMe())!;
@@ -53,8 +54,13 @@ export default async function InboxPage({ searchParams }: { searchParams: Promis
   const q = (sp.q ?? '').trim().slice(0, 40).toLowerCase();
   const hidden = new Set(await hiddenTestIds()); // 꺼져 있는 검사 전용 계정의 요청은 보이지 않는다
   const hit = (id: string) => !hidden.has(id) && (!q || (name.get(id) ?? '').toLowerCase().includes(q));
-  const ot = (otAll ?? []).filter((o) => hit(o.employee_id));
-  const co = (coAll ?? []).filter((c) => hit(c.employee_id));
+  // 한 건만 보기 (2026-10-11 의뢰인: 시프티처럼 대기중은 한 목록, 줄을 누르면 그 요청 하나를 처리하는 화면) — ?k=종류&id=요청
+  const FOCUS_KINDS = ['punch', 'shift', 'leaveDelete', 'overtime', 'corrections', 'leave', 'work'] as const;
+  type FocusKind = (typeof FOCUS_KINDS)[number];
+  const focus = (FOCUS_KINDS as readonly string[]).includes(sp.k ?? '') && /^[0-9a-f-]{36}$/i.test(sp.id ?? '') ? { k: sp.k as FocusKind, id: sp.id as string } : null;
+  const only = (k: FocusKind, id: string) => !focus || (focus.k === k && focus.id === id);
+  const ot = (otAll ?? []).filter((o) => hit(o.employee_id) && only('overtime', o.id));
+  const co = (coAll ?? []).filter((c) => hit(c.employee_id) && only('corrections', c.id));
   const keys = [...(ot ?? []).map((o) => [o.employee_id, o.work_date]), ...(co ?? []).map((c) => [c.employee_id, c.work_date])];
   const empIds = [...new Set(keys.map((k) => k[0]))];
   const dates = [...new Set(keys.map((k) => k[1]))];
@@ -73,18 +79,18 @@ export default async function InboxPage({ searchParams }: { searchParams: Promis
     (evs ?? []).filter((x) => x.employee_id === e && x.work_date === d).map((x) => `${x.kind === 'in' ? '↘' : '↗'} ${hm(x.punched_at)}`).join('  ');
 
   const { data: punchRows } = await db.from('punch_requests').select('id, employee_id, kind, requested_at, work_date, nearest_m, geo_reason').eq('is_test', practice).eq('status', 'pending').order('requested_at');
-  const punchPending = ((punchRows ?? []) as { id: string; employee_id: string; kind: 'in' | 'out'; requested_at: string; work_date: string; nearest_m: number | null; geo_reason: string }[]).filter((r) => hit(r.employee_id));
+  const punchPending = ((punchRows ?? []) as { id: string; employee_id: string; kind: 'in' | 'out'; requested_at: string; work_date: string; nearest_m: number | null; geo_reason: string }[]).filter((r) => hit(r.employee_id) && only('punch', r.id));
   const { data: shiftRows } = await db.from('shift_requests').select('id, employee_id, work_date, start_time, end_time, kind, reason').eq('is_test', practice).eq('status', 'pending').order('work_date');
-  const shiftPending = ((shiftRows ?? []) as { id: string; employee_id: string; work_date: string; start_time: string; end_time: string; kind: string; reason: string | null }[]).filter((r) => hit(r.employee_id));
+  const shiftPending = ((shiftRows ?? []) as { id: string; employee_id: string; work_date: string; start_time: string; end_time: string; kind: string; reason: string | null }[]).filter((r) => hit(r.employee_id) && only('shift', r.id));
   const { data: delRows } = await db.from('leave_change_requests').select('id, employee_id, reason, leave_requests(type_code, start_date, end_date, days, start_time, end_time)').eq('is_test', practice).eq('status', 'pending').order('created_at');
-  const delPending = ((delRows ?? []) as unknown as { id: string; employee_id: string; reason: string | null; leave_requests: { type_code: string; start_date: string; end_date: string; days: number; start_time: string | null; end_time: string | null } | null }[]).filter((r) => hit(r.employee_id) && r.leave_requests);
+  const delPending = ((delRows ?? []) as unknown as { id: string; employee_id: string; reason: string | null; leave_requests: { type_code: string; start_date: string; end_date: string; days: number; start_time: string | null; end_time: string | null } | null }[]).filter((r) => hit(r.employee_id) && r.leave_requests && only('leaveDelete', r.id));
   const tc = await getTranslations('common');
   const otPage = pageOf(ot ?? [], sp.op, REQUEST_PAGE);
   const coPage = pageOf(co ?? [], sp.cp, REQUEST_PAGE);
 
   // 연차·휴가 신청 (②-2 게이트 5): 남은 연차 + 그 날짜 출근 기록 충돌 경고 (자동으로 지우지 않는다, 요점 4)
   const tl = await getTranslations('leave');
-  const [leaveTypes, leavePending] = await Promise.all([loadAllLeaveTypes(), loadLeaveRequests({ practice }).then((rs) => rs.filter((r) => r.status === 'pending' && hit(r.employeeId)))]);
+  const [leaveTypes, leavePending] = await Promise.all([loadAllLeaveTypes(), loadLeaveRequests({ practice }).then((rs) => rs.filter((r) => r.status === 'pending' && hit(r.employeeId) && only('leave', r.id)))]);
   const leaveEmp = [...new Set(leavePending.map((r) => r.employeeId))];
   const [leaveGrants, leaveAll, { data: leavePunches }] = await Promise.all([
     Promise.all(leaveEmp.map((e) => loadLeaveGrants(e))).then((x) => x.flat()),
@@ -98,7 +104,7 @@ export default async function InboxPage({ searchParams }: { searchParams: Promis
   const leaveName = (code: string) => leaveTypeName(leaveTypes, code, tl);
   const nDays = (v: number) => f.number(v, { maximumFractionDigits: 4 });
   const lvPage = pageOf(leavePending, sp.lp, REQUEST_PAGE);
-  const workPending = (await loadWorkRequests({ practice })).filter((w) => w.status === 'pending' && hit(w.employeeId)).sort((a, b) => (a.startDate < b.startDate ? -1 : 1));
+  const workPending = (await loadWorkRequests({ practice })).filter((w) => w.status === 'pending' && hit(w.employeeId) && only('work', w.id)).sort((a, b) => (a.startDate < b.startDate ? -1 : 1));
   const wkPage = pageOf(workPending, sp.wp, REQUEST_PAGE);
 
   // 표(PC)와 카드(폰)가 같은 값을 쓰도록 한 번만 계산한다
@@ -134,6 +140,16 @@ export default async function InboxPage({ searchParams }: { searchParams: Promis
           : t('voidLine', { time: hm(target?.punched_at ?? null) });
     return { c, line };
   });
+  // 폰의 한 목록: 대기 중인 요청 전부 + 다시 확인할 연장근로(상태는 처리됨이지만 재확인 필요)
+  const listed = focus
+    ? []
+    : [
+        ...splitRequests((await loadRequests({ practice })).filter((x) => hit(x.employeeId))).pending,
+        ...ot.filter((o) => o.status !== 'pending').map((o) => ({ ...fromOvertime(o), status: 'pending' as const })),
+      ];
+  const listPage = pageOf(listed, sp.pp, 20);
+  const focusHref = (r: { kind: string; id: string }) => `/admin/inbox?k=${r.kind === 'correction' ? 'corrections' : r.kind}&id=${r.id}${sp.live === '1' ? '&live=1' : ''}`;
+  const focusCount = focus ? ot.length + co.length + leavePending.length + workPending.length + punchPending.length + shiftPending.length + delPending.length : 0;
   const empty = <p className="rounded-card bg-bg p-5 text-sm text-faint">{t('empty')}</p>;
   const hint = (text: string) => (
     <div className="flex flex-wrap items-center gap-x-1 text-sm text-muted">
@@ -387,10 +403,32 @@ export default async function InboxPage({ searchParams }: { searchParams: Promis
 
   return (
     <PageShell wide>
-      <h1 className="sr-only">{t('title')}</h1>
-      <RequestTabs admin active="pending" live={sp.live === '1'} q={q} counts={{ pending: (ot?.length ?? 0) + (co?.length ?? 0) + leavePending.length + workPending.length + punchPending.length + shiftPending.length + delPending.length }} />
-      {practice && <p className="rounded-card bg-primary-tint p-3 text-sm text-primary">{t('practiceBanner')}</p>}
-
+      {focus ? (
+        <>
+          <DetailBar back={`/admin/inbox${sp.live === '1' ? '?live=1' : ''}`} backLabel={t('backToList')} title={t('focusTitle')} />
+          {focusCount === 0 && (
+            <p className="rounded-card bg-bg p-5 text-sm text-muted">
+              {t('focusGone')}{' '}
+              <Link href={`/admin/inbox${sp.live === '1' ? '?live=1' : ''}`} className="font-bold text-primary">
+                {t('backToList')} ›
+              </Link>
+            </p>
+          )}
+        </>
+      ) : (
+        <>
+          <h1 className="sr-only">{t('title')}</h1>
+          <RequestTabs admin active="pending" live={sp.live === '1'} q={q} counts={{ pending: (ot?.length ?? 0) + (co?.length ?? 0) + leavePending.length + workPending.length + punchPending.length + shiftPending.length + delPending.length }} />
+          {practice && <p className="rounded-card bg-primary-tint p-3 text-sm text-primary">{t('practiceBanner')}</p>}
+          {/* 폰: 종류와 상관없이 한 목록 — 줄을 누르면 그 요청 하나를 처리하는 화면. PC는 아래의 종류별 표 그대로 */}
+          <div className="flex flex-col gap-3 lg:hidden">
+            {listed.length === 0 && empty}
+            <RequestRows items={listPage.items} leaveTypes={leaveTypes} names={new Map((staff ?? []).map((p) => [p.id as string, p.name as string]))} showName hrefOf={focusHref} />
+            <Pager page={listPage.page} pages={listPage.pages} param="pp" params={sp} label={tc('pages')} />
+          </div>
+        </>
+      )}
+      <div className={focus ? 'contents' : 'hidden lg:contents'}>
       {/* 반경 밖 출근/퇴근 요청 (2026-10-10 의뢰인: 시프티 방식) — 승인해야 기록이 되므로 맨 위에 둔다 */}
       {punchPending.length > 0 && (
         <section id="punch" className="flex scroll-mt-16 flex-col gap-2">
@@ -471,15 +509,25 @@ export default async function InboxPage({ searchParams }: { searchParams: Promis
         </section>
       )}
 
-      <InboxTabs
-        label={t('tabs')}
-        tabs={[
-          { key: 'overtime', label: t('overtimeTitle'), count: ot?.length ?? 0, content: overtimeTab },
-          { key: 'corrections', label: t('correctionsTitle'), count: co?.length ?? 0, content: correctionsTab },
-          { key: 'leave', label: t('leaveTitle'), count: leavePending.length, content: leaveTab },
-          { key: 'work', label: t('workTitle'), count: workPending.length, content: workTab },
-        ]}
-      />
+      {focus ? (
+        <>
+          {focus.k === 'overtime' && <div id="overtime" className="flex flex-col gap-3">{overtimeTab}</div>}
+          {focus.k === 'corrections' && <div id="corrections" className="flex flex-col gap-3">{correctionsTab}</div>}
+          {focus.k === 'leave' && <div id="leave" className="flex flex-col gap-3">{leaveTab}</div>}
+          {focus.k === 'work' && <div id="work" className="flex flex-col gap-3">{workTab}</div>}
+        </>
+      ) : (
+        <InboxTabs
+          label={t('tabs')}
+          tabs={[
+            { key: 'overtime', label: t('overtimeTitle'), count: ot?.length ?? 0, content: overtimeTab },
+            { key: 'corrections', label: t('correctionsTitle'), count: co?.length ?? 0, content: correctionsTab },
+            { key: 'leave', label: t('leaveTitle'), count: leavePending.length, content: leaveTab },
+            { key: 'work', label: t('workTitle'), count: workPending.length, content: workTab },
+          ]}
+        />
+      )}
+      </div>
 
     </PageShell>
   );

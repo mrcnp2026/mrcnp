@@ -109,9 +109,16 @@ try {
   ]).select('id, work_date');
   const okId = made!.find((x) => x.work_date === SAT)!.id;
   const noId = made!.find((x) => x.work_date === SAT2)!.id;
+  // 대기중은 한 목록 — 줄을 눌러 한 건 처리 화면으로 (2026-10-11)
   await p.goto(`${BASE}/admin/inbox`);
+  await p.getByRole('search').waitFor({ timeout: 30000 });
+  await p.waitForLoadState('networkidle');
+  const rowsShift = p.locator('main li a', { hasText: '근무일정 생성' }).locator('visible=true');
+  check((await rowsShift.count()) === 2, '요청함 한 목록에 근무일정 생성 요청 2건', String(await rowsShift.count()));
+  await p.locator(`main li a[href*="id=${okId}"]`).locator('visible=true').click();
+  await p.waitForURL(/k=shift/);
   await p.getByRole('heading', { name: /근무일정 생성 요청/ }).waitFor({ timeout: 30000 });
-  check((await p.locator('#shift li').count()) === 2, '요청함에 근무일정 생성 요청 2건', String(await p.locator('#shift li').count()));
+  check((await p.locator('#shift li').count()) === 1 && (await p.getByRole('link', { name: '요청 목록으로' }).count()) >= 1, '줄을 누르면 그 요청 하나를 처리하는 화면 (← 요청)', String(await p.locator('#shift li').count()));
   await shot('22-요청함-일정요청');
   const card = p.locator('#shift li', { hasText: '검사용 특근' });
   await card.getByRole('button', { name: '승인' }).click();

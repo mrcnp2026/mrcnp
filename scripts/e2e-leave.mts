@@ -88,7 +88,7 @@ try {
   check(r.json.result === 'ok', '직원 본인 대기 건 취소', JSON.stringify(r.json));
 
   // 6. 요청함에 뜨고, 승인 → 잔여 반영
-  await p.goto(`${BASE}/admin/inbox#leave`);
+  await p.goto(`${BASE}/admin/inbox?k=leave&id=${halfId}`); // 한 건 처리 화면 (2026-10-11: 대기중은 한 목록, 눌러서 처리)
   check(await p.locator('#leave').getByText('반차').locator('visible=true').first().waitFor({ timeout: 15000 }).then(() => true, () => false), '요청함 연차 섹션에 신청이 보임');
   r = await post(`/api/admin/leave/${halfId}/decide`, { decision: 'approved' });
   check(r.status === 403 && r.json.error === 'self_decision', '자기 휴가 신청은 스스로 승인하지 못함', JSON.stringify(r.json.error));
@@ -130,7 +130,7 @@ try {
   check(r.status === 409 && r.json.error === 'duplicate_request', '외근: 같은 날 겹치면 거절', r.json.error);
   r = await post('/api/work', { kind: 'remote', startDate: DAY, endDate: DAY, startTime: '17:00', endTime: '13:00', place: 'x' });
   check(r.status === 400 && r.json.error === 'invalid_time', '외근: 시작이 끝보다 늦으면 거절', r.json.error);
-  await p.goto(`${BASE}/admin/inbox#work`);
+  await p.goto(`${BASE}/admin/inbox?k=work&id=${workId}`);
   check(await p.locator('#work').getByText('e2e 고객사').locator('visible=true').first().waitFor({ timeout: 15000 }).then(() => true, () => false), '요청함 외근 섹션에 신청이 보임');
   r = await decide(`/api/admin/work/${workId}/decide`, { decision: 'approved' });
   check(r.json.result === 'ok', '외근 승인', JSON.stringify(r.json));

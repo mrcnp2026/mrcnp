@@ -539,7 +539,10 @@
       "leaveDeleteTitle": "Leave deletion requests",
       "leaveDeleteOne": "Leave deletion",
       "confirmLeaveDelete": "Approve {name}'s leave deletion request ({summary})? The leave will be cancelled and the balance restored.",
-      "confirmLeaveDeleteReject": "Reject {name}'s leave deletion request ({summary})? The leave stays as it is."
+      "confirmLeaveDeleteReject": "Reject {name}'s leave deletion request ({summary})? The leave stays as it is.",
+      "backToList": "Back to requests",
+      "focusTitle": "Request",
+      "focusGone": "This request has already been handled or cannot be found."
     },
     "records": {
       "title": "Records",

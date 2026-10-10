@@ -107,8 +107,13 @@ try {
   const c1 = made!.find((x) => x.leave_id === l1)!.id;
   const c2 = made!.find((x) => x.leave_id === l2)!.id;
   await p.goto(`${BASE}/admin/inbox`);
+  await p.getByRole('search').waitFor({ timeout: 30000 });
+  await p.waitForLoadState('networkidle');
+  const rowsDel = p.locator('main li a', { hasText: '휴가 삭제' }).locator('visible=true');
+  check((await rowsDel.count()) === 2, '요청함 한 목록에 휴가 삭제 요청 2건', String(await rowsDel.count()));
+  await p.locator(`main li a[href*="id=${c1}"]`).locator('visible=true').click();
+  await p.waitForURL(/k=leaveDelete/);
   await p.getByRole('heading', { name: /휴가 삭제 요청/ }).waitFor({ timeout: 30000 });
-  check((await p.locator('#leave-delete li').count()) === 2, '요청함에 휴가 삭제 요청 2건', String(await p.locator('#leave-delete li').count()));
   await shot('31-요청함-휴가삭제');
   const card = p.locator('#leave-delete li', { hasText: '검사용 승인' });
   await card.getByRole('button', { name: '승인' }).click();
