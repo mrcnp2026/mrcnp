@@ -232,7 +232,7 @@ export default async function AdminLeavePage({ searchParams }: { searchParams: P
               <tbody className="divide-y divide-border">
                 {approved.map((r) => (
                   <tr key={r.id}>
-                    <td className="px-4 py-3 font-semibold whitespace-nowrap">{name.get(r.employeeId)}</td>
+                    <td className="px-4 py-3 font-semibold whitespace-nowrap"><Link href={`/admin/leave/req/${r.id}`}>{name.get(r.employeeId)}</Link></td>
                     <td className="px-4 py-3 num whitespace-nowrap">{leaveName(r.typeCode)} · {tl('days', { n: n(r.days) })}{r.startTime && ` · ${r.startTime}-${r.endTime}`}</td>
                     <td className="px-4 py-3 num text-muted">{r.startDate === r.endDate ? day(r.startDate) : `${day(r.startDate)} ~ ${day(r.endDate)}`}</td>
                     <td className="px-4 py-3">
@@ -249,7 +249,7 @@ export default async function AdminLeavePage({ searchParams }: { searchParams: P
         {approved.map((r) => (
           <Card key={r.id} className="flex flex-col gap-2 lg:hidden">
             <div className="flex items-baseline justify-between gap-2">
-              <span className="font-semibold">{name.get(r.employeeId)}</span>
+              <Link href={`/admin/leave/req/${r.id}`} className="font-semibold text-primary">{name.get(r.employeeId)} ›</Link>
               <span className="num text-sm text-muted">
                 {leaveName(r.typeCode)} · {tl('days', { n: n(r.days) })}{r.startTime && ` · ${r.startTime}-${r.endTime}`}
               </span>

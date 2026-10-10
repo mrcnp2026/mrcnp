@@ -97,6 +97,7 @@ export default async function AdminSchedulePage({ searchParams }: { searchParams
                     </li>
                   ))}
                   {rows.map(({ p, it }) => {
+                    const at = data.planFor(p.id, d).items.indexOf(it);
                     const job = p.jobId ? jobOf.get(p.jobId) : undefined;
                     const color = job?.color ?? it.color;
                     return (
@@ -107,7 +108,7 @@ export default async function AdminSchedulePage({ searchParams }: { searchParams
                         </span>
                         <span aria-hidden className={`w-1 shrink-0 self-stretch rounded-chip ${color ? SHIFT_COLOR_CLASS[color] : 'bg-border'}`} />
                         <span className="flex min-w-0 flex-1 flex-col">
-                          <Link href={`/admin/records/${p.id}`} className="font-bold">
+                          <Link href={`/admin/schedule/${p.id}/${d}?i=${Math.max(0, at)}`} className="font-bold">
                             {p.name}
                           </Link>
                           <span className="truncate text-sm text-muted">{[groupPath(groups, p.groupId), job?.name, it.name ?? (it.source === 'rule' ? t('byRule') : null), it.note].filter(Boolean).join(' / ')}</span>

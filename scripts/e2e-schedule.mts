@@ -89,6 +89,15 @@ try {
   await p.waitForLoadState('networkidle');
   check((await p.getByRole('link', { name: emp!.name }).count()) === 1 && (await p.getByText('휴일 근무(특근)').count()) > 0 && (await p.getByText(/검사용 특근/).count()) > 0, '토요일 화면에 특근 일정 한 줄 (유형 배지·메모)');
   await shot('03-근무일정-특근');
+  // ── 이름을 누르면 일정 상세 (2026-10-11) ──
+  await p.getByRole('link', { name: emp!.name }).click();
+  await p.waitForURL(/\/admin\/schedule\/[^/]+\/\d{4}-\d{2}-\d{2}/);
+  await p.getByRole('heading', { name: '근무일정', exact: true }).waitFor({ timeout: 20000 });
+  const sl = await p.locator('main dt').allTextContents();
+  check((await p.locator('header').locator('visible=true').count()) === 0 && ((await p.locator('main p.text-3xl').textContent()) ?? '').includes('08:00 - 17:00') && (await p.getByText('근무 8시간 0분 / 휴게 1시간 0분').count()) === 1, '일정 상세: 큰 시각 08:00 - 17:00 · 근무 8시간 / 휴게 1시간', (await p.locator('main p.text-3xl').textContent()) ?? '');
+  check(['근무일정 유형', '직원', '지점', '직무', '근무일정 틀', '휴게', '일정노트', '출퇴근기록'].every((x) => sl.includes(x)) && (await p.getByText('검사용 특근').count()) === 1, '일정 상세: 항목 — 값 줄 · 일정노트', sl.join(','));
+  await p.waitForTimeout(400);
+  await shot('03c-근무일정-상세');
   await p.goto(`${BASE}/admin/schedule?d=${FRI}`);
   await p.waitForLoadState('networkidle');
   check((await p.getByRole('link', { name: emp!.name }).count()) === 2 && (await p.getByText('17:30').count()) > 0 && (await p.getByText('잔업').count()) > 0, '금요일 화면에 평소 일정 + 잔업 두 줄');

@@ -441,7 +441,7 @@ async function DoneTab({ sp, practice }: { sp: { live?: string; tab?: string; dp
       <RequestTabs admin active="done" live={sp.live === '1'} q={q} counts={{ pending: (await pendingCounts(practice)).total }} />
       {practice && <p className="rounded-card bg-primary-tint p-3 text-sm text-primary">{t('practiceBanner')}</p>}
       {page.items.length === 0 && <p className="rounded-card bg-bg p-5 text-sm text-faint">{tr('emptyDone', { days: REQUEST_WINDOW_DAYS })}</p>}
-      <RequestRows items={page.items} leaveTypes={leaveTypes} names={names} showName hrefOf={(r) => `/admin/records/${r.employeeId}?m=${r.date.slice(0, 7)}`} />
+      <RequestRows items={page.items} leaveTypes={leaveTypes} names={names} showName hrefOf={(r) => (r.kind === 'leave' ? `/admin/leave/req/${r.key.split(':')[1]}` : `/admin/records/${r.employeeId}?m=${r.date.slice(0, 7)}`)} />
       <Pager page={page.page} pages={page.pages} param="dp" params={sp} label={tc('pages')} />
       {page.items.length > 0 && <p className="text-sm text-faint">{tr('doneHint', { days: REQUEST_WINDOW_DAYS })}</p>}
     </PageShell>

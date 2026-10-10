@@ -1301,6 +1301,41 @@
       "other": "Other record that day",
       "hint": "Work and break times are for the whole day. Records are changed only through corrections.",
       "toMonth": "This employee's month"
+    },
+    "scheduleDetail": {
+      "title": "Schedule",
+      "back": "Back to list",
+      "edit": "Edit",
+      "work": "Work {t}",
+      "break": "Break {t}",
+      "kind": "Schedule type",
+      "employee": "Employee",
+      "branch": "Branch",
+      "job": "Job",
+      "template": "Schedule template",
+      "byRule": "Company rule",
+      "byDate": "Added for this date",
+      "breakTime": "Break",
+      "breakAuto": "{t} (added automatically)",
+      "note": "Schedule note",
+      "records": "Attendance record",
+      "none": "X",
+      "hint": "This is the regular schedule. Changing the template or company rule changes other days too.",
+      "hintShift": "This schedule was added for this date only. Cancel it with ✕ in the schedule list."
+    },
+    "leaveDetail": {
+      "title": "Leave",
+      "back": "Back to leave",
+      "employee": "Employee",
+      "group": "Leave group",
+      "paidHours": "Paid hours",
+      "hours": "{n}h",
+      "deductDays": "Days deducted",
+      "reason": "Reason",
+      "decidedBy": "Decided by",
+      "created": "Created",
+      "none": "X",
+      "hint": "Approve or reject in the inbox; cancel an approval under Approved leave."
     }
   },
   "side": {

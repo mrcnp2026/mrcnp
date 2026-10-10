@@ -102,6 +102,15 @@ try {
   check((await p.getByRole('button', { name: '기준일' }).count()) === 1 && (await p.getByRole('link', { name: '내 휴가', exact: true }).count()) === 1, '위 줄: 검색 · 기준일 · [내 휴가]');
   check((await p.getByRole('heading', { name: /^관리자 \d+/ }).locator('visible=true').count()) === 1, '폰 목록은 권한별 묶음 (관리자 ○명)');
   if (SHOTS) await p.screenshot({ path: path.join(SHOTS, '10-휴가-전체.png'), fullPage: true });
+  // 승인된 휴가 → 휴가 상세 (2026-10-11)
+  await p.goto(`${BASE}/admin/leave/req/${halfId}`);
+  const okDetail = await p.getByRole('heading', { name: '휴가', exact: true }).waitFor({ timeout: 20000 }).then(() => true, () => false);
+  const ll = await p.locator('main dt').allTextContents();
+  check(okDetail && ['직원', '휴가 그룹', '유급 시간', '차감 일수', '사유', '처리', '생성일자'].every((x) => ll.includes(x)) && (await p.getByText('4h').count()) === 1 && (await p.getByText('0.5일').count()) >= 1, '휴가 상세: 반차 = 유급 시간 4h · 차감 일수 0.5일', ll.join(','));
+  if (SHOTS) await p.screenshot({ path: path.join(SHOTS, '11-휴가-상세.png'), fullPage: true });
+  await p.goto(`${BASE}/admin/leave`);
+  await p.getByRole('search').waitFor({ timeout: 20000 });
+  check((await p.locator(`a[href="/admin/leave/req/${halfId}"]`).count()) >= 1, '연차 관리의 승인된 휴가에서 상세로 가는 줄');
   await p.goto(`${BASE}/admin/leave?to=2020-01-01`);
   await p.getByRole('search').waitFor({ timeout: 20000 });
   check(((await p.getByRole('button', { name: '기준일' }).textContent()) ?? '').includes('2020.01.01') && (await p.getByText('연차 미입력').locator('visible=true').count()) >= 1, '기준일을 옛날로 바꾸면 그날 기준 (부여 전이라 미입력)');
