@@ -1271,7 +1271,11 @@
       "deemed": "Deemed work",
       "noOut": "No punch out",
       "working": "Working",
-      "hint": "The time beside each date is the total working time (breaks excluded) of the staff shown. Tap a row to correct or add records for that person. Up to 62 days at a time."
+      "hint": "The time beside each date is the total working time (breaks excluded) of the staff shown. Tap a row to correct or add records for that person. Up to 62 days at a time.",
+      "add": "Add record",
+      "addWho": "Employee",
+      "addPick": "Choose an employee",
+      "addHint": "Choose an employee to enter the date, time and reason. For your own record, send a correction request."
     },
     "recordDetail": {
       "title": "Attendance record",

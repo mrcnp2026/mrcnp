@@ -88,6 +88,17 @@ try {
   await p.goto(`${BASE}/admin/records/list`);
   await ready();
 
+  // ── + 버튼 → 기록 추가 (2026-10-11). 열어 보기만 하고 저장하지 않는다 ──
+  await p.locator('[data-fab]').click();
+  const addSheet = p.getByRole('dialog');
+  await addSheet.waitFor({ timeout: 10000 });
+  const opts = await addSheet.getByLabel('직원').locator('option').count();
+  check(opts >= 2, '+ 버튼 → 기록 추가 창에 직원 고르기', `${opts - 1}명`);
+  await addSheet.getByLabel('직원').selectOption({ index: 1 });
+  check(await addSheet.getByLabel('사유').first().waitFor({ timeout: 10000 }).then(() => true, () => false), '직원을 고르면 날짜·시각·사유 칸이 열림');
+  if (SHOTS) await p.screenshot({ path: path.join(SHOTS, '04-기록-추가-창.png') });
+  await p.keyboard.press('Escape');
+
   // ── 검색 ──
   const firstName = ((await rows().first().locator('span.flex-1 > span.font-bold').first().textContent()) ?? '').trim();
   await p.getByRole('searchbox').fill(firstName);

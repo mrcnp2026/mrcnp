@@ -21,7 +21,7 @@ import type { HolidayRow, PunchCorrection, PunchEvent, WorkRule } from '@/lib/ty
 // startsOn: 입사일(joined_on), 비어 있으면 계정을 만든 날 — 그 전 날짜는 미기록·결근으로 세지 않는다 (7-8 요점 3)
 export type Person = { id: string; name: string; employeeNo: string | null; role: 'admin' | 'employee'; active: boolean; joinedOn: string | null; startsOn: string; groupId: string | null; shiftTemplateId: string | null; jobId: string | null };
 
-export type EventRow = PunchEvent & { ipVerified: boolean; verifiedBy: 'ip' | 'gps' | null; source: 'web' | 'qr' | 'admin'; note: string | null; clientIp: string | null };
+export type EventRow = PunchEvent & { ipVerified: boolean; verifiedBy: 'ip' | 'gps' | null; source: 'web' | 'qr' | 'admin'; note: string | null; clientIp: string | null; locationId: string | null };
 
 export type CorrectionRow = PunchCorrection & {
   reason: string;
@@ -101,7 +101,7 @@ export async function loadPeriod(from: string, to: string, practice = OFFICE.pra
     loadHolidays(readFrom, to),
     db.from('profiles').select('id, name, employee_no, role, active, joined_on, created_at, group_id, shift_template_id, job_id').order('name'),
     db.from('punch_events')
-      .select('id, employee_id, kind, punched_at, work_date, ip_verified, verified_by, source, note, client_ip')
+      .select('id, employee_id, kind, punched_at, work_date, ip_verified, verified_by, source, note, client_ip, location_id')
       .eq('is_test', practice).gte('work_date', readFrom).lte('work_date', to).order('punched_at'),
     db.from('punch_corrections')
       .select('id, correction_type, target_id, employee_id, work_date, kind, new_punched_at, status, reason, requested_by, approved_by, created_at, decided_at')
@@ -153,7 +153,7 @@ export async function loadPeriod(from: string, to: string, practice = OFFICE.pra
     })),
     events: (ev ?? []).map((e) => ({
       id: e.id, employeeId: e.employee_id, kind: e.kind, punchedAt: new Date(e.punched_at), workDate: e.work_date,
-      ipVerified: e.ip_verified, verifiedBy: e.verified_by, source: e.source, note: e.note, clientIp: e.client_ip,
+      ipVerified: e.ip_verified, verifiedBy: e.verified_by, source: e.source, note: e.note, clientIp: e.client_ip, locationId: e.location_id ?? null,
     })),
     corrections: (co ?? []).map((c) => ({
       id: c.id, correctionType: c.correction_type, targetId: c.target_id, employeeId: c.employee_id, workDate: c.work_date, kind: c.kind,

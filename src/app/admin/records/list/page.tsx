@@ -5,9 +5,12 @@
 import { ChevronRight } from 'lucide-react';
 import { getFormatter, getTranslations } from 'next-intl/server';
 import Link from 'next/link';
+import { AddSheet } from '@/components/AddSheet';
+import { Fab } from '@/components/Fab';
 import { ListBar } from '@/components/ListBar';
 import { Pager, pageOf } from '@/components/Pager';
-import { Chip, PageShell } from '@/components/ui';
+import { Card, Chip, PageShell } from '@/components/ui';
+import { getMe } from '@/lib/auth';
 import { OFFICE } from '@/config/office';
 import { addDays } from '@/lib/calendar';
 import { loadJobs } from '@/lib/job-data';
@@ -17,6 +20,7 @@ import { loadOrgGroups } from '@/lib/org-data';
 import { daysFor, loadPeriod } from '@/lib/period-data';
 import { SHIFT_COLOR_CLASS } from '@/lib/shifts';
 import { kstDateTime, toKstDate } from '@/lib/time';
+import { RecordAdd } from './RecordAdd';
 
 const DATES_PER_PAGE = 7;
 type Line = { key: string; idx: number; id: string; name: string; sub: string; color: string; date: string; start: string; end: string | null; deemed: boolean; open: boolean; outside: boolean; sort: number };
@@ -63,6 +67,10 @@ export default async function RecordListPage({ searchParams }: { searchParams: P
   const page = pageOf(dates, sp.p, DATES_PER_PAGE);
   const hm = (min: number) => t('hm', { h: Math.floor(min / 60), m: min % 60 });
   const keep = { live: sp.live === '1' ? '1' : undefined };
+  // + 버튼(기록 추가): 지금 운영 모드의 기록에만, 본인 것은 빼고 (직원별 기록 화면의 대리 등록과 같은 규칙)
+  const me = await getMe();
+  const canAdd = practice === OFFICE.practiceMode;
+  const addable = data.people.filter((p) => p.active && p.id !== me?.id && !p.employeeNo?.startsWith('e2e-')).map((p) => ({ id: p.id, name: p.name, group: groupPath(groups, p.groupId) }));
 
   return (
     <PageShell flush>
@@ -123,6 +131,17 @@ export default async function RecordListPage({ searchParams }: { searchParams: P
         </Link>
       </div>
       <p className="px-1 text-sm text-faint">{t('hint')}</p>
+      {canAdd && (
+        <>
+          <AddSheet id="record" title={t('add')} className="mt-3 lg:max-w-xl">
+            <Card className="flex flex-col gap-3">
+              <h2 className="hidden text-sm font-medium text-muted lg:block">{t('add')}</h2>
+              <RecordAdd people={addable} today={today} />
+            </Card>
+          </AddSheet>
+          <Fab label={t('add')} items={[{ id: 'record', label: t('add') }]} />
+        </>
+      )}
     </PageShell>
   );
 }

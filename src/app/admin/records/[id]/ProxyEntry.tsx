@@ -21,6 +21,7 @@ export function ProxyEntry({
   dateLabel,
   kinds,
   today,
+  startOpen = false,
 }: {
   employeeId: string;
   name: string;
@@ -28,10 +29,11 @@ export function ProxyEntry({
   dateLabel?: string;
   kinds: Kind[];
   today: string;
+  startOpen?: boolean; // 목록의 + 버튼에서는 양식이 바로 열려 있다
 }) {
   const t = useTranslations('admin.detail');
   const router = useRouter();
-  const [open, setOpen] = useState(false);
+  const [open, setOpen] = useState(startOpen);
   const [step, setStep] = useState<'form' | 'confirm'>('form');
   const [date, setDate] = useState(workDate ?? '');
   const [kind, setKind] = useState<Kind>(kinds[0]);

@@ -1,6 +1,6 @@
 // 출퇴근기록 한 건의 상세 (2026-10-11 의뢰인: 시프티의 출퇴근기록 상세처럼) — 큰 시각 · 날짜 · 근무/휴게 → 「항목 — 값」 줄.
 // 보여 주기만 한다. [수정]은 그 직원의 그 달 기록 화면(정정·대리 입력이 있는 곳)으로 간다 — 고치는 길은 정정뿐이다 (4-8).
-// 「출근 장소 · 퇴근 장소」는 장소 이름이 아니라 확인한 방법을 적는다(사무실 인터넷 · 위치 확인 · 확인 안 됨) — 좌표·장소는 기록에 저장하지 않는다.
+// 「출근 장소 · 퇴근 장소」: 위치로 확인된 기록은 그 출퇴근 장소의 이름, 그 밖에는 확인한 방법(사무실 인터넷 · 확인 안 됨 · 관리자 등록 · 정정)을 적는다.
 // 기록 확정([확정하기])은 아직 없다 (할일 「나. 출퇴근기록」).
 import { getFormatter, getTranslations } from 'next-intl/server';
 import Link from 'next/link';
@@ -12,6 +12,7 @@ import { loadJobs } from '@/lib/job-data';
 import { groupPath } from '@/lib/org';
 import { loadOrgGroups } from '@/lib/org-data';
 import { daysFor, loadPeriod, type EventRow } from '@/lib/period-data';
+import { createAdminClient } from '@/lib/supabase/admin';
 import { kstDateTime, toKstDate } from '@/lib/time';
 
 export default async function RecordDetailPage({ params, searchParams }: { params: Promise<{ id: string; date: string }>; searchParams: Promise<{ i?: string; live?: string }> }) {
@@ -19,7 +20,8 @@ export default async function RecordDetailPage({ params, searchParams }: { param
   if (!/^\d{4}-\d{2}-\d{2}$/.test(date) || Number.isNaN(Date.parse(`${date}T00:00:00Z`))) notFound();
   const practice = OFFICE.practiceMode && sp.live !== '1';
   const liveQ = sp.live === '1' ? '&live=1' : '';
-  const [data, groups, jobs] = await Promise.all([loadPeriod(date, date, practice), loadOrgGroups(), loadJobs()]);
+  const [data, groups, jobs, { data: places }] = await Promise.all([loadPeriod(date, date, practice), loadOrgGroups(), loadJobs(), createAdminClient().from('office_locations').select('id, label')]);
+  const placeName = new Map((places ?? []).map((x) => [x.id as string, x.label as string | null]));
   const person = data.people.find((p) => p.id === id);
   const day = person && data.rule ? daysFor(data, id, date, date)[0] : undefined;
   const idx = Math.max(0, Number.parseInt(sp.i ?? '0', 10) || 0);
@@ -40,6 +42,7 @@ export default async function RecordDetailPage({ params, searchParams }: { param
     const e = eventAt(d);
     if (!e) return t('viaFix');
     if (e.source === 'admin') return t('viaAdmin');
+    if (e.verifiedBy === 'gps' && e.locationId && placeName.get(e.locationId)) return placeName.get(e.locationId) as string;
     return t(e.verifiedBy === 'ip' ? 'viaIp' : e.verifiedBy === 'gps' ? 'viaGps' : 'viaNone');
   };
   const job = person.jobId ? jobs.find((j) => j.id === person.jobId) : undefined;

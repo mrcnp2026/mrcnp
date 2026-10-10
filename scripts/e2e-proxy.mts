@@ -71,7 +71,7 @@ try {
       return { status: r.status, json: await r.json().catch(() => ({})) };
     }, [url, body] as const);
   const api = `/api/admin/employees/${target!.id}/punch`;
-  const row = p.locator('main > ul > li', { hasText: DAY_LABEL });
+  const row = p.locator('main li', { hasText: DAY_LABEL });
   const shot = async (name: string) => SHOTS && (await p.screenshot({ path: path.join(SHOTS, `${name}.png`), fullPage: true }));
 
   if (!VIEW_ONLY) {
