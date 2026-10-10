@@ -179,9 +179,3 @@ export function CancelShift({ id, label }: { id: string; label: string }) {
     </span>
   );
 }
-
-/** 날짜 고르기 — 고르는 즉시 그날로 간다 (좁은 폰에서 「보기」 버튼 자리가 없다) */
-export function DayJump({ date, label }: { date: string; label: string }) {
-  const router = useRouter();
-  return <DateTimeInput type="date" value={date} onChange={(v) => /^\d{4}-\d{2}-\d{2}$/.test(v) && router.push(`/admin/schedule?d=${v}`)} required aria-label={label} className="num min-h-11 w-full min-w-0 rounded-button border border-border bg-bg px-3 text-base" />;
-}

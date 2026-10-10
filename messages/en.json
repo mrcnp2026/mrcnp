@@ -1133,7 +1133,19 @@
       "keep": "Keep",
       "invalid_date": "Check the date.",
       "invalid_time": "End time must be later than start time. Shifts past midnight are not supported yet.",
-      "no_people": "Select at least one person."
+      "no_people": "Select at least one person.",
+      "mine": "My schedule",
+      "thisWeek": "This week",
+      "hm": "{h}h {m}m",
+      "emptyRange": "No schedules in this period.",
+      "hint": "The time next to each date is the planned total for the people shown (start to end, breaks included). Up to 31 days at a time. ✕ cancels only schedules added for a specific date.",
+      "search": "Search name",
+      "filter": "Filter by department",
+      "period": "Choose period",
+      "from": "From",
+      "to": "To",
+      "apply": "View this period",
+      "groupAll": "All departments"
     },
     "leaveTypes": {
       "title": "Leave types",

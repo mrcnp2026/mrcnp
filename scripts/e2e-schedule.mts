@@ -58,7 +58,10 @@ try {
   await p.waitForURL(/\/admin\/schedule/);
   check(true, '관리자는 「근무일정」 탭에서 전체 일정이 먼저 열림');
   await p.waitForLoadState('networkidle');
-  await shot('01-근무일정-오늘');
+  await p.getByRole('search').waitFor({ timeout: 20000 });
+  check((await p.getByRole('search').count()) === 1 && (await p.getByRole('button', { name: '기간 고르기' }).count()) === 1 && (await p.getByRole('link', { name: '내 일정', exact: true }).count()) === 1, '위 줄: 검색 · 기간 · [내 일정]');
+  check((await p.locator('h2.num').count()) >= 1 && (await p.locator('h2.num').first().getByText(/\d+시간 \d+분/).count()) === 1, '날짜 머리줄마다 그날 계획 시간 합 (기본: 이번 주)', String(await p.locator('h2.num').count()));
+  await shot('01-근무일정-이번주');
 
   // ── + 버튼 → 일정 넣는 창 ──
   await p.locator('[data-fab]').click();
@@ -89,9 +92,18 @@ try {
   await p.goto(`${BASE}/admin/schedule?d=${FRI}`);
   await p.waitForLoadState('networkidle');
   check((await p.getByRole('link', { name: emp!.name }).count()) === 2 && (await p.getByText('17:30').count()) > 0 && (await p.getByText('잔업').count()) > 0, '금요일 화면에 평소 일정 + 잔업 두 줄');
-  await p.getByRole('link', { name: '다음 날' }).click();
-  await p.waitForURL(new RegExp(`d=${SAT}`));
-  check(true, '「다음 날」로 넘어감');
+  // ── 기간 목록: 금~토 두 날짜 머리줄 · 이름 검색 ──
+  await p.goto(`${BASE}/admin/schedule?from=${FRI}&to=${SAT}`);
+  await p.waitForLoadState('networkidle');
+  check((await p.locator('h2.num').count()) === 2 && (await p.getByRole('link', { name: emp!.name }).count()) === 3, '금~토 기간: 날짜 머리줄 2개 · 검사 계정 세 줄', `${await p.locator('h2.num').count()} / ${await p.getByRole('link', { name: emp!.name }).count()}`);
+  check((await p.locator('h2.num').nth(1).getByText('9시간 0분').count()) === 1, '토요일 합계는 특근 9시간 (검사 계정만 일정이 있는 날)', (await p.locator('h2.num').nth(1).textContent()) ?? '');
+  await shot('03b-근무일정-기간');
+  await p.goto(`${BASE}/admin/schedule?from=${FRI}&to=${SAT}&q=${encodeURIComponent('없는이름zz')}`);
+  await p.waitForLoadState('networkidle');
+  check((await p.getByText('이 기간에는 일정이 없습니다.').count()) === 1, '이름 검색에 맞는 사람이 없으면 빈 안내');
+  await p.goto(`${BASE}/admin/schedule?from=2026-01-01&to=2026-12-31`);
+  await p.waitForLoadState('networkidle');
+  check((await p.getByRole('button', { name: '기간 고르기' }).textContent())?.includes('01.01 - 01.31') ?? false, '기간이 너무 길면 31일로 줄임', (await p.getByRole('button', { name: '기간 고르기' }).textContent()) ?? '');
 
   // ── 내 일정 ──
   await p.goto(`${BASE}/punch/schedule`);
@@ -104,7 +116,7 @@ try {
   await p.goto(`${BASE}/admin/schedule?d=${SAT}`);
   await p.getByRole('button', { name: `${emp!.name} 일정 취소`, exact: true }).click();
   await p.getByRole('button', { name: '취소', exact: true }).click();
-  await p.getByText(/이 날은 일정이 없습니다/).waitFor({ timeout: 20000 });
+  await p.getByText('이 기간에는 일정이 없습니다.').waitFor({ timeout: 20000 });
   const { data: left } = await db.from('shifts').select('active').eq('employee_id', emp!.id).eq('work_date', SAT);
   check((left?.length ?? 0) >= 1 && left!.every((x) => x.active === false), '취소하면 꺼짐 (지우지 않음) · 화면에서 사라짐');
 
