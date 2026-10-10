@@ -22,7 +22,7 @@ await db.from('profiles').update({ active: true, role: 'admin', locale: 'ko' }).
 const token = randomBytes(32).toString('base64url');
 await db.from('invites').insert({ employee_id: emp!.id, token_hash: createHash('sha256').update(token).digest('hex'), issued_via: 'admin', expires_at: new Date(Date.now() + 3600e3).toISOString() });
 
-const PAGES: [string, string][] = [
+const PAGES: [string, string][] = (process.argv[3] ? [['01-홈', '/punch']] as [string, string][] : [
   ['01-홈', '/punch'],
   ['02-요청-전체', '/admin/inbox'],
   ['03-요청-내것', '/punch/requests?tab=done'],
@@ -33,7 +33,7 @@ const PAGES: [string, string][] = [
   ['08-휴가-내것', '/punch/leave'],
   ['09-현황', '/admin'],
   ['10-직원', '/admin/members'],
-];
+]);
 const browser = await chromium.launch({ channel: 'chrome', headless: true });
 try {
   const ctx = await browser.newContext({ viewport: { width: 390, height: 780 }, deviceScaleFactor: 1.5 });
@@ -44,7 +44,7 @@ try {
     await p.goto(BASE + url);
     await p.waitForLoadState('networkidle');
     await p.waitForTimeout(800);
-    await p.screenshot({ path: path.join(SHOTS, `${name}.png`) });
+    await p.screenshot({ path: path.join(SHOTS, `${name}.png`), fullPage: !!process.argv[3] });
     console.log(name);
   }
   await p.goto(`${BASE}/punch`);

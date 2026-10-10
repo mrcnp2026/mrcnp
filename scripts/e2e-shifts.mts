@@ -81,9 +81,8 @@ try {
   check(r.status === 200 && (await db.from('profiles').select('shift_template_id').eq('id', emp!.id).single()).data?.shift_template_id === id, '직원에게 적용됨 (DB)', JSON.stringify(r.json));
   await p.goto(`${BASE}/punch`);
   await p.waitForLoadState('networkidle');
-  // 홈의 "오늘 일정" 줄은 출근 전·근무 중에만 나온다. 검사 계정이 오늘 이미 퇴근까지 찍었으면(다른 검사가 만든 연습 기록) 이 항목은 볼 수 없다
-  if ((await p.getByText('퇴근했어요').count()) > 0) console.log('➖ 직원 홈의 오늘 일정: 검사 계정이 오늘 이미 퇴근해서 일정 줄이 없는 상태 — 확인하지 못함');
-  else check((await p.getByText(/07:30/).count()) > 0, '직원 홈의 오늘 일정이 틀 시각(07:30)으로 보임');
+  // 홈의 「이번주 근무」 요일 칸(과 근무일이면 「오늘 근무」 줄)에 틀 시각이 나온다
+  check((await p.getByText(/07:30/).count()) > 0, '직원 홈의 일정이 틀 시각(07:30)으로 보임');
   await shot('02-홈-틀-적용', false);
   await p.goto(`${BASE}/admin/shifts/${id}`);
   await p.waitForLoadState('networkidle');

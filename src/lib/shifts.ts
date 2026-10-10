@@ -126,3 +126,13 @@ export function validateShift(b: Record<string, unknown>): { ok: true; value: Sh
   if (employeeIds.length === 0) return { ok: false, code: 'no_people' };
   return { ok: true, value: { date: b.date, startTime, endTime, kind, templateId, note: noteRaw === '' ? null : noteRaw, employeeIds } };
 }
+
+/** 그날 계획 근무 시간(분) = 일정 길이 − 일정과 겹치는 휴게시간. 홈의 「이번주 근무」 계획 눈금에 쓴다 */
+export function planMinutes(rule: Pick<WorkRule, 'startTime' | 'endTime' | 'breakStart' | 'breakEnd'>): number {
+  const m = (t: string) => Number(t.slice(0, 2)) * 60 + Number(t.slice(3, 5));
+  const s = m(rule.startTime);
+  const e = m(rule.endTime);
+  if (e <= s) return 0;
+  const cut = rule.breakStart && rule.breakEnd ? Math.max(0, Math.min(e, m(rule.breakEnd)) - Math.max(s, m(rule.breakStart))) : 0;
+  return e - s - cut;
+}

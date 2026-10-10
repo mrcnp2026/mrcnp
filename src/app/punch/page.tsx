@@ -1,14 +1,19 @@
-// 직원 홈 (PWA 진입점, 부록 R-10-1): 날짜 → 미기록 배너 → "오늘 근무" 카드(큰 버튼) → 이번 주 막대 → 근무노트.
+// 직원 홈 (PWA 진입점). 2026-10-10 의뢰인: 시프티 홈처럼 — (관리자) 바로가기 카드 → 「오늘 근무」 → 미기록 안내 → 「이번주 근무」(요일 7칸 + 계획 막대) → 근무노트.
 // 상단 바·하단 탭은 layout.tsx(components/AppFrame).
+import { ChartNoAxesColumn, ChevronRight, ClipboardX } from 'lucide-react';
 import { getFormatter, getTranslations } from 'next-intl/server';
 import { headers } from 'next/headers';
 import Link from 'next/link';
 import { redirect } from 'next/navigation';
 import { PageShell } from '@/components/ui';
-import { LABOR } from '@/config/labor-rules';
+import { LABOR, resolveDayType } from '@/config/labor-rules';
 import { OFFICE } from '@/config/office';
 import { loadEmployeeToday } from '@/lib/attendance-data';
 import { getMe } from '@/lib/auth';
+import { addDays, weekStartOf } from '@/lib/calendar';
+import { fullLeaveSet } from '@/lib/leave';
+import { leaveDaysFor, loadPeriod } from '@/lib/period-data';
+import { hhmm, planMinutes } from '@/lib/shifts';
 import { isPhoneUserAgent } from '@/lib/passkey';
 import { createAdminClient } from '@/lib/supabase/admin';
 import { loadEmployeeRecent } from '@/lib/employee-data';
@@ -18,7 +23,7 @@ import { workStatusOn } from '@/lib/work-requests';
 import { MissingBanner } from './MissingBanner';
 import { NoteBox } from './NoteBox';
 import { TodayCard } from './TodayCard';
-import { WeekBar } from './WeekBar';
+import { WeekBar, type WeekCell } from './WeekBar';
 
 export default async function PunchPage() {
   const me = await getMe();
@@ -33,22 +38,45 @@ export default async function PunchPage() {
     // 출퇴근 기기 (등록한 1대). 없으면 홈의 버튼 자리에 등록 안내가 나온다
     createAdminClient().from('user_passkeys').select('credential_id, device_label').eq('employee_id', me.id).is('revoked_at', null).maybeSingle(),
   ]);
-  const hm = (time: string) => f.dateTime(kstDateTime(today.workDate, time), { hour: '2-digit', minute: '2-digit', hourCycle: 'h23' });
+  // 이번 주 요일 칸: 그날 일정(날짜별 일정 → 평소 틀 → 회사 규칙, 반차 반영). 하루 전부 휴가면 「휴가」
+  const weekStart = weekStartOf(today.workDate);
+  const period = await loadPeriod(weekStart, addDays(weekStart, 6));
+  const fullLeave = fullLeaveSet(leaveDaysFor(period, me.id));
+  const md = (d: string) => `${d.slice(5, 7)}.${d.slice(8, 10)}`;
+  let planTotal = 0;
+  const cells: WeekCell[] = [...Array(7)].map((_, i) => {
+    const d = addDays(weekStart, i);
+    const plan = period.planFor(me.id, d);
+    const on = plan.items.length > 0 && !!plan.rule;
+    const leave = fullLeave.has(d);
+    if (on && !leave) planTotal += planMinutes(plan.rule!);
+    const holiday = period.rule ? resolveDayType(d, period.ruleAt(d) ?? period.rule, period.holidays) !== 'workday' : false;
+    return { date: d, label: f.dateTime(kstDateTime(d, '12:00'), { weekday: 'short' }), red: holiday, today: d === today.workDate, start: on ? hhmm(plan.rule!.startTime) : null, end: on ? hhmm(plan.rule!.endTime) : null, leave };
+  });
+  const todayCell = cells.find((c) => c.today && !c.leave);
 
   return (
       <PageShell wide>
-        {/* 날짜 한 줄 — 인사말·내 계정·로그아웃은 왼쪽 위 메뉴로 옮겼다 (2026-10-10 의뢰인: 시프티처럼 간결하게) */}
-        <p className="px-1 pt-1 text-sm text-muted">{f.dateTime(kstDateTime(today.workDate, '12:00'), { dateStyle: 'full' })}</p>
+        {/* 관리자: 시프티 홈 맨 위의 바로가기 카드 (리포트 · 출근/퇴근 누락 기록) */}
+        {me.role === 'admin' && (
+          <nav aria-label={t('shortcuts')} className="flex flex-col gap-2 lg:grid lg:grid-cols-2 lg:gap-4">
+            {([['/admin', 'report', ChartNoAxesColumn], ['/admin/missing', 'missingLink', ClipboardX]] as const).map(([href, k, Icon]) => (
+              <Link key={k} href={href} className="flex min-h-14 items-center gap-4 rounded-card border border-border bg-bg px-5 font-bold">
+                <Icon aria-hidden size={22} strokeWidth={2} className="shrink-0 text-muted" />
+                <span className="flex-1">{t(k)}</span>
+                <ChevronRight aria-hidden size={22} className="shrink-0 text-muted" />
+              </Link>
+            ))}
+          </nav>
+        )}
 
         {/* PC: 왼쪽 = 오늘 근무, 오른쪽 = 이번 주·근무노트 (2026-10-06 의뢰인) · 폰: 한 칸 */}
         <div className="flex flex-col gap-3 lg:grid lg:grid-cols-2 lg:items-start lg:gap-4">
         <div className="flex flex-col gap-3 lg:gap-4">
-        <MissingBanner items={recent.missing} />
-
         <TodayCard
-          schedule={today.rule ? t('schedule', { start: hm(today.rule.startTime), end: hm(today.rule.endTime) }) : null}
-          endTime={today.rule ? hm(today.rule.endTime) : null}
-          status={today.status}
+          dateLabel={f.dateTime(kstDateTime(today.workDate, '12:00'), { month: 'numeric', day: 'numeric', weekday: 'short' })}
+          planLine={todayCell?.start ? `${todayCell.start} - ${todayCell.end}` : null}
+          hasRule={!!today.rule}
           firstIn={today.firstIn}
           firstInVerified={today.firstInVerified}
           lastOut={today.lastOut}
@@ -67,9 +95,10 @@ export default async function PunchPage() {
           </Link>
         )}
 
+        <MissingBanner items={recent.missing} />
         </div>
         <div className="flex flex-col gap-3 lg:gap-4">
-        <WeekBar week={today.week} regularHours={LABOR.weeklyRegularLimitMin / 60} limitHours={OFFICE.weeklyLimitHours} />
+        <WeekBar week={today.week} regularHours={LABOR.weeklyRegularLimitMin / 60} limitHours={OFFICE.weeklyLimitHours} cells={cells} planMinutes={planTotal} range={`${md(weekStart)} - ${md(addDays(weekStart, 6))}`} />
 
         <NoteBox initial={today.note?.body ?? null} />
         </div>

@@ -84,7 +84,12 @@
       "addOnOut": "Giờ hôm nay được cộng khi bạn tan ca",
       "records": "Lịch sử",
       "regular": "Giờ chuẩn",
-      "overtime": "Tăng ca"
+      "overtime": "Tăng ca",
+      "hours": "{h} giờ",
+      "plan": "Kế hoạch",
+      "none": "Không có lịch",
+      "leave": "Nghỉ",
+      "today": "Hôm nay"
     },
     "note": {
       "title": "Ghi chú công việc",
@@ -136,7 +141,13 @@
     "cancelled": "Việc kiểm tra đã bị hủy, hoặc đây không phải thiết bị chấm công đã đăng ký.",
     "passkey_unknown": "Thiết bị này chưa được đăng ký để chấm công.",
     "passkey_revoked": "Thiết bị này đã bị gỡ. Vui lòng đăng ký lại.",
-    "unsupported": "Trình duyệt này không hỗ trợ kiểm tra thiết bị. Hãy mở bằng Chrome hoặc Safari."
+    "unsupported": "Trình duyệt này không hỗ trợ kiểm tra thiết bị. Hãy mở bằng Chrome hoặc Safari.",
+    "todayTitle": "Hôm nay",
+    "noSchedule": "Không có lịch",
+    "noScheduleChip": "Ngoài lịch",
+    "shortcuts": "Lối tắt",
+    "report": "Tổng quan · báo cáo",
+    "missingLink": "Thiếu chấm công"
   },
   "errors": {
     "invite_invalid": "Liên kết mời đã hết hạn hoặc đã được dùng. Hãy xin quản lý liên kết mới.",

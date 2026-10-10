@@ -17,10 +17,8 @@ import { useEffect, useState } from 'react';
 import { PUNCHED_EVENT, PUNCHING_EVENT } from '@/components/NoticeSheet';
 import { callApi, passkeyBrowserError } from '@/components/client-api';
 import { ErrorNote } from '@/components/ErrorNote';
-import { LiveClock } from '@/components/LiveClock';
 import { InAppWarning, RegisterTroubleshoot } from '@/components/PasskeyHelp';
 import { Card, Chip } from '@/components/ui';
-import type { DayStatus } from '@/lib/today';
 
 type Result = { kind: 'in' | 'out'; punchedAt: string; ipVerified: boolean; verifiedBy?: 'ip' | 'gps' | null; isTest: boolean; deduped: boolean };
 
@@ -55,9 +53,9 @@ function currentPosition(): Promise<{ lat: number; lng: number; accuracy: number
 }
 
 export function TodayCard(props: {
-  schedule: string | null;
-  endTime: string | null; // 퇴근 예정 (근무규칙 끝 시각, HH:MM)
-  status: DayStatus;
+  dateLabel: string; // 10/10 (토)
+  planLine: string | null; // 오늘 일정 「08:00 - 17:00」. 없으면 null (무일정)
+  hasRule: boolean; // 회사 근무규칙이 있는가 (없으면 안내)
   firstIn: string | null;
   firstInVerified: boolean | null;
   lastOut: string | null;
@@ -153,49 +151,42 @@ export function TodayCard(props: {
   const state: 'before' | 'working' | 'done' = props.isOpen ? 'working' : props.lastOut ? 'done' : 'before';
   const Icon = kind === 'in' ? LogIn : LogOut;
   return (
-    <Card className="flex flex-col gap-5 p-6">
+    <Card className="flex flex-col gap-4">
       <div className="flex items-start justify-between gap-2">
-        <div className="min-w-0">
-          <p className={`text-sm font-bold ${state === 'working' ? 'text-primary' : 'text-muted'}`}>
-            {state === 'before' ? t('nowLabel') : state === 'working' ? t('workingLabel') : t('doneLabel')}
-          </p>
-          <p className="num mt-1 text-4xl leading-tight font-extrabold tracking-tight">
-            {state === 'before' && <LiveClock initial={new Date().toISOString()} />}
-            {state === 'working' && props.firstIn && <Elapsed since={props.firstIn} />}
-            {state === 'done' && props.lastOut && time(props.lastOut)}
-          </p>
-        </div>
-        <div className="flex flex-col items-end gap-1">
-          {state === 'before' && props.status !== 'off' && <Chip>{t('beforeIn')}</Chip>}
-          {props.status === 'off' && <Chip>{t('status.off')}</Chip>}
+        <h2 className="text-2xl font-extrabold tracking-tight">{t('todayTitle')}</h2>
+        <div className="flex flex-wrap justify-end gap-1">
           {props.lateMinutes !== null && <Chip tone="warn">{t('lateBy', { n: props.lateMinutes })}</Chip>}
           {/* 연습 모드 배지: 연한 파랑 + 파랑 글자 — 주황·초록·빨강 금지 (4-6, R-10-8 규칙 7) */}
           {props.practice && <Chip tone="info">{tc('practiceBadge')}</Chip>}
         </div>
       </div>
-
-      {state !== 'before' && (
-        <div className="grid grid-cols-2 gap-2">
-          <div className="rounded-button bg-surface px-4 py-3">
-            <p className="text-xs text-muted">{t('clockInLabel')}</p>
-            <p className="num text-xl font-extrabold">{props.firstIn ? time(props.firstIn) : '--:--'}</p>
+      {/* 날짜 · 오늘 일정 (없으면 「무일정」) · 찍은 시각 — 왼쪽 색 막대: 근무 중이면 파랑, 아니면 초록 */}
+      <div className={`flex flex-col gap-1 border-l-4 pl-4 ${state === 'working' ? 'border-primary' : 'border-ok'}`}>
+        <p className="num text-lg">{props.dateLabel}</p>
+        <p className="num flex flex-wrap items-center gap-2 text-lg text-muted">
+          {props.planLine ?? t('noSchedule')}
+          {!props.planLine && <Chip>{t('noScheduleChip')}</Chip>}
+        </p>
+        {state !== 'before' && (
+          <p className="num flex flex-wrap items-center gap-x-3 gap-y-1 text-base font-bold">
+            <span>{t('inAt', { time: props.firstIn ? time(props.firstIn) : '--:--' })}</span>
+            {state === 'done' && props.lastOut && <span>{t('outAt', { time: time(props.lastOut) })}</span>}
+            {state === 'working' && props.firstIn && (
+              <span className="text-primary">
+                <Elapsed since={props.firstIn} />
+              </span>
+            )}
             {props.firstInVerified === true && (
-              <p className="mt-0.5 flex items-center gap-1 text-xs font-medium text-ok">
+              <span className="flex items-center gap-1 text-xs font-medium text-ok">
                 <Check aria-hidden size={14} strokeWidth={2.5} />
                 {t('office')}
-              </p>
+              </span>
             )}
-            {props.firstInVerified === false && <p className="mt-0.5 text-xs font-medium text-warn">{t('outside')}</p>}
-          </div>
-          <div className="rounded-button bg-surface px-4 py-3">
-            <p className="text-xs text-muted">{state === 'working' ? t('plannedOut') : t('clockOutLabel')}</p>
-            <p className={`num text-xl font-extrabold ${state === 'working' ? 'text-faint' : ''}`}>
-              {state === 'working' ? (props.endTime ?? '--:--') : props.lastOut ? time(props.lastOut) : '--:--'}
-            </p>
-          </div>
-        </div>
-      )}
-      {state === 'before' && <p className="num -mt-3 text-sm text-muted">{props.schedule ?? t('noRule')}</p>}
+            {props.firstInVerified === false && <span className="text-xs font-medium text-warn">{t('outside')}</span>}
+          </p>
+        )}
+        {!props.hasRule && <p className="text-sm text-faint">{t('noRule')}</p>}
+      </div>
 
       {result && (
         <div className="flex flex-col gap-2" aria-live="polite">
@@ -257,9 +248,9 @@ export function TodayCard(props: {
         </div>
       ) : (
         // 출근은 파랑, 퇴근은 거의 검정 — 색 + 글자 + 아이콘 셋으로 구분 (색만 X).
-        // 왼쪽 「요청」 = 정정 요청 쓰기로 바로 간다 (2026-10-10 의뢰인: 시프티처럼 출근 버튼 옆에)
+        // 왼쪽 「요청」 = 내 요청 화면 (+ 버튼에서 종류를 고른다) (2026-10-10 의뢰인: 시프티처럼 출근 버튼 옆에)
         <div className="flex gap-2">
-        <Link href="/punch/corrections?new=1" className="flex min-h-14 shrink-0 items-center justify-center rounded-punch bg-primary-tint px-5 text-base font-bold text-primary">
+        <Link href="/punch/requests" className="flex min-h-14 shrink-0 items-center justify-center rounded-punch border-2 border-border bg-bg px-6 text-base font-bold text-text">
           {tn('requests')}
         </Link>
         <button

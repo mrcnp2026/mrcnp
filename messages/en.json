@@ -86,7 +86,12 @@
       "addOnOut": "Today's time is added when you clock out",
       "records": "My records",
       "regular": "Regular",
-      "overtime": "Overtime"
+      "overtime": "Overtime",
+      "hours": "{h} h",
+      "plan": "Plan",
+      "none": "No shift",
+      "leave": "Leave",
+      "today": "Today"
     },
     "note": {
       "title": "Work note",
@@ -140,7 +145,13 @@
     "cancelled": "The check was cancelled, or this is not your registered punch device.",
     "passkey_unknown": "This device is not registered as a punch device.",
     "passkey_revoked": "This device was released. Please register it again.",
-    "unsupported": "This browser cannot do the device check. Please open the app in Chrome or Safari."
+    "unsupported": "This browser cannot do the device check. Please open the app in Chrome or Safari.",
+    "todayTitle": "Today",
+    "noSchedule": "No shift",
+    "noScheduleChip": "Unscheduled",
+    "shortcuts": "Shortcuts",
+    "report": "Dashboard · reports",
+    "missingLink": "Missing punches"
   },
   "errors": {
     "invite_invalid": "This invitation link has expired or was already used. Ask your manager for a new one.",

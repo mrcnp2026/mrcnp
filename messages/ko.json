@@ -75,7 +75,7 @@
     "office": "사무실 인터넷",
     "outside": "사무실 밖",
     "week": {
-      "title": "이번 주 근무",
+      "title": "이번주 근무",
       "total": "{h}시간 {m}분",
       "normal": "정상",
       "caution": "주의",
@@ -86,7 +86,12 @@
       "addOnOut": "오늘 시간은 퇴근을 찍으면 더해져요",
       "records": "내 기록",
       "regular": "정규",
-      "overtime": "연장(야근)"
+      "overtime": "연장(야근)",
+      "hours": "{h}시간",
+      "plan": "계획",
+      "none": "일정 없음",
+      "leave": "휴가",
+      "today": "오늘"
     },
     "note": {
       "title": "근무노트",
@@ -140,7 +145,13 @@
     "cancelled": "본인 확인이 취소되었거나, 이 기기가 등록한 출퇴근 기기가 아닙니다.",
     "passkey_unknown": "이 기기는 출퇴근 기기로 등록되어 있지 않습니다.",
     "passkey_revoked": "이 기기의 출퇴근 등록이 해제되었습니다. 다시 등록해 주세요.",
-    "unsupported": "이 브라우저에서는 기기 확인을 쓸 수 없습니다. Chrome이나 Safari에서 여세요."
+    "unsupported": "이 브라우저에서는 기기 확인을 쓸 수 없습니다. Chrome이나 Safari에서 여세요.",
+    "todayTitle": "오늘 근무",
+    "noSchedule": "일정 없음",
+    "noScheduleChip": "무일정",
+    "shortcuts": "바로가기",
+    "report": "현황 · 리포트",
+    "missingLink": "출근/퇴근 누락 기록"
   },
   "errors": {
     "invite_invalid": "초대 링크가 만료되었거나 이미 사용되었습니다. 관리자에게 새 링크를 받으세요.",
