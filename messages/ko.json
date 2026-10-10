@@ -497,7 +497,9 @@
       "colPeriod": "기간",
       "colBalance": "남은 연차",
       "colReason": "사유 · 메모",
-      "colAction": "처리"
+      "colAction": "처리",
+      "tabPending": "대기중",
+      "tabDone": "완료"
     },
     "records": {
       "title": "기록",
@@ -1206,7 +1208,8 @@
     "shifts": "근무일정 틀",
     "mySchedule": "내 근무일정",
     "adminSchedule": "근무일정",
-    "jobs": "직무"
+    "jobs": "직무",
+    "myRequests": "내 요청"
   },
   "nav": {
     "home": "홈",
@@ -1510,5 +1513,42 @@
     "none": "일정 없음",
     "noRule": "회사 근무규칙이 아직 없어 일정을 보여 드릴 수 없습니다.",
     "hint": "계획 시간은 일정의 시작부터 끝까지 길이입니다(휴게 포함). 일정이 다르면 관리자에게 알려 주세요."
+  },
+  "requests": {
+    "title": "요청",
+    "tabPending": "대기중",
+    "tabDone": "완료",
+    "new": "새 요청",
+    "newCorrection": "출퇴근기록 정정 요청",
+    "newLeave": "휴가 신청",
+    "newWork": "외근·출장·재택 신청",
+    "kinds": {
+      "correction": "출퇴근기록 정정",
+      "overtime": "연장근로 확인",
+      "leave": "휴가",
+      "work": "외근·출장·재택"
+    },
+    "status": {
+      "pending": "대기",
+      "approved": "승인",
+      "rejected": "거절",
+      "cancelled": "취소"
+    },
+    "punch": {
+      "in": "출근",
+      "out": "퇴근"
+    },
+    "minutes": "{h}시간 {m}분",
+    "days": "{n}일",
+    "by": "{name} 처리",
+    "ago": {
+      "now": "방금",
+      "min": "{n}분 전",
+      "hour": "{n}시간 전",
+      "day": "{n}일 전"
+    },
+    "emptyPending": "대기 중인 요청이 없습니다.",
+    "emptyDone": "최근 {days}일 동안 처리된 요청이 없습니다.",
+    "doneHint": "최근 {days}일 안에 낸 요청만 보입니다."
   }
 }

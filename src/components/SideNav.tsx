@@ -49,6 +49,7 @@ export function SideNav({ isAdmin, inboxCount = 0, languages }: { isAdmin: boole
         { href: '/punch', key: 'home', icon: House },
         { href: '/punch/schedule', key: 'mySchedule', icon: CalendarRange },
         { href: '/punch/records', key: 'records', icon: ListChecks },
+        { href: '/punch/requests', key: 'myRequests', icon: BellRing },
         { href: '/punch/corrections', key: 'corrections', icon: PencilLine },
         { href: '/punch/leave', key: 'leave', icon: CalendarDays },
         { href: '/punch/notices', key: 'notices', icon: Megaphone },

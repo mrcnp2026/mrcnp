@@ -6,10 +6,10 @@ import { BellRing, CalendarDays, CalendarRange, House, ListChecks, type LucideIc
 import { useTranslations } from 'next-intl';
 import { NavTab, usePressedTab } from './NavTab';
 
-type Tab = { key: 'home' | 'requests' | 'schedule' | 'attendance' | 'leave'; icon: LucideIcon; mine: string; all?: string };
+type Tab = { key: 'home' | 'requests' | 'schedule' | 'attendance' | 'leave'; icon: LucideIcon; mine: string; all?: string; also?: string[] };
 const TABS: Tab[] = [
   { key: 'home', icon: House, mine: '/punch' },
-  { key: 'requests', icon: BellRing, mine: '/punch/corrections', all: '/admin/inbox' },
+  { key: 'requests', icon: BellRing, mine: '/punch/requests', all: '/admin/inbox', also: ['/punch/corrections'] }, // 정정 요청 양식도 요청 탭 아래다
   { key: 'schedule', icon: CalendarRange, mine: '/punch/schedule', all: '/admin/schedule' },
   { key: 'attendance', icon: ListChecks, mine: '/punch/records', all: '/admin/records' },
   { key: 'leave', icon: CalendarDays, mine: '/punch/leave', all: '/admin/leave' },
@@ -23,9 +23,9 @@ export function BottomTabs({ isAdmin, inboxCount = 0 }: { isAdmin: boolean; inbo
   return (
     <nav className="fixed inset-x-0 bottom-0 z-20 border-t border-border bg-bg pb-[env(safe-area-inset-bottom)] lg:hidden">
       <ul className="mx-auto flex max-w-md">
-        {TABS.map(({ key, icon, mine, all }) => {
+        {TABS.map(({ key, icon, mine, all, also }) => {
           const href = isAdmin && all ? all : mine;
-          const here = key === 'home' ? path === mine : under(mine) || (!!all && under(all));
+          const here = key === 'home' ? path === mine : under(mine) || (!!all && under(all)) || !!also?.some(under);
           return (
             <li key={key} className="flex-1">
               <NavTab

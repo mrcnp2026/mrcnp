@@ -204,7 +204,8 @@
     "shifts": "Mẫu ca làm việc",
     "mySchedule": "Lịch làm của tôi",
     "adminSchedule": "Lịch làm việc",
-    "jobs": "Chức danh"
+    "jobs": "Chức danh",
+    "myRequests": "Yêu cầu của tôi"
   },
   "nav": {
     "home": "Trang chủ",
@@ -522,5 +523,42 @@
     "none": "Không có lịch",
     "noRule": "Chưa có quy định giờ làm của công ty.",
     "hint": "Thời gian kế hoạch tính từ lúc bắt đầu đến lúc kết thúc, gồm cả giờ nghỉ. Nếu lịch sai, hãy báo quản lý."
+  },
+  "requests": {
+    "title": "Yêu cầu",
+    "tabPending": "Đang chờ",
+    "tabDone": "Đã xử lý",
+    "new": "Yêu cầu mới",
+    "newCorrection": "Yêu cầu sửa chấm công",
+    "newLeave": "Xin nghỉ phép",
+    "newWork": "Xin làm ngoài / công tác / từ xa",
+    "kinds": {
+      "correction": "Sửa chấm công",
+      "overtime": "Xác nhận tăng ca",
+      "leave": "Nghỉ phép",
+      "work": "Làm ngoài / công tác / từ xa"
+    },
+    "status": {
+      "pending": "Đang chờ",
+      "approved": "Đã duyệt",
+      "rejected": "Từ chối",
+      "cancelled": "Đã hủy"
+    },
+    "punch": {
+      "in": "Vào",
+      "out": "Ra"
+    },
+    "minutes": "{h} giờ {m} phút",
+    "days": "{n} ngày",
+    "by": "{name} xử lý",
+    "ago": {
+      "now": "vừa xong",
+      "min": "{n} phút trước",
+      "hour": "{n} giờ trước",
+      "day": "{n} ngày trước"
+    },
+    "emptyPending": "Không có yêu cầu đang chờ.",
+    "emptyDone": "Không có yêu cầu nào được xử lý trong {days} ngày qua.",
+    "doneHint": "Chỉ hiển thị yêu cầu trong {days} ngày gần đây."
   }
 }

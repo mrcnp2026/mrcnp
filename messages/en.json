@@ -497,7 +497,9 @@
       "colPeriod": "Period",
       "colBalance": "Leave left",
       "colReason": "Reason · note",
-      "colAction": "Decision"
+      "colAction": "Decision",
+      "tabPending": "Pending",
+      "tabDone": "Done"
     },
     "records": {
       "title": "Records",
@@ -1206,7 +1208,8 @@
     "shifts": "Shift templates",
     "mySchedule": "My schedule",
     "adminSchedule": "Schedule",
-    "jobs": "Jobs"
+    "jobs": "Jobs",
+    "myRequests": "My requests"
   },
   "nav": {
     "home": "Home",
@@ -1510,5 +1513,42 @@
     "none": "No shift",
     "noRule": "There is no company work rule yet, so the schedule cannot be shown.",
     "hint": "Planned time is the length from start to end, breaks included. If your schedule looks wrong, tell your manager."
+  },
+  "requests": {
+    "title": "Requests",
+    "tabPending": "Pending",
+    "tabDone": "Done",
+    "new": "New request",
+    "newCorrection": "Punch correction request",
+    "newLeave": "Leave request",
+    "newWork": "Off-site / trip / remote request",
+    "kinds": {
+      "correction": "Punch correction",
+      "overtime": "Overtime review",
+      "leave": "Leave",
+      "work": "Off-site / trip / remote"
+    },
+    "status": {
+      "pending": "Pending",
+      "approved": "Approved",
+      "rejected": "Rejected",
+      "cancelled": "Cancelled"
+    },
+    "punch": {
+      "in": "In",
+      "out": "Out"
+    },
+    "minutes": "{h} h {m} min",
+    "days": "{n} day",
+    "by": "by {name}",
+    "ago": {
+      "now": "just now",
+      "min": "{n} min ago",
+      "hour": "{n} h ago",
+      "day": "{n} d ago"
+    },
+    "emptyPending": "No pending requests.",
+    "emptyDone": "No requests were handled in the last {days} days.",
+    "doneHint": "Only requests from the last {days} days are shown."
   }
 }

@@ -18,16 +18,16 @@ import { toKstDate } from '@/lib/time';
 import Link from 'next/link';
 import { leaveTypeName, calcLeaveBalance } from '@/lib/leave';
 import { loadAllLeaveTypes, loadLeaveGrants, loadLeaveRequests } from '@/lib/leave-data';
+import { loadRequests, REQUEST_WINDOW_DAYS } from '@/lib/request-data';
+import { splitRequests } from '@/lib/requests';
+import { RequestRows } from '@/components/RequestRows';
 import { loadWorkRequests } from '@/lib/work-data';
 import { CorrectionDecision, LeaveDecision, OvertimeDecision, WorkDecision } from './Decisions';
 
-const RECENT_DAYS = 30;
-const RECENT_PAGE = 7;
 // 요청은 종류마다 한 쪽에 5건까지 — 넘으면 아래에 쪽 번호 (2026-10-06 의뢰인)
 const REQUEST_PAGE = 5;
-const RECENT_MAX_PAGES = 5;
 
-export default async function InboxPage({ searchParams }: { searchParams: Promise<{ live?: string; op?: string; cp?: string; lp?: string; wp?: string; rp?: string }> }) {
+export default async function InboxPage({ searchParams }: { searchParams: Promise<{ live?: string; op?: string; cp?: string; lp?: string; wp?: string; tab?: string; dp?: string }> }) {
   const t = await getTranslations('admin.inbox');
   const f = await getFormatter();
   const me = (await getMe())!;
@@ -37,23 +37,18 @@ export default async function InboxPage({ searchParams }: { searchParams: Promis
   const sp = await searchParams;
 // ★ 연습 모드에서는 모든 기록이 연습 기록이다 — 관리자 화면도 기본으로 연습 기록을 본다 (2026-10-02: 시험직원 정정 요청이 관리자에게 0건으로 보이던 문제). ?live=1이면 실제 기록
   const practice = OFFICE.practiceMode && sp.live !== '1';
+  if (sp.tab === 'done') return <DoneTab sp={sp} practice={practice} />;
   const today = toKstDate(new Date());
   const data = await loadPeriod(addDays(today, -31), today, practice);
   await syncOvertimeRequests(data, today);
 
   const db = createAdminClient();
-  // 최근 처리: 최근 30일, 한 쪽에 7줄씩 최대 5쪽 (2026-10-05 의뢰인: 끝없이 쌓여 길어지던 목록).
-  // 자동 검사 계정(e2e-audit…)이 처리한 것은 뺀다 — 검사 스크립트가 돌 때마다 수십 줄씩 쌓여 실제 처리를 가렸다
-  const [{ data: ot }, { data: co }, { data: recentAll }, { data: staff }] = await Promise.all([
+  const [{ data: ot }, { data: co }, { data: staff }] = await Promise.all([
     db.from('overtime_requests').select('*').eq('is_test', practice).or('status.eq.pending,needs_review.eq.true').order('work_date'),
     db.from('punch_corrections').select('*').eq('is_test', practice).eq('status', 'pending').order('created_at'),
-    db.from('decision_log').select('subject_table, decision, decided_by, created_at, subject_id').gte('created_at', new Date(Date.now() - RECENT_DAYS * 86_400_000).toISOString()).order('created_at', { ascending: false }).limit(500),
     db.from('profiles').select('id, name, employee_no'),
   ]);
   const name = new Map((staff ?? []).map((p) => [p.id, p.name]));
-  const checkAccounts = new Set((staff ?? []).filter((p) => p.employee_no?.startsWith('e2e-audit')).map((p) => p.id));
-  const recent = (recentAll ?? []).filter((r) => !checkAccounts.has(r.decided_by)).slice(0, RECENT_PAGE * RECENT_MAX_PAGES);
-  const rcPage = pageOf(recent, sp.rp, RECENT_PAGE);
   const keys = [...(ot ?? []).map((o) => [o.employee_id, o.work_date]), ...(co ?? []).map((c) => [c.employee_id, c.work_date])];
   const empIds = [...new Set(keys.map((k) => k[0]))];
   const dates = [...new Set(keys.map((k) => k[1]))];
@@ -383,6 +378,7 @@ export default async function InboxPage({ searchParams }: { searchParams: Promis
       <ScopeSwitch kind="requests" current="all" />
       <h1 className="text-2xl font-semibold text-primary-deep">{t('title')}</h1>
       {practice && <p className="rounded-card bg-primary-tint p-3 text-sm text-primary">{t('practiceBanner')}</p>}
+      <StateTabs done={false} live={sp.live} pending={t('tabPending')} doneLabel={t('tabDone')} label={t('title')} />
 
       <InboxTabs
         label={t('tabs')}
@@ -394,21 +390,43 @@ export default async function InboxPage({ searchParams }: { searchParams: Promis
         ]}
       />
 
-      {recent.length > 0 && (
-        <section id="recent" className="flex scroll-mt-16 flex-col gap-2">
-          <h2 className="font-semibold">{t('recent')}</h2>
-          <p className="text-xs text-faint">{t('recentHint', { days: RECENT_DAYS })}</p>
-          <ul className="divide-y divide-border rounded-card border border-border px-4 text-sm">
-            {rcPage.items.map((r, i) => (
-              <li key={i} className="flex min-h-11 items-center justify-between gap-2 py-2">
-                <span>{t(r.subject_table === 'overtime_requests' ? 'overtimeTitle' : r.subject_table === 'leave_requests' ? 'leaveTitle' : r.subject_table === 'work_requests' ? 'workTitle' : 'correctionsTitle')} · {t(`status.${r.decision}`)}</span>
-                <span className="num text-muted">{name.get(r.decided_by)} · {f.dateTime(new Date(r.created_at), { month: 'numeric', day: 'numeric', hour: '2-digit', minute: '2-digit', hourCycle: 'h23' })}</span>
-              </li>
-            ))}
-          </ul>
-          <Pager page={rcPage.page} pages={rcPage.pages} param="rp" params={sp} anchor="recent" label={tc('pages')} />
-        </section>
-      )}
+    </PageShell>
+  );
+}
+
+// 대기중 / 완료 (2026-10-10 의뢰인: 시프티의 요청 탭처럼). 「내 요청」은 화면 위 보기 범위(전체/내 것)가 맡는다
+function StateTabs({ done, live, pending, doneLabel, label }: { done: boolean; live?: string; pending: string; doneLabel: string; label: string }) {
+  const q = live === '1' ? { live: '1' } : {};
+  const tab = (on: boolean) => `flex min-h-11 flex-1 items-center justify-center border-b-2 text-sm font-bold ${on ? 'border-text text-text' : 'border-transparent text-muted'}`;
+  return (
+    <nav aria-label={label} className="flex rounded-card bg-bg px-2">
+      <Link href={{ pathname: '/admin/inbox', query: q }} aria-current={!done ? 'page' : undefined} className={tab(!done)}>
+        {pending}
+      </Link>
+      <Link href={{ pathname: '/admin/inbox', query: { ...q, tab: 'done' } }} aria-current={done ? 'page' : undefined} className={tab(done)}>
+        {doneLabel}
+      </Link>
+    </nav>
+  );
+}
+
+// 완료 — 최근 두 달 동안 처리된 요청 전부 (종류가 달라도 한 목록). 자동 검사 계정(e2e-…)의 요청은 뺀다
+async function DoneTab({ sp, practice }: { sp: { live?: string; tab?: string; dp?: string }; practice: boolean }) {
+  const [t, tr, tc] = await Promise.all([getTranslations('admin.inbox'), getTranslations('requests'), getTranslations('common')]);
+  const [items, leaveTypes, { data: staff }] = await Promise.all([loadRequests({ practice }), loadAllLeaveTypes(), createAdminClient().from('profiles').select('id, name, employee_no')]);
+  const check = new Set((staff ?? []).filter((p) => p.employee_no?.startsWith('e2e-')).map((p) => p.id as string));
+  const names = new Map((staff ?? []).map((p) => [p.id as string, p.name as string]));
+  const page = pageOf(splitRequests(items.filter((x) => !check.has(x.employeeId))).done, sp.dp, 20);
+  return (
+    <PageShell wide>
+      <ScopeSwitch kind="requests" current="all" />
+      <h1 className="text-2xl font-semibold text-primary-deep">{t('title')}</h1>
+      {practice && <p className="rounded-card bg-primary-tint p-3 text-sm text-primary">{t('practiceBanner')}</p>}
+      <StateTabs done live={sp.live} pending={t('tabPending')} doneLabel={t('tabDone')} label={t('title')} />
+      {page.items.length === 0 && <p className="rounded-card bg-bg p-5 text-sm text-faint">{tr('emptyDone', { days: REQUEST_WINDOW_DAYS })}</p>}
+      <RequestRows items={page.items} leaveTypes={leaveTypes} names={names} showName hrefOf={(r) => `/admin/records/${r.employeeId}?m=${r.date.slice(0, 7)}`} />
+      <Pager page={page.page} pages={page.pages} param="dp" params={sp} label={tc('pages')} />
+      {page.items.length > 0 && <p className="text-sm text-faint">{tr('doneHint', { days: REQUEST_WINDOW_DAYS })}</p>}
     </PageShell>
   );
 }
