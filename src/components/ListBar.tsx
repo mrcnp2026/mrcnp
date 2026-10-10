@@ -1,11 +1,12 @@
 'use client';
 // 목록 위 줄 (2026-10-10 의뢰인: 시프티처럼) — 첫 줄: 검색 칸 + 거르기 단추 · 둘째 줄: 기간 「09.01 - 09.30 ▾」 + 오른쪽 [내 기록] 같은 단추.
 // 값은 전부 주소(?q · ?g · ?from · ?to)에 둔다 — 뒤로 가기·새로 고침에도 그대로다. 기간·거르기 칸은 눌렀을 때만 펼친다.
-import { CalendarDays, ChevronDown, Funnel, Search } from 'lucide-react';
+import { CalendarDays, ChevronDown, Funnel, Search, Settings } from 'lucide-react';
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
 import { useState } from 'react';
 import { DateTimeInput } from '@/components/DateTimeInput';
+import { MenuButton } from '@/components/MenuButton';
 
 const field = 'num min-h-11 w-full min-w-0 rounded-button border border-border bg-bg px-3 text-base text-text';
 const md = (d: string) => `${d.slice(5, 7)}.${d.slice(8, 10)}`;
@@ -20,6 +21,8 @@ export function ListBar({
   keep = {},
   side,
   single = false,
+  tabs,
+  gear,
   labels,
 }: {
   q: string;
@@ -31,7 +34,9 @@ export function ListBar({
   keep?: Record<string, string | undefined>; // 그대로 둘 다른 주소 값 (연습 보기 등)
   side?: { href: string; label: string }; // 오른쪽 단추 ([내 기록])
   single?: boolean; // 기간 대신 기준일 하나 (휴가 잔여) — 값은 to에 둔다
-  labels: { search: string; filter: string; period: string; from: string; to: string; apply: string; groupAll: string };
+  tabs?: { href: string; label: string; on: boolean }[]; // 검색 줄 아래 탭 한 줄 (휴가: 내 휴가 / 전체)
+  gear?: { href: string; label: string }; // 검색 줄 오른쪽 톱니 (설정 화면으로)
+  labels: { menu: string; search: string; filter: string; period: string; from: string; to: string; apply: string; groupAll: string };
 }) {
   const router = useRouter();
   const path = usePathname();
@@ -46,8 +51,9 @@ export function ListBar({
     setOpen(null);
   };
   return (
-    <div className="-mx-4 flex flex-col gap-2 border-b border-border bg-bg px-4 py-2 lg:mx-0 lg:rounded-card lg:border">
+    <div className="sticky top-0 z-10 -mx-4 flex flex-col gap-2 border-b border-border bg-bg px-4 pt-[calc(0.5rem+env(safe-area-inset-top))] pb-2 lg:static lg:mx-0 lg:rounded-card lg:border lg:pt-2">
       <div className="flex items-center gap-2">
+        <MenuButton label={labels.menu} />
         <form
           role="search"
           className="flex min-h-11 min-w-0 flex-1 items-center gap-2 rounded-button bg-surface px-3"
@@ -64,7 +70,21 @@ export function ListBar({
             <Funnel aria-hidden size={22} strokeWidth={1.75} />
           </button>
         )}
+        {gear && (
+          <Link href={gear.href} aria-label={gear.label} title={gear.label} className="flex size-11 shrink-0 items-center justify-center rounded-button text-text">
+            <Settings aria-hidden size={22} strokeWidth={1.75} />
+          </Link>
+        )}
       </div>
+      {tabs && (
+        <nav className="-mx-4 -mt-1 flex border-b border-border">
+          {tabs.map((x) => (
+            <Link key={x.href} href={x.href} aria-current={x.on ? 'page' : undefined} className={`flex min-h-12 flex-1 items-center justify-center border-b-2 text-base font-bold ${x.on ? 'border-text text-text' : 'border-transparent text-muted'}`}>
+              {x.label}
+            </Link>
+          ))}
+        </nav>
+      )}
       {open === 'filter' && (
         <select aria-label={labels.filter} value={group} onChange={(e) => go({ g: e.target.value })} className={field}>
           <option value="">{labels.groupAll}</option>

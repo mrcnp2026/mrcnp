@@ -72,8 +72,9 @@ export function CardTitle({ children, aside, help }: { icon?: LucideIcon; childr
   );
 }
 
-export function PageShell({ children, wide = false }: { children: ReactNode; wide?: boolean }) {
+export function PageShell({ children, wide = false, flush = false }: { children: ReactNode; wide?: boolean; flush?: boolean }) {
   // 화면 좌우 16px, 폰 기준 폭 (4-9). 폰에서는 언제나 좁은 한 칸이다.
   // PC(1024px~, 2026-10-06 의뢰인: PC가 폰 화면 그대로였다): 기본은 입력·읽기 좋은 폭, wide는 현황판·목록·표를 화면 가득 펼친다
-  return <main className={`mx-auto flex w-full flex-col gap-3 px-4 py-4 lg:gap-4 lg:px-8 lg:py-6 ${wide ? 'max-w-md md:max-w-3xl lg:max-w-7xl' : 'max-w-md lg:max-w-3xl'}`}>{children}</main>;
+  // flush: 폰에서 위 여백·사이 여백 없이 — 목록 위 줄(ListBar)이 화면 맨 위에 붙고 목록이 바로 이어진다 (2026-10-11)
+  return <main className={`mx-auto flex w-full flex-col px-4 lg:gap-4 lg:px-8 lg:py-6 ${flush ? 'gap-0 pb-4' : 'gap-3 py-4'} ${wide ? 'max-w-md md:max-w-3xl lg:max-w-7xl' : 'max-w-md lg:max-w-3xl'}`}>{children}</main>;
 }

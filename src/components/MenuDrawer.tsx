@@ -12,6 +12,7 @@ import { useEffect, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { AddToHomeButton } from './AddToHome';
 import { LanguageSwitcher } from './LanguageSwitcher';
+import { OPEN_MENU_EVENT } from './MenuButton';
 import { SignOutButton } from './SignOutButton';
 
 type Item = { href: string; key: string; icon: LucideIcon };
@@ -51,6 +52,12 @@ export function MenuDrawer({ name, isAdmin, languages }: { name: string; isAdmin
   const path = usePathname();
   const [open, setOpen] = useState(false);
   useEffect(() => setOpen(false), [path]);
+  // 목록 위 줄의 ☰(MenuButton)가 보내는 신호
+  useEffect(() => {
+    const onOpen = () => setOpen(true);
+    window.addEventListener(OPEN_MENU_EVENT, onOpen);
+    return () => window.removeEventListener(OPEN_MENU_EVENT, onOpen);
+  }, []);
   useEffect(() => {
     if (!open) return;
     const onKey = (e: KeyboardEvent) => e.key === 'Escape' && setOpen(false);

@@ -2,8 +2,8 @@
 // 대기 일수는 잔여에서 빼지 않고 따로 보여 준다 (7-3 요점 5). 사유는 선택 (4-7).
 import { CalendarDays } from 'lucide-react';
 import { getFormatter, getTranslations } from 'next-intl/server';
+import Link from 'next/link';
 import { redirect } from 'next/navigation';
-import { ScopeSwitch } from '@/components/ScopeSwitch';
 import { AddSheet } from '@/components/AddSheet';
 import { Fab } from '@/components/Fab';
 import { Row, RowList } from '@/components/list';
@@ -22,6 +22,7 @@ export default async function LeavePage({ searchParams }: { searchParams: Promis
   const t = await getTranslations('leave');
   const tw = await getTranslations('work');
   const tc = await getTranslations('common');
+  const ta = await getTranslations('admin.leave');
   const f = await getFormatter();
   const sp = await searchParams;
   const today = toKstDate(new Date());
@@ -34,8 +35,20 @@ export default async function LeavePage({ searchParams }: { searchParams: Promis
 
   return (
     <PageShell wide>
-      {me.role === 'admin' && <ScopeSwitch kind="leave" current="mine" />}
-      <h1 className="text-2xl font-semibold text-primary-deep">{t('title')}</h1>
+      {me.role === 'admin' ? (
+        <>
+          <h1 className="sr-only">{t('title')}</h1>
+          <nav className="-mx-4 -mt-4 flex border-b border-border bg-bg lg:hidden">
+            {(['mine', 'all'] as const).map((k) => (
+              <Link key={k} href={k === 'mine' ? '/punch/leave' : '/admin/leave'} aria-current={k === 'mine' ? 'page' : undefined} className={`flex min-h-12 flex-1 items-center justify-center border-b-2 text-base font-bold ${k === 'mine' ? 'border-text text-text' : 'border-transparent text-muted'}`}>
+                {ta(k)}
+              </Link>
+            ))}
+          </nav>
+        </>
+      ) : (
+        <h1 className="text-2xl font-semibold text-primary-deep">{t('title')}</h1>
+      )}
 
       {/* PC: 왼쪽 = 휴가, 오른쪽 = 외근·출장·재택. 줄마다 좌우 높이를 맞춘다 — ① 요약 ② 신청 ③ 내 신청 (2026-10-06 의뢰인: 위쪽이 어긋났다) · 폰: 휴가 3칸 뒤에 외근 3칸 (order) */}
       <div className="flex flex-col gap-3 lg:grid lg:grid-cols-2 lg:gap-4">

@@ -15,7 +15,8 @@
       "dateTime": "YYYY-MM-DD HH:MM"
     },
     "account": "My account · password",
-    "add": "New"
+    "add": "New",
+    "menu": "Menu"
   },
   "login": {
     "title": "Sign in",
@@ -726,7 +727,8 @@
       "groupAll": "All departments",
       "roleAdmin": "Admins",
       "roleEmployee": "Employees",
-      "emptyPeople": "No matching employees."
+      "emptyPeople": "No matching employees.",
+      "all": "All"
     },
     "detail": {
       "backToList": "Records",

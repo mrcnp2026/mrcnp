@@ -53,6 +53,11 @@ try {
   check(true, '하단 「출퇴근기록」 탭 → 날짜별 기록 목록');
   const month1 = `${kst(0).slice(0, 8)}01`;
   check((await p.getByRole('button', { name: '기간 고르기' }).textContent())!.includes(`${md(month1)} - ${md(kst(0))}`), '기본 기간은 이번 달 1일 ~ 오늘', (await p.getByRole('button', { name: '기간 고르기' }).textContent()) ?? '');
+  // 로고 줄 없이 ☰가 검색 줄 안에 있고, 누르면 왼쪽 메뉴가 열린다 (2026-10-11)
+  check((await p.locator('header').locator('visible=true').count()) === 0, '목록 화면에는 로고 줄이 없음');
+  await p.getByRole('button', { name: '메뉴', exact: true }).locator('visible=true').click();
+  check(await p.getByRole('dialog').waitFor({ timeout: 5000 }).then(() => true, () => false), '검색 줄의 ☰로 왼쪽 메뉴가 열림');
+  await p.keyboard.press('Escape');
   check((await p.getByRole('link', { name: '내 기록', exact: true }).count()) === 1 && (await p.getByRole('searchbox').count()) === 1 && (await p.getByRole('button', { name: '부서로 거르기' }).count()) <= 1, '위 줄에 검색 칸 · 기간 · [내 기록]');
   const n = await rows().count();
   const heads = await p.locator('main section > h2').count();

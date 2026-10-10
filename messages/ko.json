@@ -15,7 +15,8 @@
       "dateTime": "연도-월-일 시:분"
     },
     "account": "내 계정 · 비밀번호",
-    "add": "새로 만들기"
+    "add": "새로 만들기",
+    "menu": "메뉴"
   },
   "login": {
     "title": "로그인",
@@ -726,7 +727,8 @@
       "groupAll": "전체 부서",
       "roleAdmin": "관리자",
       "roleEmployee": "직원",
-      "emptyPeople": "맞는 직원이 없습니다."
+      "emptyPeople": "맞는 직원이 없습니다.",
+      "all": "전체"
     },
     "detail": {
       "backToList": "기록",

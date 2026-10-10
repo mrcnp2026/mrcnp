@@ -12,7 +12,7 @@ import { OFFICE } from '@/config/office';
 import { addDays } from '@/lib/calendar';
 import { leaveTypeName, calcLeaveBalance, suggestGrant } from '@/lib/leave';
 import { loadAllLeaveTypes, loadLeaveGrants, loadLeaveRequests } from '@/lib/leave-data';
-import { buildOrgTree, groupPath, groupScope } from '@/lib/org';
+import { buildOrgTree, groupScope } from '@/lib/org';
 import { loadOrgGroups } from '@/lib/org-data';
 import { createAdminClient } from '@/lib/supabase/admin';
 import { toKstDate } from '@/lib/time';
@@ -22,6 +22,7 @@ import { GrantForm, JoinedOnForm } from './GrantForm';
 export default async function AdminLeavePage({ searchParams }: { searchParams: Promise<{ live?: string; e?: string; q?: string; g?: string; to?: string }> }) {
   const t = await getTranslations('admin.leave');
   const tl = await getTranslations('leave');
+  const tc = await getTranslations('common');
   const f = await getFormatter();
   const sp = await searchParams;
   const practice = OFFICE.practiceMode && sp.live !== '1';
@@ -55,7 +56,7 @@ export default async function AdminLeavePage({ searchParams }: { searchParams: P
   const approved = requests.filter((r) => r.status === 'approved' && r.endDate >= addDays(today, -31)).sort((a, b) => (a.startDate < b.startDate ? -1 : 1));
 
   return (
-    <PageShell wide>
+    <PageShell wide flush>
       <h1 className="sr-only">{t('title')}</h1>
       <ListBar
         key={`${q}|${g}|${asOf}`}
@@ -66,17 +67,20 @@ export default async function AdminLeavePage({ searchParams }: { searchParams: P
         group={g}
         groups={groupOptions}
         keep={{ live: sp.live === '1' ? '1' : undefined }}
-        side={{ href: '/punch/leave', label: t('mine') }}
-        labels={{ search: t('search'), filter: t('filter'), period: t('asOf'), from: '', to: t('asOf'), apply: t('apply'), groupAll: t('groupAll') }}
+        tabs={[
+          { href: '/punch/leave', label: t('mine'), on: false },
+          { href: '/admin/leave', label: t('all'), on: true },
+        ]}
+        gear={{ href: '/admin/leave/types', label: t('toTypes') }}
+        labels={{ menu: tc('menu'), search: t('search'), filter: t('filter'), period: t('asOf'), from: '', to: t('asOf'), apply: t('apply'), groupAll: t('groupAll') }}
       />
-      <div className="flex flex-wrap items-center gap-x-1 px-1">
+      <div className="hidden flex-wrap items-center gap-x-1 px-1 lg:flex">
         <span className="text-sm text-muted">{t('title')}</span>
         <Help>{t('intro')}</Help>
         <Link href="/admin/leave/types" className="ml-auto inline-flex min-h-11 items-center text-sm font-medium text-primary">
           {t('toTypes')} ›
         </Link>
       </div>
-      {practice && <p className="rounded-card bg-primary-tint p-3 text-sm text-primary">{t('practiceBanner')}</p>}
 
       {/* PC: 직원 한 명 = 표 한 줄 (2026-10-06 의뢰인: 직원이 20명이면 카드 20장이 쌓인다). 「입력·수정」을 누른 직원의 입력 칸만 표 아래에 열린다 · 폰: 직원별 카드 */}
       <Card className="hidden overflow-x-auto p-0 lg:block">
@@ -123,34 +127,31 @@ export default async function AdminLeavePage({ searchParams }: { searchParams: P
       </Card>
 
       {/* 폰: 직원 한 명 = 한 줄 (받은 · 사용 · 잔여). 누르면 그 직원의 입력 칸이 아래에 열린다 (2026-10-10 의뢰인: 시프티의 휴가 「전체」처럼) */}
-      {shown.length === 0 && <p className="rounded-card bg-bg p-5 text-sm text-faint">{t('emptyPeople')}</p>}
+      {shown.length === 0 && <p className="mt-3 rounded-card bg-bg p-5 text-sm text-faint">{t('emptyPeople')}</p>}
       <div className="-mx-4 flex flex-col lg:hidden">
-        {byRole.map(({ role, list }) => (
+        {byRole.map(({ role, list }, gi) => (
           <section key={role}>
             <h2 className="num flex items-center gap-2 border-b border-border bg-surface px-5 py-3 text-sm font-bold">
               <span className="flex-1">
                 {t(role === 'admin' ? 'roleAdmin' : 'roleEmployee')} <span className="font-medium text-muted">{list.length}</span>
               </span>
-              {(['granted', 'used', 'remaining'] as const).map((k) => (
-                <span key={k} className="w-11 text-right text-xs font-medium text-faint">{t(k)}</span>
-              ))}
+              {gi === 0 &&
+                (['granted', 'used', 'remaining'] as const).map((k) => (
+                  <span key={k} className="w-12 text-right font-medium text-muted">{t(k)}</span>
+                ))}
               <span className="w-5" />
             </h2>
             <ul className="divide-y divide-border border-b border-border bg-bg">
               {list.map((p) => {
                 const bal = balOf(p.id);
                 const on = sp.e === p.id;
-                const sub = groupPath(groups, p.group_id as string | null);
                 return (
                   <li key={p.id}>
                     <Link href={pick(p.id)} scroll={false} aria-current={on ? 'true' : undefined} className={`num flex min-h-14 items-center gap-2 px-5 py-2 ${on ? 'bg-primary-tint' : ''}`}>
-                      <span className="flex min-w-0 flex-1 flex-col">
-                        <span className="truncate font-bold">{p.name}</span>
-                        {sub && <span className="truncate text-sm text-muted">{sub}</span>}
-                      </span>
+                      <span className="min-w-0 flex-1 truncate text-base font-bold">{p.name}</span>
                       {bal.grant ? (
                         ([bal.granted, bal.used, bal.remaining] as const).map((v, i) => (
-                          <span key={i} className={`w-11 text-right ${i === 2 ? 'font-bold text-primary' : ''}`}>{n(v)}</span>
+                          <span key={i} className={`w-12 text-right ${i === 2 ? (v < 0 ? 'text-danger' : 'text-primary') : ''}`}>{n(v)}</span>
                         ))
                       ) : (
                         <Chip tone="warn">{t('noGrant')}</Chip>
@@ -165,7 +166,8 @@ export default async function AdminLeavePage({ searchParams }: { searchParams: P
         ))}
       </div>
 
-      <section id="edit" className="flex scroll-mt-16 flex-col gap-3">
+      {practice && <p className="mt-3 rounded-card bg-primary-tint lg:mt-0 p-3 text-sm text-primary">{t('practiceBanner')}</p>}
+      <section id="edit" className="mt-3 flex scroll-mt-32 flex-col gap-3 lg:mt-0">
         {(ppl ?? []).map((p) => {
           const mine = grants.filter((g) => g.employeeId === p.id);
           const bal = calcLeaveBalance({ grants: mine, requests: requests.filter((r) => r.employeeId === p.id), types, asOf: today });
@@ -218,7 +220,7 @@ export default async function AdminLeavePage({ searchParams }: { searchParams: P
         })}
       </section>
 
-      <section className="flex flex-col gap-2">
+      <section className="mt-3 flex flex-col gap-2 lg:mt-0">
         <div className="flex flex-wrap items-center gap-x-1">
           <h2 className="font-semibold">{t('approvedTitle')}</h2>
           <Help>{t('approvedHint')}</Help>

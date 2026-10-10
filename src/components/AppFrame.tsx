@@ -12,6 +12,7 @@ import { visibleNoticesNow } from '@/lib/notices';
 import { pendingCounts } from '@/lib/period-data';
 import { BottomTabs } from './BottomTabs';
 import { ConsentGate } from './ConsentGate';
+import { FrameHeader } from './FrameHeader';
 import { MenuDrawer } from './MenuDrawer';
 import { SideNav } from './SideNav';
 import { TopBar } from './TopBar';
@@ -33,16 +34,18 @@ export async function AppFrame({ me, children, overlay }: { me: Me; children: Re
         <SideNav isAdmin={isAdmin} inboxCount={inboxCount} languages={languages} />
         {/* 폰에서는 하단 탭 바 높이 + 아이폰 하단 여백만큼 비운다 */}
         <div className="min-w-0 flex-1 pb-[calc(4rem+env(safe-area-inset-bottom))] lg:pb-0">
-          <TopBar
-            className="lg:hidden"
-            left={<MenuDrawer name={me.name} isAdmin={isAdmin} languages={languages} />}
-            right={
-              <Link href="/punch/notices" aria-label={t('notices', { n: unread })} className="relative -mr-2 flex size-11 shrink-0 items-center justify-center rounded-button text-text">
-                <Bell aria-hidden size={22} strokeWidth={1.75} />
-                {unread > 0 && <span className="num absolute top-0.5 right-0.5 flex min-w-5 items-center justify-center rounded-chip bg-primary px-1 text-xs leading-5 font-semibold text-on-primary">{unread}</span>}
-              </Link>
-            }
-          />
+          <FrameHeader>
+            <TopBar
+              className="lg:hidden"
+              left={<MenuDrawer name={me.name} isAdmin={isAdmin} languages={languages} />}
+              right={
+                <Link href="/punch/notices" aria-label={t('notices', { n: unread })} className="relative -mr-2 flex size-11 shrink-0 items-center justify-center rounded-button text-text">
+                  <Bell aria-hidden size={22} strokeWidth={1.75} />
+                  {unread > 0 && <span className="num absolute top-0.5 right-0.5 flex min-w-5 items-center justify-center rounded-chip bg-primary px-1 text-xs leading-5 font-semibold text-on-primary">{unread}</span>}
+                </Link>
+              }
+            />
+          </FrameHeader>
           {children}
         </div>
       </div>

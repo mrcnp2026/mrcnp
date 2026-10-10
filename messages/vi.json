@@ -15,7 +15,8 @@
     },
     "account": "Tài khoản · mật khẩu",
     "help": "Xem giải thích",
-    "add": "Tạo mới"
+    "add": "Tạo mới",
+    "menu": "Menu"
   },
   "login": {
     "title": "Đăng nhập",

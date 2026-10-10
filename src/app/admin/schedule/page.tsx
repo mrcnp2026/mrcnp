@@ -59,10 +59,10 @@ export default async function AdminSchedulePage({ searchParams }: { searchParams
   const formDate = from === to || today < from || today > to ? from : today;
 
   return (
-    <PageShell wide>
+    <PageShell wide flush>
       <h1 className="sr-only">{t('title')}</h1>
-      <div className="grid items-start gap-3 lg:grid-cols-5 lg:gap-4">
-        <div className="flex flex-col gap-3 lg:col-span-3">
+      <div className="grid items-start lg:grid-cols-5 lg:gap-4">
+        <div className="flex flex-col lg:col-span-3 lg:gap-3">
           <ListBar
             key={`${q}|${g}|${from}|${to}`}
             q={q}
@@ -71,18 +71,10 @@ export default async function AdminSchedulePage({ searchParams }: { searchParams
             group={g}
             groups={groupOptions}
             side={{ href: '/punch/schedule', label: t('mine') }}
-            labels={{ search: t('search'), filter: t('filter'), period: t('period'), from: t('from'), to: t('to'), apply: t('apply'), groupAll: t('groupAll') }}
+            labels={{ menu: tc('menu'), search: t('search'), filter: t('filter'), period: t('period'), from: t('from'), to: t('to'), apply: t('apply'), groupAll: t('groupAll') }}
           />
-          <div className="flex flex-wrap items-center justify-between gap-x-3 px-1 text-sm">
-            <Link href="/admin/schedule" className="inline-flex min-h-11 items-center font-medium text-muted">
-              {t('thisWeek')}
-            </Link>
-            <Link href="/admin/shifts" className="inline-flex min-h-11 items-center font-medium text-primary">
-              {t('toTemplates')} ›
-            </Link>
-          </div>
-          {!data.rule && <p className="rounded-card bg-bg p-5 text-sm text-faint">{t('noRule')}</p>}
-          {data.rule && blocks.length === 0 && <p className="rounded-card bg-bg p-5 text-sm text-faint">{t('emptyRange')}</p>}
+          {!data.rule && <p className="mt-3 rounded-card bg-bg p-5 text-sm text-faint">{t('noRule')}</p>}
+          {data.rule && blocks.length === 0 && <p className="mt-3 rounded-card bg-bg p-5 text-sm text-faint">{t('emptyRange')}</p>}
           <div className="flex flex-col">
             {page.items.map(({ d, onLeave, rows, total }) => (
               <section key={d}>
@@ -130,6 +122,14 @@ export default async function AdminSchedulePage({ searchParams }: { searchParams
             ))}
           </div>
           <Pager page={page.page} pages={page.pages} param="p" params={{ ...sp }} label={tc('pages')} />
+          <div className="flex flex-wrap items-center justify-between gap-x-3 px-1 pt-2 text-sm">
+            <Link href="/admin/schedule" className="inline-flex min-h-11 items-center font-medium text-muted">
+              {t('thisWeek')}
+            </Link>
+            <Link href="/admin/shifts" className="inline-flex min-h-11 items-center font-medium text-primary">
+              {t('toTemplates')} ›
+            </Link>
+          </div>
           <p className="px-1 text-sm text-faint">{t('hint')}</p>
         </div>
         <AddSheet id="schedule" title={t('add')} className="lg:col-span-2">

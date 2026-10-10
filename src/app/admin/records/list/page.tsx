@@ -65,7 +65,7 @@ export default async function RecordListPage({ searchParams }: { searchParams: P
   const keep = { live: sp.live === '1' ? '1' : undefined };
 
   return (
-    <PageShell>
+    <PageShell flush>
       <h1 className="sr-only">{t('title')}</h1>
       <ListBar
         key={`${q}|${g}|${from}|${to}`}
@@ -77,16 +77,10 @@ export default async function RecordListPage({ searchParams }: { searchParams: P
         groups={groupOptions}
         keep={keep}
         side={{ href: '/punch/records', label: t('mine') }}
-        labels={{ search: t('search'), filter: t('filter'), period: t('period'), from: t('from'), to: t('to'), apply: t('apply'), groupAll: t('groupAll') }}
+        labels={{ menu: tc('menu'), search: t('search'), filter: t('filter'), period: t('period'), from: t('from'), to: t('to'), apply: t('apply'), groupAll: t('groupAll') }}
       />
-      <div className="flex flex-wrap items-center justify-between gap-x-3 px-1 text-sm">
-        <span className="text-muted">{practice ? t('practice') : t('live')}</span>
-        <Link href="/admin/records" className="inline-flex min-h-11 items-center font-medium text-primary">
-          {t('toMonth')} ›
-        </Link>
-      </div>
-      {!data.rule && <p className="rounded-card bg-bg p-5 text-sm text-faint">{t('noRule')}</p>}
-      {data.rule && dates.length === 0 && <p className="rounded-card bg-bg p-5 text-sm text-faint">{t('empty')}</p>}
+      {!data.rule && <p className="mt-3 rounded-card bg-bg p-5 text-sm text-faint">{t('noRule')}</p>}
+      {data.rule && dates.length === 0 && <p className="mt-3 rounded-card bg-bg p-5 text-sm text-faint">{t('empty')}</p>}
       <div className="flex flex-col">
       {page.items.map((d) => {
         const rows = lines.filter((x) => x.date === d).sort((a, b) => a.name.localeCompare(b.name) || a.sort - b.sort);
@@ -122,6 +116,12 @@ export default async function RecordListPage({ searchParams }: { searchParams: P
       })}
       </div>
       <Pager page={page.page} pages={page.pages} param="p" params={{ ...sp }} label={tc('pages')} />
+      <div className="flex flex-wrap items-center justify-between gap-x-3 px-1 pt-2 text-sm">
+        <span className="text-muted">{practice ? t('practice') : t('live')}</span>
+        <Link href="/admin/records" className="inline-flex min-h-11 items-center font-medium text-primary">
+          {t('toMonth')} ›
+        </Link>
+      </div>
       <p className="px-1 text-sm text-faint">{t('hint')}</p>
     </PageShell>
   );
