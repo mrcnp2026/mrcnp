@@ -280,7 +280,7 @@
       "filter": "가입 상태로 보기",
       "f_all": "전체",
       "f_joined": "가입",
-      "f_pending": "미가입",
+      "f_pending": "미합류",
       "joined": "가입함",
       "notJoined": "아직 가입 안 함",
       "reInvite": "링크 다시 보내기",
@@ -346,7 +346,9 @@
       "colShift": "근무일정 템플릿",
       "shiftNone": "없음 (회사 규칙)",
       "colJob": "직무",
-      "jobNone": "없음"
+      "jobNone": "없음",
+      "f_current": "현재직원",
+      "f_inactive": "비활성"
     },
     "more": {
       "title": "전체 메뉴",

@@ -1,7 +1,7 @@
 // 휴가 종류 한 건 — 내용 고치기 · 끄기/켜기. 기본 종류는 이름·시간이 잠겨 있다.
 import { getTranslations } from 'next-intl/server';
-import Link from 'next/link';
 import { notFound } from 'next/navigation';
+import { DetailBar } from '@/components/detail';
 import { Card, Chip, PageShell } from '@/components/ui';
 import { leaveTypeName } from '@/lib/leave';
 import { loadAllLeaveTypes } from '@/lib/leave-data';
@@ -14,12 +14,11 @@ export default async function LeaveTypePage({ params }: { params: Promise<{ code
   if (!x) notFound();
   const name = leaveTypeName(all, x.code, tl);
   const groups = [...new Set(all.map((v) => v.groupName).filter((g): g is string => !!g))].sort((a, b) => a.localeCompare(b));
+  const tc = await getTranslations('common');
 
   return (
     <PageShell>
-      <Link href={x.active ? '/admin/leave/types' : '/admin/leave/types?tab=off'} className="inline-flex min-h-11 items-center self-start text-sm font-medium text-muted">
-        ‹ {t('title')}
-      </Link>
+      <DetailBar plain back={x.active ? '/admin/leave/types' : '/admin/leave/types?tab=off'} backLabel={tc('back')} title={t('title')} />
       <div className="flex flex-wrap items-center gap-2 px-1">
         <h1 className="text-2xl font-extrabold tracking-tight">{name}</h1>
         {x.builtin && <Chip>{t('builtinChip')}</Chip>}

@@ -106,6 +106,30 @@ try {
       check(sw2 <= w, `가로 넘침 없음 @${w} ${url}`, `${sw2}px`);
     }
   }
+  // ── 직원 탭: 현재직원 / 미합류 / 비활성 · 직원 상세의 ← 제목 줄 (2026-10-11) ──
+  await p.setViewportSize({ width: 390, height: 844 });
+  await p.goto(`${BASE}/admin/members`);
+  await p.waitForLoadState('networkidle');
+  const mt = (await p.locator('main nav').first().locator('a').allTextContents()).map((x) => x.replace(/\d+/g, '').trim());
+  check(mt.join() === '현재직원,미합류,비활성' && (await p.locator('main nav a[aria-current="page"]').first().textContent())?.includes('현재직원') === true, '직원 탭: 현재직원 · 미합류 · 비활성 (숫자와 함께)', mt.join());
+  await shot('45-직원-목록');
+  await p.locator('main nav').first().getByRole('link', { name: /비활성/ }).click();
+  await p.waitForURL(/f=inactive/);
+  check(true, '비활성 탭으로 이동');
+  await p.goto(`${BASE}/admin/members/${emp!.id}`);
+  await p.waitForLoadState('networkidle');
+  check((await p.locator('header.sticky').locator('visible=true').count()) === 0 && (await p.getByRole('link', { name: '뒤로' }).count()) >= 1 && (await p.getByRole('heading', { level: 1 }).count()) === 1, '직원 상세: 로고 줄 없이 ← 제목 줄, 머리글은 이름 하나');
+  await shot('46-직원-상세');
+  for (const w of [320, 390]) {
+    await p.setViewportSize({ width: w, height: 800 });
+    for (const url of ['/admin/members', `/admin/members/${emp!.id}`]) {
+      await p.goto(BASE + url);
+      await p.waitForLoadState('networkidle');
+      const mw = await p.evaluate(() => document.documentElement.scrollWidth);
+      check(mw <= w + (w === 320 ? 3 : 0), `가로 넘침 없음 @${w} ${url.replace(emp!.id, '…')}`, `${mw}px`);
+    }
+  }
+
   // ── 왼쪽 메뉴: 대분류 강조 · 지금 화면 표시 (2026-10-11 의뢰인) ──
   await p.setViewportSize({ width: 390, height: 844 });
   await p.goto(`${BASE}/punch`);

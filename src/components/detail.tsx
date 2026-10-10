@@ -4,13 +4,15 @@ import { ArrowLeft, ChevronRight } from 'lucide-react';
 import Link from 'next/link';
 import type { ReactNode } from 'react';
 
-export function DetailBar({ back, backLabel, title, action, extra }: { back: string; backLabel: string; title: string; action?: { href: string; label: string }; extra?: ReactNode }) {
+export function DetailBar({ back, backLabel, title, action, extra, plain = false }: { back: string; backLabel: string; title: string; action?: { href: string; label: string }; extra?: ReactNode; plain?: boolean }) {
+  // plain: 화면의 머리글(h1)이 아래에 따로 있을 때 — 이 줄의 제목은 그냥 글자로 둔다 (머리글이 둘이 되지 않게)
+  const Title = plain ? 'p' : 'h1';
   return (
     <div className="sticky top-0 z-10 -mx-4 -mt-4 flex min-h-14 items-center gap-2 border-b border-border bg-bg px-4 pt-[env(safe-area-inset-top)] lg:static lg:mx-0 lg:mt-0 lg:rounded-card lg:border">
       <Link href={back} aria-label={backLabel} className="-ml-2 flex size-11 shrink-0 items-center justify-center rounded-button text-text">
         <ArrowLeft aria-hidden size={24} strokeWidth={1.75} />
       </Link>
-      <h1 className="min-w-0 flex-1 truncate text-lg font-bold">{title}</h1>
+      <Title className="min-w-0 flex-1 truncate text-lg font-bold">{title}</Title>
       {extra}
       {action && (
         <Link href={action.href} className="inline-flex min-h-11 shrink-0 items-center px-2 text-base font-bold text-primary">

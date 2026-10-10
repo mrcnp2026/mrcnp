@@ -13,14 +13,15 @@ import { createAdminClient } from '@/lib/supabase/admin';
 import { NewInviteButton } from './NewInviteButton';
 import { RoleCell } from './RoleCell';
 
-type Filter = 'all' | 'joined' | 'pending';
+// 탭 (2026-10-11 의뢰인: 시프티의 직원 관리처럼) — 현재직원(가입을 마친 사람) · 미합류(초대했지만 아직 가입 전) · 비활성(퇴사 등으로 꺼 둔 사람)
+type Filter = 'current' | 'pending' | 'inactive';
 type Row = { id: string; name: string; employeeNo: string | null; role: string; active: boolean; groupId: string | null; jobTitle: string | null; canViewPayroll: boolean };
 
 export default async function MembersPage({ searchParams }: { searchParams: Promise<{ f?: string }> }) {
   const t = await getTranslations('admin.members');
   const tc = await getTranslations('common');
   const sp = await searchParams;
-  const filter: Filter = sp.f === 'joined' || sp.f === 'pending' ? sp.f : 'all';
+  const filter: Filter = sp.f === 'pending' || sp.f === 'inactive' ? sp.f : 'current';
   const db = createAdminClient();
   const me = (await getMe())!;
   const [{ data: people }, { data: keys }, groups, { data: roleReqs }] = await Promise.all([
@@ -40,12 +41,12 @@ export default async function MembersPage({ searchParams }: { searchParams: Prom
   const inactive = all.filter((p) => !p.active);
   const joined = active.filter((p) => withPhone.has(p.id));
   const pending = active.filter((p) => !withPhone.has(p.id));
-  const list = filter === 'joined' ? joined : filter === 'pending' ? pending : active;
-  const sections = groupPeople(groups, list).filter((s) => s.count > 0 || (filter === 'all' && s.dept));
+  const list = filter === 'pending' ? pending : filter === 'inactive' ? inactive : joined;
+  const sections = groupPeople(groups, list).filter((s) => s.count > 0 || (filter === 'current' && s.dept));
   const tabs: { key: Filter; n: number }[] = [
-    { key: 'all', n: active.length },
-    { key: 'joined', n: joined.length },
+    { key: 'current', n: joined.length },
     { key: 'pending', n: pending.length },
+    { key: 'inactive', n: inactive.length },
   ];
 
   const row = (p: Row) => {
@@ -99,7 +100,7 @@ export default async function MembersPage({ searchParams }: { searchParams: Prom
         {tabs.map((x) => (
           <Link
             key={x.key}
-            href={x.key === 'all' ? '/admin/members' : `/admin/members?f=${x.key}`}
+            href={x.key === 'current' ? '/admin/members' : `/admin/members?f=${x.key}`}
             scroll={false}
             aria-current={filter === x.key ? 'page' : undefined}
             className={`flex min-h-12 flex-1 items-center justify-center gap-2 border-b-2 text-base font-bold whitespace-nowrap ${filter === x.key ? 'border-text text-text' : 'border-transparent text-muted'}`}
@@ -193,15 +194,6 @@ export default async function MembersPage({ searchParams }: { searchParams: Prom
       ))}
       </div>
 
-      {filter === 'all' && inactive.length > 0 && (
-        <details className="rounded-card bg-bg">
-          <summary className="flex min-h-12 cursor-pointer items-center justify-between px-5 text-sm text-muted">
-            <span>{t('inactiveTitle')}</span>
-            <span className="num text-faint">{t('count', { n: inactive.length })}</span>
-          </summary>
-          <ul className="pb-1">{inactive.map(row)}</ul>
-        </details>
-      )}
     </PageShell>
   );
 }

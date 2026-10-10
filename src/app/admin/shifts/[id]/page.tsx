@@ -1,10 +1,10 @@
 // 근무일정 틀 상세 (의뢰인 2026-10-10: 시프티의 「근무일정 템플릿」 화면처럼) — 틀 이름 · 시간 · 유형 · 색 · 메모 + 이 틀을 적용할 직원.
 import { getTranslations } from 'next-intl/server';
-import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import { AddSheet } from '@/components/AddSheet';
 import { OpenSheetButton } from '@/components/Fab';
 import { Field, FieldList } from '@/components/list';
+import { DetailBar } from '@/components/detail';
 import { Card, Chip, PageShell } from '@/components/ui';
 import { groupPath } from '@/lib/org';
 import { loadOrgGroups } from '@/lib/org-data';
@@ -15,6 +15,7 @@ import { ShiftAssignForm, ShiftForm, ShiftToggle } from '../ShiftForms';
 
 export default async function ShiftPage({ params }: { params: Promise<{ id: string }> }) {
   const t = await getTranslations('admin.shifts');
+  const tc = await getTranslations('common');
   const { id } = await params;
   const [all, groups, { data: ppl }] = await Promise.all([
     loadShiftTemplates(true),
@@ -32,12 +33,7 @@ export default async function ShiftPage({ params }: { params: Promise<{ id: stri
 
   return (
     <PageShell wide>
-      <div className="flex items-center justify-between gap-2">
-        <Link href={x.active ? '/admin/shifts' : '/admin/shifts?tab=off'} className="inline-flex min-h-11 items-center text-sm font-medium text-muted">
-          ‹ {t('title')}
-        </Link>
-        <OpenSheetButton sheet="shift-edit">{t('edit')}</OpenSheetButton>
-      </div>
+      <DetailBar plain back={x.active ? '/admin/shifts' : '/admin/shifts?tab=off'} backLabel={tc('back')} title={t('title')} extra={<OpenSheetButton sheet="shift-edit">{t('edit')}</OpenSheetButton>} />
       <div className="flex flex-wrap items-center gap-2 px-1">
         <span aria-hidden className={`size-7 shrink-0 rounded-button ${SHIFT_COLOR_CLASS[x.color]}`} />
         <h1 className="text-2xl font-extrabold tracking-tight">{x.name}</h1>

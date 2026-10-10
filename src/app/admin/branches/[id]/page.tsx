@@ -7,6 +7,7 @@ import { notFound } from 'next/navigation';
 import { AddSheet } from '@/components/AddSheet';
 import { OpenSheetButton } from '@/components/Fab';
 import { Field, FieldList, RowList } from '@/components/list';
+import { DetailBar } from '@/components/detail';
 import { Card, Chip, PageShell } from '@/components/ui';
 import { loadGroupLocationLinks, loadOfficeLocations } from '@/lib/geo-data';
 import { createAdminClient } from '@/lib/supabase/admin';
@@ -14,6 +15,7 @@ import { BranchEditForm } from '../BranchForms';
 
 export default async function BranchPage({ params }: { params: Promise<{ id: string }> }) {
   const t = await getTranslations('admin.branches');
+  const tc = await getTranslations('common');
   const { id } = await params;
   if (!/^[0-9a-f-]{36}$/i.test(id)) notFound();
   const db = createAdminClient();
@@ -31,12 +33,7 @@ export default async function BranchPage({ params }: { params: Promise<{ id: str
 
   return (
     <PageShell wide>
-      <div className="flex items-center justify-between gap-2">
-        <Link href={g.active ? '/admin/branches' : '/admin/branches?tab=off'} className="inline-flex min-h-11 items-center text-sm font-medium text-muted">
-          ‹ {t('title')}
-        </Link>
-        <OpenSheetButton sheet="branch-edit">{t('edit')}</OpenSheetButton>
-      </div>
+      <DetailBar plain back={g.active ? '/admin/branches' : '/admin/branches?tab=off'} backLabel={tc('back')} title={t('title')} extra={<OpenSheetButton sheet="branch-edit">{t('edit')}</OpenSheetButton>} />
       <div className="flex flex-wrap items-center gap-2 px-1">
         <h1 className="text-2xl font-extrabold tracking-tight">{g.name}</h1>
         {!g.active && <Chip>{t('offChip')}</Chip>}

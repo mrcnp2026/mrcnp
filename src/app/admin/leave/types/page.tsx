@@ -7,6 +7,7 @@ import { AddSheet } from '@/components/AddSheet';
 import { Fab } from '@/components/Fab';
 import { Help } from '@/components/Help';
 import { RowList } from '@/components/list';
+import { DetailBar } from '@/components/detail';
 import { Card, Chip, PageShell } from '@/components/ui';
 import { leaveTypeName } from '@/lib/leave';
 import { loadAllLeaveTypes } from '@/lib/leave-data';
@@ -24,16 +25,10 @@ export default async function LeaveTypesPage({ searchParams }: { searchParams: P
 
   return (
     <PageShell wide>
-      <Link href="/admin/leave" className="inline-flex min-h-11 items-center self-start text-sm font-medium text-muted">
-        ‹ {t('back')}
-      </Link>
-      <div className="flex flex-wrap items-center gap-x-1 px-1">
-        <h1 className="text-2xl font-extrabold tracking-tight">{t('title')}</h1>
-        <Help>{t('intro')}</Help>
-      </div>
+      <DetailBar back="/admin/leave" backLabel={t('back')} title={t('title')} extra={<Help>{t('intro')}</Help>} />
       <div className="grid items-start gap-3 lg:grid-cols-5 lg:gap-4">
         <div className="flex flex-col gap-3 lg:col-span-3">
-          <nav aria-label={t('title')} className="flex rounded-card bg-bg px-2">
+          <nav aria-label={t('title')} className="-mx-4 -mt-3 flex border-b border-border bg-bg px-2 lg:mx-0 lg:mt-0 lg:rounded-card lg:border-0">
             <Link href="/admin/leave/types" aria-current={!off ? 'page' : undefined} className={tab(!off)}>
               {t('tabOn')}
             </Link>

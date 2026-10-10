@@ -4,6 +4,7 @@ import { CalendarDays, KeyRound, Smartphone } from 'lucide-react';
 import { getFormatter, getTranslations } from 'next-intl/server';
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
+import { DetailBar } from '@/components/detail';
 import { Card, CardTitle, Chip, PageShell } from '@/components/ui';
 import { OFFICE } from '@/config/office';
 import { LOCALE_NAMES, LOCALES } from '@/i18n/locales';
@@ -23,6 +24,7 @@ import { ProfileForm } from './ProfileForm';
 
 export default async function MemberDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const t = await getTranslations('admin.members');
+  const tc = await getTranslations('common');
   const tm = await getTranslations('admin.manage');
   const f = await getFormatter();
   const me = (await getMe())!;
@@ -68,9 +70,7 @@ export default async function MemberDetailPage({ params }: { params: Promise<{ i
 
   return (
     <PageShell wide>
-      <Link href="/admin/members" className="-mb-2 inline-flex min-h-11 min-w-11 items-center self-start text-sm font-medium text-muted">
-        ‹ {t('title')}
-      </Link>
+      <DetailBar plain back={p.active ? '/admin/members' : '/admin/members?f=inactive'} backLabel={tc('back')} title={t('title')} />
       {/* 머리: 누구인지(이름·소속·상태) + 가장 자주 가는 곳(날짜별 기록) — 한 카드 (2026-10-06 의뢰인: 상세 화면이 흩어져 보였다) */}
       <header className="flex flex-wrap items-center gap-x-4 gap-y-3 rounded-card bg-bg p-5">
         <span aria-hidden className="flex size-14 shrink-0 items-center justify-center rounded-chip bg-primary-tint text-xl font-extrabold text-primary">

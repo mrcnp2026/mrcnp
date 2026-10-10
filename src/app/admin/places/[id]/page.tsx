@@ -7,6 +7,7 @@ import { AddSheet } from '@/components/AddSheet';
 import { OpenSheetButton } from '@/components/Fab';
 import { Field, FieldList, RowList } from '@/components/list';
 import { PlaceMap } from '@/components/PlaceMap';
+import { DetailBar } from '@/components/detail';
 import { Card, Chip, PageShell } from '@/components/ui';
 import { loadGroupLocationLinks, loadOfficeLocations } from '@/lib/geo-data';
 import { groupPath } from '@/lib/org';
@@ -15,6 +16,7 @@ import { PlaceForm, PlaceToggle } from '../PlaceForm';
 
 export default async function PlacePage({ params }: { params: Promise<{ id: string }> }) {
   const t = await getTranslations('admin.places');
+  const tc = await getTranslations('common');
   const { id } = await params;
   const [all, links, groups] = await Promise.all([loadOfficeLocations(true), loadGroupLocationLinks(), loadOrgGroups()]);
   const p = all.find((l) => l.id === id);
@@ -24,12 +26,7 @@ export default async function PlacePage({ params }: { params: Promise<{ id: stri
 
   return (
     <PageShell wide>
-      <div className="flex items-center justify-between gap-2">
-        <Link href={p.active ? '/admin/places' : '/admin/places?tab=off'} className="inline-flex min-h-11 items-center text-sm font-medium text-muted">
-          ‹ {t('title')}
-        </Link>
-        <OpenSheetButton sheet="place-edit">{t('edit')}</OpenSheetButton>
-      </div>
+      <DetailBar plain back={p.active ? '/admin/places' : '/admin/places?tab=off'} backLabel={tc('back')} title={t('title')} extra={<OpenSheetButton sheet="place-edit">{t('edit')}</OpenSheetButton>} />
       <div className="flex flex-wrap items-center gap-2 px-1">
         <h1 className="text-2xl font-extrabold tracking-tight">{p.label ?? t('unnamed')}</h1>
         {!p.active && <Chip>{t('offChip')}</Chip>}

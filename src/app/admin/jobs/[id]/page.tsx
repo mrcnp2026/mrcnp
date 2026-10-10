@@ -1,9 +1,9 @@
 // 직무 상세 — 이름 · 색 고치기 + 이 직무인 직원 고르기 + 끄기/켜기.
 import { getTranslations } from 'next-intl/server';
-import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import { AddSheet } from '@/components/AddSheet';
 import { OpenSheetButton } from '@/components/Fab';
+import { DetailBar } from '@/components/detail';
 import { Card, Chip, PageShell } from '@/components/ui';
 import { loadJobs } from '@/lib/job-data';
 import { groupPath } from '@/lib/org';
@@ -14,6 +14,7 @@ import { JobAssignForm, JobForm, JobToggle } from '../JobForms';
 
 export default async function JobPage({ params }: { params: Promise<{ id: string }> }) {
   const t = await getTranslations('admin.jobs');
+  const tc = await getTranslations('common');
   const { id } = await params;
   const [all, groups, { data: ppl }] = await Promise.all([loadJobs(), loadOrgGroups(), createAdminClient().from('profiles').select('id, name, employee_no, group_id, job_id').eq('active', true).order('name')]);
   const x = all.find((j) => j.id === id);
@@ -26,12 +27,7 @@ export default async function JobPage({ params }: { params: Promise<{ id: string
 
   return (
     <PageShell wide>
-      <div className="flex items-center justify-between gap-2">
-        <Link href={x.active ? '/admin/jobs' : '/admin/jobs?tab=off'} className="inline-flex min-h-11 items-center text-sm font-medium text-muted">
-          ‹ {t('title')}
-        </Link>
-        <OpenSheetButton sheet="job-edit">{t('edit')}</OpenSheetButton>
-      </div>
+      <DetailBar plain back={x.active ? '/admin/jobs' : '/admin/jobs?tab=off'} backLabel={tc('back')} title={t('title')} extra={<OpenSheetButton sheet="job-edit">{t('edit')}</OpenSheetButton>} />
       <div className="flex flex-wrap items-center gap-2 px-1">
         <span aria-hidden className={`size-7 shrink-0 rounded-button ${SHIFT_COLOR_CLASS[x.color]}`} />
         <h1 className="text-2xl font-extrabold tracking-tight">{x.name}</h1>

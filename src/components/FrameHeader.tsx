@@ -8,7 +8,7 @@ import type { ReactNode } from 'react';
 export const BARE_PATHS = ['/admin/records/list', '/admin/schedule', '/admin/leave', '/admin/inbox', '/punch/requests', '/punch/records', '/punch/schedule', '/punch/leave', '/admin/jobs', '/admin/branches', '/admin/places', '/admin/shifts', '/admin/members', '/punch/schedule/request', '/punch/home-settings'];
 
 // 상세 화면(← 제목 … 수정 줄이 맨 위)
-const BARE_PATTERNS = [/^\/admin\/schedule\/[^/]+\/\d{4}-\d{2}-\d{2}$/, /^\/admin\/leave\/req\/[^/]+$/, /^\/admin\/leave\/emp\/[^/]+$/, /^\/admin\/records\/[^/]+\/\d{4}-\d{2}-\d{2}$/];
+const BARE_PATTERNS = [/^\/admin\/(jobs|branches|places|shifts|members)\/[0-9a-f-]{36}$/, /^\/admin\/leave\/types(\/[^/]+)?$/, /^\/admin\/schedule\/[^/]+\/\d{4}-\d{2}-\d{2}$/, /^\/admin\/leave\/req\/[^/]+$/, /^\/admin\/leave\/emp\/[^/]+$/, /^\/admin\/records\/[^/]+\/\d{4}-\d{2}-\d{2}$/];
 
 export function FrameHeader({ children }: { children: ReactNode }) {
   const path = usePathname();

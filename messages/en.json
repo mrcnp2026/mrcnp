@@ -280,7 +280,7 @@
       "filter": "Filter by sign-up",
       "f_all": "All",
       "f_joined": "Joined",
-      "f_pending": "Not yet",
+      "f_pending": "Not joined",
       "joined": "Joined",
       "notJoined": "Not joined yet",
       "reInvite": "Send link again",
@@ -346,7 +346,9 @@
       "colShift": "Shift template",
       "shiftNone": "None (company rule)",
       "colJob": "Job",
-      "jobNone": "None"
+      "jobNone": "None",
+      "f_current": "Current",
+      "f_inactive": "Inactive"
     },
     "more": {
       "title": "All menus",
