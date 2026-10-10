@@ -543,7 +543,8 @@
     "onLeave": "Nghỉ phép",
     "none": "Không có lịch",
     "noRule": "Chưa có quy định giờ làm của công ty.",
-    "hint": "Thời gian kế hoạch tính từ lúc bắt đầu đến lúc kết thúc, gồm cả giờ nghỉ. Nếu lịch sai, hãy báo quản lý."
+    "hint": "Thời gian kế hoạch tính từ lúc bắt đầu đến lúc kết thúc, gồm cả giờ nghỉ. Nếu lịch sai, hãy báo quản lý.",
+    "mine": "Lịch của tôi"
   },
   "requests": {
     "title": "Yêu cầu",
@@ -595,6 +596,7 @@
     },
     "punchFar": "Cách nơi làm việc gần nhất {m} m",
     "tabMine": "Yêu cầu của tôi",
-    "emptyMine": "Bạn không có yêu cầu nào trong {days} ngày qua."
+    "emptyMine": "Bạn không có yêu cầu nào trong {days} ngày qua.",
+    "search": "Tìm kiếm"
   }
 }

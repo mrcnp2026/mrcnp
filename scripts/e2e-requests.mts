@@ -67,7 +67,8 @@ try {
   await p.waitForURL(/tab=done/);
   await p.waitForLoadState('networkidle');
   check((await p.getByRole('link', { name: '완료', exact: true }).getAttribute('aria-current')) === 'page', '「완료」 탭이 열림');
-  await shot('01-관리자-완료');
+  await p.waitForTimeout(600); // 탭 색이 바뀌는 짧은 전환이 끝난 뒤에 찍는다
+  await shot('01-관리자-완료', false);
 
   // ── 내 요청 ──
   await p.getByRole('link', { name: '내 요청', exact: true }).click();

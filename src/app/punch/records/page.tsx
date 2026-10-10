@@ -7,7 +7,7 @@ import Link from 'next/link';
 import { redirect } from 'next/navigation';
 import { Fab } from '@/components/Fab';
 import { Row, RowList } from '@/components/list';
-import { ScopeSwitch } from '@/components/ScopeSwitch';
+import { MineBar } from '@/components/MineBar';
 import { Card, Chip, PageShell } from '@/components/ui';
 import { OFFICE } from '@/config/office';
 import { getMe } from '@/lib/auth';
@@ -29,6 +29,7 @@ export default async function MyRecordsPage({ searchParams }: { searchParams: Pr
   if (!me) redirect('/login');
   const t = await getTranslations('records');
   const th = await getTranslations('home');
+  const tm = await getTranslations('common');
   const tc = await getTranslations('corrections');
   const f = await getFormatter();
   const now = new Date();
@@ -79,9 +80,9 @@ export default async function MyRecordsPage({ searchParams }: { searchParams: Pr
 
   return (
     <PageShell wide>
-      {me.role === 'admin' && <ScopeSwitch kind="attendance" current="mine" />}
+      <MineBar menu={tm('menu')} title={t('title')} side={me.role === 'admin' ? { href: '/admin/records/list', label: t('title') } : undefined} />
       <header className="flex items-center justify-between gap-2">
-        <h1 className="text-2xl font-extrabold tracking-tight">{t('title')}</h1>
+        <h1 className="sr-only lg:not-sr-only lg:text-2xl lg:font-extrabold lg:tracking-tight">{t('title')}</h1>
         <nav className="flex shrink-0 items-center" aria-label={t('month')}>
           {ym > oldest ? (
             <Link href={`?m=${shift(ym, -1)}`} aria-label={t('prev')} className="flex size-11 shrink-0 items-center justify-center text-primary">

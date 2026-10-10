@@ -5,7 +5,7 @@
 import { usePathname } from 'next/navigation';
 import type { ReactNode } from 'react';
 
-export const BARE_PATHS = ['/admin/records/list', '/admin/schedule', '/admin/leave'];
+export const BARE_PATHS = ['/admin/records/list', '/admin/schedule', '/admin/leave', '/admin/inbox', '/punch/requests', '/punch/records', '/punch/schedule', '/punch/leave'];
 
 export function FrameHeader({ children }: { children: ReactNode }) {
   const path = usePathname();

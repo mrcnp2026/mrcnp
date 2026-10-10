@@ -27,7 +27,7 @@ import { CorrectionDecision, LeaveDecision, OvertimeDecision, WorkDecision } fro
 // 요청은 종류마다 한 쪽에 5건까지 — 넘으면 아래에 쪽 번호 (2026-10-06 의뢰인)
 const REQUEST_PAGE = 5;
 
-export default async function InboxPage({ searchParams }: { searchParams: Promise<{ live?: string; op?: string; cp?: string; lp?: string; wp?: string; tab?: string; dp?: string }> }) {
+export default async function InboxPage({ searchParams }: { searchParams: Promise<{ live?: string; op?: string; cp?: string; lp?: string; wp?: string; tab?: string; dp?: string; q?: string }> }) {
   const t = await getTranslations('admin.inbox');
   const f = await getFormatter();
   const me = (await getMe())!;
@@ -43,12 +43,17 @@ export default async function InboxPage({ searchParams }: { searchParams: Promis
   await syncOvertimeRequests(data, today);
 
   const db = createAdminClient();
-  const [{ data: ot }, { data: co }, { data: staff }] = await Promise.all([
+  const [{ data: otAll }, { data: coAll }, { data: staff }] = await Promise.all([
     db.from('overtime_requests').select('*').eq('is_test', practice).or('status.eq.pending,needs_review.eq.true').order('work_date'),
     db.from('punch_corrections').select('*').eq('is_test', practice).eq('status', 'pending').order('created_at'),
     db.from('profiles').select('id, name, employee_no'),
   ]);
   const name = new Map((staff ?? []).map((p) => [p.id, p.name]));
+  // 이름 검색 (?q) — 모든 종류의 대기 요청에 같이 적용한다
+  const q = (sp.q ?? '').trim().slice(0, 40).toLowerCase();
+  const hit = (id: string) => !q || (name.get(id) ?? '').toLowerCase().includes(q);
+  const ot = (otAll ?? []).filter((o) => hit(o.employee_id));
+  const co = (coAll ?? []).filter((c) => hit(c.employee_id));
   const keys = [...(ot ?? []).map((o) => [o.employee_id, o.work_date]), ...(co ?? []).map((c) => [c.employee_id, c.work_date])];
   const empIds = [...new Set(keys.map((k) => k[0]))];
   const dates = [...new Set(keys.map((k) => k[1]))];
@@ -67,14 +72,14 @@ export default async function InboxPage({ searchParams }: { searchParams: Promis
     (evs ?? []).filter((x) => x.employee_id === e && x.work_date === d).map((x) => `${x.kind === 'in' ? '↘' : '↗'} ${hm(x.punched_at)}`).join('  ');
 
   const { data: punchRows } = await db.from('punch_requests').select('id, employee_id, kind, requested_at, work_date, nearest_m, geo_reason').eq('is_test', practice).eq('status', 'pending').order('requested_at');
-  const punchPending = (punchRows ?? []) as { id: string; employee_id: string; kind: 'in' | 'out'; requested_at: string; work_date: string; nearest_m: number | null; geo_reason: string }[];
+  const punchPending = ((punchRows ?? []) as { id: string; employee_id: string; kind: 'in' | 'out'; requested_at: string; work_date: string; nearest_m: number | null; geo_reason: string }[]).filter((r) => hit(r.employee_id));
   const tc = await getTranslations('common');
   const otPage = pageOf(ot ?? [], sp.op, REQUEST_PAGE);
   const coPage = pageOf(co ?? [], sp.cp, REQUEST_PAGE);
 
   // 연차·휴가 신청 (②-2 게이트 5): 남은 연차 + 그 날짜 출근 기록 충돌 경고 (자동으로 지우지 않는다, 요점 4)
   const tl = await getTranslations('leave');
-  const [leaveTypes, leavePending] = await Promise.all([loadAllLeaveTypes(), loadLeaveRequests({ practice }).then((rs) => rs.filter((r) => r.status === 'pending'))]);
+  const [leaveTypes, leavePending] = await Promise.all([loadAllLeaveTypes(), loadLeaveRequests({ practice }).then((rs) => rs.filter((r) => r.status === 'pending' && hit(r.employeeId)))]);
   const leaveEmp = [...new Set(leavePending.map((r) => r.employeeId))];
   const [leaveGrants, leaveAll, { data: leavePunches }] = await Promise.all([
     Promise.all(leaveEmp.map((e) => loadLeaveGrants(e))).then((x) => x.flat()),
@@ -88,7 +93,7 @@ export default async function InboxPage({ searchParams }: { searchParams: Promis
   const leaveName = (code: string) => leaveTypeName(leaveTypes, code, tl);
   const nDays = (v: number) => f.number(v, { maximumFractionDigits: 4 });
   const lvPage = pageOf(leavePending, sp.lp, REQUEST_PAGE);
-  const workPending = (await loadWorkRequests({ practice })).filter((w) => w.status === 'pending').sort((a, b) => (a.startDate < b.startDate ? -1 : 1));
+  const workPending = (await loadWorkRequests({ practice })).filter((w) => w.status === 'pending' && hit(w.employeeId)).sort((a, b) => (a.startDate < b.startDate ? -1 : 1));
   const wkPage = pageOf(workPending, sp.wp, REQUEST_PAGE);
 
   // 표(PC)와 카드(폰)가 같은 값을 쓰도록 한 번만 계산한다
@@ -378,7 +383,7 @@ export default async function InboxPage({ searchParams }: { searchParams: Promis
   return (
     <PageShell wide>
       <h1 className="sr-only">{t('title')}</h1>
-      <RequestTabs admin active="pending" live={sp.live === '1'} counts={{ pending: (ot?.length ?? 0) + (co?.length ?? 0) + leavePending.length + workPending.length + punchPending.length }} />
+      <RequestTabs admin active="pending" live={sp.live === '1'} q={q} counts={{ pending: (ot?.length ?? 0) + (co?.length ?? 0) + leavePending.length + workPending.length + punchPending.length }} />
       {practice && <p className="rounded-card bg-primary-tint p-3 text-sm text-primary">{t('practiceBanner')}</p>}
 
       {/* 반경 밖 출근/퇴근 요청 (2026-10-10 의뢰인: 시프티 방식) — 승인해야 기록이 되므로 맨 위에 둔다 */}
@@ -423,16 +428,17 @@ export default async function InboxPage({ searchParams }: { searchParams: Promis
 }
 
 // 완료 — 최근 두 달 동안 처리된 요청 전부 (종류가 달라도 한 목록). 자동 검사 계정(e2e-…)의 요청은 뺀다
-async function DoneTab({ sp, practice }: { sp: { live?: string; tab?: string; dp?: string }; practice: boolean }) {
+async function DoneTab({ sp, practice }: { sp: { live?: string; tab?: string; dp?: string; q?: string }; practice: boolean }) {
   const [t, tr, tc] = await Promise.all([getTranslations('admin.inbox'), getTranslations('requests'), getTranslations('common')]);
   const [items, leaveTypes, { data: staff }] = await Promise.all([loadRequests({ practice }), loadAllLeaveTypes(), createAdminClient().from('profiles').select('id, name, employee_no')]);
   const check = new Set((staff ?? []).filter((p) => p.employee_no?.startsWith('e2e-')).map((p) => p.id as string));
   const names = new Map((staff ?? []).map((p) => [p.id as string, p.name as string]));
-  const page = pageOf(splitRequests(items.filter((x) => !check.has(x.employeeId))).done, sp.dp, 20);
+  const q = (sp.q ?? '').trim().slice(0, 40).toLowerCase();
+  const page = pageOf(splitRequests(items.filter((x) => !check.has(x.employeeId) && (!q || (names.get(x.employeeId) ?? '').toLowerCase().includes(q)))).done, sp.dp, 20);
   return (
     <PageShell wide>
       <h1 className="sr-only">{t('title')}</h1>
-      <RequestTabs admin active="done" live={sp.live === '1'} counts={{ pending: (await pendingCounts(practice)).total }} />
+      <RequestTabs admin active="done" live={sp.live === '1'} q={q} counts={{ pending: (await pendingCounts(practice)).total }} />
       {practice && <p className="rounded-card bg-primary-tint p-3 text-sm text-primary">{t('practiceBanner')}</p>}
       {page.items.length === 0 && <p className="rounded-card bg-bg p-5 text-sm text-faint">{tr('emptyDone', { days: REQUEST_WINDOW_DAYS })}</p>}
       <RequestRows items={page.items} leaveTypes={leaveTypes} names={names} showName hrefOf={(r) => `/admin/records/${r.employeeId}?m=${r.date.slice(0, 7)}`} />

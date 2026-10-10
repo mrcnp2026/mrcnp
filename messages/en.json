@@ -1612,7 +1612,8 @@
     "onLeave": "On leave",
     "none": "No shift",
     "noRule": "There is no company work rule yet, so the schedule cannot be shown.",
-    "hint": "Planned time is the length from start to end, breaks included. If your schedule looks wrong, tell your manager."
+    "hint": "Planned time is the length from start to end, breaks included. If your schedule looks wrong, tell your manager.",
+    "mine": "My schedule"
   },
   "requests": {
     "title": "Requests",
@@ -1664,6 +1665,7 @@
     },
     "punchFar": "{m} m from the nearest work place",
     "tabMine": "My requests",
-    "emptyMine": "You have made no requests in the last {days} days."
+    "emptyMine": "You have made no requests in the last {days} days.",
+    "search": "Search"
   }
 }

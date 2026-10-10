@@ -5,7 +5,7 @@ import { Plane } from 'lucide-react';
 import { getFormatter, getTranslations } from 'next-intl/server';
 import { redirect } from 'next/navigation';
 import { RowList } from '@/components/list';
-import { ScopeSwitch } from '@/components/ScopeSwitch';
+import { MineBar } from '@/components/MineBar';
 import { Chip, PageShell } from '@/components/ui';
 import { getMe } from '@/lib/auth';
 import { addDays, weekStartOf } from '@/lib/calendar';
@@ -17,7 +17,7 @@ import { kstDateTime, toKstDate } from '@/lib/time';
 export default async function MySchedulePage() {
   const me = await getMe();
   if (!me) redirect('/login');
-  const [t, tk, f] = await Promise.all([getTranslations('schedule'), getTranslations('admin.shifts.kinds'), getFormatter()]);
+  const [t, tk, tm, f] = await Promise.all([getTranslations('schedule'), getTranslations('admin.shifts.kinds'), getTranslations('common'), getFormatter()]);
   const today = toKstDate(new Date());
   const from = weekStartOf(today);
   const to = addDays(from, 13);
@@ -29,8 +29,8 @@ export default async function MySchedulePage() {
 
   return (
     <PageShell>
-      {me.role === 'admin' && <ScopeSwitch kind="schedule" current="mine" />}
-      <h1 className="px-1 text-2xl font-extrabold tracking-tight">{t('title')}</h1>
+      <MineBar menu={tm('menu')} title={t('title')} side={me.role === 'admin' ? { href: '/admin/schedule', label: t('mine') } : undefined} />
+      <h1 className="sr-only px-1 lg:not-sr-only lg:text-2xl lg:font-extrabold lg:tracking-tight">{t('title')}</h1>
       {!data.rule && <p className="rounded-card bg-bg p-5 text-sm text-faint">{t('noRule')}</p>}
       {weeks.map((w, i) => (
         <section key={w[0].d} className="flex flex-col gap-2">

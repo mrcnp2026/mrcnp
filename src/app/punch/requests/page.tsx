@@ -18,13 +18,15 @@ import { createAdminClient } from '@/lib/supabase/admin';
 const PAGE = 20;
 const hrefOf = (r: ReqItem) => (r.kind === 'punch' ? `/punch/records?m=${r.date.slice(0, 7)}` : r.kind === 'correction' ? '/punch/corrections' : r.kind === 'overtime' ? `/punch/records?m=${r.date.slice(0, 7)}` : r.kind === 'leave' ? '/punch/leave' : '/punch/leave#work');
 
-export default async function MyRequestsPage({ searchParams }: { searchParams: Promise<{ tab?: string; p?: string }> }) {
+export default async function MyRequestsPage({ searchParams }: { searchParams: Promise<{ tab?: string; p?: string; q?: string }> }) {
   const me = await getMe();
   if (!me) redirect('/login');
   const [t, tc, sp] = await Promise.all([getTranslations('requests'), getTranslations('common'), searchParams]);
   const done = sp.tab === 'done';
   const [items, leaveTypes, { data: staff }] = await Promise.all([loadRequests({ employeeId: me.id }), loadAllLeaveTypes(), createAdminClient().from('profiles').select('id, name')]);
-  const split = splitRequests(items);
+  // 검색: 종류 이름 · 사유 · 날짜에서 찾는다 (내 요청뿐이라 이름으로는 찾을 것이 없다)
+  const q = (sp.q ?? '').trim().slice(0, 40).toLowerCase();
+  const split = splitRequests(q ? items.filter((r) => `${t(`kinds.${r.kind}`)} ${r.reason ?? ''} ${r.date}`.toLowerCase().includes(q)) : items);
   // 관리자의 「내 요청」 탭은 대기 중인 것이 위, 처리된 것이 아래로 한 목록이다 (대기중·완료 탭은 전 직원 것이라서)
   const admin = me.role === 'admin';
   const page = pageOf(admin ? [...split.pending, ...split.done] : done ? split.done : split.pending, sp.p, PAGE);
@@ -39,9 +41,9 @@ export default async function MyRequestsPage({ searchParams }: { searchParams: P
     <PageShell>
       <h1 className="sr-only">{t('title')}</h1>
       {admin ? (
-        <RequestTabs admin active="mine" counts={{ pending: (await pendingCounts()).total, mine: split.pending.length }} />
+        <RequestTabs admin active="mine" q={q} counts={{ pending: (await pendingCounts()).total, mine: split.pending.length }} />
       ) : (
-        <RequestTabs admin={false} active={done ? 'done' : 'pending'} counts={{ pending: split.pending.length, done: split.done.length }} />
+        <RequestTabs admin={false} active={done ? 'done' : 'pending'} q={q} counts={{ pending: split.pending.length, done: split.done.length }} />
       )}
       {/* PC에는 + 버튼이 없다 — 새 요청으로 가는 길을 줄로 보인다 */}
       <div className="hidden flex-wrap gap-2 lg:flex">
