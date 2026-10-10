@@ -263,15 +263,16 @@ export async function syncOvertimeRequests(data: PeriodData, upTo: string): Prom
   return inserts.length + reviews.length;
 }
 
-export async function pendingCounts(practice = OFFICE.practiceMode): Promise<{ overtime: number; corrections: number; leave: number; work: number; total: number }> {
+export async function pendingCounts(practice = OFFICE.practiceMode): Promise<{ overtime: number; corrections: number; leave: number; work: number; punch: number; total: number }> {
   const db = createAdminClient();
-  const [{ count: a }, { count: b }, { count: c }, { count: l }, { count: w }] = await Promise.all([
+  const [{ count: a }, { count: b }, { count: c }, { count: l }, { count: w }, { count: pr }] = await Promise.all([
     db.from('overtime_requests').select('id', { count: 'exact', head: true }).eq('is_test', practice).eq('status', 'pending'),
     db.from('overtime_requests').select('id', { count: 'exact', head: true }).eq('is_test', practice).eq('needs_review', true).neq('status', 'pending'),
     db.from('punch_corrections').select('id', { count: 'exact', head: true }).eq('is_test', practice).eq('status', 'pending'),
     db.from('leave_requests').select('id', { count: 'exact', head: true }).eq('is_test', practice).eq('status', 'pending'),
     db.from('work_requests').select('id', { count: 'exact', head: true }).eq('is_test', practice).eq('status', 'pending'),
+    db.from('punch_requests').select('id', { count: 'exact', head: true }).eq('is_test', practice).eq('status', 'pending'),
   ]);
-  const r = { overtime: (a ?? 0) + (b ?? 0), corrections: c ?? 0, leave: l ?? 0, work: w ?? 0 };
-  return { ...r, total: r.overtime + r.corrections + r.leave + r.work };
+  const r = { overtime: (a ?? 0) + (b ?? 0), corrections: c ?? 0, leave: l ?? 0, work: w ?? 0, punch: pr ?? 0 };
+  return { ...r, total: r.overtime + r.corrections + r.leave + r.work + r.punch };
 }

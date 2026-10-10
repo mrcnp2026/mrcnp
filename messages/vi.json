@@ -147,7 +147,13 @@
     "noScheduleChip": "Ngoài lịch",
     "shortcuts": "Lối tắt",
     "report": "Tổng quan · báo cáo",
-    "missingLink": "Thiếu chấm công"
+    "missingLink": "Thiếu chấm công",
+    "requestedIn": "Đã gửi yêu cầu chấm vào ({time})",
+    "requestedOut": "Đã gửi yêu cầu chấm ra ({time})",
+    "requestedExplain": "Bạn đang ở ngoài phạm vi nơi làm việc. Chưa được ghi nhận; khi quản lý duyệt sẽ ghi theo giờ này.",
+    "requestedNoLocation": "Không xác định được vị trí. Chưa được ghi nhận; khi quản lý duyệt sẽ ghi theo giờ này.",
+    "requestWaitIn": "Yêu cầu chấm vào đang chờ duyệt · {time}",
+    "requestWaitOut": "Yêu cầu chấm ra đang chờ duyệt · {time}"
   },
   "errors": {
     "invite_invalid": "Liên kết mời đã hết hạn hoặc đã được dùng. Hãy xin quản lý liên kết mới.",
@@ -549,7 +555,8 @@
       "correction": "Sửa chấm công",
       "overtime": "Xác nhận tăng ca",
       "leave": "Nghỉ phép",
-      "work": "Làm ngoài / công tác / từ xa"
+      "work": "Làm ngoài / công tác / từ xa",
+      "punch": "Yêu cầu chấm công"
     },
     "status": {
       "pending": "Đang chờ",
@@ -572,6 +579,18 @@
     },
     "emptyPending": "Không có yêu cầu đang chờ.",
     "emptyDone": "Không có yêu cầu nào được xử lý trong {days} ngày qua.",
-    "doneHint": "Chỉ hiển thị yêu cầu trong {days} ngày gần đây."
+    "doneHint": "Chỉ hiển thị yêu cầu trong {days} ngày gần đây.",
+    "punchKind": {
+      "in": "Yêu cầu chấm vào",
+      "out": "Yêu cầu chấm ra"
+    },
+    "punchWhy": {
+      "outside": "Ngoài phạm vi nơi làm việc",
+      "no_fix": "Không xác định được vị trí",
+      "low_accuracy": "Vị trí sai số lớn",
+      "no_office": "Chưa đăng ký nơi làm việc",
+      "no_consent": "Chưa đồng ý thu thập vị trí"
+    },
+    "punchFar": "Cách nơi làm việc gần nhất {m} m"
   }
 }

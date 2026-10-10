@@ -38,6 +38,9 @@ export default async function PunchPage() {
     // 출퇴근 기기 (등록한 1대). 없으면 홈의 버튼 자리에 등록 안내가 나온다
     createAdminClient().from('user_passkeys').select('credential_id, device_label').eq('employee_id', me.id).is('revoked_at', null).maybeSingle(),
   ]);
+  // 승인을 기다리는 반경 밖 출근/퇴근 요청 (오늘 것)
+  const { data: pr } = await createAdminClient().from('punch_requests').select('kind, requested_at').eq('employee_id', me.id).eq('work_date', today.workDate).eq('status', 'pending').eq('is_test', today.practice).order('requested_at', { ascending: false }).limit(1);
+  const pendingPunch = pr?.length ? { kind: pr[0].kind as 'in' | 'out', at: pr[0].requested_at as string } : null;
   // 이번 주 요일 칸: 그날 일정(날짜별 일정 → 평소 틀 → 회사 규칙, 반차 반영). 하루 전부 휴가면 「휴가」
   const weekStart = weekStartOf(today.workDate);
   const period = await loadPeriod(weekStart, addDays(weekStart, 6));
@@ -77,6 +80,7 @@ export default async function PunchPage() {
           dateLabel={f.dateTime(kstDateTime(today.workDate, '12:00'), { month: 'numeric', day: 'numeric', weekday: 'short' })}
           planLine={todayCell?.start ? `${todayCell.start} - ${todayCell.end}` : null}
           hasRule={!!today.rule}
+          pendingPunch={pendingPunch}
           firstIn={today.firstIn}
           firstInVerified={today.firstInVerified}
           lastOut={today.lastOut}

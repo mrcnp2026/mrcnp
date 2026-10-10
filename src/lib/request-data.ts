@@ -1,7 +1,7 @@
 // 요청 통합 읽기 — 네 표(정정 · 연장근로 · 휴가 · 외근)를 한 목록으로. 서버 전용.
 import 'server-only';
 import { OFFICE } from '@/config/office';
-import { fromCorrection, fromLeave, fromOvertime, fromWork, type ReqItem } from '@/lib/requests';
+import { fromCorrection, fromLeave, fromOvertime, fromPunchRequest, fromWork, type ReqItem } from '@/lib/requests';
 import { createAdminClient } from '@/lib/supabase/admin';
 
 export const REQUEST_WINDOW_DAYS = 62; // 완료 목록은 최근 두 달
@@ -18,11 +18,12 @@ export async function loadRequests(opts: { employeeId?: string; practice?: boole
     if (error) throw new Error(`loadRequests.${table}: ${error.code}`);
     return (data ?? []) as unknown as Record<string, unknown>[];
   };
-  const [co, ot, lv, wk] = await Promise.all([
+  const [co, ot, lv, wk, pr] = await Promise.all([
     read('punch_corrections', 'id, employee_id, work_date, correction_type, kind, new_punched_at, status, reason, approved_by, created_at, decided_at'),
     read('overtime_requests', 'id, employee_id, work_date, overtime_minutes, holiday_minutes, status, reason, approved_by, created_at, decided_at'),
     read('leave_requests', 'id, employee_id, type_code, start_date, end_date, days, start_time, end_time, status, reason, approved_by, created_at, decided_at'),
     read('work_requests', 'id, employee_id, kind, start_date, end_date, start_time, end_time, place, status, reason, approved_by, created_at, decided_at'),
+    read('punch_requests', 'id, employee_id, kind, requested_at, work_date, nearest_m, geo_reason, status, approved_by, created_at, decided_at'),
   ]);
-  return [...co.map(fromCorrection), ...ot.map(fromOvertime), ...lv.map(fromLeave), ...wk.map(fromWork)];
+  return [...pr.map(fromPunchRequest), ...co.map(fromCorrection), ...ot.map(fromOvertime), ...lv.map(fromLeave), ...wk.map(fromWork)];
 }

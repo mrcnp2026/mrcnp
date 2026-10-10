@@ -151,7 +151,13 @@
     "noScheduleChip": "Unscheduled",
     "shortcuts": "Shortcuts",
     "report": "Dashboard · reports",
-    "missingLink": "Missing punches"
+    "missingLink": "Missing punches",
+    "requestedIn": "Punch-in request sent ({time})",
+    "requestedOut": "Punch-out request sent ({time})",
+    "requestedExplain": "You are outside the work place radius. Nothing is recorded yet; once a manager approves, it is recorded at this time.",
+    "requestedNoLocation": "Your location could not be confirmed. Nothing is recorded yet; once a manager approves, it is recorded at this time. Allow location access to be recorded right away inside the radius.",
+    "requestWaitIn": "Punch-in request awaiting approval · {time}",
+    "requestWaitOut": "Punch-out request awaiting approval · {time}"
   },
   "errors": {
     "invite_invalid": "This invitation link has expired or was already used. Ask your manager for a new one.",
@@ -510,7 +516,20 @@
       "colReason": "Reason · note",
       "colAction": "Decision",
       "tabPending": "Pending",
-      "tabDone": "Done"
+      "tabDone": "Done",
+      "punchTitle": "Punch requests",
+      "punchIn": "Punch-in request",
+      "punchOut": "Punch-out request",
+      "confirmPunch": "Approve the {summary} request from {name}? It will be recorded at that time.",
+      "confirmPunchReject": "Reject the {summary} request from {name}? Nothing will be recorded.",
+      "punchWhy": {
+        "outside": "Outside the work place radius",
+        "no_fix": "Location not confirmed",
+        "low_accuracy": "Location too inaccurate",
+        "no_office": "No work place registered",
+        "no_consent": "No location consent"
+      },
+      "punchFar": "{m} m from the nearest work place"
     },
     "records": {
       "title": "Records",
@@ -1583,7 +1602,8 @@
       "correction": "Punch correction",
       "overtime": "Overtime review",
       "leave": "Leave",
-      "work": "Off-site / trip / remote"
+      "work": "Off-site / trip / remote",
+      "punch": "Punch request"
     },
     "status": {
       "pending": "Pending",
@@ -1606,6 +1626,18 @@
     },
     "emptyPending": "No pending requests.",
     "emptyDone": "No requests were handled in the last {days} days.",
-    "doneHint": "Only requests from the last {days} days are shown."
+    "doneHint": "Only requests from the last {days} days are shown.",
+    "punchKind": {
+      "in": "Punch-in request",
+      "out": "Punch-out request"
+    },
+    "punchWhy": {
+      "outside": "Outside the work place radius",
+      "no_fix": "Location not confirmed",
+      "low_accuracy": "Location too inaccurate",
+      "no_office": "No work place registered",
+      "no_consent": "No location consent"
+    },
+    "punchFar": "{m} m from the nearest work place"
   }
 }

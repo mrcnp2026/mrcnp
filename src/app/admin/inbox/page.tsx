@@ -66,6 +66,8 @@ export default async function InboxPage({ searchParams }: { searchParams: Promis
   const punchesOf = (e: string, d: string) =>
     (evs ?? []).filter((x) => x.employee_id === e && x.work_date === d).map((x) => `${x.kind === 'in' ? '↘' : '↗'} ${hm(x.punched_at)}`).join('  ');
 
+  const { data: punchRows } = await db.from('punch_requests').select('id, employee_id, kind, requested_at, work_date, nearest_m, geo_reason').eq('is_test', practice).eq('status', 'pending').order('requested_at');
+  const punchPending = (punchRows ?? []) as { id: string; employee_id: string; kind: 'in' | 'out'; requested_at: string; work_date: string; nearest_m: number | null; geo_reason: string }[];
   const tc = await getTranslations('common');
   const otPage = pageOf(ot ?? [], sp.op, REQUEST_PAGE);
   const coPage = pageOf(co ?? [], sp.cp, REQUEST_PAGE);
@@ -379,6 +381,33 @@ export default async function InboxPage({ searchParams }: { searchParams: Promis
       <h1 className="text-2xl font-semibold text-primary-deep">{t('title')}</h1>
       {practice && <p className="rounded-card bg-primary-tint p-3 text-sm text-primary">{t('practiceBanner')}</p>}
       <StateTabs done={false} live={sp.live} pending={t('tabPending')} doneLabel={t('tabDone')} label={t('title')} />
+
+      {/* 반경 밖 출근/퇴근 요청 (2026-10-10 의뢰인: 시프티 방식) — 승인해야 기록이 되므로 맨 위에 둔다 */}
+      {punchPending.length > 0 && (
+        <section id="punch" className="flex scroll-mt-16 flex-col gap-2">
+          <h2 className="px-1 font-bold">
+            {t('punchTitle')} <span className="num text-warn">{punchPending.length}</span>
+          </h2>
+          <ul className="-mx-4 divide-y divide-border border-y border-border bg-bg lg:mx-0 lg:rounded-card lg:border">
+            {punchPending.map((r) => {
+              const who = name.get(r.employee_id) ?? '';
+              const what = `${dayLabel(r.work_date)} ${hm(r.requested_at)} ${t(`kind.${r.kind}`)}`;
+              return (
+                <li key={r.id} className="flex flex-col gap-2 px-5 py-3">
+                  <div className="flex flex-wrap items-baseline justify-between gap-x-3">
+                    <span className="font-bold">
+                      {t(r.kind === 'in' ? 'punchIn' : 'punchOut')} · {who}
+                    </span>
+                    <span className="num text-sm">{dayLabel(r.work_date)} {hm(r.requested_at)}</span>
+                  </div>
+                  <p className="num text-sm text-muted">{r.geo_reason === 'outside' && r.nearest_m !== null ? t('punchFar', { m: r.nearest_m }) : t(`punchWhy.${r.geo_reason}`)}</p>
+                  {r.employee_id === me.id && ownBlocked ? ownNote : <LeaveDecision id={r.id} name={who} summary={what} url={`/api/admin/punch-requests/${r.id}/decide`} keys={['confirmPunch', 'confirmPunchReject']} />}
+                </li>
+              );
+            })}
+          </ul>
+        </section>
+      )}
 
       <InboxTabs
         label={t('tabs')}

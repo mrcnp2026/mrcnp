@@ -151,7 +151,13 @@
     "noScheduleChip": "무일정",
     "shortcuts": "바로가기",
     "report": "현황 · 리포트",
-    "missingLink": "출근/퇴근 누락 기록"
+    "missingLink": "출근/퇴근 누락 기록",
+    "requestedIn": "출근 요청을 보냈습니다 ({time})",
+    "requestedOut": "퇴근 요청을 보냈습니다 ({time})",
+    "requestedExplain": "출퇴근 장소 반경 밖입니다. 아직 기록되지 않았고, 관리자가 승인하면 이 시각으로 기록됩니다.",
+    "requestedNoLocation": "위치를 확인하지 못했습니다. 아직 기록되지 않았고, 관리자가 승인하면 이 시각으로 기록됩니다. 위치 권한을 허용하면 반경 안에서는 바로 기록됩니다.",
+    "requestWaitIn": "출근 요청 승인 대기 중 · {time}",
+    "requestWaitOut": "퇴근 요청 승인 대기 중 · {time}"
   },
   "errors": {
     "invite_invalid": "초대 링크가 만료되었거나 이미 사용되었습니다. 관리자에게 새 링크를 받으세요.",
@@ -510,7 +516,20 @@
       "colReason": "사유 · 메모",
       "colAction": "처리",
       "tabPending": "대기중",
-      "tabDone": "완료"
+      "tabDone": "완료",
+      "punchTitle": "출근/퇴근 요청",
+      "punchIn": "출근 요청",
+      "punchOut": "퇴근 요청",
+      "confirmPunch": "{name}님의 {summary} 요청을 승인할까요? 승인하면 그 시각으로 기록됩니다.",
+      "confirmPunchReject": "{name}님의 {summary} 요청을 거절할까요? 거절하면 기록되지 않습니다.",
+      "punchWhy": {
+        "outside": "출퇴근 장소 반경 밖",
+        "no_fix": "위치를 확인하지 못함",
+        "low_accuracy": "위치 오차가 큼",
+        "no_office": "등록된 출퇴근 장소 없음",
+        "no_consent": "위치 수집 동의 없음"
+      },
+      "punchFar": "가장 가까운 출퇴근 장소에서 {m}m"
     },
     "records": {
       "title": "기록",
@@ -1583,7 +1602,8 @@
       "correction": "출퇴근기록 정정",
       "overtime": "연장근로 확인",
       "leave": "휴가",
-      "work": "외근·출장·재택"
+      "work": "외근·출장·재택",
+      "punch": "출근/퇴근 요청"
     },
     "status": {
       "pending": "대기",
@@ -1606,6 +1626,18 @@
     },
     "emptyPending": "대기 중인 요청이 없습니다.",
     "emptyDone": "최근 {days}일 동안 처리된 요청이 없습니다.",
-    "doneHint": "최근 {days}일 안에 낸 요청만 보입니다."
+    "doneHint": "최근 {days}일 안에 낸 요청만 보입니다.",
+    "punchKind": {
+      "in": "출근 요청",
+      "out": "퇴근 요청"
+    },
+    "punchWhy": {
+      "outside": "출퇴근 장소 반경 밖",
+      "no_fix": "위치를 확인하지 못함",
+      "low_accuracy": "위치 오차가 큼",
+      "no_office": "등록된 출퇴근 장소 없음",
+      "no_consent": "위치 수집 동의 없음"
+    },
+    "punchFar": "가장 가까운 출퇴근 장소에서 {m}m"
   }
 }

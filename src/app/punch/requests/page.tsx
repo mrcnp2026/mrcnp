@@ -15,7 +15,7 @@ import { splitRequests, type ReqItem } from '@/lib/requests';
 import { createAdminClient } from '@/lib/supabase/admin';
 
 const PAGE = 20;
-const hrefOf = (r: ReqItem) => (r.kind === 'correction' ? '/punch/corrections' : r.kind === 'overtime' ? `/punch/records?m=${r.date.slice(0, 7)}` : r.kind === 'leave' ? '/punch/leave' : '/punch/leave#work');
+const hrefOf = (r: ReqItem) => (r.kind === 'punch' ? `/punch/records?m=${r.date.slice(0, 7)}` : r.kind === 'correction' ? '/punch/corrections' : r.kind === 'overtime' ? `/punch/records?m=${r.date.slice(0, 7)}` : r.kind === 'leave' ? '/punch/leave' : '/punch/leave#work');
 
 export default async function MyRequestsPage({ searchParams }: { searchParams: Promise<{ tab?: string; p?: string }> }) {
   const me = await getMe();

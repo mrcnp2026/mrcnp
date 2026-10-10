@@ -20,7 +20,7 @@ import { ErrorNote } from '@/components/ErrorNote';
 import { InAppWarning, RegisterTroubleshoot } from '@/components/PasskeyHelp';
 import { Card, Chip } from '@/components/ui';
 
-type Result = { kind: 'in' | 'out'; punchedAt: string; ipVerified: boolean; verifiedBy?: 'ip' | 'gps' | null; isTest: boolean; deduped: boolean };
+type Result = { requested?: boolean; kind: 'in' | 'out'; punchedAt: string; ipVerified: boolean; verifiedBy?: 'ip' | 'gps' | null; isTest: boolean; deduped: boolean };
 
 // 이 브라우저가 등록에 쓰인 기기인지 기억해 두는 표시 (등록·확인에 성공하면 적는다). 보안 장치가 아니라 안내용이다 —
 // 진짜 확인은 서버가 기기의 서명으로 한다. 브라우저 데이터를 지우면 사라지므로 "이 기기가 맞습니다"로 다시 확인할 수 있다.
@@ -56,6 +56,7 @@ export function TodayCard(props: {
   dateLabel: string; // 10/10 (토)
   planLine: string | null; // 오늘 일정 「08:00 - 17:00」. 없으면 null (무일정)
   hasRule: boolean; // 회사 근무규칙이 있는가 (없으면 안내)
+  pendingPunch?: { kind: 'in' | 'out'; at: string } | null; // 승인을 기다리는 반경 밖 출근/퇴근 요청
   firstIn: string | null;
   firstInVerified: boolean | null;
   lastOut: string | null;
@@ -185,10 +186,22 @@ export function TodayCard(props: {
             {props.firstInVerified === false && <span className="text-xs font-medium text-warn">{t('outside')}</span>}
           </p>
         )}
+        {props.pendingPunch && !result && (
+          <p className="num flex flex-wrap items-center gap-2 text-sm font-bold text-warn">
+            <Clock aria-hidden size={16} strokeWidth={2} />
+            {t(props.pendingPunch.kind === 'in' ? 'requestWaitIn' : 'requestWaitOut', { time: time(props.pendingPunch.at) })}
+          </p>
+        )}
         {!props.hasRule && <p className="text-sm text-faint">{t('noRule')}</p>}
       </div>
 
-      {result && (
+      {result?.requested && (
+        <div className="flex flex-col gap-1 rounded-button bg-warn-tint px-4 py-3 text-warn" aria-live="polite">
+          <p className="num font-bold">{t(result.kind === 'in' ? 'requestedIn' : 'requestedOut', { time: time(result.punchedAt) })}</p>
+          <p className="text-sm">{t(geoFailed ? 'requestedNoLocation' : 'requestedExplain')}</p>
+        </div>
+      )}
+      {result && !result.requested && (
         <div className="flex flex-col gap-2" aria-live="polite">
           <p className="flex items-center gap-2 rounded-button bg-ok-tint px-4 py-3 font-bold text-ok">
             <Check aria-hidden size={20} strokeWidth={2.5} className="shrink-0" />
