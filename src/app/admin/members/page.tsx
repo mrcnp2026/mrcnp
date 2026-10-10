@@ -1,9 +1,10 @@
 // ④ 직원 탭 — 조직도(부서 › 팀)로 묶어 본다 (2026-10-05 의뢰인: 샤플 대조). 누가 가입(비밀번호를 만듦)했고 누가 아직인지도 한눈에.
 // 위: 전체·가입·미가입 걸러보기 / 가운데: 부서별 묶음 → 팀 → 직원 한 줄 (이름·직급·사번·가입 상태·초대 링크).
 // 이름을 누르면 직원 상세(정보 수정·로그인·기록). 직원 추가와 조직도 관리는 각각 따로 화면이 있다.
-import { CalendarCheck, Check, ChevronRight, Network, UserPlus } from 'lucide-react';
+import { CalendarCheck, Check, ChevronRight, Network } from 'lucide-react';
 import { getTranslations } from 'next-intl/server';
 import Link from 'next/link';
+import { DetailBar } from '@/components/detail';
 import { Card, Chip, PageShell } from '@/components/ui';
 import { groupPath, groupPeople } from '@/lib/org';
 import { loadOrgGroups } from '@/lib/org-data';
@@ -17,6 +18,7 @@ type Row = { id: string; name: string; employeeNo: string | null; role: string; 
 
 export default async function MembersPage({ searchParams }: { searchParams: Promise<{ f?: string }> }) {
   const t = await getTranslations('admin.members');
+  const tc = await getTranslations('common');
   const sp = await searchParams;
   const filter: Filter = sp.f === 'joined' || sp.f === 'pending' ? sp.f : 'all';
   const db = createAdminClient();
@@ -91,39 +93,32 @@ export default async function MembersPage({ searchParams }: { searchParams: Prom
 
   return (
     <PageShell wide>
-      <header className="flex items-center justify-between gap-2 px-1 pt-2">
-        <h1 className="text-2xl font-extrabold tracking-tight">{t('title')}</h1>
-        <div className="flex shrink-0 items-center gap-2">
-          <Link href="/admin/leave" className="inline-flex min-h-11 items-center gap-1 rounded-button bg-primary-tint px-3 text-sm font-bold text-primary lg:hidden">
-            <CalendarCheck aria-hidden size={18} strokeWidth={2} />
-            {t('leaveShort')}
-          </Link>
-          <Link href="/admin/members/groups" className="inline-flex min-h-11 items-center gap-1 rounded-button bg-primary-tint px-3 text-sm font-bold text-primary lg:hidden">
-            <Network aria-hidden size={18} strokeWidth={2} />
-            {t('orgShort')}
-          </Link>
-          <Link href="/admin/members/new" className="inline-flex min-h-11 items-center gap-1 rounded-button bg-primary px-4 text-sm font-bold text-on-primary">
-            <UserPlus aria-hidden size={18} strokeWidth={2} />
-            {t('addShort')}
-          </Link>
-        </div>
-      </header>
-
-      {/* 걸러보기 — 숫자가 곧 현황 (가입 9 · 미가입 2) */}
-      <nav className="grid grid-cols-3 rounded-card bg-bg p-1" aria-label={t('filter')}>
+      <DetailBar back="/punch" backLabel={tc('back')} title={t('title')} action={{ href: '/admin/members/new', label: `+ ${t('addShort')}` }} />
+      {/* 걸러보기 — 숫자가 곧 현황 (가입 9 · 미가입 2). 시프티의 「현재직원 / 미합류 / 비활성」 탭 줄 모양 */}
+      <nav className="-mx-4 -mt-3 flex border-b border-border bg-bg px-2 lg:mx-0 lg:mt-0 lg:rounded-card lg:border-0" aria-label={t('filter')}>
         {tabs.map((x) => (
           <Link
             key={x.key}
             href={x.key === 'all' ? '/admin/members' : `/admin/members?f=${x.key}`}
             scroll={false}
             aria-current={filter === x.key ? 'page' : undefined}
-            className={`flex min-h-12 flex-col items-center justify-center rounded-button ${filter === x.key ? 'bg-primary-tint text-primary' : 'text-muted'}`}
+            className={`flex min-h-12 flex-1 items-center justify-center gap-2 border-b-2 text-base font-bold whitespace-nowrap ${filter === x.key ? 'border-text text-text' : 'border-transparent text-muted'}`}
           >
-            <span className={`num text-xl leading-none font-extrabold ${x.key === 'pending' && x.n > 0 && filter !== x.key ? 'text-warn' : ''}`}>{x.n}</span>
-            <span className="text-xs font-medium">{t(`f_${x.key}`)}</span>
+            {t(`f_${x.key}`)}
+            <span className={`num min-w-6 rounded-button px-1.5 text-center text-xs leading-5 font-bold ${x.key === 'pending' && x.n > 0 ? 'bg-warn text-on-primary' : 'bg-surface text-muted'}`}>{x.n}</span>
           </Link>
         ))}
       </nav>
+      <div className="flex gap-2 lg:hidden">
+        <Link href="/admin/leave" className="inline-flex min-h-11 flex-1 items-center justify-center gap-1 rounded-button border border-border bg-bg px-3 text-sm font-bold text-primary">
+          <CalendarCheck aria-hidden size={18} strokeWidth={2} />
+          {t('leaveShort')}
+        </Link>
+        <Link href="/admin/members/groups" className="inline-flex min-h-11 flex-1 items-center justify-center gap-1 rounded-button border border-border bg-bg px-3 text-sm font-bold text-primary">
+          <Network aria-hidden size={18} strokeWidth={2} />
+          {t('orgShort')}
+        </Link>
+      </div>
 
       {all.length === 0 && <p className="px-1 text-muted">{t('empty')}</p>}
       {all.length > 0 && list.length === 0 && <p className="px-1 text-muted">{t('emptyFilter')}</p>}

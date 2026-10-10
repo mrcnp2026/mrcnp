@@ -4,13 +4,14 @@ import { ArrowLeft, ChevronRight } from 'lucide-react';
 import Link from 'next/link';
 import type { ReactNode } from 'react';
 
-export function DetailBar({ back, backLabel, title, action }: { back: string; backLabel: string; title: string; action?: { href: string; label: string } }) {
+export function DetailBar({ back, backLabel, title, action, extra }: { back: string; backLabel: string; title: string; action?: { href: string; label: string }; extra?: ReactNode }) {
   return (
     <div className="sticky top-0 z-10 -mx-4 -mt-4 flex min-h-14 items-center gap-2 border-b border-border bg-bg px-4 pt-[env(safe-area-inset-top)] lg:static lg:mx-0 lg:mt-0 lg:rounded-card lg:border">
       <Link href={back} aria-label={backLabel} className="-ml-2 flex size-11 shrink-0 items-center justify-center rounded-button text-text">
         <ArrowLeft aria-hidden size={24} strokeWidth={1.75} />
       </Link>
       <h1 className="min-w-0 flex-1 truncate text-lg font-bold">{title}</h1>
+      {extra}
       {action && (
         <Link href={action.href} className="inline-flex min-h-11 shrink-0 items-center px-2 text-base font-bold text-primary">
           {action.label}

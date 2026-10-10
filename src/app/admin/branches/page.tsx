@@ -4,6 +4,7 @@ import { ChevronRight, MapPin, Search } from 'lucide-react';
 import { getTranslations } from 'next-intl/server';
 import Link from 'next/link';
 import { AddSheet } from '@/components/AddSheet';
+import { DetailBar } from '@/components/detail';
 import { Fab } from '@/components/Fab';
 import { Help } from '@/components/Help';
 import { RowList } from '@/components/list';
@@ -16,6 +17,7 @@ import { BranchAddForm } from './BranchForms';
 
 export default async function BranchesPage({ searchParams }: { searchParams: Promise<{ tab?: string; q?: string }> }) {
   const t = await getTranslations('admin.branches');
+  const tc = await getTranslations('common');
   const sp = await searchParams;
   const off = sp.tab === 'off';
   const q = (sp.q ?? '').trim().toLowerCase();
@@ -37,16 +39,10 @@ export default async function BranchesPage({ searchParams }: { searchParams: Pro
 
   return (
     <PageShell wide>
-      <div className="flex flex-wrap items-center gap-x-1 px-1">
-        <h1 className="text-2xl font-extrabold tracking-tight">{t('title')}</h1>
-        <Help>{t('intro')}</Help>
-        <Link href="/admin/members/groups" className="ml-auto inline-flex min-h-11 items-center text-sm font-medium text-primary">
-          {t('diagram')} ›
-        </Link>
-      </div>
+      <DetailBar back="/punch" backLabel={tc('back')} title={t('title')} extra={<Help>{t('intro')}</Help>} action={{ href: '/admin/members/groups', label: t('diagram') }} />
       <div className="grid items-start gap-3 lg:grid-cols-5 lg:gap-4">
         <div className="flex flex-col gap-3 lg:col-span-3">
-          <nav aria-label={t('title')} className="flex rounded-card bg-bg px-2">
+          <nav aria-label={t('title')} className="-mx-4 -mt-3 flex border-b border-border bg-bg px-2 lg:mx-0 lg:mt-0 lg:rounded-card lg:border-0">
             <Link href="/admin/branches" aria-current={!off ? 'page' : undefined} className={tab(!off)}>
               {t('tabOn')}
             </Link>

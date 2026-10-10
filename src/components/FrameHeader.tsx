@@ -5,7 +5,7 @@
 import { usePathname } from 'next/navigation';
 import type { ReactNode } from 'react';
 
-export const BARE_PATHS = ['/admin/records/list', '/admin/schedule', '/admin/leave', '/admin/inbox', '/punch/requests', '/punch/records', '/punch/schedule', '/punch/leave'];
+export const BARE_PATHS = ['/admin/records/list', '/admin/schedule', '/admin/leave', '/admin/inbox', '/punch/requests', '/punch/records', '/punch/schedule', '/punch/leave', '/admin/jobs', '/admin/branches', '/admin/places', '/admin/shifts', '/admin/members'];
 
 // 상세 화면(← 제목 … 수정 줄이 맨 위)
 const BARE_PATTERNS = [/^\/admin\/records\/[^/]+\/\d{4}-\d{2}-\d{2}$/];
