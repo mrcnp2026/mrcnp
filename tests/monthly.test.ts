@@ -158,3 +158,35 @@ describe('진행 중인 근무', () => {
     expect(String(tomorrow.row.flags)).toContain('block:퇴근 미기록');
   });
 });
+
+describe('기록 확정 (의뢰인 2026-10-11: 확정한 기록만 급여 계산에 쓴다)', () => {
+  const events = [ev('in', '2026-10-12', '09:30'), ev('out', '2026-10-12', '18:00'), ev('in', '2026-10-13', '09:00'), ev('out', '2026-10-13', '18:00')];
+  const sum = (confirmed?: string[]) => {
+    const days = computeEmployeeDays({ events, approvedCorrections: [], rule: RULE, holidays: [], from: '2026-10-12', to: '2026-10-13' });
+    return summarizeMonth({
+      employeeNo: 'A001', name: 'Nguyen', yearMonth: '2026-10', days, requests: [], pendingCorrections: 0, rule: RULE, joinedOn: '2026-10-12',
+      now: kstDateTime('2026-11-01', '12:00'), today: '2026-11-01', thresholdMinutes: 30, leave: new Map(), confirmed: confirmed ? new Set(confirmed) : undefined,
+    });
+  };
+  it('확정 목록을 넘기지 않으면 전부 센다 (출퇴근기록 화면)', () => {
+    const r = sum();
+    expect(r.netMinutes).toBe(450 + 480);
+    expect(r.unconfirmedDates).toEqual([]);
+    expect(String(r.row.flags)).not.toContain('미확정 기록');
+  });
+  it('확정된 날만 시간·지각을 세고, 미확정이 있으면 차단 표시', () => {
+    const r = sum(['2026-10-13']);
+    expect(r.netMinutes).toBe(480);
+    expect(r.row.regular_minutes).toBe(480);
+    expect(r.row.late_count).toBe(0); // 지각한 12일은 미확정이라 세지 않는다
+    expect(r.unconfirmedDates).toEqual(['2026-10-12']);
+    expect(String(r.row.flags)).toContain('block:미확정 기록');
+    expect(r.row.absent_days).toBe(0); // 미확정이어도 결근은 아니다
+  });
+  it('전부 확정이면 전부 세고 표시가 없다', () => {
+    const r = sum(['2026-10-12', '2026-10-13']);
+    expect(r.netMinutes).toBe(930);
+    expect(r.row.late_count).toBe(1);
+    expect(String(r.row.flags)).not.toContain('미확정 기록');
+  });
+});

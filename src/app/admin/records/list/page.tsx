@@ -2,10 +2,11 @@
 // 위: 검색 · 거르기 · 기간 · [내 기록]. 아래: 날짜 머리줄(그날 합계) + 기록 한 건이 한 줄 = 출근/퇴근 시각 · 직무 색 막대 · 이름 · 지점/직무 · 배지.
 // 합계는 그날 보이는 사람들의 근무 시간(휴게 제외) 합이다. 줄을 누르면 그 기록의 상세(큰 시각 + 항목—값), 거기서 [수정]으로 그 직원의 그 달 기록(정정·대리 입력).
 // 월 집계·엑셀 내려받기는 「월 집계」 화면(/admin/records)에 그대로 있다.
-import { ChevronRight } from 'lucide-react';
+import { CircleCheck } from 'lucide-react';
 import { getFormatter, getTranslations } from 'next-intl/server';
 import Link from 'next/link';
 import { AddSheet } from '@/components/AddSheet';
+import { ConfirmAll } from '@/components/ConfirmRecords';
 import { Fab } from '@/components/Fab';
 import { ListBar } from '@/components/ListBar';
 import { Pager, pageOf } from '@/components/Pager';
@@ -13,6 +14,7 @@ import { Card, Chip, PageShell } from '@/components/ui';
 import { getMe } from '@/lib/auth';
 import { OFFICE } from '@/config/office';
 import { addDays } from '@/lib/calendar';
+import { confirmKey, loadConfirms } from '@/lib/confirm-data';
 import { loadJobs } from '@/lib/job-data';
 import { missingRange } from '@/lib/missing-list';
 import { buildOrgTree, groupPath, groupScope } from '@/lib/org';
@@ -23,7 +25,7 @@ import { kstDateTime, toKstDate } from '@/lib/time';
 import { RecordAdd } from './RecordAdd';
 
 const DATES_PER_PAGE = 7;
-type Line = { key: string; idx: number; id: string; name: string; sub: string; color: string; date: string; start: string; end: string | null; deemed: boolean; open: boolean; outside: boolean; sort: number };
+type Line = { key: string; idx: number; id: string; name: string; sub: string; color: string; date: string; start: string; end: string | null; deemed: boolean; confirmed: boolean; open: boolean; outside: boolean; sort: number };
 
 export default async function RecordListPage({ searchParams }: { searchParams: Promise<{ q?: string; g?: string; from?: string; to?: string; live?: string; p?: string }> }) {
   const [t, tc, f, sp] = await Promise.all([getTranslations('admin.recordList'), getTranslations('common'), getFormatter(), searchParams]);
@@ -31,7 +33,7 @@ export default async function RecordListPage({ searchParams }: { searchParams: P
   const today = toKstDate(new Date());
   // 기본 기간: 이번 달 1일 ~ 오늘 (한 번에 62일까지)
   const { from, to } = missingRange(sp.from ?? `${today.slice(0, 8)}01`, sp.to, today, addDays);
-  const [data, groups, jobs] = await Promise.all([loadPeriod(from, to, practice), loadOrgGroups(), loadJobs()]);
+  const [data, groups, jobs, confirms] = await Promise.all([loadPeriod(from, to, practice), loadOrgGroups(), loadJobs(), loadConfirms(from, to, practice)]);
   const jobOf = new Map(jobs.map((j) => [j.id, j]));
   const groupOptions = buildOrgTree(groups).flatMap((d) => [{ id: d.id, label: d.name }, ...d.teams.map((x) => ({ id: x.id, label: `${d.name} › ${x.name}` }))]);
   const g = groupOptions.some((o) => o.id === sp.g) ? sp.g! : '';
@@ -58,7 +60,7 @@ export default async function RecordListPage({ searchParams }: { searchParams: P
         lines.push({
           key: `${p.id}${d.workDate}${i}`, idx: i, id: p.id, name: p.name, sub, color: job ? SHIFT_COLOR_CLASS[job.color] : 'bg-border', date: d.workDate,
           start: pair.in ? clock(pair.in) : '–', end: pair.out ? clock(pair.out) : null,
-          deemed: !real.has(d.workDate) && !!data.planFor(p.id, d.workDate).deemed, open: !!pair.in && !pair.out, outside: false, sort: at.getTime(),
+          deemed: !real.has(d.workDate) && !!data.planFor(p.id, d.workDate).deemed, confirmed: confirms.has(confirmKey(p.id, d.workDate)), open: !!pair.in && !pair.out, outside: false, sort: at.getTime(),
         });
       });
     }
@@ -92,11 +94,16 @@ export default async function RecordListPage({ searchParams }: { searchParams: P
       <div className="flex flex-col">
       {page.items.map((d) => {
         const rows = lines.filter((x) => x.date === d).sort((a, b) => a.name.localeCompare(b.name) || a.sort - b.sort);
+        // 「모두 확정」에 보낼 것: 아직 확정 안 된 사람(본인 제외). 퇴근이 빠진 날 등은 서버가 건너뛰고 건수를 알려 준다
+        const todo = canAdd ? [...new Set(rows.filter((x) => !x.confirmed && x.id !== me?.id).map((x) => x.id))].map((id) => ({ employeeId: id, date: d })) : [];
         return (
           <section key={d}>
             <h2 className="num -mx-4 flex items-center justify-between border-b border-border bg-surface px-5 py-3 font-bold lg:mx-0">
               <span>{f.dateTime(kstDateTime(d, '12:00'), { year: 'numeric', month: 'long', day: 'numeric', weekday: 'short' })}</span>
-              <span>{hm(totalOf.get(d) ?? 0)}</span>
+              <span className="flex items-center gap-3">
+                <ConfirmAll items={todo} />
+                <span>{hm(totalOf.get(d) ?? 0)}</span>
+              </span>
             </h2>
             <ul className="-mx-4 divide-y divide-border border-b border-border bg-bg lg:mx-0">
               {rows.map((x) => (
@@ -114,7 +121,7 @@ export default async function RecordListPage({ searchParams }: { searchParams: P
                     {x.deemed && <Chip>{t('deemed')}</Chip>}
                     {x.open && x.date !== today && <Chip tone="warn">{t('noOut')}</Chip>}
                     {x.open && x.date === today && <Chip tone="info">{t('working')}</Chip>}
-                    <ChevronRight aria-hidden size={20} className="shrink-0 text-faint" />
+                    <CircleCheck aria-label={t(x.confirmed ? 'confirmed' : 'unconfirmed')} size={24} className={`shrink-0 ${x.confirmed ? 'text-primary' : 'text-border'}`} />
                   </Link>
                 </li>
               ))}

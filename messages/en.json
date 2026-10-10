@@ -200,7 +200,8 @@
     "password_same_as_id": "The password cannot be the same as your employee number.",
     "password_mismatch": "The two passwords do not match.",
     "password_wrong": "The current password is not correct.",
-    "device_required": "Please register your punch device first."
+    "device_required": "Please register your punch device first.",
+    "day_confirmed": "This day is confirmed. An admin must undo the confirmation before it can be changed."
   },
   "admin": {
     "nav": {
@@ -666,7 +667,10 @@
       "peopleN": "{n}",
       "totalWorked": "Total hours",
       "totalOvertime": "Approved overtime",
-      "totalNightHoliday": "Night · holiday"
+      "totalNightHoliday": "Night · holiday",
+      "unconfirmed": "{n} day(s) of records are not confirmed. Only confirmed records are used for payroll, so those hours are not in the numbers below or the download.",
+      "toConfirm": "Confirm in attendance records",
+      "confirmedOnly": "Only confirmed records are counted. There are no unconfirmed records this month."
     },
     "weekLimit": {
       "title": "52-hour weekly limit",
@@ -1275,7 +1279,9 @@
       "add": "Add record",
       "addWho": "Employee",
       "addPick": "Choose an employee",
-      "addHint": "Choose an employee to enter the date, time and reason. For your own record, send a correction request."
+      "addHint": "Choose an employee to enter the date, time and reason. For your own record, send a correction request.",
+      "confirmed": "Confirmed",
+      "unconfirmed": "Not confirmed"
     },
     "recordDetail": {
       "title": "Attendance record",
@@ -1304,7 +1310,11 @@
       "deemed": "Deemed work",
       "other": "Other record that day",
       "hint": "Work and break times are for the whole day. Records are changed only through corrections.",
-      "toMonth": "This employee's month"
+      "toMonth": "This employee's month",
+      "confirmed": "Confirmed",
+      "confirmedBy": "Confirmed by",
+      "cannotConfirm": "A clock-in or clock-out is missing, so this cannot be confirmed yet. Fill it in under Edit first.",
+      "hintConfirmed": "This record is confirmed. It is used for payroll, and corrections are blocked. Undo the confirmation to change it."
     },
     "scheduleDetail": {
       "title": "Schedule",
@@ -1340,6 +1350,20 @@
       "created": "Created",
       "none": "X",
       "hint": "Approve or reject in the inbox; cancel an approval under Approved leave."
+    },
+    "confirm": {
+      "confirm": "Confirm",
+      "release": "Undo confirmation",
+      "releaseAsk": "If you undo it, this day is left out of payroll and corrections are allowed again. Undo?",
+      "keep": "Keep",
+      "all": "Confirm all {n}",
+      "partly": "{done} confirmed · {skipped} skipped",
+      "failed": "Could not confirm",
+      "no_record": "There is no record on this day.",
+      "not_closed": "A record with a missing clock-in or clock-out cannot be confirmed. Fill it with a correction first.",
+      "pending_exists": "There is a pending correction request. Handle it first.",
+      "self_decision": "Your own record must be confirmed by another admin.",
+      "no_rule": "Cannot confirm without a company work rule."
     }
   },
   "side": {

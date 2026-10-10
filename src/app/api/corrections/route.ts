@@ -6,6 +6,7 @@ import { OFFICE } from '@/config/office';
 import { api, ApiError, readJson } from '@/lib/api';
 import { getMe } from '@/lib/auth';
 import { addDays } from '@/lib/calendar';
+import { assertNotConfirmed } from '@/lib/confirm-data';
 import { isPeriodLocked } from '@/lib/punch';
 import { createAdminClient } from '@/lib/supabase/admin';
 import { cleanText } from '@/lib/text';
@@ -49,6 +50,7 @@ export const POST = api('corrections.create', async (req) => {
   }
   if (workDate > toKstDate(now)) throw new ApiError(400, 'future_time');
   if (await isPeriodLocked(me.id, workDate)) throw new ApiError(409, 'period_locked');
+  await assertNotConfirmed(me.id, workDate); // 확정된 날은 정정 요청을 받지 않는다 (의뢰인 2026-10-11)
 
   let dup = db
     .from('punch_corrections')

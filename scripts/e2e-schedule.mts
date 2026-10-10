@@ -68,7 +68,7 @@ try {
   const sheet = p.getByRole('dialog');
   await sheet.waitFor();
   check(await sheet.getByRole('button', { name: '일정 넣기' }).isDisabled(), '직원을 고르기 전에는 넣을 수 없음');
-  check((await sheet.getByLabel('근무일정 틀').count()) === 1 && (await sheet.getByLabel('근무일정 유형').count()) === 1, '양식에 틀 고르기·유형');
+  check((await sheet.getByLabel('근무일정 템플릿').count()) === 1 && (await sheet.getByLabel('근무일정 유형').count()) === 1, '양식에 틀 고르기·유형');
   await shot('02-일정-추가-창', false);
   await p.keyboard.press('Escape');
 
@@ -95,7 +95,7 @@ try {
   await p.getByRole('heading', { name: '근무일정', exact: true }).waitFor({ timeout: 20000 });
   const sl = await p.locator('main dt').allTextContents();
   check((await p.locator('header').locator('visible=true').count()) === 0 && ((await p.locator('main p.text-3xl').textContent()) ?? '').includes('08:00 - 17:00') && (await p.getByText('근무 8시간 0분 / 휴게 1시간 0분').count()) === 1, '일정 상세: 큰 시각 08:00 - 17:00 · 근무 8시간 / 휴게 1시간', (await p.locator('main p.text-3xl').textContent()) ?? '');
-  check(['근무일정 유형', '직원', '지점', '직무', '근무일정 틀', '휴게', '일정노트', '출퇴근기록'].every((x) => sl.includes(x)) && (await p.getByText('검사용 특근').count()) === 1, '일정 상세: 항목 — 값 줄 · 일정노트', sl.join(','));
+  check(['근무일정 유형', '직원', '지점', '직무', '근무일정 템플릿', '휴게', '일정노트', '출퇴근기록'].every((x) => sl.includes(x)) && (await p.getByText('검사용 특근').count()) === 1, '일정 상세: 항목 — 값 줄 · 일정노트', sl.join(','));
   await p.waitForTimeout(400);
   await shot('03c-근무일정-상세');
   await p.goto(`${BASE}/admin/schedule?d=${FRI}`);

@@ -2,6 +2,7 @@
 import 'server-only';
 import { OFFICE } from '@/config/office';
 import { addDays } from '@/lib/calendar';
+import { loadConfirms } from '@/lib/confirm-data';
 import { summarizeMonth, type MonthSummary } from '@/lib/monthly';
 import { daysFor, leaveDaysFor, loadPeriod, syncOvertimeRequests, workDaysFor, type PeriodData, type Person } from '@/lib/period-data';
 import { toKstDate } from '@/lib/time';
@@ -17,7 +18,8 @@ export function isYearMonth(s: unknown): s is string {
   return typeof s === 'string' && /^\d{4}-(0[1-9]|1[0-2])$/.test(s);
 }
 
-export async function buildMonth(ym: string, practice: boolean): Promise<{ data: PeriodData; rows: { person: Person; summary: MonthSummary }[] }> {
+/** confirmedOnly: 급여용 — 확정된 날의 기록만 센다 (의뢰인 2026-10-11). 출퇴근기록 화면의 월 집계는 넘기지 않는다 */
+export async function buildMonth(ym: string, practice: boolean, opts: { confirmedOnly?: boolean } = {}): Promise<{ data: PeriodData; rows: { person: Person; summary: MonthSummary }[] }> {
   const { from, to } = monthRange(ym);
   const now = new Date();
   const today = toKstDate(now);
@@ -26,6 +28,7 @@ export async function buildMonth(ym: string, practice: boolean): Promise<{ data:
   if (await syncOvertimeRequests(data, today < to ? today : to)) {
     Object.assign(data, await loadPeriod(from, to, practice));
   }
+  const confirms = opts.confirmedOnly ? await loadConfirms(from, to, practice) : null;
   const rows: { person: Person; summary: MonthSummary }[] = [];
   if (!data.rule) return { data, rows };
   for (const p of data.people) {
@@ -53,6 +56,7 @@ export async function buildMonth(ym: string, practice: boolean): Promise<{ data:
       thresholdMinutes: OFFICE.overtimeReviewThresholdMin,
       leave: leaveDaysFor(data, p.id),
       work: workDaysFor(data, p.id),
+      confirmed: confirms ? new Set([...confirms.values()].filter((c) => c.employeeId === p.id).map((c) => c.workDate)) : undefined,
     });
     rows.push({ person: p, summary });
   }

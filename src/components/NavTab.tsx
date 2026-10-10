@@ -10,7 +10,8 @@ import { useEffect, useState, type ReactNode } from 'react';
 
 function Pending({ dark = false }: { dark?: boolean }) {
   const { pending } = useLinkStatus();
-  return <span aria-hidden className={`h-0.5 w-6 rounded-chip ${dark ? 'bg-on-primary' : 'bg-primary'} ${pending ? 'opacity-100' : 'opacity-0'}`} />;
+  // 자리를 차지하지 않게 탭 바닥에 띄운다 — 흐름 안에 두면 아이콘·글자가 위로 쏠려 보인다 (2026-10-11 의뢰인)
+  return <span aria-hidden className={`h-0.5 w-6 rounded-chip ${dark ? 'absolute bottom-1 left-1/2 -translate-x-1/2 bg-on-primary' : 'bg-primary'} ${pending ? 'opacity-100' : 'opacity-0'}`} />;
 }
 
 /** 방금 누른 탭 — 화면 주소가 바뀌면 지운다 */
@@ -45,7 +46,7 @@ export function NavTab({
       href={href}
       aria-current={active ? 'page' : undefined}
       onClick={onPress}
-      className={`flex min-h-14 flex-col items-center justify-center gap-0.5 text-xs ${
+      className={`relative flex flex-col items-center justify-center text-xs ${dark ? 'min-h-16 gap-1' : 'min-h-14 gap-0.5'} ${
         wideRow ? 'lg:flex-row lg:justify-start lg:gap-2 lg:rounded-button lg:px-3 lg:text-base' : ''
       } ${dark ? (active ? 'font-bold text-on-primary' : 'text-on-primary opacity-60') : active ? `font-bold text-text ${wideRow ? 'lg:bg-primary-tint' : ''}` : 'text-faint'}`}
     >

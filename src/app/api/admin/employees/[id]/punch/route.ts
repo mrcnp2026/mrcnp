@@ -7,6 +7,7 @@ import { api, ApiError, readJson } from '@/lib/api';
 import { requireAdmin } from '@/lib/auth';
 import { applyCorrections } from '@/lib/pairs';
 import { planProxyPunch } from '@/lib/proxy-punch';
+import { assertNotConfirmed } from '@/lib/confirm-data';
 import { isPeriodLocked } from '@/lib/punch';
 import { createAdminClient } from '@/lib/supabase/admin';
 import { cleanText } from '@/lib/text';
@@ -27,6 +28,7 @@ export const POST = api<{ params: Promise<{ id: string }> }>('admin.proxy.punch'
 
   const workDate = typeof b.workDate === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(b.workDate) ? b.workDate : null;
   if (!workDate) throw new ApiError(400, 'invalid_input');
+  await assertNotConfirmed(id, workDate, practice); // 확정된 날에는 대신 넣지 못한다 — 먼저 확정을 푼다 (의뢰인 2026-10-11)
   const [{ data: ev, error: e1 }, { data: co, error: e2 }] = await Promise.all([
     db.from('punch_events').select('id, employee_id, kind, punched_at, work_date').eq('employee_id', id).eq('work_date', workDate).eq('is_test', practice),
     db.from('punch_corrections').select('id, correction_type, target_id, employee_id, work_date, kind, new_punched_at, status').eq('employee_id', id).eq('work_date', workDate).eq('is_test', practice),

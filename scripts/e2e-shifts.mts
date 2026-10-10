@@ -49,14 +49,14 @@ try {
   await p.goto(`${BASE}/admin`);
   await p.locator('[data-menu-open]').click();
   await p.getByRole('dialog').waitFor();
-  check((await p.getByRole('dialog').getByRole('link', { name: '근무일정 틀', exact: true }).count()) === 1, '왼쪽 메뉴에 「근무일정 틀」');
+  check((await p.getByRole('dialog').getByRole('link', { name: '근무일정 템플릿', exact: true }).count()) === 1, '왼쪽 메뉴에 「근무일정 틀」');
   await p.goto(`${BASE}/admin/shifts`);
   await p.waitForLoadState('networkidle');
   check((await p.getByText(/회사 근무규칙/).count()) > 0, '목록 위에 "틀이 없는 직원은 회사 근무규칙" 안내');
   await p.locator('[data-fab]').click();
   const sheet = p.getByRole('dialog');
   await sheet.waitFor();
-  await sheet.getByLabel('틀 이름').fill(NAME);
+  await sheet.getByLabel('템플릿 이름').fill(NAME);
   await sheet.locator('input[name="startTime"]').fill('07:30');
   await sheet.locator('input[name="endTime"]').fill('17:00');
   await sheet.getByLabel('초록').check({ force: true });

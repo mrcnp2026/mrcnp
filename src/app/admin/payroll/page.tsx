@@ -7,7 +7,7 @@ import { Help } from '@/components/Help';
 import { Card, PageShell } from '@/components/ui';
 import { OFFICE } from '@/config/office';
 import { getMe } from '@/lib/auth';
-import { buildMonth, isYearMonth } from '@/lib/month-data';
+import { buildMonth, isYearMonth, monthRange } from '@/lib/month-data';
 import { createAdminClient } from '@/lib/supabase/admin';
 import { toKstDate } from '@/lib/time';
 
@@ -26,6 +26,9 @@ export default async function PayrollPage({ searchParams }: { searchParams: Prom
   // 연습 모드에서는 연습 기록이 기본 (관리자 홈·요청·기록과 같은 기준)
   const practice = OFFICE.practiceMode && sp.live !== '1';
   const q = (m: string) => `?m=${m}${OFFICE.practiceMode && !practice ? '&live=1' : ''}`;
+  const today = toKstDate(new Date());
+  const lastDay = monthRange(ym).to;
+  const monthEnd = lastDay < today ? lastDay : today;
   const hm = (min: number) => tr('hm', { h: Math.floor(min / 60), m: String(min % 60).padStart(2, '0') });
 
   if (!me.canViewPayroll) {
@@ -44,7 +47,9 @@ export default async function PayrollPage({ searchParams }: { searchParams: Prom
       </PageShell>
     );
   }
-  const { rows } = await buildMonth(ym, practice);
+  // 확정한 기록만 급여 계산에 쓴다 (의뢰인 2026-10-11) — 미확정 기록이 있으면 위에 알린다
+  const { rows } = await buildMonth(ym, practice, { confirmedOnly: true });
+  const unconfirmed = rows.reduce((a, r) => a + r.summary.unconfirmedDates.length, 0);
 
   // 이 달 합계 (숫자 칸) — 표와 같은 값의 합
   const sum = (pick: (r: (typeof rows)[number]) => number) => rows.reduce((a, r) => a + pick(r), 0);
@@ -82,6 +87,16 @@ export default async function PayrollPage({ searchParams }: { searchParams: Prom
         </div>
       </header>
       {practice && <p className="rounded-card bg-primary-tint p-3 text-sm text-primary">{tr('practiceBanner')}</p>}
+      {unconfirmed > 0 ? (
+        <p className="rounded-card border border-warn bg-warn-tint p-3 text-sm text-warn">
+          {t('unconfirmed', { n: unconfirmed })}{' '}
+          <Link href={`/admin/records/list?from=${ym}-01&to=${monthEnd}`} className="font-bold underline">
+            {t('toConfirm')} ›
+          </Link>
+        </p>
+      ) : (
+        <p className="px-1 text-sm text-muted">{t('confirmedOnly')}</p>
+      )}
 
       <dl className="grid grid-cols-2 gap-2 lg:grid-cols-4 lg:gap-4">
         {tiles.map((x) => (

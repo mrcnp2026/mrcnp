@@ -1,13 +1,15 @@
 // 출퇴근기록 한 건의 상세 (2026-10-11 의뢰인: 시프티의 출퇴근기록 상세처럼) — 큰 시각 · 날짜 · 근무/휴게 → 「항목 — 값」 줄.
 // 보여 주기만 한다. [수정]은 그 직원의 그 달 기록 화면(정정·대리 입력이 있는 곳)으로 간다 — 고치는 길은 정정뿐이다 (4-8).
 // 「출근 장소 · 퇴근 장소」: 위치로 확인된 기록은 그 출퇴근 장소의 이름, 그 밖에는 확인한 방법(사무실 인터넷 · 확인 안 됨 · 관리자 등록 · 정정)을 적는다.
-// 기록 확정([확정하기])은 아직 없다 (할일 「나. 출퇴근기록」).
+// 아래 큰 [확정하기]: 그 직원의 그날 기록을 확정한다 (의뢰인 2026-10-11: 확정한 기록만 급여에 쓰고, 확정 뒤에는 정정을 막는다). 풀기도 여기서 한다.
 import { getFormatter, getTranslations } from 'next-intl/server';
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
+import { ConfirmButton } from '@/components/ConfirmRecords';
 import { DetailBar, Field, FieldList } from '@/components/detail';
 import { Chip, PageShell } from '@/components/ui';
 import { OFFICE } from '@/config/office';
+import { confirmKey, loadConfirms } from '@/lib/confirm-data';
 import { loadJobs } from '@/lib/job-data';
 import { groupPath } from '@/lib/org';
 import { loadOrgGroups } from '@/lib/org-data';
@@ -49,6 +51,10 @@ export default async function RecordDetailPage({ params, searchParams }: { param
   const branch = groupPath(groups, person.groupId);
   const open = !!pair.in && !pair.out;
   const made = eventAt(pair.in) ?? eventAt(pair.out);
+  // 확정은 지금 운영 모드의 기록에만 (연습 기간에 「실제 기록 보기」로 들어온 화면에서는 하지 않는다)
+  const canConfirm = practice === OFFICE.practiceMode;
+  const confirm = (await loadConfirms(date, date, practice)).get(confirmKey(id, date));
+  const closed = day.pairs.every((p) => p.in && p.out);
   const others = day.pairs.map((p, i) => ({ p, i })).filter((x) => x.i !== idx && (x.p.in || x.p.out));
 
   return (
@@ -60,6 +66,7 @@ export default async function RecordDetailPage({ params, searchParams }: { param
             {pair.in ? clock(pair.in) : '–'} - {pair.out ? clock(pair.out) : ''}
           </span>
           {deemed && <Chip>{t('deemed')}</Chip>}
+          {confirm && <Chip tone="ok">{t('confirmed')}</Chip>}
           {open && date === toKstDate(new Date()) && <Chip tone="info">{t('working')}</Chip>}
           {open && date !== toKstDate(new Date()) && <Chip tone="warn">{t('noOut')}</Chip>}
         </p>
@@ -89,8 +96,15 @@ export default async function RecordDetailPage({ params, searchParams }: { param
           ))}
         </FieldList>
       )}
+      {confirm && (
+        <FieldList>
+          <Field label={t('confirmedBy')} value={`${data.people.find((p) => p.id === confirm.confirmedBy)?.name ?? ''} | ${f.dateTime(new Date(confirm.confirmedAt), { month: 'numeric', day: 'numeric', hour: '2-digit', minute: '2-digit', hourCycle: 'h23' })}`} />
+        </FieldList>
+      )}
+      {canConfirm && (confirm || closed) && <ConfirmButton item={{ employeeId: id, date }} confirmed={!!confirm} />}
+      {canConfirm && !confirm && !closed && <p className="rounded-card bg-bg p-4 text-sm text-muted">{t('cannotConfirm')}</p>}
       <p className="px-1 text-sm text-faint">
-        {t('hint')}{' '}
+        {t(confirm ? 'hintConfirmed' : 'hint')}{' '}
         <Link href={`/admin/records/${id}?m=${date.slice(0, 7)}${liveQ}`} className="font-medium text-primary">
           {t('toMonth')} ›
         </Link>

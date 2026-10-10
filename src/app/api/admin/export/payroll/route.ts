@@ -15,7 +15,7 @@ export async function GET(req: NextRequest) {
   const ym = req.nextUrl.searchParams.get('m');
   if (!isYearMonth(ym)) return deny(400, 'invalid_input');
   const practice = OFFICE.practiceMode && req.nextUrl.searchParams.get('live') !== '1';
-  const { rows } = await buildMonth(ym, practice);
+  const { rows } = await buildMonth(ym, practice, { confirmedOnly: true }); // 확정한 기록만 (의뢰인 2026-10-11). 미확정이 있으면 flags에 block:미확정 기록
   const body = toCsv(PAYROLL_COLUMNS, rows.map((r) => PAYROLL_COLUMNS.map((c) => r.summary.row[c])));
   return csvResponse(body, exportFileName('payroll', practice ? `${ym}-practice` : ym, new Date()));
 }

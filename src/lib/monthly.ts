@@ -33,6 +33,7 @@ export type MonthSummary = {
   leaveDates: string[]; // 승인된 휴가가 있는 근무일
   paidLeaveDays: number; // 유급휴가 일수 (연차·반차·경조사 등) — 화면·엑셀용. 급여용 CSV 칸 목록은 그대로
   workDates: string[]; // 승인된 외근·출장·재택 근무일
+  unconfirmedDates: string[]; // 기록은 있는데 확정되지 않아 합계에서 뺀 날 (confirmed를 넘겼을 때만 채워진다)
 };
 
 // 급여를 막는 사유(block:)와 사람이 봐야 할 사실(warn:)을 접두어로 나눈다 (7-10). ③은 block:만 차단한다 (부록 R-11 #7)
@@ -40,6 +41,7 @@ const WARN_FLAGS = new Set<string>([FLAG.WEEKLY_LIMIT_EXCEEDED, FLAG.LEGAL_BREAK
 const MISSING_IN = '출근 미기록';
 const PENDING_CORRECTION = '대기 중인 정정';
 const NEEDS_REVIEW = '재확인 필요';
+const UNCONFIRMED = '미확정 기록';
 
 export function prefixFlag(f: string): string {
   if (f.startsWith('block:') || f.startsWith('warn:')) return f;
@@ -63,6 +65,9 @@ export function summarizeMonth(args: {
   leave?: Map<string, LeaveOnDay[]>;
   // 날짜별 승인 외근·출장·재택 (②-3). 기록 없는 날도 결근이 아니다
   work?: Map<string, WorkKind>;
+  // 확정된 날짜 (의뢰인 2026-10-11: 확정한 기록만 급여 계산에 쓴다). 넘기면 기록이 있는데 확정되지 않은 날의 시간·지각을 합계에서 빼고 차단 표시를 붙인다.
+  // 넘기지 않으면 예전처럼 전부 센다 (출퇴근기록 화면의 월 집계 — 사실을 그대로 보여 주는 화면).
+  confirmed?: ReadonlySet<string>;
 }): MonthSummary {
   const s = { regular: 0, overtime: 0, night: 0, h8: 0, hOver: 0, net: 0 };
   const ap = { overtime: 0, night: 0, h8: 0, hOver: 0 };
@@ -75,46 +80,52 @@ export function summarizeMonth(args: {
   const missingOutDates: string[] = [];
   const leaveDates: string[] = [];
   const workDates: string[] = [];
+  const unconfirmedDates: string[] = [];
   let paidLeave = 0;
   let unpaidLeave = 0;
   const reqByDate = new Map(args.requests.map((r) => [r.workDate, r]));
 
   for (const d of args.days) {
-    s.regular += d.regularMinutes;
-    s.overtime += d.overtimeMinutes;
-    s.night += d.nightMinutes;
-    s.h8 += d.holidayWithin8Minutes;
-    s.hOver += d.holidayOver8Minutes;
-    s.net += d.netMinutes;
-    // 오늘 아직 근무 중인 교대는 '퇴근 미기록'이 아니다 (진행 중). 내일이 되면 다시 판정된다
-    const ongoing = d.workDate === args.today && d.pairs.some((p) => p.in && !p.out);
-    d.flags.filter((f) => !(ongoing && f === FLAG.MISSING_OUT)).forEach((f) => flags.add(f));
-    if (d.flags.includes(FLAG.MISSING_OUT) && !ongoing) missingOutDates.push(d.workDate);
+    // 기록이 있는데 확정되지 않은 날: 시간·연장·지각을 세지 않는다 (결근·휴가 판정은 그대로)
+    const counted = !args.confirmed || d.pairs.length === 0 || args.confirmed.has(d.workDate);
+    if (!counted) unconfirmedDates.push(d.workDate);
+    if (counted) {
+      s.regular += d.regularMinutes;
+      s.overtime += d.overtimeMinutes;
+      s.night += d.nightMinutes;
+      s.h8 += d.holidayWithin8Minutes;
+      s.hOver += d.holidayOver8Minutes;
+      s.net += d.netMinutes;
+      // 오늘 아직 근무 중인 교대는 '퇴근 미기록'이 아니다 (진행 중). 내일이 되면 다시 판정된다
+      const ongoing = d.workDate === args.today && d.pairs.some((p) => p.in && !p.out);
+      d.flags.filter((f) => !(ongoing && f === FLAG.MISSING_OUT)).forEach((f) => flags.add(f));
+      if (d.flags.includes(FLAG.MISSING_OUT) && !ongoing) missingOutDates.push(d.workDate);
 
-    const req = reqByDate.get(d.workDate);
-    if (req) {
-      const a = approvedMinutes(req);
-      ap.overtime += a.overtime;
-      ap.night += a.night;
-      ap.h8 += a.holidayWithin8;
-      ap.hOver += a.holidayOver8;
-      const p = pendingMinutes(req);
-      pe.overtime += p.overtime;
-      pe.night += p.night;
-      pe.holiday += p.holiday;
-      if (req.needsReview) flags.add(NEEDS_REVIEW);
-    } else if (!buildOvertimeRequest({ employeeId: '', workDate: d.workDate, work: d, thresholdMinutes: args.thresholdMinutes })) {
-      // 임계값 미만: 승인 대기에 안 올렸지만 사라지지 않는다 (7-7 요점 2, B-28)
-      unreviewed += d.overtimeMinutes;
-    } else {
-      // 확인 대상인데 요청이 아직 안 만들어짐 (예: 오늘 근무 중) — 0으로도 인정으로도 처리하지 않고 보류로
-      pe.overtime += d.overtimeMinutes;
-      pe.night += d.nightMinutes;
-      pe.holiday += d.holidayMinutes;
+      const req = reqByDate.get(d.workDate);
+      if (req) {
+        const a = approvedMinutes(req);
+        ap.overtime += a.overtime;
+        ap.night += a.night;
+        ap.h8 += a.holidayWithin8;
+        ap.hOver += a.holidayOver8;
+        const p = pendingMinutes(req);
+        pe.overtime += p.overtime;
+        pe.night += p.night;
+        pe.holiday += p.holiday;
+        if (req.needsReview) flags.add(NEEDS_REVIEW);
+      } else if (!buildOvertimeRequest({ employeeId: '', workDate: d.workDate, work: d, thresholdMinutes: args.thresholdMinutes })) {
+        // 임계값 미만: 승인 대기에 안 올렸지만 사라지지 않는다 (7-7 요점 2, B-28)
+        unreviewed += d.overtimeMinutes;
+      } else {
+        // 확인 대상인데 요청이 아직 안 만들어짐 (예: 오늘 근무 중) — 0으로도 인정으로도 처리하지 않고 보류로
+        pe.overtime += d.overtimeMinutes;
+        pe.night += d.nightMinutes;
+        pe.holiday += d.holidayMinutes;
+      }
     }
 
     const firstIn = d.pairs.map((p) => p.in).filter((x): x is Date => !!x).sort((a, b) => a.getTime() - b.getTime())[0];
-    if (firstIn && d.dayType === 'workday') {
+    if (counted && firstIn && d.dayType === 'workday') {
       const l = judgeLateness({ punchedAt: firstIn, workDate: d.workDate, rule: args.ruleAt?.(d.workDate) ?? args.rule, isHoliday: false });
       if (l.verdict === 'late') {
         lateCount++;
@@ -144,6 +155,7 @@ export function summarizeMonth(args: {
   if (absentDates.length) flags.add(MISSING_IN);
   if (pe.overtime + pe.night + pe.holiday > 0) flags.add(FLAG.PENDING_OVERTIME);
   if (args.pendingCorrections > 0) flags.add(PENDING_CORRECTION);
+  if (unconfirmedDates.length) flags.add(UNCONFIRMED);
   // 7-14: 연차 자료가 없으면 결근인지 연차인지 모른다 → 무급휴가는 빈 칸 + 차단 표시 (0을 쓰지 않는다, B-27)
   if (!args.leave) flags.add(FLAG.LEAVE_MODULE_MISSING);
 
@@ -156,6 +168,7 @@ export function summarizeMonth(args: {
     leaveDates,
     paidLeaveDays: roundDays(paidLeave),
     workDates,
+    unconfirmedDates,
     row: {
       employee_no: args.employeeNo,
       name: args.name,
