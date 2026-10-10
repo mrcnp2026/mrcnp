@@ -563,7 +563,8 @@
       "payrollCsvHint": "For the payroll program. Do not open it in Excel to check — use the report above for people.",
       "viewDays": "View daily records",
       "groupAll": "All departments",
-      "groupFilter": "Filter by department or team"
+      "groupFilter": "Filter by department or team",
+      "toList": "Record list"
     },
     "notices": {
       "title": "Notices",
@@ -1208,6 +1209,27 @@
       "lineOut": "No punch out",
       "pending": "Correction requested",
       "hint": "Tap a row to open that person’s records, where you can add the missing punch. Up to 62 days at a time."
+    },
+    "recordList": {
+      "title": "Attendance",
+      "mine": "My records",
+      "search": "Search name",
+      "filter": "Filter by department",
+      "period": "Choose period",
+      "from": "From",
+      "to": "To",
+      "apply": "View this period",
+      "groupAll": "All departments",
+      "practice": "Practice records",
+      "live": "Live records",
+      "toMonth": "Monthly totals · export",
+      "noRule": "There is no company work rule yet, so records cannot be calculated.",
+      "empty": "No records in this period.",
+      "hm": "{h} h {m} min",
+      "deemed": "Deemed work",
+      "noOut": "No punch out",
+      "working": "Working",
+      "hint": "The time beside each date is the total working time (breaks excluded) of the staff shown. Tap a row to correct or add records for that person. Up to 62 days at a time."
     }
   },
   "side": {
@@ -1243,7 +1265,8 @@
     "adminSchedule": "Schedule",
     "jobs": "Jobs",
     "myRequests": "My requests",
-    "missing": "Missing punches"
+    "missing": "Missing punches",
+    "recordList": "Record list"
   },
   "nav": {
     "home": "Home",

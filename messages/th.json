@@ -217,7 +217,8 @@
     "adminSchedule": "ตารางงาน",
     "jobs": "ตำแหน่งงาน",
     "myRequests": "คำขอของฉัน",
-    "missing": "ลืมลงเวลา"
+    "missing": "ลืมลงเวลา",
+    "recordList": "รายการลงเวลา"
   },
   "nav": {
     "home": "หน้าหลัก",

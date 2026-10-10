@@ -217,7 +217,8 @@
     "adminSchedule": "Lịch làm việc",
     "jobs": "Chức danh",
     "myRequests": "Yêu cầu của tôi",
-    "missing": "Thiếu chấm công"
+    "missing": "Thiếu chấm công",
+    "recordList": "Danh sách chấm công"
   },
   "nav": {
     "home": "Trang chủ",

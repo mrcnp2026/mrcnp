@@ -11,7 +11,7 @@ const TABS: Tab[] = [
   { key: 'home', icon: House, mine: '/punch' },
   { key: 'requests', icon: BellRing, mine: '/punch/requests', all: '/admin/inbox', also: ['/punch/corrections'] }, // 정정 요청 양식도 요청 탭 아래다
   { key: 'schedule', icon: CalendarRange, mine: '/punch/schedule', all: '/admin/schedule' },
-  { key: 'attendance', icon: ListChecks, mine: '/punch/records', all: '/admin/records' },
+  { key: 'attendance', icon: ListChecks, mine: '/punch/records', all: '/admin/records/list', also: ['/admin/records'] }, // 전체 = 날짜별 기록 목록 (월 집계는 그 안의 링크)
   { key: 'leave', icon: CalendarDays, mine: '/punch/leave', all: '/admin/leave' },
 ];
 

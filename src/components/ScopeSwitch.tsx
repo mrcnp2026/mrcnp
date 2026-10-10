@@ -6,7 +6,7 @@ import Link from 'next/link';
 const HREF = {
   requests: { mine: '/punch/requests', all: '/admin/inbox' },
   schedule: { mine: '/punch/schedule', all: '/admin/schedule' },
-  attendance: { mine: '/punch/records', all: '/admin/records' },
+  attendance: { mine: '/punch/records', all: '/admin/records/list' },
   leave: { mine: '/punch/leave', all: '/admin/leave' },
 } as const;
 
