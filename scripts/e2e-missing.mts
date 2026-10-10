@@ -72,6 +72,8 @@ try {
   check((await p.getByText(emp!.name, { exact: true }).count()) === 0, '검사 전용 계정은 목록에 나오지 않음');
 
   // ── 기간 바꾸기 ──
+  await p.waitForLoadState('networkidle'); // 화면이 살아난 뒤에 고친다 (그 전에 고치면 버튼이 켜지지 않는다)
+  await p.waitForTimeout(500);
   await p.getByLabel('시작일').fill(kst(-40));
   await p.getByRole('button', { name: '이 기간으로 보기' }).click();
   await p.waitForURL(new RegExp(`from=${kst(-40)}`));

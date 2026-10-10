@@ -8,9 +8,9 @@ import Link, { useLinkStatus } from 'next/link';
 import { usePathname } from 'next/navigation';
 import { useEffect, useState, type ReactNode } from 'react';
 
-function Pending() {
+function Pending({ dark = false }: { dark?: boolean }) {
   const { pending } = useLinkStatus();
-  return <span aria-hidden className={`h-0.5 w-6 rounded-chip bg-primary ${pending ? 'opacity-100' : 'opacity-0'}`} />;
+  return <span aria-hidden className={`h-0.5 w-6 rounded-chip ${dark ? 'bg-on-primary' : 'bg-primary'} ${pending ? 'opacity-100' : 'opacity-0'}`} />;
 }
 
 /** 방금 누른 탭 — 화면 주소가 바뀌면 지운다 */
@@ -29,6 +29,7 @@ export function NavTab({
   onPress,
   badge,
   wideRow = false,
+  dark = false,
 }: {
   href: string;
   label: string;
@@ -37,6 +38,7 @@ export function NavTab({
   onPress: () => void;
   badge?: ReactNode;
   wideRow?: boolean; // 넓은 화면 왼쪽 메뉴 모양 (관리자)
+  dark?: boolean; // 짙은 바탕(폰 하단 탭) 위 — 흰 글자
 }) {
   return (
     <Link
@@ -45,14 +47,14 @@ export function NavTab({
       onClick={onPress}
       className={`flex min-h-14 flex-col items-center justify-center gap-0.5 text-xs ${
         wideRow ? 'lg:flex-row lg:justify-start lg:gap-2 lg:rounded-button lg:px-3 lg:text-base' : ''
-      } ${active ? `font-bold text-text ${wideRow ? 'lg:bg-primary-tint' : ''}` : 'text-faint'}`}
+      } ${dark ? (active ? 'font-bold text-on-primary' : 'text-on-primary opacity-60') : active ? `font-bold text-text ${wideRow ? 'lg:bg-primary-tint' : ''}` : 'text-faint'}`}
     >
       <span className="relative">
         <Icon aria-hidden size={22} strokeWidth={active ? 2.25 : 1.75} />
         {badge}
       </span>
       <span>{label}</span>
-      <Pending />
+      <Pending dark={dark} />
     </Link>
   );
 }

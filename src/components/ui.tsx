@@ -5,10 +5,10 @@ import type { ButtonHTMLAttributes, ReactNode } from 'react';
 import { Help } from './Help';
 
 export function Card({ children, className = '' }: { children: ReactNode; className?: string }) {
-  // 토스풍: 테두리·그림자 없는 큰 흰 카드. 회색 바탕 위에서 흰색만으로 묶음이 보인다
+  // 시프티풍 (2026-10-10 의뢰인): 모서리가 거의 각진 흰 카드 + 얇은 테두리
   // 부르는 쪽이 여백(p-…)을 주면 기본 여백을 빼서 겹치지 않게
   const pad = /(^|\s)p-/.test(className) ? '' : 'p-5';
-  return <section className={`rounded-card bg-bg ${pad} ${className}`}>{children}</section>;
+  return <section className={`rounded-card border border-border bg-bg ${pad} ${className}`}>{children}</section>;
 }
 
 type Variant = 'primary' | 'ok' | 'outline' | 'danger';
@@ -49,7 +49,7 @@ export function Chip({ tone = 'neutral', children }: { tone?: Tone; children: Re
     info: 'bg-primary-tint text-primary',
   };
   return (
-    <span className={`inline-flex items-center gap-1 rounded-chip px-2.5 py-1 text-xs font-bold whitespace-nowrap ${cls[tone]}`}>
+    <span className={`inline-flex items-center gap-1 rounded-button px-2 py-1 text-xs font-bold whitespace-nowrap ${cls[tone]}`}>
       {tone === 'ok' && <Check aria-hidden size={14} strokeWidth={1.75} />}
       {tone === 'warn' && <AlertTriangle aria-hidden size={14} strokeWidth={1.75} />}
       {children}

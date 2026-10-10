@@ -4,7 +4,8 @@
 import type { ReactNode } from 'react';
 
 export function RowList({ children, className = '' }: { children: ReactNode; className?: string }) {
-  return <ul className={`divide-y divide-border rounded-card bg-bg empty:hidden ${className}`}>{children}</ul>;
+  // 폰: 화면 양 끝까지 닿는 목록 (2026-10-10 의뢰인: 시프티처럼) — PageShell의 좌우 여백(16px)만큼 밖으로 뺀다. PC: 카드 모양
+  return <ul className={`-mx-4 divide-y divide-border border-y border-border bg-bg empty:hidden lg:mx-0 lg:rounded-card lg:border ${className}`}>{children}</ul>;
 }
 
 export function Row({ lead, children, aside }: { lead?: ReactNode; children: ReactNode; aside?: ReactNode }) {

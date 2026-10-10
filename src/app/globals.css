@@ -18,6 +18,7 @@
   --color-danger: var(--t-color-danger);
   --color-danger-tint: var(--t-color-danger-tint);
   --color-on-primary: var(--t-color-on-primary);
+  --color-nav: var(--t-color-nav);
 
   --radius-card: var(--t-radius-card);
   --radius-button: var(--t-radius-button);

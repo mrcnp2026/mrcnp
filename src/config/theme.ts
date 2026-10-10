@@ -1,5 +1,6 @@
 // 디자인 토큰 한곳 (부록 R-10-8, ★ 의뢰인 위임으로 확정 2026-10-01).
-// 방향 (2026-10-02 의뢰인 선택 "토스풍 시안"): 연회색 바탕 + 테두리 없는 큰 흰 카드 + 아주 큰 숫자, 파랑 하나.
+// 방향 (2026-10-10 의뢰인: "시프티와 차이가 많다" — 시프티처럼 각진 카드·화면 끝까지 닿는 목록·짙은 남색 하단 탭으로 바꿈. 색 값은 우리 것 그대로).
+// 이전 방향 (2026-10-02 의뢰인 선택 "토스풍 시안"): 연회색 바탕 + 테두리 없는 큰 흰 카드 + 아주 큰 숫자, 파랑 하나.
 // 포인트 주황(주의)·초록(정상). 장식 없이 크기와 굵기 차이로 위계를 만든다.
 // ⚠️ 색 값(#…)은 이 파일 밖에 쓰지 않는다 — 검사(tests/i18n-design.test.ts)가 찾아낸다.
 //    토큰 이름은 역할로 (blue·orange 같은 색 이름 금지). 다크 모드는 만들지 않는다.
@@ -22,12 +23,13 @@ export const COLORS = {
   danger: '#B42318', // 주 52시간 초과·오류·되돌릴 수 없는 확인창에만
   'danger-tint': '#FEF3F2',
   'on-primary': '#FFFFFF',
+  nav: '#24385F', // 폰 하단 탭 바탕 (짙은 남색) — 흰 글자 11.6:1
 } as const;
 
 // 8px 격자: 4·8·12·16·24·32·48 (Tailwind 1·2·3·4·6·8·12 단계만 쓴다)
-export const RADII = { card: '24px', button: '16px', punch: '16px', chip: '9999px' } as const;
+export const RADII = { card: '6px', button: '4px', punch: '4px', chip: '9999px' } as const;
 // PC(1024px~)는 업무용 화면답게 덜 둥글게 (2026-10-06 의뢰인: 둥근 버튼·카드가 전문적으로 보이지 않는다). 폰은 그대로
-export const RADII_PC = { card: '12px', button: '8px', punch: '8px' } as const;
+export const RADII_PC = { card: '6px', button: '4px', punch: '4px' } as const;
 export const PC_MIN_WIDTH = '1024px'; // Tailwind lg와 같게
 // 글자 크기 12/14/16/20/24/32 — 본문 16 (외국인 직원, R-10-8)
 // 큰 숫자(지금 시각·근무 시간)만 4xl 44px — 화면에서 가장 먼저 읽혀야 하는 것 하나

@@ -21,7 +21,7 @@ export function BottomTabs({ isAdmin, inboxCount = 0 }: { isAdmin: boolean; inbo
   const { path, pressed, setPressed } = usePressedTab();
   const under = (href: string) => path === href || path.startsWith(`${href}/`);
   return (
-    <nav className="fixed inset-x-0 bottom-0 z-20 border-t border-border bg-bg pb-[env(safe-area-inset-bottom)] lg:hidden">
+    <nav className="fixed inset-x-0 bottom-0 z-20 bg-nav pb-[env(safe-area-inset-bottom)] lg:hidden">
       <ul className="mx-auto flex max-w-md">
         {TABS.map(({ key, icon, mine, all, also }) => {
           const href = isAdmin && all ? all : mine;
@@ -29,6 +29,7 @@ export function BottomTabs({ isAdmin, inboxCount = 0 }: { isAdmin: boolean; inbo
           return (
             <li key={key} className="flex-1">
               <NavTab
+                dark
                 href={href}
                 label={t(key)}
                 icon={icon}
