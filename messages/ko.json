@@ -1386,7 +1386,8 @@
     "submit": "요청 보내기",
     "reason_required": "사유를 적어 주세요 (200자 이내).",
     "future_time": "미래 시각은 요청할 수 없습니다.",
-    "duplicate_request": "이 기록에 대해 이미 대기 중인 요청이 있습니다."
+    "duplicate_request": "이 기록에 대해 이미 대기 중인 요청이 있습니다.",
+    "backToRequests": "요청 목록"
   },
   "install": {
     "title": "홈 화면에 추가하기",
@@ -1638,6 +1639,8 @@
       "no_office": "등록된 출퇴근 장소 없음",
       "no_consent": "위치 수집 동의 없음"
     },
-    "punchFar": "가장 가까운 출퇴근 장소에서 {m}m"
+    "punchFar": "가장 가까운 출퇴근 장소에서 {m}m",
+    "tabMine": "내 요청",
+    "emptyMine": "최근 {days}일 동안 낸 요청이 없습니다."
   }
 }

@@ -324,7 +324,8 @@
     "submit": "Gửi yêu cầu",
     "reason_required": "Vui lòng ghi lý do (tối đa 200 ký tự).",
     "future_time": "Không thể yêu cầu giờ trong tương lai.",
-    "duplicate_request": "Đã có yêu cầu đang chờ cho dữ liệu này."
+    "duplicate_request": "Đã có yêu cầu đang chờ cho dữ liệu này.",
+    "backToRequests": "Danh sách yêu cầu"
   },
   "install": {
     "title": "Thêm vào màn hình chính",
@@ -591,6 +592,8 @@
       "no_office": "Chưa đăng ký nơi làm việc",
       "no_consent": "Chưa đồng ý thu thập vị trí"
     },
-    "punchFar": "Cách nơi làm việc gần nhất {m} m"
+    "punchFar": "Cách nơi làm việc gần nhất {m} m",
+    "tabMine": "Yêu cầu của tôi",
+    "emptyMine": "Bạn không có yêu cầu nào trong {days} ngày qua."
   }
 }

@@ -108,7 +108,10 @@ export function TodayCard(props: {
   }
 
   const time = (iso: string) => f.dateTime(new Date(iso), { hour: '2-digit', minute: '2-digit', hourCycle: 'h23' });
-  const kind: 'in' | 'out' = props.isOpen ? 'out' : 'in';
+  // 출근 요청이 승인을 기다리는 동안에는 다음에 누를 것이 퇴근이다 (승인이 늦어도 퇴근 요청을 낼 수 있게, 2026-10-11)
+  const [sentIn, setSentIn] = useState(false);
+  const waitingIn = props.pendingPunch?.kind === 'in' || sentIn;
+  const kind: 'in' | 'out' = props.isOpen || waitingIn ? 'out' : 'in';
 
   async function punch() {
     setErr(null);
@@ -140,6 +143,7 @@ export function TodayCard(props: {
       setThisDevice(true);
       setJustRegistered(false);
       setResult(r.data);
+      if (r.data.requested && r.data.kind === 'in') setSentIn(true);
       router.refresh();
     } finally {
       setBusy(false);

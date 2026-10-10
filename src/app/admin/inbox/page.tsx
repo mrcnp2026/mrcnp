@@ -5,12 +5,12 @@ import { getFormatter, getTranslations } from 'next-intl/server';
 import { Pager, pageOf } from '@/components/Pager';
 import { Help } from '@/components/Help';
 import { InboxTabs } from './InboxTabs';
-import { ScopeSwitch } from '@/components/ScopeSwitch';
+import { RequestTabs } from '@/components/RequestTabs';
 import { Card, Chip, PageShell } from '@/components/ui';
 import { OFFICE } from '@/config/office';
 import { getMe } from '@/lib/auth';
 import { addDays } from '@/lib/calendar';
-import { loadPeriod, syncOvertimeRequests } from '@/lib/period-data';
+import { loadPeriod, pendingCounts, syncOvertimeRequests } from '@/lib/period-data';
 import { loadStaff } from '@/lib/staff-data';
 import { selfDecisionBlocked } from '@/lib/staff-rules';
 import { createAdminClient } from '@/lib/supabase/admin';
@@ -377,10 +377,9 @@ export default async function InboxPage({ searchParams }: { searchParams: Promis
 
   return (
     <PageShell wide>
-      <ScopeSwitch kind="requests" current="all" />
-      <h1 className="text-2xl font-semibold text-primary-deep">{t('title')}</h1>
+      <h1 className="sr-only">{t('title')}</h1>
+      <RequestTabs admin active="pending" live={sp.live === '1'} counts={{ pending: (ot?.length ?? 0) + (co?.length ?? 0) + leavePending.length + workPending.length + punchPending.length }} />
       {practice && <p className="rounded-card bg-primary-tint p-3 text-sm text-primary">{t('practiceBanner')}</p>}
-      <StateTabs done={false} live={sp.live} pending={t('tabPending')} doneLabel={t('tabDone')} label={t('title')} />
 
       {/* 반경 밖 출근/퇴근 요청 (2026-10-10 의뢰인: 시프티 방식) — 승인해야 기록이 되므로 맨 위에 둔다 */}
       {punchPending.length > 0 && (
@@ -423,22 +422,6 @@ export default async function InboxPage({ searchParams }: { searchParams: Promis
   );
 }
 
-// 대기중 / 완료 (2026-10-10 의뢰인: 시프티의 요청 탭처럼). 「내 요청」은 화면 위 보기 범위(전체/내 것)가 맡는다
-function StateTabs({ done, live, pending, doneLabel, label }: { done: boolean; live?: string; pending: string; doneLabel: string; label: string }) {
-  const q = live === '1' ? { live: '1' } : {};
-  const tab = (on: boolean) => `flex min-h-11 flex-1 items-center justify-center border-b-2 text-sm font-bold ${on ? 'border-text text-text' : 'border-transparent text-muted'}`;
-  return (
-    <nav aria-label={label} className="flex rounded-card bg-bg px-2">
-      <Link href={{ pathname: '/admin/inbox', query: q }} aria-current={!done ? 'page' : undefined} className={tab(!done)}>
-        {pending}
-      </Link>
-      <Link href={{ pathname: '/admin/inbox', query: { ...q, tab: 'done' } }} aria-current={done ? 'page' : undefined} className={tab(done)}>
-        {doneLabel}
-      </Link>
-    </nav>
-  );
-}
-
 // 완료 — 최근 두 달 동안 처리된 요청 전부 (종류가 달라도 한 목록). 자동 검사 계정(e2e-…)의 요청은 뺀다
 async function DoneTab({ sp, practice }: { sp: { live?: string; tab?: string; dp?: string }; practice: boolean }) {
   const [t, tr, tc] = await Promise.all([getTranslations('admin.inbox'), getTranslations('requests'), getTranslations('common')]);
@@ -448,10 +431,9 @@ async function DoneTab({ sp, practice }: { sp: { live?: string; tab?: string; dp
   const page = pageOf(splitRequests(items.filter((x) => !check.has(x.employeeId))).done, sp.dp, 20);
   return (
     <PageShell wide>
-      <ScopeSwitch kind="requests" current="all" />
-      <h1 className="text-2xl font-semibold text-primary-deep">{t('title')}</h1>
+      <h1 className="sr-only">{t('title')}</h1>
+      <RequestTabs admin active="done" live={sp.live === '1'} counts={{ pending: (await pendingCounts(practice)).total }} />
       {practice && <p className="rounded-card bg-primary-tint p-3 text-sm text-primary">{t('practiceBanner')}</p>}
-      <StateTabs done live={sp.live} pending={t('tabPending')} doneLabel={t('tabDone')} label={t('title')} />
       {page.items.length === 0 && <p className="rounded-card bg-bg p-5 text-sm text-faint">{tr('emptyDone', { days: REQUEST_WINDOW_DAYS })}</p>}
       <RequestRows items={page.items} leaveTypes={leaveTypes} names={names} showName hrefOf={(r) => `/admin/records/${r.employeeId}?m=${r.date.slice(0, 7)}`} />
       <Pager page={page.page} pages={page.pages} param="dp" params={sp} label={tc('pages')} />

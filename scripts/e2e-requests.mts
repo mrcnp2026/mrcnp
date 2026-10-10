@@ -60,8 +60,8 @@ try {
   await p.waitForURL(/\/admin\/inbox/);
   await p.waitForLoadState('networkidle');
   await p.getByRole('link', { name: '완료', exact: true }).waitFor({ timeout: 20000 }).catch(() => {});
-  const nA = await p.getByRole('link', { name: '대기중', exact: true }).count(); const nB = await p.getByRole('link', { name: '완료', exact: true }).count();
-  check(nA === 1 && nB === 1, '관리자 요청 화면에 「대기중 · 완료」 탭', `${nA} ${nB}`);
+  const nA = await p.getByRole('link', { name: /^대기중/ }).count(); const nB = await p.getByRole('link', { name: '완료', exact: true }).count();
+  check(nA === 1 && nB === 1, '관리자 요청 화면 맨 위에 「대기중 · 내 요청 · 완료」 탭', `${nA} ${nB}`);
   check((await p.getByText('최근 처리').count()) === 0, '아래에 따로 있던 「최근 처리」 목록은 없어짐 (완료 탭이 대신함)');
   await p.getByRole('link', { name: '완료', exact: true }).click();
   await p.waitForURL(/tab=done/);

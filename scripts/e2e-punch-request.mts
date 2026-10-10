@@ -73,10 +73,9 @@ try {
   await p.reload();
   await p.waitForLoadState('networkidle');
   check((await p.getByText(new RegExp(`${word} 요청 승인 대기 중`)).count()) === 1, `홈에 「${word} 요청 승인 대기 중」`);
-  await p.getByRole('button', { name: /출근하기|퇴근하기/ }).click();
-  await p.getByText(new RegExp(`${word} 요청을 보냈습니다`)).waitFor({ timeout: 30000 });
+  // 출근 요청이 대기 중이면 다음에 누를 것은 퇴근이다 (승인이 늦어도 퇴근 요청을 낼 수 있게)
+  if (kind === 'in') check((await p.getByRole('button', { name: /퇴근하기/ }).count()) === 1, '출근 요청 대기 중에는 버튼이 「퇴근하기」로 바뀜');
   reqs = await myRequests();
-  check(reqs.length === 1, '다시 눌러도 요청은 한 건', String(reqs.length));
 
   // ── 내 요청 · 관리자 요청함 ──
   await p.goto(`${BASE}/punch/requests`);

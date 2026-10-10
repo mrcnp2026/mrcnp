@@ -47,26 +47,25 @@ export async function RequestRows({ items, leaveTypes, names, showName = false, 
         return (
           <li key={r.key}>
             <Link href={hrefOf(r)} className="flex items-start gap-3 px-5 py-3">
-              <Icon aria-hidden size={22} className="mt-1 shrink-0 text-muted" />
+              <span aria-hidden className="mt-1 flex size-11 shrink-0 items-center justify-center rounded-chip bg-surface text-muted">
+                <Icon size={22} strokeWidth={1.75} />
+              </span>
               <span className="flex min-w-0 flex-1 flex-col gap-1">
-                <span className="font-bold">
-                  {r.kind === 'punch' ? t(`punchKind.${r.punchKind ?? 'in'}`) : t(`kinds.${r.kind}`)}
-                  {label && ` · ${label}`}
-                  {showName && ` · ${names.get(r.employeeId) ?? ''}`}
+                <span className="flex items-start justify-between gap-2">
+                  <span className="font-bold">
+                    {r.kind === 'punch' ? t(`punchKind.${r.punchKind ?? 'in'}`) : t(`kinds.${r.kind}`)}
+                    {label && ` · ${label}`}
+                    {showName && ` · ${names.get(r.employeeId) ?? ''}`}
+                  </span>
+                  {a && <span className="num shrink-0 text-sm text-muted">{a.unit === 'now' ? t('ago.now') : t(`ago.${a.unit}`, { n: a.n })}</span>}
                 </span>
                 <span className="num text-sm">{detail(r)}</span>
                 {r.reason && <span className="truncate text-sm text-muted">{r.reason}</span>}
-                {r.status !== 'pending' && (who || r.decidedAt) && (
-                  <span className="num text-xs text-faint">
-                    {who && t('by', { name: who })}
-                    {who && r.decidedAt && ' · '}
-                    {r.decidedAt && stamp(r.decidedAt)}
-                  </span>
-                )}
-              </span>
-              <span className="flex shrink-0 flex-col items-end gap-1">
-                <Chip tone={r.status === 'approved' ? 'ok' : r.status === 'pending' ? 'warn' : 'neutral'}>{t(`status.${r.status}`)}</Chip>
-                {a && <span className="num text-xs text-faint">{a.unit === 'now' ? t('ago.now') : t(`ago.${a.unit}`, { n: a.n })}</span>}
+                <span className="num flex flex-wrap items-center gap-x-2 gap-y-1 text-sm">
+                  <Chip tone={r.status === 'approved' ? 'ok' : r.status === 'pending' ? 'warn' : 'neutral'}>{t(`status.${r.status}`)}</Chip>
+                  {r.status !== 'pending' && who && <span>{t('by', { name: who })}</span>}
+                  {r.status !== 'pending' && r.decidedAt && <span className="text-muted">| {stamp(r.decidedAt)}</span>}
+                </span>
               </span>
             </Link>
           </li>

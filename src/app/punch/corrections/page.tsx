@@ -1,12 +1,12 @@
 // 직원 "정정 요청" — 빠진 기록 추가(4-8의 유일한 채우는 길) · 시각 수정 · 잘못 찍은 기록 무효 (7-10).
 // 원본은 그대로 남고, 관리자가 승인한 정정만 집계에 쓰인다. 배너에서 오면 날짜·종류가 미리 채워진다.
 import { getFormatter, getTranslations } from 'next-intl/server';
+import Link from 'next/link';
 import { redirect } from 'next/navigation';
 import { AddSheet } from '@/components/AddSheet';
 import { Fab } from '@/components/Fab';
 import { Help } from '@/components/Help';
 import { Row, RowList } from '@/components/list';
-import { ScopeSwitch } from '@/components/ScopeSwitch';
 import { Chip, PageShell } from '@/components/ui';
 import { getMe } from '@/lib/auth';
 import { loadEmployeeRecent } from '@/lib/employee-data';
@@ -26,7 +26,9 @@ export default async function CorrectionsPage({ searchParams }: { searchParams: 
 
   return (
     <PageShell wide>
-      {me.role === 'admin' && <ScopeSwitch kind="requests" current="mine" />}
+      <Link href="/punch/requests" className="inline-flex min-h-11 items-center self-start text-sm font-medium text-muted">
+        ‹ {t('backToRequests')}
+      </Link>
       <div className="flex flex-wrap items-center gap-x-1">
         <h1 className="text-2xl font-semibold text-primary-deep">{t('title')}</h1>
         <Help>{t('intro')}</Help>

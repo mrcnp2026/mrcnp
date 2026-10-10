@@ -1386,7 +1386,8 @@
     "submit": "Send request",
     "reason_required": "Please write a reason (up to 200 characters).",
     "future_time": "You cannot request a time in the future.",
-    "duplicate_request": "You already have a waiting request for this record."
+    "duplicate_request": "You already have a waiting request for this record.",
+    "backToRequests": "Requests"
   },
   "install": {
     "title": "Add to your home screen",
@@ -1638,6 +1639,8 @@
       "no_office": "No work place registered",
       "no_consent": "No location consent"
     },
-    "punchFar": "{m} m from the nearest work place"
+    "punchFar": "{m} m from the nearest work place",
+    "tabMine": "My requests",
+    "emptyMine": "You have made no requests in the last {days} days."
   }
 }
