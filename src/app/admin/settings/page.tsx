@@ -10,7 +10,7 @@ import { createAdminClient } from '@/lib/supabase/admin';
 import { hhmm, toKstDate } from '@/lib/time';
 import { isOfficeIp, parseCidr, traceClientIp } from '@/lib/verify-location';
 import { loadOfficeLocations } from '@/lib/geo-data';
-import { ConfirmButton, HolidayForm, LocationForm, NetworkForm, RuleForm } from './SettingsForms';
+import { ConfirmButton, HolidayForm, NetworkForm, RuleForm } from './SettingsForms';
 
 export default async function SettingsPage() {
   const t = await getTranslations('admin.settings');
@@ -137,25 +137,13 @@ export default async function SettingsPage() {
       </Card>
 
       <Card className="flex flex-col gap-2">
-        <CardTitle help={t('locationNote')}>{t('locationTitle')}</CardTitle>
+        <CardTitle help={t('locationNote')} aside={<span className="num text-sm text-faint">{t('placesCount', { n: locations.filter((l) => l.active).length })}</span>}>
+          {t('locationTitle')}
+        </CardTitle>
         <p className={`rounded-button p-3 text-sm ${locations.some((l) => l.active) ? 'bg-ok-tint text-ok' : 'bg-surface text-muted'}`}>{t(locations.some((l) => l.active) ? 'gpsOn' : 'gpsOff')}</p>
-        <ul className="divide-y divide-border">
-          {locations.map((l) => (
-            <li key={l.id} className={`flex min-h-12 items-center gap-2 ${l.active ? '' : 'opacity-60'}`}>
-              <span className="min-w-0 flex-1">
-                <span className="num block truncate text-sm">{l.lat.toFixed(5)}, {l.lng.toFixed(5)} · {t('radiusM', { n: l.radiusM })}</span>
-                {l.label && <span className="block truncate text-xs text-muted">{l.label}</span>}
-              </span>
-              {!l.active && <Chip>{t('off')}</Chip>}
-              {l.active ? (
-                <ConfirmButton body={{ action: 'location.toggle', id: l.id, active: false }} label={t('turnOff')} confirmLabel={t('turnOffConfirm')} ariaLabel={t('turnOffOf', { what: l.label ?? t('locationTitle') })} />
-              ) : (
-                <ConfirmButton body={{ action: 'location.toggle', id: l.id, active: true }} label={t('turnOn')} confirmLabel={t('turnOn')} ariaLabel={t('turnOnOf', { what: l.label ?? t('locationTitle') })} />
-              )}
-            </li>
-          ))}
-        </ul>
-        <LocationForm />
+        <Link href="/admin/places" className="inline-flex min-h-11 items-center self-start text-sm font-bold text-primary">
+          {t('placesLink')} ›
+        </Link>
       </Card>
       </div>
       {/* 진단 — 사무실 확인이 이상할 때만 보는 화면이라 메뉴에서 빼고 여기에 둔다 (2026-10-06) */}

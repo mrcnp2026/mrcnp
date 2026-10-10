@@ -13,7 +13,7 @@ import { getMe } from '@/lib/auth';
 import { hasConsent } from '@/lib/consent';
 import { parseCoords, roundCoord, verifyGeo } from '@/lib/geo';
 import { passkeyService } from '@/lib/passkey-store';
-import { loadOfficeLocations } from '@/lib/geo-data';
+import { loadLocationsFor } from '@/lib/geo-data';
 import { isPeriodLocked, recordPunch } from '@/lib/punch';
 import { toKstDate } from '@/lib/time';
 import { isOfficeIp, traceClientIp } from '@/lib/verify-location';
@@ -37,11 +37,14 @@ export const POST = api('punch', async (req) => {
   const byIp = isOfficeIp(trace.ip, cidrs);
   let verifiedBy: 'ip' | 'gps' | null = byIp ? 'ip' : null;
   let geo: { lat: number; lng: number } | null = null;
+  let locationId: string | null = null; // 어느 출퇴근 장소로 확인됐는가 (2026-10-10)
   if (!byIp) {
     // 수집 동의가 없는 사람이 보낸 위치는 읽지 않는다
     const coords = (await hasConsent(who.employeeId)) ? parseCoords(body.geo) : null;
-    if (coords && verifyGeo(coords, await loadOfficeLocations()).verified) {
+    const verdict = coords ? verifyGeo(coords, await loadLocationsFor(who.employeeId)) : null;
+    if (coords && verdict?.verified) {
       verifiedBy = 'gps';
+      locationId = verdict.locationId;
       geo = { lat: roundCoord(coords.lat), lng: roundCoord(coords.lng) };
     }
   }
@@ -54,6 +57,7 @@ export const POST = api('punch', async (req) => {
     ipVerified: verifiedBy !== null,
     verifiedBy,
     geo,
+    locationId,
     source: 'web',
     isTest: OFFICE.practiceMode,
     passkeyId,

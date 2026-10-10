@@ -4,7 +4,7 @@
 // 상단 바에 늘어서 있던 언어·홈 화면에 추가·로그아웃도 여기로 옮겼다.
 // 움직임 없이 나타났다 사라진다 (R-10-8). Esc·바깥 누르기·화면 이동으로 닫힌다.
 // 메뉴는 body에 직접 붙인다 — 상단 바 안에 두면 상단 바의 겹침 순서에 갇혀 하단 탭이 메뉴 아래쪽(로그아웃)을 가린다.
-import { LayoutDashboard, Megaphone, Menu, Network, Settings, UserRound, Users, Wallet, X, type LucideIcon } from 'lucide-react';
+import { LayoutDashboard, MapPin, Megaphone, Menu, Network, Settings, UserRound, Users, Wallet, X, type LucideIcon } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
@@ -30,7 +30,8 @@ const ADMIN: Group[] = [
     key: 'people',
     items: [
       { href: '/admin/members', key: 'members', icon: Users },
-      { href: '/admin/members/groups', key: 'org', icon: Network },
+      { href: '/admin/branches', key: 'branches', icon: Network },
+      { href: '/admin/places', key: 'places', icon: MapPin },
     ],
   },
   {

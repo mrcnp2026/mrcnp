@@ -27,6 +27,7 @@ export async function recordPunch(input: {
   passkeyId: string | null;
   verifiedBy: 'ip' | 'gps' | null; // 무엇으로 사무실을 확인했는가 (ipVerified가 true면 반드시 있다)
   geo: { lat: number; lng: number } | null; // GPS로 확인됐을 때만 (사무실 밖 좌표는 저장하지 않는다)
+  locationId?: string | null; // 확인된 출퇴근 장소 (GPS로 확인됐을 때만)
 }): Promise<{ event: RecordedPunch; deduped: boolean }> {
   const db = createAdminClient();
   // 직원 단위 잠금 + 60초 중복 방지 + 근무일 결정은 DB 함수가 한 트랜잭션으로 한다 (부록 R-4)
@@ -45,6 +46,7 @@ export async function recordPunch(input: {
     p_geo_lat: input.geo?.lat ?? null,
     p_geo_lng: input.geo?.lng ?? null,
     p_verified_by: input.verifiedBy,
+    p_location_id: input.locationId ?? null,
   });
   if (error) throw new Error(`recordPunch: ${error.message}`);
   const row = (data as { event_id: string; deduped: boolean }[])[0];

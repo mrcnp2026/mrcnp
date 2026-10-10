@@ -8,14 +8,20 @@ import { useTranslations } from 'next-intl';
 import { useEffect, useState, type ReactNode } from 'react';
 
 export const OPEN_SHEET_EVENT = 'open-add-sheet';
+export const CLOSE_SHEET_EVENT = 'close-add-sheet'; // 저장이 끝난 양식이 자기 창을 닫는다
 
 export function AddSheet({ id, title, children, defaultOpen = false, className = '' }: { id: string; title: string; children: ReactNode; defaultOpen?: boolean; className?: string }) {
   const t = useTranslations('side');
   const [open, setOpen] = useState(defaultOpen);
   useEffect(() => {
     const onOpen = (e: Event) => (e as CustomEvent<string>).detail === id && setOpen(true);
+    const onClose = (e: Event) => (e as CustomEvent<string>).detail === id && setOpen(false);
     window.addEventListener(OPEN_SHEET_EVENT, onOpen);
-    return () => window.removeEventListener(OPEN_SHEET_EVENT, onOpen);
+    window.addEventListener(CLOSE_SHEET_EVENT, onClose);
+    return () => {
+      window.removeEventListener(OPEN_SHEET_EVENT, onOpen);
+      window.removeEventListener(CLOSE_SHEET_EVENT, onClose);
+    };
   }, [id]);
   useEffect(() => {
     if (!open) return;

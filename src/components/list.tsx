@@ -16,3 +16,17 @@ export function Row({ lead, children, aside }: { lead?: ReactNode; children: Rea
     </li>
   );
 }
+
+// 상세 화면의 「항목 — 값」 줄 (2026-10-10 의뢰인: 시프티의 상세 화면처럼 왼쪽 굵은 항목, 오른쪽 값). FieldList 안에 Field를 쌓는다.
+export function FieldList({ children, className = '' }: { children: ReactNode; className?: string }) {
+  return <dl className={`divide-y divide-border rounded-card bg-bg ${className}`}>{children}</dl>;
+}
+
+export function Field({ label, children }: { label: ReactNode; children: ReactNode }) {
+  return (
+    <div className="flex min-h-14 items-center justify-between gap-4 px-5 py-3">
+      <dt className="shrink-0 font-bold">{label}</dt>
+      <dd className="min-w-0 text-right break-words text-muted">{children}</dd>
+    </div>
+  );
+}
