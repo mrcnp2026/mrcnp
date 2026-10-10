@@ -130,6 +130,19 @@ try {
     }
   }
 
+  // ── 내 기록 · 내 일정: 전체 목록과 같은 모양 (날짜 머리줄 + 한 건 한 줄, 2026-10-11) ──
+  for (const w of [320, 390]) {
+    await p.setViewportSize({ width: w, height: 844 });
+    for (const [url, name] of [['/punch/records', '47-내-기록'], ['/punch/schedule', '48-내-일정']] as const) {
+      await p.goto(BASE + url);
+      await p.waitForLoadState('networkidle');
+      const sw3 = await p.evaluate(() => document.documentElement.scrollWidth);
+      check(sw3 <= w, `가로 넘침 없음 @${w} ${url}`, `${sw3}px`);
+      if (w === 390) await shot(name);
+    }
+  }
+  check((await p.locator('main section h3').count()) === 14, '내 일정: 날짜 머리줄 14개 (이번 주 · 다음 주)', String(await p.locator('main section h3').count()));
+
   // ── 왼쪽 메뉴: 대분류 강조 · 지금 화면 표시 (2026-10-11 의뢰인) ──
   await p.setViewportSize({ width: 390, height: 844 });
   await p.goto(`${BASE}/punch`);

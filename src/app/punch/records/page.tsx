@@ -6,7 +6,6 @@ import { getFormatter, getTranslations } from 'next-intl/server';
 import Link from 'next/link';
 import { redirect } from 'next/navigation';
 import { Fab } from '@/components/Fab';
-import { Row, RowList } from '@/components/list';
 import { MineBar } from '@/components/MineBar';
 import { Card, Chip, PageShell } from '@/components/ui';
 import { OFFICE } from '@/config/office';
@@ -179,34 +178,44 @@ export default async function MyRecordsPage({ searchParams }: { searchParams: Pr
       </Card>
 
       {rows.length === 0 && <p className="text-muted">{t('emptyMonth')}</p>}
-      {/* 폰: 하루 = 한 줄 (2026-10-10 의뢰인: 시프티처럼 한 줄 목록). 왼쪽 날짜 · 가운데 출근 → 퇴근 · 오른쪽 그날 근무시간 */}
-      <RowList className="lg:hidden">
-        {rows.map(({ d, firstIn, lastOut, open, req, corrected, pendingCorr }) => (
-          <Row
-            key={d.workDate}
-            lead={f.dateTime(new Date(`${d.workDate}T12:00:00+09:00`), { month: 'numeric', day: 'numeric', weekday: 'short' })}
-            aside={<span className="num text-sm font-semibold">{open && d.workDate === today ? th('status.working') : dur(d.netMinutes)}</span>}
-          >
-            <span className="num">
-              {firstIn ? hm(firstIn) : <span className="text-warn">{t('noIn')}</span>}
-              <span className="mx-2 text-faint">→</span>
-              {open ? (d.workDate === today ? <span className="text-muted">{th('status.working')}</span> : <span className="text-warn">{t('noOut')}</span>) : lastOut ? hm(lastOut) : <span className="text-warn">{t('noOut')}</span>}
-            </span>
-            {(corrected || pendingCorr || req || lateOf.has(d.workDate) || d.overtimeMinutes + d.holidayMinutes > 0) && (
-              <span className="flex flex-wrap items-center gap-2">
-                {lateOf.has(d.workDate) && <Chip tone="warn">{th('lateBy', { n: lateOf.get(d.workDate)! })}</Chip>}
-                {corrected && <Chip tone="info">{t('corrected')}</Chip>}
-                {pendingCorr && <Chip>{t('correctionPending')}</Chip>}
-                {d.overtimeMinutes + d.holidayMinutes > 0 && (
-                  <span className="num text-xs text-muted">{t('overtimeLine', { o: dur(d.overtimeMinutes), n: dur(d.nightMinutes), h: dur(d.holidayMinutes) })}</span>
-                )}
-                {req && <Chip tone={req.status === 'approved' ? 'ok' : req.status === 'rejected' ? 'neutral' : 'warn'}>{t(`overtime.${req.status}`)}</Chip>}
-              </span>
-            )}
-            {req?.status === 'pending' && <ReasonForm id={req.id} initial={req.reason} />}
-          </Row>
+      {/* 폰: 전체 목록과 같은 모양 (2026-10-11 의뢰인: 시프티의 「내 기록」) — 날짜 머리줄(그날 근무 시간) + 기록 한 건이 한 줄(출근/퇴근 시각 · 막대 · 배지) */}
+      <div className="-mx-4 flex flex-col lg:hidden">
+        {rows.map(({ d, open, req, corrected, pendingCorr }) => (
+          <section key={d.workDate}>
+            <h2 className="num flex items-center justify-between gap-2 border-b border-border bg-surface px-5 py-3 font-bold">
+              <span>{f.dateTime(new Date(`${d.workDate}T12:00:00+09:00`), { year: 'numeric', month: 'long', day: 'numeric', weekday: 'short' })}</span>
+              <span className="shrink-0">{open && d.workDate === today ? th('status.working') : dur(d.netMinutes)}</span>
+            </h2>
+            <ul className="divide-y divide-border border-b border-border bg-bg">
+              {d.pairs.map((pair, i) => (
+                <li key={i} className="flex min-h-16 items-center gap-3 py-2 pr-4 pl-5">
+                  <span className="num flex w-14 shrink-0 flex-col text-sm leading-snug">
+                    <span className="font-semibold">{pair.in ? hm(pair.in) : <span className="text-warn">–</span>}</span>
+                    <span className="text-muted">{pair.out ? hm(pair.out) : '–'}</span>
+                  </span>
+                  <span aria-hidden className="w-1 shrink-0 self-stretch rounded-chip bg-border" />
+                  <span className="flex min-w-0 flex-1 flex-wrap items-center gap-2">
+                    {!pair.in && <Chip tone="warn">{t('noIn')}</Chip>}
+                    {pair.in && !pair.out && (d.workDate === today ? <Chip tone="info">{th('status.working')}</Chip> : <Chip tone="warn">{t('noOut')}</Chip>)}
+                    {i === 0 && lateOf.has(d.workDate) && <Chip tone="warn">{th('lateBy', { n: lateOf.get(d.workDate)! })}</Chip>}
+                    {i === 0 && corrected && <Chip tone="info">{t('corrected')}</Chip>}
+                    {i === 0 && pendingCorr && <Chip>{t('correctionPending')}</Chip>}
+                    {i === 0 && req && <Chip tone={req.status === 'approved' ? 'ok' : req.status === 'rejected' ? 'neutral' : 'warn'}>{t(`overtime.${req.status}`)}</Chip>}
+                    {i === 0 && d.overtimeMinutes + d.holidayMinutes > 0 && (
+                      <span className="num basis-full text-xs text-muted">{t('overtimeLine', { o: dur(d.overtimeMinutes), n: dur(d.nightMinutes), h: dur(d.holidayMinutes) })}</span>
+                    )}
+                  </span>
+                </li>
+              ))}
+              {req?.status === 'pending' && (
+                <li className="px-5 py-3">
+                  <ReasonForm id={req.id} initial={req.reason} />
+                </li>
+              )}
+            </ul>
+          </section>
         ))}
-      </RowList>
+      </div>
       <p className="text-center text-xs text-faint">{t('olderHint', { n: MONTHS_BACK })}</p>
       <Fab label={tc('title')} href="/punch/corrections?new=1" />
     </PageShell>

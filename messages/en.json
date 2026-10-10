@@ -1788,7 +1788,10 @@
     "noRule": "There is no company work rule yet, so the schedule cannot be shown.",
     "hint": "Planned time is the length from start to end, breaks included. If your schedule looks wrong, tell your manager.",
     "mine": "My schedule",
-    "request": "Schedule request"
+    "request": "Schedule request",
+    "today": "Today",
+    "hm": "{h}h {m}m",
+    "regular": "Work"
   },
   "requests": {
     "title": "Requests",

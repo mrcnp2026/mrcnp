@@ -117,7 +117,7 @@ try {
   // ── 내 일정 ──
   await p.goto(`${BASE}/punch/schedule`);
   await p.waitForLoadState('networkidle');
-  check((await p.getByText('17:30 - 20:30').count()) === 1 && (await p.getByText('08:00 - 17:00').count()) >= 1 && (await p.getByText('휴일 근무(특근)').count()) === 1, '내 일정에 다음 주 잔업·특근이 보임');
+  check((await p.getByText('17:30', { exact: true }).count()) === 1 && (await p.getByText('20:30', { exact: true }).count()) === 1 && (await p.getByText('08:00', { exact: true }).count()) >= 1 && (await p.getByText('휴일 근무(특근)').count()) === 1 && (await p.locator('main section h3').count()) === 14, '내 일정에 다음 주 잔업·특근이 보임');
   check((await p.getByText('이번 주').count()) > 0 && (await p.getByText('다음 주').count()) > 0 && (await p.getByText(/계획 \d+시간/).count()) === 2, '이번 주·다음 주 묶음과 계획 시간');
   await shot('04-내-일정');
 

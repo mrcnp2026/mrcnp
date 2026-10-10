@@ -574,7 +574,10 @@
     "noRule": "Chưa có quy định giờ làm của công ty.",
     "hint": "Thời gian kế hoạch tính từ lúc bắt đầu đến lúc kết thúc, gồm cả giờ nghỉ. Nếu lịch sai, hãy báo quản lý.",
     "mine": "Lịch của tôi",
-    "request": "Yêu cầu lịch làm việc"
+    "request": "Yêu cầu lịch làm việc",
+    "today": "Hôm nay",
+    "hm": "{h} giờ {m} phút",
+    "regular": "Làm việc"
   },
   "requests": {
     "title": "Yêu cầu",
