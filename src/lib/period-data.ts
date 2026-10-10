@@ -269,11 +269,11 @@ export async function hiddenTestIds(): Promise<string[]> {
   return (data ?? []).map((p) => p.id as string);
 }
 
-export async function pendingCounts(practice = OFFICE.practiceMode): Promise<{ overtime: number; corrections: number; leave: number; work: number; punch: number; shift: number; total: number }> {
+export async function pendingCounts(practice = OFFICE.practiceMode): Promise<{ overtime: number; corrections: number; leave: number; work: number; punch: number; shift: number; leaveDelete: number; total: number }> {
   const db = createAdminClient();
   const hide = await hiddenTestIds();
   const skip = hide.length ? `(${hide.join(',')})` : '(00000000-0000-0000-0000-000000000000)';
-  const [{ count: a }, { count: b }, { count: c }, { count: l }, { count: w }, { count: pr }, { count: sh }] = await Promise.all([
+  const [{ count: a }, { count: b }, { count: c }, { count: l }, { count: w }, { count: pr }, { count: sh }, { count: lc }] = await Promise.all([
     db.from('overtime_requests').select('id', { count: 'exact', head: true }).eq('is_test', practice).eq('status', 'pending').not('employee_id', 'in', skip),
     db.from('overtime_requests').select('id', { count: 'exact', head: true }).eq('is_test', practice).eq('needs_review', true).neq('status', 'pending').not('employee_id', 'in', skip),
     db.from('punch_corrections').select('id', { count: 'exact', head: true }).eq('is_test', practice).eq('status', 'pending').not('employee_id', 'in', skip),
@@ -281,7 +281,8 @@ export async function pendingCounts(practice = OFFICE.practiceMode): Promise<{ o
     db.from('work_requests').select('id', { count: 'exact', head: true }).eq('is_test', practice).eq('status', 'pending').not('employee_id', 'in', skip),
     db.from('punch_requests').select('id', { count: 'exact', head: true }).eq('is_test', practice).eq('status', 'pending').not('employee_id', 'in', skip),
     db.from('shift_requests').select('id', { count: 'exact', head: true }).eq('is_test', practice).eq('status', 'pending').not('employee_id', 'in', skip),
+    db.from('leave_change_requests').select('id', { count: 'exact', head: true }).eq('is_test', practice).eq('status', 'pending').not('employee_id', 'in', skip),
   ]);
-  const r = { overtime: (a ?? 0) + (b ?? 0), corrections: c ?? 0, leave: l ?? 0, work: w ?? 0, punch: pr ?? 0, shift: sh ?? 0 };
-  return { ...r, total: r.overtime + r.corrections + r.leave + r.work + r.punch + r.shift };
+  const r = { overtime: (a ?? 0) + (b ?? 0), corrections: c ?? 0, leave: l ?? 0, work: w ?? 0, punch: pr ?? 0, shift: sh ?? 0, leaveDelete: lc ?? 0 };
+  return { ...r, total: r.overtime + r.corrections + r.leave + r.work + r.punch + r.shift + r.leaveDelete };
 }

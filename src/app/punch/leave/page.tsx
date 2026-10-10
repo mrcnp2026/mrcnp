@@ -6,6 +6,7 @@ import Link from 'next/link';
 import { redirect } from 'next/navigation';
 import { AddSheet } from '@/components/AddSheet';
 import { Fab } from '@/components/Fab';
+import { createAdminClient } from '@/lib/supabase/admin';
 import { MineBar } from '@/components/MineBar';
 import { Row, RowList } from '@/components/list';
 import { Card, CardTitle, Chip, PageShell } from '@/components/ui';
@@ -14,7 +15,7 @@ import { calcLeaveBalance, leaveTypeName } from '@/lib/leave';
 import { loadAllLeaveTypes, loadLeaveGrants, loadLeaveRequests } from '@/lib/leave-data';
 import { toKstDate } from '@/lib/time';
 import { loadWorkRequests } from '@/lib/work-data';
-import { CancelLeave, LeaveForm } from './LeaveForm';
+import { CancelLeave, DeleteLeaveRequest, LeaveForm } from './LeaveForm';
 import { CancelWork, WorkForm } from './WorkForm';
 
 export default async function LeavePage({ searchParams }: { searchParams: Promise<{ workDate?: string; new?: string }> }) {
@@ -33,6 +34,10 @@ export default async function LeavePage({ searchParams }: { searchParams: Promis
   // 올해가 아니면 연도도 (지난해·먼 미래 신청이 올해로 읽히지 않게)
   const day = (d: string) => f.dateTime(new Date(`${d}T12:00:00+09:00`), { year: d.slice(0, 4) === today.slice(0, 4) ? undefined : 'numeric', month: 'short', day: 'numeric', weekday: 'short' });
   const n = (v: number) => f.number(v, { maximumFractionDigits: 4 });
+
+  // 대기 중인 내 휴가 삭제 요청 (휴가 id → 요청 id)
+  const { data: changes } = await createAdminClient().from('leave_change_requests').select('id, leave_id').eq('employee_id', me.id).eq('status', 'pending');
+  const deleteOf = new Map((changes ?? []).map((c) => [c.leave_id as string, c.id as string]));
 
   return (
     <PageShell wide>
@@ -100,6 +105,7 @@ export default async function LeavePage({ searchParams }: { searchParams: Promis
             </span>
             {r.reason && <span className="text-sm text-muted">{r.reason}</span>}
             {r.status === 'pending' && <CancelLeave id={r.id} />}
+            {r.status === 'approved' && r.endDate >= today && <DeleteLeaveRequest leaveId={r.id} pendingId={deleteOf.get(r.id) ?? null} />}
           </Row>
         ))}
         </RowList>

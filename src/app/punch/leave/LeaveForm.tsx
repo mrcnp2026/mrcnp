@@ -148,3 +148,67 @@ export function CancelLeave({ id }: { id: string }) {
     </div>
   );
 }
+
+/** 승인된 휴가의 「삭제 요청」 (2026-10-11) — 사유를 적어 보내면 관리자가 승인해야 휴가가 취소된다. 대기 중이면 요청을 거둘 수 있다 */
+export function DeleteLeaveRequest({ leaveId, pendingId }: { leaveId: string; pendingId: string | null }) {
+  const t = useTranslations('leave');
+  const router = useRouter();
+  const [ask, setAsk] = useState(false);
+  const [reason, setReason] = useState('');
+  const [busy, setBusy] = useState(false);
+  const [err, setErr] = useState<{ code: string; requestId?: string } | null>(null);
+  if (pendingId)
+    return (
+      <div className="mt-1 flex flex-wrap items-center gap-2">
+        <span className="rounded-button bg-warn-tint px-2 py-1 text-sm font-bold text-warn">{t('deletePending')}</span>
+        <button
+          type="button"
+          disabled={busy}
+          onClick={async () => {
+            setBusy(true);
+            await callApi(`/api/leave/change/${pendingId}`, { cancel: true });
+            setBusy(false);
+            router.refresh();
+          }}
+          className="min-h-11 rounded-button border border-border bg-bg px-3 text-sm font-bold text-muted disabled:opacity-60"
+        >
+          {t('deleteWithdraw')}
+        </button>
+      </div>
+    );
+  if (!ask)
+    return (
+      <Button variant="outline" className="mt-1 self-start" onClick={() => setAsk(true)}>
+        {t('deleteRequest')}
+      </Button>
+    );
+  return (
+    <form
+      className="mt-1 flex flex-col gap-2 rounded-card border border-border p-3"
+      onSubmit={async (e) => {
+        e.preventDefault();
+        setBusy(true);
+        setErr(null);
+        const r = await callApi('/api/leave/change', { leaveId, reason });
+        setBusy(false);
+        if (!r.ok) return setErr(r);
+        setAsk(false);
+        router.refresh();
+      }}
+    >
+      <label className="flex flex-col gap-1 text-sm text-muted">
+        {t('deleteReason')}
+        <input value={reason} onChange={(e) => setReason(e.target.value)} maxLength={200} required autoComplete="off" className="min-h-11 w-full rounded-button border border-border bg-bg px-3 text-base text-text" />
+      </label>
+      {err && <ErrorNote code={err.code} requestId={err.requestId} namespace="leave" />}
+      <div className="flex gap-2">
+        <Button type="submit" disabled={busy || reason.trim().length < 1} className="flex-1">
+          {t('deleteSend')}
+        </Button>
+        <Button type="button" variant="outline" className="flex-1" onClick={() => setAsk(false)}>
+          {t('deleteClose')}
+        </Button>
+      </div>
+    </form>
+  );
+}

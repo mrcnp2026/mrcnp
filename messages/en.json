@@ -535,7 +535,11 @@
       "shiftTitle": "Schedule requests",
       "shiftOne": "Schedule request",
       "confirmShift": "Approve {name}'s schedule request ({summary})? A schedule will be created for that date.",
-      "confirmShiftReject": "Reject {name}'s schedule request ({summary})?"
+      "confirmShiftReject": "Reject {name}'s schedule request ({summary})?",
+      "leaveDeleteTitle": "Leave deletion requests",
+      "leaveDeleteOne": "Leave deletion",
+      "confirmLeaveDelete": "Approve {name}'s leave deletion request ({summary})? The leave will be cancelled and the balance restored.",
+      "confirmLeaveDeleteReject": "Reject {name}'s leave deletion request ({summary})? The leave stays as it is."
     },
     "records": {
       "title": "Records",
@@ -736,7 +740,8 @@
       "roleAdmin": "Admins",
       "roleEmployee": "Employees",
       "emptyPeople": "No matching employees.",
-      "all": "All"
+      "all": "All",
+      "toAccrual": "Leave accrual history"
     },
     "detail": {
       "backToList": "Records",
@@ -1375,6 +1380,31 @@
       "pending_exists": "There is a pending correction request. Handle it first.",
       "self_decision": "Your own record must be confirmed by another admin.",
       "no_rule": "Cannot confirm without a company work rule."
+    },
+    "leaveAccrual": {
+      "title": "Leave accrual",
+      "back": "Back to leave",
+      "asOf": "As of {date}",
+      "period": "Period {from} - {to}",
+      "open": "ongoing",
+      "total": "Total",
+      "used": "Used",
+      "left": "Left",
+      "pending": "{n} day(s) pending approval are not counted as used.",
+      "noGrant": "No accrual applies on this date. Add one below.",
+      "history": "Accrual history",
+      "historyNone": "No accrual history.",
+      "carried": "carried {n}",
+      "active": "Accrued",
+      "planned": "Planned",
+      "expired": "Expired",
+      "add": "Add an accrual",
+      "addHint": "Saving with the same period name updates that entry. A future start date shows as Planned.",
+      "hired": "Hire date",
+      "none": "X",
+      "toManage": "Hire date · edit current entry",
+      "toManageValue": "Leave management",
+      "hint": "Accrued days are entered by an admin. Automatic accrual and accrual by leave group are not available yet."
     }
   },
   "side": {
@@ -1614,7 +1644,15 @@
     "typeNoDeduct": "no annual leave deducted",
     "startTime": "Start time (optional)",
     "startTimeHint": "If entered, {h} h from that time is recorded as leave.",
-    "invalid_time": "Check the start time."
+    "invalid_time": "Check the start time.",
+    "deleteRequest": "Request deletion",
+    "deletePending": "Deletion requested",
+    "deleteWithdraw": "Withdraw request",
+    "deleteReason": "Reason for deletion",
+    "deleteSend": "Send deletion request",
+    "deleteClose": "Close",
+    "not_approved": "You can request deletion only for approved leave.",
+    "reason_required": "Enter a reason (up to 200 characters)."
   },
   "work": {
     "title": "Off-site / trip / remote",
@@ -1733,7 +1771,8 @@
       "leave": "Leave",
       "work": "Off-site / trip / remote",
       "punch": "Punch request",
-      "shift": "Schedule request"
+      "shift": "Schedule request",
+      "leaveDelete": "Leave deletion"
     },
     "status": {
       "pending": "Pending",

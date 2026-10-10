@@ -181,6 +181,9 @@ export default async function AdminLeavePage({ searchParams }: { searchParams: P
                 </span>
                 <span className="num text-xs text-muted">{hiredOn ? t('hired', { date: hiredOn }) : t('noHireDate')}</span>
               </div>
+              <Link href={`/admin/leave/emp/${p.id}${asOf === today ? '' : `?to=${asOf}`}`} className="inline-flex min-h-11 items-center self-start text-sm font-bold text-primary">
+                {t('toAccrual')} ›
+              </Link>
               {bal.grant ? (
                 <dl className="num grid grid-cols-4 gap-2 text-center">
                   {(

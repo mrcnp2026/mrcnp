@@ -562,7 +562,8 @@
       "leave": "Nghỉ phép",
       "work": "Làm ngoài / công tác / từ xa",
       "punch": "Yêu cầu chấm công",
-      "shift": "Yêu cầu lịch làm việc"
+      "shift": "Yêu cầu lịch làm việc",
+      "leaveDelete": "Xóa ngày nghỉ"
     },
     "status": {
       "pending": "Đang chờ",

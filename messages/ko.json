@@ -535,7 +535,11 @@
       "shiftTitle": "근무일정 생성 요청",
       "shiftOne": "근무일정 생성",
       "confirmShift": "{name}님의 근무일정 요청({summary})을 승인할까요? 그 날짜에 일정이 만들어집니다.",
-      "confirmShiftReject": "{name}님의 근무일정 요청({summary})을 거절할까요?"
+      "confirmShiftReject": "{name}님의 근무일정 요청({summary})을 거절할까요?",
+      "leaveDeleteTitle": "휴가 삭제 요청",
+      "leaveDeleteOne": "휴가 삭제",
+      "confirmLeaveDelete": "{name}님의 휴가 삭제 요청({summary})을 승인할까요? 이 휴가가 취소되고 잔여가 돌아옵니다.",
+      "confirmLeaveDeleteReject": "{name}님의 휴가 삭제 요청({summary})을 거절할까요? 휴가는 그대로 남습니다."
     },
     "records": {
       "title": "기록",
@@ -736,7 +740,8 @@
       "roleAdmin": "관리자",
       "roleEmployee": "직원",
       "emptyPeople": "맞는 직원이 없습니다.",
-      "all": "전체"
+      "all": "전체",
+      "toAccrual": "휴가 발생 내역"
     },
     "detail": {
       "backToList": "기록",
@@ -1375,6 +1380,31 @@
       "pending_exists": "대기 중인 정정 요청이 있습니다. 요청을 먼저 처리하세요.",
       "self_decision": "본인 기록은 다른 관리자가 확정합니다.",
       "no_rule": "회사 근무규칙이 없어 확정할 수 없습니다."
+    },
+    "leaveAccrual": {
+      "title": "휴가 발생",
+      "back": "연차 관리로",
+      "asOf": "기준일 {date}",
+      "period": "산정 기간 {from} - {to}",
+      "open": "계속",
+      "total": "총",
+      "used": "사용",
+      "left": "남은",
+      "pending": "승인 대기 중 {n}일은 사용에 넣지 않았습니다.",
+      "noGrant": "기준일에 적용되는 발생 건이 없습니다. 아래에서 추가하세요.",
+      "history": "휴가 발생 내역",
+      "historyNone": "발생 내역이 없습니다.",
+      "carried": "이월 {n}",
+      "active": "발생됨",
+      "planned": "예정됨",
+      "expired": "만료됨",
+      "add": "휴가 발생 건 추가하기",
+      "addHint": "기간 이름이 같은 건을 다시 저장하면 그 건이 고쳐집니다. 적용 시작일을 앞날로 넣으면 「예정됨」으로 보입니다.",
+      "hired": "입사일",
+      "none": "X",
+      "toManage": "입사일 · 지금 건 고치기",
+      "toManageValue": "연차 관리",
+      "hint": "발생 일수는 관리자가 넣습니다. 자동 발생(회계연도 기준 · 1년 미만 매달 1일)과 휴가 그룹별 발생은 아직 없습니다."
     }
   },
   "side": {
@@ -1614,7 +1644,15 @@
     "typeNoDeduct": "연차 차감 없음",
     "startTime": "시작 시각 (선택)",
     "startTimeHint": "적으면 그 시각부터 {h}시간이 휴가로 기록됩니다.",
-    "invalid_time": "시작 시각을 확인해 주세요."
+    "invalid_time": "시작 시각을 확인해 주세요.",
+    "deleteRequest": "삭제 요청",
+    "deletePending": "삭제 요청 중",
+    "deleteWithdraw": "요청 거두기",
+    "deleteReason": "삭제를 요청하는 사유",
+    "deleteSend": "삭제 요청 보내기",
+    "deleteClose": "닫기",
+    "not_approved": "승인된 휴가만 삭제를 요청할 수 있습니다.",
+    "reason_required": "사유를 적어 주세요 (200자 이내)."
   },
   "work": {
     "title": "외근·출장·재택 신청",
@@ -1733,7 +1771,8 @@
       "leave": "휴가",
       "work": "외근·출장·재택",
       "punch": "출근/퇴근 요청",
-      "shift": "근무일정 생성"
+      "shift": "근무일정 생성",
+      "leaveDelete": "휴가 삭제"
     },
     "status": {
       "pending": "대기",

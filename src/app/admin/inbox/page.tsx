@@ -76,6 +76,8 @@ export default async function InboxPage({ searchParams }: { searchParams: Promis
   const punchPending = ((punchRows ?? []) as { id: string; employee_id: string; kind: 'in' | 'out'; requested_at: string; work_date: string; nearest_m: number | null; geo_reason: string }[]).filter((r) => hit(r.employee_id));
   const { data: shiftRows } = await db.from('shift_requests').select('id, employee_id, work_date, start_time, end_time, kind, reason').eq('is_test', practice).eq('status', 'pending').order('work_date');
   const shiftPending = ((shiftRows ?? []) as { id: string; employee_id: string; work_date: string; start_time: string; end_time: string; kind: string; reason: string | null }[]).filter((r) => hit(r.employee_id));
+  const { data: delRows } = await db.from('leave_change_requests').select('id, employee_id, reason, leave_requests(type_code, start_date, end_date, days, start_time, end_time)').eq('is_test', practice).eq('status', 'pending').order('created_at');
+  const delPending = ((delRows ?? []) as unknown as { id: string; employee_id: string; reason: string | null; leave_requests: { type_code: string; start_date: string; end_date: string; days: number; start_time: string | null; end_time: string | null } | null }[]).filter((r) => hit(r.employee_id) && r.leave_requests);
   const tc = await getTranslations('common');
   const otPage = pageOf(ot ?? [], sp.op, REQUEST_PAGE);
   const coPage = pageOf(co ?? [], sp.cp, REQUEST_PAGE);
@@ -386,7 +388,7 @@ export default async function InboxPage({ searchParams }: { searchParams: Promis
   return (
     <PageShell wide>
       <h1 className="sr-only">{t('title')}</h1>
-      <RequestTabs admin active="pending" live={sp.live === '1'} q={q} counts={{ pending: (ot?.length ?? 0) + (co?.length ?? 0) + leavePending.length + workPending.length + punchPending.length + shiftPending.length }} />
+      <RequestTabs admin active="pending" live={sp.live === '1'} q={q} counts={{ pending: (ot?.length ?? 0) + (co?.length ?? 0) + leavePending.length + workPending.length + punchPending.length + shiftPending.length + delPending.length }} />
       {practice && <p className="rounded-card bg-primary-tint p-3 text-sm text-primary">{t('practiceBanner')}</p>}
 
       {/* 반경 밖 출근/퇴근 요청 (2026-10-10 의뢰인: 시프티 방식) — 승인해야 기록이 되므로 맨 위에 둔다 */}
@@ -436,6 +438,32 @@ export default async function InboxPage({ searchParams }: { searchParams: Promis
                   </div>
                   {r.reason && <p className="text-sm text-muted">{r.reason}</p>}
                   {r.employee_id === me.id && ownBlocked ? ownNote : <LeaveDecision id={r.id} name={who} summary={what} url={`/api/admin/schedule-requests/${r.id}/decide`} keys={['confirmShift', 'confirmShiftReject']} />}
+                </li>
+              );
+            })}
+          </ul>
+        </section>
+      )}
+
+      {/* 휴가 삭제 요청 (2026-10-11 의뢰인: 시프티의 휴가 삭제) — 승인하면 그 휴가가 취소되고 잔여가 돌아온다 */}
+      {delPending.length > 0 && (
+        <section id="leave-delete" className="flex scroll-mt-16 flex-col gap-2">
+          <h2 className="px-1 font-bold">
+            {t('leaveDeleteTitle')} <span className="num text-warn">{delPending.length}</span>
+          </h2>
+          <ul className="-mx-4 divide-y divide-border border-y border-border bg-bg lg:mx-0 lg:rounded-card lg:border">
+            {delPending.map((r) => {
+              const lv = r.leave_requests!;
+              const who = name.get(r.employee_id) ?? '';
+              const what = `${leaveName(lv.type_code)} ${tl('days', { n: nDays(Number(lv.days)) })} (${lv.start_date === lv.end_date ? dayLabel(lv.start_date) : `${dayLabel(lv.start_date)} ~ ${dayLabel(lv.end_date)}`})`;
+              return (
+                <li key={r.id} className="flex flex-col gap-2 px-5 py-3">
+                  <span className="font-bold">
+                    {t('leaveDeleteOne')} · {who}
+                  </span>
+                  <p className="num text-sm">{what}</p>
+                  {r.reason && <p className="text-sm text-muted">{r.reason}</p>}
+                  {r.employee_id === me.id && ownBlocked ? ownNote : <LeaveDecision id={r.id} name={who} summary={what} url={`/api/admin/leave-changes/${r.id}/decide`} keys={['confirmLeaveDelete', 'confirmLeaveDeleteReject']} />}
                 </li>
               );
             })}
