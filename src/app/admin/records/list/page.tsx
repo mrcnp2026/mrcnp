@@ -1,6 +1,6 @@
 // 출퇴근기록 — 전체 목록 (의뢰인 2026-10-10: 시프티의 「출퇴근기록」 탭처럼).
 // 위: 검색 · 거르기 · 기간 · [내 기록]. 아래: 날짜 머리줄(그날 합계) + 기록 한 건이 한 줄 = 출근/퇴근 시각 · 직무 색 막대 · 이름 · 지점/직무 · 배지.
-// 합계는 그날 보이는 사람들의 근무 시간(휴게 제외) 합이다. 줄을 누르면 그 직원의 그 달 기록(정정·대리 입력은 거기서).
+// 합계는 그날 보이는 사람들의 근무 시간(휴게 제외) 합이다. 줄을 누르면 그 기록의 상세(큰 시각 + 항목—값), 거기서 [수정]으로 그 직원의 그 달 기록(정정·대리 입력).
 // 월 집계·엑셀 내려받기는 「월 집계」 화면(/admin/records)에 그대로 있다.
 import { ChevronRight } from 'lucide-react';
 import { getFormatter, getTranslations } from 'next-intl/server';
@@ -19,7 +19,7 @@ import { SHIFT_COLOR_CLASS } from '@/lib/shifts';
 import { kstDateTime, toKstDate } from '@/lib/time';
 
 const DATES_PER_PAGE = 7;
-type Line = { key: string; id: string; name: string; sub: string; color: string; date: string; start: string; end: string | null; deemed: boolean; open: boolean; outside: boolean; sort: number };
+type Line = { key: string; idx: number; id: string; name: string; sub: string; color: string; date: string; start: string; end: string | null; deemed: boolean; open: boolean; outside: boolean; sort: number };
 
 export default async function RecordListPage({ searchParams }: { searchParams: Promise<{ q?: string; g?: string; from?: string; to?: string; live?: string; p?: string }> }) {
   const [t, tc, f, sp] = await Promise.all([getTranslations('admin.recordList'), getTranslations('common'), getFormatter(), searchParams]);
@@ -52,7 +52,7 @@ export default async function RecordListPage({ searchParams }: { searchParams: P
         const at = pair.in ?? pair.out;
         if (!at) return;
         lines.push({
-          key: `${p.id}${d.workDate}${i}`, id: p.id, name: p.name, sub, color: job ? SHIFT_COLOR_CLASS[job.color] : 'bg-border', date: d.workDate,
+          key: `${p.id}${d.workDate}${i}`, idx: i, id: p.id, name: p.name, sub, color: job ? SHIFT_COLOR_CLASS[job.color] : 'bg-border', date: d.workDate,
           start: pair.in ? clock(pair.in) : '–', end: pair.out ? clock(pair.out) : null,
           deemed: !real.has(d.workDate) && !!data.planFor(p.id, d.workDate).deemed, open: !!pair.in && !pair.out, outside: false, sort: at.getTime(),
         });
@@ -93,7 +93,7 @@ export default async function RecordListPage({ searchParams }: { searchParams: P
             <ul className="-mx-4 divide-y divide-border border-b border-border bg-bg lg:mx-0">
               {rows.map((x) => (
                 <li key={x.key}>
-                  <Link href={`/admin/records/${x.id}?m=${x.date.slice(0, 7)}`} className="flex min-h-16 items-center gap-3 py-2 pr-3 pl-5">
+                  <Link href={`/admin/records/${x.id}/${x.date}?i=${x.idx}${sp.live === '1' ? '&live=1' : ''}`} className="flex min-h-16 items-center gap-3 py-2 pr-3 pl-5">
                     <span className="num flex w-14 shrink-0 flex-col text-sm leading-snug">
                       <span className="font-semibold">{x.start}</span>
                       <span className="text-muted">{x.end ?? '–'}</span>

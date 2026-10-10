@@ -66,6 +66,28 @@ try {
   check(/^\d{2}:\d{2}/.test(((await rows().first().textContent()) ?? '').trim()), '한 줄은 출근 시각으로 시작');
   if (SHOTS) await p.screenshot({ path: path.join(SHOTS, '01-출퇴근기록-목록.png') });
 
+  // ── 줄을 누르면 상세 (2026-10-11) ──
+  await rows().first().click();
+  await p.waitForURL(/\/admin\/records\/[^/]+\/\d{4}-\d{2}-\d{2}/);
+  await p.getByRole('heading', { name: '출퇴근기록', exact: true }).waitFor({ timeout: 20000 });
+  check((await p.locator('header').locator('visible=true').count()) === 0 && (await p.getByRole('link', { name: '수정', exact: true }).count()) === 1 && (await p.getByRole('link', { name: '목록으로' }).count()) === 1, '상세: 로고 줄 없이 「← 출퇴근기록 … 수정」');
+  check(/\d{2}:\d{2} -/.test((await p.locator('main p.text-3xl').textContent()) ?? '') && (await p.getByText(/근무 \d+시간 \d+분 \/ 휴게 \d+시간 \d+분/).count()) === 1, '상세: 큰 시각 · 근무/휴게', (await p.locator('main p.text-3xl').textContent()) ?? '');
+  const labels = await p.locator('main dt').allTextContents();
+  check(['직원', '지점', '직무', '휴게시간', '근무일정', '출근 장소', '퇴근 장소', '생성일자'].every((x) => labels.includes(x)), '상세: 항목 — 값 줄 8개', labels.join(','));
+  await p.waitForTimeout(400);
+  if (SHOTS) await p.screenshot({ path: path.join(SHOTS, '03-출퇴근기록-상세.png'), fullPage: true });
+  for (const w of [320, 390]) {
+    await p.setViewportSize({ width: w, height: 800 });
+    const sw = await p.evaluate(() => document.documentElement.scrollWidth);
+    check(sw <= w, `상세: 가로 넘침 없음 @${w}`, `${sw}px`);
+  }
+  await p.setViewportSize({ width: 390, height: 844 });
+  await p.getByRole('link', { name: '수정', exact: true }).click();
+  await p.waitForURL(/\/admin\/records\/[^/]+\?m=/);
+  check(true, '상세의 [수정] → 그 직원의 그 달 기록');
+  await p.goto(`${BASE}/admin/records/list`);
+  await ready();
+
   // ── 검색 ──
   const firstName = ((await rows().first().locator('span.flex-1 > span.font-bold').first().textContent()) ?? '').trim();
   await p.getByRole('searchbox').fill(firstName);
