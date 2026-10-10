@@ -205,7 +205,8 @@
     "mySchedule": "Lịch làm của tôi",
     "adminSchedule": "Lịch làm việc",
     "jobs": "Chức danh",
-    "myRequests": "Yêu cầu của tôi"
+    "myRequests": "Yêu cầu của tôi",
+    "missing": "Thiếu chấm công"
   },
   "nav": {
     "home": "Trang chủ",

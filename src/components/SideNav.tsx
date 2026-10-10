@@ -4,6 +4,7 @@
 // 「더보기」에 접혀 있던 화면(연차 관리·공지·설정·진단·내 계정)을 PC에서는 전부 펼쳐 보인다.
 import {
   BriefcaseBusiness,
+  ClipboardX,
   CalendarClock,
   CalendarRange,
   MapPin,
@@ -64,6 +65,7 @@ export function SideNav({ isAdmin, inboxCount = 0, languages }: { isAdmin: boole
               { href: '/admin/inbox', key: 'inbox', icon: BellRing, badge: inboxCount },
               { href: '/admin/schedule', key: 'adminSchedule', icon: CalendarRange },
               { href: '/admin/records', key: 'adminRecords', icon: ClipboardList },
+              { href: '/admin/missing', key: 'missing', icon: ClipboardX },
               { href: '/admin/leave', key: 'adminLeave', icon: CalendarCheck },
             ],
           },

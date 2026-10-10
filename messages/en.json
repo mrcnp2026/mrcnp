@@ -1175,6 +1175,28 @@
       "duplicate_job": "A job with the same name already exists.",
       "job_in_use": "Some staff have this job. Move them to another job first.",
       "job_off": "This job is turned off."
+    },
+    "missing": {
+      "title": "Missing punches",
+      "intro": "Days in the period where a punch in or out is missing. A missing punch in is flagged {m} min after the scheduled start, a missing punch out {h} h after the scheduled end. Full-day leave, approved off-site work and deemed work are excluded.",
+      "practiceBanner": "These are practice records.",
+      "from": "From",
+      "to": "To",
+      "load": "View this period",
+      "tab": {
+        "in": "Missing in",
+        "out": "Missing out"
+      },
+      "count": "{n}",
+      "empty": {
+        "in": "No missing punch in for this period.",
+        "out": "No missing punch out for this period."
+      },
+      "noRule": "There is no company work rule yet, so missing punches cannot be judged.",
+      "lineIn": "No punch in",
+      "lineOut": "No punch out",
+      "pending": "Correction requested",
+      "hint": "Tap a row to open that person’s records, where you can add the missing punch. Up to 62 days at a time."
     }
   },
   "side": {
@@ -1209,7 +1231,8 @@
     "mySchedule": "My schedule",
     "adminSchedule": "Schedule",
     "jobs": "Jobs",
-    "myRequests": "My requests"
+    "myRequests": "My requests",
+    "missing": "Missing punches"
   },
   "nav": {
     "home": "Home",

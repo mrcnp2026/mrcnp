@@ -205,7 +205,8 @@
     "mySchedule": "ตารางงานของฉัน",
     "adminSchedule": "ตารางงาน",
     "jobs": "ตำแหน่งงาน",
-    "myRequests": "คำขอของฉัน"
+    "myRequests": "คำขอของฉัน",
+    "missing": "ลืมลงเวลา"
   },
   "nav": {
     "home": "หน้าหลัก",

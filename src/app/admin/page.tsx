@@ -127,7 +127,7 @@ export default async function AdminHome({ searchParams }: { searchParams: Promis
     { key: 'pendingCorrections', n: counts.corrections, href: '/admin/inbox#corrections' },
     { key: 'pendingLeave', n: counts.leave, href: '/admin/inbox#leave' },
     { key: 'pendingWork', n: counts.work, href: '/admin/inbox#work' },
-    { key: 'missing', n: missingPeople, href: '/admin/records' },
+    { key: 'missing', n: missingPeople, href: '/admin/missing' },
     ...(roleReqs?.length ? [{ key: 'pendingRole' as const, n: roleReqs.length, href: `/admin/members/${roleReqs[0].target_id}` }] : []),
   ];
 
