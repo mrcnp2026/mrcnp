@@ -60,12 +60,20 @@ function Fold({ label, children }: { label: string; children: (close: () => void
   const [open, setOpen] = useState(false);
   if (!open) {
     return (
-      <button type="button" onClick={() => setOpen(true)} className="min-h-11 self-start text-sm font-bold text-primary">
+      <button type="button" onClick={() => setOpen(true)} className="min-h-11 self-start text-sm font-bold whitespace-nowrap text-primary lg:h-8 lg:min-h-0 lg:rounded-button lg:bg-primary lg:px-3 lg:text-on-primary">
         + {label}
       </button>
     );
   }
-  return <div className="rounded-button bg-surface p-4">{children(() => setOpen(false))}</div>;
+  // 폰: 그 자리에 펼친다 · PC: 가운데 팝업 (2026-10-11 의뢰인: PC의 양식은 팝업으로)
+  return (
+    <div className="rounded-button bg-surface p-4 lg:fixed lg:inset-0 lg:z-40 lg:flex lg:items-center lg:justify-center lg:rounded-none lg:bg-text/40 lg:p-6">
+      <div role="dialog" aria-modal="true" aria-label={label} className="lg:max-h-full lg:w-full lg:max-w-xl lg:overflow-y-auto lg:rounded-card lg:bg-bg lg:p-6 lg:text-left lg:shadow-card">
+        <h2 className="hidden pb-4 text-lg font-bold text-text lg:block">{label}</h2>
+        {children(() => setOpen(false))}
+      </div>
+    </div>
+  );
 }
 
 export type RuleValues = { startTime: string; endTime: string; lateGraceMin: number; breakStart: string; breakEnd: string; break2Start: string; break2End: string; roundStepMin: number; workdays: number[]; weeklyRestDay: number };

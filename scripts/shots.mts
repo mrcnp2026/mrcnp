@@ -33,6 +33,7 @@ try {
   await p.goto(`${BASE}/register?token=${token}`);
   await createPassword(p);
   const shot = async (name: string, url: string, full = true) => {
+    if (process.env.ONLY && !new RegExp(process.env.ONLY).test(name)) return; // ONLY=정규식 — 그 이름의 화면만 찍는다
     await p.goto(BASE + url);
     await p.waitForLoadState('networkidle');
     await p.waitForFunction("!document.querySelector('[aria-busy=true]')");
@@ -66,6 +67,9 @@ try {
   await shot('admin-notice-new', '/admin/notices/new');
   await shot('admin-notices', '/admin/notices');
   await shot('admin-settings', '/admin/settings');
+  await shot('admin-settings-work', '/admin/settings?tab=work');
+  await shot('admin-settings-punch', '/admin/settings?tab=punch');
+  await shot('admin-settings-break', '/admin/settings?tab=break');
   await shot('admin-payroll', '/admin/payroll');
   await shot('admin-member-new', '/admin/members/new');
   await shot('admin-member-detail', '/admin/members/' + emp!.id);
@@ -74,6 +78,8 @@ try {
   await db.from('profiles').update({ role: 'employee' }).eq('id', emp!.id);
   await shot('punch-home', '/punch');
   await menu('punch-menu', '/punch');
+  await shot('punch-schedule', '/punch/schedule');
+  await shot('punch-requests', '/punch/requests');
   await shot('punch-records', '/punch/records');
   await shot('punch-corrections', '/punch/corrections');
   await shot('punch-corrections-new', '/punch/corrections?new=1', false);

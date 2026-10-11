@@ -134,7 +134,8 @@ try {
   await p.goto(`${BASE}/punch/requests`);
   await p.waitForLoadState('networkidle');
   check(await p.getByRole('link', { name: /\+ 휴가 신청/ }).isVisible(), 'PC에서는 새 요청으로 가는 줄이 보임');
-  check((await p.locator('aside, nav').getByRole('link', { name: '내 요청', exact: true }).count()) >= 1, 'PC 왼쪽 메뉴에 「내 요청」');
+  // PC 직원 모드는 왼쪽 메뉴 없이 상단 탭이다 (2026-10-11 의뢰인 스샷 `스샷/직원모드 요청내역.png`)
+  check((await p.locator('header nav a[aria-current="page"]').textContent()) === '요청 내역', 'PC 상단 탭 「요청 내역」이 켜짐');
   await shot('05-PC-내-요청');
   check(errors.length === 0, '화면 오류 없음', errors[0] ?? '');
 } catch (e) {

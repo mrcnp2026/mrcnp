@@ -10,6 +10,9 @@ export type GridCell = { leave: string | null; items: { it: PlanItem; href: stri
 export type GridRow = { id: string; name: string; sub: string; total: string; cells: GridCell[] };
 export type GridDay = { date: string; label: string; holiday: string | null; red: boolean; today: boolean; count: number };
 
+// 카드 바탕: 직무 색을 옅게 (시프티 주 보기의 카드 — 왼쪽 색 띠 + 같은 색의 옅은 바탕)
+const TINT: Record<ShiftColor, string> = { primary: 'bg-primary/10', ok: 'bg-ok/10', warn: 'bg-warn/15', danger: 'bg-danger/10', text: 'bg-text/10', muted: 'bg-muted/10' };
+
 export function ScheduleGrid({ days, rows, dense, labels }: { days: GridDay[]; rows: GridRow[]; dense: boolean; labels: { employee: string; people: string; empty: string } }) {
   const colW = dense ? 'min-w-17' : 'min-w-40';
   return (
@@ -21,9 +24,9 @@ export function ScheduleGrid({ days, rows, dense, labels }: { days: GridDay[]; r
               {labels.employee}
             </th>
             {days.map((d) => (
-              <th key={d.date} scope="col" className={`${colW} border-r border-border px-2 py-2 text-center last:border-r-0 ${d.today ? 'bg-primary-tint!' : ''} ${d.red ? 'text-danger!' : ''}`}>
+              <th key={d.date} scope="col" className={`${colW} border-r border-border px-2 py-2 text-center last:border-r-0 ${d.today ? 'bg-primary-tint!' : d.red ? 'bg-danger-tint!' : ''} ${d.red ? 'text-danger!' : ''}`}>
                 <span className="num">{d.label}</span>
-                {d.holiday && !dense && <span className="ml-1 font-medium">{d.holiday}</span>}
+                {d.holiday && !dense && <span className="block truncate text-xs font-medium">{d.holiday}</span>}
               </th>
             ))}
           </tr>
@@ -44,7 +47,7 @@ export function ScheduleGrid({ days, rows, dense, labels }: { days: GridDay[]; r
                 {r.sub && <span className="block truncate text-xs text-faint">{r.sub}</span>}
               </th>
               {r.cells.map((c, i) => (
-                <td key={days[i].date} className={`border-r border-b border-border p-1 align-top last:border-r-0 ${days[i].today ? 'bg-primary-tint' : ''}`}>
+                <td key={days[i].date} className={`border-r border-b border-border p-1 align-top last:border-r-0 ${days[i].today ? 'bg-primary-tint' : days[i].red ? 'bg-danger-tint' : ''}`}>
                   <div className="flex flex-col gap-1">
                     {c.leave && (
                       <div className="flex items-center gap-1.5 rounded-button bg-surface px-2 py-1.5 text-muted">
@@ -53,7 +56,7 @@ export function ScheduleGrid({ days, rows, dense, labels }: { days: GridDay[]; r
                       </div>
                     )}
                     {c.items.map(({ it, href, color, tag }) => (
-                      <Link key={`${it.shiftId ?? it.source}${it.startTime}`} href={href} className="flex overflow-hidden rounded-button bg-surface hover:bg-primary-tint">
+                      <Link key={`${it.shiftId ?? it.source}${it.startTime}`} href={href} className={`flex overflow-hidden rounded-button hover:brightness-95 ${color ? TINT[color] : 'bg-surface'}`}>
                         <span aria-hidden className={`w-1 shrink-0 ${color ? SHIFT_COLOR_CLASS[color] : 'bg-border'}`} />
                         {dense ? (
                           <span className="num flex flex-1 flex-col px-1 py-1 text-center text-xs leading-tight">
@@ -67,7 +70,7 @@ export function ScheduleGrid({ days, rows, dense, labels }: { days: GridDay[]; r
                             </span>
                             <span className="flex items-center justify-between gap-1 text-xs text-muted">
                               <span className="truncate">{it.name ?? ''}</span>
-                              {tag && <span className="shrink-0 rounded-button bg-primary-tint px-1.5 text-primary">{tag}</span>}
+                              {tag && <span className="shrink-0 rounded-button bg-nav px-1.5 text-on-primary">{tag}</span>}
                             </span>
                           </span>
                         )}
@@ -86,7 +89,7 @@ export function ScheduleGrid({ days, rows, dense, labels }: { days: GridDay[]; r
                 {labels.people}
               </th>
               {days.map((d) => (
-                <td key={d.date} className={`num border-r border-border px-2 py-2 text-center text-muted last:border-r-0 ${d.today ? 'bg-primary-tint' : ''}`}>
+                <td key={d.date} className={`num border-r border-border px-2 py-2 text-center text-muted last:border-r-0 ${d.today ? 'bg-primary-tint' : d.red ? 'bg-danger-tint' : ''}`}>
                   {d.count}
                 </td>
               ))}

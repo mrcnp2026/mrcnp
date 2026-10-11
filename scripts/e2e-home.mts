@@ -157,7 +157,6 @@ try {
   await p.setViewportSize({ width: 1440, height: 900 });
   await p.goto(`${BASE}/admin/jobs`);
   await p.waitForLoadState('networkidle');
-  const side = p.locator('nav.sticky');
   // PC 메뉴 (2026-10-11): 남색 사이드 메뉴 + 관리 화면에서는 회색 둘째 메뉴. 지금 화면은 둘째 메뉴에서 표시
   const panelNow = p.locator('nav.sticky').nth(1).locator('a[aria-current="page"]');
   check((await p.locator('nav.sticky').count()) === 2 && (await panelNow.count()) === 1 && ((await panelNow.textContent()) ?? '').includes('직무'), 'PC 메뉴: 관리 화면에서는 회색 둘째 메뉴가 붙고 지금 화면(직무)이 표시됨');
@@ -166,7 +165,14 @@ try {
   await p.locator('nav.sticky').first().getByRole('link', { name: '출퇴근기록', exact: true }).hover();
   check(await p.locator('nav.sticky').first().getByRole('link', { name: '목록형', exact: true }).isVisible(), 'PC 메뉴: 마우스를 올리면 하위 메뉴가 아래로 펼쳐짐');
   await p.locator('nav.sticky').first().getByRole('link', { name: '관리', exact: true }).hover();
-  check(await p.locator('nav.sticky').first().getByRole('link', { name: '출퇴근 장소', exact: true }).isVisible(), 'PC 메뉴: 「관리」에 마우스를 올리면 오른쪽에 패널이 나옴');
+  // 패널은 0.2초에 걸쳐 부드럽게 나온다 — 다 나올 때까지 기다린 뒤 본다
+  check(await p.locator('nav.sticky').first().getByRole('link', { name: '출퇴근 장소', exact: true }).waitFor({ state: 'visible', timeout: 3000 }).then(() => true, () => false), 'PC 메뉴: 「관리」에 마우스를 올리면 오른쪽에 패널이 나옴');
+  // 직원 모드(PC): 왼쪽 메뉴 없이 상단 탭 4개 + 월 달력 (2026-10-11 의뢰인 스샷 `스샷/직원모드 홈.png`)
+  await p.goto(`${BASE}/punch`);
+  await p.waitForLoadState('networkidle');
+  const tabs = p.locator('header nav a');
+  check((await p.locator('nav.sticky').count()) === 0 && (await tabs.count()) === 4 && ((await tabs.first().getAttribute('aria-current')) === 'page'), 'PC 직원 모드: 왼쪽 메뉴 없이 상단 탭 4개, 첫 탭(스케줄)이 켜짐');
+  check((await p.getByText('내 근로 통계').isVisible()) && (await p.getByText('내 휴가 통계').isVisible()) && (await p.locator('main .grid-cols-7 > div').count()) >= 35, 'PC 직원 홈: 내 근로 통계 · 내 휴가 통계 · 월 달력');
   await shot('44-PC-메뉴');
   check(errors.length === 0, '화면 오류 없음', errors[0] ?? '');
 } catch (e) {

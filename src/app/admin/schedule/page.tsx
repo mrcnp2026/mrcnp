@@ -12,7 +12,7 @@ import { Fab } from '@/components/Fab';
 import { ListBar } from '@/components/ListBar';
 import { Pager, pageOf } from '@/components/Pager';
 import { Card, Chip, PageShell } from '@/components/ui';
-import { addDays, weekStartOf } from '@/lib/calendar';
+import { addDays, isoWeekday, weekStartOf } from '@/lib/calendar';
 import { loadJobs } from '@/lib/job-data';
 import { isFullDayLeave } from '@/lib/leave';
 import { listRange } from '@/lib/list-range';
@@ -20,12 +20,14 @@ import { buildOrgTree, groupPath, groupScope } from '@/lib/org';
 import { loadOrgGroups } from '@/lib/org-data';
 import { leaveDaysFor, loadPeriod } from '@/lib/period-data';
 import { SHIFT_COLOR_CLASS, spanMinutes } from '@/lib/shifts';
+import { createAdminClient } from '@/lib/supabase/admin';
 import { kstDateTime, toKstDate } from '@/lib/time';
 import { SheetOpener } from '@/components/SheetOpener';
 import { resolveDayType } from '@/config/labor-rules';
 import { ChevronLeft, ChevronRight } from 'lucide-react';
 import { CancelShift, ScheduleForm } from './ScheduleForms';
 import { ScheduleGrid, type GridDay, type GridRow } from './ScheduleGrid';
+import { ScheduleMonth, type MonthCell } from './ScheduleMonth';
 
 const DATES_PER_PAGE = 7;
 
@@ -34,7 +36,8 @@ export default async function AdminSchedulePage({ searchParams }: { searchParams
   const today = toKstDate(new Date());
   const week = weekStartOf(today);
   const { from, to } = listRange(sp.from ?? sp.d, sp.to ?? sp.d, { from: week, to: addDays(week, 6) }, addDays);
-  const [data, groups, jobs] = await Promise.all([loadPeriod(from, to), loadOrgGroups(), loadJobs()]);
+  const [data, groups, jobs, { data: named }] = await Promise.all([loadPeriod(from, to), loadOrgGroups(), loadJobs(), createAdminClient().from('holidays').select('the_date, label').gte('the_date', from).lte('the_date', to)]);
+  const holidayName = new Map((named ?? []).map((h) => [h.the_date as string, h.label as string]));
   const jobOf = new Map(jobs.map((j) => [j.id, j]));
   const groupOptions = buildOrgTree(groups).flatMap((d) => [{ id: d.id, label: d.name }, ...d.teams.map((x) => ({ id: x.id, label: `${d.name} › ${x.name}` }))]);
   const g = groupOptions.some((o) => o.id === sp.g) ? sp.g! : '';
@@ -91,9 +94,41 @@ export default async function AdminSchedulePage({ searchParams }: { searchParams
     });
     return { id: p.id, name: p.name, sub: [groupPath(groups, p.groupId), job?.name].filter(Boolean).join(' / '), total: hm(total), cells };
   });
+  const isRed = (d: string) => isoWeekday(d) >= 6 || holidayName.has(d) || (data.rule ? resolveDayType(d, data.rule, data.holidays) === 'holiday' : false);
+  // 월 보기 = 진짜 달력(일~토). 칸마다 그날의 휴가 → 일정(시작 시각 순). 달 밖의 날은 빈 칸으로 흐리게
+  const monthCells: MonthCell[] = [];
+  if (month) {
+    const gridStart = addDays(from, -(isoWeekday(from) % 7));
+    const gridEnd = addDays(to, 6 - (isoWeekday(to) % 7));
+    for (let d = gridStart; d <= gridEnd; d = addDays(d, 1)) {
+      const inMonth = d >= from && d <= to;
+      const seen = inMonth ? gridPeople : [];
+      const onLeave = seen.filter((p) => isFullDayLeave(leaveOf.get(p.id)?.get(d)));
+      const off = new Set(onLeave.map((p) => p.id));
+      const rows = seen
+        .filter((p) => !off.has(p.id))
+        .flatMap((p) => data.planFor(p.id, d).items.map((it, i) => ({ p, it, i })))
+        .sort((x, y) => x.it.startTime.localeCompare(y.it.startTime) || x.p.name.localeCompare(y.p.name));
+      monthCells.push({
+        date: d,
+        day: d.endsWith('-01') ? `${Number(d.slice(5, 7))}/1` : String(Number(d.slice(8))),
+        inMonth,
+        red: isRed(d),
+        today: d === today,
+        holiday: holidayName.get(d) ?? null,
+        entries: [
+          ...onLeave.map((p) => ({ key: `l${p.id}`, name: p.name, time: null, href: null, color: null, tag: t('onLeave') })),
+          ...rows.map(({ p, it, i }) => ({ key: `${p.id}${i}`, name: p.name, time: `${it.startTime} - ${it.endTime}`, href: `/admin/schedule/${p.id}/${d}?i=${i}`, color: (p.jobId ? jobOf.get(p.jobId)?.color : undefined) ?? it.color, tag: it.kind !== 'none' ? tk(it.kind) : null })),
+        ],
+      });
+    }
+  }
+  const sunday = addDays(weekStartOf(today), -1);
+  const weekdayNames = [...Array(7)].map((_, i) => f.dateTime(kstDateTime(addDays(sunday, i), '12:00'), { weekday: 'short' }));
   const gridDays: GridDay[] = days.map((d) => {
-    const red = data.rule ? resolveDayType(d, data.rule, data.holidays) === 'holiday' : false;
-    return { date: d, label: f.dateTime(kstDateTime(d, '12:00'), month ? { day: 'numeric', weekday: 'narrow' } : { day: 'numeric', weekday: 'short' }), holiday: null, red, today: d === today, count: count.get(d) ?? 0 };
+    // 토요일 · 일요일 · 공휴일(주휴일 포함)은 빨간 글자와 옅은 붉은 바탕으로 구분한다 (2026-10-11 의뢰인)
+    const red = isRed(d);
+    return { date: d, label: f.dateTime(kstDateTime(d, '12:00'), { day: 'numeric', weekday: 'short' }), holiday: holidayName.get(d) ?? null, red, today: d === today, count: count.get(d) ?? 0 };
   });
   const rangeTitle = month
     ? f.dateTime(kstDateTime(from, '12:00'), { year: 'numeric', month: 'long' })
@@ -106,7 +141,10 @@ export default async function AdminSchedulePage({ searchParams }: { searchParams
       {/* PC: 달력형 — 제목 · [추가하기] / ‹ › 오늘 · 기간 · 검색 · 부서 / [주 · 월] */}
       <div className="hidden flex-col gap-4 lg:flex">
         <div className="flex items-center justify-between gap-3">
-          <h1 className="text-2xl font-bold">{t('title')}</h1>
+          <div className="min-w-0">
+            <h1 className="text-2xl font-bold">{t('title')}</h1>
+            <p className="pt-1 text-sm text-faint">{t('pcIntro')}</p>
+          </div>
           <div className="flex items-center gap-2">
             <Link href="/admin/shifts" className="inline-flex min-h-8 items-center rounded-button border border-nav bg-bg px-4 text-sm font-bold text-nav">
               {t('toTemplates')}
@@ -154,7 +192,11 @@ export default async function AdminSchedulePage({ searchParams }: { searchParams
           </div>
         </div>
         {!data.rule && <p className="rounded-card bg-bg p-5 text-sm text-faint">{t('noRule')}</p>}
-        <ScheduleGrid days={gridDays} rows={gridRows} dense={month} labels={{ employee: t('colEmployee'), people: t('colPeople'), empty: t('emptyRange') }} />
+        {month ? (
+          <ScheduleMonth weekdays={weekdayNames} cells={monthCells} labels={{ more: (n) => t('more', { n }) }} />
+        ) : (
+          <ScheduleGrid days={gridDays} rows={gridRows} dense={false} labels={{ employee: t('colEmployee'), people: t('colPeople'), empty: t('emptyRange') }} />
+        )}
         <p className="text-xs text-faint">{t('hint')}</p>
       </div>
       <div className="grid items-start lg:hidden">

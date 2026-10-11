@@ -1,8 +1,10 @@
 // 설정 (더보기 › 설정) — 근무시간 · 휴일 · 사무실 인터넷 주소를 화면에서 바꾼다 (2026-10-05: 지금까지는 개발자가 DB·열쇠 파일을 고쳐야 했다).
 // 근무시간은 이력이다: 고치지 않고 "언제부터 적용"되는 새 규칙을 넣는다 (② 4-1). 휴일·주소는 지우지 않고 빼거나 끈다 (변경 기록에 남는다).
+import { Check } from 'lucide-react';
 import { getFormatter, getTranslations } from 'next-intl/server';
 import { headers } from 'next/headers';
 import Link from 'next/link';
+import type { ReactNode } from 'react';
 import { Card, CardTitle, Chip, PageShell } from '@/components/ui';
 import { OFFICE } from '@/config/office';
 import { addDays } from '@/lib/calendar';
@@ -12,8 +14,39 @@ import { isOfficeIp, parseCidr, traceClientIp } from '@/lib/verify-location';
 import { loadOfficeLocations } from '@/lib/geo-data';
 import { ConfirmButton, HolidayForm, NetworkForm, RuleForm } from './SettingsForms';
 
-export default async function SettingsPage() {
+/** PC 설정 줄: 왼쪽 굵은 항목 이름 — 오른쪽 값·설명 (시프티 회사 설정의 줄 모양) */
+function SetRow({ label, children, last = false }: { label: string; children: ReactNode; last?: boolean }) {
+  return (
+    <div className={`grid grid-cols-[15rem_minmax(0,1fr)] gap-6 px-6 py-4 ${last ? '' : 'border-b border-border'}`}>
+      <p className="font-bold">{label}</p>
+      <div className="flex min-w-0 flex-col gap-2 text-sm">{children}</div>
+    </div>
+  );
+}
+
+/** PC 설정 묶음 제목: 회색 띠 */
+function SetBand({ children }: { children: ReactNode }) {
+  return <h2 className="border-b border-border bg-surface px-6 py-2 text-sm font-bold text-muted">{children}</h2>;
+}
+
+/** 켜짐/꺼짐 표시 — 체크 네모 + 글자 (바꿀 수 없는 설정도 지금 상태를 같은 모양으로 보인다) */
+function Flag({ on, label }: { on: boolean; label: string }) {
+  return (
+    <p className="flex items-center gap-2 font-bold">
+      <span aria-hidden className={`flex size-4 items-center justify-center rounded-button border ${on ? 'border-primary bg-primary text-on-primary' : 'border-border bg-surface'}`}>{on && <Check size={12} strokeWidth={3} />}</span>
+      {label}
+    </p>
+  );
+}
+
+export default async function SettingsPage({ searchParams }: { searchParams: Promise<{ tab?: string }> }) {
+  // PC: 시프티의 회사 설정 구성 (2026-10-11 의뢰인 스샷 `스샷/관리-회사설정*.png`) — 사이드 메뉴 옆 둘째 메뉴에서 탭을 고르고,
+  // 본문은 「굵은 항목 이름 — 값」 줄 + 회색 띠 묶음 제목 + 오른쪽 위 버튼. 폰은 예전처럼 카드 네 장을 한 화면에
+  const sp = await searchParams;
+  const tab: 'general' | 'work' | 'punch' | 'break' = sp.tab === 'work' || sp.tab === 'punch' || sp.tab === 'break' ? sp.tab : 'general';
   const t = await getTranslations('admin.settings');
+  const ts = await getTranslations('side');
+  const tp = await getTranslations('admin.settings.pc');
   const tm = await getTranslations('admin.more');
   const f = await getFormatter();
   const today = toKstDate(new Date());
@@ -51,13 +84,206 @@ export default async function SettingsPage() {
   const activeCidrs = [...(networks ?? []).filter((n) => n.active).map((n) => String(n.cidr)), ...OFFICE.allowedCidrs].filter((c) => parseCidr(c));
   const here = isOfficeIp(trace.ip, activeCidrs);
   const base = current ?? upcoming[0] ?? null;
+  const breaks = current?.break_start && current.break_end ? [{ start: hhmm(current.break_start), end: hhmm(current.break_end) }, ...((current.extra_breaks as { start: string; end: string }[] | null) ?? [])] : [];
+  // 폰 카드와 PC 줄이 같은 조각을 쓴다
+  const ruleForm = (
+        <RuleForm
+          tomorrow={addDays(today, 1)}
+          weekdays={weekdays}
+          initial={{
+            startTime: base ? hhmm(base.start_time) : '09:00', endTime: base ? hhmm(base.end_time) : '18:00', lateGraceMin: base?.late_grace_min ?? 0,
+            breakStart: base?.break_start ? hhmm(base.break_start) : '', breakEnd: base?.break_end ? hhmm(base.break_end) : '',
+            break2Start: (base?.extra_breaks as { start: string; end: string }[] | null)?.[0]?.start ?? '', break2End: (base?.extra_breaks as { start: string; end: string }[] | null)?.[0]?.end ?? '', roundStepMin: base?.round_step_min ?? 0,
+            workdays: (base?.workdays as number[] | undefined) ?? [1, 2, 3, 4, 5], weeklyRestDay: base?.weekly_rest_day ?? 7,
+          }}
+        />
+  );
+  const networkList = (
+        <ul className="divide-y divide-border">
+          {/* 검사 스크립트가 넣었다 끈 주소(메모가 e2e-…)는 목록에 보이지 않게 — 검사 계정·검사 그룹과 같은 규칙 */}
+          {(networks ?? []).filter((n) => n.active || !n.label?.startsWith('e2e-')).map((n) => (
+            <li key={n.id} className={`flex min-h-12 items-center gap-2 ${n.active ? '' : 'opacity-60'}`}>
+              <span className="min-w-0 flex-1">
+                <span className="num block truncate text-sm">{String(n.cidr)}</span>
+                {n.label && <span className="block truncate text-xs text-muted">{n.label}</span>}
+              </span>
+              {!n.active && <Chip>{t('off')}</Chip>}
+              {n.active ? (
+                <ConfirmButton body={{ action: 'network.toggle', id: n.id, active: false }} label={t('turnOff')} confirmLabel={t('turnOffConfirm')} ariaLabel={t('turnOffOf', { what: String(n.cidr) })} />
+              ) : (
+                <ConfirmButton body={{ action: 'network.toggle', id: n.id, active: true }} label={t('turnOn')} confirmLabel={t('turnOn')} ariaLabel={t('turnOnOf', { what: String(n.cidr) })} />
+              )}
+            </li>
+          ))}
+          {OFFICE.allowedCidrs.map((c) => (
+            <li key={c} className="flex min-h-12 items-center gap-2">
+              <span className="num min-w-0 flex-1 truncate text-sm">{c}</span>
+              <Chip>{t('fromEnv')}</Chip>
+            </li>
+          ))}
+        </ul>
+  );
 
   return (
     <PageShell wide>
-      <h1 className="px-1 text-2xl font-extrabold tracking-tight">{t('title')}</h1>
+      <h1 className="px-1 text-2xl font-extrabold tracking-tight lg:hidden">{t('title')}</h1>
 
-      {/* PC: 왼쪽 = 근무시간·사무실 인터넷 주소·사무실 위치, 오른쪽 = 휴일 목록 (2026-10-06 의뢰인: 좁은 한 줄로 길게 늘어져 있었다) · 폰: 한 칸 */}
-      <div className="flex flex-col gap-3 lg:gap-4">
+      {/* ── PC ── */}
+      <div className="hidden lg:flex lg:flex-col lg:gap-4">
+        <div className="flex items-start gap-4">
+          <div className="min-w-0 flex-1">
+            <h1 className="text-2xl font-bold">{ts(tab === 'general' ? 'sGeneral' : tab === 'work' ? 'sWork' : tab === 'punch' ? 'sPunch' : 'sBreak')}</h1>
+            <p className="pt-1 text-sm text-faint">{tp(tab === 'general' ? 'descGeneral' : tab === 'work' ? 'descWork' : tab === 'punch' ? 'descPunch' : 'descBreak')}</p>
+          </div>
+          {tab !== 'general' && ruleForm}
+        </div>
+        <div className="border border-border bg-bg">
+          {tab === 'general' && (
+            <>
+              <SetRow label={tp('weekStart')}>
+                <p className="font-bold">{tp('weekStartValue')}</p>
+                <p className="text-muted">{tp('weekStartNote')}</p>
+              </SetRow>
+              <SetRow label={tp('companyHolidays')} last>
+                <p className="text-muted">{t('holidayNote')}</p>
+                <table className="num w-full max-w-3xl border border-border text-sm">
+                  <thead>
+                    <tr className="bg-surface">
+                      <th scope="col" className="px-3 py-2 text-left">{tp('colDate')}</th>
+                      <th scope="col" className="px-3 py-2 text-left">{tp('colName')}</th>
+                      <th scope="col" className="px-3 py-2 text-left">{tp('colKind')}</th>
+                      <th scope="col" className="w-32 px-3 py-2" />
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {(holidays ?? []).length === 0 && (
+                      <tr>
+                        <td colSpan={4} className="px-3 py-4 text-faint">{t('holidayNone')}</td>
+                      </tr>
+                    )}
+                    {(holidays ?? []).map((h) => (
+                      <tr key={h.the_date} className="border-t border-border">
+                        <td className="px-3 py-1">{day(h.the_date)}</td>
+                        <td className="px-3 py-1">{h.label}</td>
+                        <td className="px-3 py-1 text-muted">{t(h.kind === 'company' ? 'kind.company' : 'kind.public')}</td>
+                        <td className="px-3 py-1 text-right">
+                          <ConfirmButton body={{ action: 'holiday.remove', date: h.the_date }} label={t('remove')} confirmLabel={t('removeConfirm')} ariaLabel={t('removeOf', { what: `${h.the_date} ${h.label}` })} />
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+                <HolidayForm monthStart={monthStart} />
+              </SetRow>
+            </>
+          )}
+          {tab === 'work' && (
+            <>
+              {!current && <p className="m-4 rounded-button bg-warn-tint p-3 text-sm text-warn">{t('ruleNone')}</p>}
+              {current && (
+                <>
+                  <SetRow label={tp('applied')}>
+                    <p className="font-bold">{t('since', { date: day(current.effective_from) })}</p>
+                    <p className="text-muted">{t('ruleAddHint')}</p>
+                  </SetRow>
+                  <SetRow label={tp('workHours')}>
+                    <p className="num font-bold">{hhmm(current.start_time)} ~ {hhmm(current.end_time)}</p>
+                  </SetRow>
+                  <SetRow label={t('workdays')}>
+                    <p className="font-bold">{(current.workdays as number[]).map((d) => weekdays[d - 1]).join(' · ')}</p>
+                  </SetRow>
+                  <SetRow label={t('restDay')}>
+                    <p className="font-bold">{weekdays[current.weekly_rest_day - 1]}</p>
+                  </SetRow>
+                  <SetRow label={t('graceShort')}>
+                    <p className="num font-bold">{t('minutes', { n: current.late_grace_min })}</p>
+                  </SetRow>
+                </>
+              )}
+              <SetRow label={tp('deemed')}>
+                <Flag on label={tp('use')} />
+                <p className="text-muted">{tp('deemedNote')}</p>
+              </SetRow>
+              <SetBand>{tp('upcomingBand')}</SetBand>
+              {upcoming.length === 0 && <p className="px-6 py-4 text-sm text-faint">{tp('noRuleChange')}</p>}
+              {upcoming.map((r) => (
+                <SetRow key={r.id} label={t('upcoming', { date: day(r.effective_from) })}>
+                  {ruleLine(r)}
+                  <span className="self-start">
+                    <ConfirmButton body={{ action: 'rule.hide', id: r.id }} label={t('ruleHide')} confirmLabel={t('ruleHideConfirm')} ariaLabel={t('ruleHideOf', { date: r.effective_from })} />
+                  </span>
+                </SetRow>
+              ))}
+            </>
+          )}
+          {tab === 'punch' && (
+            <>
+              <SetBand>{tp('bandPunch')}</SetBand>
+              <SetRow label={tp('pcPunch')}>
+                <Flag on={false} label={tp('notUse')} />
+                <p className="text-muted">{tp('pcPunchNote')}</p>
+              </SetRow>
+              <SetBand>{tp('bandRound')}</SetBand>
+              <SetRow label={tp('roundIn')}>
+                <p className="num font-bold">{current?.round_step_min ? tp('roundInValue', { n: current.round_step_min }) : tp('roundNone')}</p>
+              </SetRow>
+              <SetRow label={tp('roundOut')}>
+                <p className="num font-bold">{current?.round_step_min ? tp('roundOutValue', { n: current.round_step_min }) : tp('roundNone')}</p>
+                <p className="text-muted">{t('roundHint')}</p>
+              </SetRow>
+              <SetBand>{tp('bandPlace')}</SetBand>
+              <SetRow label={t('networkTitle')}>
+                <p className={`font-bold ${here ? 'text-ok' : 'text-warn'}`}>{trace.ip ? t(here ? 'hereYes' : 'hereNo', { ip: trace.ip }) : t('hereUnknown')}</p>
+                <p className="text-muted">{t('networkNote')}</p>
+                <div className="max-w-3xl">{networkList}</div>
+                <NetworkForm currentIp={trace.ip} currentKnown={here} />
+              </SetRow>
+              <SetRow label={t('locationTitle')} last>
+                <Flag on={locations.some((l) => l.active)} label={t('placesCount', { n: locations.filter((l) => l.active).length })} />
+                <p className="text-muted">{t(locations.some((l) => l.active) ? 'gpsOn' : 'gpsOff')}</p>
+                <Link href="/admin/places" className="inline-flex min-h-8 items-center self-start font-bold text-primary">
+                  {t('placesLink')} ›
+                </Link>
+              </SetRow>
+            </>
+          )}
+          {tab === 'break' && (
+            <>
+              <SetRow label={tp('autoBreak')}>
+                <Flag on={breaks.length > 0} label={breaks.length > 0 ? tp('byClock') : tp('notUse')} />
+                {breaks.length === 0 ? (
+                  <p className="text-faint">{tp('breakNone')}</p>
+                ) : (
+                  <table className="num w-full max-w-xl border border-border text-sm">
+                    <thead>
+                      <tr className="bg-surface">
+                        <th scope="col" className="px-3 py-2 text-left">{tp('colBreakStart')}</th>
+                        <th scope="col" className="px-3 py-2 text-left">{tp('colBreakEnd')}</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {breaks.map((b) => (
+                        <tr key={b.start} className="border-t border-border">
+                          <td className="px-3 py-2">{b.start}</td>
+                          <td className="px-3 py-2">{b.end}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                )}
+                <p className="text-muted">{tp('breakNote')}</p>
+              </SetRow>
+              <SetRow label={tp('manualBreak')} last>
+                <Flag on={false} label={tp('notUse')} />
+                <p className="text-muted">{tp('manualBreakNote')}</p>
+              </SetRow>
+            </>
+          )}
+        </div>
+      </div>
+
+      {/* ── 폰 ── */}
+      <div className="flex flex-col gap-3 lg:hidden">
       <Card className="flex flex-col gap-3">
         <CardTitle help={t('ruleNote')}>{t('ruleTitle')}</CardTitle>
         {current ? (
@@ -77,16 +303,7 @@ export default async function SettingsPage() {
             {ruleLine(r)}
           </div>
         ))}
-        <RuleForm
-          tomorrow={addDays(today, 1)}
-          weekdays={weekdays}
-          initial={{
-            startTime: base ? hhmm(base.start_time) : '09:00', endTime: base ? hhmm(base.end_time) : '18:00', lateGraceMin: base?.late_grace_min ?? 0,
-            breakStart: base?.break_start ? hhmm(base.break_start) : '', breakEnd: base?.break_end ? hhmm(base.break_end) : '',
-            break2Start: (base?.extra_breaks as { start: string; end: string }[] | null)?.[0]?.start ?? '', break2End: (base?.extra_breaks as { start: string; end: string }[] | null)?.[0]?.end ?? '', roundStepMin: base?.round_step_min ?? 0,
-            workdays: (base?.workdays as number[] | undefined) ?? [1, 2, 3, 4, 5], weeklyRestDay: base?.weekly_rest_day ?? 7,
-          }}
-        />
+        {ruleForm}
       </Card>
 
       <Card className="flex flex-col gap-2">
@@ -113,29 +330,7 @@ export default async function SettingsPage() {
           {trace.ip ? t(here ? 'hereYes' : 'hereNo', { ip: trace.ip }) : t('hereUnknown')}
         </p>
         {(networks ?? []).length === 0 && OFFICE.allowedCidrs.length === 0 && <p className="text-sm text-faint">{t('networkNone')}</p>}
-        <ul className="divide-y divide-border">
-          {/* 검사 스크립트가 넣었다 끈 주소(메모가 e2e-…)는 목록에 보이지 않게 — 검사 계정·검사 그룹과 같은 규칙 */}
-          {(networks ?? []).filter((n) => n.active || !n.label?.startsWith('e2e-')).map((n) => (
-            <li key={n.id} className={`flex min-h-12 items-center gap-2 ${n.active ? '' : 'opacity-60'}`}>
-              <span className="min-w-0 flex-1">
-                <span className="num block truncate text-sm">{String(n.cidr)}</span>
-                {n.label && <span className="block truncate text-xs text-muted">{n.label}</span>}
-              </span>
-              {!n.active && <Chip>{t('off')}</Chip>}
-              {n.active ? (
-                <ConfirmButton body={{ action: 'network.toggle', id: n.id, active: false }} label={t('turnOff')} confirmLabel={t('turnOffConfirm')} ariaLabel={t('turnOffOf', { what: String(n.cidr) })} />
-              ) : (
-                <ConfirmButton body={{ action: 'network.toggle', id: n.id, active: true }} label={t('turnOn')} confirmLabel={t('turnOn')} ariaLabel={t('turnOnOf', { what: String(n.cidr) })} />
-              )}
-            </li>
-          ))}
-          {OFFICE.allowedCidrs.map((c) => (
-            <li key={c} className="flex min-h-12 items-center gap-2">
-              <span className="num min-w-0 flex-1 truncate text-sm">{c}</span>
-              <Chip>{t('fromEnv')}</Chip>
-            </li>
-          ))}
-        </ul>
+        {networkList}
         <NetworkForm currentIp={trace.ip} currentKnown={here} />
       </Card>
 

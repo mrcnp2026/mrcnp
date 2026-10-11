@@ -25,10 +25,11 @@ import { workStatusOn } from '@/lib/work-requests';
 import { MissingBanner } from './MissingBanner';
 import { NoteBox } from './NoteBox';
 import { SituationCard } from './SituationCard';
+import { StaffDesk } from './StaffDesk';
 import { TodayCard } from './TodayCard';
 import { WeekBar, type WeekCell } from './WeekBar';
 
-export default async function PunchPage({ searchParams }: { searchParams: Promise<{ w?: string }> }) {
+export default async function PunchPage({ searchParams }: { searchParams: Promise<{ w?: string; m?: string }> }) {
   const me = await getMe();
   if (!me) redirect('/login');
   const t = await getTranslations('home');
@@ -81,8 +82,13 @@ export default async function PunchPage({ searchParams }: { searchParams: Promis
   });
   const todayCell = cells.find((c) => c.today && !c.leave);
 
+  // PC에서는 시프티 직원 모드처럼 「스케줄」(통계 + 월 달력)을 보인다 — 폰 브라우저에는 만들지 않는다(자료를 두 번 읽지 않게)
+  const phone = isPhoneUserAgent((await headers()).get('user-agent'));
+
   return (
       <PageShell wide>
+        {!phone && <StaffDesk meId={me.id} today={today.workDate} month={(await searchParams).m} />}
+        <div className="flex flex-col gap-3 lg:hidden">
         {/* 관리자: 시프티 홈 맨 위의 바로가기 카드 (리포트 · 출근/퇴근 누락 기록) */}
         {me.role === 'admin' && (cards.has('report') || cards.has('missing')) && (
           <nav aria-label={t('shortcuts')} className="flex flex-col gap-2 lg:grid lg:grid-cols-2 lg:gap-4">
@@ -136,6 +142,7 @@ export default async function PunchPage({ searchParams }: { searchParams: Promis
           <Settings aria-hidden size={18} strokeWidth={1.75} />
           {t('settingsLink')}
         </Link>
+        </div>
 
       </PageShell>
   );

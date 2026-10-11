@@ -7,7 +7,7 @@ import Link from 'next/link';
 import { PageShell } from '@/components/ui';
 import { resolveDayType } from '@/config/labor-rules';
 import { OFFICE } from '@/config/office';
-import { addDays } from '@/lib/calendar';
+import { addDays, isoWeekday } from '@/lib/calendar';
 import { isFullDayLeave } from '@/lib/leave';
 import { buildOrgTree, groupPath, groupScope } from '@/lib/org';
 import { loadOrgGroups } from '@/lib/org-data';
@@ -36,6 +36,11 @@ export default async function RecordCalendarPage({ searchParams }: { searchParam
     const qs = new URLSearchParams();
     for (const [k, v] of Object.entries({ ym, q, g, live: sp.live === '1' ? '1' : '', ...over })) if (v) qs.set(k, v);
     return `/admin/records/calendar?${qs}`;
+  };
+  // 토요일 · 일요일 · 공휴일(주휴일 포함)은 빨간 글자와 옅은 붉은 바탕 (2026-10-11 의뢰인)
+  const redDay = (d: string) => {
+    const rule = data.ruleAt(d) ?? data.rule;
+    return isoWeekday(d) >= 6 || (rule ? resolveDayType(d, rule, data.holidays) === 'holiday' : false);
   };
   const days: string[] = [];
   for (let d = from; d <= to; d = addDays(d, 1)) days.push(d);
@@ -116,11 +121,10 @@ export default async function RecordCalendarPage({ searchParams }: { searchParam
                 {t('colEmployee')}
               </th>
               {days.map((d) => {
-                const rule = data.ruleAt(d) ?? data.rule;
-                const red = rule ? resolveDayType(d, rule, data.holidays) === 'holiday' : false;
+                const red = redDay(d);
                 return (
-                  <th key={d} scope="col" className={`num min-w-12 border-r border-border px-1 py-2 text-center text-xs! ${d === today ? 'bg-primary-tint!' : ''} ${red ? 'text-danger!' : ''}`}>
-                    {f.dateTime(kstDateTime(d, '12:00'), { day: 'numeric', weekday: 'narrow' })}
+                  <th key={d} scope="col" className={`num min-w-11 border-r border-border px-0.5 py-2 text-center text-xs! whitespace-nowrap ${d === today ? 'bg-primary-tint!' : red ? 'bg-danger-tint!' : ''} ${red ? 'text-danger!' : ''}`}>
+                    {Number(d.slice(8))}/{f.dateTime(kstDateTime(d, '12:00'), { weekday: 'narrow' })}
                   </th>
                 );
               })}
@@ -146,7 +150,7 @@ export default async function RecordCalendarPage({ searchParams }: { searchParam
                   <span className="block truncate text-faint">{groupPath(groups, p.groupId)}</span>
                 </th>
                 {cells.map((c) => (
-                  <td key={c.d} className={`num border-r border-b border-border p-0 text-center align-middle ${c.d === today ? 'bg-primary-tint' : ''}`}>
+                  <td key={c.d} className={`num border-r border-b border-border p-0 text-center align-middle ${c.d === today ? 'bg-primary-tint' : redDay(c.d) ? 'bg-danger-tint' : ''}`}>
                     {c.in || c.out ? (
                       <Link href={`/admin/records/${p.id}/${c.d}${sp.live === '1' ? '?live=1' : ''}`} title={c.open ? t('noOut') : undefined} className={`flex flex-col px-1 py-1.5 leading-tight hover:bg-primary-tint ${c.deemed ? 'text-muted' : ''}`}>
                         <span>{c.in ?? '–'}</span>
