@@ -28,6 +28,7 @@ export type MonthRequest = OvertimeRequest & { workDate: string; needsReview: bo
 export type MonthSummary = {
   row: PayrollRow;
   netMinutes: number; // 실제 근로 합계 (화면용)
+  payableMinutes: number; // 급여용 시간 합계 — 끊는 단위를 적용한 것 (확정-9). 끊지 않으면 netMinutes와 같다
   absentDates: string[];
   missingOutDates: string[];
   leaveDates: string[]; // 승인된 휴가가 있는 근무일
@@ -69,7 +70,7 @@ export function summarizeMonth(args: {
   // 넘기지 않으면 예전처럼 전부 센다 (출퇴근기록 화면의 월 집계 — 사실을 그대로 보여 주는 화면).
   confirmed?: ReadonlySet<string>;
 }): MonthSummary {
-  const s = { regular: 0, overtime: 0, night: 0, h8: 0, hOver: 0, net: 0 };
+  const s = { regular: 0, overtime: 0, night: 0, h8: 0, hOver: 0, net: 0, payable: 0 };
   const ap = { overtime: 0, night: 0, h8: 0, hOver: 0 };
   const pe = { overtime: 0, night: 0, holiday: 0 };
   let unreviewed = 0;
@@ -96,6 +97,7 @@ export function summarizeMonth(args: {
       s.h8 += d.holidayWithin8Minutes;
       s.hOver += d.holidayOver8Minutes;
       s.net += d.netMinutes;
+      s.payable += d.payableMinutes;
       // 오늘 아직 근무 중인 교대는 '퇴근 미기록'이 아니다 (진행 중). 내일이 되면 다시 판정된다
       const ongoing = d.workDate === args.today && d.pairs.some((p) => p.in && !p.out);
       d.flags.filter((f) => !(ongoing && f === FLAG.MISSING_OUT)).forEach((f) => flags.add(f));
@@ -163,6 +165,7 @@ export function summarizeMonth(args: {
 
   return {
     netMinutes: s.net,
+    payableMinutes: s.payable,
     absentDates,
     missingOutDates,
     leaveDates,

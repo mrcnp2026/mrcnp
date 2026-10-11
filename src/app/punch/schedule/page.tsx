@@ -28,7 +28,7 @@ export default async function MySchedulePage() {
   const total = (w: typeof days) => w.filter((x) => !x.off).reduce((a, x) => a + x.items.reduce((b, it) => b + spanMinutes(it), 0), 0);
 
   return (
-    <PageShell>
+    <PageShell wide>
       <MineBar menu={tm('menu')} title={t('title')} side={me.role === 'admin' ? { href: '/admin/schedule', label: t('mine') } : undefined} />
       <h1 className="sr-only px-1 lg:not-sr-only lg:text-2xl lg:font-extrabold lg:tracking-tight">{t('title')}</h1>
       {!data.rule && <p className="rounded-card bg-bg p-5 text-sm text-faint">{t('noRule')}</p>}

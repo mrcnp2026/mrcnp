@@ -125,7 +125,11 @@ try {
   await p.setViewportSize({ width: 1440, height: 900 });
   await p.goto(`${BASE}/admin/jobs`);
   await p.waitForLoadState('networkidle');
-  check(await p.getByLabel('직무 이름').isVisible(), 'PC에서는 추가 양식이 옆에 펼쳐져 있음');
+  // PC (2026-10-11): 목록이 전체 폭, 추가는 제목 오른쪽 버튼 → 가운데 팝업
+  check(!(await p.getByLabel('직무 이름').isVisible()), 'PC에서 추가 양식은 닫혀 있음(목록이 전체 폭)');
+  await p.locator('main button:has(svg.lucide-plus)').first().click();
+  check(await p.getByLabel('직무 이름').isVisible(), 'PC에서 추가 버튼을 누르면 팝업으로 양식이 열림');
+  await p.keyboard.press('Escape');
   await shot('05-PC-직무');
   check(errors.length === 0, '화면 오류 없음', errors[0] ?? '');
 } catch (e) {

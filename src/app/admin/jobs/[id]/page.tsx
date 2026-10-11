@@ -33,8 +33,8 @@ export default async function JobPage({ params }: { params: Promise<{ id: string
         <h1 className="text-2xl font-extrabold tracking-tight">{x.name}</h1>
         {!x.active && <Chip>{t('offChip')}</Chip>}
       </div>
-      <div className="grid items-start gap-3 lg:grid-cols-5 lg:gap-4">
-        <div className="flex flex-col gap-3 lg:col-span-3">
+      <div className="grid items-start gap-3">
+        <div className="flex flex-col gap-3">
           <section className="flex flex-col gap-2">
             <h2 className="px-1 text-sm font-medium text-muted">{t('assignTitle')}</h2>
             <Card className="flex flex-col gap-3">
@@ -43,9 +43,8 @@ export default async function JobPage({ params }: { params: Promise<{ id: string
           </section>
           <JobToggle id={x.id} active={x.active} />
         </div>
-        <AddSheet id="job-edit" title={t('edit')} className="lg:col-span-2">
+        <AddSheet id="job-edit" title={t('edit')} modal>
           <Card className="flex flex-col gap-3">
-            <h2 className="hidden text-sm font-medium text-muted lg:block">{t('edit')}</h2>
             <JobForm key={`${x.name}|${x.color}`} sheet="job-edit" initial={{ id: x.id, name: x.name, color: x.color }} />
           </Card>
         </AddSheet>

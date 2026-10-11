@@ -175,7 +175,7 @@ export default async function RecordsPage({ searchParams }: { searchParams: Prom
           <table className="num w-full table-fixed text-sm">
             <thead className="bg-surface text-xs text-muted">
               <tr>
-                {(['name', 'workedCol', 'actual', 'approved', 'pending', 'unreviewed', 'nightCol', 'holidayCol', 'lateCol', 'absentCol'] as const).map((k) => (
+                {(['name', 'workedCol', 'payableCol', 'actual', 'approved', 'pending', 'unreviewed', 'nightCol', 'holidayCol', 'lateCol', 'absentCol'] as const).map((k) => (
                   <th key={k} className="px-2 py-2 text-right leading-tight break-words first:w-1/5 first:text-left">{t(k)}</th>
                 ))}
               </tr>
@@ -191,6 +191,7 @@ export default async function RecordsPage({ searchParams }: { searchParams: Prom
                       </Link>
                     </td>
                     <td className="px-2 py-2 text-right whitespace-nowrap">{hm(s.netMinutes)}</td>
+                    <td className="px-2 py-2 text-right font-bold whitespace-nowrap">{hm(s.payableMinutes)}</td>
                     <td className="px-2 py-2 text-right whitespace-nowrap">{hm(Number(r.overtime_minutes))}</td>
                     <td className="px-2 py-2 text-right whitespace-nowrap">{hm(Number(r.approved_overtime_minutes))}</td>
                     <td className={`px-2 py-2 text-right whitespace-nowrap ${Number(r.pending_overtime_minutes) > 0 ? 'text-warn' : ''}`}>{hm(Number(r.pending_overtime_minutes))}</td>

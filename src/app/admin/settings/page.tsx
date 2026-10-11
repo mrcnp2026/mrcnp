@@ -57,7 +57,7 @@ export default async function SettingsPage() {
       <h1 className="px-1 text-2xl font-extrabold tracking-tight">{t('title')}</h1>
 
       {/* PC: 왼쪽 = 근무시간·사무실 인터넷 주소·사무실 위치, 오른쪽 = 휴일 목록 (2026-10-06 의뢰인: 좁은 한 줄로 길게 늘어져 있었다) · 폰: 한 칸 */}
-      <div className="flex flex-col gap-3 lg:grid lg:grid-cols-2 lg:items-start lg:gap-4">
+      <div className="flex flex-col gap-3 lg:gap-4">
       <Card className="flex flex-col gap-3">
         <CardTitle help={t('ruleNote')}>{t('ruleTitle')}</CardTitle>
         {current ? (
@@ -89,7 +89,7 @@ export default async function SettingsPage() {
         />
       </Card>
 
-      <Card className="flex flex-col gap-2 lg:col-start-2 lg:row-span-3 lg:row-start-1">
+      <Card className="flex flex-col gap-2">
         <CardTitle help={t('holidayNote')} aside={<span className="num text-sm text-faint">{holidays?.length ?? 0}</span>}>{t('holidayTitle')}</CardTitle>
         {(holidays ?? []).length === 0 && <p className="text-sm text-faint">{t('holidayNone')}</p>}
         <ul className="divide-y divide-border lg:max-h-96 lg:overflow-y-auto lg:pr-2">

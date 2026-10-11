@@ -39,7 +39,7 @@ export default async function MyRequestsPage({ searchParams }: { searchParams: P
   ];
 
   return (
-    <PageShell>
+    <PageShell wide>
       <h1 className="sr-only">{t('title')}</h1>
       {admin ? (
         <RequestTabs admin active="mine" q={q} counts={{ pending: (await pendingCounts()).total, mine: split.pending.length }} />

@@ -38,8 +38,8 @@ export default async function BranchPage({ params }: { params: Promise<{ id: str
         <h1 className="text-2xl font-extrabold tracking-tight">{g.name}</h1>
         {!g.active && <Chip>{t('offChip')}</Chip>}
       </div>
-      <div className="grid items-start gap-3 lg:grid-cols-5 lg:gap-4">
-        <div className="flex flex-col gap-3 lg:col-span-3">
+      <div className="grid items-start gap-3">
+        <div className="flex flex-col gap-3">
           <FieldList>
             <Field label={t('name')}>{g.name}</Field>
             <Field label={t('parent')}>{parent ? <Link href={`/admin/branches/${parent.id}`}>{parent.name}</Link> : t('parentNone')}</Field>
@@ -73,9 +73,8 @@ export default async function BranchPage({ params }: { params: Promise<{ id: str
             <p className="min-h-14 rounded-card bg-bg p-5 whitespace-pre-wrap">{g.memo ?? <span className="text-sm text-faint">{t('memoNone')}</span>}</p>
           </section>
         </div>
-        <AddSheet id="branch-edit" title={t('edit')} className="lg:col-span-2">
+        <AddSheet id="branch-edit" title={t('edit')} modal>
           <Card className="flex flex-col gap-3">
-            <h2 className="hidden text-sm font-medium text-muted lg:block">{t('edit')}</h2>
             <BranchEditForm key={`${g.name}|${g.memo}|${g.active}|${picked.join()}`} sheet="branch-edit" id={g.id} name={g.name} memo={g.memo ?? ''} active={g.active} places={choices} picked={picked} />
           </Card>
         </AddSheet>

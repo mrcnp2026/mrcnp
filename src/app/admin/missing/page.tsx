@@ -64,7 +64,7 @@ export default async function MissingPage({ searchParams }: { searchParams: Prom
   const tab = (on: boolean) => `flex min-h-11 flex-1 items-center justify-center gap-1 border-b-2 text-sm font-bold ${on ? 'border-text text-text' : 'border-transparent text-muted'}`;
 
   return (
-    <PageShell>
+    <PageShell wide>
       <div className="flex flex-wrap items-center gap-x-1 px-1">
         <h1 className="text-2xl font-extrabold tracking-tight">{t('title')}</h1>
         <Help>{t('intro', { h: OFFICE.missingOutGraceHours, m: OFFICE.missingInGraceMin })}</Help>

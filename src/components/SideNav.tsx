@@ -58,6 +58,7 @@ export function SideNav({ isAdmin, inboxCount = 0 }: { isAdmin: boolean; inboxCo
             key: 'attendance',
             icon: Clock,
             sub: [
+              { href: '/admin/records/calendar', key: 'calendarView' },
               { href: '/admin/records/list', key: 'listView' },
               { href: '/admin/records', key: 'monthly' },
               { href: '/admin/missing', key: 'missing' },

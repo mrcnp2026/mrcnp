@@ -9,7 +9,7 @@ import { useTranslations } from 'next-intl';
 export function PageSkeleton() {
   const t = useTranslations('common');
   return (
-    <div className="mx-auto flex w-full max-w-md flex-col gap-4 px-4 py-4 lg:max-w-7xl lg:px-8 lg:py-6" aria-busy="true">
+    <div className="mx-auto flex w-full max-w-md flex-col gap-4 px-4 py-4 lg:mx-0 lg:max-w-none lg:px-8 lg:py-6" aria-busy="true">
       <p className="flex items-center gap-2 text-sm font-medium text-muted">
         <Clock aria-hidden size={18} strokeWidth={1.75} />
         {t('working')}

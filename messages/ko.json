@@ -626,7 +626,8 @@
       "viewDays": "날짜별 기록 보기",
       "groupAll": "전체 부서",
       "groupFilter": "부서·팀으로 보기",
-      "toList": "기록 목록"
+      "toList": "기록 목록",
+      "payableCol": "급여용"
     },
     "notices": {
       "title": "공지",
@@ -1462,6 +1463,28 @@
       "toManage": "입사일 · 지금 건 고치기",
       "toManageValue": "연차 관리",
       "hint": "발생 일수는 관리자가 넣습니다. 자동 발생(회계연도 기준 · 1년 미만 매달 1일)과 휴가 그룹별 발생은 아직 없습니다."
+    },
+    "recordCalendar": {
+      "title": "출퇴근기록",
+      "toList": "목록형",
+      "prev": "이전 달",
+      "next": "다음 달",
+      "thisMonth": "이번 달",
+      "search": "이름 검색",
+      "filter": "부서",
+      "groupAll": "전체 부서",
+      "apply": "보기",
+      "colEmployee": "직원",
+      "colTotal": "합계",
+      "days": "{n}일",
+      "leave": "휴가",
+      "deemed": "간주",
+      "empty": "이 달에 볼 직원이 없습니다.",
+      "practice": "연습 기록",
+      "live": "실제 기록",
+      "hint": "칸의 윗줄은 출근, 아랫줄은 퇴근 시각입니다. 합계는 기록이 있는 날 수와 급여용 시간입니다. 칸을 누르면 그날의 기록으로 갑니다.",
+      "hm": "{h}시간 {m}분",
+      "noOut": "퇴근 없음"
     }
   },
   "side": {
@@ -1506,7 +1529,8 @@
     "leaveStatus": "휴가 현황",
     "leaveTypes": "휴가 유형",
     "requests": "요청 내역",
-    "admin": "관리"
+    "admin": "관리",
+    "calendarView": "달력형"
   },
   "nav": {
     "home": "홈",

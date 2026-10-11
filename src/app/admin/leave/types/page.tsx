@@ -25,9 +25,9 @@ export default async function LeaveTypesPage({ searchParams }: { searchParams: P
 
   return (
     <PageShell wide>
-      <DetailBar back="/admin/leave" backLabel={t('back')} title={t('title')} extra={<Help>{t('intro')}</Help>} />
-      <div className="grid items-start gap-3 lg:grid-cols-5 lg:gap-4">
-        <div className="flex flex-col gap-3 lg:col-span-3">
+      <DetailBar sheet={{ id: 'leave-type', label: t('add') }} back="/admin/leave" backLabel={t('back')} title={t('title')} extra={<Help>{t('intro')}</Help>} />
+      <div className="grid items-start gap-3">
+        <div className="flex flex-col gap-3">
           <nav aria-label={t('title')} className="-mx-4 -mt-3 flex border-b border-border bg-bg px-2 lg:mx-0 lg:mt-0 lg:rounded-card lg:border-0">
             <Link href="/admin/leave/types" aria-current={!off ? 'page' : undefined} className={tab(!off)}>
               {t('tabOn')}
@@ -62,9 +62,8 @@ export default async function LeaveTypesPage({ searchParams }: { searchParams: P
             </section>
           ))}
         </div>
-        <AddSheet id="leave-type" title={t('add')} className="lg:col-span-2">
+        <AddSheet id="leave-type" title={t('add')} modal>
           <Card className="flex flex-col gap-3">
-            <h2 className="hidden text-sm font-medium text-muted lg:block">{t('add')}</h2>
             <LeaveTypeForm sheet="leave-type" groups={groupNames} />
           </Card>
         </AddSheet>

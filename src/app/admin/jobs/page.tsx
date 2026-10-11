@@ -30,9 +30,9 @@ export default async function JobsPage({ searchParams }: { searchParams: Promise
 
   return (
     <PageShell wide>
-      <DetailBar back="/punch" backLabel={tc('back')} title={t('title')} extra={<Help>{t('intro')}</Help>} />
-      <div className="grid items-start gap-3 lg:grid-cols-5 lg:gap-4">
-        <div className="flex flex-col gap-3 lg:col-span-3">
+      <DetailBar sheet={{ id: 'job', label: t('add') }} back="/punch" backLabel={tc('back')} title={t('title')} extra={<Help>{t('intro')}</Help>} />
+      <div className="grid items-start gap-3">
+        <div className="flex flex-col gap-3">
           <nav aria-label={t('title')} className="-mx-4 -mt-3 flex border-b border-border bg-bg px-2 lg:mx-0 lg:mt-0 lg:rounded-card lg:border-0">
             <Link href="/admin/jobs" aria-current={!off ? 'page' : undefined} className={tab(!off)}>
               {t('tabOn')}
@@ -56,9 +56,8 @@ export default async function JobsPage({ searchParams }: { searchParams: Promise
             ))}
           </RowList>
         </div>
-        <AddSheet id="job" title={t('add')} className="lg:col-span-2">
+        <AddSheet id="job" title={t('add')} modal>
           <Card className="flex flex-col gap-3">
-            <h2 className="hidden text-sm font-medium text-muted lg:block">{t('add')}</h2>
             <JobForm sheet="job" />
           </Card>
         </AddSheet>

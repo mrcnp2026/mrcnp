@@ -1,5 +1,6 @@
 // 직원 "정정 요청" — 빠진 기록 추가(4-8의 유일한 채우는 길) · 시각 수정 · 잘못 찍은 기록 무효 (7-10).
 // 원본은 그대로 남고, 관리자가 승인한 정정만 집계에 쓰인다. 배너에서 오면 날짜·종류가 미리 채워진다.
+import { SheetOpener } from '@/components/SheetOpener';
 import { getFormatter, getTranslations } from 'next-intl/server';
 import Link from 'next/link';
 import { redirect } from 'next/navigation';
@@ -32,11 +33,12 @@ export default async function CorrectionsPage({ searchParams }: { searchParams: 
       <div className="flex flex-wrap items-center gap-x-1">
         <h1 className="text-2xl font-semibold text-primary-deep">{t('title')}</h1>
         <Help>{t('intro')}</Help>
+        <SheetOpener id="correction" label={t('title')} className="ml-auto hidden lg:inline-flex" />
       </div>
       {/* PC: 왼쪽 = 요청 쓰기, 오른쪽 = 내 요청 (2026-10-06 의뢰인) · 폰: 내 요청 목록이 먼저, 쓰는 양식은 + 버튼을 누르면 올라온다 (2026-10-10 의뢰인) */}
-      <div className="flex flex-col gap-3 lg:grid lg:grid-cols-2 lg:items-start lg:gap-4">
+      <div className="flex flex-col gap-3">
       {/* 미기록 배너에서 날짜를 채워 넘어왔거나 ?new=1이면 열린 채로 시작한다 */}
-      <AddSheet id="correction" title={t('title')} defaultOpen={!!sp.date || sp.new === '1'}>
+      <AddSheet id="correction" title={t('title')} defaultOpen={!!sp.date || sp.new === '1'} modal>
       <CorrectionForm
         today={toKstDate(new Date())}
         initialDate={sp.date && /^\d{4}-\d{2}-\d{2}$/.test(sp.date) ? sp.date : null}

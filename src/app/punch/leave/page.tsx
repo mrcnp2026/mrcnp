@@ -1,5 +1,6 @@
 // 직원 「연차」 탭 (②-2 게이트 5, 시프티 대조 우선 반영 ①). 잔여 · 신청 · 내 신청.
 // 대기 일수는 잔여에서 빼지 않고 따로 보여 준다 (7-3 요점 5). 사유는 선택 (4-7).
+import { SheetOpener } from '@/components/SheetOpener';
 import { CalendarDays } from 'lucide-react';
 import { getFormatter, getTranslations } from 'next-intl/server';
 import Link from 'next/link';
@@ -52,10 +53,14 @@ export default async function LeavePage({ searchParams }: { searchParams: Promis
           </nav>
         )}
       </MineBar>
-      <h1 className="sr-only lg:not-sr-only lg:text-2xl lg:font-semibold lg:text-primary-deep">{t('title')}</h1>
+      <div className="flex items-center gap-2">
+        <h1 className="sr-only lg:not-sr-only lg:text-2xl lg:font-semibold lg:text-primary-deep">{t('title')}</h1>
+        <SheetOpener id="leave" label={t('request')} className="ml-auto hidden lg:inline-flex" />
+        <SheetOpener id="work" label={tw('title')} className="hidden lg:inline-flex" />
+      </div>
 
       {/* PC: 왼쪽 = 휴가, 오른쪽 = 외근·출장·재택. 줄마다 좌우 높이를 맞춘다 — ① 요약 ② 신청 ③ 내 신청 (2026-10-06 의뢰인: 위쪽이 어긋났다) · 폰: 휴가 3칸 뒤에 외근 3칸 (order) */}
-      <div className="flex flex-col gap-3 lg:grid lg:grid-cols-2 lg:gap-4">
+      <div className="flex flex-col gap-3">
 
       <Card className="order-1 flex flex-col gap-3 p-6">
         <CardTitle icon={CalendarDays} aside={bal.grant && <span className="text-sm text-faint">{bal.grant.periodLabel}</span>}>
@@ -86,7 +91,7 @@ export default async function LeavePage({ searchParams }: { searchParams: Promis
       </Card>
 
       {/* 폰: 양식은 + 버튼을 누르면 올라온다 (2026-10-10 의뢰인) · PC: 제자리에 펼쳐 둔다 */}
-      <AddSheet id="leave" title={t('request')} defaultOpen={sp.new === 'leave'} className="order-2 lg:order-3 lg:grid">
+      <AddSheet id="leave" title={t('request')} defaultOpen={sp.new === 'leave'} modal>
         <LeaveForm today={today} types={types.filter((x) => x.active).map((x) => ({ code: x.code, name: nameOf(x.code), unit: x.dayUnit, deducts: x.deductsBalance, hours: x.hours ?? x.dayUnit * 8, startTime: x.startTime ?? null, endTime: x.endTime ?? null, group: x.groupName ?? null }))} />
       </AddSheet>
 
@@ -129,7 +134,7 @@ export default async function LeavePage({ searchParams }: { searchParams: Promis
         </div>
       </div>
       {/* 홈의 "사무실 밖" 안내에서 날짜를 채워 넘어오면 열린 채로 시작한다 */}
-      <AddSheet id="work" title={tw('title')} defaultOpen={!!sp.workDate || sp.new === 'work'} className="order-5 lg:order-4 lg:grid">
+      <AddSheet id="work" title={tw('title')} defaultOpen={!!sp.workDate || sp.new === 'work'} modal>
         <WorkForm today={today} initialDate={sp.workDate && /^\d{4}-\d{2}-\d{2}$/.test(sp.workDate) ? sp.workDate : null} />
       </AddSheet>
       <section className="order-6 flex flex-col gap-2">

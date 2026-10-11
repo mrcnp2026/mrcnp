@@ -626,7 +626,8 @@
       "viewDays": "View daily records",
       "groupAll": "All departments",
       "groupFilter": "Filter by department or team",
-      "toList": "Record list"
+      "toList": "Record list",
+      "payableCol": "Payable"
     },
     "notices": {
       "title": "Notices",
@@ -1462,6 +1463,28 @@
       "toManage": "Hire date · edit current entry",
       "toManageValue": "Leave management",
       "hint": "Accrued days are entered by an admin. Automatic accrual and accrual by leave group are not available yet."
+    },
+    "recordCalendar": {
+      "title": "Attendance",
+      "toList": "List",
+      "prev": "Previous month",
+      "next": "Next month",
+      "thisMonth": "This month",
+      "search": "Search name",
+      "filter": "Department",
+      "groupAll": "All departments",
+      "apply": "Show",
+      "colEmployee": "Employee",
+      "colTotal": "Total",
+      "days": "{n} days",
+      "leave": "Leave",
+      "deemed": "Deemed",
+      "empty": "No employees to show this month.",
+      "practice": "Practice records",
+      "live": "Live records",
+      "hint": "Top line is clock-in, bottom line is clock-out. Totals show days with records and payable time. Click a cell to open that day.",
+      "hm": "{h}h {m}m",
+      "noOut": "No clock-out"
     }
   },
   "side": {
@@ -1506,7 +1529,8 @@
     "leaveStatus": "Leave balances",
     "leaveTypes": "Leave types",
     "requests": "Requests",
-    "admin": "Manage"
+    "admin": "Manage",
+    "calendarView": "Calendar"
   },
   "nav": {
     "home": "Home",

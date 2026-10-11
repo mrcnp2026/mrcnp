@@ -164,7 +164,11 @@ try {
   await p.setViewportSize({ width: 1440, height: 900 });
   await p.goto(`${BASE}/admin/places/${placeId}`);
   await p.locator('[data-place-map]').first().locator('img').first().waitFor({ timeout: 20000 });
-  check(await p.getByLabel('출퇴근 장소명').isVisible(), 'PC에서는 고치기 양식이 옆에 펼쳐져 있음');
+  // PC (2026-10-11): 고치기는 제목 줄의 버튼 → 가운데 팝업
+  check(!(await p.getByLabel('출퇴근 장소명').isVisible()), 'PC에서 고치기 양식은 닫혀 있음');
+  await p.locator('[data-open-sheet="place-edit"]').click();
+  check(await p.getByLabel('출퇴근 장소명').isVisible(), 'PC에서 수정 버튼을 누르면 팝업으로 양식이 열림');
+  await p.keyboard.press('Escape');
   await shot('07-PC-장소-상세');
   await p.goto(`${BASE}/admin/branches`);
   await shot('08-PC-지점-목록');

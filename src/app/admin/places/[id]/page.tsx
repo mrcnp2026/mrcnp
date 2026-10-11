@@ -31,8 +31,8 @@ export default async function PlacePage({ params }: { params: Promise<{ id: stri
         <h1 className="text-2xl font-extrabold tracking-tight">{p.label ?? t('unnamed')}</h1>
         {!p.active && <Chip>{t('offChip')}</Chip>}
       </div>
-      <div className="grid items-start gap-3 lg:grid-cols-5 lg:gap-4">
-        <div className="flex flex-col gap-3 lg:col-span-3">
+      <div className="grid items-start gap-3">
+        <div className="flex flex-col gap-3">
           <FieldList>
             <Field label={t('name')}>{p.label ?? t('unnamed')}</Field>
             <Field label={t('address')}>{p.address ?? t('noAddress')}</Field>
@@ -62,9 +62,8 @@ export default async function PlacePage({ params }: { params: Promise<{ id: stri
           </section>
           <PlaceToggle id={p.id} active={p.active} />
         </div>
-        <AddSheet id="place-edit" title={t('edit')} className="lg:col-span-2">
+        <AddSheet id="place-edit" title={t('edit')} modal>
           <Card className="flex flex-col gap-3">
-            <h2 className="hidden text-sm font-medium text-muted lg:block">{t('edit')}</h2>
             <PlaceForm key={`${p.lat},${p.lng},${p.radiusM},${p.label},${p.address}`} sheet="place-edit" initial={{ id: p.id, label: p.label ?? '', address: p.address ?? '', lat: p.lat, lng: p.lng, radiusM: p.radiusM }} />
           </Card>
         </AddSheet>

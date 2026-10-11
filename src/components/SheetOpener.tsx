@@ -4,12 +4,13 @@
 import { Plus } from 'lucide-react';
 import { OPEN_SHEET_EVENT } from './AddSheet';
 
-export function SheetOpener({ id, label, className = '' }: { id: string; label: string; className?: string }) {
+// className에 보이는 방식(display)을 준다 — 기본 inline-flex. 폰에서 숨길 때는 'hidden lg:inline-flex' (기본값과 hidden을 함께 쓰면 어느 쪽이 이길지 알 수 없다)
+export function SheetOpener({ id, label, className = 'inline-flex' }: { id: string; label: string; className?: string }) {
   return (
     <button
       type="button"
       onClick={() => window.dispatchEvent(new CustomEvent(OPEN_SHEET_EVENT, { detail: id }))}
-      className={`inline-flex min-h-8 shrink-0 items-center gap-1.5 rounded-button bg-primary px-4 text-sm font-bold whitespace-nowrap text-on-primary ${className}`}
+      className={`min-h-8 shrink-0 items-center gap-1.5 rounded-button bg-primary px-4 text-sm font-bold whitespace-nowrap text-on-primary ${className}`}
     >
       <Plus aria-hidden size={16} strokeWidth={2.5} />
       {label}

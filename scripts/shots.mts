@@ -56,6 +56,9 @@ try {
   await shot('admin-schedule', '/admin/schedule');
   await shot('admin-schedule-month', '/admin/schedule?v=month&from=' + new Date().toISOString().slice(0, 7) + '-01&to=' + new Date().toISOString().slice(0, 7) + '-28');
   await shot('admin-record-list', '/admin/records/list');
+  await shot('admin-record-calendar', '/admin/records/calendar');
+  await shot('admin-jobs', '/admin/jobs');
+  await shot('admin-shifts', '/admin/shifts');
   await shot('admin-records', '/admin/records');
   await shot('admin-inbox', '/admin/inbox');
   await shot('admin-leave', '/admin/leave');

@@ -39,9 +39,9 @@ export default async function BranchesPage({ searchParams }: { searchParams: Pro
 
   return (
     <PageShell wide>
-      <DetailBar back="/punch" backLabel={tc('back')} title={t('title')} extra={<Help>{t('intro')}</Help>} action={{ href: '/admin/members/groups', label: t('diagram') }} />
-      <div className="grid items-start gap-3 lg:grid-cols-5 lg:gap-4">
-        <div className="flex flex-col gap-3 lg:col-span-3">
+      <DetailBar sheet={{ id: 'branch', label: t('add') }} back="/punch" backLabel={tc('back')} title={t('title')} extra={<Help>{t('intro')}</Help>} action={{ href: '/admin/members/groups', label: t('diagram') }} />
+      <div className="grid items-start gap-3">
+        <div className="flex flex-col gap-3">
           <nav aria-label={t('title')} className="-mx-4 -mt-3 flex border-b border-border bg-bg px-2 lg:mx-0 lg:mt-0 lg:rounded-card lg:border-0">
             <Link href="/admin/branches" aria-current={!off ? 'page' : undefined} className={tab(!off)}>
               {t('tabOn')}
@@ -75,9 +75,8 @@ export default async function BranchesPage({ searchParams }: { searchParams: Pro
             ))}
           </RowList>
         </div>
-        <AddSheet id="branch" title={t('add')} className="lg:col-span-2">
+        <AddSheet id="branch" title={t('add')} modal>
           <Card className="flex flex-col gap-3">
-            <h2 className="hidden text-sm font-medium text-muted lg:block">{t('add')}</h2>
             <BranchAddForm sheet="branch" parents={tree.filter((d) => d.active).map((d) => ({ id: d.id, name: d.name }))} />
           </Card>
         </AddSheet>

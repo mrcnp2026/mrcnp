@@ -39,8 +39,8 @@ export default async function ShiftPage({ params }: { params: Promise<{ id: stri
         <h1 className="text-2xl font-extrabold tracking-tight">{x.name}</h1>
         {!x.active && <Chip>{t('offChip')}</Chip>}
       </div>
-      <div className="grid items-start gap-3 lg:grid-cols-5 lg:gap-4">
-        <div className="flex flex-col gap-3 lg:col-span-3">
+      <div className="grid items-start gap-3">
+        <div className="flex flex-col gap-3">
           <FieldList>
             <Field label={t('name')}>{x.name}</Field>
             <Field label={t('time')}>
@@ -63,9 +63,8 @@ export default async function ShiftPage({ params }: { params: Promise<{ id: stri
           </section>
           <ShiftToggle id={x.id} active={x.active} />
         </div>
-        <AddSheet id="shift-edit" title={t('edit')} className="lg:col-span-2">
+        <AddSheet id="shift-edit" title={t('edit')} modal>
           <Card className="flex flex-col gap-3">
-            <h2 className="hidden text-sm font-medium text-muted lg:block">{t('edit')}</h2>
             <ShiftForm key={`${x.name}|${x.startTime}|${x.endTime}|${x.kind}|${x.color}|${x.memo}`} sheet="shift-edit" initial={{ id: x.id, name: x.name, startTime: x.startTime, endTime: x.endTime, kind: x.kind, color: x.color, memo: x.memo ?? '' }} />
           </Card>
         </AddSheet>

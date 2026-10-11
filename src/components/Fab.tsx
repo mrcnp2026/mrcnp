@@ -56,7 +56,7 @@ export function Fab({ label, items, href }: { label: string; items?: { id: strin
 /** 상세 화면 오른쪽 위 「수정」 — 폰에서 고치기 창을 연다. PC에서는 양식이 화면에 펼쳐져 있어 보이지 않는다 */
 export function OpenSheetButton({ sheet, children }: { sheet: string; children: string }) {
   return (
-    <button type="button" data-open-sheet={sheet} onClick={() => openSheet(sheet)} className="min-h-11 px-2 font-bold text-primary lg:hidden">
+    <button type="button" data-open-sheet={sheet} onClick={() => openSheet(sheet)} className="min-h-11 px-2 font-bold text-primary lg:min-h-8 lg:rounded-button lg:border lg:border-nav lg:bg-bg lg:px-4 lg:text-sm lg:text-nav">
       {children}
     </button>
   );
