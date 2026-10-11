@@ -1,7 +1,7 @@
 // 근무일정 틀(템플릿) — 직원마다 다른 출퇴근 시각 (의뢰인 2026-10-10: 시프티의 「근무일정 템플릿」처럼. 07:30·07:40·07:50 시작 등을 만들어 직원별로 적용). 순수함수.
 // 회사 근무규칙(지각 유예·휴게·근무 요일·주휴일)은 그대로 쓰고, **시작·끝 시각만** 그 직원의 틀로 바꿔 끼운다.
 //   → 지각·미기록·「야근중」·홈 화면의 오늘 일정이 전부 그 직원의 틀 기준이 된다. 틀이 없는 직원은 회사 규칙 그대로다.
-// 유형 「간주 근무」: 찍지 않아도 그 시간만큼 근무한 것으로 본다 (대표·경영진). 찍은 기록이 있으면 기록이 먼저다.
+// 유형 「간주 근무」: 출퇴근 기록이 불명확하더라도 그 시간만큼 근무한 것으로 본다 (확정-7, 2026-10-11). 찍은 기록은 참고로만 남는다.
 import { kstDateTime } from '@/lib/time';
 import type { PunchPair, WorkRule } from '@/lib/types';
 
@@ -24,7 +24,7 @@ export function applyTemplate(rule: WorkRule | null, tpl: Pick<ShiftTemplate, 's
 }
 
 /**
- * 간주 근무의 그날 근무 — 찍은 기록이 없는 근무일에만 쓴다.
+ * 간주 근무의 그날 근무 — 찍은 기록과 상관없이 이 시간으로 계산한다 (확정-7).
  * 지난 날은 시작~끝 전부, 오늘은 시작 시각이 지나야 생기고 끝 시각 전에는 "근무 중"(퇴근 없음), 앞날은 없다.
  */
 export function deemedPair(tpl: Pick<ShiftTemplate, 'startTime' | 'endTime'>, workDate: string, now: Date): PunchPair | null {
@@ -62,7 +62,7 @@ export type DayShift = { id: string; employeeId: string; workDate: string; start
 export type PlanItem = { startTime: string; endTime: string; kind: ShiftKind; name: string | null; color: ShiftColor | null; shiftId: string | null; note: string | null; source: 'shift' | 'template' | 'rule' };
 export type DayPlan = {
   rule: WorkRule | null; // 그날 판정에 쓰는 규칙 (시작·끝 시각이 그날 일정으로 바뀐 것)
-  deemed: { startTime: string; endTime: string } | null; // 간주 근무로 볼 시간 (찍은 기록이 없을 때만 쓴다)
+  deemed: { startTime: string; endTime: string } | null; // 간주 근무로 볼 시간 (찍은 기록과 상관없이 쓴다, 확정-7)
   items: PlanItem[]; // 화면에 보일 그날 일정 줄 (시작 시각 순)
 };
 

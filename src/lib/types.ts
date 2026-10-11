@@ -9,6 +9,8 @@ export type WorkRule = {
   lateGraceMin: number;
   breakStart: string | null; // 1.3판: 휴게시간대. 둘 다 있거나 둘 다 null
   breakEnd: string | null;
+  extraBreaks?: { start: string; end: string }[]; // 둘째 휴게시간대부터 (예: 17:00~17:30) — 확정-9. 없으면 휴게시간대 하나
+  roundStepMin?: number; // 급여용 시간의 끊는 단위(분). 출근은 올림 · 퇴근은 내림 — 확정-9. 0이나 없음 = 끊지 않는다
   workdays: number[]; // ISO 1=월 … 7=일
   weeklyRestDay: number; // 주휴일 (기본 7=일)
 };

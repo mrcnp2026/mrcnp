@@ -8,7 +8,15 @@ const rule = (over: Record<string, unknown> = {}) => ({ startTime: '09:00', endT
 describe('근무시간', () => {
   it('바른 값은 그대로, 요일은 정렬·중복 제거', () => {
     const r = validateRule(rule({ workdays: [5, 1, 1, 3, 2, 4], lateGraceMin: '10' }), TODAY);
-    expect(r).toEqual({ ok: true, value: { startTime: '09:00', endTime: '18:00', lateGraceMin: 10, breakStart: '12:00', breakEnd: '13:00', workdays: [1, 2, 3, 4, 5], weeklyRestDay: 7, effectiveFrom: '2026-11-01' } });
+    expect(r).toEqual({ ok: true, value: { startTime: '09:00', endTime: '18:00', lateGraceMin: 10, breakStart: '12:00', breakEnd: '13:00', extraBreaks: [], roundStepMin: 0, workdays: [1, 2, 3, 4, 5], weeklyRestDay: 7, effectiveFrom: '2026-11-01' } });
+  });
+  it('둘째 휴게와 급여용 시간 끊는 단위 (확정-9) — 둘째 휴게는 근무시간 끝 뒤여도 된다', () => {
+    const r = validateRule(rule({ startTime: '08:00', endTime: '17:00', break2Start: '17:00', break2End: '17:30', roundStepMin: '15' }), TODAY);
+    expect(r.ok && r.value.extraBreaks).toEqual([{ start: '17:00', end: '17:30' }]);
+    expect(r.ok && r.value.roundStepMin).toBe(15);
+    expect(validateRule(rule({ break2Start: '17:00' }), TODAY)).toEqual({ ok: false, code: 'invalid_break' });
+    expect(validateRule(rule({ break2Start: '17:30', break2End: '17:00' }), TODAY)).toEqual({ ok: false, code: 'invalid_break' });
+    expect(validateRule(rule({ roundStepMin: 7 }), TODAY)).toEqual({ ok: false, code: 'invalid_input' });
   });
   it('지난 날짜부터 적용할 수 없다 (이미 본 숫자가 바뀐다) — 오늘부터는 된다', () => {
     expect(validateRule(rule({ effectiveFrom: '2026-10-04' }), TODAY)).toEqual({ ok: false, code: 'past_date' });

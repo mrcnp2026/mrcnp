@@ -32,7 +32,7 @@ export const POST = api('admin.settings', async (req, ctx) => {
         .from('work_rules')
         .insert({
           name: `rule ${r.effectiveFrom}`, start_time: r.startTime, end_time: r.endTime, late_grace_min: r.lateGraceMin,
-          break_start: r.breakStart, break_end: r.breakEnd, workdays: r.workdays, weekly_rest_day: r.weeklyRestDay, effective_from: r.effectiveFrom,
+          break_start: r.breakStart, break_end: r.breakEnd, extra_breaks: r.extraBreaks, round_step_min: r.roundStepMin, workdays: r.workdays, weekly_rest_day: r.weeklyRestDay, effective_from: r.effectiveFrom,
         })
         .select('id')
         .single();

@@ -24,7 +24,7 @@ import { calcWeek } from '@/lib/worktime';
 export const loadRuleVersions = cache(async (): Promise<RuleVersion[]> => {
   const { data } = await createAdminClient()
     .from('work_rules')
-    .select('start_time, end_time, late_grace_min, break_start, break_end, workdays, weekly_rest_day, effective_from')
+    .select('start_time, end_time, late_grace_min, break_start, break_end, extra_breaks, round_step_min, workdays, weekly_rest_day, effective_from')
     .eq('active', true)
     .order('effective_from', { ascending: false });
   return (data ?? []).map((d) => ({
@@ -35,6 +35,8 @@ export const loadRuleVersions = cache(async (): Promise<RuleVersion[]> => {
       lateGraceMin: d.late_grace_min,
       breakStart: d.break_start,
       breakEnd: d.break_end,
+      extraBreaks: (d.extra_breaks as { start: string; end: string }[] | null) ?? [],
+      roundStepMin: d.round_step_min ?? 0,
       workdays: d.workdays,
       weeklyRestDay: d.weekly_rest_day,
     },
@@ -128,8 +130,8 @@ export async function loadEmployeeToday(employeeId: string, now: Date): Promise<
   const rule = plan.rule && timedLeave.length ? trimRuleByLeave(plan.rule, timedLeave) : plan.rule;
   const byDate = pairsByWorkDate(events, corrections);
   let pairs = byDate.get(workDate)?.pairs ?? [];
-  // 간주 근무: 찍지 않은 날은 일정 시간만큼 근무로 본다
-  if (pairs.length === 0 && plan.deemed) {
+  // 간주 근무 (확정-7): 찍은 기록과 상관없이 일정 시간만큼 근무로 본다
+  if (plan.deemed) {
     const v = deemedPair(plan.deemed, workDate, now);
     if (v) pairs = [v];
   }

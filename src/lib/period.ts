@@ -8,7 +8,14 @@ import { pairsByWorkDate } from '@/lib/pairs';
 import type { DayType, HolidayRow, PunchCorrection, PunchEvent, PunchPair, WorkRule } from '@/lib/types';
 import { calcWeek, type WorkCalc } from '@/lib/worktime';
 
-export type DayRow = WorkCalc & { workDate: string; dayType: DayType; pairs: PunchPair[]; weekRegularMinutesSoFar: number };
+export type DayRow = WorkCalc & {
+  workDate: string;
+  dayType: DayType;
+  pairs: PunchPair[]; // 계산에 쓴 출근–퇴근. 간주 근무일에는 일정 시각이다
+  weekRegularMinutesSoFar: number;
+  deemed?: boolean; // 간주 근무로 계산한 날
+  punchedPairs?: PunchPair[]; // 간주 근무일에 실제로 찍힌 기록 (참고용 — 계산에는 쓰지 않는다)
+};
 
 /** from~to(포함)의 날짜별 계산. events·corrections는 그 직원 것, from이 속한 주 월요일부터 있어야 한다 */
 export function computeEmployeeDays(args: {
@@ -16,7 +23,7 @@ export function computeEmployeeDays(args: {
   approvedCorrections: PunchCorrection[];
   rule: WorkRule; // 기본 규칙 (그날 규칙이 없을 때)
   ruleAt?: (date: string) => WorkRule | null; // ② 4-1: 날짜마다 그날 유효한 규칙
-  deemed?: (date: string, dayType: DayType) => PunchPair | null; // 간주 근무 (2026-10-10): 찍은 기록이 없는 근무일에 근무로 볼 시간. 없으면 null
+  deemed?: (date: string, dayType: DayType) => PunchPair | null; // 간주 근무: 그날 근무로 볼 시간(일정). 없으면 null. 찍은 기록이 있어도 이 시간으로 계산한다 (확정-7)
   holidays: HolidayRow[];
   from: string;
   to: string;
@@ -27,19 +34,19 @@ export function computeEmployeeDays(args: {
   for (let ws = weekStartOf(args.from); ws <= args.to; ws = addDays(ws, 7)) {
     const days = [...Array(7)].map((_, i) => addDays(ws, i)).map((d) => {
       const dayType = resolveDayType(d, ruleOf(d), args.holidays);
-      let pairs = byDate.get(d)?.pairs ?? [];
-      // 간주 근무: 찍은 기록이 하나도 없을 때만 (근무일인지는 부르는 쪽이 본다). 기록이 있으면 기록이 먼저다
-      if (pairs.length === 0) {
-        const v = args.deemed?.(d, dayType);
-        if (v) pairs = [v];
-      }
-      return { workDate: d, pairs, flags: byDate.get(d)?.flags ?? [], dayType };
+      const punched = byDate.get(d)?.pairs ?? [];
+      // 간주 근무 (확정-7, 2026-10-11): 출퇴근 기록이 불명확하더라도 일반 정시 근로와 같은 내용으로 출근한 것으로 책정한다.
+      //   찍은 기록이 있어도 일정 시간으로 한 번만 계산하고, 찍은 기록은 참고로만 남긴다. 누락·중복 표시도 붙이지 않는다.
+      const v = args.deemed?.(d, dayType) ?? null;
+      if (v) return { workDate: d, pairs: [v], flags: [], dayType, deemed: true, punchedPairs: punched };
+      return { workDate: d, pairs: punched, flags: byDate.get(d)?.flags ?? [], dayType, deemed: false, punchedPairs: undefined as PunchPair[] | undefined };
     });
-    const pairsOf = new Map(days.map((d) => [d.workDate, d.pairs]));
+    const dayOf = new Map(days.map((d) => [d.workDate, d]));
     const calc = calcWeek(days, ruleOf);
     for (const r of calc) {
       if (r.workDate < args.from || r.workDate > args.to) continue;
-      out.push({ ...r, pairs: pairsOf.get(r.workDate) ?? [] });
+      const d = dayOf.get(r.workDate)!;
+      out.push({ ...r, pairs: d.pairs, ...(d.deemed ? { deemed: true, punchedPairs: d.punchedPairs } : {}) });
     }
   }
   return out;

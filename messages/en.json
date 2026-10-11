@@ -1014,7 +1014,14 @@
       "locationNote": "Location is requested only when the office internet check fails. A location judged outside the office is not stored. Collecting staff location requires prior consent.",
       "invalid_location": "Check the latitude, longitude and radius (30–1000 m).",
       "placesLink": "Go to work locations",
-      "placesCount": "{n} active locations"
+      "placesCount": "{n} active locations",
+      "break2Start": "Second break start (leave empty if none)",
+      "break2End": "Second break end",
+      "roundStep": "Rounding for payable time",
+      "roundShort": "Payable time",
+      "roundOff": "No rounding (1 minute)",
+      "roundValue": "{n}-minute steps — clock-in rounds up, clock-out rounds down",
+      "roundHint": "Example: with 15-minute steps, a 07:29 clock-in counts as 07:30 and a 20:47 clock-out as 20:45. The recorded times themselves are kept."
     },
     "places": {
       "title": "Work locations",

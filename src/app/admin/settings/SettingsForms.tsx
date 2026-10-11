@@ -1,5 +1,6 @@
 'use client';
 // 설정 화면의 입력 양식들 — 전부 /api/admin/settings 한 곳으로 보낸다. 저장하면 화면을 새로 읽는다.
+import { ROUND_STEPS } from '@/lib/settings-rules';
 import { useTranslations } from 'next-intl';
 import { useRouter } from 'next/navigation';
 import { useState, type ReactNode } from 'react';
@@ -67,7 +68,7 @@ function Fold({ label, children }: { label: string; children: (close: () => void
   return <div className="rounded-button bg-surface p-4">{children(() => setOpen(false))}</div>;
 }
 
-export type RuleValues = { startTime: string; endTime: string; lateGraceMin: number; breakStart: string; breakEnd: string; workdays: number[]; weeklyRestDay: number };
+export type RuleValues = { startTime: string; endTime: string; lateGraceMin: number; breakStart: string; breakEnd: string; break2Start: string; break2End: string; roundStepMin: number; workdays: number[]; weeklyRestDay: number };
 
 export function RuleForm({ initial, tomorrow, weekdays }: { initial: RuleValues; tomorrow: string; weekdays: string[] }) {
   const t = useTranslations('admin.settings');
@@ -107,7 +108,26 @@ export function RuleForm({ initial, tomorrow, weekdays }: { initial: RuleValues;
               {t('breakEnd')}
               <DateTimeInput name="breakEnd" type="time" defaultValue={initial.breakEnd} className={`num ${field}`} />
             </label>
+            <label className="flex flex-col gap-1 text-sm text-muted">
+              {t('break2Start')}
+              <DateTimeInput name="break2Start" type="time" defaultValue={initial.break2Start} className={`num ${field}`} />
+            </label>
+            <label className="flex flex-col gap-1 text-sm text-muted">
+              {t('break2End')}
+              <DateTimeInput name="break2End" type="time" defaultValue={initial.break2End} className={`num ${field}`} />
+            </label>
           </div>
+          <label className="flex flex-col gap-1 text-sm text-muted">
+            {t('roundStep')}
+            <select name="roundStepMin" defaultValue={initial.roundStepMin} className={`num ${field}`}>
+              {ROUND_STEPS.map((n) => (
+                <option key={n} value={n}>
+                  {n === 0 ? t('roundOff') : t('roundValue', { n })}
+                </option>
+              ))}
+            </select>
+            <span className="text-xs text-faint">{t('roundHint')}</span>
+          </label>
           <label className="flex flex-col gap-1 text-sm text-muted">
             {t('grace')}
             <input name="lateGraceMin" type="number" inputMode="numeric" min={0} max={120} required defaultValue={initial.lateGraceMin} className={`num ${field}`} />

@@ -20,7 +20,7 @@ export default async function SettingsPage() {
   const monthStart = `${today.slice(0, 7)}-01`;
   const db = createAdminClient();
   const [{ data: rules }, { data: holidays }, { data: networks }] = await Promise.all([
-    db.from('work_rules').select('id, start_time, end_time, late_grace_min, break_start, break_end, workdays, weekly_rest_day, effective_from').eq('active', true).order('effective_from', { ascending: false }),
+    db.from('work_rules').select('id, start_time, end_time, late_grace_min, break_start, break_end, extra_breaks, round_step_min, workdays, weekly_rest_day, effective_from').eq('active', true).order('effective_from', { ascending: false }),
     db.from('holidays').select('the_date, label, kind').gte('the_date', monthStart).order('the_date').limit(60),
     db.from('office_networks').select('id, cidr, label, active').order('created_at'),
   ]);
@@ -36,7 +36,9 @@ export default async function SettingsPage() {
       <dt className="text-muted">{t('hours')}</dt>
       <dd>{hhmm(r.start_time)} ~ {hhmm(r.end_time)}</dd>
       <dt className="text-muted">{t('break')}</dt>
-      <dd>{r.break_start && r.break_end ? `${hhmm(r.break_start)} ~ ${hhmm(r.break_end)}` : t('none')}</dd>
+      <dd>{r.break_start && r.break_end ? [`${hhmm(r.break_start)} ~ ${hhmm(r.break_end)}`, ...((r.extra_breaks as { start: string; end: string }[] | null) ?? []).map((x) => `${x.start} ~ ${x.end}`)].join(' · ') : t('none')}</dd>
+      <dt className="text-muted">{t('roundShort')}</dt>
+      <dd>{r.round_step_min ? t('roundValue', { n: r.round_step_min }) : t('roundOff')}</dd>
       <dt className="text-muted">{t('graceShort')}</dt>
       <dd>{t('minutes', { n: r.late_grace_min })}</dd>
       <dt className="text-muted">{t('workdays')}</dt>
@@ -81,6 +83,7 @@ export default async function SettingsPage() {
           initial={{
             startTime: base ? hhmm(base.start_time) : '09:00', endTime: base ? hhmm(base.end_time) : '18:00', lateGraceMin: base?.late_grace_min ?? 0,
             breakStart: base?.break_start ? hhmm(base.break_start) : '', breakEnd: base?.break_end ? hhmm(base.break_end) : '',
+            break2Start: (base?.extra_breaks as { start: string; end: string }[] | null)?.[0]?.start ?? '', break2End: (base?.extra_breaks as { start: string; end: string }[] | null)?.[0]?.end ?? '', roundStepMin: base?.round_step_min ?? 0,
             workdays: (base?.workdays as number[] | undefined) ?? [1, 2, 3, 4, 5], weeklyRestDay: base?.weekly_rest_day ?? 7,
           }}
         />

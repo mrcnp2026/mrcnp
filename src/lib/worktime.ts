@@ -15,6 +15,7 @@ export type WorkCalc = {
   grossMinutes: number; // 출근~퇴근 전체 (짝이 맞는 쌍만)
   breakMinutes: number; // 휴게시간대와 겹친 분만
   netMinutes: number; // gross - break
+  payableMinutes: number; // 급여용 시간: 출근을 올리고 퇴근을 내려 끊은 뒤 휴게를 뺀 분 (확정-9). 끊는 단위가 없으면 netMinutes와 같다
   regularMinutes: number; // 소정 (휴일이면 0)
   overtimeMinutes: number; // 연장 (휴일이면 0)
   holidayMinutes: number; // 휴일 근로 (휴일이 아니면 0)
@@ -71,6 +72,20 @@ export function nightWindows(fromMs: number, toMs: number): Iv[] {
 }
 
 const toMin = (ms: number) => Math.floor(ms / 60_000);
+const floorTo = (ms: number, stepMin: number) => Math.floor(ms / (stepMin * 60_000)) * stepMin * 60_000;
+const ceilTo = (ms: number, stepMin: number) => Math.ceil(ms / (stepMin * 60_000)) * stepMin * 60_000;
+
+/** 그 근무에 걸리는 휴게시간대들. 근무일에 놓고, 근무가 자정을 넘기면 다음 날에도 놓는다 */
+function breakWindows(rule: WorkRule, workDate: string, work: Iv[]): Iv[] {
+  const list = [...(rule.breakStart && rule.breakEnd ? [{ start: rule.breakStart, end: rule.breakEnd }] : []), ...(rule.extraBreaks ?? [])];
+  if (list.length === 0 || work.length === 0) return [];
+  const lastEnd = Math.max(...work.map((i) => i[1]));
+  const out: Iv[] = [];
+  for (let d = workDate; kstDateTime(d, '00:00').getTime() < lastEnd; d = addDays(d, 1)) {
+    for (const b of list) out.push([kstDateTime(d, b.start).getTime(), kstDateTime(d, b.end).getTime()]);
+  }
+  return out;
+}
 
 export function calcWorkMinutes(pairs: PunchPair[], rule: WorkRule, ctx: WorkCtx): WorkCalc {
   const flags = new Set<string>();
@@ -79,19 +94,20 @@ export function calcWorkMinutes(pairs: PunchPair[], rule: WorkRule, ctx: WorkCtx
     // 4-8, 요점 6: 짝이 안 맞으면 0으로 조용히 넘기지 않고 flags에 남긴다
     if (p.in && !p.out) flags.add(FLAG.MISSING_OUT);
     else if (!p.in && p.out) flags.add(FLAG.ORPHAN_OUT);
-    else if (p.in && p.out && p.out > p.in) work.push([p.in.getTime(), p.out.getTime()]);
+    // 초는 버리고 분 단위로 맞춘 뒤 계산한다 (확정-9: 시프티 정산과 같게 — 07:29:28은 07:29)
+    else if (p.in && p.out && p.out > p.in) work.push([floorTo(p.in.getTime(), 1), floorTo(p.out.getTime(), 1)]);
   }
 
-  // 요점 1: 휴게시간대와 실제 근무가 **겹친 분만** 뺀다. 휴게시간대가 없으면 공제 0.
-  // 근무가 4시간 미만이면 공제하지 않는다 (labor-rules.ts breakDeductionMinGrossMin — 문서 모순을 메운 값)
-  let net = work;
-  if (rule.breakStart && rule.breakEnd && toMin(sumMs(work)) >= LABOR.breakDeductionMinGrossMin) {
-    const brk: Iv = [
-      kstDateTime(ctx.workDate, rule.breakStart).getTime(),
-      kstDateTime(ctx.workDate, rule.breakEnd).getTime(),
-    ];
-    net = subtract(work, brk);
-  }
+  // 요점 1: 휴게시간대와 실제 근무가 **겹친 분만** 뺀다. 휴게시간대가 없으면 공제 0. 시간대가 여럿이면 각각 뺀다(겹치는 시간대끼리도 한 번만 빠진다).
+  const breaks = breakWindows(rule, ctx.workDate, work);
+  const cutBreaks = (ivs: Iv[]) => (toMin(sumMs(work)) >= LABOR.breakDeductionMinGrossMin ? breaks.reduce((acc, b) => subtract(acc, b), ivs) : ivs);
+  const net = cutBreaks(work);
+
+  // 급여용 시간 (확정-9): 출근은 끊는 단위로 올리고 퇴근은 내린다. 내린 퇴근이 올린 출근보다 이르면 0분(음수 금지).
+  // 한국 시간은 UTC와 9시간 차이라 1·5·10·15·30·60분 단위는 시각을 그대로 끊어도 한국 시각 기준과 같다.
+  const step = rule.roundStepMin && rule.roundStepMin > 1 ? rule.roundStepMin : 0;
+  const rounded: Iv[] = step ? work.map(([s, e]) => { const rs = ceilTo(s, step); return [rs, Math.max(rs, floorTo(e, step))] as Iv; }).filter(([s, e]) => e > s) : work;
+  const payableMinutes = step ? toMin(sumMs(cutBreaks(rounded))) : toMin(sumMs(net));
 
   const grossMinutes = toMin(sumMs(work));
   const netMinutes = toMin(sumMs(net));
@@ -132,6 +148,7 @@ export function calcWorkMinutes(pairs: PunchPair[], rule: WorkRule, ctx: WorkCtx
     grossMinutes,
     breakMinutes,
     netMinutes,
+    payableMinutes,
     regularMinutes,
     overtimeMinutes,
     holidayMinutes,

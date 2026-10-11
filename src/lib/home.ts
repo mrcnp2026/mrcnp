@@ -20,7 +20,7 @@ export function homeCookieValue(on: ReadonlySet<HomeCard>): string {
 export type SituationPerson = {
   working: boolean; // 찍은 출근이 있고 아직 퇴근 전
   hasPlan: boolean; // 그날 일정이 있다
-  deemed: boolean; // 간주 근무 (찍지 않아도 근무로 본다) — 찍은 기록이 없을 때만
+  deemed: boolean; // 간주 근무 (찍은 기록과 상관없이 일정 시간으로 근무로 본다, 확정-7)
   late: boolean; // 오늘 지각
   onLeave: boolean; // 하루 전부 휴가
 };

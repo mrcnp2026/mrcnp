@@ -34,7 +34,7 @@ describe('간주 근무', () => {
     expect(deemedPair(T, '2026-10-09', kstDateTime('2026-10-09', '10:00'))).toEqual({ in: kstDateTime('2026-10-09', '08:00'), out: null });
     expect(deemedPair(T, '2026-10-10', kstDateTime('2026-10-09', '10:00'))).toBeNull();
   });
-  it('찍지 않은 근무일만 근무로 잡힌다 — 휴일에는 생기지 않고, 찍은 날은 기록이 먼저', () => {
+  it('근무일은 찍은 기록과 상관없이 일정 시간으로 잡힌다 (확정-7) — 휴일에는 생기지 않는다', () => {
     const now = kstDateTime('2026-10-20', '12:00');
     const rule = applyTemplate(RULE, T)!;
     const punched = [
@@ -45,8 +45,11 @@ describe('간주 근무', () => {
     const of = (d: string) => days.find((x) => x.workDate === d)!;
     expect(of('2026-10-12').pairs).toHaveLength(1); // 월: 간주
     expect(of('2026-10-12').netMinutes).toBe(8 * 60); // 08–17에서 휴게 1시간
-    expect(of('2026-10-13').pairs[0].in).toEqual(kstDateTime('2026-10-13', '10:00')); // 화: 찍은 기록 그대로
-    expect(of('2026-10-13').netMinutes).toBe(4 * 60);
+    expect(of('2026-10-12').deemed).toBe(true);
+    expect(of('2026-10-13').pairs[0].in).toEqual(kstDateTime('2026-10-13', '08:00')); // 화: 10:00~15:00에 찍었어도 일정 08–17로
+    expect(of('2026-10-13').netMinutes).toBe(8 * 60);
+    expect(of('2026-10-13').punchedPairs![0].in).toEqual(kstDateTime('2026-10-13', '10:00')); // 찍은 기록은 참고로 남는다
+    expect(of('2026-10-13').flags).toEqual([]);
     expect(of('2026-10-17').pairs).toHaveLength(0); // 토: 근무일 아님
     expect(of('2026-10-18').pairs).toHaveLength(0); // 일
     // 간주가 없으면 찍지 않은 날은 빈 날

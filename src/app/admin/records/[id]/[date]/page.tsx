@@ -37,7 +37,7 @@ export default async function RecordDetailPage({ params, searchParams }: { param
   // 찍은 기록이 없는 시각 = 정정으로 들어온 시각이거나 간주 근무로 채운 시각
   const real = events.some((e) => e.workDate === date) || data.corrections.some((c) => c.employeeId === id && c.workDate === date && c.status === 'approved');
   const plan = data.planFor(id, date);
-  const deemed = !real && !!plan.deemed;
+  const deemed = !!plan.deemed; // 찍은 기록이 있어도 간주 근무다 (확정-7)
   const via = (d: Date | null) => {
     if (!d) return t('none');
     if (deemed) return t('viaDeemed');

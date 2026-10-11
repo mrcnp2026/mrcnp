@@ -60,7 +60,7 @@ export default async function RecordListPage({ searchParams }: { searchParams: P
         lines.push({
           key: `${p.id}${d.workDate}${i}`, idx: i, id: p.id, name: p.name, sub, color: job ? SHIFT_COLOR_CLASS[job.color] : 'bg-border', date: d.workDate,
           start: pair.in ? clock(pair.in) : '–', end: pair.out ? clock(pair.out) : null,
-          deemed: !real.has(d.workDate) && !!data.planFor(p.id, d.workDate).deemed, confirmed: confirms.has(confirmKey(p.id, d.workDate)), open: !!pair.in && !pair.out, outside: false, sort: at.getTime(),
+          deemed: !!data.planFor(p.id, d.workDate).deemed, confirmed: confirms.has(confirmKey(p.id, d.workDate)), open: !!pair.in && !pair.out, outside: false, sort: at.getTime(),
         });
       });
     }

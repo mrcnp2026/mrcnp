@@ -123,10 +123,10 @@ describe('지각 판정', () => {
 });
 
 describe('근로시간 (휴게 12:00~13:00)', () => {
-  it('09:00~12:30 → 휴게 0, 실근로 3시간 30분 ← B-5', () => {
+  it('09:00~12:30 → 휴게 30분, 실근로 3시간 — 짧은 근무도 겹친 만큼 뺀다 (확정-9, 예전에는 4시간 미만이면 공제 0)', () => {
     const r = calcWorkMinutes([pair(MON, '09:00', '12:30')], RULE, ctx(MON));
-    expect(r.breakMinutes).toBe(0);
-    expect(r.netMinutes).toBe(H(3, 30));
+    expect(r.breakMinutes).toBe(30);
+    expect(r.netMinutes).toBe(H(3));
   });
   it('09:00~18:00 → 휴게 60분, 실근로 8시간', () => {
     const r = calcWorkMinutes([pair(MON, '09:00', '18:00')], RULE, ctx(MON));
@@ -530,5 +530,44 @@ describe('금액 경계 (4-4)', () => {
         .join('\n');
       expect(sql).not.toMatch(/\b(amount|wage|salary|hourly_rate|pay_rate)\b|\b\w+_won\b/i);
     }
+  });
+});
+
+// 확정-9 (2026-10-11): 시프티에서 지금 쓰는 방식 그대로 — 자동 휴게 두 구간 · 출근 15분 올림 · 퇴근 15분 내림.
+// 기대값은 `pc용/…/fixtures/calculation_cases.json`의 T-001 ~ T-006 (PRD 22장)과 9월 정산 엑셀의 예.
+describe('휴게 여러 구간 · 급여용 시간 끊기 (확정-9)', () => {
+  const R2 = { ...RULE, startTime: '08:00', endTime: '17:00', extraBreaks: [{ start: '17:00', end: '17:30' }], roundStepMin: 15 };
+  const at = (d: string, t: string) => new Date(`${d}T${t}+09:00`);
+  const p = (a: string, b: string) => ({ in: at(MON, a), out: at(MON, b) });
+  it('T-001 08:00~17:00 → 480분', () => {
+    expect(calcWorkMinutes([p('08:00:00', '17:00:00')], R2, ctx(MON)).netMinutes).toBe(480);
+  });
+  it('T-002 08:07~17:08 → 찍힌 그대로 473분(휴게 68분), 급여용 08:15~17:00 465분', () => {
+    const r = calcWorkMinutes([p('08:07:00', '17:08:00')], R2, ctx(MON));
+    expect([r.netMinutes, r.breakMinutes, r.payableMinutes]).toEqual([473, 68, 465]);
+  });
+  it('T-003 13초짜리 기록 07:33:16~07:33:29 → 0분, 음수가 되지 않는다', () => {
+    const r = calcWorkMinutes([p('07:33:16', '07:33:29')], R2, ctx(MON));
+    expect([r.netMinutes, r.payableMinutes]).toEqual([0, 0]);
+  });
+  it('T-004 11:30~13:30 → 근무 60분 · 휴게 60분 / T-005 16:45~17:15 → 근무 15분 · 휴게 15분', () => {
+    const a = calcWorkMinutes([p('11:30:00', '13:30:00')], R2, ctx(MON));
+    const b = calcWorkMinutes([p('16:45:00', '17:15:00')], R2, ctx(MON));
+    expect([a.netMinutes, a.breakMinutes, b.netMinutes, b.breakMinutes]).toEqual([60, 60, 15, 15]);
+  });
+  it('9월 엑셀의 예: 07:30:04~20:58:17 → 찍힌 그대로 11시간 58분, 급여용 07:30~20:45에서 90분 빼고 11시간 45분', () => {
+    const r = calcWorkMinutes([p('07:30:04', '20:58:17')], R2, ctx(MON));
+    expect([r.netMinutes, r.payableMinutes]).toEqual([H(11, 58), H(11, 45)]);
+  });
+  it('9월 엑셀의 예: 07:29:28~17:05:24 → 급여용 07:30~17:00, 휴게 60분 → 8시간 30분', () => {
+    expect(calcWorkMinutes([p('07:29:28', '17:05:24')], R2, ctx(MON)).payableMinutes).toBe(H(8, 30));
+  });
+  it('끊는 단위가 없으면 급여용 시간은 찍힌 그대로와 같다', () => {
+    const r = calcWorkMinutes([p('08:07:00', '17:08:00')], { ...R2, roundStepMin: 0 }, ctx(MON));
+    expect(r.payableMinutes).toBe(r.netMinutes);
+  });
+  it('휴게시간대가 서로 겹쳐도 한 번만 뺀다', () => {
+    const r = calcWorkMinutes([p('08:00:00', '17:00:00')], { ...R2, extraBreaks: [{ start: '12:15', end: '12:45' }] }, ctx(MON));
+    expect([r.netMinutes, r.breakMinutes]).toEqual([480, 60]);
   });
 });
