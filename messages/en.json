@@ -1334,7 +1334,20 @@
       "addPick": "Choose an employee",
       "addHint": "Choose an employee to enter the date, time and reason. For your own record, send a correction request.",
       "confirmed": "Confirmed",
-      "unconfirmed": "Not confirmed"
+      "unconfirmed": "Not confirmed",
+      "colEmployee": "Employee",
+      "colDate": "Date",
+      "colTime": "Worked",
+      "colPlan": "Schedule",
+      "colBreak": "Break",
+      "colTotal": "Total",
+      "colPayable": "Payable",
+      "colState": "Status",
+      "colConfirmed": "Confirmed",
+      "noPlan": "Unscheduled",
+      "totalAll": "Total",
+      "payableAll": "Payable",
+      "min": "{n} min"
     },
     "recordDetail": {
       "title": "Attendance record",
