@@ -8,7 +8,7 @@ export function SignOutButton() {
   return (
     <button
       type="button"
-      className="inline-flex min-h-11 w-full items-center justify-center gap-2 rounded-button border border-border bg-bg px-4 text-sm text-muted"
+      className="inline-flex min-h-11 w-full items-center justify-center gap-2 rounded-button border border-border bg-bg px-4 text-sm whitespace-nowrap text-muted lg:min-h-8"
       onClick={async () => {
         await callApi('/api/auth/signout');
         window.location.assign('/login'); // 언어·세션이 바뀌므로 전체 새로 고침

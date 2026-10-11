@@ -1474,7 +1474,15 @@
     "jobs": "직무",
     "myRequests": "내 요청",
     "missing": "누락 기록",
-    "recordList": "기록 목록"
+    "recordList": "기록 목록",
+    "attendance": "출퇴근기록",
+    "listView": "목록형",
+    "monthly": "월 집계",
+    "leaveAdmin": "휴가",
+    "leaveStatus": "휴가 현황",
+    "leaveTypes": "휴가 유형",
+    "requests": "요청 내역",
+    "admin": "관리"
   },
   "nav": {
     "home": "홈",

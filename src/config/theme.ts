@@ -29,7 +29,23 @@ export const COLORS = {
 // 8px 격자: 4·8·12·16·24·32·48 (Tailwind 1·2·3·4·6·8·12 단계만 쓴다)
 export const RADII = { card: '6px', button: '4px', punch: '4px', chip: '9999px' } as const;
 // PC(1024px~)는 업무용 화면답게 덜 둥글게 (2026-10-06 의뢰인: 둥근 버튼·카드가 전문적으로 보이지 않는다). 폰은 그대로
-export const RADII_PC = { card: '6px', button: '4px', punch: '4px' } as const;
+export const RADII_PC = { card: '3px', button: '2px', punch: '2px' } as const;
+// PC 색·글자 (2026-10-11 의뢰인: PC도 시프티 수준으로) — 시프티 PC 화면에서 직접 읽은 값에 맞춘다 (`pc용/시프티 PC 화면 기록.md` 2장).
+//   짙은 남색 왼쪽 메뉴 · 파랑 주 버튼 · 옅은 선 · 본문 14px. faint만 우리 값을 둔다(시프티의 #828793은 흰 바탕 대비 3.7:1로 모자란다).
+//   폰 값은 건드리지 않는다 — 폰은 스샷 81장에 이미 맞췄다.
+export const COLORS_PC = {
+  surface: '#F9FAFB',
+  border: '#E3E5E9',
+  text: '#1E1F21', // 16.5:1
+  muted: '#464A52', // 8.8:1
+  primary: '#004DC1', // 흰 글자 7.4:1
+  'primary-tint': '#EDF6FE',
+  'primary-deep': '#1E1F21',
+  danger: '#BF0920', // 흰 글자 6.9:1
+  nav: '#0A2864', // 왼쪽 메뉴 바탕 — 흰 글자 14.0:1
+} as const;
+export const FONT_SIZES_PC = { xs: '12px', sm: '13px', base: '14px', lg: '16px', xl: '18px', '2xl': '24px', '3xl': '28px', '4xl': '36px' } as const;
+export const SHADOW_CARD_PC = '0 2px 4px 0 rgb(130 135 147 / 0.12)';
 export const PC_MIN_WIDTH = '1024px'; // Tailwind lg와 같게
 // 글자 크기 12/14/16/20/24/32 — 본문 16 (외국인 직원, R-10-8)
 // 큰 숫자(지금 시각·근무 시간)만 4xl 44px — 화면에서 가장 먼저 읽혀야 하는 것 하나
@@ -44,6 +60,11 @@ export function themeCssVariables(): string {
   for (const [k, v] of Object.entries(RADII)) lines.push(`--t-radius-${k}:${v}`);
   for (const [k, v] of Object.entries(FONT_SIZES)) lines.push(`--t-text-${k}:${v}`);
   lines.push(`--t-shadow-card:${SHADOW_CARD}`, `--t-motion:${MOTION_MS}ms`);
-  const pc = Object.entries(RADII_PC).map(([k, v]) => `--t-radius-${k}:${v}`);
+  const pc = [
+    ...Object.entries(RADII_PC).map(([k, v]) => `--t-radius-${k}:${v}`),
+    ...Object.entries(COLORS_PC).map(([k, v]) => `--t-color-${k}:${v}`),
+    ...Object.entries(FONT_SIZES_PC).map(([k, v]) => `--t-text-${k}:${v}`),
+    `--t-shadow-card:${SHADOW_CARD_PC}`,
+  ];
   return `:root{${lines.join(';')}}@media (min-width:${PC_MIN_WIDTH}){:root{${pc.join(';')}}}`;
 }
