@@ -65,6 +65,26 @@ try {
   await shot('admin-shifts', '/admin/shifts');
   await shot('admin-records', '/admin/records');
   await shot('admin-inbox', '/admin/inbox');
+  // 요청 한 건을 열었을 때의 오른쪽 상세 패널 (PC) · 메뉴에 마우스를 올렸을 때의 확장 패널
+  if (!process.env.ONLY || /inbox-panel/.test(process.env.ONLY)) {
+    await p.goto(BASE + '/admin/inbox');
+    const open = p.getByRole('link', { name: '처리', exact: true }).filter({ visible: true }).first();
+    if (await open.count()) {
+      await open.click();
+      await p.waitForURL(/id=/);
+      await p.waitForTimeout(600);
+      await p.screenshot({ path: path.join(OUT, 'admin-inbox-panel.png') });
+      console.log('찍음 admin-inbox-panel');
+    }
+    const side = p.locator('nav.sticky').first().getByRole('link', { name: '출퇴근기록', exact: true });
+    if (await side.count()) {
+      await p.goto(BASE + '/admin');
+      await side.hover();
+      await p.waitForTimeout(700);
+      await p.screenshot({ path: path.join(OUT, 'admin-menu-panel.png') });
+      console.log('찍음 admin-menu-panel');
+    }
+  }
   await shot('admin-leave', '/admin/leave');
   await shot('admin-org', '/admin/members/groups');
   await shot('admin-notice-new', '/admin/notices/new');

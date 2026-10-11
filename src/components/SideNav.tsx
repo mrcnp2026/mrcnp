@@ -3,7 +3,7 @@
 // 시프티 PC의 구성을 따른다 (2026-10-11 의뢰인 스샷 `스샷/홈.png` · `스샷/관리-직원.png`):
 //   · 짙은 남색 196px · 한 줄 메뉴(아이콘 + 글자) · 묶음 사이는 간격으로만 나눔
 //   · 하위 메뉴가 있는 메뉴는 **마우스를 올리면** 바로 아래로 펼쳐진다(누르지 않아도). 그 메뉴 안에 있을 때는 펼쳐진 채로 있다
-//   · 「관리」처럼 항목이 많은 메뉴는 마우스를 올리면 사이드 메뉴 오른쪽에 패널이 하나 더 나온다. 관리 화면 안에서는 그 패널이 회색 둘째 메뉴로 계속 붙어 있다
+//   · 「출퇴근기록 · 관리 · 회사 설정」은 마우스를 올리면 사이드 메뉴 오른쪽으로 패널이 펼쳐진다(옅은 파랑 바탕, 0.3초에 걸쳐 매끄럽게). 관리 화면 안에서는 그 패널이 회색 둘째 메뉴로 계속 붙어 있다
 //     (2026-10-11 의뢰인: "메뉴에 마우스를 대면 상세 메뉴가 자연스럽게 내려오는 구조 · 많으면 사이드 메뉴 우측으로 패널")
 //   · 관리자 화면(/admin)에만 있다. 직원 화면(/punch)은 왼쪽 메뉴 없이 상단 탭(StaffTabs) — 오가는 것은 상단 줄의 [직원 모드로 전환] / [관리자 모드로 전환] 버튼
 import { Building2, CalendarRange, Clock, House, Megaphone, Plane, Send, UserRoundCog, Wallet, type LucideIcon } from 'lucide-react';
@@ -57,6 +57,19 @@ function PanelLinks({ panel, active, onPick, t, dark = false }: { panel: { key: 
   );
 }
 
+// 「출퇴근기록」의 둘째 메뉴 (2026-10-11 의뢰인: 출퇴근기록도 오른쪽으로 펼쳐지는 패널로)
+const RECORDS: { key: string; items: Leaf[] }[] = [
+  {
+    key: 'attendance',
+    items: [
+      { href: '/admin/records/calendar', key: 'calendarView' },
+      { href: '/admin/records/list', key: 'listView' },
+      { href: '/admin/records', key: 'monthly' },
+      { href: '/admin/missing', key: 'missing' },
+    ],
+  },
+];
+
 // 「회사 설정」의 둘째 메뉴 — 시프티는 왼쪽에 탭 목록(일반 · 알림 · 권한 …)이 있고 고른 탭의 내용만 오른쪽에 보인다.
 // 우리가 가진 설정만 탭으로 둔다(없는 기능의 빈 탭은 만들지 않는다) — 이름은 시프티와 같게: 일반 · 근무일정 · 출퇴근기록 · 휴게시간. 탭은 주소의 ?tab= 로 고른다
 const SETTINGS: { key: string; items: Leaf[] }[] = [
@@ -79,17 +92,7 @@ export function SideNav({ isAdmin, inboxCount = 0 }: { isAdmin: boolean; inboxCo
     [
       { href: '/admin', key: 'home', icon: House },
       { href: '/admin/schedule', key: 'adminSchedule', icon: CalendarRange },
-      {
-        href: '/admin/records/calendar',
-        key: 'attendance',
-        icon: Clock,
-        sub: [
-          { href: '/admin/records/calendar', key: 'calendarView' },
-          { href: '/admin/records/list', key: 'listView' },
-          { href: '/admin/records', key: 'monthly' },
-          { href: '/admin/missing', key: 'missing' },
-        ],
-      },
+      { href: '/admin/records/calendar', key: 'attendance', icon: Clock, panel: RECORDS },
       { href: '/admin/leave', key: 'leaveAdmin', icon: Plane },
       { href: '/admin/inbox', key: 'requests', icon: Send, badge: inboxCount },
       { href: '/admin/notices', key: 'adminNotices', icon: Megaphone },
@@ -138,7 +141,7 @@ export function SideNav({ isAdmin, inboxCount = 0 }: { isAdmin: boolean; inboxCo
                   </Link>
                   {/* 하위 메뉴: 그 메뉴 안에 있으면 펼쳐 두고, 아니면 마우스를 올리거나 글쇠로 들어왔을 때 펼친다 */}
                   {sub && (
-                    <div className={`grid bg-primary-deep/35 transition-[grid-template-rows,opacity] duration-200 ease-out ${open ? 'grid-rows-[1fr] opacity-100' : 'grid-rows-[0fr] opacity-0 group-focus-within/item:grid-rows-[1fr] group-focus-within/item:opacity-100 group-hover/item:grid-rows-[1fr] group-hover/item:opacity-100'}`}>
+                    <div className={`grid bg-primary-deep/35 transition-[grid-template-rows,opacity] duration-300 ease-[cubic-bezier(0.22,1,0.36,1)] ${open ? 'grid-rows-[1fr] opacity-100' : 'grid-rows-[0fr] opacity-0 group-focus-within/item:grid-rows-[1fr] group-focus-within/item:opacity-100 group-hover/item:grid-rows-[1fr] group-hover/item:opacity-100'}`}>
                       <div className="overflow-hidden">
                         <div className="py-1">
                       {sub.map((s) => {
@@ -156,8 +159,8 @@ export function SideNav({ isAdmin, inboxCount = 0 }: { isAdmin: boolean; inboxCo
                   )}
                   {/* 항목이 많은 메뉴: 마우스를 올리면 사이드 메뉴 오른쪽에 패널 (그 메뉴 안에서는 아래의 붙어 있는 패널이 대신한다) */}
                   {p && !open && (
-                    <div className="invisible absolute top-0 left-full z-30 w-52 -translate-x-2 bg-nav py-3 opacity-0 shadow-card transition-[opacity,transform,visibility] duration-200 ease-out group-focus-within/item:visible group-focus-within/item:translate-x-0 group-focus-within/item:opacity-100 group-hover/item:visible group-hover/item:translate-x-0 group-hover/item:opacity-100">
-                      <PanelLinks dark panel={p} active={active} onPick={setPressed} t={t} />
+                    <div className="pointer-events-none invisible fixed top-14 bottom-0 left-49 z-30 w-52 -translate-x-3 overflow-y-auto border-r border-border bg-primary-tint py-4 opacity-0 shadow-card transition-[opacity,transform,visibility] delay-100 duration-300 ease-[cubic-bezier(0.22,1,0.36,1)] group-focus-within/item:pointer-events-auto group-focus-within/item:visible group-focus-within/item:translate-x-0 group-focus-within/item:opacity-100 group-focus-within/item:delay-0 group-hover/item:pointer-events-auto group-hover/item:visible group-hover/item:translate-x-0 group-hover/item:opacity-100 group-hover/item:delay-0">
+                      <PanelLinks panel={p} active={active} onPick={setPressed} t={t} />
                     </div>
                   )}
                 </div>

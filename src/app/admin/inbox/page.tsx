@@ -1,11 +1,11 @@
 // ② 처리함 — 사람이 판단해야 하는 것을 한 받은함에 (마스터 5장): 연장근로 승인(7-7) · 정정 요청(7-10).
 // 그날 근무노트를 연장 요청 옆에 보여 준다 (R-10-2의 8) — 사유로 자동 복사하지 않는다.
 // 누가·언제 처리했는지 항상 보인다 (R-2의 5).
+import { X } from 'lucide-react';
 import { getFormatter, getTranslations } from 'next-intl/server';
 import { Pager, pageOf } from '@/components/Pager';
 import { DetailBar } from '@/components/detail';
 import { Help } from '@/components/Help';
-import { InboxTabs } from './InboxTabs';
 import { RequestTabs } from '@/components/RequestTabs';
 import { Card, Chip, PageShell } from '@/components/ui';
 import { OFFICE } from '@/config/office';
@@ -107,16 +107,7 @@ export default async function InboxPage({ searchParams }: { searchParams: Promis
   const workPending = (await loadWorkRequests({ practice })).filter((w) => w.status === 'pending' && hit(w.employeeId) && only('work', w.id)).sort((a, b) => (a.startDate < b.startDate ? -1 : 1));
   const wkPage = pageOf(workPending, sp.wp, REQUEST_PAGE);
 
-  // 표(PC)와 카드(폰)가 같은 값을 쓰도록 한 번만 계산한다
-  const th = 'px-4 py-3 text-left text-xs font-medium whitespace-nowrap text-faint';
-  const td = 'px-4 py-3 align-top';
-  const who = (id: string, extra?: React.ReactNode) => (
-    <span className="flex flex-col items-start gap-1">
-      <span className="font-semibold whitespace-nowrap">{name.get(id)}</span>
-      {extra}
-      {id === me.id && <Chip>{t('self')}</Chip>}
-    </span>
-  );
+  // 상세(폰 화면 · PC 오른쪽 패널)의 카드가 쓰는 값
   const lvRows = lvPage.items.map((r) => {
     const bal = calcLeaveBalance({ grants: leaveGrants.filter((g) => g.employeeId === r.employeeId), requests: leaveAll.filter((x) => x.employeeId === r.employeeId), types: leaveTypes, asOf: r.startDate });
     const deducts = leaveTypes.find((x) => x.code === r.typeCode)?.deductsBalance;
@@ -141,12 +132,10 @@ export default async function InboxPage({ searchParams }: { searchParams: Promis
     return { c, line };
   });
   // 폰의 한 목록: 대기 중인 요청 전부 + 다시 확인할 연장근로(상태는 처리됨이지만 재확인 필요)
-  const listed = focus
-    ? []
-    : [
-        ...splitRequests((await loadRequests({ practice })).filter((x) => hit(x.employeeId))).pending,
-        ...ot.filter((o) => o.status !== 'pending').map((o) => ({ ...fromOvertime(o), status: 'pending' as const })),
-      ];
+  const listed = [
+    ...splitRequests((await loadRequests({ practice })).filter((x) => hit(x.employeeId))).pending,
+    ...(otAll ?? []).filter((o) => hit(o.employee_id) && o.status !== 'pending').map((o) => ({ ...fromOvertime(o), status: 'pending' as const })),
+  ];
   const listPage = pageOf(listed, sp.pp, 20);
   const focusHref = (r: { kind: string; id: string }) => `/admin/inbox?k=${r.kind === 'correction' ? 'corrections' : r.kind}&id=${r.id}${sp.live === '1' ? '&live=1' : ''}`;
   const focusCount = focus ? ot.length + co.length + leavePending.length + workPending.length + punchPending.length + shiftPending.length + delPending.length : 0;
@@ -162,45 +151,7 @@ export default async function InboxPage({ searchParams }: { searchParams: Promis
     <>
       {hint(t('overtimeHint'))}
       {(ot ?? []).length === 0 && empty}
-      {/* PC: 표 한 줄 = 요청 한 건 (2026-10-06 의뢰인: 카드·둥근 버튼 대신 표) */}
-      {otPage.items.length > 0 && (
-        <Card className="hidden overflow-x-auto p-0 lg:block">
-          <table className="w-full text-sm">
-            <thead>
-              <tr className="border-b border-border">
-                {[t('colWho'), t('colDate'), t('colPunch'), t('overtime'), t('night'), t('holiday'), t('colReason'), t('colAction')].map((x, i) => (
-                  <th key={x} scope="col" className={`${th} ${i >= 3 && i <= 5 ? 'text-right' : ''}`}>{x}</th>
-                ))}
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-border">
-              {otPage.items.map((o) => (
-                <tr key={o.id}>
-                  <td className={td}>{who(o.employee_id, o.needs_review && <Chip tone="warn">{t('needsReview')}</Chip>)}</td>
-                  <td className={`${td} num whitespace-nowrap`}>{dayLabel(o.work_date)}</td>
-                  <td className={`${td} num text-muted`}>{punchesOf(o.employee_id, o.work_date) || '–'}</td>
-                  {(['overtime', 'night', 'holiday'] as const).map((k) => (
-                    <td key={k} className={`${td} num text-right whitespace-nowrap`}>
-                      <span className="font-semibold">{t('min', { n: o[`${k}_minutes`] })}</span>
-                      {o.needs_review && o[`recomputed_${k}_minutes`] !== null && <span className="block text-xs text-warn">{t('nowCounted', { n: o[`recomputed_${k}_minutes`] })}</span>}
-                    </td>
-                  ))}
-                  <td className={`${td} text-muted`}>
-                    {o.reason && <span className="block text-text">{o.reason}</span>}
-                    {noteOf(o.employee_id, o.work_date) && <span className="block whitespace-pre-wrap break-words">{t('note')}: {noteOf(o.employee_id, o.work_date)}</span>}
-                    {o.status !== 'pending' && <span className="block text-xs">{t('decidedBy', { status: t(`status.${o.status}`), who: name.get(o.approved_by) ?? '—' })}</span>}
-                    {!o.reason && !noteOf(o.employee_id, o.work_date) && o.status === 'pending' && '–'}
-                  </td>
-                  <td className={`${td} w-72`}>
-                    {ownBlocked && o.employee_id === me.id ? ownNote : <OvertimeDecision compact id={o.id} name={name.get(o.employee_id) ?? ''} facts={{ overtime: o.overtime_minutes, night: o.night_minutes, holiday: o.holiday_minutes }} />}
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </Card>
-      )}
-      <div className="flex flex-col gap-3 lg:hidden">
+      <div className="flex flex-col gap-3">
         {otPage.items.map((o) => (
           <Card key={o.id} className="flex flex-col gap-2">
             <div className="flex items-start justify-between gap-2">
@@ -245,32 +196,7 @@ export default async function InboxPage({ searchParams }: { searchParams: Promis
   const correctionsTab = (
     <>
       {(co ?? []).length === 0 && empty}
-      {coRows.length > 0 && (
-        <Card className="hidden overflow-x-auto p-0 lg:block">
-          <table className="w-full text-sm">
-            <thead>
-              <tr className="border-b border-border">
-                {[t('colWho'), t('colDate'), t('colType'), t('colChange'), t('colReason'), t('colAction')].map((x) => (
-                  <th key={x} scope="col" className={th}>{x}</th>
-                ))}
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-border">
-              {coRows.map(({ c, line }) => (
-                <tr key={c.id}>
-                  <td className={td}>{who(c.employee_id)}</td>
-                  <td className={`${td} num whitespace-nowrap`}>{dayLabel(c.work_date)}</td>
-                  <td className={`${td} whitespace-nowrap`}>{t(`type.${c.correction_type}`)}</td>
-                  <td className={`${td} num font-semibold`}>{line}</td>
-                  <td className={td}>{c.reason}</td>
-                  <td className={`${td} w-64`}>{ownBlocked && c.employee_id === me.id ? ownNote : <CorrectionDecision compact id={c.id} name={name.get(c.employee_id) ?? ''} />}</td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </Card>
-      )}
-      <div className="flex flex-col gap-3 lg:hidden">
+      <div className="flex flex-col gap-3">
         {coRows.map(({ c, line }) => (
           <Card key={c.id} className="flex flex-col gap-2">
             <div className="flex items-start justify-between gap-2">
@@ -293,35 +219,7 @@ export default async function InboxPage({ searchParams }: { searchParams: Promis
   const leaveTab = (
     <>
       {leavePending.length === 0 && empty}
-      {lvRows.length > 0 && (
-        <Card className="hidden overflow-x-auto p-0 lg:block">
-          <table className="w-full text-sm">
-            <thead>
-              <tr className="border-b border-border">
-                {[t('colWho'), t('colPeriod'), t('colType'), t('colBalance'), t('colReason'), t('colAction')].map((x) => (
-                  <th key={x} scope="col" className={th}>{x}</th>
-                ))}
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-border">
-              {lvRows.map(({ r, clash, range, summary, balance }) => (
-                <tr key={r.id}>
-                  <td className={td}>{who(r.employeeId)}</td>
-                  <td className={`${td} num whitespace-nowrap`}>{range}</td>
-                  <td className={`${td} num font-semibold whitespace-nowrap`}>{leaveName(r.typeCode)} · {tl('days', { n: nDays(r.days) })}</td>
-                  <td className={`${td} num text-muted`}>{balance ?? '–'}</td>
-                  <td className={td}>
-                    {r.reason ?? (clash.length === 0 ? '–' : null)}
-                    {clash.length > 0 && <span className="mt-1 block rounded-button border border-warn bg-warn-tint p-2 text-warn">{t('leaveClash', { dates: clash.map(dayLabel).join(', ') })}</span>}
-                  </td>
-                  <td className={`${td} w-64`}>{ownBlocked && r.employeeId === me.id ? ownNote : <LeaveDecision compact id={r.id} name={name.get(r.employeeId) ?? ''} summary={summary} />}</td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </Card>
-      )}
-      <div className="flex flex-col gap-3 lg:hidden">
+      <div className="flex flex-col gap-3">
         {lvRows.map(({ r, clash, range, summary, balance }) => (
           <Card key={r.id} className="flex flex-col gap-2">
             <div className="flex items-start justify-between gap-2">
@@ -354,32 +252,7 @@ export default async function InboxPage({ searchParams }: { searchParams: Promis
     <>
       {hint(t('workClashHint'))}
       {workPending.length === 0 && empty}
-      {wkRows.length > 0 && (
-        <Card className="hidden overflow-x-auto p-0 lg:block">
-          <table className="w-full text-sm">
-            <thead>
-              <tr className="border-b border-border">
-                {[t('colWho'), t('colPeriod'), t('colType'), t('place'), t('colReason'), t('colAction')].map((x) => (
-                  <th key={x} scope="col" className={th}>{x}</th>
-                ))}
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-border">
-              {wkRows.map(({ w, when }) => (
-                <tr key={w.id}>
-                  <td className={td}>{who(w.employeeId)}</td>
-                  <td className={`${td} num whitespace-nowrap`}>{when}</td>
-                  <td className={`${td} font-semibold whitespace-nowrap`}>{t(`workKind.${w.kind}`)}</td>
-                  <td className={td}>{w.place}</td>
-                  <td className={td}>{w.reason ?? '–'}</td>
-                  <td className={`${td} w-64`}>{ownBlocked && w.employeeId === me.id ? ownNote : <WorkDecision compact id={w.id} name={name.get(w.employeeId) ?? ''} summary={`${t(`workKind.${w.kind}`)} (${when})`} />}</td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </Card>
-      )}
-      <div className="flex flex-col gap-3 lg:hidden">
+      <div className="flex flex-col gap-3">
         {wkRows.map(({ w, when }) => (
           <Card key={w.id} className="flex flex-col gap-2">
             <div className="flex items-start justify-between gap-2">
@@ -401,34 +274,61 @@ export default async function InboxPage({ searchParams }: { searchParams: Promis
     </>
   );
 
+  const listHref = `/admin/inbox${sp.live === '1' ? '?live=1' : ''}`;
+  const names = new Map((staff ?? []).map((p) => [p.id as string, p.name as string]));
+  const gone = (
+    <p className="rounded-card bg-surface p-5 text-sm text-muted">
+      {t('focusGone')}{' '}
+      <Link href={listHref} className="font-bold text-primary">
+        {t('backToList')} ›
+      </Link>
+    </p>
+  );
+
   return (
     <PageShell wide>
-      {focus ? (
-        <>
-          <DetailBar back={`/admin/inbox${sp.live === '1' ? '?live=1' : ''}`} backLabel={t('backToList')} title={t('focusTitle')} />
-          {focusCount === 0 && (
-            <p className="rounded-card bg-bg p-5 text-sm text-muted">
-              {t('focusGone')}{' '}
-              <Link href={`/admin/inbox${sp.live === '1' ? '?live=1' : ''}`} className="font-bold text-primary">
-                {t('backToList')} ›
-              </Link>
-            </p>
-          )}
-        </>
-      ) : (
-        <>
-          <h1 className="sr-only">{t('title')}</h1>
-          <RequestTabs admin active="pending" live={sp.live === '1'} q={q} counts={{ pending: (ot?.length ?? 0) + (co?.length ?? 0) + leavePending.length + workPending.length + punchPending.length + shiftPending.length + delPending.length }} />
-          {practice && <p className="rounded-card bg-primary-tint p-3 text-sm text-primary">{t('practiceBanner')}</p>}
-          {/* 폰: 종류와 상관없이 한 목록 — 줄을 누르면 그 요청 하나를 처리하는 화면. PC는 아래의 종류별 표 그대로 */}
-          <div className="flex flex-col gap-3 lg:hidden">
-            {listed.length === 0 && empty}
-            <RequestRows items={listPage.items} leaveTypes={leaveTypes} names={new Map((staff ?? []).map((p) => [p.id as string, p.name as string]))} showName hrefOf={focusHref} />
-            <Pager page={listPage.page} pages={listPage.pages} param="pp" params={sp} label={tc('pages')} />
-          </div>
-        </>
+      {/* 폰: 한 건 보기는 그 요청만의 화면 */}
+      {focus && (
+        <div className="flex flex-col gap-3 lg:hidden">
+          <DetailBar back={listHref} backLabel={t('backToList')} title={t('focusTitle')} />
+          {focusCount === 0 && gone}
+        </div>
       )}
-      <div className={focus ? 'contents' : 'hidden lg:contents'}>
+      {/* 목록 — 폰: 한 건 보기 중에는 숨긴다 · PC: 언제나 보이고 한 건 보기는 오른쪽 패널로 뜬다 (2026-10-11 의뢰인 스샷 `스샷/요청 내역*.png`) */}
+      <div className={focus ? 'hidden lg:contents' : 'contents'}>
+        <h1 className="sr-only lg:hidden">{t('title')}</h1>
+        <div className="hidden items-start gap-4 lg:flex">
+          <div className="min-w-0 flex-1">
+            <h1 className="text-2xl font-bold">{t('pcTitle')}</h1>
+            <p className="pt-1 text-sm text-faint">{t('pcIntro')}</p>
+          </div>
+          <p className="num pt-2 text-sm text-muted">
+            {t('totalCount')} <b className="text-lg text-text">{listed.length}</b>
+          </p>
+        </div>
+        <RequestTabs admin active="pending" live={sp.live === '1'} q={q} counts={{ pending: listed.length }} />
+        {practice && <p className="rounded-card bg-primary-tint p-3 text-sm text-primary">{t('practiceBanner')}</p>}
+        {listed.length === 0 && empty}
+        <div className="flex flex-col gap-3 lg:hidden">
+          <RequestRows items={listPage.items} leaveTypes={leaveTypes} names={names} showName hrefOf={focusHref} />
+        </div>
+        {listPage.items.length > 0 && (
+          <div className="hidden lg:block">
+            <RequestRows table items={listPage.items} leaveTypes={leaveTypes} names={names} showName hrefOf={focusHref} />
+          </div>
+        )}
+        <Pager page={listPage.page} pages={listPage.pages} param="pp" params={sp} label={tc('pages')} />
+      </div>
+      {/* 한 건 보기 — 폰: 본문 그대로 · PC: 화면 오른쪽에서 밀려 나오는 상세 패널(시프티의 요청 상세) */}
+      {focus && (
+      <div className="panel-in contents lg:fixed lg:top-14 lg:right-0 lg:bottom-0 lg:z-30 lg:flex lg:w-136 lg:flex-col lg:gap-4 lg:overflow-y-auto lg:border-l lg:border-border lg:bg-bg lg:p-6 lg:shadow-card">
+        <div className="hidden items-center justify-between lg:flex">
+          <h2 className="text-lg font-bold">{t('focusTitle')}</h2>
+          <Link href={listHref} aria-label={t('panelClose')} className="flex size-8 items-center justify-center rounded-button text-muted hover:bg-surface">
+            <X aria-hidden size={18} />
+          </Link>
+        </div>
+        {focusCount === 0 && <div className="hidden lg:block">{gone}</div>}
       {/* 반경 밖 출근/퇴근 요청 (2026-10-10 의뢰인: 시프티 방식) — 승인해야 기록이 되므로 맨 위에 둔다 */}
       {punchPending.length > 0 && (
         <section id="punch" className="flex scroll-mt-16 flex-col gap-2">
@@ -509,26 +409,12 @@ export default async function InboxPage({ searchParams }: { searchParams: Promis
         </section>
       )}
 
-      {focus ? (
-        <>
-          {focus.k === 'overtime' && <div id="overtime" className="flex flex-col gap-3">{overtimeTab}</div>}
-          {focus.k === 'corrections' && <div id="corrections" className="flex flex-col gap-3">{correctionsTab}</div>}
-          {focus.k === 'leave' && <div id="leave" className="flex flex-col gap-3">{leaveTab}</div>}
-          {focus.k === 'work' && <div id="work" className="flex flex-col gap-3">{workTab}</div>}
-        </>
-      ) : (
-        <InboxTabs
-          label={t('tabs')}
-          tabs={[
-            { key: 'overtime', label: t('overtimeTitle'), count: ot?.length ?? 0, content: overtimeTab },
-            { key: 'corrections', label: t('correctionsTitle'), count: co?.length ?? 0, content: correctionsTab },
-            { key: 'leave', label: t('leaveTitle'), count: leavePending.length, content: leaveTab },
-            { key: 'work', label: t('workTitle'), count: workPending.length, content: workTab },
-          ]}
-        />
-      )}
+        {focus.k === 'overtime' && <div id="overtime" className="flex flex-col gap-3">{overtimeTab}</div>}
+        {focus.k === 'corrections' && <div id="corrections" className="flex flex-col gap-3">{correctionsTab}</div>}
+        {focus.k === 'leave' && <div id="leave" className="flex flex-col gap-3">{leaveTab}</div>}
+        {focus.k === 'work' && <div id="work" className="flex flex-col gap-3">{workTab}</div>}
       </div>
-
+      )}
     </PageShell>
   );
 }

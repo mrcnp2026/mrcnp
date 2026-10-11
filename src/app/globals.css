@@ -151,3 +151,18 @@ button:not(:disabled):active, a:active, summary:active, [role='button']:active {
     transform: none;
   }
 }
+
+/* 오른쪽에서 밀려 나오는 상세 패널 (PC 요청 내역) — 0.2초, 움직임 줄이기 설정이면 위의 규칙이 끈다 */
+@keyframes panel-in {
+  from {
+    transform: translateX(1.5rem);
+    opacity: 0;
+  }
+  to {
+    transform: none;
+    opacity: 1;
+  }
+}
+.panel-in {
+  animation: panel-in 200ms ease-out;
+}

@@ -582,7 +582,11 @@
       "confirmLeaveDeleteReject": "Reject {name}'s leave deletion request ({summary})? The leave stays as it is.",
       "backToList": "Back to requests",
       "focusTitle": "Request",
-      "focusGone": "This request has already been handled or cannot be found."
+      "focusGone": "This request has already been handled or cannot be found.",
+      "pcTitle": "Requests",
+      "pcIntro": "Review staff requests, approve or reject them, and check their status.",
+      "panelClose": "Close",
+      "totalCount": "Requests"
     },
     "records": {
       "title": "Records",
@@ -2006,7 +2010,15 @@
       "remote": "Remote work",
       "holiday": "Holiday work",
       "extra": "Extra hours"
-    }
+    },
+    "colKind": "Type",
+    "colWho": "From",
+    "colWhat": "Request",
+    "colReason": "Reason",
+    "colStatus": "Status",
+    "colAsked": "Requested",
+    "colManage": "Manage",
+    "open": "Review"
   },
   "scheduleRequest": {
     "title": "Schedule request",

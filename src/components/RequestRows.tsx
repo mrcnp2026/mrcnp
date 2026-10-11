@@ -10,12 +10,13 @@ import { ago, type ReqItem, type ReqKind } from '@/lib/requests';
 
 const ICON: Record<ReqKind, LucideIcon> = { correction: PencilLine, overtime: Clock, leave: CalendarDays, work: MapPin, punch: MapPinOff, shift: CalendarRange, leaveDelete: CalendarX };
 
-export async function RequestRows({ items, leaveTypes, names, showName = false, hrefOf }: {
+export async function RequestRows({ items, leaveTypes, names, showName = false, hrefOf, table = false }: {
   items: ReqItem[];
   leaveTypes: { code: string; name: string }[];
   names: Map<string, string>;
   showName?: boolean;
   hrefOf: (r: ReqItem) => string;
+  table?: boolean; // PC 표 모양 (시프티의 「요청 내역」 표) — 줄 끝의 [처리]를 누르면 그 요청의 상세가 열린다
 }) {
   const [t, tco, tl, tw, f] = await Promise.all([getTranslations('requests'), getTranslations('corrections'), getTranslations('leave'), getTranslations('work'), getFormatter()]);
   const SHIFT_KIND = new Set(['normal', 'deemed', 'outside', 'remote', 'holiday', 'extra']);
@@ -37,6 +38,65 @@ export async function RequestRows({ items, leaveTypes, names, showName = false, 
         : r.kind === 'leave' || r.kind === 'leaveDelete'
           ? `${range(r)} · ${t('days', { n: f.number(r.days ?? 0, { maximumFractionDigits: 4 }) })}`
           : `${range(r)}${r.place ? ` · ${r.place}` : ''}`;
+
+  if (table) {
+    const th = 'px-3 py-2 text-left whitespace-nowrap';
+    const td = 'px-4 py-2.5 align-middle';
+    return (
+      <div className="overflow-x-auto border-t border-border bg-bg">
+        <table className="w-full text-sm">
+          <thead>
+            <tr>
+              {[t('colKind'), t('colWho'), t('colWhat'), t('colReason'), t('colStatus'), t('colAsked'), t('colManage')].map((x) => (
+                <th key={x} scope="col" className={th}>{x}</th>
+              ))}
+            </tr>
+          </thead>
+          <tbody>
+            {items.map((r) => {
+              const who = r.decidedBy ? names.get(r.decidedBy) : null;
+              const label = sub(r);
+              return (
+                <tr key={r.key}>
+                  <td className={`${td} font-bold whitespace-nowrap`}>
+                    <Link href={hrefOf(r)} className="hover:text-primary">
+                      {r.kind === 'punch' ? t(`punchKind.${r.punchKind ?? 'in'}`) : t(`kinds.${r.kind}`)}
+                    </Link>
+                    {label && <span className="block text-xs font-normal text-muted">{label}</span>}
+                  </td>
+                  <td className={`${td} whitespace-nowrap`}>{names.get(r.employeeId) ?? ''}</td>
+                  <td className={`${td} num`}>
+                    {r.kind === 'correction' && r.oldAt ? (
+                      <>
+                        {day(r.date)}
+                        {r.punchKind ? ` · ${t(`punch.${r.punchKind}`)} ` : ' '}
+                        <s className="text-muted">{clock(r.oldAt)}</s>
+                        {' → '}
+                        <span className="font-bold text-primary">{r.newAt ? clock(r.newAt) : 'X'}</span>
+                      </>
+                    ) : (
+                      detail(r)
+                    )}
+                  </td>
+                  <td className={`${td} max-w-64 truncate text-muted`}>{r.reason ?? ''}</td>
+                  <td className={`${td} whitespace-nowrap`}>
+                    <Chip tone={r.status === 'approved' ? 'ok' : r.status === 'pending' ? 'warn' : 'neutral'}>{t(`status.${r.status}`)}</Chip>
+                    {r.status !== 'pending' && who && <span className="num ml-2 text-xs text-muted">{t('by', { name: who })}</span>}
+                  </td>
+                  <td className={`${td} num whitespace-nowrap text-muted`}>{r.createdAt ? stamp(r.createdAt) : ''}</td>
+                  <td className={`${td} whitespace-nowrap`}>
+                    <Link href={hrefOf(r)} className="inline-flex h-8 items-center rounded-button border border-primary bg-bg px-4 text-sm font-bold text-primary hover:bg-primary-tint">
+                      {t('open')}
+                    </Link>
+                  </td>
+                </tr>
+              );
+            })}
+          </tbody>
+        </table>
+      </div>
+    );
+  }
 
   return (
     <RowList>

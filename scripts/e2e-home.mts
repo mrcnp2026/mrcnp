@@ -163,7 +163,9 @@ try {
   await p.goto(`${BASE}/admin`);
   await p.waitForLoadState('networkidle');
   await p.locator('nav.sticky').first().getByRole('link', { name: '출퇴근기록', exact: true }).hover();
-  check(await p.locator('nav.sticky').first().getByRole('link', { name: '목록형', exact: true }).isVisible(), 'PC 메뉴: 마우스를 올리면 하위 메뉴가 아래로 펼쳐짐');
+  check(await p.locator('nav.sticky').first().getByRole('link', { name: '목록형', exact: true }).waitFor({ state: 'visible', timeout: 3000 }).then(() => true, () => false), 'PC 메뉴: 「출퇴근기록」에 마우스를 올리면 오른쪽 패널에 목록형이 나옴');
+  await p.waitForTimeout(400);
+  await shot('44-PC-메뉴-패널');
   await p.locator('nav.sticky').first().getByRole('link', { name: '관리', exact: true }).hover();
   // 패널은 0.2초에 걸쳐 부드럽게 나온다 — 다 나올 때까지 기다린 뒤 본다
   check(await p.locator('nav.sticky').first().getByRole('link', { name: '출퇴근 장소', exact: true }).waitFor({ state: 'visible', timeout: 3000 }).then(() => true, () => false), 'PC 메뉴: 「관리」에 마우스를 올리면 오른쪽에 패널이 나옴');
