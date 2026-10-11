@@ -2142,7 +2142,26 @@
     "colOut": "Out",
     "colWorked": "Hours",
     "colOver": "Overtime · night · holiday",
-    "colNote": "Notes"
+    "colNote": "Notes",
+    "pc": {
+      "title": "My attendance",
+      "catNormal": "Normal",
+      "catLate": "Late",
+      "catNoOut": "Missing clock-out",
+      "catDeemed": "Deemed work",
+      "colTime": "Worked",
+      "colPlan": "Shift",
+      "colBreak": "Break",
+      "colTotal": "Total",
+      "colPayable": "Payable",
+      "colDiffIn": "In vs plan",
+      "colDiffOut": "Out vs plan",
+      "colState": "Status",
+      "newCorrection": "Request a correction",
+      "deemed": "Deemed work",
+      "noPlan": "No shift",
+      "empty": "No records of the chosen kinds."
+    }
   },
   "corrections": {
     "title": "Corrections",

@@ -2142,7 +2142,26 @@
     "colOut": "퇴근",
     "colWorked": "근로시간",
     "colOver": "연장 · 야간 · 휴일",
-    "colNote": "비고"
+    "colNote": "비고",
+    "pc": {
+      "title": "내 출퇴근기록",
+      "catNormal": "정상적인 기록",
+      "catLate": "지각 기록",
+      "catNoOut": "퇴근 누락 기록",
+      "catDeemed": "간주근로 근무일정",
+      "colTime": "근무시간",
+      "colPlan": "근무일정",
+      "colBreak": "휴게시간",
+      "colTotal": "총 시간",
+      "colPayable": "급여용 시간",
+      "colDiffIn": "출근시간 오차",
+      "colDiffOut": "퇴근시간 오차",
+      "colState": "상태",
+      "newCorrection": "출퇴근기록 정정 요청",
+      "deemed": "간주 근무",
+      "noPlan": "무일정",
+      "empty": "고른 종류의 기록이 없습니다."
+    }
   },
   "corrections": {
     "title": "정정 요청",

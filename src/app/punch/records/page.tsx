@@ -1,7 +1,7 @@
 // 직원 "내 기록" — 월 단위 + 월 이동(최근 6개월) (2026-10-02 의뢰인: 14일만 보이고 시간 표시가 지저분하다).
 // 하루 한 줄: "출근 09:00 → 퇴근 20:00" / 근무 중이면 "출근 10:56 · 근무 중". 정정된 날은 "정정됨" 칩 (R-10-8: 상태를 숨기지 않는다).
 // 연장 확인 요청이 대기 중이면 사유를 적을 수 있다 (6장: 서버 API로만).
-import { ChevronLeft, ChevronRight } from 'lucide-react';
+import { Check, ChevronLeft, ChevronRight, Clock } from 'lucide-react';
 import { getFormatter, getTranslations } from 'next-intl/server';
 import Link from 'next/link';
 import { redirect } from 'next/navigation';
@@ -13,7 +13,7 @@ import { getMe } from '@/lib/auth';
 import { judgeLateness } from '@/lib/lateness';
 import { isYearMonth, monthRange } from '@/lib/month-data';
 import { daysFor, loadPeriod } from '@/lib/period-data';
-import { toKstDate } from '@/lib/time';
+import { kstDateTime, toKstDate } from '@/lib/time';
 import { ReasonForm } from './ReasonForm';
 
 const MONTHS_BACK = 6; // 직원이 볼 수 있는 과거 (보존은 3년 — 그 이상은 관리자에게 요청)
@@ -23,7 +23,7 @@ function shift(ym: string, n: number) {
   return new Date(Date.UTC(y, m - 1 + n, 1)).toISOString().slice(0, 7);
 }
 
-export default async function MyRecordsPage({ searchParams }: { searchParams: Promise<{ m?: string }> }) {
+export default async function MyRecordsPage({ searchParams }: { searchParams: Promise<{ m?: string; x?: string }> }) {
   const me = await getMe();
   if (!me) redirect('/login');
   const t = await getTranslations('records');
@@ -77,10 +77,32 @@ export default async function MyRecordsPage({ searchParams }: { searchParams: Pr
     };
   });
 
+  // PC: 시프티 직원 모드의 「내 출퇴근기록」 — 왼쪽 좁은 칸(달 · 요약 · 기록 종류 체크) + 오른쪽 표 (2026-10-11 의뢰인 스샷 `스샷/직원모드 출퇴근기록.png`)
+  // 기록 종류 체크는 주소의 ?x=(숨길 종류, 쉼표)로 — 누르면 그 종류를 숨기거나 다시 보인다
+  const CATS = ['normal', 'late', 'noOut', 'deemed'] as const;
+  type Cat = (typeof CATS)[number];
+  const CAT_KEY = { normal: 'pc.catNormal', late: 'pc.catLate', noOut: 'pc.catNoOut', deemed: 'pc.catDeemed' } as const;
+  const CAT_COLOR: Record<Cat, string> = { normal: 'border-ok bg-ok', late: 'border-warn bg-warn', noOut: 'border-danger bg-danger', deemed: 'border-primary bg-primary' };
+  const hidden = new Set((sp.x ?? '').split(',').filter((c): c is Cat => (CATS as readonly string[]).includes(c)));
+  const catOf = (r: (typeof rows)[number]): Cat => (r.d.deemed ? 'deemed' : r.open && r.d.workDate !== today ? 'noOut' : lateOf.has(r.d.workDate) ? 'late' : 'normal');
+  const catCount = (c: Cat) => rows.filter((r) => catOf(r) === c).length;
+  const toggle = (c: Cat) => {
+    const next = new Set(hidden);
+    if (next.has(c)) next.delete(c);
+    else next.add(c);
+    const u = new URLSearchParams();
+    if (ym !== thisMonth) u.set('m', ym);
+    if (next.size) u.set('x', [...next].join(','));
+    return `/punch/records${u.size ? `?${u}` : ''}`;
+  };
+  const pcRows = rows.filter((r) => !hidden.has(catOf(r)));
+  const diff = (at: Date | undefined, date: string, hhmm: string | undefined) => (at && hhmm ? Math.round((at.getTime() - kstDateTime(date, hhmm).getTime()) / 60000) : null);
+  const diffText = (v: number | null) => (v === null || v === 0 ? '' : `${v > 0 ? '+' : '-'} ${dur(Math.abs(v))}`);
+
   return (
     <PageShell wide>
       <MineBar menu={tm('menu')} title={t('title')} side={me.role === 'admin' ? { href: '/admin/records/list', label: t('title') } : undefined} />
-      <header className="flex items-center justify-between gap-2">
+      <header className="flex items-center justify-between gap-2 lg:hidden">
         <h1 className="sr-only lg:not-sr-only lg:text-2xl lg:font-extrabold lg:tracking-tight">{t('title')}</h1>
         <nav className="flex shrink-0 items-center" aria-label={t('month')}>
           {ym > oldest ? (
@@ -103,57 +125,117 @@ export default async function MyRecordsPage({ searchParams }: { searchParams: Pr
 
       {!data.rule && <p className="text-sm text-faint">{th('noRule')}</p>}
 
-      {/* PC: 숫자 칸 4개(같은 크기) → 날짜별 표 (2026-10-06 의뢰인: 왼쪽 요약 + 오른쪽 카드 더미는 보기 나빴다) */}
-      <dl className="hidden grid-cols-4 gap-4 lg:grid">
-        {[
-          { k: 'totalWorked', v: dur(total), warn: false },
-          { k: 'daysWorked', v: t('days', { n: worked.length }), warn: false },
-          { k: 'lateTotal', v: t('lateValue', { n: lateOf.size, m: lateMin }), warn: lateOf.size > 0 },
-          { k: 'overtimeTotal', v: dur(overtimeTotal), warn: false },
-        ].map((x) => (
-          <div key={x.k} className="flex flex-col gap-2 rounded-card bg-bg p-5">
-            <dt className="text-sm text-muted">{t(x.k)}</dt>
-            <dd className={`num text-3xl leading-none font-extrabold ${x.warn ? 'text-warn' : ''}`}>{x.v}</dd>
+      {/* ── PC ── */}
+      <div className="hidden lg:grid lg:grid-cols-[14rem_minmax(0,1fr)] lg:gap-8">
+        <aside className="flex flex-col gap-4">
+          <h1 className="text-lg font-bold">{t('pc.title')}</h1>
+          <nav className="flex items-center gap-1" aria-label={t('month')}>
+            {ym > oldest ? (
+              <Link href={`?m=${shift(ym, -1)}`} aria-label={t('prev')} className="flex size-8 items-center justify-center rounded-button border border-border bg-bg text-muted">
+                <ChevronLeft aria-hidden size={16} />
+              </Link>
+            ) : (
+              <span className="size-8" />
+            )}
+            <span className="num flex-1 text-center font-bold">{f.dateTime(new Date(`${ym}-15T12:00:00+09:00`), { year: 'numeric', month: 'long' })}</span>
+            {ym < thisMonth ? (
+              <Link href={`?m=${shift(ym, 1)}`} aria-label={t('next')} className="flex size-8 items-center justify-center rounded-button border border-border bg-bg text-muted">
+                <ChevronRight aria-hidden size={16} />
+              </Link>
+            ) : (
+              <span className="size-8" />
+            )}
+          </nav>
+          <dl className="num flex flex-col divide-y divide-border border-y border-border text-sm">
+            {[
+              { k: 'totalWorked', v: dur(total) },
+              { k: 'daysWorked', v: t('days', { n: worked.length }) },
+              { k: 'lateTotal', v: t('lateValue', { n: lateOf.size, m: lateMin }) },
+              { k: 'overtimeTotal', v: dur(overtimeTotal) },
+            ].map((x) => (
+              <div key={x.k} className="flex items-baseline justify-between gap-2 py-1.5">
+                <dt className="text-muted">{t(x.k)}</dt>
+                <dd className="font-bold">{x.v}</dd>
+              </div>
+            ))}
+          </dl>
+          <ul className="flex flex-col gap-1 text-sm">
+            {CATS.map((c) => (
+              <li key={c}>
+                <Link href={toggle(c)} role="checkbox" aria-checked={!hidden.has(c)} scroll={false} className="flex min-h-8 items-center gap-2">
+                  <span aria-hidden className={`flex size-4 items-center justify-center rounded-button border ${hidden.has(c) ? 'border-border bg-bg' : CAT_COLOR[c]}`}>
+                    {!hidden.has(c) && <Check size={12} strokeWidth={3} className="text-on-primary" />}
+                  </span>
+                  <span className="flex-1">{t(CAT_KEY[c])}</span>
+                  <span className="num text-xs text-faint">{catCount(c)}</span>
+                </Link>
+              </li>
+            ))}
+          </ul>
+        </aside>
+        <section className="flex min-w-0 flex-col gap-3">
+          <div className="flex justify-end">
+            <Link href="/punch/corrections?new=1" className="inline-flex h-8 items-center gap-1.5 rounded-button bg-primary px-4 text-sm font-bold text-on-primary">
+              <Clock aria-hidden size={16} />
+              {t('pc.newCorrection')}
+            </Link>
           </div>
-        ))}
-      </dl>
-      {rows.length > 0 && (
-        <Card className="hidden overflow-x-auto p-0 lg:block">
-          <table className="w-full text-sm">
-            <thead>
-              <tr className="border-b border-border">
-                {[t('colDate'), t('colIn'), t('colOut'), t('colWorked'), t('colOver'), t('colNote')].map((x, i) => (
-                  <th key={x} scope="col" className={`px-5 py-3 text-xs font-medium whitespace-nowrap text-faint ${i >= 1 && i <= 3 ? 'text-right' : 'text-left'}`}>{x}</th>
-                ))}
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-border">
-              {rows.map(({ d, firstIn, lastOut, open, req, corrected, pendingCorr }) => (
-                <tr key={d.workDate}>
-                  <td className="px-5 py-3 font-semibold whitespace-nowrap">{f.dateTime(new Date(`${d.workDate}T12:00:00+09:00`), { month: 'short', day: 'numeric', weekday: 'short' })}</td>
-                  <td className="num px-5 py-3 text-right">{firstIn ? hm(firstIn) : '–'}</td>
-                  <td className="num px-5 py-3 text-right">
-                    {open ? (d.workDate === today ? <span className="text-muted">{th('status.working')}</span> : <span className="text-warn">{t('noOut')}</span>) : lastOut ? hm(lastOut) : '–'}
-                  </td>
-                  <td className="num px-5 py-3 text-right font-semibold whitespace-nowrap">{open && d.workDate === today ? '–' : dur(d.netMinutes)}</td>
-                  <td className="num px-5 py-3 text-xs text-muted">{d.overtimeMinutes + d.holidayMinutes > 0 ? t('overtimeLine', { o: dur(d.overtimeMinutes), n: dur(d.nightMinutes), h: dur(d.holidayMinutes) }) : '–'}</td>
-                  <td className="px-5 py-3">
-                    <span className="flex flex-col gap-2">
-                      <span className="flex flex-wrap items-center gap-1">
-                        {lateOf.has(d.workDate) && <Chip tone="warn">{th('lateBy', { n: lateOf.get(d.workDate)! })}</Chip>}
-                        {corrected && <Chip tone="info">{t('corrected')}</Chip>}
-                        {pendingCorr && <Chip>{t('correctionPending')}</Chip>}
-                        {req && <Chip tone={req.status === 'approved' ? 'ok' : req.status === 'rejected' ? 'neutral' : 'warn'}>{t(`overtime.${req.status}`)}</Chip>}
-                      </span>
-                      {req?.status === 'pending' && <ReasonForm id={req.id} initial={req.reason} />}
-                    </span>
-                  </td>
+          <div className="overflow-x-auto border-t border-border bg-bg">
+            <table className="w-full text-sm">
+              <thead>
+                <tr>
+                  {[t('colDate'), t('pc.colTime'), t('pc.colPlan'), t('pc.colBreak'), t('pc.colTotal'), t('pc.colPayable'), t('pc.colDiffIn'), t('pc.colDiffOut'), t('pc.colState')].map((x, i) => (
+                    <th key={x} scope="col" className={`px-3 py-2 whitespace-nowrap ${i >= 3 && i <= 7 ? 'text-right' : 'text-left'}`}>
+                      {x}
+                    </th>
+                  ))}
                 </tr>
-              ))}
-            </tbody>
-          </table>
-        </Card>
-      )}
+              </thead>
+              <tbody>
+                {pcRows.length === 0 && (
+                  <tr>
+                    <td colSpan={9} className="px-3 py-8 text-center text-faint">
+                      {t('pc.empty')}
+                    </td>
+                  </tr>
+                )}
+                {pcRows.map((r) => {
+                  const { d, firstIn, lastOut, open, req, corrected, pendingCorr } = r;
+                  const plan = data.planFor(me.id, d.workDate);
+                  const live = open && d.workDate === today;
+                  return (
+                    <tr key={d.workDate}>
+                      <td className="num px-3 py-2 font-bold whitespace-nowrap">{f.dateTime(new Date(`${d.workDate}T12:00:00+09:00`), { month: '2-digit', day: '2-digit', weekday: 'short' })}</td>
+                      <td className="num px-3 py-2 whitespace-nowrap">
+                        {d.deemed ? t('pc.deemed') : `${firstIn ? hm(firstIn) : '–'} - ${open ? '' : lastOut ? hm(lastOut) : '–'}`}
+                        {open && !live && <span className="ml-1 text-warn">{t('noOut')}</span>}
+                        {live && <span className="ml-1 text-muted">{th('status.working')}</span>}
+                      </td>
+                      <td className="num px-3 py-2 whitespace-nowrap text-muted">{plan.items.length ? plan.items.map((it) => `${it.startTime} - ${it.endTime}`).join(', ') : t('pc.noPlan')}</td>
+                      <td className="num px-3 py-2 text-right text-muted">{dur(d.breakMinutes)}</td>
+                      <td className="num px-3 py-2 text-right">{live ? '–' : dur(d.netMinutes)}</td>
+                      <td className="num px-3 py-2 text-right font-bold">{live ? '–' : dur(d.payableMinutes)}</td>
+                      <td className="num px-3 py-2 text-right whitespace-nowrap text-muted">{d.deemed ? '' : diffText(diff(firstIn, d.workDate, plan.items[0]?.startTime))}</td>
+                      <td className="num px-3 py-2 text-right whitespace-nowrap text-muted">{d.deemed || open ? '' : diffText(diff(lastOut, d.workDate, plan.items.at(-1)?.endTime))}</td>
+                      <td className="px-3 py-2">
+                        <span className="flex flex-col gap-2">
+                          <span className="flex flex-wrap items-center gap-1">
+                            {lateOf.has(d.workDate) && <Chip tone="warn">{th('lateBy', { n: lateOf.get(d.workDate)! })}</Chip>}
+                            {corrected && <Chip tone="info">{t('corrected')}</Chip>}
+                            {pendingCorr && <Chip>{t('correctionPending')}</Chip>}
+                            {req && <Chip tone={req.status === 'approved' ? 'ok' : req.status === 'rejected' ? 'neutral' : 'warn'}>{t(`overtime.${req.status}`)}</Chip>}
+                          </span>
+                          {req?.status === 'pending' && <ReasonForm id={req.id} initial={req.reason} />}
+                        </span>
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
+        </section>
+      </div>
 
       {/* 폰: 이 달 요약 — 근무 시간을 크게, 나머지는 2×2 (토스풍) */}
       <Card className="flex flex-col gap-4 p-6 lg:hidden">
