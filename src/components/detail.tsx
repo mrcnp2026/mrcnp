@@ -8,14 +8,15 @@ export function DetailBar({ back, backLabel, title, action, extra, plain = false
   // plain: 화면의 머리글(h1)이 아래에 따로 있을 때 — 이 줄의 제목은 그냥 글자로 둔다 (머리글이 둘이 되지 않게)
   const Title = plain ? 'p' : 'h1';
   return (
-    <div className="sticky top-0 z-10 -mx-4 -mt-4 flex min-h-14 items-center gap-2 border-b border-border bg-bg px-4 pt-[env(safe-area-inset-top)] lg:static lg:mx-0 lg:mt-0 lg:rounded-card lg:border">
-      <Link href={back} aria-label={backLabel} className="-ml-2 flex size-11 shrink-0 items-center justify-center rounded-button text-text">
-        <ArrowLeft aria-hidden size={24} strokeWidth={1.75} />
+    // PC (2026-10-11, 시프티 PC 화면): 상자 없이 큰 제목(24px) + 오른쪽에 파란 주 버튼 하나. 폰은 그대로(맨 위에 붙는 흰 줄)
+    <div className="sticky top-0 z-10 -mx-4 -mt-4 flex min-h-14 items-center gap-2 border-b border-border bg-bg px-4 pt-[env(safe-area-inset-top)] lg:static lg:mx-0 lg:mt-0 lg:min-h-10 lg:border-0 lg:bg-transparent lg:px-0">
+      <Link href={back} aria-label={backLabel} className="-ml-2 flex size-11 shrink-0 items-center justify-center rounded-button text-text lg:ml-0 lg:size-8 lg:border lg:border-border lg:bg-bg lg:text-muted">
+        <ArrowLeft aria-hidden size={24} strokeWidth={1.75} className="lg:size-4.5" />
       </Link>
-      <Title className="min-w-0 flex-1 truncate text-lg font-bold">{title}</Title>
+      <Title className="min-w-0 flex-1 truncate text-lg font-bold lg:text-2xl">{title}</Title>
       {extra}
       {action && (
-        <Link href={action.href} className="inline-flex min-h-11 shrink-0 items-center px-2 text-base font-bold text-primary">
+        <Link href={action.href} className="inline-flex min-h-11 shrink-0 items-center px-2 text-base font-bold text-primary lg:min-h-8 lg:rounded-button lg:bg-primary lg:px-4 lg:text-sm lg:text-on-primary">
           {action.label}
         </Link>
       )}

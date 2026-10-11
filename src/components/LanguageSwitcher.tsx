@@ -25,7 +25,7 @@ export function LanguageSwitcher({ options }: { options: { code: string; name: s
 
   if (options.length <= 2) {
     return (
-      <div role="group" aria-label={t('language')} className="flex rounded-chip border border-border bg-surface p-0.5">
+      <div role="group" aria-label={t('language')} className="flex rounded-chip border border-border bg-surface p-0.5 lg:rounded-button">
         {options.map((o) => {
           const on = o.code === current;
           return (
@@ -38,7 +38,7 @@ export function LanguageSwitcher({ options }: { options: { code: string; name: s
               title={o.name}
               disabled={pending}
               onClick={() => change(o.code)}
-              className={`min-h-11 min-w-11 rounded-chip px-2 text-sm font-semibold ${on ? 'bg-primary text-on-primary' : 'text-muted'}`}
+              className={`min-h-11 min-w-11 rounded-chip px-2 text-sm font-semibold lg:min-h-7 lg:min-w-9 lg:rounded-button ${on ? 'bg-primary text-on-primary' : 'text-muted'}`}
             >
               {o.code.toUpperCase()}
             </button>
