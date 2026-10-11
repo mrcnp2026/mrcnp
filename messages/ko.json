@@ -2483,7 +2483,13 @@
     "colStatus": "상태",
     "colAsked": "신청일자",
     "colManage": "관리",
-    "open": "처리"
+    "open": "처리",
+    "view": "보기",
+    "pcTitle": "내 요청들",
+    "pcPending": "대기중인 요청 수",
+    "pcDone": "완료된 요청 수",
+    "pcShowPending": "대기중인 요청 보기",
+    "pcShowDone": "완료된 요청 보기"
   },
   "scheduleRequest": {
     "title": "근무일정 요청",

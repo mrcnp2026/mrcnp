@@ -11,12 +11,13 @@ import { ago, type ReqItem, type ReqKind } from '@/lib/requests';
 
 const ICON: Record<ReqKind, LucideIcon> = { correction: PencilLine, overtime: Clock, leave: CalendarDays, work: MapPin, punch: MapPinOff, shift: CalendarRange, leaveDelete: CalendarX };
 
-export async function RequestRows({ items, leaveTypes, names, showName = false, hrefOf, table = false }: {
+export async function RequestRows({ items, leaveTypes, names, showName = false, hrefOf, table = false, openKey = 'open' }: {
   items: ReqItem[];
   leaveTypes: { code: string; name: string }[];
   names: Map<string, string>;
   showName?: boolean;
   hrefOf: (r: ReqItem) => string;
+  openKey?: 'open' | 'view'; // 줄 끝 버튼 글자 — 관리자는 「처리」, 직원은 「보기」
   table?: boolean; // PC 표 모양 (시프티의 「요청 내역」 표) — 줄 어디를 눌러도 그 요청의 상세가 열린다
 }) {
   const [t, tco, tl, tw, f] = await Promise.all([getTranslations('requests'), getTranslations('corrections'), getTranslations('leave'), getTranslations('work'), getFormatter()]);
@@ -87,7 +88,7 @@ export async function RequestRows({ items, leaveTypes, names, showName = false, 
                   <td className={`${td} num whitespace-nowrap text-muted`}>{r.createdAt ? stamp(r.createdAt) : ''}</td>
                   <td className={`${td} whitespace-nowrap`}>
                     <Link href={hrefOf(r)} className="inline-flex h-8 items-center rounded-button border border-primary bg-bg px-4 text-sm font-bold text-primary hover:bg-primary-tint">
-                      {t('open')}
+                      {t(openKey)}
                     </Link>
                   </td>
                 </ClickRow>

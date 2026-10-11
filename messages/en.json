@@ -2483,7 +2483,13 @@
     "colStatus": "Status",
     "colAsked": "Requested",
     "colManage": "Manage",
-    "open": "Review"
+    "open": "Review",
+    "view": "View",
+    "pcTitle": "My requests",
+    "pcPending": "Pending",
+    "pcDone": "Completed",
+    "pcShowPending": "Show pending",
+    "pcShowDone": "Show completed"
   },
   "scheduleRequest": {
     "title": "Schedule request",

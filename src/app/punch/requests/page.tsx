@@ -38,16 +38,59 @@ export default async function MyRequestsPage({ searchParams }: { searchParams: P
     { id: 'work', label: t('newWork'), href: '/punch/leave?new=work' },
   ];
 
+  // PC: 시프티 직원 모드의 「요청 내역」 — 왼쪽 좁은 칸(대기/완료 수 · 보기 고르기) + 오른쪽 표 (2026-10-11 의뢰인 스샷 `스샷/직원모드 요청내역.png`)
+  const pcItems = done ? split.done : split.pending;
+  const pick = (on: boolean, label: string, href: string) => (
+    <Link href={href} role="radio" aria-checked={on} className="flex min-h-8 items-center gap-2 text-sm">
+      <span aria-hidden className={`size-4 rounded-button border ${on ? 'border-primary bg-primary' : 'border-border bg-bg'}`} />
+      {label}
+    </Link>
+  );
+
   return (
     <PageShell wide>
       <h1 className="sr-only">{t('title')}</h1>
+      <div className="hidden lg:grid lg:grid-cols-[14rem_minmax(0,1fr)] lg:gap-8">
+        <aside className="flex flex-col gap-4">
+          <h2 className="text-lg font-bold">{t('pcTitle')}</h2>
+          <dl className="num flex flex-col gap-1 text-sm">
+            <div className="flex items-center justify-between gap-2">
+              <dt className="text-muted">{t('pcPending')}</dt>
+              <dd className="rounded-button bg-warn-tint px-2 font-bold text-warn">{split.pending.length}</dd>
+            </div>
+            <div className="flex items-center justify-between gap-2">
+              <dt className="text-muted">{t('pcDone')}</dt>
+              <dd className="rounded-button bg-surface px-2 font-bold">{split.done.length}</dd>
+            </div>
+          </dl>
+          <div role="radiogroup" className="flex flex-col gap-1 border-t border-border pt-3">
+            {pick(!done, t('pcShowPending'), '/punch/requests')}
+            {pick(done, t('pcShowDone'), '/punch/requests?tab=done')}
+          </div>
+        </aside>
+        <section className="flex min-w-0 flex-col gap-3">
+          <div className="flex flex-wrap justify-end gap-2">
+            {fresh.map((x) => (
+              <Link key={x.id} href={x.href} className="inline-flex h-8 items-center rounded-button border border-primary bg-bg px-3 text-sm font-bold text-primary hover:bg-primary-tint">
+                + {x.label}
+              </Link>
+            ))}
+          </div>
+          {pcItems.length === 0 ? (
+            <p className="border-t border-border py-10 text-center text-sm text-faint">{done ? t('emptyDone', { days: REQUEST_WINDOW_DAYS }) : t('emptyPending')}</p>
+          ) : (
+            <RequestRows table openKey="view" items={pcItems} leaveTypes={leaveTypes} names={names} hrefOf={hrefOf} />
+          )}
+        </section>
+      </div>
+      <div className="flex flex-col gap-3 lg:hidden">
       {admin ? (
         <RequestTabs admin active="mine" q={q} counts={{ pending: (await pendingCounts()).total, mine: split.pending.length }} />
       ) : (
         <RequestTabs admin={false} active={done ? 'done' : 'pending'} q={q} counts={{ pending: split.pending.length, done: split.done.length }} />
       )}
       {/* PC에는 + 버튼이 없다 — 새 요청으로 가는 길을 줄로 보인다 */}
-      <div className="hidden flex-wrap gap-2 lg:flex">
+      <div className="hidden">
         {fresh.map((x) => (
           <Link key={x.id} href={x.href} className="inline-flex min-h-11 items-center rounded-button border border-border bg-bg px-4 text-sm font-bold text-primary">
             + {x.label}
@@ -58,6 +101,7 @@ export default async function MyRequestsPage({ searchParams }: { searchParams: P
       <RequestRows items={page.items} leaveTypes={leaveTypes} names={names} hrefOf={hrefOf} />
       <Pager page={page.page} pages={page.pages} param="p" params={sp} label={tc('pages')} />
       {(done || admin) && split.done.length > 0 && <p className="px-1 text-sm text-faint">{t('doneHint', { days: REQUEST_WINDOW_DAYS })}</p>}
+      </div>
       <Fab label={t('new')} items={fresh} />
     </PageShell>
   );
