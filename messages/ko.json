@@ -1209,7 +1209,11 @@
       "from": "시작일",
       "to": "종료일",
       "apply": "이 기간으로 보기",
-      "groupAll": "전체 부서"
+      "groupAll": "전체 부서",
+      "viewWeek": "주",
+      "viewMonth": "월",
+      "colEmployee": "직원",
+      "colPeople": "근무 인원"
     },
     "leaveTypes": {
       "title": "휴가 종류",

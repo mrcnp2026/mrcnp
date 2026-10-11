@@ -21,11 +21,15 @@ import { loadOrgGroups } from '@/lib/org-data';
 import { leaveDaysFor, loadPeriod } from '@/lib/period-data';
 import { SHIFT_COLOR_CLASS, spanMinutes } from '@/lib/shifts';
 import { kstDateTime, toKstDate } from '@/lib/time';
+import { SheetOpener } from '@/components/SheetOpener';
+import { resolveDayType } from '@/config/labor-rules';
+import { ChevronLeft, ChevronRight } from 'lucide-react';
 import { CancelShift, ScheduleForm } from './ScheduleForms';
+import { ScheduleGrid, type GridDay, type GridRow } from './ScheduleGrid';
 
 const DATES_PER_PAGE = 7;
 
-export default async function AdminSchedulePage({ searchParams }: { searchParams: Promise<{ d?: string; q?: string; g?: string; from?: string; to?: string; p?: string }> }) {
+export default async function AdminSchedulePage({ searchParams }: { searchParams: Promise<{ d?: string; q?: string; g?: string; from?: string; to?: string; p?: string; v?: string }> }) {
   const [t, tk, tc, f, sp] = await Promise.all([getTranslations('admin.schedule'), getTranslations('admin.shifts.kinds'), getTranslations('common'), getFormatter(), searchParams]);
   const today = toKstDate(new Date());
   const week = weekStartOf(today);
@@ -58,11 +62,103 @@ export default async function AdminSchedulePage({ searchParams }: { searchParams
   const hm = (min: number) => t('hm', { h: Math.floor(min / 60), m: min % 60 });
   const formDate = from === to || today < from || today > to ? from : today;
 
+  // ── PC 달력형 (줄 = 직원, 칸 = 날짜). 주 보기 · 월 보기는 기간만 다르다 — 같은 자료를 그린다
+  const month = sp.v === 'month';
+  const monthStart = `${from.slice(0, 7)}-01`;
+  const nextMonth = addDays(`${addDays(monthStart, 31).slice(0, 7)}-01`, 0);
+  const span = days.length;
+  const link = (a: string, b: string, v = sp.v) => {
+    const qs = new URLSearchParams();
+    for (const [k, val] of Object.entries({ q, g, from: a, to: b, v })) if (val) qs.set(k, val);
+    return `/admin/schedule?${qs}`;
+  };
+  const prev = month ? link(`${addDays(monthStart, -1).slice(0, 7)}-01`, addDays(monthStart, -1)) : link(addDays(from, -span), addDays(from, -1));
+  const next = month ? link(nextMonth, addDays(`${addDays(nextMonth, 31).slice(0, 7)}-01`, -1)) : link(addDays(to, 1), addDays(to, span));
+  const gridPeople = people.filter((p) => !p.employeeNo?.startsWith('e2e-') || data.shifts.some((s) => s.employeeId === p.id));
+  const count = new Map<string, number>();
+  const gridRows: GridRow[] = gridPeople.map((p) => {
+    const job = p.jobId ? jobOf.get(p.jobId) : undefined;
+    let total = 0;
+    const cells = days.map((d) => {
+      const leave = isFullDayLeave(leaveOf.get(p.id)?.get(d));
+      const items = leave ? [] : data.planFor(p.id, d).items;
+      if (items.length) count.set(d, (count.get(d) ?? 0) + 1);
+      total += items.reduce((a, it) => a + spanMinutes(it), 0);
+      return {
+        leave: leave ? t('onLeave') : null,
+        items: items.map((it, i) => ({ it, href: `/admin/schedule/${p.id}/${d}?i=${i}`, color: job?.color ?? it.color, tag: it.kind !== 'none' ? tk(it.kind) : null })),
+      };
+    });
+    return { id: p.id, name: p.name, sub: [groupPath(groups, p.groupId), job?.name].filter(Boolean).join(' / '), total: hm(total), cells };
+  });
+  const gridDays: GridDay[] = days.map((d) => {
+    const red = data.rule ? resolveDayType(d, data.rule, data.holidays) === 'holiday' : false;
+    return { date: d, label: f.dateTime(kstDateTime(d, '12:00'), month ? { day: 'numeric', weekday: 'narrow' } : { day: 'numeric', weekday: 'short' }), holiday: null, red, today: d === today, count: count.get(d) ?? 0 };
+  });
+  const rangeTitle = month
+    ? f.dateTime(kstDateTime(from, '12:00'), { year: 'numeric', month: 'long' })
+    : `${f.dateTime(kstDateTime(from, '12:00'), { year: 'numeric', month: 'long', day: 'numeric' })} - ${f.dateTime(kstDateTime(to, '12:00'), { month: 'long', day: 'numeric' })}`;
+  const viewBtn = (on: boolean) => `inline-flex min-h-8 items-center border px-3 text-sm first:rounded-l-button last:rounded-r-button ${on ? 'z-10 border-primary bg-primary-tint font-bold text-primary' : 'border-border bg-bg text-muted'}`;
+
   return (
     <PageShell wide flush>
-      <h1 className="sr-only">{t('title')}</h1>
-      <div className="grid items-start lg:grid-cols-5 lg:gap-4">
-        <div className="flex flex-col lg:col-span-3 lg:gap-3">
+      <h1 className="sr-only lg:hidden">{t('title')}</h1>
+      {/* PC: 달력형 — 제목 · [추가하기] / ‹ › 오늘 · 기간 · 검색 · 부서 / [주 · 월] */}
+      <div className="hidden flex-col gap-4 lg:flex">
+        <div className="flex items-center justify-between gap-3">
+          <h1 className="text-2xl font-bold">{t('title')}</h1>
+          <div className="flex items-center gap-2">
+            <Link href="/admin/shifts" className="inline-flex min-h-8 items-center rounded-button border border-nav bg-bg px-4 text-sm font-bold text-nav">
+              {t('toTemplates')}
+            </Link>
+            <SheetOpener id="schedule" label={t('add')} />
+          </div>
+        </div>
+        <div className="flex flex-wrap items-center gap-2">
+          <div className="flex">
+            <Link href={prev} aria-label={t('prevDay')} className="inline-flex size-8 items-center justify-center rounded-l-button border border-border bg-bg text-muted">
+              <ChevronLeft aria-hidden size={16} />
+            </Link>
+            <Link href={next} aria-label={t('nextDay')} className="-ml-px inline-flex size-8 items-center justify-center rounded-r-button border border-border bg-bg text-muted">
+              <ChevronRight aria-hidden size={16} />
+            </Link>
+          </div>
+          <Link href={month ? link(`${today.slice(0, 7)}-01`, addDays(`${addDays(`${today.slice(0, 7)}-01`, 31).slice(0, 7)}-01`, -1)) : link(week, addDays(week, 6))} className="inline-flex min-h-8 items-center rounded-button border border-border bg-bg px-4 text-sm text-muted">
+            {t('today')}
+          </Link>
+          <p className="num ml-2 text-lg font-bold">{rangeTitle}</p>
+          <form action="/admin/schedule" className="ml-auto flex items-center gap-2">
+            <input type="hidden" name="from" value={from} />
+            <input type="hidden" name="to" value={to} />
+            {sp.v && <input type="hidden" name="v" value={sp.v} />}
+            <input type="search" name="q" defaultValue={q} placeholder={t('search')} aria-label={t('search')} maxLength={40} className="min-h-8 w-44 rounded-button border border-border bg-bg px-3" />
+            <select name="g" defaultValue={g} aria-label={t('filter')} className="min-h-8 rounded-button border border-border bg-surface px-2 text-muted">
+              <option value="">{t('groupAll')}</option>
+              {groupOptions.map((o) => (
+                <option key={o.id} value={o.id}>
+                  {o.label}
+                </option>
+              ))}
+            </select>
+            <button type="submit" className="inline-flex min-h-8 items-center rounded-button border border-border bg-bg px-3 text-sm text-muted">
+              {t('apply')}
+            </button>
+          </form>
+          <div className="flex">
+            <Link href={link(weekStartOf(from), addDays(weekStartOf(from), 6), '')} aria-current={!month ? 'page' : undefined} className={viewBtn(!month)}>
+              {t('viewWeek')}
+            </Link>
+            <Link href={link(monthStart, addDays(nextMonth, -1), 'month')} aria-current={month ? 'page' : undefined} className={`-ml-px ${viewBtn(month)}`}>
+              {t('viewMonth')}
+            </Link>
+          </div>
+        </div>
+        {!data.rule && <p className="rounded-card bg-bg p-5 text-sm text-faint">{t('noRule')}</p>}
+        <ScheduleGrid days={gridDays} rows={gridRows} dense={month} labels={{ employee: t('colEmployee'), people: t('colPeople'), empty: t('emptyRange') }} />
+        <p className="text-xs text-faint">{t('hint')}</p>
+      </div>
+      <div className="grid items-start lg:hidden">
+        <div className="flex flex-col">
           <ListBar
             key={`${q}|${g}|${from}|${to}`}
             q={q}
@@ -133,7 +229,8 @@ export default async function AdminSchedulePage({ searchParams }: { searchParams
           </div>
           <p className="px-1 text-sm text-faint">{t('hint')}</p>
         </div>
-        <AddSheet id="schedule" title={t('add')} className="lg:col-span-2">
+        </div>
+      <AddSheet id="schedule" title={t('add')} modal>
           <Card className="flex flex-col gap-3">
             <h2 className="hidden text-sm font-medium text-muted lg:block">{t('add')}</h2>
             <ScheduleForm
@@ -145,7 +242,6 @@ export default async function AdminSchedulePage({ searchParams }: { searchParams
             />
           </Card>
         </AddSheet>
-      </div>
       <Fab label={t('add')} items={[{ id: 'schedule', label: t('add') }]} />
     </PageShell>
   );

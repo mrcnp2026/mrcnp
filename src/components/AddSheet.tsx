@@ -10,7 +10,8 @@ import { useEffect, useState, type ReactNode } from 'react';
 export const OPEN_SHEET_EVENT = 'open-add-sheet';
 export const CLOSE_SHEET_EVENT = 'close-add-sheet'; // 저장이 끝난 양식이 자기 창을 닫는다
 
-export function AddSheet({ id, title, children, defaultOpen = false, className = '' }: { id: string; title: string; children: ReactNode; defaultOpen?: boolean; className?: string }) {
+// modal: PC에서도 닫혀 있다가 「추가하기」 버튼(SheetOpener)을 누르면 가운데 팝업으로 뜬다 (2026-10-11, 시프티 PC의 팝업 모양 — 흰 상자 · 어두운 바탕 · 제목 줄 · ×)
+export function AddSheet({ id, title, children, defaultOpen = false, className = '', modal = false }: { id: string; title: string; children: ReactNode; defaultOpen?: boolean; className?: string; modal?: boolean }) {
   const t = useTranslations('side');
   const [open, setOpen] = useState(defaultOpen);
   useEffect(() => {
@@ -26,26 +27,30 @@ export function AddSheet({ id, title, children, defaultOpen = false, className =
   useEffect(() => {
     if (!open) return;
     const phone = window.matchMedia('(max-width: 1023px)');
-    const onKey = (e: KeyboardEvent) => e.key === 'Escape' && phone.matches && setOpen(false);
+    const onKey = (e: KeyboardEvent) => e.key === 'Escape' && (phone.matches || modal) && setOpen(false);
     window.addEventListener('keydown', onKey);
-    if (phone.matches) document.body.style.overflow = 'hidden'; // 창 뒤의 화면이 같이 밀리지 않게 (폰에서만)
+    if (phone.matches || modal) document.body.style.overflow = 'hidden'; // 창 뒤의 화면이 같이 밀리지 않게 (폰, PC 팝업)
     return () => {
       window.removeEventListener('keydown', onKey);
       document.body.style.overflow = '';
     };
-  }, [open]);
+  }, [open, modal]);
 
   return (
-    <div data-add-sheet={id} className={`${open ? 'fixed inset-0 z-40 flex flex-col justify-end' : 'hidden'} lg:static lg:z-auto lg:block ${className}`}>
-      <button type="button" tabIndex={-1} aria-label={t('close')} onClick={() => setOpen(false)} className="flex-1 bg-text opacity-40 lg:hidden" />
-      <div role={open ? 'dialog' : undefined} aria-label={title} className="flex max-h-[calc(100dvh-3rem)] flex-col rounded-t-card bg-surface pb-[env(safe-area-inset-bottom)] lg:block lg:max-h-none lg:rounded-none lg:bg-transparent lg:pb-0">
-        <div className="flex items-center justify-between gap-2 py-1 pr-2 pl-5 lg:hidden">
+    <div data-add-sheet={id} className={`${open ? 'fixed inset-0 z-40 flex flex-col justify-end' : 'hidden'} ${modal ? 'lg:items-center lg:justify-center' : `lg:static lg:z-auto lg:block ${className}`}`}>
+      <button type="button" tabIndex={-1} aria-label={t('close')} onClick={() => setOpen(false)} className={`flex-1 bg-text opacity-40 ${modal ? 'lg:absolute lg:inset-0 lg:opacity-70' : 'lg:hidden'}`} />
+      <div
+        role={open ? 'dialog' : undefined}
+        aria-label={title}
+        className={`flex max-h-[calc(100dvh-3rem)] flex-col rounded-t-card bg-surface pb-[env(safe-area-inset-bottom)] ${modal ? 'lg:relative lg:w-160 lg:max-w-[calc(100vw-2rem)] lg:rounded-card lg:border lg:border-border lg:bg-bg lg:pb-0 lg:shadow-card' : 'lg:block lg:max-h-none lg:rounded-none lg:bg-transparent lg:pb-0'}`}
+      >
+        <div className={`flex items-center justify-between gap-2 py-1 pr-2 pl-5 ${modal ? 'lg:border-b lg:border-border lg:py-2 lg:text-lg' : 'lg:hidden'}`}>
           <p className="font-bold">{title}</p>
           <button type="button" aria-label={t('close')} onClick={() => setOpen(false)} className="flex size-11 shrink-0 items-center justify-center rounded-button text-primary">
             <X aria-hidden size={24} strokeWidth={1.75} />
           </button>
         </div>
-        <div className="overflow-y-auto px-3 pb-3 lg:overflow-visible lg:p-0">{children}</div>
+        <div className={`overflow-y-auto px-3 pb-3 ${modal ? 'lg:p-4' : 'lg:overflow-visible lg:p-0'}`}>{children}</div>
       </div>
     </div>
   );

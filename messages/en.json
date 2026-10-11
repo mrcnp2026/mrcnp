@@ -1209,7 +1209,11 @@
       "from": "From",
       "to": "To",
       "apply": "View this period",
-      "groupAll": "All departments"
+      "groupAll": "All departments",
+      "viewWeek": "Week",
+      "viewMonth": "Month",
+      "colEmployee": "Employee",
+      "colPeople": "People scheduled"
     },
     "leaveTypes": {
       "title": "Leave types",
