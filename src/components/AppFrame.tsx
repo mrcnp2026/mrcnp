@@ -17,6 +17,7 @@ import { FrameHeader } from './FrameHeader';
 import { LanguageSwitcher } from './LanguageSwitcher';
 import { Logo } from './Logo';
 import { MenuDrawer } from './MenuDrawer';
+import { ModeSwitch } from './ModeSwitch';
 import { SideNav } from './SideNav';
 import { SignOutButton } from './SignOutButton';
 import { TopBar } from './TopBar';
@@ -25,6 +26,7 @@ import { TopBar } from './TopBar';
 export async function AppFrame({ me, children, overlay }: { me: Me; children: ReactNode; overlay?: ReactNode }) {
   const isAdmin = me.role === 'admin';
   const t = await getTranslations('home');
+  const ts = await getTranslations('side');
   const [consented, inboxCount, notices] = await Promise.all([
     hasConsent(me.id), // 관리자도 직원이다 — 같은 동의 창
     isAdmin ? pendingCounts().then((c) => c.total) : 0,
@@ -43,6 +45,7 @@ export async function AppFrame({ me, children, overlay }: { me: Me; children: Re
             {unread > 0 && <span className="num absolute -top-0.5 -right-0.5 flex min-w-4.5 items-center justify-center rounded-chip bg-danger px-1 text-xs leading-4.5 font-bold text-on-primary">{unread}</span>}
           </Link>
           <LanguageSwitcher options={languages} />
+          {isAdmin && <ModeSwitch toEmployee={ts('toEmployee')} toManager={ts('toManager')} />}
           <div className="w-auto">
             <SignOutButton />
           </div>

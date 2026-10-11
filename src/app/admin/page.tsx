@@ -21,7 +21,7 @@ import { buildTodayBoard, type BoardPerson } from '@/lib/today';
 import { weekLimitList } from '@/lib/week-limit';
 import { AutoRefresh } from './AutoRefresh';
 import { BoardView } from './BoardView';
-import { BarCard } from './Analytics';
+import { BarCard, DonutCard, LineCard } from './Analytics';
 import { KpiRow } from './KpiRow';
 import { WeekLimitCard } from './WeekLimitCard';
 
@@ -166,6 +166,28 @@ export default async function AdminHome({ searchParams }: { searchParams: Promis
           { label: t('todo'), value: String(todo.reduce((a, x) => a + x.n, 0)), sub: t('kpiTodo'), href: '/admin/inbox' },
         ]}
       />
+
+      {/* 그래프 줄 (2026-10-11 의뢰인: 막대·선·동그라미 그래프로 집계를 보는 현황판) — 동그라미: 오늘 근무 현황 · 선: 최근 14일 출근 인원 */}
+      <div className="flex flex-col gap-3 lg:grid lg:grid-cols-3 lg:gap-4">
+        <DonutCard
+          title={t('donutTitle')}
+          unit={t('chartUnit')}
+          center={rate === null ? '–' : `${rate}%`}
+          centerLabel={t('chartRate')}
+          slices={[
+            { key: 'in', label: t('donutIn'), n: Math.max(0, inCount - board.late.length), tone: 'primary' },
+            { key: 'late', label: th('status.late'), n: board.late.length, tone: 'warn' },
+            { key: 'absent', label: th('status.absent'), n: board.absent.length, tone: 'danger' },
+            { key: 'off', label: t('donutOff'), n: board.off.length, tone: 'muted' },
+          ]}
+        />
+        <LineCard
+          className="lg:col-span-2"
+          title={t('lineTitle')}
+          unit={t('chartUnit')}
+          points={daily.map((x) => ({ key: x.d, label: md(x.d), n: x.n, dim: !x.workday, tip: t('lineTip', { date: longDay(x.d), n: x.n }) }))}
+        />
+      </div>
 
       {/* PC: ① 오늘 직원 현황(넓게) + 처리할 일 ② 30일 추이 + 14일 지각 ③ 주 52시간 + 근무노트 — 줄마다 높이를 맞춘다 (2026-10-06 의뢰인: 흩어져 난잡했다) · 폰: 한 칸 */}
       <div className="flex flex-col gap-3 lg:grid lg:grid-cols-3 lg:gap-4">

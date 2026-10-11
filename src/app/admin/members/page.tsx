@@ -5,6 +5,7 @@ import { CalendarCheck, Check, ChevronRight, Network } from 'lucide-react';
 import { getTranslations } from 'next-intl/server';
 import Link from 'next/link';
 import { DetailBar } from '@/components/detail';
+import { PcTable } from '@/components/PcTable';
 import { Card, Chip, PageShell } from '@/components/ui';
 import { groupPath, groupPeople } from '@/lib/org';
 import { loadOrgGroups } from '@/lib/org-data';
@@ -94,7 +95,7 @@ export default async function MembersPage({ searchParams }: { searchParams: Prom
 
   return (
     <PageShell wide>
-      <DetailBar back="/punch" backLabel={tc('back')} title={t('title')} action={{ href: '/admin/members/new', label: `+ ${t('addShort')}` }} />
+      <DetailBar back="/punch" backLabel={tc('back')} title={t('title')} desc={t('pcIntro')} action={{ href: '/admin/members/new', label: `+ ${t('addShort')}` }} />
       {/* 걸러보기 — 숫자가 곧 현황 (가입 9 · 미가입 2). 시프티의 「현재직원 / 미합류 / 비활성」 탭 줄 모양 */}
       <nav className="-mx-4 -mt-3 flex border-b border-border bg-bg px-2 lg:mx-0 lg:mt-0 lg:rounded-card lg:border-0" aria-label={t('filter')}>
         {tabs.map((x) => (
@@ -127,48 +128,39 @@ export default async function MembersPage({ searchParams }: { searchParams: Prom
         <p className="rounded-card bg-primary-tint p-3 text-sm text-primary">{t('orgEmptyHint')}</p>
       )}
 
-      {/* PC: 한 표로 (2026-10-06 의뢰인) · 폰: 부서별 카드 */}
-      {list.length > 0 && (
-        <Card className="hidden p-0 py-2 lg:block">
-          <table className="w-full text-left text-sm">
-            <thead>
-              <tr className="text-xs text-faint">
-                {(['colName', 'colNo', 'colGroup', 'colTitle', 'colRole', 'colStatus'] as const).map((k) => (
-                  <th key={k} scope="col" className="px-5 py-3 font-medium">
-                    {t(k)}
-                  </th>
-                ))}
-                <th scope="col" className="px-5 py-3" />
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-border border-t border-border">
-              {list.map((p) => {
-                const ok = withPhone.has(p.id);
-                return (
-                  <tr key={p.id}>
-                    <td className="px-5 py-2">
-                      <Link href={`/admin/members/${p.id}`} className="flex min-h-11 items-center gap-3 font-medium">
-                        <span aria-hidden className={`flex size-9 shrink-0 items-center justify-center rounded-chip font-bold ${ok ? 'bg-primary-tint text-primary' : 'bg-warn-tint text-warn'}`}>
-                          {p.name.slice(0, 1)}
-                        </span>
-                        {p.name}
-                      </Link>
-                    </td>
-                    <td className="num px-5 py-2 text-muted">{p.employeeNo}</td>
-                    <td className="px-5 py-2 text-muted">{groupPath(groups, p.groupId) ?? t('unassigned')}</td>
-                    <td className="px-5 py-2 text-muted">{p.jobTitle ?? '–'}</td>
-                    <td className="px-5 py-2">
-                      <RoleCell employeeId={p.id} role={p.role} canViewPayroll={p.canViewPayroll} self={p.id === me.id} waiting={roleWaiting.has(p.id)} actorCanPayroll={me.canViewPayroll} />
-                    </td>
-                    <td className="px-5 py-2">{ok ? <Chip tone="ok">{t('joined')}</Chip> : <Chip tone="warn">{t('notJoined')}</Chip>}</td>
-                    <td className="px-5 py-2 text-right">{!ok && <NewInviteButton employeeId={p.id} name={p.name} compact />}</td>
-                  </tr>
-                );
-              })}
-            </tbody>
-          </table>
-        </Card>
-      )}
+      {/* PC: 시프티의 「직원 관리」 표 — 열마다 검색 · 정렬 (2026-10-11) · 폰: 부서별 카드 */}
+      <div className="hidden lg:block">
+        <PcTable
+          total
+          labels={{ search: t('colSearch'), empty: t('emptyFilter'), total: t('totalCount') }}
+          cols={[
+            { key: 'name', label: t('colName') },
+            { key: 'role', label: t('colRole') },
+            { key: 'no', label: t('colNo') },
+            { key: 'group', label: t('colGroup') },
+            { key: 'title', label: t('colTitle') },
+            { key: 'status', label: t('colStatus') },
+            { key: 'act', label: '', search: false, sort: false, align: 'right' },
+          ]}
+          rows={list.map((p) => {
+            const ok = withPhone.has(p.id);
+            const roleText = [p.role === 'admin' ? t('adminChip') : t('employeeRole'), p.canViewPayroll ? t('payrollChip') : ''].filter(Boolean).join(' ');
+            return {
+              id: p.id,
+              dim: !p.active,
+              cells: {
+                name: { text: p.name, node: <Link href={`/admin/members/${p.id}`} className="font-bold hover:text-primary">{p.name}</Link> },
+                role: { text: roleText, node: <RoleCell employeeId={p.id} role={p.role} canViewPayroll={p.canViewPayroll} self={p.id === me.id} waiting={roleWaiting.has(p.id)} actorCanPayroll={me.canViewPayroll} /> },
+                no: { text: p.employeeNo ?? '' },
+                group: { text: groupPath(groups, p.groupId) ?? t('unassigned') },
+                title: { text: p.jobTitle ?? '' },
+                status: { text: !p.active ? t('inactive') : ok ? t('joined') : t('notJoined'), node: !p.active ? <Chip>{t('inactive')}</Chip> : ok ? <Chip tone="ok">{t('joined')}</Chip> : <Chip tone="warn">{t('notJoined')}</Chip> },
+                act: { text: '', node: p.active && !ok ? <NewInviteButton employeeId={p.id} name={p.name} compact /> : null },
+              },
+            };
+          })}
+        />
+      </div>
 
       <div className="flex flex-col gap-3 lg:hidden">
       {sections.map((s) => (

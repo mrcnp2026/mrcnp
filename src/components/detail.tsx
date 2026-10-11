@@ -5,7 +5,8 @@ import Link from 'next/link';
 import type { ReactNode } from 'react';
 import { SheetOpener } from './SheetOpener';
 
-export function DetailBar({ back, backLabel, title, action, extra, plain = false, sheet }: { back: string; backLabel: string; title: string; action?: { href: string; label: string }; extra?: ReactNode; plain?: boolean; sheet?: { id: string; label: string } }) {
+export function DetailBar({ back, backLabel, title, action, extra, plain = false, sheet, desc }: { back: string; backLabel: string; title: string; action?: { href: string; label: string }; extra?: ReactNode; plain?: boolean; sheet?: { id: string; label: string }; desc?: string }) {
+  // desc: PC에서 제목 아래에 보이는 회색 설명 한 줄
   // sheet: PC에서 제목 오른쪽에 놓는 [추가] 버튼 — 누르면 그 창(AddSheet modal)이 가운데 팝업으로 뜬다. 폰은 오른쪽 아래 + 버튼이 한다
   // 맨 위 목록 화면(뒤로 = 홈)은 PC에서 뒤로 화살표를 숨긴다 — 왼쪽 메뉴가 있다
   // plain: 화면의 머리글(h1)이 아래에 따로 있을 때 — 이 줄의 제목은 그냥 글자로 둔다 (머리글이 둘이 되지 않게)
@@ -16,7 +17,10 @@ export function DetailBar({ back, backLabel, title, action, extra, plain = false
       <Link href={back} aria-label={backLabel} className={`-ml-2 flex size-11 shrink-0 items-center justify-center rounded-button text-text lg:ml-0 lg:size-8 lg:border lg:border-border lg:bg-bg lg:text-muted ${back === '/punch' ? 'lg:hidden' : ''}`}>
         <ArrowLeft aria-hidden size={24} strokeWidth={1.75} className="lg:size-4.5" />
       </Link>
-      <Title className="min-w-0 flex-1 truncate text-lg font-bold lg:text-2xl">{title}</Title>
+      <div className="flex min-w-0 flex-1 flex-col">
+        <Title className="truncate text-lg font-bold lg:text-2xl">{title}</Title>
+        {desc && <p className="hidden truncate text-sm text-faint lg:block">{desc}</p>}
+      </div>
       {extra}
       {sheet && <SheetOpener id={sheet.id} label={sheet.label} className="hidden lg:inline-flex" />}
       {action && (

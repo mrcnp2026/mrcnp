@@ -28,7 +28,7 @@ export default async function PlacesPage({ searchParams }: { searchParams: Promi
 
   return (
     <PageShell wide>
-      <DetailBar sheet={{ id: 'place', label: t('add') }} back="/punch" backLabel={tc('back')} title={t('title')} extra={<Help>{t('intro')}</Help>} />
+      <DetailBar sheet={{ id: 'place', label: t('add') }} back="/punch" backLabel={tc('back')} title={t('title')} extra={<Help>{t('intro')}</Help>} desc={t('intro')} />
       <div className="grid items-start gap-3">
         <div className="flex flex-col gap-3">
           <nav aria-label={t('title')} className="-mx-4 -mt-3 flex border-b border-border bg-bg px-2 lg:mx-0 lg:mt-0 lg:rounded-card lg:border-0">

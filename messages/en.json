@@ -348,7 +348,11 @@
       "colJob": "Job",
       "jobNone": "None",
       "f_current": "Current",
-      "f_inactive": "Inactive"
+      "f_inactive": "Inactive",
+      "colSearch": "Search..",
+      "totalCount": "Employees",
+      "employeeRole": "Employee",
+      "pcIntro": "Manage departments, titles, access and sign-up status, and invite employees with a code."
     },
     "more": {
       "title": "All menus",
@@ -459,7 +463,12 @@
       "otWeekTitle": "Overtime this week (by day)",
       "otWeekUnit": "Overtime + holiday work · h:mm",
       "otWeekNone": "No overtime this week.",
-      "otWeekTip": "{date} · overtime {time}"
+      "otWeekTip": "{date} · overtime {time}",
+      "donutTitle": "Today's attendance",
+      "donutIn": "On time",
+      "donutOff": "Day off / leave",
+      "lineTitle": "Clock-ins, last 14 days",
+      "lineTip": "{date} · {n} clocked in"
     },
     "inbox": {
       "title": "Requests",
@@ -1530,7 +1539,12 @@
     "leaveTypes": "Leave types",
     "requests": "Requests",
     "admin": "Manage",
-    "calendarView": "Calendar"
+    "calendarView": "Calendar",
+    "gBasic": "Basics",
+    "gSchedule": "Schedule",
+    "gLeave": "Leave",
+    "toEmployee": "Switch to employee mode",
+    "toManager": "Switch to manager mode"
   },
   "nav": {
     "home": "Home",

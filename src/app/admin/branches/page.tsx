@@ -39,7 +39,7 @@ export default async function BranchesPage({ searchParams }: { searchParams: Pro
 
   return (
     <PageShell wide>
-      <DetailBar sheet={{ id: 'branch', label: t('add') }} back="/punch" backLabel={tc('back')} title={t('title')} extra={<Help>{t('intro')}</Help>} action={{ href: '/admin/members/groups', label: t('diagram') }} />
+      <DetailBar sheet={{ id: 'branch', label: t('add') }} back="/punch" backLabel={tc('back')} title={t('title')} extra={<Help>{t('intro')}</Help>} desc={t('intro')} action={{ href: '/admin/members/groups', label: t('diagram') }} />
       <div className="grid items-start gap-3">
         <div className="flex flex-col gap-3">
           <nav aria-label={t('title')} className="-mx-4 -mt-3 flex border-b border-border bg-bg px-2 lg:mx-0 lg:mt-0 lg:rounded-card lg:border-0">

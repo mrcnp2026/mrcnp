@@ -348,7 +348,11 @@
       "colJob": "직무",
       "jobNone": "없음",
       "f_current": "현재직원",
-      "f_inactive": "비활성"
+      "f_inactive": "비활성",
+      "colSearch": "검색..",
+      "totalCount": "총 직원수",
+      "employeeRole": "직원",
+      "pcIntro": "부서, 직책, 권한, 가입 여부를 관리하고, 초대 코드로 직원을 초대할 수 있습니다."
     },
     "more": {
       "title": "전체 메뉴",
@@ -459,7 +463,12 @@
       "otWeekTitle": "이번 주 연장근로 (요일별 합계)",
       "otWeekUnit": "연장 + 휴일 근로 · 시간:분",
       "otWeekNone": "이번 주에는 연장근로가 없습니다.",
-      "otWeekTip": "{date} · 연장근로 {time}"
+      "otWeekTip": "{date} · 연장근로 {time}",
+      "donutTitle": "오늘의 근무 현황",
+      "donutIn": "정상 출근",
+      "donutOff": "휴무 · 휴가",
+      "lineTitle": "최근 14일 출근 인원",
+      "lineTip": "{date} · 출근 {n}명"
     },
     "inbox": {
       "title": "요청",
@@ -1530,7 +1539,12 @@
     "leaveTypes": "휴가 유형",
     "requests": "요청 내역",
     "admin": "관리",
-    "calendarView": "달력형"
+    "calendarView": "달력형",
+    "gBasic": "기본",
+    "gSchedule": "근무일정",
+    "gLeave": "휴가",
+    "toEmployee": "직원 모드로 전환",
+    "toManager": "관리자 모드로 전환"
   },
   "nav": {
     "home": "홈",
