@@ -138,7 +138,7 @@ try {
 
   // ── 조직도 화면 + 넘침 ──
   await p.goto(`${BASE}/admin/members/groups`);
-  await p.getByText('e2e-팀').first().waitFor();
+  await p.getByText('e2e-팀').filter({ visible: true }).first().waitFor();
   await shot('org-groups');
   for (const url of ['/admin/members', '/admin/members/groups', '/admin/members/new', `/admin/members/${emp!.id}`]) {
     await p.setViewportSize({ width: 320, height: 800 });

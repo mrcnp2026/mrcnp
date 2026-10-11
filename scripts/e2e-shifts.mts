@@ -108,7 +108,7 @@ try {
 
   // ── 목록 · 가로 넘침 · PC ──
   await p.goto(`${BASE}/admin/shifts`);
-  check((await p.getByText(NAME).count()) === 1 && (await p.getByText(/\[간주 근무\] 07:30 - 17:00/).count()) > 0, '목록에 [유형] 시각');
+  check((await p.getByText(NAME).filter({ visible: true }).count()) === 1 && (await p.getByText(/\[간주 근무\] 07:30 - 17:00/).count()) > 0, '목록에 [유형] 시각');
   await shot('04-틀-목록');
   for (const w of [320, 390]) {
     await p.setViewportSize({ width: w, height: 800 });

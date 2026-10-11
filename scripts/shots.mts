@@ -59,6 +59,9 @@ try {
   await shot('admin-record-list', '/admin/records/list');
   await shot('admin-record-calendar', '/admin/records/calendar');
   await shot('admin-jobs', '/admin/jobs');
+  await shot('admin-branches', '/admin/branches');
+  await shot('admin-places', '/admin/places');
+  await shot('admin-leave-types', '/admin/leave/types');
   await shot('admin-shifts', '/admin/shifts');
   await shot('admin-records', '/admin/records');
   await shot('admin-inbox', '/admin/inbox');

@@ -4,6 +4,8 @@ import { ChevronRight, MapPin, Search } from 'lucide-react';
 import { getTranslations } from 'next-intl/server';
 import Link from 'next/link';
 import { AddSheet } from '@/components/AddSheet';
+import { OffToggle } from '@/components/OffToggle';
+import { PcTable } from '@/components/PcTable';
 import { DetailBar } from '@/components/detail';
 import { Fab } from '@/components/Fab';
 import { Help } from '@/components/Help';
@@ -30,7 +32,24 @@ export default async function PlacesPage({ searchParams }: { searchParams: Promi
     <PageShell wide>
       <DetailBar sheet={{ id: 'place', label: t('add') }} back="/punch" backLabel={tc('back')} title={t('title')} extra={<Help>{t('intro')}</Help>} desc={t('intro')} />
       <div className="grid items-start gap-3">
-        <div className="flex flex-col gap-3">
+        {/* PC: 시프티의 목록 — 「비활성화된 … 보기」 토글 + 열마다 검색 · 정렬이 되는 표 (2026-10-11 의뢰인 스샷). 폰은 아래의 탭 + 줄 목록 */}
+        <div className="hidden flex-col gap-3 lg:flex">
+          <OffToggle href={off ? '/admin/places' : '/admin/places?tab=off'} on={off} label={t('showOff')} />
+          <PcTable
+            labels={{ search: tc('colSearch'), empty: t(off ? 'emptyOff' : 'empty') }}
+            cols={[{ key: 'name', label: t('colName') }, { key: 'address', label: t('colAddress') }, { key: 'radius', label: t('colRadius'), align: 'right' }, { key: 'used', label: t('colUsed'), align: 'right' }]}
+            rows={shown.map((l) => ({
+              id: l.id,
+              cells: {
+                name: { text: l.label ?? t('unnamed'), node: <Link href={`/admin/places/${l.id}`} className="font-bold hover:text-primary">{l.label ?? t('unnamed')}</Link> },
+                address: { text: l.address ?? '' },
+                radius: { text: t('radiusM', { n: l.radiusM }) },
+                used: { text: String(used(l.id)) },
+              },
+            }))}
+          />
+        </div>
+        <div className="flex flex-col gap-3 lg:hidden">
           <nav aria-label={t('title')} className="-mx-4 -mt-3 flex border-b border-border bg-bg px-2 lg:mx-0 lg:mt-0 lg:rounded-card lg:border-0">
             <Link href="/admin/places" aria-current={!off ? 'page' : undefined} className={tab(!off)}>
               {t('tabOn')}

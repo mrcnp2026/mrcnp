@@ -7,6 +7,8 @@ import { AddSheet } from '@/components/AddSheet';
 import { Fab } from '@/components/Fab';
 import { Help } from '@/components/Help';
 import { RowList } from '@/components/list';
+import { OffToggle } from '@/components/OffToggle';
+import { PcTable } from '@/components/PcTable';
 import { DetailBar } from '@/components/detail';
 import { Card, Chip, PageShell } from '@/components/ui';
 import { leaveTypeName } from '@/lib/leave';
@@ -15,6 +17,7 @@ import { LeaveTypeForm } from './TypeForms';
 
 export default async function LeaveTypesPage({ searchParams }: { searchParams: Promise<{ tab?: string }> }) {
   const [t, tl, f, sp] = await Promise.all([getTranslations('admin.leaveTypes'), getTranslations('leave'), getFormatter(), searchParams]);
+  const tc = await getTranslations('common');
   const off = sp.tab === 'off';
   const all = await loadAllLeaveTypes();
   const shown = all.filter((x) => x.active !== off && (x.active || !x.name.startsWith('e2e-')));
@@ -27,7 +30,26 @@ export default async function LeaveTypesPage({ searchParams }: { searchParams: P
     <PageShell wide>
       <DetailBar sheet={{ id: 'leave-type', label: t('add') }} back="/admin/leave" backLabel={t('back')} title={t('title')} extra={<Help>{t('intro')}</Help>} desc={t('intro')} />
       <div className="grid items-start gap-3">
-        <div className="flex flex-col gap-3">
+        {/* PC: 시프티의 목록 — 「비활성화된 … 보기」 토글 + 열마다 검색 · 정렬이 되는 표 (2026-10-11 의뢰인 스샷). 폰은 아래의 탭 + 줄 목록 */}
+        <div className="hidden flex-col gap-3 lg:flex">
+          <OffToggle href={off ? '/admin/leave/types' : '/admin/leave/types?tab=off'} on={off} label={t('showOff')} />
+          <PcTable
+            labels={{ search: tc('colSearch'), empty: t(off ? 'emptyOff' : 'empty') }}
+            cols={[{ key: 'group', label: t('colGroup') }, { key: 'name', label: t('colName') }, { key: 'time', label: t('colTime') }, { key: 'hours', label: t('colHours'), align: 'right' }, { key: 'deduct', label: t('colDeduct'), align: 'right' }, { key: 'paid', label: t('colPaid') }]}
+            rows={shown.map((x) => ({
+              id: x.code,
+              cells: {
+                group: { text: x.groupName ?? '' },
+                name: { text: leaveTypeName(all, x.code, tl), node: <Link href={`/admin/leave/types/${x.code}`} className="font-bold hover:text-primary">{leaveTypeName(all, x.code, tl)}</Link> },
+                time: { text: x.startTime ? `${x.startTime} - ${x.endTime}` : t('allDay') },
+                hours: { text: t('hoursValue', { h: num(x.hours ?? 0) }) },
+                deduct: { text: x.deductsBalance ? t('daysValue', { d: num(x.dayUnit) }) : t('noDeduct') },
+                paid: { text: t(x.isPaid ? 'paidChip' : 'unpaidChip') },
+              },
+            }))}
+          />
+        </div>
+        <div className="flex flex-col gap-3 lg:hidden">
           <nav aria-label={t('title')} className="-mx-4 -mt-3 flex border-b border-border bg-bg px-2 lg:mx-0 lg:mt-0 lg:rounded-card lg:border-0">
             <Link href="/admin/leave/types" aria-current={!off ? 'page' : undefined} className={tab(!off)}>
               {t('tabOn')}

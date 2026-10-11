@@ -4,6 +4,8 @@ import { ChevronRight, MapPin, Search } from 'lucide-react';
 import { getTranslations } from 'next-intl/server';
 import Link from 'next/link';
 import { AddSheet } from '@/components/AddSheet';
+import { OffToggle } from '@/components/OffToggle';
+import { PcTable } from '@/components/PcTable';
 import { DetailBar } from '@/components/detail';
 import { Fab } from '@/components/Fab';
 import { Help } from '@/components/Help';
@@ -41,7 +43,24 @@ export default async function BranchesPage({ searchParams }: { searchParams: Pro
     <PageShell wide>
       <DetailBar sheet={{ id: 'branch', label: t('add') }} back="/punch" backLabel={tc('back')} title={t('title')} extra={<Help>{t('intro')}</Help>} desc={t('intro')} action={{ href: '/admin/members/groups', label: t('diagram') }} />
       <div className="grid items-start gap-3">
-        <div className="flex flex-col gap-3">
+        {/* PC: 시프티의 목록 — 「비활성화된 … 보기」 토글 + 열마다 검색 · 정렬이 되는 표 (2026-10-11 의뢰인 스샷). 폰은 아래의 탭 + 줄 목록 */}
+        <div className="hidden flex-col gap-3 lg:flex">
+          <OffToggle href={off ? '/admin/branches' : '/admin/branches?tab=off'} on={off} label={t('showOff')} />
+          <PcTable
+            labels={{ search: tc('colSearch'), empty: t(off ? 'emptyOff' : 'empty') }}
+            cols={[{ key: 'name', label: t('colName') }, { key: 'parent', label: t('colParent') }, { key: 'people', label: t('colPeople'), align: 'right' }, { key: 'places', label: t('colPlaces'), align: 'right' }]}
+            rows={rows.map(({ g, parent }) => ({
+              id: g.id,
+              cells: {
+                name: { text: g.name, node: <Link href={`/admin/branches/${g.id}`} className="font-bold hover:text-primary">{g.name}</Link> },
+                parent: { text: parent ?? '' },
+                people: { text: String(countOf.get(g.id) ?? 0) },
+                places: { text: String(placesOf(g.id)) },
+              },
+            }))}
+          />
+        </div>
+        <div className="flex flex-col gap-3 lg:hidden">
           <nav aria-label={t('title')} className="-mx-4 -mt-3 flex border-b border-border bg-bg px-2 lg:mx-0 lg:mt-0 lg:rounded-card lg:border-0">
             <Link href="/admin/branches" aria-current={!off ? 'page' : undefined} className={tab(!off)}>
               {t('tabOn')}

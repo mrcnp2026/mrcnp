@@ -16,7 +16,8 @@
     },
     "account": "My account · password",
     "add": "New",
-    "menu": "Menu"
+    "menu": "Menu",
+    "colSearch": "Search.."
   },
   "login": {
     "title": "Sign in",
@@ -1113,7 +1114,12 @@
       "turnOn": "Turn back on",
       "turnOffNote": "Punches here will no longer be verified. Past records stay as they are.",
       "invalid_location": "Check the position and the radius (30–1000 m).",
-      "invalid_place": "Name must be 1–40 characters; address up to 200."
+      "invalid_place": "Name must be 1–40 characters; address up to 200.",
+      "showOff": "Show deactivated places",
+      "colName": "Place",
+      "colAddress": "Address",
+      "colRadius": "Radius",
+      "colUsed": "Used by"
     },
     "branches": {
       "title": "Branches",
@@ -1151,7 +1157,12 @@
       "duplicate_group": "A branch with this name already exists.",
       "group_in_use": "This branch still has staff or sub-branches. Move them first.",
       "parent_hidden": "The parent branch is hidden. Restore it first.",
-      "invalid_group": "This branch cannot be used as a parent."
+      "invalid_group": "This branch cannot be used as a parent.",
+      "showOff": "Show deactivated branches",
+      "colName": "Branch",
+      "colParent": "Parent branch",
+      "colPeople": "Employees",
+      "colPlaces": "Clock-in places"
     },
     "shifts": {
       "title": "Shift templates",
@@ -1214,7 +1225,14 @@
         "danger": "Red",
         "text": "Black",
         "muted": "Gray"
-      }
+      },
+      "showOff": "Show deactivated shift templates",
+      "colName": "Template",
+      "colTime": "Hours",
+      "colKind": "Shift type",
+      "colColor": "Color",
+      "colPeople": "Employees",
+      "colMemo": "Memo"
     },
     "schedule": {
       "title": "Schedule",
@@ -1307,7 +1325,17 @@
       "invalid_name": "Enter a name of 1–40 characters.",
       "invalid_hours": "Choose 0.5–8 hours in 30-minute steps.",
       "invalid_time": "End time must be later than start time.",
-      "duplicate_type": "A type with the same name already exists."
+      "duplicate_type": "A type with the same name already exists.",
+      "showOff": "Show deactivated leave types",
+      "colGroup": "Leave group",
+      "colName": "Leave type",
+      "colTime": "Time",
+      "colHours": "Paid hours",
+      "colDeduct": "Days deducted",
+      "colPaid": "Paid",
+      "allDay": "All day",
+      "hoursValue": "{h}h",
+      "daysValue": "{d} d"
     },
     "jobs": {
       "title": "Jobs",
@@ -1336,7 +1364,11 @@
       "invalid_job_name": "Enter a name of 1–40 characters.",
       "duplicate_job": "A job with the same name already exists.",
       "job_in_use": "Some staff have this job. Move them to another job first.",
-      "job_off": "This job is turned off."
+      "job_off": "This job is turned off.",
+      "showOff": "Show deactivated jobs",
+      "colName": "Job",
+      "colColor": "Color",
+      "colPeople": "Employees"
     },
     "missing": {
       "title": "Missing punches",

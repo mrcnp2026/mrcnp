@@ -106,7 +106,7 @@ try {
 
   // ── 목록: 검색 ──
   await p.goto(`${BASE}/admin/places?q=${encodeURIComponent(TAG)}`);
-  check((await p.getByText(PLACE).count()) === 1, '목록에서 이름으로 찾음');
+  check((await p.getByText(PLACE).filter({ visible: true }).count()) === 1, '목록에서 이름으로 찾음'); // PC 표와 폰 목록에 둘 다 있다 — 보이는 것만 센다
   await p.goto(`${BASE}/admin/places`);
   await shot('04-장소-목록');
 

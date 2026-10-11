@@ -3,6 +3,8 @@ import { ChevronRight } from 'lucide-react';
 import { getTranslations } from 'next-intl/server';
 import Link from 'next/link';
 import { AddSheet } from '@/components/AddSheet';
+import { OffToggle } from '@/components/OffToggle';
+import { PcTable } from '@/components/PcTable';
 import { DetailBar } from '@/components/detail';
 import { Fab } from '@/components/Fab';
 import { Help } from '@/components/Help';
@@ -32,7 +34,23 @@ export default async function JobsPage({ searchParams }: { searchParams: Promise
     <PageShell wide>
       <DetailBar sheet={{ id: 'job', label: t('add') }} back="/punch" backLabel={tc('back')} title={t('title')} extra={<Help>{t('intro')}</Help>} desc={t('intro')} />
       <div className="grid items-start gap-3">
-        <div className="flex flex-col gap-3">
+        {/* PC: 시프티의 목록 — 「비활성화된 … 보기」 토글 + 열마다 검색 · 정렬이 되는 표 (2026-10-11 의뢰인 스샷). 폰은 아래의 탭 + 줄 목록 */}
+        <div className="hidden flex-col gap-3 lg:flex">
+          <OffToggle href={off ? '/admin/jobs' : '/admin/jobs?tab=off'} on={off} label={t('showOff')} />
+          <PcTable
+            labels={{ search: tc('colSearch'), empty: t(off ? 'emptyOff' : 'empty') }}
+            cols={[{ key: 'name', label: t('colName') }, { key: 'color', label: t('colColor'), search: false, sort: false }, { key: 'people', label: t('colPeople'), align: 'right' }]}
+            rows={shown.map((x) => ({
+              id: x.id,
+              cells: {
+                name: { text: x.name, node: <Link href={`/admin/jobs/${x.id}`} className="font-bold hover:text-primary">{x.name}</Link> },
+                color: { text: x.color, node: <span aria-hidden className={`inline-block size-5 rounded-button align-middle ${SHIFT_COLOR_CLASS[x.color]}`} /> },
+                people: { text: String(countOf.get(x.id) ?? 0) },
+              },
+            }))}
+          />
+        </div>
+        <div className="flex flex-col gap-3 lg:hidden">
           <nav aria-label={t('title')} className="-mx-4 -mt-3 flex border-b border-border bg-bg px-2 lg:mx-0 lg:mt-0 lg:rounded-card lg:border-0">
             <Link href="/admin/jobs" aria-current={!off ? 'page' : undefined} className={tab(!off)}>
               {t('tabOn')}
