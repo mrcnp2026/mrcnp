@@ -469,7 +469,22 @@
       "donutIn": "On time",
       "donutOff": "Day off / leave",
       "lineTitle": "Clock-ins, last 14 days",
-      "lineTip": "{date} · {n} clocked in"
+      "lineTip": "{date} · {n} clocked in",
+      "cardMissing": "Missing punches",
+      "cardMissingNone": "No missing records.",
+      "cardMissingMore": "See all missing records",
+      "cardNotices": "Notices",
+      "cardNoticesNone": "No published notices.",
+      "cardNoticesAll": "See all",
+      "cardCare": "Employees needing attention",
+      "careNoHire": "No hire date",
+      "careNoGroup": "No branch",
+      "careNoJob": "No job",
+      "careNoPhone": "No registered phone",
+      "cardLeave": "Leave status",
+      "cardLeaveNone": "No employee has a leave grant yet.",
+      "cardLeaveAll": "See leave accrual",
+      "totalStaff": "Employees"
     },
     "inbox": {
       "title": "Requests",
@@ -789,7 +804,28 @@
       "roleEmployee": "Employees",
       "emptyPeople": "No matching employees.",
       "all": "All",
-      "toAccrual": "Leave accrual history"
+      "toAccrual": "Leave accrual history",
+      "pcHistory": "Leave history",
+      "pcHistoryIntro": "Browse approved leave as a list or by month, and cancel leave entered by mistake.",
+      "pcAccrual": "Leave accrual",
+      "pcAccrualIntro": "See each employee's granted, used and remaining days as of a date, and enter hire dates and grants.",
+      "viewList": "List",
+      "viewMonth": "Monthly",
+      "yearOf": "{y}",
+      "show": "Show",
+      "colPeriod": "Period",
+      "colGroup": "Leave group",
+      "colType": "Leave type",
+      "colPaidHours": "Paid hours",
+      "colDeduct": "Days deducted",
+      "colReason": "Reason",
+      "colSpan": "Accrual period",
+      "hoursValue": "{h}h",
+      "daysValue": "{d} d",
+      "monthOf": "M{m}",
+      "totalCount": "Total",
+      "listTotal": "Leaves",
+      "emptyYear": "No approved leave in this year."
     },
     "detail": {
       "backToList": "Records",
@@ -942,7 +978,107 @@
       "revokeDeviceHint": "When they changed or lost their phone. The password stays the same.",
       "revokeDeviceNote": "After this, that device can no longer punch. The employee signs in on the new phone and registers it. Until then, add punches with \"Add record\".",
       "no_device": "No punch device is registered.",
-      "owner_only": "Only the owner can change the owner account's role, status or sign-in."
+      "owner_only": "Only the owner can change the owner account's role, status or sign-in.",
+      "readOnly": "This screen shows what is currently fixed in the app. Tell us if anything should be changed.",
+      "shiftKinds": {
+        "title": "Shift types",
+        "intro": "Types attached to shifts. They are chosen in shift templates and dated shifts.",
+        "colName": "Type",
+        "colDeemed": "Deemed work",
+        "colNote": "Description",
+        "yes": "Yes",
+        "no": "",
+        "note": {
+          "normal": "Ordinary work with clock-in and clock-out.",
+          "deemed": "Counts the scheduled hours regardless of clock records.",
+          "outside": "A day worked outside the office.",
+          "remote": "A day worked from home or elsewhere.",
+          "holiday": "Work on a holiday, counted as holiday work.",
+          "extra": "Keeps the usual shift and only extends the end time."
+        }
+      },
+      "leaveGroups": {
+        "title": "Leave groups",
+        "intro": "Groups of leave types. The group is set when a leave type is created or edited.",
+        "colName": "Leave group",
+        "colCount": "Leave types",
+        "colTypes": "Types",
+        "noGroup": "(No group)",
+        "toTypes": "Manage leave types"
+      },
+      "accrualRule": {
+        "title": "Leave accrual rule",
+        "intro": "How annual leave accrues. A reference value is calculated from the hire date; a manager confirms and enters the grant.",
+        "colWho": "Service",
+        "colDays": "Days",
+        "colNote": "Description",
+        "r1": "Under 1 year",
+        "r1d": "1 day per month (max 11)",
+        "r1n": "One day accrues for each full month.",
+        "r2": "1 year or more",
+        "r2d": "15 days",
+        "r2n": "Granted anew on each hire anniversary.",
+        "r3": "3 years or more",
+        "r3d": "+1 day every 2 years (max 25)",
+        "r3n": "From the third year, one more day every two years.",
+        "caution": "Attendance under 80%, perfect attendance and fiscal-year settlement are not checked automatically, so the value is a reference and the manager's entry is what counts.",
+        "toAccrual": "Open leave accrual"
+      },
+      "approvalRules": {
+        "title": "Approval rules",
+        "intro": "Who approves each type of request.",
+        "colKind": "Request type",
+        "colApprover": "Approval",
+        "colSelf": "Own requests",
+        "colEffect": "On approval",
+        "approver": "One manager",
+        "self": "Handled by another manager",
+        "effect": {
+          "punch": "The clock-in or clock-out record is created.",
+          "correction": "The attendance record is corrected.",
+          "overtime": "Overtime, night and holiday work are recognised.",
+          "shift": "A shift is created on that date.",
+          "leave": "The leave is booked and deducted from the balance.",
+          "leaveDelete": "The leave is cancelled and the balance restored.",
+          "work": "Clocking outside the office counts as normal work that day."
+        }
+      },
+      "workInfo": {
+        "title": "Work terms",
+        "intro": "Working conditions such as workdays, weekly rest day and hours. One company-wide default is used for now.",
+        "colName": "Name",
+        "colWage": "Hourly wage",
+        "colDays": "Workdays",
+        "colRest": "Weekly rest day",
+        "colHours": "Hours",
+        "colGrace": "Late grace",
+        "baseName": "Default work terms",
+        "noWage": "Not entered",
+        "minutes": "{n} min",
+        "caution": "Wages and per-employee work terms are not entered yet. They will be added with payroll calculation.",
+        "toSettings": "Change in company settings",
+        "none": "No work rule yet."
+      },
+      "messageTemplates": {
+        "title": "Message templates",
+        "intro": "Reusable formats for messages sent often.",
+        "colName": "Template",
+        "colSubject": "Subject",
+        "colNote": "Note",
+        "colCreated": "Created",
+        "empty": "Message templates are not available yet. Notices are written each time in “Notices”.",
+        "toNotices": "Open notices"
+      },
+      "messageRules": {
+        "title": "Message automation",
+        "intro": "Rules that send messages automatically on set dates.",
+        "colName": "Name",
+        "colKind": "Type",
+        "colStart": "Start date",
+        "colTime": "Send time",
+        "empty": "Message automation is not available yet.",
+        "toNotices": "Open notices"
+      }
     },
     "settings": {
       "title": "Settings",
@@ -1074,7 +1210,265 @@
         "breakNote": "Only the part of the work that overlaps these windows is deducted. E.g. working 08:00–12:30 deducts 30 minutes.",
         "breakNone": "No automatic break.",
         "manualBreak": "Manual breaks (break button)",
-        "manualBreakNote": "Staff do not clock breaks themselves."
+        "manualBreakNote": "Staff do not clock breaks themselves.",
+        "desc_notify": "What the app notifies about. Phone push notifications are not available yet.",
+        "desc_access": "Rules for who can see and handle what.",
+        "desc_branch": "How branches (departments and teams) are organised.",
+        "desc_staff": "Employee accounts and how staff join.",
+        "desc_leave": "How leave is counted and requested.",
+        "desc_request": "Request types staff can send and how they are approved.",
+        "desc_message": "Posting messages from managers to staff.",
+        "desc_closing": "Locking records so they can no longer be changed.",
+        "desc_report": "Summaries of working time.",
+        "desc_pay": "What this app covers for payroll.",
+        "desc_security": "Rules for sign-in and record protection.",
+        "go": "Open the management screen",
+        "fixedNote": "These items show how the app works today. Tell us if any of them should be changed.",
+        "desc_esign": "Exchanging employment contracts and similar documents by e-signature.",
+        "desc_advanced": "Other options about how screens are arranged."
+      },
+      "info": {
+        "notify": {
+          "notice": {
+            "label": "Notice alerts",
+            "value": "On",
+            "note": "A new notice pops up when the app is opened and the bell shows the unread count."
+          },
+          "request": {
+            "label": "Request alerts (managers)",
+            "value": "On",
+            "note": "The number of pending requests is shown in red next to “Requests” in the menu."
+          },
+          "push": {
+            "label": "Shift start · late alerts (phone)",
+            "value": "Off",
+            "note": "Phone push notifications are not available yet."
+          }
+        },
+        "access": {
+          "admin": {
+            "label": "Manager",
+            "value": "On",
+            "note": "Sees and handles every employee's schedule, attendance, leave and requests. A manager's own requests are handled by another manager."
+          },
+          "payroll": {
+            "label": "Payroll officer",
+            "value": "On",
+            "note": "Only managers marked as payroll officers can open the payroll screen."
+          },
+          "employee": {
+            "label": "Employee",
+            "value": "On",
+            "note": "Sees only their own schedule, attendance, leave and requests."
+          },
+          "change": {
+            "label": "Role change confirmation",
+            "value": "On",
+            "note": "Granting or removing manager rights takes effect only after another manager confirms."
+          }
+        },
+        "branch": {
+          "parent": {
+            "label": "Parent branches",
+            "value": "On",
+            "note": "A branch can have sub-branches (teams)."
+          },
+          "places": {
+            "label": "Clock-in places per branch",
+            "value": "On",
+            "note": "Each branch is linked to clock-in places. Clocking in within a linked place's radius counts as the office."
+          }
+        },
+        "staff": {
+          "number": {
+            "label": "Employee numbers",
+            "value": "On",
+            "note": "Each employee can have an employee number."
+          },
+          "invite": {
+            "label": "Invitations",
+            "value": "On",
+            "note": "A manager sends an invite code and the employee creates their own password."
+          },
+          "device": {
+            "label": "Clock-in device",
+            "value": "One device",
+            "note": "Staff can clock in and out only on their one registered phone. A manager releases the registration to change devices."
+          }
+        },
+        "leave": {
+          "hourly": {
+            "label": "Hourly leave",
+            "value": "On",
+            "note": "Leave can be taken in hours, such as half days. One day counts as 8 hours."
+          },
+          "pending": {
+            "label": "Pending leave",
+            "value": "Not deducted",
+            "note": "Leave awaiting approval is shown separately and not deducted from the balance."
+          },
+          "accrual": {
+            "label": "Automatic accrual",
+            "value": "Off",
+            "note": "A reference value is calculated from the hire date; a manager confirms and enters the grant."
+          }
+        },
+        "request": {
+          "punch": {
+            "label": "Clock-in · clock-out requests",
+            "value": "On",
+            "note": "Clocking outside a place's radius becomes a request and is recorded only when approved."
+          },
+          "correction": {
+            "label": "Attendance corrections",
+            "value": "On",
+            "note": "Requests to add a missing record or fix a wrong time."
+          },
+          "overtime": {
+            "label": "Overtime confirmation",
+            "value": "On",
+            "note": "Managers confirm overtime, night and holiday work."
+          },
+          "shift": {
+            "label": "Shift requests",
+            "value": "On",
+            "note": "Requests to add a shift on a date. Approval creates the shift."
+          },
+          "leave": {
+            "label": "Leave requests",
+            "value": "On",
+            "note": "Staff choose a leave type and dates."
+          },
+          "leaveDelete": {
+            "label": "Leave cancellation requests",
+            "value": "On",
+            "note": "Requests to cancel approved leave. Approval restores the balance."
+          },
+          "work": {
+            "label": "Off-site · trip · remote",
+            "value": "On",
+            "note": "When approved, clocking outside the office counts as normal work that day."
+          },
+          "approver": {
+            "label": "Approver",
+            "value": "One manager",
+            "note": "One manager's approval completes a request. A manager's own request is handled by another manager."
+          },
+          "custom": {
+            "label": "Custom request types",
+            "value": "Off",
+            "note": "There are no company-defined request types."
+          }
+        },
+        "message": {
+          "notice": {
+            "label": "Messages (notices)",
+            "value": "On",
+            "note": "Managers choose recipients, post a message and see who has confirmed it."
+          },
+          "translate": {
+            "label": "Translation drafts",
+            "value": "On",
+            "note": "A draft translation is made for English readers, and changed numbers or dates must be confirmed."
+          },
+          "auto": {
+            "label": "Message automation",
+            "value": "Off",
+            "note": "There are no scheduled automatic messages."
+          }
+        },
+        "closing": {
+          "day": {
+            "label": "Daily confirmation",
+            "value": "On",
+            "note": "Managers confirm attendance records day by day."
+          },
+          "month": {
+            "label": "Period closing",
+            "value": "Off",
+            "note": "Closing a period per employee to block requests is not available yet."
+          }
+        },
+        "report": {
+          "monthly": {
+            "label": "Monthly summary",
+            "value": "On",
+            "note": "Hours, overtime, night, holiday work, lateness and absence per employee by month, with Excel download."
+          },
+          "week52": {
+            "label": "52-hour week",
+            "value": "Caution from 48 h · limit 52 h",
+            "note": "Weeks over the thresholds are flagged on the home and record screens."
+          },
+          "snapshot": {
+            "label": "Report snapshots",
+            "value": "Off",
+            "note": "Saving a report at a point in time is not available."
+          }
+        },
+        "pay": {
+          "scope": {
+            "label": "Payroll scope",
+            "value": "Working-time totals",
+            "note": "Totals used for pay (payable time, overtime, night, holiday) can be downloaded."
+          },
+          "viewer": {
+            "label": "Payroll screen",
+            "value": "Payroll officers only",
+            "note": "Only managers marked as payroll officers can open it."
+          },
+          "tax": {
+            "label": "Tax · insurance calculation",
+            "value": "Off",
+            "note": "Taxes and insurance are not calculated in this app."
+          }
+        },
+        "security": {
+          "login": {
+            "label": "Sign-in",
+            "value": "Password + registered device",
+            "note": "Staff sign in with their own password and clock in only on the registered device."
+          },
+          "audit": {
+            "label": "Change log",
+            "value": "On",
+            "note": "Records who changed settings, employee data and records, and when."
+          },
+          "consent": {
+            "label": "Privacy · location consent",
+            "value": "On",
+            "note": "A consent screen is shown on first use; location is collected only after consent."
+          },
+          "ip": {
+            "label": "IP access control",
+            "value": "Off",
+            "note": "Office network addresses are used only to verify clock-ins, not to block access."
+          }
+        },
+        "esign": {
+          "use": {
+            "label": "E-contracts",
+            "value": "Off",
+            "note": "This app does not exchange documents by e-signature."
+          }
+        },
+        "advanced": {
+          "homeCards": {
+            "label": "Mobile > home cards",
+            "value": "On",
+            "note": "Staff can turn home cards such as this week's work and work notes on or off on their phone."
+          },
+          "bulk": {
+            "label": "Bulk approval",
+            "value": "Off",
+            "note": "Requests are reviewed and approved one at a time."
+          },
+          "brand": {
+            "label": "Company logo",
+            "value": "On",
+            "note": "The company logo is shown in the top bar and on the sign-in screen."
+          }
+        }
       }
     },
     "places": {
@@ -1286,7 +1680,18 @@
       "colEmployee": "Employee",
       "colPeople": "People scheduled",
       "more": "{n} more",
-      "pcIntro": "See everyone's shifts on a calendar and add or change shifts by date."
+      "pcIntro": "See everyone's shifts on a calendar and add or change shifts by date.",
+      "viewDay": "Day",
+      "viewList": "List",
+      "colDate": "Date",
+      "colTime": "Hours",
+      "colKind": "Shift type",
+      "colGroup": "Branch",
+      "colJob": "Job",
+      "colTemplate": "Template",
+      "colNote": "Note",
+      "colTotal": "Total",
+      "listTotal": "Shifts"
     },
     "leaveTypes": {
       "title": "Leave types",
@@ -1589,7 +1994,7 @@
     "inbox": "Requests",
     "adminRecords": "Punch records",
     "adminLeave": "Leave management",
-    "members": "Staff list",
+    "members": "Employees",
     "org": "Org chart",
     "payroll": "Payroll",
     "adminNotices": "Manage notices",
@@ -1629,7 +2034,35 @@
     "tRecords": "Attendance",
     "tRequests": "Requests",
     "tMessages": "Messages",
-    "sBreak": "Breaks"
+    "sBreak": "Breaks",
+    "leaveHistory": "Leave history",
+    "leaveAccrual": "Leave accrual",
+    "s_general": "General",
+    "s_notify": "Notifications",
+    "s_access": "Permissions",
+    "s_branch": "Branches",
+    "s_staff": "Employees",
+    "s_work": "Schedule",
+    "s_punch": "Attendance",
+    "s_break": "Breaks",
+    "s_leave": "Leave",
+    "s_request": "Requests",
+    "s_message": "Messages",
+    "s_closing": "Closing",
+    "s_report": "Reports",
+    "s_pay": "Payroll",
+    "s_security": "Security",
+    "gRequest": "Requests",
+    "shiftKinds": "Shift types",
+    "leaveGroups": "Leave groups",
+    "accrualRule": "Accrual rule",
+    "approvalRules": "Approval rules",
+    "s_esign": "E-contracts",
+    "s_advanced": "Advanced",
+    "workInfo": "Work terms",
+    "gMessage": "Messages",
+    "messageTemplates": "Message templates",
+    "messageRules": "Message automation"
   },
   "nav": {
     "home": "Home",

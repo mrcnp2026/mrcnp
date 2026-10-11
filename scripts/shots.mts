@@ -76,16 +76,18 @@ try {
       await p.screenshot({ path: path.join(OUT, 'admin-inbox-panel.png') });
       console.log('찍음 admin-inbox-panel');
     }
-    const side = p.locator('nav.sticky').first().getByRole('link', { name: '출퇴근기록', exact: true });
+    const side = p.locator('nav.sticky').first().getByRole('link', { name: '관리', exact: true });
     if (await side.count()) {
       await p.goto(BASE + '/admin');
       await side.hover();
-      await p.waitForTimeout(700);
+      await p.waitForTimeout(1000);
       await p.screenshot({ path: path.join(OUT, 'admin-menu-panel.png') });
       console.log('찍음 admin-menu-panel');
     }
   }
   await shot('admin-leave', '/admin/leave');
+  await shot('admin-leave-month', '/admin/leave?v=month');
+  await shot('admin-leave-accrual', '/admin/leave?v=accrual');
   await shot('admin-org', '/admin/members/groups');
   await shot('admin-notice-new', '/admin/notices/new');
   await shot('admin-notices', '/admin/notices');
@@ -93,6 +95,12 @@ try {
   await shot('admin-settings-work', '/admin/settings?tab=work');
   await shot('admin-settings-punch', '/admin/settings?tab=punch');
   await shot('admin-settings-break', '/admin/settings?tab=break');
+  await shot('admin-settings-request', '/admin/settings?tab=request');
+  await shot('admin-manage-approval', '/admin/manage/approval-rules');
+  await shot('admin-manage-kinds', '/admin/manage/shift-kinds');
+  await shot('admin-manage-workinfo', '/admin/manage/work-info');
+  await shot('admin-schedule-day', '/admin/schedule?v=day&from=' + new Date().toISOString().slice(0, 8) + '06&to=' + new Date().toISOString().slice(0, 8) + '06');
+  await shot('admin-schedule-list', '/admin/schedule?v=list');
   await shot('admin-payroll', '/admin/payroll');
   await shot('admin-member-new', '/admin/members/new');
   await shot('admin-member-detail', '/admin/members/' + emp!.id);

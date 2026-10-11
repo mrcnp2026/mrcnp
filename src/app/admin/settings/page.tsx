@@ -14,6 +14,26 @@ import { isOfficeIp, parseCidr, traceClientIp } from '@/lib/verify-location';
 import { loadOfficeLocations } from '@/lib/geo-data';
 import { ConfirmButton, HolidayForm, NetworkForm, RuleForm } from './SettingsForms';
 
+// 탭 이름 · 순서는 시프티의 회사 설정 (2026-10-11 의뢰인 스샷 `스샷/관리-회사설정*.png`). 일반 · 근무일정 · 출퇴근기록 · 휴게시간은 바꿀 수 있는 설정이고,
+// 나머지 탭은 지금 앱이 동작하는 방식을 같은 줄 모양으로 보여 준다(on = 쓰는 기능인가, href = 관련 관리 화면)
+const TABS = ['general', 'notify', 'access', 'branch', 'staff', 'work', 'punch', 'break', 'leave', 'request', 'message', 'esign', 'closing', 'report', 'pay', 'security', 'advanced'] as const;
+type Tab = (typeof TABS)[number];
+const INFO: Partial<Record<Tab, { k: string; on: boolean; href?: string }[]>> = {
+  notify: [{ k: 'notice', on: true }, { k: 'request', on: true }, { k: 'push', on: false }],
+  access: [{ k: 'admin', on: true }, { k: 'payroll', on: true }, { k: 'employee', on: true }, { k: 'change', on: true }],
+  branch: [{ k: 'parent', on: true }, { k: 'places', on: true, href: '/admin/branches' }],
+  staff: [{ k: 'number', on: true }, { k: 'invite', on: true }, { k: 'device', on: true, href: '/admin/members' }],
+  leave: [{ k: 'hourly', on: true, href: '/admin/leave/types' }, { k: 'pending', on: true }, { k: 'accrual', on: false, href: '/admin/manage/accrual-rule' }],
+  request: [{ k: 'punch', on: true }, { k: 'correction', on: true }, { k: 'overtime', on: true }, { k: 'shift', on: true }, { k: 'leave', on: true }, { k: 'leaveDelete', on: true }, { k: 'work', on: true }, { k: 'approver', on: true, href: '/admin/manage/approval-rules' }, { k: 'custom', on: false }],
+  message: [{ k: 'notice', on: true, href: '/admin/notices' }, { k: 'translate', on: true }, { k: 'auto', on: false }],
+  closing: [{ k: 'day', on: true }, { k: 'month', on: false }],
+  report: [{ k: 'monthly', on: true, href: '/admin/records' }, { k: 'week52', on: true }, { k: 'snapshot', on: false }],
+  pay: [{ k: 'scope', on: true, href: '/admin/payroll' }, { k: 'viewer', on: true }, { k: 'tax', on: false }],
+  esign: [{ k: 'use', on: false }],
+  advanced: [{ k: 'homeCards', on: true }, { k: 'bulk', on: false }, { k: 'brand', on: true }],
+  security: [{ k: 'login', on: true }, { k: 'audit', on: true }, { k: 'consent', on: true }, { k: 'ip', on: false }],
+};
+
 /** PC 설정 줄: 왼쪽 굵은 항목 이름 — 오른쪽 값·설명 (시프티 회사 설정의 줄 모양) */
 function SetRow({ label, children, last = false }: { label: string; children: ReactNode; last?: boolean }) {
   return (
@@ -43,7 +63,9 @@ export default async function SettingsPage({ searchParams }: { searchParams: Pro
   // PC: 시프티의 회사 설정 구성 (2026-10-11 의뢰인 스샷 `스샷/관리-회사설정*.png`) — 사이드 메뉴 옆 둘째 메뉴에서 탭을 고르고,
   // 본문은 「굵은 항목 이름 — 값」 줄 + 회색 띠 묶음 제목 + 오른쪽 위 버튼. 폰은 예전처럼 카드 네 장을 한 화면에
   const sp = await searchParams;
-  const tab: 'general' | 'work' | 'punch' | 'break' = sp.tab === 'work' || sp.tab === 'punch' || sp.tab === 'break' ? sp.tab : 'general';
+  const tab: Tab = (TABS as readonly string[]).includes(sp.tab ?? '') ? (sp.tab as Tab) : 'general';
+  const info = INFO[tab];
+  const ti = await getTranslations('admin.settings.info');
   const t = await getTranslations('admin.settings');
   const ts = await getTranslations('side');
   const tp = await getTranslations('admin.settings.pc');
@@ -132,12 +154,24 @@ export default async function SettingsPage({ searchParams }: { searchParams: Pro
       <div className="hidden lg:flex lg:flex-col lg:gap-4">
         <div className="flex items-start gap-4">
           <div className="min-w-0 flex-1">
-            <h1 className="text-2xl font-bold">{ts(tab === 'general' ? 'sGeneral' : tab === 'work' ? 'sWork' : tab === 'punch' ? 'sPunch' : 'sBreak')}</h1>
-            <p className="pt-1 text-sm text-faint">{tp(tab === 'general' ? 'descGeneral' : tab === 'work' ? 'descWork' : tab === 'punch' ? 'descPunch' : 'descBreak')}</p>
+            <h1 className="text-2xl font-bold">{ts(`s_${tab}`)}</h1>
+            <p className="pt-1 text-sm text-faint">{tp(tab === 'general' ? 'descGeneral' : tab === 'work' ? 'descWork' : tab === 'punch' ? 'descPunch' : tab === 'break' ? 'descBreak' : `desc_${tab}`)}</p>
           </div>
-          {tab !== 'general' && ruleForm}
+          {(tab === 'work' || tab === 'punch' || tab === 'break') && ruleForm}
         </div>
         <div className="border border-border bg-bg">
+          {info &&
+            info.map((r, i) => (
+              <SetRow key={r.k} label={ti(`${tab}.${r.k}.label`)} last={i === info.length - 1}>
+                <Flag on={r.on} label={ti(`${tab}.${r.k}.value`)} />
+                <p className="text-muted">{ti(`${tab}.${r.k}.note`)}</p>
+                {r.href && (
+                  <Link href={r.href} className="inline-flex min-h-8 items-center self-start font-bold text-primary">
+                    {tp('go')} ›
+                  </Link>
+                )}
+              </SetRow>
+            ))}
           {tab === 'general' && (
             <>
               <SetRow label={tp('weekStart')}>
@@ -280,6 +314,7 @@ export default async function SettingsPage({ searchParams }: { searchParams: Pro
             </>
           )}
         </div>
+        {info && <p className="text-sm text-faint">{tp('fixedNote')}</p>}
       </div>
 
       {/* ── 폰 ── */}

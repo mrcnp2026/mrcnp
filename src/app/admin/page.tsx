@@ -13,7 +13,8 @@ import { getMe } from '@/lib/auth';
 import { findMissingPunches } from '@/lib/missing-punch';
 import { weekTotalMinutes } from '@/lib/period';
 import { isProxyCorrection } from '@/lib/day-detail';
-import { fullLeaveSet } from '@/lib/leave';
+import { calcLeaveBalance, fullLeaveSet } from '@/lib/leave';
+import { loadAllLeaveTypes, loadLeaveGrants, loadLeaveRequests } from '@/lib/leave-data';
 import { daysFor, leaveDaysFor, loadPeriod, pendingCounts, syncOvertimeRequests, workDaysFor } from '@/lib/period-data';
 import { createAdminClient } from '@/lib/supabase/admin';
 import { kstDateTime, toKstDate } from '@/lib/time';
@@ -54,6 +55,7 @@ export default async function AdminHome({ searchParams }: { searchParams: Promis
   );
 
   let missingPeople = 0;
+  const missingNames: string[] = [];
   // PC 그래프: 이번 주 요일별 연장근로(연장 + 휴일 근로) 분 — 직원별 하루 집계를 날짜로 더한다
   const overtimeByDay = new Map<string, number>();
   const people: BoardPerson[] = active.map((p) => {
@@ -72,7 +74,10 @@ export default async function AdminHome({ searchParams }: { searchParams: Promis
         outGraceHours: OFFICE.missingOutGraceHours, inGraceMin: OFFICE.missingInGraceMin, joinedOn: p.startsOn,
         fullLeaveDates: new Set([...fullLeave, ...work.keys()]),
       });
-      if (miss.length) missingPeople++;
+      if (miss.length) {
+        missingPeople++;
+        missingNames.push(p.name);
+      }
     }
     return {
       id: p.id,
@@ -131,6 +136,29 @@ export default async function AdminHome({ searchParams }: { searchParams: Promis
     ...(roleReqs?.length ? [{ key: 'pendingRole' as const, n: roleReqs.length, href: `/admin/members/${roleReqs[0].target_id}` }] : []),
   ];
 
+  // PC 홈 카드 (2026-10-11 의뢰인 스샷 `스샷/홈.png`): 출퇴근 누락 · 공지사항 · 관리가 필요한 직원 · 휴가 현황
+  const real = active.filter((p) => !p.employeeNo?.startsWith('e2e-'));
+  const [{ data: latestNotices }, { data: keys }, grants, leaveReqs, leaveTypes] = await Promise.all([
+    createAdminClient().from('notices').select('id, title, created_at').eq('status', 'published').order('created_at', { ascending: false }).limit(5),
+    createAdminClient().from('user_passkeys').select('employee_id').is('revoked_at', null),
+    loadLeaveGrants(),
+    loadLeaveRequests({ practice: practiceView }),
+    loadAllLeaveTypes(),
+  ]);
+  const withPhone = new Set((keys ?? []).map((k) => k.employee_id as string));
+  const care = [
+    { key: 'careNoPhone', n: real.filter((p) => !withPhone.has(p.id)).length },
+    { key: 'careNoHire', n: real.filter((p) => !p.joinedOn).length },
+    { key: 'careNoGroup', n: real.filter((p) => !p.groupId).length },
+    { key: 'careNoJob', n: real.filter((p) => !p.jobId).length },
+  ] as const;
+  const leaveRows = real
+    .map((p) => ({ p, bal: calcLeaveBalance({ grants: grants.filter((g) => g.employeeId === p.id), requests: leaveReqs.filter((r) => r.employeeId === p.id), types: leaveTypes, asOf: today }) }))
+    .filter((x) => x.bal.grant)
+    .slice(0, 10);
+  const num = (v: number) => fmt.number(v, { maximumFractionDigits: 4 });
+  const cardLink = 'inline-flex min-h-8 items-center self-end text-sm font-bold text-primary';
+
   return (
     <PageShell wide>
       <AutoRefresh seconds={30} />
@@ -166,6 +194,78 @@ export default async function AdminHome({ searchParams }: { searchParams: Promis
           { label: t('todo'), value: String(todo.reduce((a, x) => a + x.n, 0)), sub: t('kpiTodo'), href: '/admin/inbox' },
         ]}
       />
+
+      {/* PC 카드 줄: 출퇴근 누락 · 공지사항 · 관리가 필요한 직원 · 휴가 현황 (시프티 홈의 카드 구성) */}
+      <div className="hidden gap-4 lg:grid lg:grid-cols-4">
+        <Card className="flex flex-col gap-2">
+          <CardTitle aside={<span className={`num text-lg font-bold ${missingPeople > 0 ? 'text-warn' : 'text-faint'}`}>{missingPeople}</span>}>{t('cardMissing')}</CardTitle>
+          {missingNames.length === 0 ? (
+            <p className="flex-1 py-4 text-center text-sm text-faint">{t('cardMissingNone')}</p>
+          ) : (
+            <ul className="flex-1 divide-y divide-border text-sm">
+              {missingNames.slice(0, 5).map((x) => (
+                <li key={x} className="py-1.5 font-bold">{x}</li>
+              ))}
+            </ul>
+          )}
+          <Link href="/admin/missing" className={cardLink}>{t('cardMissingMore')} ›</Link>
+        </Card>
+        <Card className="flex flex-col gap-2">
+          <CardTitle>{t('cardNotices')}</CardTitle>
+          {(latestNotices ?? []).length === 0 ? (
+            <p className="flex-1 py-4 text-center text-sm text-faint">{t('cardNoticesNone')}</p>
+          ) : (
+            <ul className="flex-1 divide-y divide-border text-sm">
+              {(latestNotices ?? []).map((x) => (
+                <li key={x.id}>
+                  <Link href={`/admin/notices/${x.id}`} className="flex items-center gap-2 py-1.5 hover:text-primary">
+                    <span className="min-w-0 flex-1 truncate">{x.title}</span>
+                    <span className="num shrink-0 text-xs text-faint">{toKstDate(new Date(x.created_at as string))}</span>
+                  </Link>
+                </li>
+              ))}
+            </ul>
+          )}
+          <Link href="/admin/notices" className={cardLink}>{t('cardNoticesAll')} ›</Link>
+        </Card>
+        <Card className="flex flex-col gap-2">
+          <CardTitle aside={<span className="num text-sm text-muted">{t('totalStaff')} <b className="text-text">{real.length}</b></span>}>{t('cardCare')}</CardTitle>
+          <ul className="flex-1 text-sm">
+            {care.map((x) => (
+              <li key={x.key}>
+                <Link href="/admin/members" className="flex items-center gap-2 py-1.5 hover:text-primary">
+                  <span className="flex-1">{t(x.key)}</span>
+                  <span className={`num inline-flex h-6 min-w-8 items-center justify-center rounded-button px-1 font-bold ${x.n > 0 ? 'bg-warn-tint text-warn' : 'bg-surface text-faint'}`}>{x.n}</span>
+                  <ChevronRight aria-hidden size={16} className="text-faint" />
+                </Link>
+              </li>
+            ))}
+          </ul>
+        </Card>
+        <Card className="flex flex-col gap-2">
+          <CardTitle>{t('cardLeave')}</CardTitle>
+          {leaveRows.length === 0 ? (
+            <p className="flex-1 py-4 text-center text-sm text-faint">{t('cardLeaveNone')}</p>
+          ) : (
+            <ul className="flex-1 text-sm">
+              {leaveRows.map(({ p, bal }) => {
+                const over = bal.used > bal.granted;
+                const w = bal.granted > 0 ? Math.min(100, Math.round((bal.used / bal.granted) * 100)) : over ? 100 : 0;
+                return (
+                  <li key={p.id} className="flex items-center gap-2 py-1">
+                    <span className="w-20 shrink-0 truncate font-bold">{p.name}</span>
+                    <svg aria-hidden viewBox="0 0 100 6" preserveAspectRatio="none" className="h-1.5 min-w-0 flex-1 rounded-chip bg-border">
+                      <rect width={w} height="6" className={over ? 'fill-danger' : 'fill-ok'} />
+                    </svg>
+                    <span className={`num w-20 shrink-0 text-right text-xs ${over ? 'text-danger' : 'text-muted'}`}>{num(bal.used)} / {num(bal.granted)}</span>
+                  </li>
+                );
+              })}
+            </ul>
+          )}
+          <Link href="/admin/leave?v=accrual" className={cardLink}>{t('cardLeaveAll')} ›</Link>
+        </Card>
+      </div>
 
       {/* 그래프 줄 (2026-10-11 의뢰인: 막대·선·동그라미 그래프로 집계를 보는 현황판) — 동그라미: 오늘 근무 현황 · 선: 최근 14일 출근 인원 */}
       <div className="flex flex-col gap-3 lg:grid lg:grid-cols-3 lg:gap-4">

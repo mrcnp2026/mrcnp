@@ -58,7 +58,7 @@ try {
 
   // ── 연차 관리 → 휴가 종류 ──
   await p.goto(`${BASE}/admin/leave`);
-  await p.getByRole('link', { name: /휴가 종류/ }).click();
+  await p.getByRole('link', { name: /휴가 유형/ }).filter({ visible: true }).first().click();
   await p.waitForURL(/\/admin\/leave\/types/);
   await p.waitForLoadState('networkidle');
   check((await p.getByText('연차', { exact: true }).count()) > 0 && (await p.getByText('반반차', { exact: true }).count()) > 0, '기본 종류(연차·반차·반반차 …)가 목록에 있음');

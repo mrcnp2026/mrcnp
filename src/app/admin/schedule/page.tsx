@@ -26,6 +26,8 @@ import { SheetOpener } from '@/components/SheetOpener';
 import { resolveDayType } from '@/config/labor-rules';
 import { ChevronLeft, ChevronRight } from 'lucide-react';
 import { CancelShift, ScheduleForm } from './ScheduleForms';
+import { PcTable } from '@/components/PcTable';
+import { ScheduleDay, type DayLine } from './ScheduleDay';
 import { ScheduleGrid, type GridDay, type GridRow } from './ScheduleGrid';
 import { ScheduleMonth, type MonthCell } from './ScheduleMonth';
 
@@ -67,6 +69,8 @@ export default async function AdminSchedulePage({ searchParams }: { searchParams
 
   // ── PC 달력형 (줄 = 직원, 칸 = 날짜). 주 보기 · 월 보기는 기간만 다르다 — 같은 자료를 그린다
   const month = sp.v === 'month';
+  const dayView = sp.v === 'day';
+  const listView = sp.v === 'list';
   const monthStart = `${from.slice(0, 7)}-01`;
   const nextMonth = addDays(`${addDays(monthStart, 31).slice(0, 7)}-01`, 0);
   const span = days.length;
@@ -123,6 +127,11 @@ export default async function AdminSchedulePage({ searchParams }: { searchParams
       });
     }
   }
+  // 일 보기: 줄 = 직원, 일정은 시간 막대 (그 기간의 첫날만 그린다)
+  const dayLines: DayLine[] = dayView
+    ? gridRows.map((r) => ({ id: r.id, name: r.name, sub: r.sub, total: r.total, leave: r.cells[0].leave, bars: r.cells[0].items.map(({ it, href, color, tag }, i) => ({ key: `${i}${it.startTime}`, start: it.startTime, end: it.endTime, href, color, tag })) }))
+    : [];
+  const pickDay = today >= from && today <= to ? today : from;
   const sunday = addDays(weekStartOf(today), -1);
   const weekdayNames = [...Array(7)].map((_, i) => f.dateTime(kstDateTime(addDays(sunday, i), '12:00'), { weekday: 'short' }));
   const gridDays: GridDay[] = days.map((d) => {
@@ -130,7 +139,9 @@ export default async function AdminSchedulePage({ searchParams }: { searchParams
     const red = isRed(d);
     return { date: d, label: f.dateTime(kstDateTime(d, '12:00'), { day: 'numeric', weekday: 'short' }), holiday: holidayName.get(d) ?? null, red, today: d === today, count: count.get(d) ?? 0 };
   });
-  const rangeTitle = month
+  const rangeTitle = dayView
+    ? f.dateTime(kstDateTime(from, '12:00'), { year: 'numeric', month: 'long', day: 'numeric', weekday: 'short' })
+    : month
     ? f.dateTime(kstDateTime(from, '12:00'), { year: 'numeric', month: 'long' })
     : `${f.dateTime(kstDateTime(from, '12:00'), { year: 'numeric', month: 'long', day: 'numeric' })} - ${f.dateTime(kstDateTime(to, '12:00'), { month: 'long', day: 'numeric' })}`;
   const viewBtn = (on: boolean) => `inline-flex min-h-8 items-center border px-3 text-sm first:rounded-l-button last:rounded-r-button ${on ? 'z-10 border-primary bg-primary-tint font-bold text-primary' : 'border-border bg-bg text-muted'}`;
@@ -161,7 +172,7 @@ export default async function AdminSchedulePage({ searchParams }: { searchParams
               <ChevronRight aria-hidden size={16} />
             </Link>
           </div>
-          <Link href={month ? link(`${today.slice(0, 7)}-01`, addDays(`${addDays(`${today.slice(0, 7)}-01`, 31).slice(0, 7)}-01`, -1)) : link(week, addDays(week, 6))} className="inline-flex min-h-8 items-center rounded-button border border-border bg-bg px-4 text-sm text-muted">
+          <Link href={month ? link(`${today.slice(0, 7)}-01`, addDays(`${addDays(`${today.slice(0, 7)}-01`, 31).slice(0, 7)}-01`, -1)) : dayView ? link(today, today) : link(week, addDays(week, 6))} className="inline-flex min-h-8 items-center rounded-button border border-border bg-bg px-4 text-sm text-muted">
             {t('today')}
           </Link>
           <p className="num ml-2 text-lg font-bold">{rangeTitle}</p>
@@ -183,17 +194,57 @@ export default async function AdminSchedulePage({ searchParams }: { searchParams
             </button>
           </form>
           <div className="flex">
-            <Link href={link(weekStartOf(from), addDays(weekStartOf(from), 6), '')} aria-current={!month ? 'page' : undefined} className={viewBtn(!month)}>
+            <Link href={link(pickDay, pickDay, 'day')} aria-current={dayView ? 'page' : undefined} className={viewBtn(dayView)}>
+              {t('viewDay')}
+            </Link>
+            <Link href={link(weekStartOf(from), addDays(weekStartOf(from), 6), '')} aria-current={!month && !dayView && !listView ? 'page' : undefined} className={`-ml-px ${viewBtn(!month && !dayView && !listView)}`}>
               {t('viewWeek')}
             </Link>
             <Link href={link(monthStart, addDays(nextMonth, -1), 'month')} aria-current={month ? 'page' : undefined} className={`-ml-px ${viewBtn(month)}`}>
               {t('viewMonth')}
+            </Link>
+            <Link href={link(from, to, 'list')} aria-current={listView ? 'page' : undefined} className={`-ml-px ${viewBtn(listView)}`}>
+              {t('viewList')}
             </Link>
           </div>
         </div>
         {!data.rule && <p className="rounded-card bg-bg p-5 text-sm text-faint">{t('noRule')}</p>}
         {month ? (
           <ScheduleMonth weekdays={weekdayNames} cells={monthCells} labels={{ more: (n) => t('more', { n }) }} />
+        ) : dayView ? (
+          <ScheduleDay lines={dayLines} labels={{ employee: t('colEmployee'), empty: t('emptyRange') }} />
+        ) : listView ? (
+          <PcTable
+            total
+            labels={{ search: tc('colSearch'), empty: t('emptyRange'), total: t('listTotal') }}
+            cols={[
+              { key: 'who', label: t('colEmployee') },
+              { key: 'date', label: t('colDate') },
+              { key: 'time', label: t('colTime') },
+              { key: 'kind', label: t('colKind') },
+              { key: 'group', label: t('colGroup') },
+              { key: 'job', label: t('colJob') },
+              { key: 'tpl', label: t('colTemplate') },
+              { key: 'note', label: t('colNote') },
+              { key: 'total', label: t('colTotal'), align: 'right' },
+            ]}
+            rows={blocks.flatMap(({ d, rows }) =>
+              rows.map(({ p, it }, i) => ({
+                id: `${d}${p.id}${i}`,
+                cells: {
+                  who: { text: p.name, node: <Link href={`/admin/schedule/${p.id}/${d}?i=${Math.max(0, data.planFor(p.id, d).items.indexOf(it))}`} className="font-bold hover:text-primary">{p.name}</Link> },
+                  date: { text: d, node: <span className="num">{f.dateTime(kstDateTime(d, '12:00'), { month: 'numeric', day: 'numeric', weekday: 'short' })}</span> },
+                  time: { text: `${it.startTime} - ${it.endTime}`, node: <span className="num">{it.startTime} - {it.endTime}</span> },
+                  kind: { text: it.kind !== 'none' ? tk(it.kind) : '' },
+                  group: { text: groupPath(groups, p.groupId) ?? '' },
+                  job: { text: (p.jobId ? jobOf.get(p.jobId)?.name : '') ?? '' },
+                  tpl: { text: it.name ?? (it.source === 'rule' ? t('byRule') : '') },
+                  note: { text: it.note ?? '' },
+                  total: { text: hm(spanMinutes(it)) },
+                },
+              })),
+            )}
+          />
         ) : (
           <ScheduleGrid days={gridDays} rows={gridRows} dense={false} labels={{ employee: t('colEmployee'), people: t('colPeople'), empty: t('emptyRange') }} />
         )}

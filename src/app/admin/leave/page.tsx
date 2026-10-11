@@ -7,6 +7,7 @@ import { getFormatter, getTranslations } from 'next-intl/server';
 import Link from 'next/link';
 import { Help } from '@/components/Help';
 import { ListBar } from '@/components/ListBar';
+import { PcTable } from '@/components/PcTable';
 import { Card, Chip, PageShell } from '@/components/ui';
 import { OFFICE } from '@/config/office';
 import { addDays } from '@/lib/calendar';
@@ -19,7 +20,7 @@ import { toKstDate } from '@/lib/time';
 import { LeaveCancel } from '../inbox/Decisions';
 import { GrantForm, JoinedOnForm } from './GrantForm';
 
-export default async function AdminLeavePage({ searchParams }: { searchParams: Promise<{ live?: string; e?: string; q?: string; g?: string; to?: string }> }) {
+export default async function AdminLeavePage({ searchParams }: { searchParams: Promise<{ live?: string; e?: string; q?: string; g?: string; to?: string; v?: string; y?: string }> }) {
   const t = await getTranslations('admin.leave');
   const tl = await getTranslations('leave');
   const tc = await getTranslations('common');
@@ -53,11 +54,130 @@ export default async function AdminLeavePage({ searchParams }: { searchParams: P
   const day = (d: string) => f.dateTime(new Date(`${d}T12:00:00+09:00`), { year: d.slice(0, 4) === today.slice(0, 4) ? undefined : 'numeric', month: 'short', day: 'numeric', weekday: 'short' });
   const name = new Map((ppl ?? []).map((p) => [p.id, p.name]));
   const leaveName = (code: string) => leaveTypeName(types, code, tl);
+  // PC: 시프티처럼 「휴가 내역」(목록 · 월별)과 「휴가 발생」으로 나눈다 (2026-10-11 의뢰인 스샷 `스샷/휴가내역*.png` · `휴가발생.png`). 폰은 한 화면 그대로
+  const view: 'list' | 'month' | 'accrual' = sp.v === 'accrual' ? 'accrual' : sp.v === 'month' ? 'month' : 'list';
+  const year = sp.y && /^\d{4}$/.test(sp.y) ? sp.y : today.slice(0, 4);
+  const typeOf = new Map(types.map((x) => [x.code, x]));
+  const inYear = requests.filter((r) => r.status === 'approved' && r.startDate.slice(0, 4) === year && name.has(r.employeeId)).sort((a, b) => (a.startDate > b.startDate ? -1 : 1));
+  const years = [...new Set([today.slice(0, 4), year, ...requests.map((r) => r.startDate.slice(0, 4))])].sort().reverse();
+  const viewHref = (v: string, y = year) => {
+    const u = new URLSearchParams();
+    for (const [k, val] of Object.entries({ v: v === 'list' ? '' : v, y: y === today.slice(0, 4) ? '' : y, live: sp.live === '1' ? '1' : '' })) if (val) u.set(k, val);
+    const qs = u.toString();
+    return `/admin/leave${qs ? `?${qs}` : ''}`;
+  };
+  const viewBtn = (on: boolean) => `inline-flex h-8 items-center border px-3 text-sm first:rounded-l-button last:rounded-r-button ${on ? 'z-10 border-primary bg-primary-tint font-bold text-primary' : 'border-border bg-bg text-muted'}`;
   const approved = requests.filter((r) => r.status === 'approved' && r.endDate >= addDays(today, -31)).sort((a, b) => (a.startDate < b.startDate ? -1 : 1));
 
   return (
     <PageShell wide flush>
-      <h1 className="sr-only">{t('title')}</h1>
+      <h1 className="sr-only lg:hidden">{t('title')}</h1>
+      {/* ── PC 머리: 제목 + 설명 / [휴가 유형] ── */}
+      <div className="hidden items-start gap-4 lg:flex">
+        <div className="min-w-0 flex-1">
+          <h1 className="text-2xl font-bold">{t(view === 'accrual' ? 'pcAccrual' : 'pcHistory')}</h1>
+          <p className="pt-1 text-sm text-faint">{t(view === 'accrual' ? 'pcAccrualIntro' : 'pcHistoryIntro')}</p>
+        </div>
+        <Link href="/admin/leave/types" className="inline-flex h-8 items-center rounded-button border border-nav bg-bg px-4 text-sm font-bold whitespace-nowrap text-nav">
+          {t('toTypes')}
+        </Link>
+      </div>
+      {view !== 'accrual' && (
+        <div className="hidden flex-col gap-3 lg:flex">
+          <div className="flex items-center gap-2">
+            <form action="/admin/leave" className="flex items-center gap-2">
+              {view === 'month' && <input type="hidden" name="v" value="month" />}
+              {sp.live === '1' && <input type="hidden" name="live" value="1" />}
+              <select name="y" defaultValue={year} aria-label={t('yearOf', { y: year })} className="num h-8 rounded-button border border-border bg-bg px-2">
+                {years.map((y) => (
+                  <option key={y} value={y}>
+                    {t('yearOf', { y })}
+                  </option>
+                ))}
+              </select>
+              <button type="submit" className="inline-flex h-8 items-center rounded-button border border-border bg-bg px-3 text-sm text-muted">
+                {t('show')}
+              </button>
+            </form>
+            <div className="ml-auto flex">
+              <Link href={viewHref('list')} aria-current={view === 'list' ? 'page' : undefined} className={viewBtn(view === 'list')}>
+                {t('viewList')}
+              </Link>
+              <Link href={viewHref('month')} aria-current={view === 'month' ? 'page' : undefined} className={`-ml-px ${viewBtn(view === 'month')}`}>
+                {t('viewMonth')}
+              </Link>
+            </div>
+          </div>
+          {view === 'list' ? (
+            <PcTable
+              total
+              labels={{ search: tc('colSearch'), empty: t('emptyYear'), total: t('listTotal') }}
+              cols={[
+                { key: 'who', label: t('colName') },
+                { key: 'period', label: t('colPeriod') },
+                { key: 'group', label: t('colGroup') },
+                { key: 'type', label: t('colType') },
+                { key: 'hours', label: t('colPaidHours'), align: 'right' },
+                { key: 'deduct', label: t('colDeduct'), align: 'right' },
+                { key: 'reason', label: t('colReason') },
+                { key: 'act', label: '', search: false, sort: false, align: 'right' },
+              ]}
+              rows={inYear.map((r) => {
+                const ty = typeOf.get(r.typeCode);
+                const units = ty && ty.dayUnit > 0 ? r.days / ty.dayUnit : r.days;
+                const period = `${r.startDate === r.endDate ? day(r.startDate) : `${day(r.startDate)} ~ ${day(r.endDate)}`}${r.startTime ? ` ${r.startTime} - ${r.endTime}` : ''}`;
+                return {
+                  id: r.id,
+                  cells: {
+                    who: { text: name.get(r.employeeId) ?? '', node: <Link href={`/admin/leave/req/${r.id}`} className="font-bold hover:text-primary">{name.get(r.employeeId)}</Link> },
+                    period: { text: `${r.startDate} ${period}`, node: <span className="num">{period}</span> },
+                    group: { text: ty?.groupName ?? '' },
+                    type: { text: leaveName(r.typeCode) },
+                    hours: { text: ty?.isPaid ? t('hoursValue', { h: n((ty.hours ?? 8) * units) }) : t('hoursValue', { h: 0 }) },
+                    deduct: { text: t('daysValue', { d: n(ty?.deductsBalance ? r.days : 0) }) },
+                    reason: { text: r.reason ?? '' },
+                    act: { text: '', node: <span className="inline-flex flex-col items-end"><LeaveCancel id={r.id} name={name.get(r.employeeId) ?? ''} /></span> },
+                  },
+                };
+              })}
+            />
+          ) : (
+            <div className="overflow-x-auto border-t border-l border-border bg-bg">
+              <table className="num w-full border-separate border-spacing-0 text-sm">
+                <thead>
+                  <tr>
+                    <th scope="col" className="w-40 border-r border-b border-border px-3 py-2 text-left">{t('colName')}</th>
+                    {[...Array(12)].map((_, i) => (
+                      <th key={i} scope="col" className="border-r border-b border-border px-2 py-2 text-center">{t('monthOf', { m: i + 1 })}</th>
+                    ))}
+                    <th scope="col" className="border-r border-b border-border px-3 py-2 text-center">{t('totalCount')}</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {shown.map((p) => {
+                    const mine = inYear.filter((r) => r.employeeId === p.id);
+                    return (
+                      <tr key={p.id}>
+                        <th scope="row" className="border-r border-b border-border px-3 py-2 text-left font-bold">{p.name}</th>
+                        {[...Array(12)].map((_, i) => {
+                          const c = mine.filter((r) => Number(r.startDate.slice(5, 7)) === i + 1).length;
+                          return (
+                            <td key={i} className="border-r border-b border-border px-2 py-2 text-center">
+                              {c > 0 ? <span className="inline-flex h-6 min-w-6 items-center justify-center rounded-button bg-primary-tint px-1 font-bold text-primary">{c}</span> : <span className="text-border">+</span>}
+                            </td>
+                          );
+                        })}
+                        <td className="border-r border-b border-border px-3 py-2 text-center font-bold">{mine.length}</td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </div>
+      )}
+      <div className={view === 'accrual' ? 'contents' : 'contents lg:hidden'}>
       <ListBar
         key={`${q}|${g}|${asOf}`}
         single
@@ -74,21 +194,15 @@ export default async function AdminLeavePage({ searchParams }: { searchParams: P
         gear={{ href: '/admin/leave/types', label: t('toTypes') }}
         labels={{ menu: tc('menu'), search: t('search'), filter: t('filter'), period: t('asOf'), from: '', to: t('asOf'), apply: t('apply'), groupAll: t('groupAll') }}
       />
-      <div className="hidden flex-wrap items-center gap-x-1 px-1 lg:flex">
-        <span className="text-sm text-muted">{t('title')}</span>
-        <Help>{t('intro')}</Help>
-        <Link href="/admin/leave/types" className="ml-auto inline-flex min-h-11 items-center text-sm font-medium text-primary">
-          {t('toTypes')} ›
-        </Link>
       </div>
-
       {/* PC: 직원 한 명 = 표 한 줄 (2026-10-06 의뢰인: 직원이 20명이면 카드 20장이 쌓인다). 「입력·수정」을 누른 직원의 입력 칸만 표 아래에 열린다 · 폰: 직원별 카드 */}
-      <Card className="hidden overflow-x-auto p-0 lg:block">
+      <Card className={`hidden overflow-x-auto p-0 ${view === 'accrual' ? 'lg:block' : ''}`}>
         <table className="w-full text-sm">
           <thead>
             <tr className="border-b border-border">
               <th scope="col" className="px-4 py-3 text-left text-xs font-medium whitespace-nowrap text-faint">{t('colName')}</th>
               <th scope="col" className="px-4 py-3 text-left text-xs font-medium whitespace-nowrap text-faint">{t('colHired')}</th>
+              <th scope="col" className="px-4 py-3 text-left text-xs font-medium whitespace-nowrap text-faint">{t('colSpan')}</th>
               {(['granted', 'used', 'pending', 'remaining'] as const).map((k) => (
                 <th key={k} scope="col" className="px-4 py-3 text-left text-xs font-medium whitespace-nowrap text-faint text-right">{t(k)}</th>
               ))}
@@ -105,6 +219,7 @@ export default async function AdminLeavePage({ searchParams }: { searchParams: P
                     <span className="font-semibold">{p.name}</span> <span className="num text-xs text-faint">{p.employee_no}</span>
                   </td>
                   <td className="px-4 py-3 num text-muted">{(p.joined_on as string | null) ?? '–'}</td>
+                  <td className="px-4 py-3 num text-muted">{bal.grant?.periodLabel ?? '–'}</td>
                   {bal.grant ? (
                     ([bal.granted, bal.used, bal.pending, bal.remaining] as const).map((v, i) => (
                       <td key={i} className={`px-4 py-3 num text-right ${i === 3 ? 'font-bold text-primary' : ''}`}>{n(v)}</td>
@@ -223,32 +338,12 @@ export default async function AdminLeavePage({ searchParams }: { searchParams: P
         })}
       </section>
 
-      <section className="mt-3 flex flex-col gap-2 lg:mt-0">
+      <section className="mt-3 flex flex-col gap-2 lg:hidden">
         <div className="flex flex-wrap items-center gap-x-1">
           <h2 className="font-semibold">{t('approvedTitle')}</h2>
           <Help>{t('approvedHint')}</Help>
         </div>
         {approved.length === 0 && <p className="text-sm text-faint">{t('approvedNone')}</p>}
-        {approved.length > 0 && (
-          <Card className="hidden overflow-x-auto p-0 lg:block">
-            <table className="w-full text-sm">
-              <tbody className="divide-y divide-border">
-                {approved.map((r) => (
-                  <tr key={r.id}>
-                    <td className="px-4 py-3 font-semibold whitespace-nowrap"><Link href={`/admin/leave/req/${r.id}`}>{name.get(r.employeeId)}</Link></td>
-                    <td className="px-4 py-3 num whitespace-nowrap">{leaveName(r.typeCode)} · {tl('days', { n: n(r.days) })}{r.startTime && ` · ${r.startTime}-${r.endTime}`}</td>
-                    <td className="px-4 py-3 num text-muted">{r.startDate === r.endDate ? day(r.startDate) : `${day(r.startDate)} ~ ${day(r.endDate)}`}</td>
-                    <td className="px-4 py-3">
-                      <span className="flex flex-col items-end">
-                        <LeaveCancel id={r.id} name={name.get(r.employeeId) ?? ''} />
-                      </span>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </Card>
-        )}
         {approved.map((r) => (
           <Card key={r.id} className="flex flex-col gap-2 lg:hidden">
             <div className="flex items-baseline justify-between gap-2">
