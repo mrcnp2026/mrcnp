@@ -3,9 +3,7 @@
 // 시프티 PC의 구성을 따른다 (2026-10-11 의뢰인 스샷 88장 — `스샷/홈.png` · `근무일정 달력형 주 단위.png` · `휴가내역.png` · `스케줄 패턴.png` · `관리-회사설정.png`):
 //   · 짙은 남색 196px · 한 줄 메뉴(아이콘 + 흰 글자) · 묶음 사이는 간격으로만 나눔
 //   · 근무일정 · 출퇴근기록 · 휴가: 마우스를 올리면 하위 메뉴가 **아래로** 스르륵 펼쳐진다. 그 메뉴 안에 있을 때는 펼쳐진 채로 있다
-//   · 관리 · 회사 설정: 마우스를 올리면 사이드 메뉴 **오른쪽으로** 패널이 스르륵 펼쳐진다(왼쪽에서 오른쪽으로 1.4초에 걸쳐 열리고 글자가 뒤따라 나타난다 — 2026-10-11 의뢰인: "너무 빠르다, 2~3배 천천히").
-//     그 화면 안에서는 같은 패널이 둘째 메뉴로 계속 붙어 있다. 패널 항목은 스샷의 묶음 · 이름 · 순서를 따른다
-//     (2026-10-11 의뢰인: "출퇴근기록은 하단 드롭 형태로, 옆으로 확장되는 것은 관리와 회사 설정", "스르륵 열리게", "패널 색이 별로다")
+//   · 관리 · 회사 설정: 마우스를 올려도 펼치지 않는다 — 눌러서 들어가면 사이드 메뉴 옆에 흰 둘째 메뉴가 붙는다 (2026-10-11 시프티 실측 · 의뢰인 "두 개는 클릭")
 import { Building2, CalendarRange, Clock, House, Megaphone, Plane, Send, UserRoundCog, Wallet, type LucideIcon } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 import Link, { useLinkStatus } from 'next/link';
@@ -16,8 +14,9 @@ type Leaf = { href: string; key: string };
 type Panel = { key: string; items: Leaf[] }[];
 type Item = { href: string; key: string; icon: LucideIcon; badge?: number; sub?: Leaf[]; panel?: Panel };
 
-// 스르륵: 처음에 빠르고 끝에서 천천히 멎는 박자 — 아래로 펼침과 옆으로 펼침이 같은 박자를 쓴다
-const EASE = 'ease-[cubic-bezier(0.16,1,0.3,1)]';
+// 스르륵: 시프티와 같은 박자 — 천천히 시작해 빨라졌다가 천천히 멎는다(ease-in-out). 2026-10-11 시프티 실측: 0.35초 ease-in-out.
+// 의뢰인 2026-10-11: "출퇴근기록 · 휴가가 열리는 모습을 그대로" — 열림 · 닫힘 모두 0.35초 ease-in-out, 머뭇거림 없음. 확 튀어나오는 곡선(ease-out 계열)은 쓰지 않는다
+const EASE = 'ease-in-out';
 
 /** 누른 메뉴의 다음 화면을 불러오는 동안 오른쪽 끝에 막대 (2026-10-06 의뢰인: 눌러도 진행 중인지 모르겠다) */
 function Loading({ dark = false }: { dark?: boolean }) {
@@ -173,9 +172,9 @@ export function SideNav({ isAdmin, inboxCount = 0 }: { isAdmin: boolean; inboxCo
                   </Link>
                   {/* 아래로 펼침: 높이가 스르륵 열리고 글자가 살짝 내려오며 나타난다. 그 메뉴 안에 있으면 펼쳐 둔다 */}
                   {sub && (
-                    <div className={`grid bg-primary-deep/35 transition-[grid-template-rows] duration-1400 ${EASE} ${open ? 'grid-rows-[1fr]' : 'grid-rows-[0fr] group-focus-within/item:grid-rows-[1fr] group-hover/item:grid-rows-[1fr]'}`}>
+                    <div className={`grid bg-primary-deep/35 transition-[grid-template-rows] duration-350 ${EASE} ${open ? 'grid-rows-[1fr]' : 'grid-rows-[0fr] group-focus-within/item:grid-rows-[1fr] group-hover/item:grid-rows-[1fr]'}`}>
                       <div className="overflow-hidden">
-                        <div className={`py-1 transition-[opacity,transform] duration-1600 ${EASE} ${open ? '' : '-translate-y-2 opacity-0 group-focus-within/item:translate-y-0 group-focus-within/item:opacity-100 group-hover/item:translate-y-0 group-hover/item:opacity-100'}`}>
+                        <div className="py-1">
                           {sub.map((s) => {
                             const on = active === s.href;
                             return (
@@ -186,17 +185,6 @@ export function SideNav({ isAdmin, inboxCount = 0 }: { isAdmin: boolean; inboxCo
                             );
                           })}
                         </div>
-                      </div>
-                    </div>
-                  )}
-                  {/* 옆으로 펼침(관리 · 회사 설정): 사이드 메뉴 높이 전체의 흰 패널이 왼쪽에서 오른쪽으로 열리고, 글자가 조금 늦게 따라 나온다.
-                      마우스가 떠나면 잠깐 뒤에 닫힌다. 그 메뉴 안에서는 아래의 붙어 있는 패널이 대신한다 */}
-                  {p && !open && (
-                    <div
-                      className={`pointer-events-none invisible fixed top-14 bottom-0 left-49 z-30 w-56 overflow-y-auto border-r border-border bg-bg py-4 text-text shadow-card transition-[clip-path,visibility] delay-300 duration-1400 [clip-path:inset(0_100%_0_0)] ${EASE} group-focus-within/item:pointer-events-auto group-focus-within/item:visible group-focus-within/item:delay-150 group-focus-within/item:[clip-path:inset(0_-2rem_0_0)] group-hover/item:pointer-events-auto group-hover/item:visible group-hover/item:delay-150 group-hover/item:[clip-path:inset(0_-2rem_0_0)]`}
-                    >
-                      <div className={`-translate-x-6 opacity-0 transition-[opacity,transform] delay-200 duration-1800 ${EASE} group-focus-within/item:translate-x-0 group-focus-within/item:opacity-100 group-hover/item:translate-x-0 group-hover/item:opacity-100`}>
-                        <PanelLinks panel={p} active={active} onPick={setPressed} t={t} />
                       </div>
                     </div>
                   )}
