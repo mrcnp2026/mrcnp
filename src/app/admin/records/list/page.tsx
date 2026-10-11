@@ -53,7 +53,6 @@ export default async function RecordListPage({ searchParams }: { searchParams: P
     const job = p.jobId ? jobOf.get(p.jobId) : undefined;
     const sub = [groupPath(groups, p.groupId), job?.name].filter(Boolean).join(' / ');
     // 간주 근무 줄: 그날 일정이 간주 근무이고 찍은 기록·승인된 정정이 하나도 없을 때 (계산이 일정 시간으로 채운 줄)
-    const real = new Set([...data.events.filter((e) => e.employeeId === p.id).map((e) => e.workDate), ...data.corrections.filter((c) => c.employeeId === p.id && c.status === 'approved').map((c) => c.workDate)]);
     for (const d of daysFor(data, p.id)) {
       if (d.pairs.length === 0) continue;
       totalOf.set(d.workDate, (totalOf.get(d.workDate) ?? 0) + d.netMinutes);

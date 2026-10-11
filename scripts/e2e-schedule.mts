@@ -109,7 +109,7 @@ try {
   await shot('03b-근무일정-기간');
   await p.goto(`${BASE}/admin/schedule?from=${FRI}&to=${SAT}&q=${encodeURIComponent('없는이름zz')}`);
   await p.waitForLoadState('networkidle');
-  check((await p.getByText('이 기간에는 일정이 없습니다.').count()) === 1, '이름 검색에 맞는 사람이 없으면 빈 안내');
+  check((await p.getByText('이 기간에는 일정이 없습니다.').filter({ visible: true }).count()) === 1, '이름 검색에 맞는 사람이 없으면 빈 안내'); // PC 달력형에도 같은 안내가 있다(폰에서는 숨김)
   await p.goto(`${BASE}/admin/schedule?from=2026-01-01&to=2026-12-31`);
   await p.waitForLoadState('networkidle');
   check((await p.getByRole('button', { name: '기간 고르기' }).textContent())?.includes('01.01 - 01.31') ?? false, '기간이 너무 길면 31일로 줄임', (await p.getByRole('button', { name: '기간 고르기' }).textContent()) ?? '');
@@ -142,7 +142,13 @@ try {
   await p.setViewportSize({ width: 1440, height: 900 });
   await p.goto(`${BASE}/admin/schedule?d=${FRI}`);
   await p.waitForLoadState('networkidle');
-  check(await p.getByRole('button', { name: '일정 넣기' }).isVisible(), 'PC에서는 일정 넣는 양식이 옆에 펼쳐져 있음');
+  // PC (2026-10-11): 달력형 표 + 오른쪽 위 [추가] 버튼 → 가운데 팝업
+  check(await p.locator('main table').first().isVisible(), 'PC에서는 달력형 표가 보임');
+  check(!(await p.getByRole('button', { name: '일정 넣기' }).isVisible()), 'PC에서 일정 넣는 양식은 닫혀 있음');
+  await p.locator('main button:has(svg.lucide-plus)').first().click();
+  check(await p.getByRole('button', { name: '일정 넣기' }).isVisible(), '추가 버튼을 누르면 팝업으로 양식이 열림');
+  await p.keyboard.press('Escape');
+  check(!(await p.getByRole('button', { name: '일정 넣기' }).isVisible()), 'Esc로 팝업이 닫힘');
   await shot('05-PC-근무일정');
   check(errors.length === 0, '화면 오류 없음', errors[0] ?? '');
 } catch (e) {

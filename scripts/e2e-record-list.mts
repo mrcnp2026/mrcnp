@@ -111,13 +111,13 @@ try {
   await p.getByRole('searchbox').press('Enter');
   await p.waitForURL(/q=%EC%97%86/);
   await ready();
-  check((await rows().count()) === 0 && (await p.getByText('이 기간에 기록이 없습니다.').count()) === 1, '없는 이름이면 안내 문구');
+  check((await rows().count()) === 0 && (await p.getByText('이 기간에 기록이 없습니다.').filter({ visible: true }).count()) === 1, '없는 이름이면 안내 문구'); // PC 표에도 같은 안내가 있다(폰에서는 숨김)
 
   // ── 기간 ──
   await p.goto(`${BASE}/admin/records/list`);
   await ready();
   await p.getByRole('button', { name: '기간 고르기' }).click();
-  await p.getByLabel('시작일').fill(kst(-3));
+  await p.getByLabel('시작일').filter({ visible: true }).fill(kst(-3));
   await p.getByRole('button', { name: '이 기간으로 보기' }).click();
   await p.waitForURL(new RegExp(`from=${kst(-3)}`));
   await ready();
@@ -138,8 +138,10 @@ try {
   }
   await p.setViewportSize({ width: 1440, height: 900 });
   await p.goto(`${BASE}/admin/records/list`);
-  await ready();
-  check((await p.locator('aside, nav').getByRole('link', { name: '기록 목록', exact: true }).count()) >= 1, 'PC 왼쪽 메뉴에 「기록 목록」');
+  await p.locator('main table').first().waitFor({ timeout: 30000 }); // PC (2026-10-11): 목록형 표
+  await p.waitForLoadState('networkidle');
+  check((await p.locator('nav').getByRole('link', { name: '목록형', exact: true }).count()) >= 1, 'PC 왼쪽 메뉴 「출퇴근기록 › 목록형」');
+  check((await p.locator('main thead th').filter({ hasText: '급여용 시간' }).count()) === 1, 'PC 표에 「급여용 시간」 열');
   if (SHOTS) await p.screenshot({ path: path.join(SHOTS, '02-PC-출퇴근기록-목록.png') });
   check(errors.length === 0, '화면 오류 없음', errors[0] ?? '');
 } catch (e) {
