@@ -103,3 +103,51 @@ button:not(:disabled):active, a:active, summary:active, [role='button']:active {
 .dt-native::-webkit-datetime-edit {
   opacity: 0;
 }
+
+/* ───────── PC(1024px~) 전용 — 시프티 PC 화면의 촘촘함에 맞춘다 (2026-10-11 의뢰인, `pc용/시프티 PC 화면 기록.md` 2장) ─────────
+   폰은 손가락으로 누르는 크기(44px)를 지키고, PC는 마우스 화면이라 버튼·입력 칸 32~36px · 표 줄을 낮게 쓴다.
+   본문(main) 안의 간격 단위만 줄인다 — 높이·여백·간격이 함께 0.8배가 된다(글자 크기는 theme.ts의 PC 값). 왼쪽 메뉴·상단 줄은 그대로. */
+@media (min-width: 1024px) {
+  main {
+    --spacing: 0.2rem;
+  }
+  /* 표: 머리는 14px 굵게 회색, 줄 사이는 가는 선만, 숫자는 자리 고정 */
+  main table {
+    border-collapse: collapse;
+    font-variant-numeric: tabular-nums;
+  }
+  main thead th {
+    font-size: var(--t-text-base);
+    font-weight: 600;
+    color: var(--t-color-muted);
+    background: var(--t-color-bg);
+    border-bottom: 1px solid var(--t-color-border);
+    white-space: nowrap;
+  }
+  main tbody tr {
+    border-bottom: 1px solid var(--t-color-border);
+  }
+  main tbody tr:hover {
+    background: var(--t-color-surface);
+  }
+  main tbody tr:last-child {
+    border-bottom: 0;
+  }
+  /* 화면 제목 */
+  main h1 {
+    letter-spacing: -0.01em;
+  }
+  /* 입력 칸: 시프티처럼 낮고 각지게 */
+  main input:not([type='checkbox']):not([type='radio']),
+  main select,
+  main textarea {
+    font-size: var(--t-text-base);
+  }
+  /* 누르면 작아지는 효과는 폰용 — PC에서는 색만 바뀐다 */
+  button:not(:disabled):active,
+  a:active,
+  summary:active,
+  [role='button']:active {
+    transform: none;
+  }
+}
