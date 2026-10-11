@@ -3,7 +3,7 @@
 // 시프티 PC의 구성을 따른다 (2026-10-11 의뢰인 스샷 88장 — `스샷/홈.png` · `근무일정 달력형 주 단위.png` · `휴가내역.png` · `스케줄 패턴.png` · `관리-회사설정.png`):
 //   · 짙은 남색 196px · 한 줄 메뉴(아이콘 + 흰 글자) · 묶음 사이는 간격으로만 나눔
 //   · 근무일정 · 출퇴근기록 · 휴가: 마우스를 올리면 하위 메뉴가 **아래로** 스르륵 펼쳐진다. 그 메뉴 안에 있을 때는 펼쳐진 채로 있다
-//   · 관리 · 회사 설정: 마우스를 올리면 사이드 메뉴 **오른쪽으로** 패널이 스르륵 펼쳐진다(왼쪽에서 오른쪽으로 열리고 글자가 뒤따라 나타난다).
+//   · 관리 · 회사 설정: 마우스를 올리면 사이드 메뉴 **오른쪽으로** 패널이 스르륵 펼쳐진다(왼쪽에서 오른쪽으로 1.4초에 걸쳐 열리고 글자가 뒤따라 나타난다 — 2026-10-11 의뢰인: "너무 빠르다, 2~3배 천천히").
 //     그 화면 안에서는 같은 패널이 둘째 메뉴로 계속 붙어 있다. 패널 항목은 스샷의 묶음 · 이름 · 순서를 따른다
 //     (2026-10-11 의뢰인: "출퇴근기록은 하단 드롭 형태로, 옆으로 확장되는 것은 관리와 회사 설정", "스르륵 열리게", "패널 색이 별로다")
 import { Building2, CalendarRange, Clock, House, Megaphone, Plane, Send, UserRoundCog, Wallet, type LucideIcon } from 'lucide-react';
@@ -173,9 +173,9 @@ export function SideNav({ isAdmin, inboxCount = 0 }: { isAdmin: boolean; inboxCo
                   </Link>
                   {/* 아래로 펼침: 높이가 스르륵 열리고 글자가 살짝 내려오며 나타난다. 그 메뉴 안에 있으면 펼쳐 둔다 */}
                   {sub && (
-                    <div className={`grid bg-primary-deep/35 transition-[grid-template-rows] duration-500 ${EASE} ${open ? 'grid-rows-[1fr]' : 'grid-rows-[0fr] group-focus-within/item:grid-rows-[1fr] group-hover/item:grid-rows-[1fr]'}`}>
+                    <div className={`grid bg-primary-deep/35 transition-[grid-template-rows] duration-1400 ${EASE} ${open ? 'grid-rows-[1fr]' : 'grid-rows-[0fr] group-focus-within/item:grid-rows-[1fr] group-hover/item:grid-rows-[1fr]'}`}>
                       <div className="overflow-hidden">
-                        <div className={`py-1 transition-[opacity,transform] duration-500 ${EASE} ${open ? '' : '-translate-y-2 opacity-0 group-focus-within/item:translate-y-0 group-focus-within/item:opacity-100 group-hover/item:translate-y-0 group-hover/item:opacity-100'}`}>
+                        <div className={`py-1 transition-[opacity,transform] duration-1600 ${EASE} ${open ? '' : '-translate-y-2 opacity-0 group-focus-within/item:translate-y-0 group-focus-within/item:opacity-100 group-hover/item:translate-y-0 group-hover/item:opacity-100'}`}>
                           {sub.map((s) => {
                             const on = active === s.href;
                             return (
@@ -193,9 +193,9 @@ export function SideNav({ isAdmin, inboxCount = 0 }: { isAdmin: boolean; inboxCo
                       마우스가 떠나면 잠깐 뒤에 닫힌다. 그 메뉴 안에서는 아래의 붙어 있는 패널이 대신한다 */}
                   {p && !open && (
                     <div
-                      className={`pointer-events-none invisible fixed top-14 bottom-0 left-49 z-30 w-56 overflow-y-auto border-r border-border bg-bg py-4 text-text shadow-card transition-[clip-path,visibility] delay-100 duration-500 [clip-path:inset(0_100%_0_0)] ${EASE} group-focus-within/item:pointer-events-auto group-focus-within/item:visible group-focus-within/item:delay-0 group-focus-within/item:[clip-path:inset(0_-2rem_0_0)] group-hover/item:pointer-events-auto group-hover/item:visible group-hover/item:delay-0 group-hover/item:[clip-path:inset(0_-2rem_0_0)]`}
+                      className={`pointer-events-none invisible fixed top-14 bottom-0 left-49 z-30 w-56 overflow-y-auto border-r border-border bg-bg py-4 text-text shadow-card transition-[clip-path,visibility] delay-300 duration-1400 [clip-path:inset(0_100%_0_0)] ${EASE} group-focus-within/item:pointer-events-auto group-focus-within/item:visible group-focus-within/item:delay-150 group-focus-within/item:[clip-path:inset(0_-2rem_0_0)] group-hover/item:pointer-events-auto group-hover/item:visible group-hover/item:delay-150 group-hover/item:[clip-path:inset(0_-2rem_0_0)]`}
                     >
-                      <div className={`-translate-x-6 opacity-0 transition-[opacity,transform] duration-700 ${EASE} group-focus-within/item:translate-x-0 group-focus-within/item:opacity-100 group-hover/item:translate-x-0 group-hover/item:opacity-100`}>
+                      <div className={`-translate-x-6 opacity-0 transition-[opacity,transform] delay-200 duration-1800 ${EASE} group-focus-within/item:translate-x-0 group-focus-within/item:opacity-100 group-hover/item:translate-x-0 group-hover/item:opacity-100`}>
                         <PanelLinks panel={p} active={active} onPick={setPressed} t={t} />
                       </div>
                     </div>

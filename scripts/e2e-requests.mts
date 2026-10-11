@@ -97,7 +97,7 @@ try {
   await p.waitForLoadState('networkidle');
   check((await tabCount('대기중')) === before + 2, '대기중 수가 2 늘어남', `${before} → ${await tabCount('대기중')}`);
   check((await p.getByText('휴가 · 병가').count()) >= 1 && (await p.getByText('외근·출장·재택 · 외근').count()) >= 1, '종류가 달라도 한 목록에 「종류 · 구분」으로 보임');
-  check((await p.getByText(new RegExp(PLACE)).count()) === 1 && (await p.getByText('검사용 요청').count()) >= 1 && (await p.getByText('방금').count()) >= 1, '내용(장소·사유)과 「방금」이 보임');
+  check((await p.getByText(new RegExp(PLACE)).filter({ visible: true }).count()) === 1 && (await p.getByText('검사용 요청').filter({ visible: true }).count()) >= 1 && (await p.getByText('방금').filter({ visible: true }).count()) >= 1, '내용(장소·사유)과 「방금」이 보임');
   await shot('02-내-요청-대기중');
 
   // ── + 버튼: 종류 고르기 ──
