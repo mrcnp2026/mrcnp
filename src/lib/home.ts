@@ -28,7 +28,7 @@ export type SituationPerson = {
 /**
  * 「현재 근무 상황」 인원수. 한 사람이 여러 칸에 들어갈 수 있다 (지각하고 근무중).
  *   근무중 = 지금 일하는 사람(무일정 포함) · 무일정 = 그중 오늘 일정이 없는 사람 · 간주근로 · 지각 · 휴가
- * ★ 시프티의 「휴게」「조퇴」 칸은 없다 — 기준이 정해지지 않았다 (결정 문서 알-2)
+ * ★ 시프티의 「휴게」「조퇴」 칸은 없다 — 기준이 정해지지 않았다 (결정 문서 알림-2)
  */
 export function workSituation(people: readonly SituationPerson[]): { working: number; unscheduled: number; deemed: number; late: number; leave: number } {
   const n = (f: (p: SituationPerson) => boolean) => people.filter(f).length;

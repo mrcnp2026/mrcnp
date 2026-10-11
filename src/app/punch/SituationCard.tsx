@@ -1,5 +1,5 @@
 // 「현재 근무 상황」 카드 — 관리자 홈 (의뢰인 2026-10-11: 시프티 홈처럼). 색 점 + 이름 + 인원수, 마지막으로 불러온 시각, 새로 고침, [자세히 보기](현황판).
-// 근무중 · 무일정 · 간주근로 · 지각 · 휴가. 시프티의 「휴게」「조퇴」 칸은 기준이 정해지지 않아 없다 (결정 문서 알-2).
+// 근무중 · 무일정 · 간주근로 · 지각 · 휴가. 시프티의 「휴게」「조퇴」 칸은 기준이 정해지지 않아 없다 (결정 문서 알림-2).
 import { RefreshCw } from 'lucide-react';
 import { getFormatter, getTranslations } from 'next-intl/server';
 import Link from 'next/link';

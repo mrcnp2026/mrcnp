@@ -1,6 +1,6 @@
 // 휴가 발생 — 직원 한 명 (의뢰인 2026-10-11: 시프티의 「휴가 발생」 화면처럼) — 기준일 · 산정 기간 · 총/사용/남은 · 발생 내역(만료됨·발생됨·예정됨) · 발생 건 추가.
 // 발생 건 = 연차 부여(leave_grants) 한 줄. 기준일에 적용되는 건이 「발생됨」, 그보다 앞선 건이 「만료됨」, 시작일이 기준일 뒤인 건이 「예정됨」이다.
-// ★ 발생 일수는 관리자가 넣는다 (4-7). 자동 발생(회계연도 기준·매달 1일)과 휴가 그룹별 발생은 결정 뒤에 만든다 (결정 문서 급-10).
+// ★ 발생 일수는 관리자가 넣는다 (4-7). 자동 발생(회계연도 기준·매달 1일)과 휴가 그룹별 발생은 결정 뒤에 만든다 (결정 문서 급여-10).
 import { getFormatter, getTranslations } from 'next-intl/server';
 import { notFound } from 'next/navigation';
 import { DetailBar, Field, FieldList } from '@/components/detail';
