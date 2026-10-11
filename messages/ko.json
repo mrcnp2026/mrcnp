@@ -601,7 +601,13 @@
       "pcTitle": "요청 내역",
       "pcIntro": "직원의 요청 내역을 조회하고, 승인·거절 처리 및 진행 상태를 확인할 수 있습니다.",
       "panelClose": "닫기",
-      "totalCount": "총 요청 수"
+      "totalCount": "총 요청 수",
+      "mapShared": "위 지도의 위치는 이 요청을 확인하는 목적으로 관리자에게 공유되었습니다.",
+      "mapNone": "이 요청에는 위치가 없습니다(위치를 받지 못했거나 위치 수집 동의가 없습니다).",
+      "zoomIn": "지도 확대",
+      "zoomOut": "지도 축소",
+      "mapCredit": "지도 © OpenStreetMap",
+      "map": "요청한 위치 지도"
     },
     "records": {
       "title": "기록",
@@ -1839,7 +1845,13 @@
       "noPlan": "무일정근무",
       "totalAll": "총 시간",
       "payableAll": "급여용 시간",
-      "min": "{n}분"
+      "min": "{n}분",
+      "colPlaceIn": "출근 장소",
+      "colPlaceOut": "퇴근 장소",
+      "colDiffIn": "출근시간 오차",
+      "colDiffOut": "퇴근시간 오차",
+      "diffPlus": "+ {n}분",
+      "diffMinus": "- {n}분"
     },
     "recordDetail": {
       "title": "출퇴근기록",
@@ -1975,7 +1987,8 @@
       "live": "실제 기록",
       "hint": "칸의 윗줄은 출근, 아랫줄은 퇴근 시각입니다. 합계는 기록이 있는 날 수와 급여용 시간입니다. 칸을 누르면 그날의 기록으로 갑니다.",
       "hm": "{h}시간 {m}분",
-      "noOut": "퇴근 없음"
+      "noOut": "퇴근 없음",
+      "pcIntro": "직원별로 한 달의 출근 · 퇴근 시각을 달력으로 봅니다. 칸 아래의 색 띠는 직무 색입니다."
     }
   },
   "side": {

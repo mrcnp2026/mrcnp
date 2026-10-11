@@ -6,6 +6,7 @@ import { getFormatter, getTranslations } from 'next-intl/server';
 import { Pager, pageOf } from '@/components/Pager';
 import { DetailBar } from '@/components/detail';
 import { Help } from '@/components/Help';
+import { PlaceMap } from '@/components/PlaceMap';
 import { RequestTabs } from '@/components/RequestTabs';
 import { Card, Chip, PageShell } from '@/components/ui';
 import { OFFICE } from '@/config/office';
@@ -78,8 +79,8 @@ export default async function InboxPage({ searchParams }: { searchParams: Promis
   const punchesOf = (e: string, d: string) =>
     (evs ?? []).filter((x) => x.employee_id === e && x.work_date === d).map((x) => `${x.kind === 'in' ? '↘' : '↗'} ${hm(x.punched_at)}`).join('  ');
 
-  const { data: punchRows } = await db.from('punch_requests').select('id, employee_id, kind, requested_at, work_date, nearest_m, geo_reason').eq('is_test', practice).eq('status', 'pending').order('requested_at');
-  const punchPending = ((punchRows ?? []) as { id: string; employee_id: string; kind: 'in' | 'out'; requested_at: string; work_date: string; nearest_m: number | null; geo_reason: string }[]).filter((r) => hit(r.employee_id) && only('punch', r.id));
+  const { data: punchRows } = await db.from('punch_requests').select(OFFICE.requestLocation ? 'id, employee_id, kind, requested_at, work_date, nearest_m, geo_reason, lat, lng' : 'id, employee_id, kind, requested_at, work_date, nearest_m, geo_reason').eq('is_test', practice).eq('status', 'pending').order('requested_at');
+  const punchPending = ((punchRows ?? []) as unknown as { id: string; employee_id: string; kind: 'in' | 'out'; requested_at: string; work_date: string; nearest_m: number | null; geo_reason: string; lat?: number | null; lng?: number | null }[]).filter((r) => hit(r.employee_id) && only('punch', r.id));
   const { data: shiftRows } = await db.from('shift_requests').select('id, employee_id, work_date, start_time, end_time, kind, reason').eq('is_test', practice).eq('status', 'pending').order('work_date');
   const shiftPending = ((shiftRows ?? []) as { id: string; employee_id: string; work_date: string; start_time: string; end_time: string; kind: string; reason: string | null }[]).filter((r) => hit(r.employee_id) && only('shift', r.id));
   const { data: delRows } = await db.from('leave_change_requests').select('id, employee_id, reason, leave_requests(type_code, start_date, end_date, days, start_time, end_time)').eq('is_test', practice).eq('status', 'pending').order('created_at');
@@ -348,6 +349,16 @@ export default async function InboxPage({ searchParams }: { searchParams: Promis
                     <span className="num text-sm">{dayLabel(r.work_date)} {hm(r.requested_at)}</span>
                   </div>
                   <p className="num text-sm text-muted">{r.geo_reason === 'outside' && r.nearest_m !== null ? t('punchFar', { m: r.nearest_m }) : t(`punchWhy.${r.geo_reason}`)}</p>
+                  {/* 요청한 위치 지도 — 한 건 보기(상세)에서만, 위치를 남기는 설정이 켜져 있을 때만 */}
+                  {focus && OFFICE.requestLocation &&
+                    (typeof r.lat === 'number' && typeof r.lng === 'number' ? (
+                      <>
+                        <PlaceMap lat={r.lat} lng={r.lng} radiusM={0} labels={{ zoomIn: t('zoomIn'), zoomOut: t('zoomOut'), credit: t('mapCredit'), map: t('map') }} />
+                        <p className="rounded-button bg-surface p-2 text-xs text-muted">{t('mapShared')}</p>
+                      </>
+                    ) : (
+                      <p className="rounded-button bg-surface p-2 text-xs text-muted">{t('mapNone')}</p>
+                    ))}
                   {r.employee_id === me.id && ownBlocked ? ownNote : <LeaveDecision id={r.id} name={who} summary={what} url={`/api/admin/punch-requests/${r.id}/decide`} keys={['confirmPunch', 'confirmPunchReject']} />}
                 </li>
               );

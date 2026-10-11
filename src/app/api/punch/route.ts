@@ -46,6 +46,7 @@ export const POST = api('punch', async (req) => {
   let geoReason: GeoReason = 'no_fix';
   let nearestM: number | null = null;
   let places = 0;
+  let askedAt: { lat: number; lng: number } | null = null; // 반경 밖 요청에 남길 위치 (OFFICE.requestLocation이 켜져 있을 때만)
   if (!byIp) {
     // 수집 동의가 없는 사람이 보낸 위치는 읽지 않는다
     const consent = await hasConsent(who.employeeId);
@@ -60,6 +61,7 @@ export const POST = api('punch', async (req) => {
     }
     geoReason = geoReasonOf({ consent, hasCoords: !!coords, verdict: verdict?.reason ?? null });
     nearestM = verdict?.nearestM ?? null;
+    if (OFFICE.requestLocation && coords && !verdict?.verified) askedAt = { lat: roundCoord(coords.lat), lng: roundCoord(coords.lng) };
   }
 
   // 반경 밖: 기록 대신 요청 (2026-10-10 의뢰인 확정)
@@ -73,7 +75,7 @@ export const POST = api('punch', async (req) => {
       if (had?.length) return { requested: true, kind, punchedAt: had[0].requested_at, ipVerified: false, verifiedBy: null, isTest: OFFICE.practiceMode, deduped: true, note: null, nearestM };
       const { data: made, error } = await db
         .from('punch_requests')
-        .insert({ employee_id: who.employeeId, kind, requested_at: now.toISOString(), work_date: today, client_ip: trace.ip, nearest_m: nearestM, geo_reason: geoReason, passkey_id: passkeyId, is_test: OFFICE.practiceMode })
+        .insert({ employee_id: who.employeeId, kind, requested_at: now.toISOString(), work_date: today, client_ip: trace.ip, nearest_m: nearestM, geo_reason: geoReason, passkey_id: passkeyId, is_test: OFFICE.practiceMode, ...(askedAt ?? {}) })
         .select('requested_at')
         .single();
       if (error) throw new Error(`punch.request: ${error.code}`);

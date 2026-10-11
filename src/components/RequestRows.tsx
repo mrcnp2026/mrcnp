@@ -3,6 +3,7 @@
 import { CalendarDays, CalendarRange, CalendarX, Clock, MapPin, MapPinOff, PencilLine, type LucideIcon } from 'lucide-react';
 import { getFormatter, getTranslations } from 'next-intl/server';
 import Link from 'next/link';
+import { ClickRow } from '@/components/ClickRow';
 import { RowList } from '@/components/list';
 import { Chip } from '@/components/ui';
 import { leaveTypeName } from '@/lib/leave';
@@ -16,7 +17,7 @@ export async function RequestRows({ items, leaveTypes, names, showName = false, 
   names: Map<string, string>;
   showName?: boolean;
   hrefOf: (r: ReqItem) => string;
-  table?: boolean; // PC 표 모양 (시프티의 「요청 내역」 표) — 줄 끝의 [처리]를 누르면 그 요청의 상세가 열린다
+  table?: boolean; // PC 표 모양 (시프티의 「요청 내역」 표) — 줄 어디를 눌러도 그 요청의 상세가 열린다
 }) {
   const [t, tco, tl, tw, f] = await Promise.all([getTranslations('requests'), getTranslations('corrections'), getTranslations('leave'), getTranslations('work'), getFormatter()]);
   const SHIFT_KIND = new Set(['normal', 'deemed', 'outside', 'remote', 'holiday', 'extra']);
@@ -57,7 +58,7 @@ export async function RequestRows({ items, leaveTypes, names, showName = false, 
               const who = r.decidedBy ? names.get(r.decidedBy) : null;
               const label = sub(r);
               return (
-                <tr key={r.key}>
+                <ClickRow key={r.key} href={hrefOf(r)}>
                   <td className={`${td} font-bold whitespace-nowrap`}>
                     <Link href={hrefOf(r)} className="hover:text-primary">
                       {r.kind === 'punch' ? t(`punchKind.${r.punchKind ?? 'in'}`) : t(`kinds.${r.kind}`)}
@@ -89,7 +90,7 @@ export async function RequestRows({ items, leaveTypes, names, showName = false, 
                       {t('open')}
                     </Link>
                   </td>
-                </tr>
+                </ClickRow>
               );
             })}
           </tbody>

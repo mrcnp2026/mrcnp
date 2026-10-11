@@ -2,6 +2,7 @@
 // 위: 검색 · 거르기 · 기간 · [내 기록]. 아래: 날짜 머리줄(그날 합계) + 기록 한 건이 한 줄 = 출근/퇴근 시각 · 직무 색 막대 · 이름 · 지점/직무 · 배지.
 // 합계는 그날 보이는 사람들의 근무 시간(휴게 제외) 합이다. 줄을 누르면 그 기록의 상세(큰 시각 + 항목—값), 거기서 [수정]으로 그 직원의 그 달 기록(정정·대리 입력).
 // 월 집계·엑셀 내려받기는 「월 집계」 화면(/admin/records)에 그대로 있다.
+import { loadOfficeLocations } from '@/lib/geo-data';
 import { SheetOpener } from '@/components/SheetOpener';
 import { CircleCheck } from 'lucide-react';
 import { getFormatter, getTranslations } from 'next-intl/server';
@@ -44,7 +45,15 @@ export default async function RecordListPage({ searchParams }: { searchParams: P
 
   const lines: Line[] = [];
   // PC 표: 한 줄 = 직원의 하루 (시프티 PC 「출퇴근기록 목록형」). 찍힌 그대로의 시간과 급여용 시간(끊은 것)을 나란히 보인다
-  const dayRows: { key: string; id: string; name: string; sub: string; date: string; time: string; plan: string; breakMin: number; net: number; payable: number; deemed: boolean; confirmed: boolean; open: boolean }[] = [];
+  const dayRows: { key: string; id: string; name: string; sub: string; date: string; time: string; plan: string; breakMin: number; net: number; payable: number; deemed: boolean; confirmed: boolean; open: boolean; placeIn: string; placeOut: string; diffIn: number | null; diffOut: number | null }[] = [];
+  // 출근 · 퇴근 장소(어느 출퇴근 장소로 확인됐는가)와 일정 대비 오차 — 시프티 목록형의 열 (2026-10-11 의뢰인 스샷 `스샷/출퇴근기록 목록형.png`)
+  const placeName = new Map((await loadOfficeLocations(true)).map((l) => [l.id, l.label ?? '']));
+  const placeOf = (employeeId: string, date: string, kind: 'in' | 'out') => {
+    const evs = data.events.filter((e) => e.employeeId === employeeId && e.workDate === date && e.kind === kind && e.locationId);
+    const e = kind === 'in' ? evs[0] : evs.at(-1);
+    return e?.locationId ? (placeName.get(e.locationId) ?? '') : '';
+  };
+  const diffMin = (at: Date | null | undefined, date: string, hhmm: string | undefined) => (at && hhmm ? Math.round((at.getTime() - kstDateTime(date, hhmm).getTime()) / 60000) : null);
   const totalOf = new Map<string, number>();
   for (const p of data.people) {
     if (p.employeeNo?.startsWith('e2e-')) continue;
@@ -66,6 +75,9 @@ export default async function RecordListPage({ searchParams }: { searchParams: P
           time: `${first ? clock(first) : '–'} - ${last && !stillOpen ? clock(last) : '–'}`,
           plan: plan.items.length ? plan.items.map((it) => `${it.startTime} - ${it.endTime}`).join(', ') : t('noPlan'),
           breakMin: d.breakMinutes, net: d.netMinutes, payable: d.payableMinutes, deemed: !!plan.deemed, confirmed: confirms.has(confirmKey(p.id, d.workDate)), open: stillOpen,
+          placeIn: placeOf(p.id, d.workDate, 'in'), placeOut: placeOf(p.id, d.workDate, 'out'),
+          // 간주 근무는 일정 시각으로 계산하므로 오차가 없다
+          diffIn: plan.deemed ? null : diffMin(first, d.workDate, plan.items[0]?.startTime), diffOut: plan.deemed || stillOpen ? null : diffMin(last, d.workDate, plan.items.at(-1)?.endTime),
         });
       }
       d.pairs.forEach((pair, i) => {
@@ -133,12 +145,12 @@ export default async function RecordListPage({ searchParams }: { searchParams: P
           <table className="w-full text-left text-sm">
             <thead>
               <tr>
-                {(['colEmployee', 'colDate', 'colTime', 'colPlan'] as const).map((k) => (
+                {(['colEmployee', 'colDate', 'colTime', 'colPlan', 'colPlaceIn', 'colPlaceOut'] as const).map((k) => (
                   <th key={k} scope="col" className="px-4 py-2.5">
                     {t(k)}
                   </th>
                 ))}
-                {(['colBreak', 'colTotal', 'colPayable'] as const).map((k) => (
+                {(['colBreak', 'colTotal', 'colPayable', 'colDiffIn', 'colDiffOut'] as const).map((k) => (
                   <th key={k} scope="col" className="px-4 py-2.5 text-right">
                     {t(k)}
                   </th>
@@ -154,7 +166,7 @@ export default async function RecordListPage({ searchParams }: { searchParams: P
             <tbody>
               {dayRows.length === 0 && (
                 <tr>
-                  <td colSpan={9} className="px-4 py-8 text-center text-faint">
+                  <td colSpan={13} className="px-4 py-8 text-center text-faint">
                     {data.rule ? t('empty') : t('noRule')}
                   </td>
                 </tr>
@@ -172,9 +184,16 @@ export default async function RecordListPage({ searchParams }: { searchParams: P
                     <td className="num px-4 py-2.5 whitespace-nowrap">{f.dateTime(kstDateTime(r.date, '12:00'), { month: '2-digit', day: '2-digit', weekday: 'short' })}</td>
                     <td className="num px-4 py-2.5 whitespace-nowrap">{r.time}</td>
                     <td className="num px-4 py-2.5 text-muted">{r.plan}</td>
+                    <td className="px-4 py-2.5 text-muted">{r.placeIn}</td>
+                    <td className="px-4 py-2.5 text-muted">{r.placeOut}</td>
                     <td className="num px-4 py-2.5 text-right text-muted">{t('min', { n: r.breakMin })}</td>
                     <td className="num px-4 py-2.5 text-right">{hm(r.net)}</td>
                     <td className="num px-4 py-2.5 text-right font-bold">{hm(r.payable)}</td>
+                    {[r.diffIn, r.diffOut].map((v, i) => (
+                      <td key={i} className={`num px-4 py-2.5 text-right whitespace-nowrap ${v !== null && ((i === 0 && v > 0) || (i === 1 && v < 0)) ? 'text-warn' : 'text-muted'}`}>
+                        {v === null || v === 0 ? '' : t(v > 0 ? 'diffPlus' : 'diffMinus', { n: Math.abs(v) })}
+                      </td>
+                    ))}
                     <td className="px-4 py-2.5">
                       <span className="flex flex-wrap gap-1">
                         {r.deemed && <Chip>{t('deemed')}</Chip>}

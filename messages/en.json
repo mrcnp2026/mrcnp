@@ -601,7 +601,13 @@
       "pcTitle": "Requests",
       "pcIntro": "Review staff requests, approve or reject them, and check their status.",
       "panelClose": "Close",
-      "totalCount": "Requests"
+      "totalCount": "Requests",
+      "mapShared": "The location on this map was shared with managers to review this request.",
+      "mapNone": "This request has no location (no fix, or no location consent).",
+      "zoomIn": "Zoom in",
+      "zoomOut": "Zoom out",
+      "mapCredit": "Map © OpenStreetMap",
+      "map": "Map of the requested location"
     },
     "records": {
       "title": "Records",
@@ -1839,7 +1845,13 @@
       "noPlan": "Unscheduled",
       "totalAll": "Total",
       "payableAll": "Payable",
-      "min": "{n} min"
+      "min": "{n} min",
+      "colPlaceIn": "In place",
+      "colPlaceOut": "Out place",
+      "colDiffIn": "In vs plan",
+      "colDiffOut": "Out vs plan",
+      "diffPlus": "+ {n} min",
+      "diffMinus": "- {n} min"
     },
     "recordDetail": {
       "title": "Attendance record",
@@ -1975,7 +1987,8 @@
       "live": "Live records",
       "hint": "Top line is clock-in, bottom line is clock-out. Totals show days with records and payable time. Click a cell to open that day.",
       "hm": "{h}h {m}m",
-      "noOut": "No clock-out"
+      "noOut": "No clock-out",
+      "pcIntro": "See each employee's clock-in and clock-out times for the month. The colour band under a cell is the job colour."
     }
   },
   "side": {
