@@ -191,7 +191,7 @@ export default async function RecordListPage({ searchParams }: { searchParams: P
                     <td className="num px-4 py-2.5 text-right font-bold">{hm(r.payable)}</td>
                     {[r.diffIn, r.diffOut].map((v, i) => (
                       <td key={i} className={`num px-4 py-2.5 text-right whitespace-nowrap ${v !== null && ((i === 0 && v > 0) || (i === 1 && v < 0)) ? 'text-warn' : 'text-muted'}`}>
-                        {v === null || v === 0 ? '' : t(v > 0 ? 'diffPlus' : 'diffMinus', { n: Math.abs(v) })}
+                        {v === null || v === 0 ? '' : t(v > 0 ? 'diffPlus' : 'diffMinus', { n: Math.abs(v) < 60 ? t('min', { n: Math.abs(v) }) : hm(Math.abs(v)) })}
                       </td>
                     ))}
                     <td className="px-4 py-2.5">

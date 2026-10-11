@@ -1850,8 +1850,8 @@
       "colPlaceOut": "퇴근 장소",
       "colDiffIn": "출근시간 오차",
       "colDiffOut": "퇴근시간 오차",
-      "diffPlus": "+ {n}분",
-      "diffMinus": "- {n}분"
+      "diffPlus": "+ {n}",
+      "diffMinus": "- {n}"
     },
     "recordDetail": {
       "title": "출퇴근기록",

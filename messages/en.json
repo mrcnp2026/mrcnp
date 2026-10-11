@@ -1850,8 +1850,8 @@
       "colPlaceOut": "Out place",
       "colDiffIn": "In vs plan",
       "colDiffOut": "Out vs plan",
-      "diffPlus": "+ {n} min",
-      "diffMinus": "- {n} min"
+      "diffPlus": "+ {n}",
+      "diffMinus": "- {n}"
     },
     "recordDetail": {
       "title": "Attendance record",
