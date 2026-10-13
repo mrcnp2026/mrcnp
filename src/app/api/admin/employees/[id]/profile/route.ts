@@ -10,6 +10,7 @@ import { assignableGroup } from '@/lib/org-data';
 import { staffEmail } from '@/lib/session';
 import { createAdminClient } from '@/lib/supabase/admin';
 import { toKstDate } from '@/lib/time';
+import { syncStaffHistorySafe } from '@/lib/staff-history';
 
 export const POST = api<{ params: Promise<{ id: string }> }>('admin.employees.profile', async (req, ctx) => {
   const me = await requireAdmin();
@@ -56,5 +57,6 @@ export const POST = api<{ params: Promise<{ id: string }> }>('admin.employees.pr
     .eq('id', id);
   if (error?.code === '23505') throw new ApiError(409, 'duplicate_no');
   if (error) throw new Error(`profile.update: ${error.code}`);
+  await syncStaffHistorySafe(id, me.id);
   return { ok: true };
 });

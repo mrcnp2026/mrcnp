@@ -7,6 +7,7 @@ import { requireAdmin } from '@/lib/auth';
 import { auditStaffAction, loadStaff, revokePhones, setLoginBlocked } from '@/lib/staff-data';
 import { checkReinstate, checkResign, cleanReason } from '@/lib/staff-rules';
 import { createAdminClient } from '@/lib/supabase/admin';
+import { syncStaffHistorySafe } from '@/lib/staff-history';
 
 export const POST = api<{ params: Promise<{ id: string }> }>('admin.employees.status', async (req, ctx) => {
   const me = await requireAdmin();
@@ -30,6 +31,7 @@ export const POST = api<{ params: Promise<{ id: string }> }>('admin.employees.st
     const phones = await revokePhones(id, me.id);
     await setLoginBlocked(id, true);
     await auditStaffAction({ actorId: me.id, targetId: id, event: 'resign', reason, detail: { phonesRevoked: phones, requestId: ctx.requestId } });
+    await syncStaffHistorySafe(id, me.id);
     return { ok: true, phonesRevoked: phones };
   }
 
@@ -39,5 +41,6 @@ export const POST = api<{ params: Promise<{ id: string }> }>('admin.employees.st
   const { error } = await db.from('profiles').update({ active: true, updated_by: me.id }).eq('id', id);
   if (error) throw new Error(`status.reinstate: ${error.code}`);
   await auditStaffAction({ actorId: me.id, targetId: id, event: 'reinstate', reason, detail: { requestId: ctx.requestId } });
+  await syncStaffHistorySafe(id, me.id);
   return { ok: true };
 });

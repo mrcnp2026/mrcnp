@@ -5,6 +5,7 @@ import { api, ApiError, readJson } from '@/lib/api';
 import { requireAdmin } from '@/lib/auth';
 import { validateJob } from '@/lib/jobs';
 import { createAdminClient } from '@/lib/supabase/admin';
+import { syncStaffHistorySafe } from '@/lib/staff-history';
 
 const UUID = /^[0-9a-f-]{36}$/i;
 
@@ -48,6 +49,7 @@ export const POST = api<{ params: Promise<{ id: string }> }>('admin.jobs.update'
       const { error } = await db.from('profiles').update({ job_id: null, updated_by: me.id }).in('id', drop);
       if (error) throw new Error(`jobs.unassign: ${error.code}`);
     }
+    for (const x of [...add, ...drop]) await syncStaffHistorySafe(x, me.id);
     return { ok: true, added: add.length, removed: drop.length };
   }
 

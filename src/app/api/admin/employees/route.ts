@@ -7,6 +7,7 @@ import { isLocale } from '@/i18n/locales';
 import { cleanJobTitle, cleanPhone } from '@/lib/org';
 import { assignableGroup } from '@/lib/org-data';
 import { createAdminClient } from '@/lib/supabase/admin';
+import { syncStaffHistorySafe } from '@/lib/staff-history';
 
 export const POST = api('admin.employees.create', async (req) => {
   const me = await requireAdmin();
@@ -42,6 +43,7 @@ export const POST = api('admin.employees.create', async (req) => {
     const { error } = await createAdminClient().from('profiles').update({ job_id: jobId, updated_by: me.id }).eq('id', employeeId);
     if (error) throw new Error(`employees.create.job: ${error.code}`);
   }
+  await syncStaffHistorySafe(employeeId, me.id);
   const invite = await issueInvite({ employeeId, issuedBy: me.id, via: 'admin' });
   return { employeeId, name, invite };
 });

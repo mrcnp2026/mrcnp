@@ -4,6 +4,7 @@ import { api, ApiError, readJson } from '@/lib/api';
 import { requireAdmin } from '@/lib/auth';
 import { createAdminClient } from '@/lib/supabase/admin';
 import { toKstDate } from '@/lib/time';
+import { syncStaffHistorySafe } from '@/lib/staff-history';
 
 export const POST = api<{ params: Promise<{ id: string }> }>('admin.employees.joinedOn', async (req, ctx) => {
   const me = await requireAdmin();
@@ -16,5 +17,6 @@ export const POST = api<{ params: Promise<{ id: string }> }>('admin.employees.jo
   const { data, error } = await createAdminClient().from('profiles').update({ joined_on: joinedOn }).eq('id', id).select('id');
   if (error) throw new Error(`profiles.joined_on: ${error.code}`);
   if (!data?.length) throw new ApiError(404, 'not_found');
+  await syncStaffHistorySafe(id, me.id);
   return { ok: true };
 });
