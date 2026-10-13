@@ -521,14 +521,29 @@ describe('주간 누적', () => {
 });
 
 describe('금액 경계 (4-4)', () => {
-  it('마이그레이션 어디에도 금액 컬럼(원·amount·wage·rate)이 없다', () => {
-    const dir = path.join(import.meta.dirname, '..', 'supabase', 'migrations');
-    for (const f of readdirSync(dir)) {
-      const sql = readFileSync(path.join(dir, f), 'utf8')
-        .split('\n')
-        .filter((l) => !l.trim().startsWith('--'))
-        .join('\n');
-      expect(sql).not.toMatch(/\b(amount|wage|salary|hourly_rate|pay_rate)\b|\b\w+_won\b/i);
+  // 급여 영역(파일 이름에 _payroll_ 이 든 마이그레이션)만 금액 칸을 둘 수 있다 (PRD v1.3 11장: 검사를 지우지 않고 근태 영역으로 정밀화)
+  const dir = path.join(import.meta.dirname, '..', 'supabase', 'migrations');
+  const body = (f: string) =>
+    readFileSync(path.join(dir, f), 'utf8')
+      .split('\n')
+      .filter((l) => !l.trim().startsWith('--'))
+      .join('\n');
+  const isPayroll = (f: string) => /_payroll_/.test(f);
+
+  it('근태 영역의 마이그레이션 어디에도 금액 컬럼(원·amount·wage·rate)이 없다', () => {
+    for (const f of readdirSync(dir).filter((x) => !isPayroll(x))) {
+      expect(body(f), f).not.toMatch(/\b(amount|wage|salary|hourly_rate|pay_rate)\b|\b\w+_won\b/i);
+    }
+  });
+
+  it('급여 영역의 마이그레이션은 payroll_ 로 시작하는 표만 만들고, 다른 표를 고치거나 지우지 않는다', () => {
+    const files = readdirSync(dir).filter(isPayroll);
+    expect(files.length).toBeGreaterThan(0);
+    for (const f of files) {
+      const sql = body(f);
+      for (const m of sql.matchAll(/create table\s+(?:if not exists\s+)?public\.(\w+)/gi)) expect(m[1], f).toMatch(/^payroll_/);
+      for (const m of sql.matchAll(/alter table\s+(?:only\s+)?public\.(\w+)/gi)) expect(m[1], f).toMatch(/^payroll_/);
+      expect(sql, f).not.toMatch(/\bdrop\s+(table|column)\b|\btruncate\b|\bdelete\s+from\b/i);
     }
   });
 });
