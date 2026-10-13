@@ -40,7 +40,7 @@ const toRun = (r: Row): RunRow => ({
 });
 
 export async function loadRuns(practice: boolean): Promise<RunRow[]> {
-  const { data, error } = await db().from('payroll_runs').select('*').eq('is_test', practice).order('period_from', { ascending: false }).order('revision', { ascending: false }).limit(60);
+  const { data, error } = await db().from('payroll_runs').select('*').eq('is_test', practice).neq('run_kind', 'DAILY').order('period_from', { ascending: false }).order('revision', { ascending: false }).limit(60); // 일용 대장은 일용직 화면에서 따로 본다
   if (error) fail('loadRuns', error);
   // 검사가 만든 대장(제목이 e2e-로 시작)은 목록에 보이지 않는다 — 검사 전용 계정을 숨기는 것과 같은 규칙
   return (data ?? []).map(toRun).filter((r) => !r.title?.startsWith('e2e-'));
@@ -283,7 +283,7 @@ async function setRun(run: RunRow, patch: Row): Promise<void> {
 }
 const must = async (id: string, expectedVersion: number): Promise<RunRow> => {
   const run = await loadRun(id);
-  if (!run) throw new ApiError(404, 'not_found');
+  if (!run || run.kind === 'DAILY') throw new ApiError(404, 'not_found');
   if (run.status === 'FINALIZED') throw new ApiError(409, 'payroll_finalized');
   if (run.version !== expectedVersion) throw new ApiError(409, 'payroll_run_conflict');
   return run;

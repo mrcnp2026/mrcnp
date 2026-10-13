@@ -20,7 +20,7 @@ export default async function PayRunPage({ params }: { params: Promise<{ id: str
   if (!me || me.role !== 'admin' || !me.canViewPayroll) return <PageShell><p className="rounded-card bg-warn-tint p-4 text-sm text-warn">{t('forbidden')}</p></PageShell>;
   if (!/^[0-9a-f-]{36}$/i.test(id)) notFound();
   const run = await loadRun(id);
-  if (!run) notFound();
+  if (!run || run.kind === 'DAILY') notFound(); // 일용 대장은 일용직 화면에서 연다
   const [{ lines, stale }, groups, { data: who }] = await Promise.all([loadRunBoard(run), loadOrgGroups(), createAdminClient().from('profiles').select('id, name').in('id', [run.createdBy, run.reviewedBy, run.finalizedBy].filter((x): x is string => !!x))]);
   const nameOf = new Map((who ?? []).map((p) => [p.id as string, p.name as string]));
   const won = (v: unknown) => t('won', { n: f.number(Number(v ?? 0)) });

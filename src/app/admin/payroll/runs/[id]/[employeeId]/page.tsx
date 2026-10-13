@@ -20,7 +20,7 @@ export default async function PayStatementPage({ params }: { params: Promise<{ i
   if (!me || me.role !== 'admin' || !me.canViewPayroll) return <PageShell><p className="rounded-card bg-warn-tint p-4 text-sm text-warn">{t('forbidden')}</p></PageShell>;
   if (!/^[0-9a-f-]{36}$/i.test(id) || !/^[0-9a-f-]{36}$/i.test(employeeId)) notFound();
   const run = await loadRun(id);
-  if (!run) notFound();
+  if (!run || run.kind === 'DAILY') notFound(); // 일용 대장은 일용직 화면에서 연다
   const db = createAdminClient();
   const [{ data: p }, { data: mem }, { statement: s, overrides }, items] = await Promise.all([
     db.from('profiles').select('id, name, employee_no').eq('id', employeeId).maybeSingle(),

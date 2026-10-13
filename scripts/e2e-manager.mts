@@ -68,7 +68,7 @@ try {
   await createPassword(p);
 
   // ── 들어갈 수 있는 화면 ──
-  for (const url of ['/admin', '/admin/members', `/admin/members/${A.id}`, '/admin/settings', '/admin/settings?tab=pay', '/admin/payroll', '/admin/closing', '/admin/leave/ledger', '/admin/leave/types', '/admin/shifts', '/admin/notices', '/admin/branches', '/admin/places', '/admin/jobs', '/admin/manage/report-snapshots', '/admin/diag', '/admin/messages', '/admin/leave/promotion', '/admin/payroll/labor-cost', '/admin/payroll/retirement', '/admin/payroll/insurance']) {
+  for (const url of ['/admin', '/admin/members', `/admin/members/${A.id}`, '/admin/settings', '/admin/settings?tab=pay', '/admin/payroll', '/admin/closing', '/admin/leave/ledger', '/admin/leave/types', '/admin/shifts', '/admin/notices', '/admin/branches', '/admin/places', '/admin/jobs', '/admin/manage/report-snapshots', '/admin/diag', '/admin/messages', '/admin/leave/promotion', '/admin/payroll/labor-cost', '/admin/payroll/retirement', '/admin/payroll/insurance', '/admin/payroll/daily']) {
     const r = await open(url);
     check(r.at === '/admin/inbox', `${url} → 요청 화면으로 돌려보낸다`, r.at);
   }
