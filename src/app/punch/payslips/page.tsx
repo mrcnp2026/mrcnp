@@ -20,6 +20,9 @@ export default async function MyPayslipsPage() {
         <h1 className="text-2xl font-bold">{t('title')}</h1>
         <p className="pt-1 text-sm text-faint">{t('intro')}</p>
       </div>
+      <Link href="/punch/retirement" className="inline-flex min-h-11 items-center self-start rounded-button border border-border bg-bg px-4 text-sm font-bold text-primary">
+        {t('toRetirement')}
+      </Link>
       {slips.length === 0 ? (
         <p className="rounded-card bg-bg p-5 text-sm text-faint">{t('empty')}</p>
       ) : (

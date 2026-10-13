@@ -3366,6 +3366,107 @@
       "blockedNote": "{n} blocked statements have no amounts and are not in the totals. (They are not counted as zero.)",
       "empty": "No finalized payroll ledger matches these filters.",
       "note": "Total labor cost = total pay + employer cost (employer social insurance). It differs from total net pay. When a correction is finalized only the correction is counted. Departments are current assignments, not those of the month. Day labor and retirement pay are not included."
+    },
+    "retirement": {
+      "title": "Retirement pay",
+      "intro": "Records retirement pay estimates, final settlements and interim settlements with the inputs and the calculation. For manual verification.",
+      "forbidden": "Only payroll admins can view this.",
+      "practice": "Practice data",
+      "legal": "This screen only applies the common formula (average daily wage × 30 days × service days ÷ 365) to the values you enter. Whether the wage items, excluded periods and ordinary-wage comparison are right needs a labor attorney. Retirement income tax is not calculated — enter the value confirmed by your tax accountant. Pension plan (DB/DC) contributions are not calculated.",
+      "newTitle": "New case",
+      "fEmployee": "Employee",
+      "fKind": "Type",
+      "fLastDay": "Last working day (basis date)",
+      "pick": "Select",
+      "inactive": "inactive",
+      "fill": "Fill from records",
+      "kind": {
+        "ESTIMATE": "Estimate",
+        "FINAL": "Final settlement",
+        "INTERIM": "Interim settlement"
+      },
+      "state": {
+        "DRAFT": "Draft",
+        "FINALIZED": "Finalized",
+        "WITHDRAWN": "Withdrawn"
+      },
+      "fillTitle": "{name} · {kind} — check and correct the values below, then create",
+      "from": {
+        "employment": "Service start was filled from the employment period.",
+        "profile": "Service start was filled from the hire date in the profile.",
+        "after_interim": "A finalized interim settlement exists, so the day after it was used as the service start.",
+        "none": "No hire date, so the service start could not be filled. Enter it yourself."
+      },
+      "wageFilled": "3-month wages were filled from finalized payroll ledgers ({months}). Remove items that do not belong in the average wage.",
+      "wageEmpty": "3-month wages could not be filled (the last working day is not a month end, or the three finalized ledgers are not all present). Enter it yourself.",
+      "bonusFilled": "Bonus for the last year was filled from {n} finalized bonus ledgers. Enter leave pay, ordinary wage and excluded days yourself.",
+      "f": {
+        "periodFrom": "Service start",
+        "periodTo": "Last working day",
+        "wage3m": "Wages, last 3 months (KRW)",
+        "days3m": "Days in those 3 months",
+        "bonus1y": "Bonus, last year (KRW)",
+        "leavePay1y": "Annual leave pay, last year (KRW)",
+        "ordinaryDaily": "Ordinary daily wage (KRW, to compare)",
+        "excludedDays": "Excluded days",
+        "taxAmount": "Retirement income tax (KRW, confirmed)",
+        "taxBasis": "Basis of the tax amount"
+      },
+      "fieldNote": "Only 3/12 of bonus and leave pay goes into the average wage. If you enter an ordinary daily wage, the larger of the two is used. Amounts are rounded down to the won.",
+      "cService": "Service days",
+      "cAverage": "Average daily wage",
+      "cUsed": "Daily wage used",
+      "cAmount": "Retirement pay",
+      "usedOrdinary": "ordinary wage",
+      "usedAverage": "average wage",
+      "blank": "(none)",
+      "noAmount": "No amount (inputs missing)",
+      "noAmountShort": "No amount",
+      "won": "₩{n}",
+      "daysValue": "{n} days",
+      "missing": {
+        "period": "The service period (start date and last working day) is missing.",
+        "bad_period": "The last working day is before the start date.",
+        "under_one_year": "The service period is under one year (365 days). No amount is produced.",
+        "wage3m": "Total wages for the last 3 months are missing.",
+        "days3m": "The number of days in the 3 months is missing.",
+        "bad_days3m": "The number of days in the 3 months looks wrong (usually 89–92)."
+      },
+      "taxNote": "The program does not calculate retirement income tax. If you enter a tax amount, also enter its basis (who calculated it, which documents).",
+      "createDo": "Create with these values",
+      "saveDo": "Save",
+      "saved": "Saved.",
+      "finalize": "Finalize",
+      "finalizeConfirm": "A finalized case cannot be edited. To fix it you must withdraw it with a reason and create a new revision.",
+      "finalizeYes": "Finalize",
+      "cancel": "Cancel",
+      "withdraw": "Withdraw",
+      "withdrawReason": "Reason for withdrawing",
+      "withdrawDo": "Withdraw",
+      "revise": "Create a new revision from this",
+      "notReady": "To finalize, no inputs may be missing and an amount must be saved. If you changed values, save first.",
+      "colName": "Employee",
+      "colKind": "Type",
+      "colPeriod": "Period",
+      "colAmount": "Retirement pay",
+      "colState": "State",
+      "colMade": "Created",
+      "rev": "rev {n}",
+      "empty": "No cases yet.",
+      "madeOn": "created {date}",
+      "finalizedOn": "finalized {date}",
+      "withdrawnNote": "Withdrawn. Reason: {reason}",
+      "toPrevious": "View previous revision",
+      "editTitle": "Inputs and check",
+      "checkTitle": "Check",
+      "formula": "Formula: average daily wage = (3-month wages + bonus × 3/12 + leave pay × 3/12) ÷ days in 3 months → retirement pay = daily wage × 30 × service days ÷ 365 (rounded down). Common practice; labor verification pending.",
+      "retirement_overlap": "This overlaps a finalized settlement period for this employee. The same period cannot be settled twice.",
+      "retirement_locked": "Not allowed in the current state.",
+      "retirement_incomplete": "Inputs are missing or no amount is saved, so it cannot be finalized. Save the values and try again.",
+      "retirement_estimate": "An estimate is not finalized. Create a final or interim settlement instead.",
+      "retirement_period": "Check the service start and last working day.",
+      "retirement_tax_basis": "Enter the basis when you enter a tax amount.",
+      "retirement_reason": "Enter a reason of at least 2 characters."
     }
   },
   "side": {
@@ -3489,7 +3590,8 @@
     "orgChart": "Org chart",
     "adminMessages": "Work messages",
     "leavePromotion": "Leave use promotion",
-    "payLabor": "Labor cost"
+    "payLabor": "Labor cost",
+    "payRetirement": "Retirement pay"
   },
   "nav": {
     "home": "Home",
@@ -4044,7 +4146,8 @@
     "pdfPage": "{n} / {all}",
     "pdfFile": "payslip",
     "hRevision": "Revision",
-    "pdfNote": "This payslip shows the values stored in the program. If an amount looks wrong, tell the payroll admin. A payslip does not mean the payment has been made."
+    "pdfNote": "This payslip shows the values stored in the program. If an amount looks wrong, tell the payroll admin. A payslip does not mean the payment has been made.",
+    "toRetirement": "See estimated retirement pay"
   },
   "org": {
     "title": "Org chart",
@@ -4143,5 +4246,39 @@
     "submitted": "Submitted.",
     "promotion_plan_invalid": "Check the dates. Enter at least one date on or after the basis date.",
     "promotion_locked": "This campaign cannot accept plans right now."
+  },
+  "retirementEstimate": {
+    "title": "Estimated retirement pay",
+    "back": "My payslips",
+    "estimateChip": "Estimate",
+    "intro": "A rough figure assuming you left today. Your actual retirement pay is what the company settles when you leave.",
+    "amount": "Estimated retirement pay",
+    "cannot": "Cannot be calculated yet",
+    "won": "₩{n}",
+    "daysValue": "{n} days",
+    "unknown": "No data",
+    "missing": {
+      "period": "Your hire date is not registered. Ask an admin.",
+      "bad_period": "Your hire date is after today. Ask an admin.",
+      "under_one_year": "You have worked less than one year, so retirement pay has not accrued yet.",
+      "wage3m": "Published payslips for the last three months are not all available, so it cannot be calculated.",
+      "days3m": "Period information needed for the calculation is missing.",
+      "bad_days3m": "Period information needed for the calculation looks wrong."
+    },
+    "basisTitle": "Data used",
+    "row": {
+      "asOf": "As of",
+      "joined": "Service start",
+      "service": "Days worked",
+      "wage": "Pay, last three months (published payslips)",
+      "bonus": "Bonus, last year (published payslips)",
+      "average": "Average daily wage"
+    },
+    "excludedTitle": "Not included",
+    "x1": "Annual leave pay, and pay or bonus not yet published",
+    "x2": "Periods excluded from service such as leave of absence",
+    "x3": "The comparison when ordinary wage exceeds average wage",
+    "x4": "Retirement income tax (this is before tax)",
+    "note": "Formula: average daily wage × 30 days × days worked ÷ 365. A reference figure using common practice, not an amount the company promises."
   }
 }
