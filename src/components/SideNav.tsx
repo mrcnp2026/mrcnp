@@ -156,7 +156,15 @@ export function SideNav({ isAdmin, branchManager = false, inboxCount = 0 }: { is
       { href: '/admin/notices', key: 'adminNotices', icon: Megaphone },
       { href: '/admin/closing', key: 'closing', icon: Lock },
       { href: '/admin/manage/report-snapshots', key: 'reports', icon: ChartColumn },
-      { href: '/admin/payroll', key: 'payroll', icon: Wallet },
+      {
+        href: '/admin/payroll',
+        key: 'payroll',
+        icon: Wallet,
+        sub: [
+          { href: '/admin/payroll', key: 'payHours' },
+          { href: '/admin/payroll/staff', key: 'payStaff' },
+        ],
+      },
     ],
     [
       { href: '/admin/members', key: 'admin', icon: UserRoundCog, panel: MANAGE },
