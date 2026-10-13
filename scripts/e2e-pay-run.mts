@@ -104,6 +104,7 @@ try {
   check(page.includes('이 달의 근태를 마감하지 않았습니다.') && page.includes('승인된 기준 자료가 없습니다'), '화면에 차단 사유가 글로 보인다');
   await shot('payrun-1-blocked');
   check((await post(api, { action: 'review', expectedVersion: r.version })).json.error === 'payroll_has_blocked', '차단이 있으면 검토할 수 없다');
+  check((await post(api, { action: 'publish' })).json.error === 'payroll_not_finalized', '확정 전에는 공개할 수 없다');
   check((await post(api, { action: 'finalize', expectedVersion: r.version })).json.error === 'payroll_wrong_status', '검토 없이 확정할 수 없다');
   check((await post(api, { action: 'calculate', expectedVersion: r.version + 5 })).status === 409, '판 번호가 다르면 계산되지 않는다');
 
@@ -165,10 +166,53 @@ try {
   check(!!direct.error, 'DB에서 직접 고치려 해도 막힌다', direct.error?.code ?? '');
   check(!(await open('/admin/payroll/runs')).includes(YM), '검사 대장은 목록에 보이지 않는다');
 
+  // ── 공개 · 내 명세서 (검사 계정 e2e-audit2가 직원으로 들어가 본다) ──
+  const { data: fin } = await db.from('payroll_statements').select('id').eq('generation_id', r.current_generation_id).eq('employee_id', other!.id).single();
+  const slipId = fin!.id as string;
+  await db.from('profiles').update({ active: true, role: 'employee', locale: 'ko' }).eq('id', other!.id);
+  const token2 = randomBytes(32).toString('base64url');
+  await db.from('invites').insert({ employee_id: other!.id, token_hash: createHash('sha256').update(token2).digest('hex'), issued_via: 'admin', expires_at: new Date(Date.now() + 3600e3).toISOString() });
+  const ctx2 = await browser.newContext({ viewport: { width: 1440, height: 900 } });
+  const q = await ctx2.newPage();
+  q.on('pageerror', (e) => errors.push(e.message));
+  await q.goto(`${BASE}/register?token=${token2}`);
+  await createPassword(q);
+  const see = async (url: string) => {
+    await q.goto(`${BASE}${url}`);
+    await q.waitForLoadState('networkidle');
+    return q.locator('body').innerText();
+  };
+  let mine = await see('/punch/payslips');
+  check(mine.includes('내 명세서') && mine.includes('아직 공개된 명세서가 없습니다.'), '직원: 공개 전에는 내 명세서가 비어 있다');
+  check(!(await see(`/punch/payslips/${slipId}`)).includes('2,916,670'), '직원: 공개 전에는 주소를 직접 쳐도 금액이 보이지 않는다');
+  page = await open(`/admin/payroll/runs/${runId}`);
+  check(page.includes('공개 중 0명 · 공개 안 함 1명'), '관리자: 확정한 대장에 공개 상태가 보인다');
+  await p.getByRole('button', { name: '공개하지 않은 1명에게 공개' }).click();
+  await p.getByText('1명에게 공개했습니다.').waitFor({ timeout: 30000 });
+  await shot('payrun-4-published');
+  mine = await see('/punch/payslips');
+  check(mine.includes(`${YM} 급여`) && mine.includes('2,916,670원'), '직원: 공개하면 목록에 그 달과 실지급액이 보인다');
+  const slip = await see(`/punch/payslips/${slipId}`);
+  check(slip.includes('기본급') && slip.includes('3,000,000원') && slip.includes('소득세') && slip.includes('84,850원') && slip.includes('2,916,670원'), '직원: 명세서에 항목과 금액');
+  check(!slip.includes('사업주') && !slip.includes('e2e 특별 지급'), '직원: 사업주 부담 · 조정 사유는 보이지 않는다');
+  if (SHOTS) await q.screenshot({ path: path.join(SHOTS, 'payrun-5-myslip.png'), fullPage: true });
+  check((await q.locator('a[href="/punch/payslips"]').count()) >= 1, '직원 화면 위쪽 탭에 명세서');
+  // 다른 사람의 명세서: 관리자 계정(e2e-audit)이 직원 화면 주소로 열어도 보이지 않는다
+  check(!(await open(`/punch/payslips/${slipId}`)).includes('2,916,670'), '다른 사람의 명세서는 주소를 알아도 열리지 않는다');
+  const denyApi = await q.evaluate(async (u) => (await fetch(u, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ action: 'publish' }) })).status, api);
+  check(denyApi === 403, '직원은 공개 처리를 할 수 없다', String(denyApi));
+  check((await post(api, { action: 'unpublish', employeeId: other!.id, reason: '' })).json.error === 'payroll_reason_required', '사유 없이 공개를 회수할 수 없다');
+  check((await post(api, { action: 'unpublish', employeeId: other!.id, reason: 'e2e 검사 회수' })).status === 200, '공개 회수');
+  check((await see('/punch/payslips')).includes('아직 공개된 명세서가 없습니다.') && !(await see(`/punch/payslips/${slipId}`)).includes('2,916,670'), '직원: 회수하면 다시 보이지 않는다');
+  const { data: evs } = await db.from('payroll_publication_events').select('id, kind, reason').eq('statement_id', slipId).order('id');
+  check(JSON.stringify(evs?.map((e) => e.kind)) === JSON.stringify(['PUBLISHED', 'UNPUBLISHED']) && evs![1].reason === 'e2e 검사 회수', '공개 · 회수가 기록으로 쌓인다');
+  check(!!(await db.from('payroll_publication_events').delete().eq('id', evs![0].id)).error, '공개 기록은 지울 수 없다');
+  await ctx2.close();
+
   // ── 기록 · 권한 ──
   const { data: audit } = await db.from('payroll_audit_events').select('action, detail').eq('run_id', runId);
   const acts = new Set((audit ?? []).map((a) => a.action));
-  check(['run.create', 'run.calculate', 'run.review', 'run.finalize', 'member.exclude', 'override.add'].every((a) => acts.has(a)) && !JSON.stringify(audit).includes('3010000') && !JSON.stringify(audit).includes('2906670'), '급여 전용 기록에 누가 무엇을 했는지 남고, 금액은 적히지 않는다');
+  check(['run.create', 'run.calculate', 'run.review', 'run.finalize', 'member.exclude', 'override.add', 'run.publish', 'statement.unpublish'].every((a) => acts.has(a)) && !JSON.stringify(audit).includes('3010000') && !JSON.stringify(audit).includes('2906670'), '급여 전용 기록에 누가 무엇을 했는지 남고, 금액은 적히지 않는다');
   await db.from('profiles').update({ can_view_payroll: false }).eq('id', emp!.id);
   check((await post('/api/admin/payroll/runs', { action: 'create', month: '2089-01' })).status === 403, '급여 담당이 아닌 관리자는 대장을 만들 수 없다');
   const denied = await open(`/admin/payroll/runs/${runId}/${other!.id}`);
@@ -178,6 +222,7 @@ try {
   await browser.close();
   await cleanup();
   await db.from('profiles').update({ can_view_payroll: false }).eq('id', emp!.id);
+  await db.from('profiles').update({ active: false, role: 'employee' }).eq('id', other!.id);
 }
 console.log(fails === 0 ? '\n전부 통과' : `\n실패 ${fails}건`);
 process.exit(fails === 0 ? 0 : 1);

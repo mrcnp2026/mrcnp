@@ -2993,7 +2993,7 @@
       "runMeta": "귀속 {from} ~ {to} · 지급일 {pay}",
       "reviewedBy": "검토 {name} {date}",
       "finalizedBy": "확정 {name} {date}",
-      "finalNote": "확정한 대장입니다. 아무것도 바꿀 수 없습니다. 잘못된 것이 있으면 정정 판을 새로 만들어야 합니다(정정 기능은 아직 없습니다). 직원에게 명세서를 공개하는 기능도 아직 없습니다.",
+      "finalNote": "확정한 대장입니다. 금액과 항목은 바꿀 수 없습니다. 잘못된 것이 있으면 정정 판을 새로 만들어야 합니다(정정 기능은 아직 없습니다).",
       "stale": "계산한 뒤에 근태 · 계약 · 세무 · 항목 · 기준 자료 · 조정 가운데 바뀐 것이 있습니다. 다시 계산해야 검토 · 확정할 수 있습니다.",
       "hasBlocked": "차단된 직원이 {n}명 있습니다. 해결한 뒤 다시 계산하거나, 사유를 적어 대상에서 빼야 검토 · 확정할 수 있습니다.",
       "missingRef": "승인된 기준 자료가 없습니다: {list}. 회사 설정 › 급여에서 「확인 후 반영」해 주세요.",
@@ -3133,7 +3133,21 @@
       "payroll_wrong_status": "지금 상태에서는 할 수 없습니다. 화면을 새로 고쳐 주세요.",
       "payroll_reason_required": "사유를 2자 이상 적어 주세요.",
       "payroll_negative_pay": "지급 항목에는 음수를 넣을 수 없습니다.",
-      "payroll_forbidden": "급여 담당 관리자만 할 수 있습니다."
+      "payroll_forbidden": "급여 담당 관리자만 할 수 있습니다.",
+      "colPublish": "직원 공개",
+      "pubSummary": "공개 중 {on}명 · 공개 안 함 {off}명",
+      "publishAll": "공개하지 않은 {n}명에게 공개",
+      "publishDone": "{n}명에게 공개했습니다.",
+      "publishHint": "공개하면 직원이 「내 명세서」에서 자기 것만 봅니다. 문자 · 메일은 보내지 않습니다. 공개가 입금을 뜻하지는 않습니다.",
+      "publishOne": "공개",
+      "unpublish": "공개 회수",
+      "unpublishReason": "회수하는 사유",
+      "unpublishReasonOf": "{name}의 공개를 회수하는 사유",
+      "pubOn": "공개 중 · {date}",
+      "pubOff": "공개 안 함",
+      "pubWithdrawn": "회수함",
+      "payroll_not_finalized": "확정한 대장만 공개할 수 있습니다.",
+      "payroll_not_published": "공개 중인 명세서가 아닙니다."
     }
   },
   "side": {
@@ -3247,7 +3261,9 @@
     "anomalies": "이상자 관리",
     "payHours": "근로시간 요약",
     "payStaff": "사원별 급여",
-    "payRuns": "급여대장"
+    "payRuns": "급여대장",
+    "tPayslips": "명세서",
+    "payslips": "내 명세서"
   },
   "nav": {
     "home": "홈",
@@ -3730,5 +3746,40 @@
     "reqShift": "근무일정 생성 요청",
     "noRule": "회사 근무규칙이 아직 없어 일정을 보여 드릴 수 없습니다.",
     "hint": "PC에서는 출퇴근을 찍지 않습니다. 출근 · 퇴근은 등록한 폰에서 찍고, 여기서는 일정과 기록을 보고 요청을 보냅니다."
+  },
+  "payslip": {
+    "title": "내 명세서",
+    "intro": "회사가 공개한 내 급여 명세서입니다.",
+    "empty": "아직 공개된 명세서가 없습니다.",
+    "won": "{n}원",
+    "monthOf": "{month} 급여",
+    "corrected": "정정 {n}판",
+    "practice": "연습",
+    "payDate": "지급일 {date}",
+    "publishedOn": "{date} 공개",
+    "net": "실지급액",
+    "pay": "지급",
+    "deduction": "공제",
+    "none": "항목이 없습니다.",
+    "howHours": "{h}시간 × {rate}원 × {factor}",
+    "howHoursPlain": "{h}시간 × {rate}원",
+    "howRate": "{base}원 × {rate}",
+    "note": "명세서가 보인다고 입금이 끝났다는 뜻은 아닙니다. 지급일과 실제 입금은 회사에 확인해 주세요.",
+    "detailNote": "금액이 맞지 않으면 급여 담당자에게 알려 주세요. 고쳐지면 정정 명세서가 새로 공개됩니다.",
+    "line": {
+      "BASE": "기본급",
+      "OVERTIME": "연장근로수당",
+      "NIGHT": "야간근로수당",
+      "HOLIDAY": "휴일근로수당",
+      "HOLIDAY_OVER8": "휴일근로수당 (8시간 초과)",
+      "PAID_LEAVE": "유급휴가",
+      "PENSION": "국민연금",
+      "HEALTH": "건강보험",
+      "LTC": "장기요양보험",
+      "EMPLOYMENT": "고용보험",
+      "INCOME_TAX": "소득세",
+      "LOCAL_TAX": "지방소득세",
+      "STUDENT_LOAN": "학자금 상환"
+    }
   }
 }

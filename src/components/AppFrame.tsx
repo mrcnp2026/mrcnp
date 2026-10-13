@@ -41,7 +41,7 @@ export async function AppFrame({ me, children, overlay }: { me: Me; children: Re
       {/* PC 상단 줄: 화면 전체 폭, 왼쪽 메뉴 위에 놓인다 */}
       <header className="sticky top-0 z-20 hidden h-14 items-center gap-3 border-b border-border bg-bg px-5 shadow-card lg:flex">
         <Logo height={30} priority />
-        <StaffTabs labels={{ menu: ts('menu'), tSchedule: ts('tSchedule'), tRecords: ts('tRecords'), tRequests: ts('tRequests'), tMessages: ts('tMessages') }} />
+        <StaffTabs labels={{ menu: ts('menu'), tSchedule: ts('tSchedule'), tRecords: ts('tRecords'), tRequests: ts('tRequests'), tMessages: ts('tMessages'), tPayslips: ts('tPayslips') }} />
         <div className="ml-auto flex items-center gap-2">
           <Link href="/punch/notices" aria-label={t('notices', { n: unread })} className="relative flex size-9 shrink-0 items-center justify-center rounded-button text-muted hover:bg-surface">
             <Bell aria-hidden size={20} strokeWidth={1.75} />

@@ -2993,7 +2993,7 @@
       "runMeta": "Period {from} ~ {to} · pay date {pay}",
       "reviewedBy": "Reviewed by {name} {date}",
       "finalizedBy": "Finalized by {name} {date}",
-      "finalNote": "This ledger is finalized and cannot change. To fix an error a correction revision is needed (not available yet). Publishing statements to employees is not available yet either.",
+      "finalNote": "This ledger is finalized; amounts and items cannot change. To fix an error a correction revision is needed (not available yet).",
       "stale": "Attendance, contracts, tax settings, items, reference data or adjustments changed after calculation. Recalculate before reviewing or finalizing.",
       "hasBlocked": "{n} employees are blocked. Resolve and recalculate, or exclude them with a reason, before reviewing or finalizing.",
       "missingRef": "No approved reference data: {list}. Approve it in Company settings › Payroll.",
@@ -3133,7 +3133,21 @@
       "payroll_wrong_status": "Not possible in the current status. Refresh the page.",
       "payroll_reason_required": "Enter a reason of 2 or more characters.",
       "payroll_negative_pay": "Pay items cannot be negative.",
-      "payroll_forbidden": "Only payroll admins can do this."
+      "payroll_forbidden": "Only payroll admins can do this.",
+      "colPublish": "Published to employee",
+      "pubSummary": "Published {on} · not published {off}",
+      "publishAll": "Publish to the remaining {n}",
+      "publishDone": "Published to {n}.",
+      "publishHint": "Once published, each employee sees only their own payslip. No text or email is sent. Publishing does not mean the transfer was made.",
+      "publishOne": "Publish",
+      "unpublish": "Withdraw",
+      "unpublishReason": "Reason for withdrawing",
+      "unpublishReasonOf": "Reason for withdrawing {name}'s payslip",
+      "pubOn": "Published · {date}",
+      "pubOff": "Not published",
+      "pubWithdrawn": "Withdrawn",
+      "payroll_not_finalized": "Only a finalized ledger can be published.",
+      "payroll_not_published": "That payslip is not published."
     }
   },
   "side": {
@@ -3247,7 +3261,9 @@
     "anomalies": "Exceptions",
     "payHours": "Hours summary",
     "payStaff": "Pay by employee",
-    "payRuns": "Payroll ledgers"
+    "payRuns": "Payroll ledgers",
+    "tPayslips": "Payslips",
+    "payslips": "My payslips"
   },
   "nav": {
     "home": "Home",
@@ -3730,5 +3746,40 @@
     "reqShift": "Request a shift",
     "noRule": "No company work rule yet, so the schedule cannot be shown.",
     "hint": "You cannot clock in or out on a PC. Use your registered phone to clock in and out; here you can view schedules and records and send requests."
+  },
+  "payslip": {
+    "title": "My payslips",
+    "intro": "Payslips your company has published to you.",
+    "empty": "No payslips have been published yet.",
+    "won": "₩{n}",
+    "monthOf": "Pay for {month}",
+    "corrected": "Correction {n}",
+    "practice": "Practice",
+    "payDate": "Pay date {date}",
+    "publishedOn": "Published {date}",
+    "net": "Net pay",
+    "pay": "Pay",
+    "deduction": "Deductions",
+    "none": "No items.",
+    "howHours": "{h} h × ₩{rate} × {factor}",
+    "howHoursPlain": "{h} h × ₩{rate}",
+    "howRate": "₩{base} × {rate}",
+    "note": "Seeing a payslip does not mean the transfer has been made. Check the pay date and deposit with your company.",
+    "detailNote": "If an amount looks wrong, tell the payroll admin. A corrected payslip will be published.",
+    "line": {
+      "BASE": "Base pay",
+      "OVERTIME": "Overtime pay",
+      "NIGHT": "Night pay",
+      "HOLIDAY": "Holiday pay",
+      "HOLIDAY_OVER8": "Holiday pay (over 8h)",
+      "PAID_LEAVE": "Paid leave",
+      "PENSION": "National pension",
+      "HEALTH": "Health insurance",
+      "LTC": "Long-term care",
+      "EMPLOYMENT": "Employment insurance",
+      "INCOME_TAX": "Income tax",
+      "LOCAL_TAX": "Local income tax",
+      "STUDENT_LOAN": "Student loan repayment"
+    }
   }
 }

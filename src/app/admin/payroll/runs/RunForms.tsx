@@ -204,3 +204,71 @@ export function OverrideForm({ id, employeeId, codes, active }: { id: string; em
     </div>
   );
 }
+
+export function PublishAll({ id, waiting }: { id: string; waiting: number }) {
+  const t = useTranslations('admin.payRuns');
+  const { busy, err, send } = useRun(`/api/admin/payroll/runs/${id}`);
+  const [msg, setMsg] = useState<string | null>(null);
+  return (
+    <div className="flex flex-col gap-2 text-sm">
+      <div className="flex flex-wrap items-center gap-3">
+        <Button
+          type="button"
+          size="sm"
+          disabled={busy || waiting === 0}
+          onClick={async () => {
+            setMsg(null);
+            const r = await send<{ publish: { published: number } }>({ action: 'publish' });
+            if (r) setMsg(t('publishDone', { n: r.publish.published }));
+          }}
+        >
+          {t('publishAll', { n: waiting })}
+        </Button>
+        {msg && <span role="status" className="text-ok">{msg}</span>}
+      </div>
+      <p className="text-xs text-faint">{t('publishHint')}</p>
+      {err && <ErrorNote code={err.code} requestId={err.requestId} namespace="admin.payRuns" />}
+    </div>
+  );
+}
+
+export function PublishToggle({ id, employeeId, published, name }: { id: string; employeeId: string; published: boolean; name: string }) {
+  const t = useTranslations('admin.payRuns');
+  const { busy, err, send } = useRun(`/api/admin/payroll/runs/${id}`);
+  const [open, setOpen] = useState(false);
+  if (!published)
+    return (
+      <span className="flex flex-col gap-1">
+        <button type="button" disabled={busy} onClick={() => send({ action: 'publish', employeeIds: [employeeId] })} className="inline-flex h-8 items-center self-start rounded-button border border-primary bg-bg px-3 text-sm font-bold text-primary disabled:opacity-50">
+          {t('publishOne')}
+        </button>
+        {err && <ErrorNote code={err.code} requestId={err.requestId} namespace="admin.payRuns" />}
+      </span>
+    );
+  if (!open)
+    return (
+      <button type="button" onClick={() => setOpen(true)} className="inline-flex h-8 items-center rounded-button border border-border bg-bg px-3 text-sm font-bold text-muted">
+        {t('unpublish')}
+      </button>
+    );
+  return (
+    <form
+      className="flex min-w-56 flex-col gap-2"
+      onSubmit={async (e) => {
+        e.preventDefault();
+        if (await send({ action: 'unpublish', employeeId, reason: new FormData(e.currentTarget).get('reason') })) setOpen(false);
+      }}
+    >
+      <input name="reason" required minLength={2} maxLength={300} placeholder={t('unpublishReason')} aria-label={t('unpublishReasonOf', { name })} className={field} autoComplete="off" />
+      <span className="flex gap-2">
+        <Button type="submit" size="sm" variant="outline" disabled={busy}>
+          {t('unpublish')}
+        </Button>
+        <button type="button" onClick={() => setOpen(false)} className="min-h-9 px-2 text-sm text-muted">
+          {t('cancel')}
+        </button>
+      </span>
+      {err && <ErrorNote code={err.code} requestId={err.requestId} namespace="admin.payRuns" />}
+    </form>
+  );
+}

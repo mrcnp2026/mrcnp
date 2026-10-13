@@ -1,7 +1,8 @@
-// 급여대장의 작업 — 계산 · 검토 · 확정 · 대상 빼기/넣기 · 금액 조정 (PRD v1.3 18.3 · 19장). 급여 담당 관리자만.
+// 급여대장의 작업 — 계산 · 검토 · 확정 · 대상 빼기/넣기 · 금액 조정 · 명세서 공개/회수 (PRD v1.3 18.3 · 19장). 급여 담당 관리자만.
 // 계산 · 검토 · 확정은 화면이 보던 판 번호(expectedVersion)가 지금과 같을 때만 된다 — 두 사람이 동시에 누르면 먼저 한 쪽만 성공한다.
 import { api, ApiError, readJson } from '@/lib/api';
 import { requirePayroll } from '@/lib/payroll/data';
+import { publishRun, unpublishStatement } from '@/lib/payroll/publish-data';
 import { addOverride, calculateRun, finalizeRun, reviewRun, setMember, withdrawOverride } from '@/lib/payroll/run-data';
 
 export const maxDuration = 60;
@@ -44,6 +45,19 @@ export const POST = api<{ params: Promise<{ id: string }> }>('admin.payroll.run'
   if (b.action === 'override.withdraw') {
     if (typeof b.overrideId !== 'string' || !UUID.test(b.overrideId)) throw new ApiError(400, 'invalid_input');
     await withdrawOverride({ ...common, overrideId: b.overrideId });
+    return { ok: true };
+  }
+  // 공개 · 회수 — 확정한 대장만. 공개가 은행 지급을 뜻하지 않고, 문자 · 메일을 보내지 않는다
+  if (b.action === 'publish') {
+    const ids = b.employeeIds === undefined ? undefined : Array.isArray(b.employeeIds) && b.employeeIds.length > 0 && b.employeeIds.length <= 500 && b.employeeIds.every((x) => typeof x === 'string' && UUID.test(x)) ? (b.employeeIds as string[]) : null;
+    if (ids === null) throw new ApiError(400, 'invalid_input');
+    return { publish: await publishRun({ runId: id, employeeIds: ids, me, requestId: ctx.requestId }) };
+  }
+  if (b.action === 'unpublish') {
+    const reason = reasonOf(b.reason);
+    if (typeof b.employeeId !== 'string' || !UUID.test(b.employeeId)) throw new ApiError(400, 'invalid_input');
+    if (!reason) throw new ApiError(400, 'payroll_reason_required');
+    await unpublishStatement({ runId: id, employeeId: b.employeeId, reason, me, requestId: ctx.requestId });
     return { ok: true };
   }
   throw new ApiError(400, 'invalid_input');

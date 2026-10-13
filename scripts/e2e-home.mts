@@ -166,11 +166,11 @@ try {
   check(await p.locator('nav.sticky').first().locator('a[href="/admin/records/list"]').waitFor({ state: 'visible', timeout: 3000 }).then(() => true, () => false), 'PC 메뉴: 「출퇴근기록」에 마우스를 올리면 하위 메뉴(목록형)가 아래로 펼쳐짐');
   await p.waitForTimeout(400);
   await shot('44-PC-메뉴-패널');
-  // 직원 모드(PC): 왼쪽 메뉴 없이 상단 탭 4개 + 월 달력 (2026-10-11 의뢰인 스샷 `스샷/직원모드 홈.png`)
+  // 직원 모드(PC): 왼쪽 메뉴 없이 상단 탭(시프티의 4개 + 2026-10-13 명세서) + 월 달력 (2026-10-11 의뢰인 스샷 `스샷/직원모드 홈.png`)
   await p.goto(`${BASE}/punch`);
   await p.waitForLoadState('networkidle');
   const tabs = p.locator('header nav a');
-  check((await p.locator('nav.sticky').count()) === 0 && (await tabs.count()) === 4 && ((await tabs.first().getAttribute('aria-current')) === 'page'), 'PC 직원 모드: 왼쪽 메뉴 없이 상단 탭 4개, 첫 탭(스케줄)이 켜짐');
+  check((await p.locator('nav.sticky').count()) === 0 && (await tabs.count()) === 5 && ((await tabs.first().getAttribute('aria-current')) === 'page'), 'PC 직원 모드: 왼쪽 메뉴 없이 상단 탭 5개(시프티의 4개 + 명세서), 첫 탭(스케줄)이 켜짐');
   check((await p.getByText('내 근로 통계').isVisible()) && (await p.getByText('내 휴가 통계').isVisible()) && (await p.locator('main .grid-cols-7 > div').count()) >= 35, 'PC 직원 홈: 내 근로 통계 · 내 휴가 통계 · 월 달력');
   await shot('44-PC-메뉴');
   check(errors.length === 0, '화면 오류 없음', errors[0] ?? '');
