@@ -12,6 +12,7 @@ import { createAdminClient } from '@/lib/supabase/admin';
 import { hhmm, toKstDate } from '@/lib/time';
 import { isOfficeIp, parseCidr, traceClientIp } from '@/lib/verify-location';
 import { loadOfficeLocations } from '@/lib/geo-data';
+import { PaySettings } from './pay/PaySettings';
 import { ConfirmButton, HolidayForm, NetworkForm, RuleForm } from './SettingsForms';
 
 // 탭 이름 · 순서는 시프티의 회사 설정 (2026-10-11 의뢰인 스샷 `스샷/관리-회사설정*.png`). 일반 · 근무일정 · 출퇴근기록 · 휴게시간은 바꿀 수 있는 설정이고,
@@ -59,11 +60,21 @@ function Flag({ on, label }: { on: boolean; label: string }) {
   );
 }
 
-export default async function SettingsPage({ searchParams }: { searchParams: Promise<{ tab?: string }> }) {
+export default async function SettingsPage({ searchParams }: { searchParams: Promise<{ tab?: string; section?: string; v?: string; year?: string; from?: string; edit?: string; add?: string }> }) {
   // PC: 시프티의 회사 설정 구성 (2026-10-11 의뢰인 스샷 `스샷/관리-회사설정*.png`) — 사이드 메뉴 옆 둘째 메뉴에서 탭을 고르고,
   // 본문은 「굵은 항목 이름 — 값」 줄 + 회색 띠 묶음 제목 + 오른쪽 위 버튼. 폰은 예전처럼 카드 네 장을 한 화면에
   const sp = await searchParams;
   const tab: Tab = (TABS as readonly string[]).includes(sp.tab ?? '') ? (sp.tab as Tab) : 'general';
+  // 급여 탭은 9개 화면이 있는 따로 된 구성이다 (PRD v1.3 4.1 · 17장) — PC · 폰 같은 화면
+  if (tab === 'pay') {
+    const tpay = await getTranslations('admin.paySettings');
+    return (
+      <PageShell wide>
+        <h1 className="text-2xl font-bold">{tpay('title')}</h1>
+        <PaySettings sp={sp} />
+      </PageShell>
+    );
+  }
   const info = INFO[tab];
   const ti = await getTranslations('admin.settings.info');
   const t = await getTranslations('admin.settings');
