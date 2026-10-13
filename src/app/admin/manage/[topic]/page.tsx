@@ -4,7 +4,7 @@
 import { Check } from 'lucide-react';
 import { getFormatter, getTranslations } from 'next-intl/server';
 import Link from 'next/link';
-import { notFound } from 'next/navigation';
+import { notFound, redirect } from 'next/navigation';
 import { PcTable, type PcCol, type PcRow } from '@/components/PcTable';
 import { PageShell } from '@/components/ui';
 import { OFFICE } from '@/config/office';
@@ -41,6 +41,7 @@ const REQUEST_KINDS = ['punch', 'correction', 'overtime', 'shift', 'leave', 'lea
 
 export default async function ManageInfoPage({ params }: { params: Promise<{ topic: string }> }) {
   const { topic } = await params;
+  if (topic === 'closing') redirect('/admin/closing'); // 2026-10-13: 실제 마감 화면으로 옮겼다
   if (!(topic in TOPICS)) notFound();
   const ns = TOPICS[topic as keyof typeof TOPICS];
   const [tm, tc, tk, tr, tl] = await Promise.all([getTranslations('admin.manage'), getTranslations('common'), getTranslations('admin.shifts.kinds'), getTranslations('requests'), getTranslations('leave')]);

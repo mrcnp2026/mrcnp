@@ -151,7 +151,7 @@ export function SideNav({ isAdmin, inboxCount = 0 }: { isAdmin: boolean; inboxCo
       },
       { href: '/admin/inbox', key: 'requests', icon: Send, badge: inboxCount },
       { href: '/admin/notices', key: 'adminNotices', icon: Megaphone },
-      { href: '/admin/manage/closing', key: 'closing', icon: Lock },
+      { href: '/admin/closing', key: 'closing', icon: Lock },
       { href: '/admin/manage/report-snapshots', key: 'reports', icon: ChartColumn },
       { href: '/admin/payroll', key: 'payroll', icon: Wallet },
     ],

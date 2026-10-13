@@ -76,10 +76,10 @@ export async function recordPunch(input: {
 }
 
 /**
- * 월 잠금 확인 자리 (7-14). ①단계에는 잠금이 없으므로 항상 "안 잠김".
- * ②-3에서 period_locks를 읽도록 **이 함수만** 채운다.
+ * 월 마감 확인 (7-14 · PRD v1.3 8장) — 그 직원의 그 날짜가 마감된 기간이면 true. 2026-10-13부터 실제 마감 기록(attendance_closes)을 본다.
+ * 화면에 미리 「마감된 달입니다」를 보이기 위한 검사다. 최종 방어선은 DB의 트리거(0034)라서, 이 검사를 빠뜨린 길로 들어와도 DB가 막는다.
  */
-// eslint-disable-next-line @typescript-eslint/no-unused-vars -- ②-3에서 쓰는 인자. 자리만 먼저 만든다
-export async function isPeriodLocked(_employeeId: string, _workDate: string): Promise<boolean> {
-  return false;
+export async function isPeriodLocked(employeeId: string, workDate: string): Promise<boolean> {
+  const { isClosed } = await import('@/lib/close-data');
+  return isClosed(employeeId, workDate);
 }

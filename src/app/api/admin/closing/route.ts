@@ -1,0 +1,31 @@
+// 근태 월 마감 · 다시 열기 (PRD v1.3 8 · 35.2장). 관리자만.
+// 마감: 화면이 검토한 자료(해시)와 지금 자료가 같고 막는 것이 없을 때만. 다시 열기: 사유 필수.
+import { api, ApiError, readJson } from '@/lib/api';
+import { requireAdmin } from '@/lib/auth';
+import { OFFICE } from '@/config/office';
+import { closeMonth, reopenClose } from '@/lib/close-data';
+import { isMonth } from '@/lib/close-review';
+import { toKstDate } from '@/lib/time';
+
+export const maxDuration = 60;
+
+export const POST = api('admin.closing', async (req) => {
+  const me = await requireAdmin();
+  if (!me) throw new ApiError(403, 'forbidden');
+  const b = await readJson(req);
+  if (b.action === 'reopen') {
+    const reason = typeof b.reason === 'string' ? b.reason.trim() : '';
+    if (typeof b.id !== 'string' || !/^[0-9a-f-]{36}$/i.test(b.id) || reason.length < 2 || reason.length > 500) throw new ApiError(400, 'invalid_input');
+    await reopenClose(b.id, reason, me);
+    return { ok: true };
+  }
+  if (b.action !== 'close' || !isMonth(b.month) || !Array.isArray(b.items) || b.items.length === 0 || b.items.length > 300) throw new ApiError(400, 'invalid_input');
+  const items: { employeeId: string; hash: string }[] = [];
+  for (const x of b.items as { employeeId?: unknown; hash?: unknown }[]) {
+    if (typeof x?.employeeId !== 'string' || !/^[0-9a-f-]{36}$/i.test(x.employeeId) || typeof x.hash !== 'string' || !/^[0-9a-f]{64}$/.test(x.hash)) throw new ApiError(400, 'invalid_input');
+    if (!items.some((y) => y.employeeId === x.employeeId)) items.push({ employeeId: x.employeeId, hash: x.hash });
+  }
+  // 연습/운영은 서버가 정한다 (운영 중인 앱에서 live=1은 실제 기록)
+  const practice = OFFICE.practiceMode && b.live !== true;
+  return { results: await closeMonth({ ym: b.month, practice, items, today: toKstDate(new Date()), me }) };
+});

@@ -39,6 +39,10 @@ export function api<C extends { params: Promise<object> } = { params: Promise<Re
         body = { error: e.code };
         // 폰 확인 실패는 경고로 남긴다 — 같은 직원이 연속 실패하면 관리자가 폰 해제·재등록을 안내 (② 7-16)
         await logError({ code: 'PASSKEY_VERIFY_FAILED', route, detail: { errorName: 'PasskeyError', httpStatus: 400, ms: Date.now() - started, requestId } });
+      } else if (/:\s*AC001$/.test(String((e as Error)?.message ?? ''))) {
+        // 마감된 기간의 근태 자료를 넣거나 고치려 했다 — DB의 마감 잠금(0034)이 막은 것. 미리 하는 검사를 빠뜨린 길도 여기서 같은 안내가 된다
+        status = 409;
+        body = { error: 'period_locked' };
       } else {
         status = 500;
         body = { error: 'generic' };
