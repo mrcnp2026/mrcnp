@@ -31,6 +31,7 @@ export default async function MyPayslipsPage() {
                   <span className="num flex flex-wrap items-center gap-2 text-lg font-bold">
                     {t('monthOf', { month: s.month })}
                     {s.revision > 1 && <Chip tone="warn">{t('corrected', { n: s.revision })}</Chip>}
+                    {s.kind === 'BONUS' && <Chip tone="info">{t('bonus')}</Chip>}
                     {s.isTest && <Chip>{t('practice')}</Chip>}
                   </span>
                   <span className="num text-sm text-muted">{t('payDate', { date: s.payDate })} · {t('publishedOn', { date: toKstDate(new Date(s.publishedAt)) })}</span>

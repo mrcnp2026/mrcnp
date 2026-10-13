@@ -18,7 +18,8 @@ export default async function PayRunsPage({ searchParams }: { searchParams: Prom
   const today = toKstDate(new Date());
   // 만들 수 있는 달: 이번 달부터 거꾸로 12달 가운데 아직 대장이 없는 달
   const have = new Set(runs.filter((r) => r.kind === 'REGULAR').map((r) => r.periodFrom.slice(0, 7)));
-  const months = [...Array(12)].map((_, i) => new Date(Date.UTC(Number(today.slice(0, 4)), Number(today.slice(5, 7)) - 1 - i, 1)).toISOString().slice(0, 7)).filter((m) => !have.has(m));
+  const recent = [...Array(12)].map((_, i) => new Date(Date.UTC(Number(today.slice(0, 4)), Number(today.slice(5, 7)) - 1 - i, 1)).toISOString().slice(0, 7));
+  const months = recent.filter((m) => !have.has(m));
   const won = (v: unknown) => t('won', { n: f.number(Number(v ?? 0)) });
 
   return (
@@ -31,7 +32,7 @@ export default async function PayRunsPage({ searchParams }: { searchParams: Prom
       <Card>
         <CardTitle>{t('createTitle')}</CardTitle>
         <p className="pt-1 pb-3 text-sm text-faint">{t('createIntro')}</p>
-        {months.length > 0 ? <RunCreate months={months} live={sp.live === '1'} /> : <p className="text-sm text-faint">{t('createNone')}</p>}
+        <RunCreate months={months} bonusMonths={recent} today={today} live={sp.live === '1'} />
       </Card>
       <div className="overflow-x-auto border border-border bg-bg">
         <table className="w-full text-sm">
@@ -51,6 +52,7 @@ export default async function PayRunsPage({ searchParams }: { searchParams: Prom
                   <Link href={`/admin/payroll/runs/${r.id}`} className="font-bold text-primary underline">
                     {r.periodFrom.slice(0, 7)}
                   </Link>
+                  {r.kind !== 'REGULAR' && <span className="ml-2 text-xs font-bold text-muted">{t('kindSeq', { kind: t(`kind.${r.kind}`), n: r.sequence })}{r.title ? ` · ${r.title}` : ''}</span>}
                   {r.revision > 1 && <span className="ml-2 text-xs text-faint">{t('revision', { n: r.revision })}</span>}
                   {runs.some((x) => x.kind === r.kind && x.periodFrom === r.periodFrom && x.sequence === r.sequence && x.revision > r.revision) && <span className="ml-2 text-xs text-faint">{t('older')}</span>}
                 </td>

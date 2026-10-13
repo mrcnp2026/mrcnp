@@ -86,7 +86,7 @@ export async function unpublishStatement(args: { runId: string; employeeId: stri
 }
 
 // ── 직원: 내 명세서 ──
-export type MySlip = { id: string; month: string; payDate: string; kind: string; revision: number; pay: number; deduction: number; net: number; publishedAt: string; isTest: boolean; correctionReason: string | null; current: boolean };
+export type MySlip = { id: string; month: string; payDate: string; kind: string; revision: number; pay: number; deduction: number; net: number; publishedAt: string; isTest: boolean; correctionReason: string | null; current: boolean; periodFrom: string; periodTo: string; sequence: number; no: string };
 export type MySlipLine = { code: string; kind: 'PAYMENT' | 'DEDUCTION'; label: string; quantity: string | null; unitPrice: string | null; factor: string | null; amount: number };
 
 /** 내게 공개 중인 명세서 (새 달부터). practice = 지금 앱의 모드 — 연습 대장과 운영 대장을 섞어 보이지 않는다. 정정본으로 바뀐 이전본은 목록에 없고 정정본에서 따라 들어간다 */
@@ -99,12 +99,12 @@ async function mySlips(employeeId: string, practice: boolean): Promise<MySlip[]>
   const events = await latestEvents({ employeeId });
   const ids = [...events].filter(([, e]) => e.kind === 'PUBLISHED' || e.kind === 'SUPERSEDED').map(([id]) => id);
   if (ids.length === 0) return [];
-  const { data, error } = await db().from('payroll_statements').select('id, generation_id, pay_total, deduction_total, net_total, state, payroll_runs!inner(id, run_kind, period_from, pay_date, revision, status, is_test, current_generation_id, correction_reason)').eq('employee_id', employeeId).in('id', ids);
+  const { data, error } = await db().from('payroll_statements').select('id, generation_id, pay_total, deduction_total, net_total, state, payroll_runs!inner(id, run_kind, period_from, period_to, pay_date, sequence, revision, status, is_test, current_generation_id, correction_reason)').eq('employee_id', employeeId).in('id', ids);
   if (error) boom('loadMySlips', error);
   return (data ?? [])
     .map((s) => ({ s, r: s.payroll_runs as unknown as Row }))
     .filter(({ s, r }) => s.state === 'OK' && r.status === 'FINALIZED' && r.current_generation_id === s.generation_id && r.is_test === practice)
-    .map(({ s, r }) => ({ id: s.id as string, month: (r.period_from as string).slice(0, 7), payDate: r.pay_date as string, kind: r.run_kind as string, revision: r.revision as number, pay: Number(s.pay_total), deduction: Number(s.deduction_total), net: Number(s.net_total), publishedAt: events.get(s.id as string)!.at, isTest: r.is_test as boolean, correctionReason: (r.correction_reason as string | null) ?? null, current: events.get(s.id as string)!.kind === 'PUBLISHED' }))
+    .map(({ s, r }) => ({ id: s.id as string, month: (r.period_from as string).slice(0, 7), payDate: r.pay_date as string, kind: r.run_kind as string, revision: r.revision as number, pay: Number(s.pay_total), deduction: Number(s.deduction_total), net: Number(s.net_total), publishedAt: events.get(s.id as string)!.at, isTest: r.is_test as boolean, correctionReason: (r.correction_reason as string | null) ?? null, current: events.get(s.id as string)!.kind === 'PUBLISHED', periodFrom: r.period_from as string, periodTo: new Date(Date.parse(`${r.period_to}T00:00:00Z`) - 86400000).toISOString().slice(0, 10), sequence: r.sequence as number, no: `${(r.period_from as string).slice(0, 7).replace('-', '')}-${(r.run_kind as string)[0]}${r.sequence}-${(s.id as string).slice(0, 8).toUpperCase()}` }))
     .sort((a, b) => b.month.localeCompare(a.month) || b.revision - a.revision);
 }
 

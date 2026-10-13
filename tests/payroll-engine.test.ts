@@ -164,14 +164,28 @@ describe('C08 합성 세금 비율', () => {
 describe('C09 상여 누적', () => {
   it('같은 묶음 전체 세액 30,000 − 앞선 정규 명세 20,000 = 상여 차액 10,000', () => {
     const r = ok(calculateStatement(input({
-      runKind: 'BONUS', contract: { payType: 'MONTHLY', amount: 1_000_000, monthlyHours: 209, annualDivisor: null, included: { overtimeHours: null, holidayHours: null } },
+      runKind: 'BONUS', items: [item('BONUS', 'PAYMENT', 1_000_000)],
       prior: { taxable: 3_000_000, incomeTax: 20_000, localTax: 2_000 },
       withholding: (a) => (a.taxable === 4_000_000 ? { ok: true, incomeTax: 30_000, localTax: 3_000 } : { ok: false, why: 'unexpected' }),
     })));
     expect([amount(r, 'INCOME_TAX'), amount(r, 'LOCAL_TAX')]).toEqual([10_000, 1_000]);
   });
   it('앞선 명세를 모르면 상여의 세금을 계산하지 않는다', () => {
-    expect(calculateStatement(input({ runKind: 'BONUS' }))).toMatchObject({ state: 'BLOCKED', blockers: [{ code: 'bonus_prior_missing' }] });
+    expect(calculateStatement(input({ runKind: 'BONUS', items: [item('BONUS', 'PAYMENT', 1_000_000)] }))).toMatchObject({ state: 'BLOCKED', blockers: [{ code: 'bonus_prior_missing' }] });
+  });
+  it('상여 대장은 기본급 · 시간 수당을 만들지 않고, 금액을 넣지 않은 직원은 차단한다', () => {
+    const prior = { taxable: 3_000_000, incomeTax: 0, localTax: 0 };
+    const r = ok(calculateStatement(input({ runKind: 'BONUS', prior, time: { ...NO_TIME, overtimeMinutes: 600 }, overrides: [{ itemCode: 'BONUS', kind: 'PAYMENT', amount: 500_000 }] })));
+    expect(r.lines.map((l) => l.code)).toEqual(['BONUS', 'INCOME_TAX', 'LOCAL_TAX']);
+    expect(r.totals.pay).toBe(500_000);
+    expect(calculateStatement(input({ runKind: 'BONUS', prior })).blockers.map((b) => b.code)).toEqual(['no_bonus_amount']);
+    expect(calculateStatement(input({ runKind: 'BONUS', prior, contract: null, overrides: [{ itemCode: 'BONUS', kind: 'PAYMENT', amount: 1 }] })).state).toBe('OK'); // 계약이 없어도 상여는 계산된다
+  });
+  it('상여 대장에서 4대보험을 건너뛰면 경고로 알린다', () => {
+    const tax = { ...NOT_INSURED, insurance: { pension: ins('YES'), health: ins('YES'), employment: ins('UNKNOWN'), accident: ins('YES') } };
+    const r = ok(calculateStatement(input({ runKind: 'BONUS', tax, skipInsurance: true, prior: { taxable: 0, incomeTax: 0, localTax: 0 }, overrides: [{ itemCode: 'BONUS', kind: 'PAYMENT', amount: 500_000 }] })));
+    expect(r.lines.some((l) => ['PENSION', 'HEALTH', 'LTC', 'EMPLOYMENT'].includes(l.code))).toBe(false);
+    expect(r.warnings).toEqual([{ code: 'insurance_not_calculated' }]);
   });
 });
 

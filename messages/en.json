@@ -2936,7 +2936,13 @@
       "payroll_version_conflict": "Someone saved first or the periods overlap. Refresh and try again.",
       "payroll_effective_from_past": "The effective date must be after the current version's start.",
       "payroll_reason_required": "Enter a reason for the change.",
-      "payroll_forbidden": "Only payroll admins can do this."
+      "payroll_forbidden": "Only payroll admins can do this.",
+      "previewTitle": "Estimated pay and deductions",
+      "previewChip": "Estimate",
+      "previewIntro": "One month calculated from the current contract, tax settings, personal items and approved rates. It assumes no overtime, night or holiday work and no absence, and nothing is saved.",
+      "previewSum": "Total",
+      "previewNet": "Estimated net pay",
+      "previewBlocked": "It cannot be estimated for the reasons below."
     },
     "payRuns": {
       "title": "Payroll ledgers",
@@ -3094,7 +3100,9 @@
         "no_work_rule": "No work rule.",
         "item_missing": "An unusable item is attached ({detail}).",
         "item_amount_missing": "An item has no amount ({detail}).",
-        "employer_rate_missing": "No employer rate, so it is left out of employer cost ({detail}). Net pay is not affected."
+        "employer_rate_missing": "No employer rate, so it is left out of employer cost ({detail}). Net pay is not affected.",
+        "no_bonus_amount": "No bonus amount entered. Enter it under Adjustments or exclude this employee.",
+        "insurance_not_calculated": "Social insurance is not calculated in a bonus ledger. Settle or adjust separately if needed."
       },
       "detail": {
         "pension": "national pension",
@@ -3159,7 +3167,23 @@
       "replacedBy": "This ledger was replaced by correction revision {n}. This revision is kept as a record.",
       "older": "Before correction",
       "payroll_correction_exists": "A correction revision already exists. Continue from the newest revision.",
-      "payroll_superseded": "A correction has been finalized, so this revision can no longer be published. Publish the correction instead."
+      "payroll_superseded": "A correction has been finalized, so this revision can no longer be published. Publish the correction instead.",
+      "fKind": "Kind",
+      "kind": {
+        "REGULAR": "Regular pay",
+        "BONUS": "Bonus",
+        "DAILY": "Daily"
+      },
+      "kindSeq": "{kind} #{n}",
+      "fPayDate": "Pay date",
+      "fTitle": "Name (optional)",
+      "liveChip": "Live",
+      "bonusHint": "A bonus ledger has no base pay or hourly allowances; it calculates only the pay entered per employee as an adjustment. Tax is the difference after combining with pay finalized in the same month (the regular ledger for that month must be finalized first). Social insurance is not calculated in a bonus ledger.",
+      "bonusNote": "This is a bonus ledger. Open each employee and enter the bonus amount under Adjustments, then calculate. Employees with no amount are blocked; exclude them with a reason.",
+      "exportDo": "Download Excel",
+      "exportFile": "payroll-ledger",
+      "exportDraft": "For review (not finalized)",
+      "exportBlocked": "Blocked"
     }
   },
   "side": {
@@ -3796,6 +3820,14 @@
     "correctedNote": "This payslip was corrected. Reason: {reason}",
     "toPrevious": "View the previous payslip",
     "oldVersion": "This is the payslip before correction. The corrected payslip is the valid one.",
-    "toCurrent": "View the corrected payslip"
+    "toCurrent": "View the corrected payslip",
+    "bonus": "Bonus",
+    "print": "Print · save as PDF",
+    "hCompany": "Company",
+    "hNo": "Payslip no.",
+    "hName": "Name (ID)",
+    "hGroup": "Branch",
+    "hPeriod": "Period",
+    "hPayDate": "Pay date"
   }
 }

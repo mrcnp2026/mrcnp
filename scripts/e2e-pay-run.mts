@@ -38,6 +38,11 @@ const cleanup = async () => {
   await db.from('payroll_employee_items').update({ active: false }).eq('employee_id', other!.id).eq('active', true);
   // 앞선 검사가 남긴 검사용 세액표(2090년대에만 적용)가 승인된 채 남아 있으면 거둔다
   await db.from('payroll_reference_versions').update({ state: 'WITHDRAWN' }).eq('state', 'APPROVED').eq('origin', 'manual').gte('valid_from', '2090-01-01').eq('review_reason', 'e2e');
+  // 검사 계정에게 공개 중인 명세서(앞선 검사가 남긴 것 포함)는 회수해 둔다 — 다음 검사의 「내 명세서」가 빈 상태에서 시작하게
+  const { data: evs } = await db.from('payroll_publication_events').select('id, statement_id, run_id, kind').eq('employee_id', other!.id).order('id');
+  const latest = new Map<string, { run_id: string; kind: string }>();
+  for (const e of evs ?? []) latest.set(e.statement_id as string, { run_id: e.run_id as string, kind: e.kind as string });
+  for (const [statementId, e] of latest) if (e.kind === 'PUBLISHED') await db.from('payroll_publication_events').insert({ statement_id: statementId, run_id: e.run_id, employee_id: other!.id, kind: 'UNPUBLISHED', reason: 'e2e 정리', actor_id: emp!.id });
   if (closeId) await db.from('attendance_closes').update({ state: 'REOPENED', reopened_by: emp!.id, reopened_at: new Date().toISOString(), reopen_reason: 'e2e 검사 끝' }).eq('id', closeId).eq('state', 'CLOSED');
 };
 await cleanup();
@@ -120,6 +125,8 @@ try {
   if (!closeId || !refId) throw new Error(`setup2: ${close.error?.message ?? ref.error?.message}`);
   const taxes = [84850, 67350, 32490, 26690, 22690, 18690, 14690, 11430, 8050, 4670, 1290]; // 검사용 값 (실제 세액표가 아니다)
   await db.from('payroll_tax_rows').insert(taxes.map((t, i) => ({ reference_version_id: refId, wage_from: 3000000, wage_to: 3020000, family_count: i + 1, base_tax: t })));
+  // 상여 검사용: 정규 급여 + 상여를 합친 금액이 드는 구간 (검사용 값)
+  await db.from('payroll_tax_rows').insert(taxes.map((t, i) => ({ reference_version_id: refId, wage_from: 3500000, wage_to: 3520000, family_count: i + 1, base_tax: t + 45150 })));
 
   page = await open(`/admin/payroll/runs/${runId}`);
   check(page.includes('다시 계산해야 검토 · 확정할 수 있습니다.'), '입력이 바뀌면 「오래됨」으로 알려 준다');
@@ -261,12 +268,55 @@ try {
   check(old.includes('정정되기 전의 명세서입니다.') && old.includes('2,916,670원'), '직원: 이전 명세서는 「정정 전」이라고 표시된 채 남아 있다');
   if (SHOTS) await q.screenshot({ path: path.join(SHOTS, 'payrun-7-myslip-corrected.png'), fullPage: true });
   check((await open(`/admin/payroll/runs/${runId}`)).includes('이 대장은 정정 2판으로 바뀌었습니다.'), '원본 화면에 정정됐다고 보인다');
+
+  // ── 엑셀 받기 ──
+  const xl = await p.evaluate(async (u) => { const r = await fetch(u); const b = new Uint8Array(await r.arrayBuffer()); return { status: r.status, type: r.headers.get('content-type') ?? '', head: Array.from(b.slice(0, 2)), size: b.length }; }, `/api/admin/payroll/runs/${run2Id}/export`);
+  check(xl.status === 200 && xl.type.includes('spreadsheetml') && xl.head[0] === 0x50 && xl.head[1] === 0x4b && xl.size > 5000, '대장 엑셀을 받을 수 있다', `${xl.status} ${xl.size}바이트`);
+  const xlDenied = await q.evaluate(async (u) => (await fetch(u)).status, `/api/admin/payroll/runs/${run2Id}/export`);
+  check(xlDenied === 403, '직원은 대장 엑셀을 받을 수 없다', String(xlDenied));
+
+  // ── 상여 대장: 같은 달에 확정한 급여와 합쳐 세금은 차액만 ──
+  check((await post('/api/admin/payroll/runs', { action: 'create', kind: 'BONUS', month: YM, title: 'e2e-상여' })).json.error === 'payroll_pay_date', '상여 대장은 지급일을 정해야 만들어진다');
+  const bMade = await post('/api/admin/payroll/runs', { action: 'create', kind: 'BONUS', month: YM, payDate: `${YM}-25`, title: 'e2e-상여' });
+  const bId = bMade.json.id as string;
+  const bApi = `/api/admin/payroll/runs/${bId}`;
+  const bRun = async () => (await db.from('payroll_runs').select('status, version, run_kind, sequence, current_generation_id').eq('id', bId).single()).data!;
+  let b = await bRun();
+  check(bMade.status === 200 && b.run_kind === 'BONUS' && b.sequence === 1, '상여 대장 만들기 (1차)');
+  for (const m of mem!.filter((x) => x.employee_id !== other!.id)) await post(bApi, { action: 'exclude', employeeId: m.employee_id, reason: 'e2e 검사 — 검사 계정만 계산' });
+  check((await post(bApi, { action: 'calculate', expectedVersion: b.version })).json.calculated?.blocked === 1, '상여 금액을 넣지 않으면 차단');
+  b = await bRun();
+  const { data: bs0 } = await db.from('payroll_statements').select('blockers').eq('generation_id', b.current_generation_id).eq('employee_id', other!.id).single();
+  check(((bs0?.blockers ?? []) as { code: string }[]).some((x) => x.code === 'no_bonus_amount'), '차단 사유: 상여 금액 없음');
+  check((await post(bApi, { action: 'override.add', employeeId: other!.id, itemCode: 'BONUS', kind: 'PAYMENT', amount: 500000, reason: 'e2e 상여' })).status === 200, '상여 금액을 조정으로 넣는다');
+  check((await post(bApi, { action: 'calculate', expectedVersion: b.version })).json.calculated?.ok === 1, '상여 계산');
+  b = await bRun();
+  const { data: bs } = await db.from('payroll_statements').select('id, pay_total, deduction_total, net_total, snapshot, blockers').eq('generation_id', b.current_generation_id).eq('employee_id', other!.id).single();
+  const { data: bl } = await db.from('payroll_statement_items').select('item_code, amount').eq('statement_id', bs!.id).order('item_code');
+  // 정규(정정 2판) 과세 3,010,000 · 소득세 84,850 · 지방 8,480 + 상여 500,000 → 묶음 과세 3,510,000의 세액 130,000 / 13,000 → 차액 45,150 / 4,520
+  check(JSON.stringify(bl?.map((l) => [l.item_code, Number(l.amount)])) === JSON.stringify([['BONUS', 500000], ['INCOME_TAX', 45150], ['LOCAL_TAX', 4520]]) && Number(bs!.net_total) === 450330, '상여 세금은 차액만: 소득세 45,150 · 지방소득세 4,520 → 실지급 450,330', JSON.stringify(bl));
+  check((bs!.snapshot as { prior: { taxable: number; incomeTax: number } }).prior.taxable === 3010000 && (bs!.snapshot as { prior: { incomeTax: number } }).prior.incomeTax === 84850, '앞선 명세로 정정 2판(가장 새 확정 판)을 썼다');
+  check(((bs!.blockers ?? []) as { code: string; warning?: boolean }[]).some((x) => x.code === 'insurance_not_calculated' && x.warning), '4대보험을 계산하지 않았다는 경고가 붙는다');
+  check(!(await db.from('payroll_statement_items').select('id').eq('statement_id', bs!.id).eq('item_code', 'BASE')).data?.length, '상여 대장에는 기본급 줄이 없다');
+  check((await post(bApi, { action: 'review', expectedVersion: b.version })).status === 200, '상여 검토');
+  b = await bRun();
+  check((await post(bApi, { action: 'finalize', expectedVersion: b.version })).status === 200, '상여 확정');
+  check((await post(bApi, { action: 'publish' })).json.publish?.published === 1, '상여 명세서 공개');
+  mine = await see('/punch/payslips');
+  check(mine.includes('450,330원') && mine.includes('상여') && mine.includes('2,911,670원'), '직원: 급여 명세서와 상여 명세서가 따로 보인다');
+  const bSlip = await see(`/punch/payslips/${bs!.id}`);
+  check(bSlip.includes('인쇄 · PDF로 저장') && bSlip.includes('명세 번호') && bSlip.includes('귀속 기간') && bSlip.includes(other!.name), '직원 명세서: 회사 · 명세 번호 · 귀속 기간 · 이름과 인쇄 버튼');
+  check(!(await open('/admin/payroll/runs')).includes('e2e-상여'), '검사용 상여 대장도 목록에 보이지 않는다');
+
+  // ── 예상 지급 · 공제 (오늘은 승인된 세액표가 없어 예상할 수 없다고 나와야 한다) ──
+  const prev = await open(`/admin/payroll/staff/${other!.id}`);
+  check(prev.includes('예상 지급 · 공제') && prev.includes('아래 이유로 예상할 수 없습니다.') && prev.includes('승인된 기준 자료가 없습니다'), '사원별 급여: 예상 지급 · 공제 칸 — 자료가 없으면 이유를 보여 준다');
   await ctx2.close();
 
   // ── 기록 · 권한 ──
-  const { data: audit } = await db.from('payroll_audit_events').select('action, detail').eq('run_id', runId);
+  const { data: audit } = await db.from('payroll_audit_events').select('action, detail').in('run_id', [runId, run2Id]);
   const acts = new Set((audit ?? []).map((a) => a.action));
-  check(['run.create', 'run.calculate', 'run.review', 'run.finalize', 'member.exclude', 'override.add', 'run.publish', 'statement.unpublish'].every((a) => acts.has(a)) && !JSON.stringify(audit).includes('3010000') && !JSON.stringify(audit).includes('2906670'), '급여 전용 기록에 누가 무엇을 했는지 남고, 금액은 적히지 않는다');
+  check(['run.create', 'run.calculate', 'run.review', 'run.finalize', 'member.exclude', 'override.add', 'run.publish', 'statement.unpublish', 'run.correct', 'run.export'].every((a) => acts.has(a)) && !JSON.stringify(audit).includes('3010000') && !JSON.stringify(audit).includes('2906670'), '급여 전용 기록에 누가 무엇을 했는지 남고, 금액은 적히지 않는다');
   await db.from('profiles').update({ can_view_payroll: false }).eq('id', emp!.id);
   check((await post('/api/admin/payroll/runs', { action: 'create', month: '2089-01' })).status === 403, '급여 담당이 아닌 관리자는 대장을 만들 수 없다');
   const denied = await open(`/admin/payroll/runs/${runId}/${other!.id}`);

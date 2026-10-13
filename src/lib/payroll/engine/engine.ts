@@ -43,6 +43,7 @@ export type EngineInput = {
   withholding: Withholding | null;
   overrides: EngineOverride[];
   prior?: { taxable: number; incomeTax: number; localTax: number } | null; // 상여: 같은 징수 묶음에서 앞서 낸 명세의 과세 합계와 세액
+  skipInsurance?: boolean; // 상여 대장: 4대보험을 여기서 계산하지 않는다(정기 급여에서 이미 냈거나 정산으로 맞춘다) — 경고로 알린다
 };
 
 export type LineKind = 'PAYMENT' | 'DEDUCTION' | 'EMPLOYER';
@@ -80,7 +81,8 @@ export function calculateStatement(input: EngineInput): EngineResult {
   };
 
   // ── 1. 계약 ──
-  if (!c) block('no_contract');
+  const regular = input.runKind === 'REGULAR'; // 상여 대장은 기본급 · 시간 수당을 만들지 않는다(직접 넣은 지급만)
+  if (!c && regular) block('no_contract');
   if (!tax) block('no_tax');
   let hourly: Dec | null = null; // 시간당 임금 — 끝수를 끊지 않은 값
   if (c) {
@@ -96,7 +98,7 @@ export function calculateStatement(input: EngineInput): EngineResult {
   };
 
   // ── 2. 지급 항목 ──
-  if (c) {
+  if (c && regular) {
     if (c.payType === 'HOURLY') {
       if (!time) block('no_attendance');
       else {
@@ -167,6 +169,7 @@ export function calculateStatement(input: EngineInput): EngineResult {
   }
 
   // ── 4. 보험 ──
+  if (tax && input.skipInsurance) warnings.push({ code: 'insurance_not_calculated' });
   if (tax) {
     const insure = (key: 'pension' | 'health' | 'employment', r: InsuranceRef | null): { employee: bigint; employer: bigint } | null => {
       const st = tax.insurance[key];
@@ -190,8 +193,9 @@ export function calculateStatement(input: EngineInput): EngineResult {
       const theirs = lines.find((l) => l.code === `${code}_EMPLOYER`)!;
       return { employee: BigInt(mine.amount), employer: BigInt(theirs.amount) };
     };
-    insure('pension', ref.pension);
-    const health = insure('health', ref.health);
+    const on = !input.skipInsurance;
+    if (on) insure('pension', ref.pension);
+    const health = on ? insure('health', ref.health) : null;
     if (health) {
       // 장기요양 = 건강보험료 × 비율 (보수에 비율을 곱하지 않는다)
       if (ref.ltcOfHealth === null) block('reference_missing', 'ltc');
@@ -200,10 +204,12 @@ export function calculateStatement(input: EngineInput): EngineResult {
         push({ code: 'LTC_EMPLOYER', kind: 'EMPLOYER', label: 'ltcEmployer', raw: mul(dec(health.employer), dec(ref.ltcOfHealth)), rounding: policy.rounding.insurance, quantity: dec(health.employer), factor: dec(ref.ltcOfHealth), trace: { of: 'HEALTH_EMPLOYER' } });
       }
     }
-    insure('employment', ref.employment);
+    if (on) insure('employment', ref.employment);
     // 산재보험은 사업주만 낸다 — 직원 실지급에서 빼지 않는다
     const acc = tax.insurance.accident;
-    if (acc.state === 'UNKNOWN') block('insurance_unknown', 'accident');
+    if (!on) {
+      // 상여 대장에서는 건너뛴다
+    } else if (acc.state === 'UNKNOWN') block('insurance_unknown', 'accident');
     else if (acc.state === 'YES') {
       // 산재 요율(업종별)이 없어도 직원 명세는 계산된다 — 사업주 부담 합계에서 빠진다는 것만 알린다
       if (ref.accidentEmployerRate === null) warnings.push({ code: 'employer_rate_missing', detail: 'accident' });
@@ -240,6 +246,7 @@ export function calculateStatement(input: EngineInput): EngineResult {
 
   // ── 7. 합계 · 검산 ──
   const pay = sum(lines, 'PAYMENT'), deduction = sum(lines, 'DEDUCTION'), employer = sum(lines, 'EMPLOYER');
+  if (!regular && pay === 0) block('no_bonus_amount'); // 상여 금액을 넣지 않은 직원
   if (pay < 0 || isNeg(dec(pay - deduction))) block('negative_net');
   if (blockers.length > 0) return { state: 'BLOCKED', lines: [], totals: null, blockers, warnings, engineVersion: ENGINE_VERSION };
   return { state: 'OK', lines, totals: { pay, deduction, net: pay - deduction, employer, taxable, insuranceBase: insurable }, blockers: [], warnings, engineVersion: ENGINE_VERSION };

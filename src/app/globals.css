@@ -166,3 +166,15 @@ button:not(:disabled):active, a:active, summary:active, [role='button']:active {
 .panel-in {
   animation: panel-in 200ms ease-out;
 }
+
+/* 인쇄(명세서를 PDF로 저장할 때): 메뉴 · 상단 줄 · 하단 탭 · 버튼은 빼고 본문만 */
+@media print {
+  header,
+  nav,
+  [data-noprint] {
+    display: none !important;
+  }
+  body {
+    background: white !important;
+  }
+}

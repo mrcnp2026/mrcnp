@@ -48,6 +48,7 @@ export default async function PayRunPage({ params }: { params: Promise<{ id: str
         <h1 className="flex flex-wrap items-center gap-2 text-2xl font-bold">
           {t('runTitle', { month: run.periodFrom.slice(0, 7) })}
           <Chip tone={TONE[run.status]}>{t(`status.${run.status}`)}</Chip>
+          {run.kind !== 'REGULAR' && <Chip tone="info">{t('kindSeq', { kind: t(`kind.${run.kind}`), n: run.sequence })}</Chip>}
           {run.isTest && <Chip>{t('practiceChip')}</Chip>}
         </h1>
         <p className="num pt-1 text-sm text-faint">
@@ -98,6 +99,12 @@ export default async function PayRunPage({ params }: { params: Promise<{ id: str
         </Card>
       )}
 
+      {run.kind === 'BONUS' && !final && <p className="rounded-card border border-border bg-surface p-3 text-sm text-muted">{t('bonusNote')}</p>}
+      {run.generationId && (
+        <a href={`/api/admin/payroll/runs/${run.id}/export`} className="inline-flex h-8 items-center gap-1 self-start rounded-button border border-nav bg-bg px-4 text-sm font-bold text-nav">
+          {t('exportDo')}
+        </a>
+      )}
       {run.generationId && (
         <dl className="grid gap-3 text-sm md:grid-cols-5">
           {[

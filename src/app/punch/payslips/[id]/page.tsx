@@ -6,7 +6,12 @@ import { notFound, redirect } from 'next/navigation';
 import { Card, CardTitle, Chip, PageShell } from '@/components/ui';
 import { OFFICE } from '@/config/office';
 import { getMe } from '@/lib/auth';
+import { BRAND } from '@/config/brand';
+import { groupPath } from '@/lib/org';
+import { loadOrgGroups } from '@/lib/org-data';
 import { loadMySlip } from '@/lib/payroll/publish-data';
+import { createAdminClient } from '@/lib/supabase/admin';
+import { PrintButton } from '@/app/admin/payroll/runs/RunForms';
 
 export default async function MyPayslipPage({ params }: { params: Promise<{ id: string }> }) {
   const me = await getMe();
@@ -16,6 +21,7 @@ export default async function MyPayslipPage({ params }: { params: Promise<{ id: 
   const found = await loadMySlip(me.id, id, OFFICE.practiceMode);
   if (!found) notFound();
   const { slip, lines, previous, replacedBy } = found;
+  const [{ data: mine }, groups] = await Promise.all([createAdminClient().from('profiles').select('group_id').eq('id', me.id).maybeSingle(), loadOrgGroups()]);
   const won = (v: number) => t('won', { n: f.number(v) });
   const num = (v: string | null) => (v === null ? null : f.number(Number(v), { maximumFractionDigits: 4 }));
   const name = (code: string, fallback: string) => (t.has(`line.${code}`) ? t(`line.${code}`) : fallback);
@@ -29,17 +35,26 @@ export default async function MyPayslipPage({ params }: { params: Promise<{ id: 
 
   return (
     <PageShell>
-      <Link href="/punch/payslips" className="inline-flex min-h-9 items-center self-start text-sm font-medium text-muted">
+      <Link href="/punch/payslips" data-noprint className="inline-flex min-h-9 items-center self-start text-sm font-medium text-muted">
         ‹ {t('title')}
       </Link>
       <div>
         <h1 className="num flex flex-wrap items-center gap-2 text-2xl font-bold">
           {t('monthOf', { month: slip.month })}
           {slip.revision > 1 && <Chip tone="warn">{t('corrected', { n: slip.revision })}</Chip>}
+          {slip.kind === 'BONUS' && <Chip tone="info">{t('bonus')}</Chip>}
           {slip.isTest && <Chip>{t('practice')}</Chip>}
         </h1>
-        <p className="num pt-1 text-sm text-faint">{me.name} · {t('payDate', { date: slip.payDate })}</p>
+        <dl className="num grid gap-x-6 gap-y-1 pt-2 text-sm md:grid-cols-2">
+          {([['hCompany', BRAND.name], ['hNo', slip.no], ['hName', `${me.name} (${me.employeeNo ?? ''})`], ['hGroup', groupPath(groups, mine?.group_id) ?? ''], ['hPeriod', `${slip.periodFrom} ~ ${slip.periodTo}`], ['hPayDate', slip.payDate]] as const).map(([k, v]) => (
+            <div key={k} className="flex justify-between gap-3">
+              <dt className="text-muted">{t(k)}</dt>
+              <dd>{v}</dd>
+            </div>
+          ))}
+        </dl>
       </div>
+      <PrintButton label={t('print')} />
       {replacedBy && (
         <p className="rounded-card border border-warn bg-warn-tint p-3 text-sm text-warn">
           {t('oldVersion')}{' '}

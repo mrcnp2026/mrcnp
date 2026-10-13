@@ -19,7 +19,7 @@ import { calculateStatement, ENGINE_VERSION, type Blocker, type EngineInput, typ
 import { makeWithholding, referenceFrom, TEMP_INSURANCE_ROUNDING } from './engine/inputs';
 import { asChildRule, asTaxRules, pickAt, type ReferenceKind, type TaxBand } from './reference';
 import { DEFAULT_LEDGER, payDateFor, type AllowancePolicy, type Ledger } from './settings';
-import { payrollAudit, type ContractRow, type TaxRow } from './staff-data';
+import { loadStaffPay, payrollAudit, type ContractRow, type TaxRow } from './staff-data';
 
 const db = () => createAdminClient();
 type Row = Record<string, unknown>;
@@ -59,7 +59,7 @@ async function ledger(): Promise<Ledger> {
  * 그 달의 정규 대장을 만든다(초안). 연습/운영은 서버가 정한다.
  * 대상: 켜져 있는 직원 + 그 달에 걸친 계약이 있는 직원(퇴사자 포함). 기록이 없다는 이유로 빼지 않는다. 뺄 때는 사유를 적어 따로 뺀다.
  */
-export async function createRun(args: { ym: string; practice: boolean; me: Me; requestId?: string }): Promise<RunRow> {
+export async function createRun(args: { ym: string; kind?: 'REGULAR' | 'BONUS'; payDate?: string; title?: string | null; practice: boolean; me: Me; requestId?: string }): Promise<RunRow> {
   const c = db();
   const from = `${args.ym}-01`;
   const [y, m] = args.ym.split('-').map(Number);
@@ -72,12 +72,19 @@ export async function createRun(args: { ym: string; practice: boolean; me: Me; r
   const contracted = new Set((cons ?? []).filter((x) => x.valid_to === null || (x.valid_to as string) > from).map((x) => x.employee_id as string));
   const members = (people ?? []).filter((p) => contracted.has(p.id as string) || (p.active && !(p.employee_no as string | null)?.startsWith('e2e-'))).map((p) => p.id as string);
   if (members.length === 0) throw new ApiError(409, 'payroll_no_members');
-  const { data, error } = await c.from('payroll_runs').insert({ run_kind: 'REGULAR', period_from: from, period_to: to, pay_date: payDateFor(args.ym, l), is_test: args.practice, created_by: args.me.id }).select('*').single();
+  const kind = args.kind ?? 'REGULAR';
+  // 상여는 한 달에 여러 번 줄 수 있다 — 차수를 올린다. 정규 대장은 한 달에 하나(정정은 판 번호로)
+  let sequence = 1;
+  if (kind === 'BONUS') {
+    const { data: prev } = await c.from('payroll_runs').select('sequence').eq('run_kind', 'BONUS').eq('period_from', from).eq('period_to', to).eq('is_test', args.practice).order('sequence', { ascending: false }).limit(1);
+    sequence = ((prev?.[0]?.sequence as number | undefined) ?? 0) + 1;
+  }
+  const { data, error } = await c.from('payroll_runs').insert({ run_kind: kind, title: args.title ?? null, period_from: from, period_to: to, pay_date: args.payDate ?? payDateFor(args.ym, l), sequence, is_test: args.practice, created_by: args.me.id }).select('*').single();
   if (error?.code === '23505') throw new ApiError(409, 'payroll_run_exists');
   if (error || !data) fail('createRun', error);
   const ins = await c.from('payroll_run_members').insert(members.map((id) => ({ run_id: data!.id, employee_id: id })));
   if (ins.error) fail('createRun.members', ins.error);
-  await payrollAudit({ actorId: args.me.id, action: 'run.create', table: 'payroll_runs', subjectId: data!.id as string, runId: data!.id as string, requestId: args.requestId, detail: { month: args.ym, members: members.length, practice: args.practice } });
+  await payrollAudit({ actorId: args.me.id, action: 'run.create', table: 'payroll_runs', subjectId: data!.id as string, runId: data!.id as string, requestId: args.requestId, detail: { month: args.ym, kind, sequence, members: members.length, practice: args.practice } });
   return toRun(data!);
 }
 
@@ -102,25 +109,9 @@ async function loadBands(referenceId: string): Promise<TaxBand[]> {
   return [...by.values()].filter((b) => b.taxes.length === 11 && b.taxes.every((t) => typeof t === 'number')).sort((a, b) => a.wageFrom - b.wageFrom);
 }
 
-async function buildInputs(run: RunRow): Promise<Built> {
-  const c = db();
-  const from = run.periodFrom, last = prevDay(run.periodTo), ym = from.slice(0, 7);
-  const [{ data: mem }, { data: cons }, { data: taxes }, { data: assigns }, { data: closes }, { data: ovs }, { data: people }, { data: emps }, items, policies, refs, l, period, confirms] = await Promise.all([
-    c.from('payroll_run_members').select('employee_id, inclusion_state').eq('run_id', run.id),
-    c.from('payroll_contract_versions').select('*').eq('status', 'active'),
-    c.from('payroll_employee_tax_versions').select('*').eq('status', 'active'),
-    c.from('payroll_employee_items').select('*').eq('active', true),
-    c.from('attendance_closes').select('id, employee_id, input_hash').eq('state', 'CLOSED').eq('is_test', run.isTest).eq('period_from', from).eq('period_to', run.periodTo),
-    c.from('payroll_statement_overrides').select('id, employee_id, item_code, kind, proposed_amount').eq('run_id', run.id).eq('active', true),
-    c.from('profiles').select('id, name, employee_no, joined_on'),
-    c.from('staff_employment_periods').select('employee_id, starts_on, ends_on').eq('active', true),
-    loadItems(),
-    loadPolicies('allowance.'),
-    loadReferences(REF_KINDS, ['APPROVED']),
-    ledger(),
-    loadPeriod(from, last, run.isTest),
-    loadConfirms(from, last, run.isTest),
-  ]);
+/** 그 날에 적용되는 회사 정책 · 승인된 기준 자료 · 지급/공제 항목 — 대장 계산과 예상 미리 보기가 같이 쓴다 */
+export async function loadCalcBasis(last: string) {
+  const [items, policies, refs, l] = await Promise.all([loadItems(), loadPolicies('allowance.'), loadReferences(REF_KINDS, ['APPROVED']), ledger()]);
   // 회사 정책 · 기준 자료 (귀속 기간의 마지막 날에 적용되는 것)
   const premium = (kind: string, key: keyof AllowancePolicy = 'premium') => {
     const p = policies.find((x) => x.kind === `allowance.${kind}` && x.inUse);
@@ -129,7 +120,7 @@ async function buildInputs(run: RunRow): Promise<Built> {
   };
   const policy: EngineInput['policy'] = { overtimePremium: premium('overtime'), nightPremium: premium('night'), holidayPremium: premium('holiday'), holidayOver8Premium: premium('holiday', 'premiumOver8h'), rounding: { pay: { mode: 'HALF_UP', unit: 1 }, insurance: TEMP_INSURANCE_ROUNDING.contribution } };
   const refAt = (kind: ReferenceKind) => pickAt(refs.filter((r) => r.kind === kind), last);
-  const bundle: Built['bundle'] = {};
+  const bundle: Record<string, { id: string; hash: string }> = {};
   const payloads: Parameters<typeof referenceFrom>[0] = {};
   for (const k of REF_KINDS) {
     const r = refAt(k);
@@ -143,6 +134,29 @@ async function buildInputs(run: RunRow): Promise<Built> {
   const rules = asTaxRules(table?.payload);
   const withholding = table && rules ? makeWithholding({ bands: await loadBands(table.id), rules, childRule: asChildRule(refAt('income-tax.child-adjust')?.payload) }) : null;
   const insuranceBasis = l.insuranceBasis === 'REPORTED_BASE' ? 'REPORTED' : l.insuranceBasis;
+  return { items, policy, reference, missing, bundle, withholding, insuranceBasis: insuranceBasis as EngineInput['insuranceBasis'] };
+}
+
+async function buildInputs(run: RunRow): Promise<Built> {
+  const c = db();
+  const from = run.periodFrom, last = prevDay(run.periodTo), ym = from.slice(0, 7);
+  const [{ data: mem }, { data: cons }, { data: taxes }, { data: assigns }, { data: closes }, { data: ovs }, { data: people }, { data: emps }, basis, period, confirms] = await Promise.all([
+    c.from('payroll_run_members').select('employee_id, inclusion_state').eq('run_id', run.id),
+    c.from('payroll_contract_versions').select('*').eq('status', 'active'),
+    c.from('payroll_employee_tax_versions').select('*').eq('status', 'active'),
+    c.from('payroll_employee_items').select('*').eq('active', true),
+    c.from('attendance_closes').select('id, employee_id, input_hash').eq('state', 'CLOSED').eq('is_test', run.isTest).eq('period_from', from).eq('period_to', run.periodTo),
+    c.from('payroll_statement_overrides').select('id, employee_id, item_code, kind, proposed_amount').eq('run_id', run.id).eq('active', true),
+    c.from('profiles').select('id, name, employee_no, joined_on'),
+    c.from('staff_employment_periods').select('employee_id, starts_on, ends_on').eq('active', true),
+    loadCalcBasis(last),
+    loadPeriod(from, last, run.isTest),
+    loadConfirms(from, last, run.isTest),
+  ]);
+  const { items, policy, reference, missing, bundle, withholding, insuranceBasis } = basis;
+
+  const bonus = run.kind === 'BONUS';
+  const priorOf = bonus ? await loadPrior(run) : null;
 
   const contracts = (cons ?? []) as Row[];
   const taxRows = (taxes ?? []) as Row[];
@@ -166,12 +180,12 @@ async function buildInputs(run: RunRow): Promise<Built> {
     // 달 중간에 입사 · 퇴사했거나 계약이 달 중간에 시작됐으면 일할 계산이 필요하다 — 자동으로 나누지 않는다
     const joined = (person?.joined_on as string | null) ?? null;
     const left = (emps ?? []).filter((e) => e.employee_id === id && e.ends_on !== null && (e.ends_on as string) >= from && (e.ends_on as string) < last);
-    const partialMonth = (!!joined && joined > from && joined <= last) || left.length > 0 || (!!con && con.validFrom > from);
+    const partialMonth = !bonus && ((!!joined && joined > from && joined <= last) || left.length > 0 || (!!con && con.validFrom > from));
     // 근태: 마감한 달만
     const close = (closes ?? []).find((x) => x.employee_id === id);
     let time: EngineInput['time'] = null;
     let facts: Row | null = null;
-    if (close && contract) {
+    if (close && contract && !bonus) {
       if (!period.rule) pre.push({ code: 'no_work_rule' });
       else {
         const p = period.people.find((x) => x.id === id);
@@ -198,7 +212,8 @@ async function buildInputs(run: RunRow): Promise<Built> {
     }
     // 개인 항목 (그 달 마지막 날에 붙어 있는 것)
     const engineItems: EngineItem[] = [];
-    for (const a of ((assigns ?? []) as Row[]).filter((x) => x.employee_id === id && (x.valid_from as string) <= last && (x.valid_to === null || (x.valid_to as string) > last))) {
+    // 상여 대장에는 매달 붙는 개인 항목을 넣지 않는다 — 상여 금액은 조정(직접 넣는 지급)으로만 들어온다
+    for (const a of bonus ? [] : ((assigns ?? []) as Row[]).filter((x) => x.employee_id === id && (x.valid_from as string) <= last && (x.valid_to === null || (x.valid_to as string) > last))) {
       const it = itemAt(a.item_code as string);
       if (!it) { pre.push({ code: 'item_missing', detail: a.item_code as string }); continue; }
       const amount = a.amount === null ? it.defaultAmount : Number(a.amount);
@@ -207,11 +222,50 @@ async function buildInputs(run: RunRow): Promise<Built> {
       engineItems.push({ code: it.code, kind: it.kind, label: it.koName, amount, taxable, exemptLimit: it.taxExemptLimit, insurable: taxable !== 'EXEMPT', itemVersionId: it.id });
     }
     const overrides: EngineOverride[] = ((ovs ?? []) as Row[]).filter((o) => o.employee_id === id).map((o) => ({ id: o.id as string, itemCode: o.item_code as string, kind: o.kind as 'PAYMENT' | 'DEDUCTION', amount: Number(o.proposed_amount), label: itemAt(o.item_code as string)?.koName }));
-    const input: MemberInput['input'] = { runKind: 'REGULAR', contract, tax, time, partialMonth, items: engineItems, policy, reference, insuranceBasis, overrides, prior: null };
-    members.push({ employeeId: id, input, pre, closeId: (close?.id as string | undefined) ?? null, contractId: (con?.id as string | undefined) ?? null, taxId: (taxRow?.id as string | undefined) ?? null, snapshot: { contract, tax, time, attendance: facts, items: engineItems, overrides, partialMonth, closeHash: close?.input_hash ?? null } });
+    // 상여: 같은 달에 앞서 확정한 명세(정규 + 앞 차수 상여)의 과세 합계와 세액을 넘긴다 → 세금은 차액만. 4대보험은 상여 대장에서 계산하지 않는다(경고로 알린다)
+    const prior = bonus ? (priorOf!.get(id) ?? (priorOf!.has('*') ? { taxable: 0, incomeTax: 0, localTax: 0 } : null)) : null;
+    const input: MemberInput['input'] = { runKind: bonus ? 'BONUS' : 'REGULAR', contract, tax, time, partialMonth, items: engineItems, policy, reference, insuranceBasis, overrides, prior, skipInsurance: bonus };
+    members.push({ employeeId: id, input, pre, closeId: (close?.id as string | undefined) ?? null, contractId: (con?.id as string | undefined) ?? null, taxId: (taxRow?.id as string | undefined) ?? null, snapshot: { contract, tax, time, attendance: facts, items: engineItems, overrides, partialMonth, prior, closeHash: close?.input_hash ?? null } });
   }
   const inputHash = sha({ engine: ENGINE_VERSION, policy, insuranceBasis, bundle, members: members.map((x) => ({ id: x.employeeId, pre: x.pre, close: x.closeId, contract: x.contractId, tax: x.taxId, s: x.snapshot })) });
   return { members, withholding, bundle, missing, inputHash };
+}
+
+/**
+ * 상여의 세금 차액 계산에 쓰는 「앞선 명세」: 같은 달 · 같은 모드에서 확정한 정규 대장(가장 새 확정 판)과 앞 차수 상여 대장의 과세 합계 · 소득세 · 지방소득세.
+ * 확정한 정규 대장이 없으면 빈 Map(= 전원 차단: 앞선 명세를 모른다). 있으면 '*' 표시를 넣고, 그 대장에 명세가 없는 직원은 0으로 본다(그 달 정규 급여가 없던 사람).
+ * 과세 합계는 명세서 스냅샷에 적혀 있어야 한다 — 없으면(예전 계산) 그 직원은 차단된다.
+ */
+async function loadPrior(run: RunRow): Promise<Map<string, { taxable: number; incomeTax: number; localTax: number }>> {
+  const c = db();
+  const out = new Map<string, { taxable: number; incomeTax: number; localTax: number }>();
+  const { data: runs, error } = await c.from('payroll_runs').select('id, run_kind, sequence, revision, current_generation_id').eq('period_from', run.periodFrom).eq('period_to', run.periodTo).eq('is_test', run.isTest).eq('status', 'FINALIZED').in('run_kind', ['REGULAR', 'BONUS']);
+  if (error) fail('loadPrior', error);
+  // 대장(종류 · 차수)마다 가장 새 확정 판만
+  const latest = new Map<string, Row>();
+  for (const r of (runs ?? []) as Row[]) {
+    if (r.run_kind === 'BONUS' && (r.sequence as number) >= run.sequence) continue;
+    const k = `${r.run_kind}:${r.sequence}`;
+    if (!latest.has(k) || (latest.get(k)!.revision as number) < (r.revision as number)) latest.set(k, r);
+  }
+  if (![...latest.values()].some((r) => r.run_kind === 'REGULAR')) return out;
+  out.set('*', { taxable: 0, incomeTax: 0, localTax: 0 });
+  const gens = [...latest.values()].map((r) => r.current_generation_id as string).filter(Boolean);
+  const { data: sts } = await c.from('payroll_statements').select('id, employee_id, snapshot').in('generation_id', gens).eq('state', 'OK');
+  const ids = (sts ?? []).map((s) => s.id as string);
+  const { data: lines } = ids.length ? await c.from('payroll_statement_items').select('statement_id, item_code, amount').in('statement_id', ids).in('item_code', ['INCOME_TAX', 'LOCAL_TAX']).eq('kind', 'DEDUCTION') : { data: [] as Row[] };
+  const missing = new Set<string>();
+  for (const s of sts ?? []) {
+    const id = s.employee_id as string;
+    const taxable = ((s.snapshot as Row | null)?.totals as { taxable?: number } | null | undefined)?.taxable;
+    if (typeof taxable !== 'number') { missing.add(id); continue; }
+    const cur = out.get(id) ?? { taxable: 0, incomeTax: 0, localTax: 0 };
+    const of = (code: string) => ((lines ?? []) as Row[]).filter((l) => l.statement_id === s.id && l.item_code === code).reduce((a, l) => a + Number(l.amount), 0);
+    out.set(id, { taxable: cur.taxable + taxable, incomeTax: cur.incomeTax + of('INCOME_TAX'), localTax: cur.localTax + of('LOCAL_TAX') });
+  }
+  for (const id of missing) out.delete(id);
+  if (missing.size > 0) out.delete('*'); // 과세 합계를 모르는 명세가 섞여 있으면 「없던 사람은 0」으로 보지 않는다
+  return out;
 }
 
 /** 한 사람 계산. 근태 쪽에서 이미 막힌 것이 있으면 계산 모듈의 차단 사유와 합친다 */
@@ -254,7 +308,7 @@ export async function calculateRun(args: { id: string; expectedVersion: number; 
       hashes.push(resultHash);
       const { data: st, error } = await c.from('payroll_statements').insert({
         generation_id: genId, run_id: run.id, employee_id: m.employeeId, close_id: m.closeId, contract_id: m.contractId, tax_id: m.taxId, state: r.state, blockers: [...r.blockers, ...r.warnings.map((w) => ({ ...w, warning: true }))],
-        snapshot: m.snapshot, reference_bundle: built.bundle, pay_total: r.totals?.pay ?? null, deduction_total: r.totals?.deduction ?? null, net_total: r.totals?.net ?? null, employer_total: r.totals?.employer ?? null, result_hash: resultHash,
+        snapshot: { ...m.snapshot, totals: r.totals ? { taxable: r.totals.taxable, insuranceBase: r.totals.insuranceBase } : null }, reference_bundle: built.bundle, pay_total: r.totals?.pay ?? null, deduction_total: r.totals?.deduction ?? null, net_total: r.totals?.net ?? null, employer_total: r.totals?.employer ?? null, result_hash: resultHash,
       }).select('id').single();
       if (error || !st) fail('calculateRun.statement', error);
       if (r.state === 'OK') {
@@ -355,6 +409,37 @@ export async function withdrawOverride(args: { id: string; overrideId: string; m
   if (error) fail('withdrawOverride', error);
   if (!data?.length) throw new ApiError(404, 'not_found');
   await payrollAudit({ actorId: args.me.id, action: 'override.withdraw', table: 'payroll_statement_overrides', subjectId: args.overrideId, runId: run.id, employeeId: data[0].employee_id as string, requestId: args.requestId });
+}
+
+// ── 예상 지급 · 공제 (대장을 만들지 않는다) ──
+/**
+ * 그 날의 계약 · 세무 · 개인 항목 · 승인된 기준 자료만으로 한 달 치를 계산해 본다. 근태는 넣지 않는다(연장 · 야간 · 휴일 0, 결근 없음으로 본 값).
+ * 아무것도 저장하지 않고, 정식 대장을 만들거나 확정하지 않는다.
+ */
+export async function previewPay(employeeId: string, date: string): Promise<EngineResult> {
+  const [pay, basis] = await Promise.all([loadStaffPay(employeeId), loadCalcBasis(date)]);
+  const con = versionAt(pay.contracts, date);
+  const tax = versionAt(pay.taxes, date);
+  const pre: Blocker[] = [];
+  const items: EngineItem[] = [];
+  for (const a of pay.items.filter((x) => x.validFrom <= date && (x.validTo === null || x.validTo > date))) {
+    const it = basis.items.find((x) => x.code === a.itemCode && x.inUse && x.validFrom <= date);
+    const amount = a.amount ?? it?.defaultAmount ?? null;
+    if (!it) pre.push({ code: 'item_missing', detail: a.itemCode });
+    else if (amount === null) pre.push({ code: 'item_amount_missing', detail: it.code });
+    else items.push({ code: it.code, kind: it.kind, label: it.koName, amount, taxable: it.taxTreatment === 'EXEMPT' ? 'EXEMPT' : it.taxTreatment === 'PARTIAL' ? 'PARTIAL' : 'TAXABLE', exemptLimit: it.taxExemptLimit, insurable: it.taxTreatment !== 'EXEMPT', itemVersionId: it.id });
+  }
+  const one = (k: 'pension' | 'health' | 'employment' | 'accident') => ({ state: tax!.insurance[k].state, reportedWage: tax!.insurance[k].reportedWage });
+  const r = calculateStatement({
+    runKind: 'REGULAR',
+    contract: con ? { payType: con.payType, amount: con.amount, monthlyHours: con.monthlyHours, annualDivisor: con.annualDivisor, included: { overtimeHours: con.included.overtimeHours, holidayHours: con.included.holidayHours } } : null,
+    tax: tax ? { withholdingRatio: tax.withholdingRatio, familyCount: tax.familyCount, childCount: tax.childCount, insurance: { pension: one('pension'), health: one('health'), employment: one('employment'), accident: one('accident') }, studentLoan: tax.studentLoan } : null,
+    // 시급제는 일한 시간을 모르면 예상할 수 없다 → 근태 없음으로 차단된다. 월급 · 연봉제는 시간 0으로 본다
+    time: con && con.payType !== 'HOURLY' ? { workedMinutes: 0, overtimeMinutes: 0, nightMinutes: 0, holidayMinutes: 0, holidayOver8Minutes: 0, paidLeaveMinutes: 0 } : null,
+    partialMonth: false, items, policy: basis.policy, reference: basis.reference, insuranceBasis: basis.insuranceBasis, withholding: basis.withholding, overrides: [], prior: null,
+  });
+  if (pre.length === 0) return r;
+  return { state: 'BLOCKED', lines: [], totals: null, blockers: [...pre, ...r.blockers], warnings: r.warnings, engineVersion: r.engineVersion };
 }
 
 // ── 정정 판 ──

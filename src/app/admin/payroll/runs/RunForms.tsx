@@ -29,31 +29,55 @@ function useRun(url: string) {
   return { busy, err, send, router };
 }
 
-export function RunCreate({ months, live }: { months: string[]; live: boolean }) {
+export function RunCreate({ months, bonusMonths, today, live }: { months: string[]; bonusMonths: string[]; today: string; live: boolean }) {
   const t = useTranslations('admin.payRuns');
   const { busy, err, send, router } = useRun('/api/admin/payroll/runs');
+  const [kind, setKind] = useState<'REGULAR' | 'BONUS'>(months.length > 0 ? 'REGULAR' : 'BONUS');
+  const list = kind === 'REGULAR' ? months : bonusMonths;
   return (
     <form
       className="flex flex-wrap items-end gap-3 text-sm"
       onSubmit={async (e) => {
         e.preventDefault();
-        const r = await send<{ id: string }>({ action: 'create', month: new FormData(e.currentTarget).get('month'), live });
+        const f = new FormData(e.currentTarget);
+        const r = await send<{ id: string }>({ action: 'create', kind, month: f.get('month'), payDate: kind === 'BONUS' ? f.get('payDate') : undefined, title: kind === 'BONUS' ? f.get('title') : undefined, live });
         if (r) router.push(`/admin/payroll/runs/${r.id}`);
       }}
     >
       <label className="flex flex-col gap-1">
+        <span className="font-bold">{t('fKind')}</span>
+        <select name="kind" value={kind} onChange={(e) => setKind(e.target.value as 'REGULAR' | 'BONUS')} className={field}>
+          <option value="REGULAR">{t('kind.REGULAR')}</option>
+          <option value="BONUS">{t('kind.BONUS')}</option>
+        </select>
+      </label>
+      <label className="flex flex-col gap-1">
         <span className="font-bold">{t('fMonth')}</span>
         <select name="month" className={field}>
-          {months.map((m) => (
+          {list.map((m) => (
             <option key={m} value={m}>
               {m}
             </option>
           ))}
         </select>
       </label>
-      <Button type="submit" size="sm" disabled={busy}>
+      {kind === 'BONUS' && (
+        <>
+          <label className="flex flex-col gap-1">
+            <span className="font-bold">{t('fPayDate')}</span>
+            <input name="payDate" type="date" required defaultValue={today} className={field} />
+          </label>
+          <label className="flex flex-col gap-1">
+            <span className="font-bold">{t('fTitle')}</span>
+            <input name="title" maxLength={80} className={field} autoComplete="off" />
+          </label>
+        </>
+      )}
+      <Button type="submit" size="sm" disabled={busy || list.length === 0}>
         {t('create')}
       </Button>
+      {kind === 'REGULAR' && months.length === 0 && <span className="text-faint">{t('createNone')}</span>}
+      {kind === 'BONUS' && <p className="basis-full text-xs text-faint">{t('bonusHint')}</p>}
       {err && <ErrorNote code={err.code} requestId={err.requestId} namespace="admin.payRuns" />}
     </form>
   );
@@ -307,5 +331,14 @@ export function CorrectionStart({ id }: { id: string }) {
       </span>
       {err && <ErrorNote code={err.code} requestId={err.requestId} namespace="admin.payRuns" />}
     </form>
+  );
+}
+
+/** 인쇄 — 브라우저의 인쇄 창을 연다(거기서 「PDF로 저장」을 고를 수 있다). 메뉴 · 버튼은 인쇄에 나오지 않는다 */
+export function PrintButton({ label }: { label: string }) {
+  return (
+    <button type="button" data-noprint onClick={() => window.print()} className="inline-flex h-8 items-center self-start rounded-button border border-border bg-bg px-3 text-sm font-bold text-muted">
+      {label}
+    </button>
   );
 }

@@ -9,6 +9,7 @@ import { groupPath } from '@/lib/org';
 import { loadOrgGroups } from '@/lib/org-data';
 import { INSURERS, referenceHourly, setupGaps, versionAt } from '@/lib/payroll/contract';
 import { loadItems } from '@/lib/payroll/data';
+import { previewPay } from '@/lib/payroll/run-data';
 import { loadStaffPay } from '@/lib/payroll/staff-data';
 import { createAdminClient } from '@/lib/supabase/admin';
 import { toKstDate } from '@/lib/time';
@@ -37,6 +38,11 @@ export default async function StaffPayDetailPage({ params }: { params: Promise<{
   const usable = items.filter((x) => x.inUse && (x.validTo === null || x.validTo > today));
   const itemName = (code: string) => items.find((x) => x.code === code)?.koName ?? code;
   const hourly = contract ? referenceHourly(contract) : null;
+  // 예상 지급 · 공제 — 계약만으로 한 달 치를 계산해 본 값. 대장을 만들지 않는다
+  const [preview, tr] = await Promise.all([previewPay(id, today), getTranslations('admin.payRuns')]);
+  const dk = (d: string) => d.replace(/[.-]/g, '_');
+  const whyNot = (b: { code: string; detail?: string }) => (tr.has(`blocker.${b.code}`) ? tr(`blocker.${b.code}`, { detail: b.detail ? (tr.has(`detail.${dk(b.detail)}`) ? tr(`detail.${dk(b.detail)}`) : b.detail) : '' }) : b.code);
+  const lineName = (code: string, fallback: string) => (tr.has(`line.${code}`) ? tr(`line.${code}`) : (items.find((x) => x.code === code)?.koName ?? fallback));
 
   return (
     <PageShell wide>
@@ -110,6 +116,44 @@ export default async function StaffPayDetailPage({ params }: { params: Promise<{
           <ul className="num mt-4 flex flex-col gap-1 border-t border-border pt-3 text-xs text-faint">
             {pay.taxes.map((x) => (
               <li key={x.id}>{t('taxHistory', { n: x.version, from: x.validFrom, to: x.validTo ?? '', who: nameOf.get(x.createdBy) ?? '', at: day(x.createdAt), reason: x.reason ?? '' })}</li>
+            ))}
+          </ul>
+        )}
+      </Card>
+
+      <Card>
+        <CardTitle aside={<Chip tone="info">{t('previewChip')}</Chip>}>{t('previewTitle')}</CardTitle>
+        <p className="pt-1 text-sm text-faint">{t('previewIntro')}</p>
+        {preview.state === 'OK' ? (
+          <div className="grid gap-4 pt-3 text-sm md:grid-cols-2">
+            {(['PAYMENT', 'DEDUCTION'] as const).map((kind) => (
+              <dl key={kind} className="num flex flex-col gap-1">
+                <dt className="font-bold">{t(kind === 'PAYMENT' ? 'kindPay' : 'kindDeduct')}</dt>
+                {preview.lines.filter((l) => l.kind === kind).map((l, i) => (
+                  <div key={`${l.code}${i}`} className="flex justify-between gap-3">
+                    <dt className="text-muted">{lineName(l.code, l.label)}</dt>
+                    <dd>{won(l.amount)}</dd>
+                  </div>
+                ))}
+                <div className="flex justify-between gap-3 border-t border-border pt-1 font-bold">
+                  <dt>{t('previewSum')}</dt>
+                  <dd>{won(kind === 'PAYMENT' ? preview.totals.pay : preview.totals.deduction)}</dd>
+                </div>
+              </dl>
+            ))}
+            <p className="num flex justify-between gap-3 rounded-button bg-surface p-3 text-base font-bold md:col-span-2">
+              <span>{t('previewNet')}</span>
+              <span>{won(preview.totals.net)}</span>
+            </p>
+            {preview.warnings.map((w, i) => (
+              <p key={i} className="text-xs text-muted md:col-span-2">{whyNot(w)}</p>
+            ))}
+          </div>
+        ) : (
+          <ul className="flex flex-col gap-1 pt-3 text-sm text-warn">
+            <li className="font-bold">{t('previewBlocked')}</li>
+            {preview.blockers.map((b, i) => (
+              <li key={i}>{whyNot(b)}</li>
             ))}
           </ul>
         )}
