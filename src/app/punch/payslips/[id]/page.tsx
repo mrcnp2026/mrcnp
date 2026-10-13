@@ -54,7 +54,12 @@ export default async function MyPayslipPage({ params }: { params: Promise<{ id: 
           ))}
         </dl>
       </div>
-      <PrintButton label={t('print')} />
+      <div data-noprint className="flex flex-wrap gap-2">
+        <a href={`/api/payslips/${slip.id}/pdf`} className="inline-flex h-8 items-center rounded-button bg-primary px-3 text-sm font-bold text-on-primary">
+          {t('pdf')}
+        </a>
+        <PrintButton label={t('print')} />
+      </div>
       {replacedBy && (
         <p className="rounded-card border border-warn bg-warn-tint p-3 text-sm text-warn">
           {t('oldVersion')}{' '}

@@ -308,6 +308,37 @@ try {
   check(bSlip.includes('인쇄 · PDF로 저장') && bSlip.includes('명세 번호') && bSlip.includes('귀속 기간') && bSlip.includes(other!.name), '직원 명세서: 회사 · 명세 번호 · 귀속 기간 · 이름과 인쇄 버튼');
   check(!(await open('/admin/payroll/runs')).includes('e2e-상여'), '검사용 상여 대장도 목록에 보이지 않는다');
 
+  // ── 명세서 PDF ──
+  const pdfOf = (pg: typeof p, u: string) => pg.evaluate(async (url) => { const res = await fetch(url); const b = new Uint8Array(await res.arrayBuffer()); return { status: res.status, type: res.headers.get('content-type') ?? '', head: String.fromCharCode(...b.slice(0, 5)), size: b.length, name: decodeURIComponent(res.headers.get('content-disposition') ?? ''), cache: res.headers.get('cache-control') ?? '' }; }, u);
+  const myPdf = await pdfOf(q, `/api/payslips/${sNew!.id}/pdf`);
+  check(myPdf.status === 200 && myPdf.type === 'application/pdf' && myPdf.head === '%PDF-' && myPdf.size > 10000 && myPdf.size < 300000, '직원: 내 명세서를 PDF로 받는다 (글꼴은 쓴 글자만 심는다)', `${myPdf.status} ${myPdf.size}바이트`);
+  check(myPdf.name.includes('급여명세_') && myPdf.name.includes('_rev2.pdf') && myPdf.cache.includes('no-store'), 'PDF 파일 이름에 귀속월 · 사번 · 판이 들어가고, 저장해 두지 않게 내려준다', myPdf.name);
+  check((await pdfOf(p, `/api/payslips/${sNew!.id}/pdf`)).status === 404, '다른 사람의 명세서 PDF는 받을 수 없다(없는 것으로 답한다)');
+  check((await pdfOf(q, `/api/admin/payroll/runs/${run2Id}/pdf?emp=${other!.id}`)).status === 403, '직원은 관리자용 PDF 주소로 받을 수 없다');
+  const admPdf = await pdfOf(p, `/api/admin/payroll/runs/${run2Id}/pdf?emp=${other!.id}`);
+  check(admPdf.status === 200 && admPdf.head === '%PDF-' && !admPdf.name.includes('검토용'), '급여 담당자: 확정한 대장의 명세서 PDF');
+  check((await pdfOf(p, `/api/admin/payroll/runs/${run2Id}/pdf?emp=${emp!.id}`)).status === 404, '대장에 명세서가 없는 사람은 PDF가 없다');
+  check((await see(`/punch/payslips/${sNew!.id}`)).includes('PDF 받기') && (await open(`/admin/payroll/runs/${run2Id}/${other!.id}`)).includes('명세서 PDF'), '명세서 화면에 PDF 받기 버튼');
+  const { count: pdfLogs } = await db.from('payroll_audit_events').select('id', { count: 'exact', head: true }).in('action', ['statement.pdf', 'statement.pdf.self']).eq('employee_id', other!.id).gte('created_at', new Date(Date.now() - 600e3).toISOString());
+  check((pdfLogs ?? 0) >= 2, 'PDF를 받으면 급여 기록에 남는다', String(pdfLogs));
+
+  // ── 인건비 현황: 정정본만 세고(원본을 두 번 세지 않는다), 급여 + 상여를 달로 더한다 ──
+  const labor = async (qs: string) => {
+    await open(`/admin/payroll/labor-cost?y=${year}${qs}`);
+    const tds = p.locator('table[data-labor="byMonth"] tr', { hasText: YM }).locator('td');
+    return (await tds.count()) === 7 ? (await tds.allInnerTexts()).map((v) => v.trim()) : [];
+  };
+  const both = await labor('');
+  check(both[1] === '2' && both[2] === '3,510,000' && both[4] === '3,362,000', '인건비 현황: 그 달의 정규(정정 2판) + 상여 = 명세서 2건', both.join(' | '));
+  check(both[6] === both[2].replace(/,/g, '') || Number(both[6].replace(/,/g, '')) === Number(both[2].replace(/,/g, '')) + Number(both[5].replace(/,/g, '')), '총인건비 = 지급 합계 + 사업주 부담', `${both[6]}`);
+  const reg = await labor('&k=REGULAR');
+  check(reg[1] === '1' && reg[4] === '2,911,670', '정규만 고르면 정정본 한 건만 (원본 2,916,670은 세지 않는다)', reg.join(' | '));
+  const body = await p.locator('body').innerText();
+  check(body.includes(other!.name) && body.includes('총인건비 = 지급 합계 + 사업주 부담') && body.includes('달별') && body.includes('부서별') && body.includes('직원별'), '인건비 현황에 달 · 부서 · 직원 표와 안내');
+  await shot('payrun-9-labor-cost');
+  check((await p.locator('nav a[href="/admin/payroll/labor-cost"]').count()) >= 1, '왼쪽 메뉴 급여 아래에 인건비 현황');
+  check((await see('/admin/payroll/labor-cost')).includes('3,362,000') === false, '직원에게는 인건비 현황이 보이지 않는다');
+
   // ── 예상 지급 · 공제 (오늘은 승인된 세액표가 없어 예상할 수 없다고 나와야 한다) ──
   const prev = await open(`/admin/payroll/staff/${other!.id}`);
   check(prev.includes('예상 지급 · 공제') && prev.includes('아래 이유로 예상할 수 없습니다.') && prev.includes('승인된 기준 자료가 없습니다'), '사원별 급여: 예상 지급 · 공제 칸 — 자료가 없으면 이유를 보여 준다');

@@ -52,6 +52,11 @@ export default async function PayStatementPage({ params }: { params: Promise<{ i
         </h1>
         <p className="num pt-1 text-sm text-faint">{p.employee_no}</p>
       </div>
+      {s?.state === 'OK' && (
+        <a href={`/api/admin/payroll/runs/${id}/pdf?emp=${employeeId}`} className="inline-flex h-8 items-center self-start rounded-button border border-border bg-bg px-3 text-sm font-bold text-muted">
+          {t(final ? 'pdfOne' : 'pdfOneDraft')}
+        </a>
+      )}
       {s && s.blockers.length > 0 && (
         <ul className="flex flex-col gap-1 rounded-card border border-warn bg-warn-tint p-3 text-sm text-warn">
           {s.blockers.map((b, i) => (

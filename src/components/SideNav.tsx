@@ -175,6 +175,7 @@ export function SideNav({ isAdmin, branchManager = false, inboxCount = 0 }: { is
           { href: '/admin/payroll', key: 'payHours' },
           { href: '/admin/payroll/staff', key: 'payStaff' },
           { href: '/admin/payroll/runs', key: 'payRuns' },
+          { href: '/admin/payroll/labor-cost', key: 'payLabor' },
         ],
       },
     ],

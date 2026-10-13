@@ -3194,7 +3194,9 @@
       "exportDo": "Download Excel",
       "exportFile": "payroll-ledger",
       "exportDraft": "For review (not finalized)",
-      "exportBlocked": "Blocked"
+      "exportBlocked": "Blocked",
+      "pdfOne": "Payslip PDF",
+      "pdfOneDraft": "Payslip PDF (for review)"
     },
     "reports": {
       "attTitle": "Attendance report",
@@ -3327,6 +3329,43 @@
       "promotion_no_targets": "There is no one to notify.",
       "promotion_wrong_state": "This person cannot be handled in the current state.",
       "promotion_note_required": "Enter a reason of at least 2 characters."
+    },
+    "laborCost": {
+      "title": "Labor cost",
+      "intro": "Pay, deductions, net pay and employer cost from finalized payroll ledgers, summed by month, department and employee.",
+      "forbidden": "Only payroll admins can view this.",
+      "practice": "Practice data",
+      "draftChip": "Includes drafts",
+      "fYear": "Year",
+      "fKind": "Ledger type",
+      "fGroup": "Department",
+      "fDraft": "Include ledgers not finalized (for review)",
+      "apply": "Show",
+      "all": "All",
+      "kind": {
+        "REGULAR": "Regular pay",
+        "BONUS": "Bonus"
+      },
+      "unassigned": "Unassigned",
+      "cStatements": "Statements",
+      "cPay": "Total pay",
+      "cDeduction": "Total deductions",
+      "cNet": "Total net pay",
+      "cEmployer": "Employer cost",
+      "cTotal": "Total labor cost",
+      "cMonth": "Month",
+      "cGroup": "Department",
+      "cEmployee": "Employee",
+      "sPeople": "Employees",
+      "groupPeople": "{name} ({n})",
+      "sum": "Total",
+      "byMonth": "By month",
+      "byGroup": "By department",
+      "byEmployee": "By employee",
+      "draftNote": "Amounts from ledgers that are not finalized are included. They may change; use for review only.",
+      "blockedNote": "{n} blocked statements have no amounts and are not in the totals. (They are not counted as zero.)",
+      "empty": "No finalized payroll ledger matches these filters.",
+      "note": "Total labor cost = total pay + employer cost (employer social insurance). It differs from total net pay. When a correction is finalized only the correction is counted. Departments are current assignments, not those of the month. Day labor and retirement pay are not included."
     }
   },
   "side": {
@@ -3449,7 +3488,8 @@
     "reportSnapshots": "Saved reports",
     "orgChart": "Org chart",
     "adminMessages": "Work messages",
-    "leavePromotion": "Leave use promotion"
+    "leavePromotion": "Leave use promotion",
+    "payLabor": "Labor cost"
   },
   "nav": {
     "home": "Home",
@@ -3992,7 +4032,19 @@
     "hName": "Name (ID)",
     "hGroup": "Branch",
     "hPeriod": "Period",
-    "hPayDate": "Pay date"
+    "hPayDate": "Pay date",
+    "pdf": "Download PDF",
+    "pdfTitle": "Payslip {month}",
+    "pdfItem": "Item",
+    "pdfHow": "How it is calculated",
+    "pdfAmount": "Amount",
+    "pdfPayTotal": "Total pay",
+    "pdfDeductionTotal": "Total deductions",
+    "pdfDraft": "For review",
+    "pdfPage": "{n} / {all}",
+    "pdfFile": "payslip",
+    "hRevision": "Revision",
+    "pdfNote": "This payslip shows the values stored in the program. If an amount looks wrong, tell the payroll admin. A payslip does not mean the payment has been made."
   },
   "org": {
     "title": "Org chart",

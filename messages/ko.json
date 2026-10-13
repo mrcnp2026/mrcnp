@@ -3194,7 +3194,9 @@
       "exportDo": "엑셀 받기",
       "exportFile": "급여대장",
       "exportDraft": "검토용 (확정 전)",
-      "exportBlocked": "차단"
+      "exportBlocked": "차단",
+      "pdfOne": "명세서 PDF",
+      "pdfOneDraft": "명세서 PDF (검토용)"
     },
     "reports": {
       "attTitle": "근태 리포트",
@@ -3327,6 +3329,43 @@
       "promotion_no_targets": "안내를 보낼 대상이 없습니다.",
       "promotion_wrong_state": "이 직원은 지금 처리할 수 없는 상태입니다.",
       "promotion_note_required": "사유를 2자 이상 적어 주세요."
+    },
+    "laborCost": {
+      "title": "인건비 현황",
+      "intro": "확정한 급여대장의 지급 · 공제 · 실지급 · 사업주 부담을 달 · 부서 · 직원으로 더한 표입니다.",
+      "forbidden": "급여 담당 관리자만 볼 수 있습니다.",
+      "practice": "연습 기록",
+      "draftChip": "검토용 포함",
+      "fYear": "연도",
+      "fKind": "대장 종류",
+      "fGroup": "부서",
+      "fDraft": "확정 전 대장도 넣기 (검토용)",
+      "apply": "보기",
+      "all": "전체",
+      "kind": {
+        "REGULAR": "정규 급여",
+        "BONUS": "상여"
+      },
+      "unassigned": "미배정",
+      "cStatements": "명세서 수",
+      "cPay": "지급 합계",
+      "cDeduction": "공제 합계",
+      "cNet": "실지급 합계",
+      "cEmployer": "사업주 부담",
+      "cTotal": "총인건비",
+      "cMonth": "귀속 달",
+      "cGroup": "부서",
+      "cEmployee": "직원",
+      "sPeople": "직원 수",
+      "groupPeople": "{name} ({n}명)",
+      "sum": "합계",
+      "byMonth": "달별",
+      "byGroup": "부서별",
+      "byEmployee": "직원별",
+      "draftNote": "확정하지 않은 대장의 금액이 들어 있습니다. 확정하면 달라질 수 있으니 검토용으로만 보세요.",
+      "blockedNote": "계산이 막힌 명세서 {n}건은 금액이 없어 합계에 들어가지 않았습니다. (0원으로 넣지 않습니다)",
+      "empty": "이 조건에 맞는 확정한 급여대장이 없습니다.",
+      "note": "총인건비 = 지급 합계 + 사업주 부담(회사가 내는 4대보험). 실지급 합계와 다른 숫자입니다. 정정본을 확정하면 앞 판 대신 정정본만 셉니다. 부서는 지금의 소속 기준입니다(그 달의 소속이 아닐 수 있습니다). 일용직 · 퇴직급여는 들어 있지 않습니다."
     }
   },
   "side": {
@@ -3449,7 +3488,8 @@
     "reportSnapshots": "저장한 리포트",
     "orgChart": "조직도",
     "adminMessages": "업무 메시지",
-    "leavePromotion": "연차 사용 촉진"
+    "leavePromotion": "연차 사용 촉진",
+    "payLabor": "인건비 현황"
   },
   "nav": {
     "home": "홈",
@@ -3992,7 +4032,19 @@
     "hName": "이름 (사번)",
     "hGroup": "소속",
     "hPeriod": "귀속 기간",
-    "hPayDate": "지급일"
+    "hPayDate": "지급일",
+    "pdf": "PDF 받기",
+    "pdfTitle": "{month} 급여명세서",
+    "pdfItem": "항목",
+    "pdfHow": "계산 방법",
+    "pdfAmount": "금액",
+    "pdfPayTotal": "지급 합계",
+    "pdfDeductionTotal": "공제 합계",
+    "pdfDraft": "검토용",
+    "pdfPage": "{n} / {all}",
+    "pdfFile": "급여명세",
+    "hRevision": "판",
+    "pdfNote": "이 명세서는 프로그램에 저장된 값 그대로입니다. 금액이 맞지 않으면 급여 담당자에게 알려 주세요. 명세서가 있다고 입금이 끝났다는 뜻은 아닙니다."
   },
   "org": {
     "title": "조직도",
