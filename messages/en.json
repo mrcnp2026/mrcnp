@@ -1089,6 +1089,54 @@
         "colTime": "Send time",
         "empty": "Message automation is not available yet.",
         "toNotices": "Open notices"
+      },
+      "schedulePatterns": {
+        "title": "Schedule patterns",
+        "intro": "Repeating work patterns (for example 5 days on, 2 days off) that can be applied to many employees at once.",
+        "colCode": "Code",
+        "colName": "Pattern",
+        "colGroups": "Branches",
+        "colJobs": "Jobs",
+        "colStart": "Start date",
+        "colDays": "Total days",
+        "colMemo": "Memo",
+        "empty": "Schedule patterns are not available yet. For now, assign a shift template to each employee.",
+        "toShifts": "Go to shift templates"
+      },
+      "reportTemplates": {
+        "title": "Report snapshot templates",
+        "intro": "Sets of items used when making a report snapshot.",
+        "colName": "Template",
+        "colItems": "Report items",
+        "colGroups": "Branch",
+        "colJobs": "Job",
+        "colNote": "Note",
+        "empty": "Report snapshot templates are not available yet. For now, use the monthly summary and the monthly attendance report (Excel).",
+        "toMonthly": "Go to monthly summary"
+      },
+      "reportSnapshots": {
+        "title": "Report snapshots",
+        "intro": "A report saved as it was at one point in time. Live values are on the monthly summary screen.",
+        "colName": "Snapshot",
+        "colItems": "Report items",
+        "colPeople": "Employees selected",
+        "colNote": "Note",
+        "colCreated": "Created",
+        "empty": "No saved snapshots. Saving snapshots is not available yet. For now, download and keep the monthly attendance report (Excel) from the monthly summary.",
+        "toMonthly": "Go to live report (monthly summary)"
+      },
+      "closing": {
+        "title": "Closing",
+        "intro": "Closed periods for each employee. Records on a closed (confirmed) day cannot be corrected or entered by proxy.",
+        "colName": "Name",
+        "colGroup": "Branch",
+        "colJob": "Job",
+        "colDays": "Confirmed days",
+        "colClosed": "Closed periods (last three months)",
+        "none": "None",
+        "empty": "No employees.",
+        "toRecords": "Confirm records",
+        "caution": "Closing currently means confirming records day by day. Closing or reopening a whole month at once is not available yet."
       }
     },
     "settings": {
@@ -1668,6 +1716,12 @@
       "pickNone": "Clear",
       "save": "Add shift",
       "extraNote": "Overtime block: the usual schedule for that day stays, and only its end time is extended to the end of this block.",
+      "breakTitle": "Shift break",
+      "breakAuto": "Automatic break",
+      "breakMinutes": "{h} h {m} min",
+      "breakNone": "No break window overlaps this time.",
+      "breakNoRule": "The company rule has no break window.",
+      "breakDeemed": "Deemed work is counted by the scheduled time as it is.",
       "cancelOf": "Cancel shift of {name}",
       "cancelConfirm": "Cancel it",
       "keep": "Keep",
@@ -2080,7 +2134,12 @@
     "workInfo": "Work terms",
     "gMessage": "Messages",
     "messageTemplates": "Message templates",
-    "messageRules": "Message automation"
+    "messageRules": "Message automation",
+    "schedulePatterns": "Schedule patterns",
+    "gReport": "Reports",
+    "reportTemplates": "Report snapshot templates",
+    "closing": "Closing",
+    "reports": "Reports"
   },
   "nav": {
     "home": "Home",
@@ -2509,6 +2568,8 @@
     "colManage": "Manage",
     "open": "Review",
     "view": "View",
+    "rowApprove": "Approve",
+    "rowReject": "Reject",
     "pcTitle": "My requests",
     "pcPending": "Pending",
     "pcDone": "Completed",

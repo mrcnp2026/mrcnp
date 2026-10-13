@@ -323,12 +323,13 @@ export default async function AdminSchedulePage({ searchParams }: { searchParams
           <p className="px-1 text-sm text-faint">{t('hint')}</p>
         </div>
         </div>
-      <AddSheet id="schedule" title={t('add')} modal>
+      <AddSheet id="schedule" title={t('add')} modal wide>
           <Card className="flex flex-col gap-3">
             <h2 className="hidden text-sm font-medium text-muted lg:block">{t('add')}</h2>
             <ScheduleForm
               key={formDate}
               sheet="schedule"
+              breaks={data.rule ? [...(data.rule.breakStart && data.rule.breakEnd ? [{ start: data.rule.breakStart.slice(0, 5), end: data.rule.breakEnd.slice(0, 5) }] : []), ...(data.rule.extraBreaks ?? []).map((b) => ({ start: b.start.slice(0, 5), end: b.end.slice(0, 5) }))] : []}
               date={formDate}
               templates={data.templates.map((x) => ({ id: x.id, name: x.name, startTime: x.startTime, endTime: x.endTime, kind: x.kind }))}
               people={data.people.filter((p) => p.active && !p.employeeNo?.startsWith('e2e-')).map((p) => ({ id: p.id, name: p.name, group: groupPath(groups, p.groupId) }))}

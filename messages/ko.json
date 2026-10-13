@@ -1089,6 +1089,54 @@
         "colTime": "알림 발송 시각",
         "empty": "메시지 자동화 기능은 아직 없습니다.",
         "toNotices": "공지 관리로"
+      },
+      "schedulePatterns": {
+        "title": "스케줄 패턴 관리",
+        "intro": "며칠 단위로 되풀이되는 근무 패턴(예: 5일 근무 · 2일 휴무)을 만들어 직원에게 한꺼번에 적용합니다.",
+        "colCode": "코드",
+        "colName": "패턴명",
+        "colGroups": "지점들",
+        "colJobs": "직무들",
+        "colStart": "시작일자",
+        "colDays": "총 일수",
+        "colMemo": "메모",
+        "empty": "스케줄 패턴 기능은 아직 없습니다. 지금은 근무일정 템플릿을 직원에게 지정해 씁니다.",
+        "toShifts": "근무일정 템플릿으로"
+      },
+      "reportTemplates": {
+        "title": "리포트 스냅샷 템플릿 관리",
+        "intro": "리포트 스냅샷을 만들 때 쓸 항목 묶음입니다.",
+        "colName": "템플릿명",
+        "colItems": "리포트 항목들",
+        "colGroups": "지점",
+        "colJobs": "직무",
+        "colNote": "노트",
+        "empty": "리포트 스냅샷 템플릿 기능은 아직 없습니다. 지금은 월 집계 화면과 월별 근태확인서(엑셀)를 씁니다.",
+        "toMonthly": "월 집계로"
+      },
+      "reportSnapshots": {
+        "title": "리포트 스냅샷",
+        "intro": "어느 시점의 리포트를 그대로 저장해 둔 것입니다. 실시간 값은 월 집계 화면에서 봅니다.",
+        "colName": "스냅샷명",
+        "colItems": "리포트 항목들",
+        "colPeople": "선택된 직원 수",
+        "colNote": "노트",
+        "colCreated": "생성 일자",
+        "empty": "저장된 스냅샷이 없습니다. 스냅샷 저장 기능은 아직 없습니다 — 지금은 월 집계 화면에서 그 달의 근태확인서(엑셀)를 내려받아 보관합니다.",
+        "toMonthly": "실시간 리포트(월 집계)로"
+      },
+      "closing": {
+        "title": "마감 관리",
+        "intro": "직원별로 마감된 기간입니다. 마감(확정)된 날의 기록은 정정 요청과 대리 입력이 막힙니다.",
+        "colName": "이름",
+        "colGroup": "지점",
+        "colJob": "직무",
+        "colDays": "확정된 날 수",
+        "colClosed": "마감된 기간들 (최근 석 달)",
+        "none": "없음",
+        "empty": "직원이 없습니다.",
+        "toRecords": "출퇴근기록에서 확정하기",
+        "caution": "지금의 마감은 날짜별 「기록 확정」입니다. 달 단위로 한꺼번에 마감하고 푸는 기능은 아직 없습니다."
       }
     },
     "settings": {
@@ -1668,6 +1716,12 @@
       "pickNone": "모두 해제",
       "save": "일정 넣기",
       "extraNote": "잔업: 그날의 평소 일정은 그대로 두고 끝 시각만 이 일정의 끝으로 늘립니다.",
+      "breakTitle": "근무일정 휴게시간",
+      "breakAuto": "자동 휴게시간",
+      "breakMinutes": "{h}시간 {m}분",
+      "breakNone": "이 시간에는 겹치는 휴게시간대가 없습니다.",
+      "breakNoRule": "회사 규칙에 휴게시간대가 없습니다.",
+      "breakDeemed": "간주 근무는 일정 시간 그대로 계산합니다.",
       "cancelOf": "{name} 일정 취소",
       "cancelConfirm": "취소",
       "keep": "그대로",
@@ -2080,7 +2134,12 @@
     "workInfo": "근로정보",
     "gMessage": "메시지",
     "messageTemplates": "메시지 템플릿",
-    "messageRules": "메시지 자동화 규칙"
+    "messageRules": "메시지 자동화 규칙",
+    "schedulePatterns": "스케줄 패턴",
+    "gReport": "리포트",
+    "reportTemplates": "리포트 스냅샷 템플릿",
+    "closing": "마감 관리",
+    "reports": "리포트"
   },
   "nav": {
     "home": "홈",
@@ -2509,6 +2568,8 @@
     "colManage": "관리",
     "open": "처리",
     "view": "보기",
+    "rowApprove": "승인",
+    "rowReject": "거절",
     "pcTitle": "내 요청들",
     "pcPending": "대기중인 요청 수",
     "pcDone": "완료된 요청 수",

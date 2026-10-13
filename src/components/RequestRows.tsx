@@ -87,9 +87,21 @@ export async function RequestRows({ items, leaveTypes, names, showName = false, 
                   </td>
                   <td className={`${td} num whitespace-nowrap text-muted`}>{r.createdAt ? stamp(r.createdAt) : ''}</td>
                   <td className={`${td} whitespace-nowrap`}>
-                    <Link href={hrefOf(r)} className="inline-flex h-8 items-center rounded-button border border-primary bg-bg px-4 text-sm font-bold text-primary hover:bg-primary-tint">
-                      {t(openKey)}
-                    </Link>
+                    {/* 관리자 표의 대기 중 요청: 시프티처럼 줄에 [승인][거절] — 누르면 그 요청의 상세 패널이 열리고 거기서 확인한 뒤 처리한다 (한 번에 처리되지 않게) */}
+                    {openKey === 'open' && r.status === 'pending' ? (
+                      <span className="inline-flex gap-1">
+                        <Link href={hrefOf(r)} className="inline-flex h-8 items-center rounded-button border border-primary bg-bg px-3 text-sm font-bold text-primary hover:bg-primary-tint">
+                          {t('rowApprove')}
+                        </Link>
+                        <Link href={hrefOf(r)} className="inline-flex h-8 items-center rounded-button border border-danger bg-bg px-3 text-sm font-bold text-danger">
+                          {t('rowReject')}
+                        </Link>
+                      </span>
+                    ) : (
+                      <Link href={hrefOf(r)} className="inline-flex h-8 items-center rounded-button border border-primary bg-bg px-4 text-sm font-bold text-primary hover:bg-primary-tint">
+                        {t(openKey)}
+                      </Link>
+                    )}
                   </td>
                 </ClickRow>
               );

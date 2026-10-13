@@ -4,7 +4,7 @@
 //   · 짙은 남색 196px · 한 줄 메뉴(아이콘 + 흰 글자) · 묶음 사이는 간격으로만 나눔
 //   · 근무일정 · 출퇴근기록 · 휴가: 마우스를 올리면 하위 메뉴가 **아래로** 스르륵 펼쳐진다. 그 메뉴 안에 있을 때는 펼쳐진 채로 있다
 //   · 관리 · 회사 설정: 마우스를 올려도 펼치지 않는다 — 눌러서 들어가면 사이드 메뉴 옆에 흰 둘째 메뉴가 붙는다 (2026-10-11 시프티 실측 · 의뢰인 "두 개는 클릭")
-import { Building2, CalendarRange, Clock, House, Megaphone, Plane, Send, UserRoundCog, Wallet, type LucideIcon } from 'lucide-react';
+import { Building2, CalendarRange, ChartColumn, Clock, House, Lock, Megaphone, Plane, Send, UserRoundCog, Wallet, type LucideIcon } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 import Link, { useLinkStatus } from 'next/link';
 import { useSearchParams } from 'next/navigation';
@@ -41,6 +41,7 @@ const MANAGE: Panel = [
     items: [
       { href: '/admin/manage/shift-kinds', key: 'shiftKinds' },
       { href: '/admin/shifts', key: 'shifts' },
+      { href: '/admin/manage/schedule-patterns', key: 'schedulePatterns' },
     ],
   },
   {
@@ -59,6 +60,7 @@ const MANAGE: Panel = [
       { href: '/admin/manage/message-rules', key: 'messageRules' },
     ],
   },
+  { key: 'gReport', items: [{ href: '/admin/manage/report-templates', key: 'reportTemplates' }] },
 ];
 
 // 「회사 설정」의 둘째 메뉴 — 시프티의 탭 이름 · 순서. 탭은 주소의 ?tab= 로 고른다(없으면 일반)
@@ -125,6 +127,8 @@ export function SideNav({ isAdmin, inboxCount = 0 }: { isAdmin: boolean; inboxCo
       },
       { href: '/admin/inbox', key: 'requests', icon: Send, badge: inboxCount },
       { href: '/admin/notices', key: 'adminNotices', icon: Megaphone },
+      { href: '/admin/manage/closing', key: 'closing', icon: Lock },
+      { href: '/admin/manage/report-snapshots', key: 'reports', icon: ChartColumn },
       { href: '/admin/payroll', key: 'payroll', icon: Wallet },
     ],
     [

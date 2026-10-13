@@ -7,12 +7,36 @@ import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import { PcTable, type PcCol, type PcRow } from '@/components/PcTable';
 import { PageShell } from '@/components/ui';
+import { OFFICE } from '@/config/office';
 import { loadActiveRule } from '@/lib/attendance-data';
+import { loadConfirms } from '@/lib/confirm-data';
+import { loadJobs } from '@/lib/job-data';
 import { leaveTypeName } from '@/lib/leave';
 import { loadAllLeaveTypes } from '@/lib/leave-data';
+import { groupPath } from '@/lib/org';
+import { loadOrgGroups } from '@/lib/org-data';
 import { SHIFT_KINDS } from '@/lib/shifts';
+import { createAdminClient } from '@/lib/supabase/admin';
+import { toKstDate } from '@/lib/time';
 
-const TOPICS = { 'shift-kinds': 'shiftKinds', 'leave-groups': 'leaveGroups', 'accrual-rule': 'accrualRule', 'approval-rules': 'approvalRules', 'work-info': 'workInfo', 'message-templates': 'messageTemplates', 'message-rules': 'messageRules' } as const;
+// 이어진 날짜를 「시작 ~ 끝」 묶음으로 (마감 관리의 「마감된 기간들」)
+function dayRanges(days: string[]): string[] {
+  const out: string[] = [];
+  let a = '';
+  let b = '';
+  const next = (d: string) => new Date(Date.parse(`${d}T00:00:00Z`) + 864e5).toISOString().slice(0, 10);
+  for (const d of [...days].sort()) {
+    if (a && d === next(b)) b = d;
+    else {
+      if (a) out.push(a === b ? a : `${a} ~ ${b}`);
+      a = b = d;
+    }
+  }
+  if (a) out.push(a === b ? a : `${a} ~ ${b}`);
+  return out;
+}
+
+const TOPICS = { 'shift-kinds': 'shiftKinds', 'leave-groups': 'leaveGroups', 'accrual-rule': 'accrualRule', 'approval-rules': 'approvalRules', 'work-info': 'workInfo', 'message-templates': 'messageTemplates', 'message-rules': 'messageRules', 'schedule-patterns': 'schedulePatterns', 'report-templates': 'reportTemplates', 'report-snapshots': 'reportSnapshots', closing: 'closing' } as const;
 const REQUEST_KINDS = ['punch', 'correction', 'overtime', 'shift', 'leave', 'leaveDelete', 'work'] as const;
 
 export default async function ManageInfoPage({ params }: { params: Promise<{ topic: string }> }) {
@@ -23,6 +47,7 @@ export default async function ManageInfoPage({ params }: { params: Promise<{ top
   // 번역 묶음은 화면마다 따로 읽는다(묶음 이름을 글자 그대로 적어야 번역 누락 검사가 따라온다)
   const [ts, tg, ta, tp] = await Promise.all([getTranslations('admin.manage.shiftKinds'), getTranslations('admin.manage.leaveGroups'), getTranslations('admin.manage.accrualRule'), getTranslations('admin.manage.approvalRules')]);
   const [tw, tmt, tmr, f] = await Promise.all([getTranslations('admin.manage.workInfo'), getTranslations('admin.manage.messageTemplates'), getTranslations('admin.manage.messageRules'), getFormatter()]);
+  const [tsp, trt, trs, tcl] = await Promise.all([getTranslations('admin.manage.schedulePatterns'), getTranslations('admin.manage.reportTemplates'), getTranslations('admin.manage.reportSnapshots'), getTranslations('admin.manage.closing')]);
   const head =
     ns === 'shiftKinds' ? { title: ts('title'), intro: ts('intro') }
     : ns === 'leaveGroups' ? { title: tg('title'), intro: tg('intro') }
@@ -30,6 +55,10 @@ export default async function ManageInfoPage({ params }: { params: Promise<{ top
     : ns === 'workInfo' ? { title: tw('title'), intro: tw('intro') }
     : ns === 'messageTemplates' ? { title: tmt('title'), intro: tmt('intro') }
     : ns === 'messageRules' ? { title: tmr('title'), intro: tmr('intro') }
+    : ns === 'schedulePatterns' ? { title: tsp('title'), intro: tsp('intro') }
+    : ns === 'reportTemplates' ? { title: trt('title'), intro: trt('intro') }
+    : ns === 'reportSnapshots' ? { title: trs('title'), intro: trs('intro') }
+    : ns === 'closing' ? { title: tcl('title'), intro: tcl('intro') }
     : { title: tp('title'), intro: tp('intro') };
   let empty = '';
 
@@ -76,6 +105,52 @@ export default async function ManageInfoPage({ params }: { params: Promise<{ top
     cols = [{ key: 'name', label: tmr('colName') }, { key: 'kind', label: tmr('colKind') }, { key: 'start', label: tmr('colStart') }, { key: 'time', label: tmr('colTime') }];
     empty = tmr('empty');
     link = { href: '/admin/notices', label: tmr('toNotices') };
+  } else if (ns === 'schedulePatterns') {
+    // 시프티: 코드 · 패턴명 · 지점들 · 직무들 · 시작일자 · 총 일수 · 메모 (스샷 `스샷/스케줄 패턴.png`)
+    cols = [{ key: 'code', label: tsp('colCode') }, { key: 'name', label: tsp('colName') }, { key: 'groups', label: tsp('colGroups') }, { key: 'jobs', label: tsp('colJobs') }, { key: 'start', label: tsp('colStart') }, { key: 'days', label: tsp('colDays') }, { key: 'memo', label: tsp('colMemo') }];
+    empty = tsp('empty');
+    link = { href: '/admin/shifts', label: tsp('toShifts') };
+  } else if (ns === 'reportTemplates') {
+    cols = [{ key: 'name', label: trt('colName') }, { key: 'items', label: trt('colItems') }, { key: 'groups', label: trt('colGroups') }, { key: 'jobs', label: trt('colJobs') }, { key: 'note', label: trt('colNote') }];
+    empty = trt('empty');
+    link = { href: '/admin/records', label: trt('toMonthly') };
+  } else if (ns === 'reportSnapshots') {
+    cols = [{ key: 'name', label: trs('colName') }, { key: 'items', label: trs('colItems') }, { key: 'people', label: trs('colPeople') }, { key: 'note', label: trs('colNote') }, { key: 'created', label: trs('colCreated') }];
+    empty = trs('empty');
+    link = { href: '/admin/records', label: trs('toMonthly') };
+  } else if (ns === 'closing') {
+    // 시프티 「마감 관리」: 이름 · 본지점 · 직무 · 마감된 기간들 (스샷 `스샷/마감 관리.png`). 우리 앱의 마감 = 날짜별 「기록 확정」 — 최근 석 달의 확정된 날을 이어진 기간으로 묶어 보인다
+    const today = toKstDate(new Date());
+    const from = `${new Date(Date.parse(`${today.slice(0, 7)}-01T00:00:00Z`) - 62 * 864e5).toISOString().slice(0, 7)}-01`;
+    const [{ data: people }, groups, jobs, confirms] = await Promise.all([
+      createAdminClient().from('profiles').select('id, name, employee_no, group_id, job_id').eq('active', true).order('name'),
+      loadOrgGroups(),
+      loadJobs(),
+      loadConfirms(from, today, OFFICE.practiceMode),
+    ]);
+    const jobName = new Map(jobs.map((j) => [j.id, j.name]));
+    const daysOf = new Map<string, string[]>();
+    for (const c of confirms.values()) daysOf.set(c.employeeId, [...(daysOf.get(c.employeeId) ?? []), c.workDate]);
+    cols = [{ key: 'name', label: tcl('colName') }, { key: 'group', label: tcl('colGroup') }, { key: 'job', label: tcl('colJob') }, { key: 'days', label: tcl('colDays'), align: 'right' }, { key: 'closed', label: tcl('colClosed') }];
+    rows = (people ?? [])
+      .filter((p) => !p.employee_no?.startsWith('e2e-'))
+      .map((p) => {
+        const days = daysOf.get(p.id) ?? [];
+        const ranges = dayRanges(days);
+        return {
+          id: p.id,
+          cells: {
+            name: { text: p.name, node: <Link href={`/admin/members/${p.id}`} className="font-bold hover:text-primary">{p.name}</Link> },
+            group: { text: groupPath(groups, p.group_id) ?? '' },
+            job: { text: (p.job_id && jobName.get(p.job_id)) || '' },
+            days: { text: String(days.length) },
+            closed: { text: ranges.join(', '), node: ranges.length ? <span className="num">{ranges.join(', ')}</span> : <span className="text-faint">{tcl('none')}</span> },
+          },
+        };
+      });
+    empty = tcl('empty');
+    link = { href: '/admin/records/list', label: tcl('toRecords') };
+    caution = tcl('caution');
   } else {
     cols = [{ key: 'kind', label: tp('colKind') }, { key: 'approver', label: tp('colApprover') }, { key: 'self', label: tp('colSelf') }, { key: 'effect', label: tp('colEffect') }];
     rows = REQUEST_KINDS.map((k) => ({ id: k, cells: { kind: { text: tr(`kinds.${k}`), node: <b>{tr(`kinds.${k}`)}</b> }, approver: { text: tp('approver') }, self: { text: tp('self') }, effect: { text: tp(`effect.${k}`) } } }));

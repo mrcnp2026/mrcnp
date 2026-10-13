@@ -19,11 +19,13 @@ export function ScheduleForm({
   templates,
   people,
   sheet,
+  breaks = [],
 }: {
   date: string;
   templates: { id: string; name: string; startTime: string; endTime: string; kind: ShiftKind }[];
   people: { id: string; name: string; group: string | null }[];
   sheet: string;
+  breaks?: { start: string; end: string }[]; // 회사 규칙의 휴게시간대 — 이 일정과 겹치는 만큼이 자동 휴게
 }) {
   const t = useTranslations('admin.schedule');
   const tk = useTranslations('admin.shifts.kinds');
@@ -43,6 +45,12 @@ export function ScheduleForm({
       else n.add(id);
       return n;
     });
+  // 자동 휴게 = 일정 시간과 회사 휴게시간대가 겹치는 분 (자정을 넘는 일정은 끝을 다음 날로 본다)
+  const min = (x: string) => Number(x.slice(0, 2)) * 60 + Number(x.slice(3, 5));
+  const s0 = min(start);
+  const e0 = min(end) > s0 ? min(end) : min(end) + 1440;
+  const hit = breaks.map((b) => ({ ...b, m: Math.max(0, Math.min(e0, min(b.end)) - Math.max(s0, min(b.start))) })).filter((b) => b.m > 0);
+  const autoBreak = hit.reduce((n, b) => n + b.m, 0);
   return (
     <form
       className="flex flex-col gap-3"
@@ -60,6 +68,9 @@ export function ScheduleForm({
         router.refresh();
       }}
     >
+      {/* PC: 두 칸 — 왼쪽 일정(날짜 · 템플릿 · 시간 · 유형 · 노트) / 오른쪽 휴게시간 · 직원 (2026-10-11 의뢰인 스샷 `스샷/근무일정 추가하기 팝업.png`) */}
+      <div className="flex flex-col gap-3 lg:grid lg:grid-cols-2 lg:items-start lg:gap-6">
+      <div className="flex flex-col gap-3">
       <label className="flex flex-col gap-1 text-sm text-muted">
         {t('date')}
         <DateTimeInput type="date" value={day} onChange={setDay} required className={`num ${field}`} />
@@ -112,6 +123,23 @@ export function ScheduleForm({
         {t('note')}
         <input name="note" maxLength={200} className={field} autoComplete="off" />
       </label>
+      </div>
+      <div className="flex flex-col gap-3">
+      <div className="flex flex-col gap-1 rounded-button bg-surface p-3 text-sm">
+        <p className="font-bold">{t('breakTitle')}</p>
+        {kind === 'deemed' ? (
+          <p className="text-muted">{t('breakDeemed')}</p>
+        ) : breaks.length === 0 ? (
+          <p className="text-muted">{t('breakNoRule')}</p>
+        ) : (
+          <>
+            <p className="num">
+              {t('breakAuto')} : <b className="text-primary">{t('breakMinutes', { h: Math.floor(autoBreak / 60), m: autoBreak % 60 })}</b>
+            </p>
+            <p className="num text-xs text-muted">{hit.length ? hit.map((b) => `${b.start} - ${b.end}`).join(' · ') : t('breakNone')}</p>
+          </>
+        )}
+      </div>
       <fieldset className="flex flex-col gap-1">
         <legend className="flex w-full items-center justify-between text-sm text-muted">
           <span>{t('people', { n: picked.size })}</span>
@@ -136,6 +164,8 @@ export function ScheduleForm({
           ))}
         </ul>
       </fieldset>
+      </div>
+      </div>
       {err && <ErrorNote code={err.code} requestId={err.requestId} namespace="admin.schedule" />}
       <Button type="submit" disabled={busy || picked.size === 0}>
         {t('save')}
