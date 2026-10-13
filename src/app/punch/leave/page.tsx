@@ -14,6 +14,9 @@ import { Card, CardTitle, Chip, PageShell } from '@/components/ui';
 import { getMe } from '@/lib/auth';
 import { calcLeaveBalance, leaveTypeName } from '@/lib/leave';
 import { loadAllLeaveTypes, loadLeaveGrants, loadLeaveRequests } from '@/lib/leave-data';
+import { endingSoonest, entriesFor, ledgerBalance, lotRemaining, minutesToDays } from '@/lib/leave-ledger';
+import { loadEntries, loadLots } from '@/lib/leave-ledger-data';
+import { OFFICE } from '@/config/office';
 import { toKstDate } from '@/lib/time';
 import { loadWorkRequests } from '@/lib/work-data';
 import { CancelLeave, DeleteLeaveRequest, LeaveForm } from './LeaveForm';
@@ -31,6 +34,12 @@ export default async function LeavePage({ searchParams }: { searchParams: Promis
   const today = toKstDate(new Date());
   const [types, grants, requests, works] = await Promise.all([loadAllLeaveTypes(), loadLeaveGrants(me.id), loadLeaveRequests({ employeeId: me.id }), loadWorkRequests({ employeeId: me.id })]);
   const bal = calcLeaveBalance({ grants, requests, types, asOf: today });
+  // 휴가 원장(지급 건이 승인된 직원만): 받은 연차 · 사용 · 잔여 · 소진율 · 곧 끝나는 연차 (PRD 37.5, L21). 위의 잔여 카드는 아직 예전 계산이다(대조 단계)
+  const [lots, ledgerAll] = await Promise.all([loadLots({ employeeId: me.id, states: ['APPROVED'] }), loadEntries(me.id)]);
+  const ledger = entriesFor(ledgerAll, OFFICE.practiceMode);
+  const lb = lots.length > 0 ? ledgerBalance(lots, ledger, today) : null;
+  const rem = lotRemaining(lots, ledger);
+  const ending = endingSoonest(lots, rem, today);
   const nameOf = (code: string) => leaveTypeName(types, code, t);
   // 올해가 아니면 연도도 (지난해·먼 미래 신청이 올해로 읽히지 않게)
   const day = (d: string) => f.dateTime(new Date(`${d}T12:00:00+09:00`), { year: d.slice(0, 4) === today.slice(0, 4) ? undefined : 'numeric', month: 'short', day: 'numeric', weekday: 'short' });
@@ -58,6 +67,26 @@ export default async function LeavePage({ searchParams }: { searchParams: Promis
         <SheetOpener id="leave" label={t('request')} className="ml-auto hidden lg:inline-flex" />
         <SheetOpener id="work" label={tw('title')} className="hidden lg:inline-flex" />
       </div>
+
+      {lb && (
+        <Card className="flex flex-col gap-2 p-6">
+          <CardTitle icon={CalendarDays}>{t('usageTitle')}</CardTitle>
+          <dl className="num grid grid-cols-2 gap-x-6 gap-y-1 text-sm md:grid-cols-4">
+            {([['usageGranted', minutesToDays(lb.granted)], ['usageUsed', minutesToDays(lb.used)], ['usageRemaining', minutesToDays(lb.remaining)], ['usageExpired', minutesToDays(lb.expired)]] as const).map(([k, v]) => (
+              <div key={k} className="flex justify-between gap-3">
+                <dt className="text-muted">{t(k)}</dt>
+                <dd className="font-bold">{t('days', { n: n(v) })}</dd>
+              </div>
+            ))}
+          </dl>
+          <p className="num text-sm">
+            {lb.granted > 0 ? t('usageRate', { pct: n(Math.round((lb.used / lb.granted) * 1000) / 10) }) : t('usageRateNone')}
+            {lb.advance > 0 && ` · ${t('usageAdvance', { n: n(minutesToDays(lb.advance)) })}`}
+          </p>
+          {ending && <p className="num text-sm text-warn">{t('usageEnding', { n: n(minutesToDays(rem.get(ending.id) ?? 0)), date: day(ending.usableTo!) })}</p>}
+          <p className="text-xs text-faint">{t('usageNote')}</p>
+        </Card>
+      )}
 
       {/* PC: 왼쪽 = 휴가, 오른쪽 = 외근·출장·재택. 줄마다 좌우 높이를 맞춘다 — ① 요약 ② 신청 ③ 내 신청 (2026-10-06 의뢰인: 위쪽이 어긋났다) · 폰: 휴가 3칸 뒤에 외근 3칸 (order) */}
       <div className="flex flex-col gap-3">

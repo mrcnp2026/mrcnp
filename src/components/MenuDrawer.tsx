@@ -25,6 +25,7 @@ const MY: Group = {
     { href: '/punch/account', key: 'account', icon: UserRound },
     { href: '/punch/notices', key: 'notices', icon: Megaphone },
     { href: '/punch/payslips', key: 'payslips', icon: ReceiptText },
+    { href: '/punch/org', key: 'orgChart', icon: Network },
   ],
 };
 const ADMIN: Group[] = [

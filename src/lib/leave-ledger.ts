@@ -289,3 +289,8 @@ export function checkTypeRule(rule: LeaveTypeRule, req: { days: number; startDat
   if (rule.reasonRequired && req.reason.trim().length < 2) return 'leave_reason_required';
   return null;
 }
+
+/** 지금 쓸 수 있는 지급 건 가운데 가장 먼저 끝나는, 남은 분이 있는 건 (없으면 null) */
+export function endingSoonest(lots: readonly Lot[], remaining: ReadonlyMap<string, number>, today: string): Lot | null {
+  return [...lots].filter((l) => l.state === 'APPROVED' && l.usableFrom <= today && l.usableTo !== null && l.usableTo > today && (remaining.get(l.id) ?? 0) > 0).sort((a, b) => a.usableTo!.localeCompare(b.usableTo!))[0] ?? null;
+}

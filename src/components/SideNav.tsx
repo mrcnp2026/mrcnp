@@ -155,7 +155,16 @@ export function SideNav({ isAdmin, branchManager = false, inboxCount = 0 }: { is
       { href: '/admin/inbox', key: 'requests', icon: Send, badge: inboxCount },
       { href: '/admin/notices', key: 'adminNotices', icon: Megaphone },
       { href: '/admin/closing', key: 'closing', icon: Lock },
-      { href: '/admin/manage/report-snapshots', key: 'reports', icon: ChartColumn },
+      {
+        href: '/admin/reports/attendance',
+        key: 'reports',
+        icon: ChartColumn,
+        sub: [
+          { href: '/admin/reports/attendance', key: 'reportAttendance' },
+          { href: '/admin/reports/leave', key: 'reportLeave' },
+          { href: '/admin/manage/report-snapshots', key: 'reportSnapshots' },
+        ],
+      },
       {
         href: '/admin/payroll',
         key: 'payroll',
