@@ -2244,7 +2244,20 @@
     "confirmed": "Read",
     "new": "New",
     "countAll": "Current notices",
-    "countNew": "Not confirmed yet"
+    "countNew": "Not confirmed yet",
+    "pcTitle": "Messages",
+    "from": "From",
+    "to": "To",
+    "load": "Show",
+    "allPeriod": "Show all dates",
+    "unread": "Not confirmed",
+    "close": "Close",
+    "pcEmpty": "No messages yet. Check the dates or search terms.",
+    "colName": "Message",
+    "colState": "Status",
+    "colNote": "Note",
+    "colDate": "Created",
+    "colManage": "Manage"
   },
   "leave": {
     "title": "Leave & off-site",

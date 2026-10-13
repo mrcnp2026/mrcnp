@@ -5,7 +5,8 @@ import { useState } from 'react';
 import { callApi } from '@/components/client-api';
 import { Button } from '@/components/ui';
 
-export function ConfirmButton({ id }: { id: string }) {
+// small: PC 표 · 상세의 작은 버튼
+export function ConfirmButton({ id, small = false }: { id: string; small?: boolean }) {
   const t = useTranslations('notices');
   const locale = useLocale();
   const router = useRouter();
@@ -14,7 +15,8 @@ export function ConfirmButton({ id }: { id: string }) {
     <Button
       variant="outline"
       disabled={busy}
-      className="w-full"
+      size={small ? 'sm' : 'md'}
+      className={small ? 'whitespace-nowrap' : 'w-full'}
       onClick={async () => {
         setBusy(true);
         await callApi(`/api/notices/${id}/confirm`, { locale });

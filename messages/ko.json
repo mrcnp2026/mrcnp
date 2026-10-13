@@ -2244,7 +2244,20 @@
     "confirmed": "확인함",
     "new": "새 공지",
     "countAll": "게시 중인 공지",
-    "countNew": "확인하지 않은 공지"
+    "countNew": "확인하지 않은 공지",
+    "pcTitle": "메시지",
+    "from": "시작일",
+    "to": "종료일",
+    "load": "보기",
+    "allPeriod": "전체 기간 보기",
+    "unread": "확인 안 함",
+    "close": "닫기",
+    "pcEmpty": "아직 받은 메시지가 없습니다. 날짜 또는 검색어를 확인해 주세요.",
+    "colName": "메시지명",
+    "colState": "상태",
+    "colNote": "노트",
+    "colDate": "생성일자",
+    "colManage": "관리"
   },
   "leave": {
     "title": "휴가·외근",
