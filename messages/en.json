@@ -2139,7 +2139,23 @@
     "gReport": "Reports",
     "reportTemplates": "Report snapshot templates",
     "closing": "Closing",
-    "reports": "Reports"
+    "reports": "Reports",
+    "wideMenu": "Wide menu",
+    "narrowMenu": "Collapse menu",
+    "short": {
+      "home": "Home",
+      "adminSchedule": "Shifts",
+      "attendance": "Time",
+      "leaveAdmin": "Leave",
+      "requests": "Requests",
+      "adminNotices": "Notices",
+      "closing": "Closing",
+      "reports": "Reports",
+      "payroll": "Pay",
+      "admin": "Manage",
+      "config": "Settings",
+      "wideMenu": "Wide"
+    }
   },
   "nav": {
     "home": "Home",

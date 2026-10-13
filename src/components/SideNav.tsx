@@ -4,10 +4,11 @@
 //   · 짙은 남색 196px · 한 줄 메뉴(아이콘 + 흰 글자) · 묶음 사이는 간격으로만 나눔
 //   · 근무일정 · 출퇴근기록 · 휴가: 마우스를 올리면 하위 메뉴가 **아래로** 스르륵 펼쳐진다. 그 메뉴 안에 있을 때는 펼쳐진 채로 있다
 //   · 관리 · 회사 설정: 마우스를 올려도 펼치지 않는다 — 눌러서 들어가면 사이드 메뉴 옆에 흰 둘째 메뉴가 붙는다 (2026-10-11 시프티 실측 · 의뢰인 "두 개는 클릭")
-import { Building2, CalendarRange, ChartColumn, Clock, House, Lock, Megaphone, Plane, Send, UserRoundCog, Wallet, type LucideIcon } from 'lucide-react';
+import { Building2, CalendarRange, ChartColumn, Clock, House, Lock, Megaphone, PanelLeftClose, PanelLeftOpen, Plane, Send, UserRoundCog, Wallet, type LucideIcon } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 import Link, { useLinkStatus } from 'next/link';
 import { useSearchParams } from 'next/navigation';
+import { useEffect, useState } from 'react';
 import { usePressedTab } from './NavTab';
 
 type Leaf = { href: string; key: string };
@@ -93,6 +94,29 @@ export function SideNav({ isAdmin, inboxCount = 0 }: { isAdmin: boolean; inboxCo
   const { path, pressed, setPressed } = usePressedTab();
   const query = useSearchParams();
   const manager = isAdmin && path.startsWith('/admin');
+  // 좁은 메뉴(아이콘 + 짧은 이름)가 기본, 맨 아래 「와이드 메뉴」를 누르면 이름이 아이콘 오른쪽으로 옮겨 가며 넓게 열린다 (2026-10-13 의뢰인: 다우오피스 왼쪽 메뉴처럼, 서랍이 열리듯 부드럽게)
+  // 고른 모양은 이 브라우저에 기억한다. 처음 그릴 때는 움직임 없이 그 모양으로 바로 놓는다(ready 전에는 transition을 끈다)
+  const [wide, setWide] = useState(false);
+  const [ready, setReady] = useState(false);
+  useEffect(() => {
+    try {
+      if (localStorage.getItem('nav-wide') === '1') setWide(true);
+    } catch {
+      // 저장이 막혀 있으면 기억하지 못할 뿐이다
+    }
+    const id = requestAnimationFrame(() => setReady(true));
+    return () => cancelAnimationFrame(id);
+  }, []);
+  const toggleWide = () => {
+    setWide((w) => {
+      try {
+        localStorage.setItem('nav-wide', w ? '0' : '1');
+      } catch {
+        // 위와 같음
+      }
+      return !w;
+    });
+  };
   const groups: Item[][] = [
     [
       { href: '/admin', key: 'home', icon: House },
@@ -149,14 +173,22 @@ export function SideNav({ isAdmin, inboxCount = 0 }: { isAdmin: boolean; inboxCo
   };
   const here = leaves.map((i) => ({ href: i.href, s: score(i.href) })).filter((x) => x.s >= 0).sort((a, b) => b.s - a.s)[0]?.href;
   const active = pressed ?? here;
-  const panel = groups.flat().find((i) => i.panel?.some((g) => g.items.some((x) => x.href === active)))?.panel;
+  const owner = groups.flat().find((i) => (i.sub ?? i.panel?.flatMap((g) => g.items))?.some((x) => x.href === active));
+  // 둘째 메뉴(흰 칸): 관리 · 회사 설정은 늘, 근무일정 · 출퇴근기록 · 휴가의 하위 메뉴는 좁은 메뉴일 때 여기에 보인다(넓은 메뉴에서는 그 자리 아래로 펼친다)
+  const panel: Panel | undefined = owner?.panel ?? (owner?.sub && !wide ? [{ key: owner.key, items: owner.sub }] : undefined);
+  // 닫히는 동안에도 내용이 남아 있어야 서랍처럼 닫힌다
+  const [lastPanel, setLastPanel] = useState<Panel | undefined>(panel);
+  if (panel && panel !== lastPanel && JSON.stringify(panel) !== JSON.stringify(lastPanel)) setLastPanel(panel);
   if (!manager) return null;
+  // 전역 규칙(globals.css의 `* { transition-duration }` · 버튼/링크의 ease-out)이 층 밖에 있어 보통 클래스를 이긴다 — 메뉴 서랍은 !로 0.35초 ease-in-out을 지킨다
+  const move = ready ? 'transition-all! duration-350! ease-in-out!' : '';
+  const Toggle = wide ? PanelLeftClose : PanelLeftOpen;
 
   return (
     <>
-      <nav aria-label={t('menu')} className="sticky top-14 z-20 hidden h-[calc(100dvh-3.5rem)] w-49 shrink-0 flex-col bg-nav py-4 text-on-primary lg:flex">
+      <nav aria-label={t('menu')} className={`sticky top-14 z-20 hidden h-[calc(100dvh-3.5rem)] shrink-0 flex-col overflow-x-hidden overflow-y-auto bg-nav py-4 text-on-primary lg:flex ${move} ${wide ? 'w-49' : 'w-19'}`}>
         {groups.map((items, gi) => (
-          <div key={gi} className={gi > 0 ? 'mt-8' : ''}>
+          <div key={gi} className={`${move} ${gi > 0 ? (wide ? 'mt-8' : 'mt-4') : ''}`}>
             {items.map(({ href, key, icon: Icon, badge, sub, panel: p }) => {
               const kids = sub ?? p?.flatMap((g) => g.items);
               const open = kids ? kids.some((s) => s.href === active) : active === href;
@@ -164,25 +196,34 @@ export function SideNav({ isAdmin, inboxCount = 0 }: { isAdmin: boolean; inboxCo
                 <div key={key} className="group/item relative">
                   <Link
                     href={href}
+                    aria-label={t(key)}
                     aria-current={open && !kids ? 'page' : undefined}
-                    aria-expanded={sub ? open : undefined}
+                    aria-expanded={sub && wide ? open : undefined}
                     onClick={() => setPressed(href)}
-                    className={`flex min-h-10.5 items-center gap-3.5 border-l-4 pr-3 pl-3.5 text-sm font-bold transition-colors duration-200 ${open ? 'border-on-primary/60 bg-on-primary/15 text-on-primary' : 'border-transparent text-on-primary hover:bg-on-primary/10'}`}
+                    className={`relative block w-full overflow-hidden border-l-4 text-sm font-bold ${move} ${wide ? 'h-10.5' : 'h-14'} ${open ? 'border-on-primary/60 bg-on-primary/15 text-on-primary' : 'border-transparent text-on-primary hover:bg-on-primary/10'}`}
                   >
-                    <Icon aria-hidden size={18} strokeWidth={2} className="shrink-0" />
-                    <span className="flex-1">{t(key)}</span>
-                    {!!badge && <span className="num min-w-4.5 rounded-chip bg-danger px-1 text-center text-xs leading-4.5 font-bold text-on-primary">{badge}</span>}
-                    <Loading />
+                    <Icon aria-hidden size={18} strokeWidth={2} className={`absolute ${move} ${wide ? 'top-3 left-3.5' : 'top-2.5 left-6.5'}`} />
+                    {/* 좁을 때: 아이콘 아래 짧은 이름 · 넓을 때: 아이콘 오른쪽 온전한 이름 — 한쪽이 옆으로 밀리며 사라지고 다른 쪽이 나타난다 */}
+                    <span aria-hidden className={`absolute inset-x-0 bottom-1.5 text-center text-xs font-medium whitespace-nowrap ${move} ${wide ? 'translate-x-6 opacity-0' : 'opacity-100'}`}>
+                      {t(`short.${key}`)}
+                    </span>
+                    <span aria-hidden className={`absolute top-1/2 left-11.5 -translate-y-1/2 whitespace-nowrap ${move} ${wide ? 'opacity-100' : '-translate-x-4 opacity-0'}`}>
+                      {t(key)}
+                    </span>
+                    {!!badge && <span className={`num absolute min-w-4.5 rounded-chip bg-danger px-1 text-center text-xs leading-4.5 font-bold text-on-primary ${move} ${wide ? 'top-3 right-5' : 'top-1 right-2.5'}`}>{badge}</span>}
+                    <span className="absolute top-1/2 right-1 -translate-y-1/2">
+                      <Loading />
+                    </span>
                   </Link>
-                  {/* 아래로 펼침: 높이가 스르륵 열리고 글자가 살짝 내려오며 나타난다. 그 메뉴 안에 있으면 펼쳐 둔다 */}
+                  {/* 넓은 메뉴에서만 아래로 펼침: 높이가 스르륵 열린다. 그 메뉴 안에 있으면 펼쳐 둔다 */}
                   {sub && (
-                    <div className={`grid bg-primary-deep/35 transition-[grid-template-rows] duration-350 ${EASE} ${open ? 'grid-rows-[1fr]' : 'grid-rows-[0fr] group-focus-within/item:grid-rows-[1fr] group-hover/item:grid-rows-[1fr]'}`}>
+                    <div className={`grid bg-primary-deep/35 transition-[grid-template-rows] duration-350! ${EASE} ${!wide ? 'grid-rows-[0fr]' : open ? 'grid-rows-[1fr]' : 'grid-rows-[0fr] group-focus-within/item:grid-rows-[1fr] group-hover/item:grid-rows-[1fr]'}`}>
                       <div className="overflow-hidden">
                         <div className="py-1">
                           {sub.map((s) => {
                             const on = active === s.href;
                             return (
-                              <Link key={s.href} href={s.href} aria-current={on ? 'page' : undefined} onClick={() => setPressed(s.href)} className={`flex min-h-9 items-center pr-3 pl-15 text-sm transition-colors duration-200 ${on ? 'font-bold text-on-primary' : 'text-on-primary/80 hover:text-on-primary'}`}>
+                              <Link key={s.href} href={s.href} tabIndex={wide ? undefined : -1} aria-current={on ? 'page' : undefined} onClick={() => setPressed(s.href)} className={`flex min-h-9 items-center pr-3 pl-15 text-sm whitespace-nowrap transition-colors duration-200 ${on ? 'font-bold text-on-primary' : 'text-on-primary/80 hover:text-on-primary'}`}>
                                 <span className="flex-1">{t(s.key)}</span>
                                 <Loading />
                               </Link>
@@ -197,12 +238,20 @@ export function SideNav({ isAdmin, inboxCount = 0 }: { isAdmin: boolean; inboxCo
             })}
           </div>
         ))}
+        <button type="button" onClick={toggleWide} aria-pressed={wide} aria-label={t(wide ? 'narrowMenu' : 'wideMenu')} className={`relative mt-auto block w-full shrink-0 overflow-hidden border-l-4 border-transparent text-sm font-bold text-on-primary/80 hover:bg-on-primary/10 hover:text-on-primary ${move} ${wide ? 'h-10.5' : 'h-14'}`}>
+          <Toggle aria-hidden size={18} strokeWidth={2} className={`absolute ${move} ${wide ? 'top-3 left-3.5' : 'top-2.5 left-6.5'}`} />
+          <span aria-hidden className={`absolute inset-x-0 bottom-1.5 text-center text-xs font-medium whitespace-nowrap ${move} ${wide ? 'translate-x-6 opacity-0' : 'opacity-100'}`}>
+            {t('short.wideMenu')}
+          </span>
+          <span aria-hidden className={`absolute top-1/2 left-11.5 -translate-y-1/2 whitespace-nowrap ${move} ${wide ? 'opacity-100' : '-translate-x-4 opacity-0'}`}>
+            {t('narrowMenu')}
+          </span>
+        </button>
       </nav>
-      {panel && (
-        <nav aria-label={t('admin')} className="sticky top-14 hidden h-[calc(100dvh-3.5rem)] w-56 shrink-0 flex-col overflow-y-auto border-r border-border bg-bg py-4 lg:flex">
-          <PanelLinks panel={panel} active={active} onPick={setPressed} t={t} />
-        </nav>
-      )}
+      {/* 둘째 메뉴도 서랍처럼: 폭이 0에서 열리고 닫힌다 */}
+      <nav aria-label={t('admin')} aria-hidden={panel ? undefined : true} className={`sticky top-14 hidden h-[calc(100dvh-3.5rem)] shrink-0 overflow-hidden bg-bg lg:block ${move} ${panel ? 'w-56 border-r border-border' : 'w-0'}`}>
+        <div className="h-full w-56 overflow-y-auto py-4">{lastPanel && <PanelLinks panel={panel ?? lastPanel} active={active} onPick={setPressed} t={t} />}</div>
+      </nav>
     </>
   );
 }

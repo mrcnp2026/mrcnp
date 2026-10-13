@@ -2139,7 +2139,23 @@
     "gReport": "리포트",
     "reportTemplates": "리포트 스냅샷 템플릿",
     "closing": "마감 관리",
-    "reports": "리포트"
+    "reports": "리포트",
+    "wideMenu": "와이드 메뉴",
+    "narrowMenu": "메뉴 접기",
+    "short": {
+      "home": "홈",
+      "adminSchedule": "일정",
+      "attendance": "출퇴근",
+      "leaveAdmin": "휴가",
+      "requests": "요청",
+      "adminNotices": "공지",
+      "closing": "마감",
+      "reports": "리포트",
+      "payroll": "급여",
+      "admin": "관리",
+      "config": "설정",
+      "wideMenu": "와이드"
+    }
   },
   "nav": {
     "home": "홈",
