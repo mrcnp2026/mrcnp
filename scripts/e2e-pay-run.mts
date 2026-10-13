@@ -241,6 +241,74 @@ try {
   check((await post(api2, { action: 'override.add', employeeId: other!.id, itemCode: 'ETC_CUT', kind: 'DEDUCTION', amount: 5000, reason: 'e2e 누락된 공제' })).status === 200, '정정 판에 공제 조정을 넣는다');
   check((await post(api2, { action: 'calculate', expectedVersion: r2.version })).json.calculated?.ok === 1, '정정 판 계산');
   r2 = await run2();
+  // ── 사회보험: 취득/상실 확인 + 고지 보험료 정산 (정정 판이 계산됐고 아직 확정 전인 지금) ──
+  {
+    const INS = '/api/admin/payroll/insurance';
+    const QD = `${YM}-03`;
+    const en = await post(INS, { action: 'enroll.add', employeeId: other!.id, event: 'ACQUIRE', qualifyOn: QD, insurers: ['NP', 'HI', 'EI', 'IA'] });
+    check(en.status === 200 && en.json.added === 4, '취득 줄 4개(4대보험)를 넣는다', JSON.stringify(en.json));
+    const en2 = await post(INS, { action: 'enroll.add', employeeId: other!.id, event: 'ACQUIRE', qualifyOn: QD, insurers: ['NP', 'HI'] });
+    check(en2.json.added === 0 && en2.json.skipped === 2, '같은 줄은 두 번 들어가지 않는다');
+    const enRow = async () => (await db.from('payroll_insurance_enrollments').select('id, version, state, confirmed_on, evidence').eq('employee_id', other!.id).eq('qualify_on', QD).eq('insurer', 'NP').eq('active', true).single()).data!;
+    let np = await enRow();
+    check((await post(INS, { action: 'enroll.set', id: np.id, expectedVersion: np.version, state: 'CONFIRMED', confirmedOn: QD, evidence: '' })).json.error === 'insurance_evidence', '근거 없이 확인 완료로 바꿀 수 없다');
+    check((await post(INS, { action: 'enroll.set', id: np.id, expectedVersion: np.version, state: 'CONFIRMED', confirmedOn: QD, evidence: '900101-1234567 접수' })).json.error === 'insurance_no_rrn', '근거 칸에 주민번호 꼴은 넣을 수 없다');
+    check((await post(INS, { action: 'enroll.set', id: np.id, expectedVersion: np.version, state: 'CHECKING' })).status === 200, '확인 중으로');
+    check((await post(INS, { action: 'enroll.set', id: np.id, expectedVersion: np.version, state: 'CONFIRMED', confirmedOn: QD, evidence: 'e2e 접수 123' })).status === 409, '앞 화면의 판 번호로는 바꿀 수 없다');
+    np = await enRow();
+    check((await post(INS, { action: 'enroll.set', id: np.id, expectedVersion: np.version, state: 'CONFIRMED', confirmedOn: QD, evidence: 'e2e 접수 123' })).status === 200 && (await enRow()).state === 'CONFIRMED', '확인한 날 · 근거를 적어 확인 완료');
+    const enPage = await open('/admin/payroll/insurance');
+    check(enPage.includes('사회보험') && enPage.includes(other!.name) && enPage.includes('확인 완료') && enPage.includes('e2e 접수 123') && enPage.includes('미신고') && enPage.includes('프로그램이 공단에 신고하지 않습니다'), '취득 · 상실 화면에 상태 · 근거와 「신고하지 않는다」 안내');
+    await shot('payrun-5a-insurance');
+    check((await q.evaluate(async (u) => (await fetch(u, { method: 'POST', headers: { 'content-type': 'application/json' }, body: '{}' })).status, INS)) === 403, '직원은 사회보험 처리를 할 수 없다');
+
+    // 고지 보험료 — 검사 계정은 보험을 전부 「가입 안 함」으로 뒀으므로 이미 뗀 금액은 0원이고 차액 = 고지액
+    check((await post(INS, { action: 'notice.save', insurer: 'NP', month: YM, rows: [{ employeeId: other!.id, employee: 150000 }, { employeeId: other!.id, employee: 1 }] })).json.error === 'insurance_rows', '같은 직원을 두 줄 넣을 수 없다');
+    const nf = await post(INS, { action: 'notice.save', insurer: 'NP', month: YM, rows: [{ employeeId: other!.id, employee: 150000, employer: 150000, note: 'e2e 고지' }] });
+    check(nf.status === 200 && !!nf.json.id, '고지 보험료를 손으로 넣는다');
+    const { data: nrow } = await db.from('payroll_insurance_notices').select('id, mapping_state, components').eq('file_id', nf.json.id).single();
+    check(nrow?.mapping_state === 'MAPPED' && (nrow.components as Record<string, string>)['employee.notice'] === '150000', '직원을 직접 골라 넣은 줄은 바로 이어진다');
+    const { error: fix } = await db.from('payroll_insurance_notices').update({ components: {} }).eq('id', nrow!.id);
+    check(!!fix, '넣은 고지 금액은 DB에서도 고칠 수 없다');
+    const first = await open(`/admin/payroll/insurance/notice/${nf.json.id}`);
+    check(first.includes('150,000원') && first.includes('급여대장을 고르면'), '대장을 고르기 전에는 고지액만 보인다');
+    const cmp = await open(`/admin/payroll/insurance/notice/${nf.json.id}?run=${run2Id}`);
+    const cells = (await p.locator('table[data-notice] tbody tr').first().locator('td').allInnerTexts()).map((v) => v.trim());
+    check(cells[1] === '150,000원' && cells[3] === '0원' && cells[4] === '+150,000원' && cmp.includes('대장에 넣기'), '대장을 고르면 이미 뗀 금액과 차액이 보인다', cells.slice(1, 5).join(' | '));
+    await p.getByRole('button', { name: `${other!.name} 차액을 대장에 넣기` }).click();
+    await p.getByText('이 대장에 +150,000원').waitFor({ timeout: 30000 });
+    await shot('payrun-5b-notice');
+    const { data: al } = await db.from('payroll_insurance_allocations').select('id, amount, override_id, active').eq('notice_id', nrow!.id).eq('active', true);
+    const { data: ov } = await db.from('payroll_statement_overrides').select('id, item_code, kind, proposed_amount').eq('run_id', run2Id).eq('item_code', 'PENSION_SETTLE').eq('active', true);
+    check(al?.length === 1 && Number(al[0].amount) === 150000 && ov?.length === 1 && al[0].override_id === ov[0].id && ov[0].kind === 'DEDUCTION', '차액이 대장의 「국민연금 정산」 공제 조정으로 들어간다');
+    check((await post(INS, { action: 'notice.allocate', noticeId: nrow!.id, runId: run2Id })).json.error === 'insurance_allocated', '같은 고지 금액을 두 번 넣을 수 없다');
+    check((await post(INS, { action: 'notice.withdraw', id: nf.json.id, reason: 'e2e 거두기' })).json.error === 'insurance_in_use', '대장에 들어간 줄이 있으면 묶음을 거둘 수 없다');
+    r2 = await run2();
+    check((await post(api2, { action: 'review', expectedVersion: r2.version })).json.error === 'payroll_stale', '차액을 넣으면 다시 계산하기 전에는 검토할 수 없다');
+    check((await post(api2, { action: 'calculate', expectedVersion: r2.version })).json.calculated?.ok === 1, '차액을 넣고 다시 계산');
+    r2 = await run2();
+    const { data: sIns } = await db.from('payroll_statements').select('id, deduction_total, net_total').eq('generation_id', r2.current_generation_id).eq('employee_id', other!.id).single();
+    check(Number(sIns?.net_total) === 2911670 - 150000, '명세서의 실지급이 차액만큼 줄어든다', String(sIns?.net_total));
+    check((await open(`/admin/payroll/runs/${run2Id}/${other!.id}`)).includes('국민연금 정산'), '명세서에 「국민연금 정산」 줄이 보인다');
+    await open(`/admin/payroll/insurance/notice/${nf.json.id}?run=${run2Id}`);
+    await p.getByRole('button', { name: `${other!.name} 차액을 대장에서 빼기` }).click();
+    await p.getByRole('button', { name: `${other!.name} 차액을 대장에 넣기` }).waitFor({ timeout: 30000 });
+    const { data: ov2 } = await db.from('payroll_statement_overrides').select('id').eq('run_id', run2Id).eq('item_code', 'PENSION_SETTLE').eq('active', true);
+    const { data: al2 } = await db.from('payroll_insurance_allocations').select('id').eq('notice_id', nrow!.id).eq('active', true);
+    check(!ov2?.length && !al2?.length, '대장에서 빼면 조정과 반영 기록이 꺼진다');
+    check((await post(INS, { action: 'notice.withdraw', id: nf.json.id, reason: '' })).status === 400 && (await post(INS, { action: 'notice.withdraw', id: nf.json.id, reason: 'e2e 거두기' })).status === 200, '뺀 뒤에는 사유를 적어 묶음을 거둘 수 있다');
+    check((await post(INS, { action: 'notice.allocate', noticeId: nrow!.id, runId: run2Id })).status === 409, '거둔 묶음은 대장에 넣을 수 없다');
+    const ia = await post(INS, { action: 'notice.save', insurer: 'IA', month: YM, rows: [{ employeeId: other!.id, employee: 0, employer: 30000 }] });
+    check((await open(`/admin/payroll/insurance/notice/${ia.json.id}?run=${run2Id}`)).includes('산재보험은 근로자 부담이 없어'), '산재보험 고지는 기록만 하고 대장에 넣지 않는다');
+    await post(INS, { action: 'notice.withdraw', id: ia.json.id, reason: 'e2e 검사 끝' });
+    const list = await open('/admin/payroll/insurance?v=notice');
+    check(list.includes(YM) && list.includes('국민연금') && list.includes('거둠') && (await p.locator('nav a[href="/admin/payroll/insurance"]').count()) >= 1, '고지 보험료 목록과 왼쪽 메뉴');
+    // 다음 검사를 위해: 취득 줄은 끄고, 정정 판은 차액 없이 다시 계산해 둔다
+    await db.from('payroll_insurance_enrollments').update({ active: false }).eq('employee_id', other!.id).eq('qualify_on', QD).eq('active', true);
+    r2 = await run2();
+    check((await post(api2, { action: 'calculate', expectedVersion: r2.version })).json.calculated?.ok === 1, '차액을 뺀 뒤 다시 계산');
+    r2 = await run2();
+  }
   check((await post(api2, { action: 'review', expectedVersion: r2.version })).status === 200, '정정 판 검토');
   r2 = await run2();
   check((await post(api2, { action: 'finalize', expectedVersion: r2.version })).status === 200 && (await run2()).status === 'FINALIZED', '정정 판 확정');
@@ -346,8 +414,9 @@ try {
 
   // ── 기록 · 권한 ──
   const { data: audit } = await db.from('payroll_audit_events').select('action, detail').in('run_id', [runId, run2Id]);
-  const acts = new Set((audit ?? []).map((a) => a.action));
-  check(['run.create', 'run.calculate', 'run.review', 'run.finalize', 'member.exclude', 'override.add', 'run.publish', 'statement.unpublish', 'run.correct', 'run.export'].every((a) => acts.has(a)) && !JSON.stringify(audit).includes('3010000') && !JSON.stringify(audit).includes('2906670'), '급여 전용 기록에 누가 무엇을 했는지 남고, 금액은 적히지 않는다');
+  const { data: audit2 } = await db.from('payroll_audit_events').select('action').eq('actor_id', emp!.id).like('action', 'insurance.%').gte('created_at', new Date(Date.now() - 1800e3).toISOString()); // 대장 번호가 없는 사회보험 기록
+  const acts = new Set([...(audit ?? []), ...(audit2 ?? [])].map((a) => a.action));
+  check(['run.create', 'run.calculate', 'run.review', 'run.finalize', 'member.exclude', 'override.add', 'run.publish', 'statement.unpublish', 'run.correct', 'run.export', 'insurance.enroll.add', 'insurance.enroll.state', 'insurance.notice.save', 'insurance.allocate', 'insurance.unallocate', 'insurance.notice.withdraw'].every((a) => acts.has(a)) && !JSON.stringify(audit).includes('3010000') && !JSON.stringify(audit).includes('2906670'), '급여 전용 기록에 누가 무엇을 했는지 남고, 금액은 적히지 않는다');
   await db.from('profiles').update({ can_view_payroll: false }).eq('id', emp!.id);
   check((await post('/api/admin/payroll/runs', { action: 'create', month: '2089-01' })).status === 403, '급여 담당이 아닌 관리자는 대장을 만들 수 없다');
   const denied = await open(`/admin/payroll/runs/${runId}/${other!.id}`);
