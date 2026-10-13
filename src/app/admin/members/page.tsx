@@ -4,19 +4,24 @@
 import { CalendarCheck, Check, ChevronRight, Download, Network } from 'lucide-react';
 import { getTranslations } from 'next-intl/server';
 import Link from 'next/link';
+import { AddSheet } from '@/components/AddSheet';
 import { DetailBar } from '@/components/detail';
 import { PcTable } from '@/components/PcTable';
 import { Card, Chip, PageShell } from '@/components/ui';
-import { groupPath, groupPeople } from '@/lib/org';
+import { LOCALE_NAMES, LOCALES } from '@/i18n/locales';
+import { loadJobs } from '@/lib/job-data';
+import { buildOrgTree, groupPath, groupPeople } from '@/lib/org';
 import { loadOrgGroups } from '@/lib/org-data';
 import { getMe } from '@/lib/auth';
 import { createAdminClient } from '@/lib/supabase/admin';
+import { toKstDate } from '@/lib/time';
+import { RegisterWizard } from './new/RegisterWizard';
 import { NewInviteButton } from './NewInviteButton';
 import { RoleCell } from './RoleCell';
 
 // 탭 (2026-10-11 의뢰인: 시프티의 직원 관리처럼) — 현재직원(가입을 마친 사람) · 미합류(초대했지만 아직 가입 전) · 비활성(퇴사 등으로 꺼 둔 사람)
 type Filter = 'current' | 'pending' | 'inactive';
-type Row = { id: string; name: string; employeeNo: string | null; role: string; active: boolean; groupId: string | null; jobTitle: string | null; canViewPayroll: boolean };
+type Row = { id: string; name: string; employeeNo: string | null; role: string; active: boolean; groupId: string | null; jobTitle: string | null; canViewPayroll: boolean; joinedOn: string | null; jobId: string | null };
 
 export default async function MembersPage({ searchParams }: { searchParams: Promise<{ f?: string }> }) {
   const t = await getTranslations('admin.members');
@@ -25,19 +30,22 @@ export default async function MembersPage({ searchParams }: { searchParams: Prom
   const filter: Filter = sp.f === 'pending' || sp.f === 'inactive' ? sp.f : 'current';
   const db = createAdminClient();
   const me = (await getMe())!;
-  const [{ data: people }, { data: keys }, groups, { data: roleReqs }] = await Promise.all([
-    db.from('profiles').select('id, name, employee_no, role, active, group_id, job_title, password_set_at, can_view_payroll').order('name'),
+  const [{ data: people }, { data: keys }, groups, { data: roleReqs }, jobs] = await Promise.all([
+    // (맨 끝) 직무: 표의 직무 열과 추가 팝업의 고르기 칸
+    db.from('profiles').select('id, name, employee_no, role, active, group_id, job_title, password_set_at, can_view_payroll, joined_on, job_id').order('name'),
     db.from('user_passkeys').select('employee_id').is('revoked_at', null),
     loadOrgGroups(),
     db.from('role_change_requests').select('target_id').eq('status', 'pending'),
+    loadJobs(),
   ]);
+  const jobName = new Map(jobs.map((j) => [j.id, j.name]));
   const roleWaiting = new Set((roleReqs ?? []).map((x) => x.target_id)); // 권한 변경 확인 대기 (R-2의 8)
   // 가입 = 비밀번호를 만들었거나, 예전 방식으로 폰(지문 로그인)을 등록해 둔 사람
   const withPhone = new Set([...(keys ?? []).map((k) => k.employee_id), ...(people ?? []).filter((p) => p.password_set_at).map((p) => p.id)]);
   // 검사 전용 계정(e2e-audit, e2e-audit2)은 검사 중에만 켜진다 — 꺼져 있으면 목록에 안 보이게
   const all: Row[] = (people ?? [])
     .filter((p) => p.active || !p.employee_no?.startsWith('e2e-audit'))
-    .map((p) => ({ id: p.id, name: p.name, employeeNo: p.employee_no, role: p.role, active: p.active, groupId: p.group_id, jobTitle: p.job_title, canViewPayroll: p.can_view_payroll }));
+    .map((p) => ({ id: p.id, name: p.name, employeeNo: p.employee_no, role: p.role, active: p.active, groupId: p.group_id, jobTitle: p.job_title, canViewPayroll: p.can_view_payroll, joinedOn: p.joined_on, jobId: p.job_id }));
   const active = all.filter((p) => p.active);
   const inactive = all.filter((p) => !p.active);
   const joined = active.filter((p) => withPhone.has(p.id));
@@ -97,12 +105,24 @@ export default async function MembersPage({ searchParams }: { searchParams: Prom
     <PageShell wide>
       <DetailBar back="/punch" backLabel={tc('back')} title={t('title')} desc={t('pcIntro')}
         extra={
+          <>
           <a href="/api/admin/export/list?kind=members" className="hidden h-8 items-center gap-1 rounded-button border border-nav bg-bg px-4 text-sm font-bold whitespace-nowrap text-nav lg:inline-flex">
             <Download aria-hidden size={16} />
             {tc('download')}
           </a>
+            <Link href="/admin/members/new" className="inline-flex min-h-11 shrink-0 items-center px-2 text-base font-bold text-primary lg:hidden">
+              + {t('addShort')}
+            </Link>
+            </>
         }
-        action={{ href: '/admin/members/new', label: `+ ${t('addShort')}` }} />
+        sheet={{ id: 'member', label: t('addTitle') }}
+      />
+      {/* PC: 가운데 팝업(두 칸) · 폰: 따로 화면(/admin/members/new) */}
+      <AddSheet id="member" title={t('addTitle')} modal wide className="hidden">
+        <div className="flex flex-col gap-4">
+          <RegisterWizard popup groups={buildOrgTree(groups).flatMap((d) => [{ id: d.id, label: d.name }, ...d.teams.map((x) => ({ id: x.id, label: `${d.name} › ${x.name}` }))])} jobs={jobs.filter((j) => j.active).map((j) => ({ id: j.id, label: j.name }))} locales={LOCALES.map((code) => ({ code, name: LOCALE_NAMES[code] }))} today={toKstDate(new Date())} />
+        </div>
+      </AddSheet>
       {/* 걸러보기 — 숫자가 곧 현황 (가입 9 · 미가입 2). 시프티의 「현재직원 / 미합류 / 비활성」 탭 줄 모양 */}
       <nav className="-mx-4 -mt-3 flex border-b border-border bg-bg px-2 lg:mx-0 lg:mt-0 lg:rounded-card lg:border-0" aria-label={t('filter')}>
         {tabs.map((x) => (
@@ -146,6 +166,8 @@ export default async function MembersPage({ searchParams }: { searchParams: Prom
             { key: 'no', label: t('colNo') },
             { key: 'group', label: t('colGroup') },
             { key: 'title', label: t('colTitle') },
+            { key: 'job', label: t('colJob') },
+            { key: 'joined', label: t('infoJoined') },
             { key: 'status', label: t('colStatus') },
             { key: 'act', label: '', search: false, sort: false, align: 'right' },
           ]}
@@ -161,6 +183,8 @@ export default async function MembersPage({ searchParams }: { searchParams: Prom
                 no: { text: p.employeeNo ?? '' },
                 group: { text: groupPath(groups, p.groupId) ?? t('unassigned') },
                 title: { text: p.jobTitle ?? '' },
+                job: { text: (p.jobId && jobName.get(p.jobId)) || '' },
+                joined: { text: p.joinedOn ?? '', node: <span className="num whitespace-nowrap">{p.joinedOn ?? ''}</span> },
                 status: { text: !p.active ? t('inactive') : ok ? t('joined') : t('notJoined'), node: !p.active ? <Chip>{t('inactive')}</Chip> : ok ? <Chip tone="ok">{t('joined')}</Chip> : <Chip tone="warn">{t('notJoined')}</Chip> },
                 act: { text: '', node: p.active && !ok ? <NewInviteButton employeeId={p.id} name={p.name} compact /> : null },
               },

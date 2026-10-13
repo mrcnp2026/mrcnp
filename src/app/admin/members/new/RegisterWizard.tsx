@@ -5,13 +5,15 @@ import { useTranslations } from 'next-intl';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useState } from 'react';
+import { CLOSE_SHEET_EVENT } from '@/components/AddSheet';
 import { callApi } from '@/components/client-api';
 import { ErrorNote } from '@/components/ErrorNote';
 import { Button, Card } from '@/components/ui';
 import { EmployeeFields, type OrgOption } from '../EmployeeFields';
 import { InviteView, type Invite } from '../InviteView';
 
-export function RegisterWizard({ groups, locales, today }: { groups: OrgOption[]; locales: { code: string; name: string }[]; today: string }) {
+// popup: PC 직원 목록의 가운데 팝업 안 — 두 칸 양식 + [닫기][추가하기] (2026-10-11 의뢰인 스샷 `스샷/관리-직원-직원추가하기.png`)
+export function RegisterWizard({ groups, locales, today, jobs, popup = false }: { groups: OrgOption[]; locales: { code: string; name: string }[]; today: string; jobs?: OrgOption[]; popup?: boolean }) {
   const t = useTranslations('admin.members');
   const tc = useTranslations('common');
   const router = useRouter();
@@ -62,11 +64,23 @@ export function RegisterWizard({ groups, locales, today }: { groups: OrgOption[]
               router.refresh();
             }}
           >
-            <EmployeeFields groups={groups} locales={locales} today={today} />
+            <EmployeeFields groups={groups} locales={locales} today={today} jobs={jobs} popup={popup} />
+            {popup && <p className="rounded-button bg-primary-tint p-3 text-sm text-primary">{t('inviteNote')}</p>}
             {err && <ErrorNote code={err.code} requestId={err.requestId} namespace="admin.members" />}
-            <Button type="submit" disabled={busy} className="w-full">
-              {busy ? tc('working') : t('submit')}
-            </Button>
+            {popup ? (
+              <div className="flex justify-end gap-2">
+                <Button type="button" variant="outline" size="sm" disabled={busy} onClick={() => window.dispatchEvent(new CustomEvent(CLOSE_SHEET_EVENT, { detail: 'member' }))}>
+                  {t('roleClose')}
+                </Button>
+                <Button type="submit" size="sm" disabled={busy}>
+                  {busy ? tc('working') : t('popupSubmit')}
+                </Button>
+              </div>
+            ) : (
+              <Button type="submit" disabled={busy} className="w-full">
+                {busy ? tc('working') : t('submit')}
+              </Button>
+            )}
           </form>
         </Card>
       )}

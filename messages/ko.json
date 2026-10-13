@@ -354,6 +354,9 @@
       "f_inactive": "비활성",
       "colSearch": "검색..",
       "totalCount": "총 직원수",
+      "job": "직무 (선택)",
+      "popupSubmit": "추가하기",
+      "inviteNote": "추가하면 초대 링크가 만들어집니다. 다음 단계에서 링크나 QR을 직원에게 전달하세요.",
       "employeeRole": "직원",
       "pcIntro": "부서, 직책, 권한, 가입 여부를 관리하고, 초대 코드로 직원을 초대할 수 있습니다."
     },

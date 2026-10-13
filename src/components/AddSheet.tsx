@@ -11,7 +11,7 @@ export const OPEN_SHEET_EVENT = 'open-add-sheet';
 export const CLOSE_SHEET_EVENT = 'close-add-sheet'; // 저장이 끝난 양식이 자기 창을 닫는다
 
 // modal: PC에서도 닫혀 있다가 「추가하기」 버튼(SheetOpener)을 누르면 가운데 팝업으로 뜬다 (2026-10-11, 시프티 PC의 팝업 모양 — 흰 상자 · 어두운 바탕 · 제목 줄 · ×)
-export function AddSheet({ id, title, children, defaultOpen = false, className = '', modal = false }: { id: string; title: string; children: ReactNode; defaultOpen?: boolean; className?: string; modal?: boolean }) {
+export function AddSheet({ id, title, children, defaultOpen = false, className = '', modal = false, wide = false }: { id: string; title: string; children: ReactNode; defaultOpen?: boolean; className?: string; modal?: boolean; wide?: boolean }) {
   const t = useTranslations('side');
   const [open, setOpen] = useState(defaultOpen);
   useEffect(() => {
@@ -42,7 +42,7 @@ export function AddSheet({ id, title, children, defaultOpen = false, className =
       <div
         role={open ? 'dialog' : undefined}
         aria-label={title}
-        className={`flex max-h-[calc(100dvh-3rem)] flex-col rounded-t-card bg-surface pb-[env(safe-area-inset-bottom)] ${modal ? 'lg:relative lg:w-160 lg:max-w-[calc(100vw-2rem)] lg:rounded-card lg:border lg:border-border lg:bg-bg lg:pb-0 lg:shadow-card' : 'lg:block lg:max-h-none lg:rounded-none lg:bg-transparent lg:pb-0'}`}
+        className={`flex max-h-[calc(100dvh-3rem)] flex-col rounded-t-card bg-surface pb-[env(safe-area-inset-bottom)] ${modal ? `lg:relative ${wide ? 'lg:w-240' : 'lg:w-160'} lg:max-w-[calc(100vw-2rem)] lg:rounded-card lg:border lg:border-border lg:bg-bg lg:pb-0 lg:shadow-card` : 'lg:block lg:max-h-none lg:rounded-none lg:bg-transparent lg:pb-0'}`}
       >
         <div className={`flex items-center justify-between gap-2 py-1 pr-2 pl-5 ${modal ? 'lg:border-b lg:border-border lg:py-2 lg:text-lg' : 'lg:hidden'}`}>
           <p className="font-bold">{title}</p>

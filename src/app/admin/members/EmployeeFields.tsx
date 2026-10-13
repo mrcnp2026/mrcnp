@@ -14,18 +14,23 @@ export function EmployeeFields({
   groups,
   locales,
   today,
+  jobs,
+  popup = false,
 }: {
   initial?: Partial<EmployeeValues>;
   groups: OrgOption[];
   locales: { code: string; name: string }[];
   today: string;
+  jobs?: OrgOption[]; // 넘기면 「직무」 고르기 칸이 생긴다 (추가할 때만)
+  popup?: boolean; // PC 팝업: 두 칸 + 회색 띠 제목 (시프티 「직원 추가하기」)
 }) {
   const t = useTranslations('admin.members');
+  const legend = popup ? 'mb-3 w-full bg-surface px-3 py-2 text-sm font-bold' : 'mb-2 text-sm font-bold text-primary';
   return (
     // PC: 묶음 3개를 가로로 (2026-10-06 의뢰인: 한 줄로 길게 늘어져 있었다) · 폰: 세로
-    <div className="flex flex-col gap-4 lg:grid lg:grid-cols-2 lg:items-start lg:gap-6 xl:grid-cols-3">
+    <div className={`flex flex-col gap-4 lg:grid lg:grid-cols-2 lg:items-start lg:gap-6 ${popup ? '' : 'xl:grid-cols-3'}`}>
       <fieldset className="flex flex-col gap-3">
-        <legend className="mb-2 text-sm font-bold text-primary">{t('secBasic')}</legend>
+        <legend className={legend}>{t('secBasic')}</legend>
         <label className="flex flex-col gap-1 text-sm text-muted">
           <span>{t('name')} <span className="text-warn">*</span></span>
           <input name="name" required maxLength={50} defaultValue={initial?.name ?? ''} className={field} autoComplete="off" />
@@ -43,7 +48,7 @@ export function EmployeeFields({
       </fieldset>
 
       <fieldset className="flex flex-col gap-3">
-        <legend className="mb-2 text-sm font-bold text-primary">{t('secOrg')}</legend>
+        <legend className={legend}>{t('secOrg')}</legend>
         <label className="flex flex-col gap-1 text-sm text-muted">
           {t('group')}
           <select name="groupId" defaultValue={initial?.groupId ?? ''} className={field}>
@@ -60,6 +65,19 @@ export function EmployeeFields({
           {t('jobTitle')}
           <input name="jobTitle" maxLength={40} defaultValue={initial?.jobTitle ?? ''} className={field} autoComplete="off" />
         </label>
+        {jobs && (
+          <label className="flex flex-col gap-1 text-sm text-muted">
+            {t('job')}
+            <select name="jobId" defaultValue="" className={field}>
+              <option value="">{t('jobNone')}</option>
+              {jobs.map((j) => (
+                <option key={j.id} value={j.id}>
+                  {j.label}
+                </option>
+              ))}
+            </select>
+          </label>
+        )}
         <label className="flex flex-col gap-1 text-sm text-muted">
           {t('joinedOn')}
           <DateTimeInput name="joinedOn" type="date" max={today} defaultValue={initial?.joinedOn ?? ''} className={`num ${field}`} />
@@ -67,7 +85,7 @@ export function EmployeeFields({
       </fieldset>
 
       <fieldset className="flex flex-col gap-3">
-        <legend className="mb-2 text-sm font-bold text-primary">{t('secApp')}</legend>
+        <legend className={legend}>{t('secApp')}</legend>
         <label className="flex flex-col gap-1 text-sm text-muted">
           {t('locale')}
           <select name="locale" defaultValue={initial?.locale ?? 'en'} className={field}>

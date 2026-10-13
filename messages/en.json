@@ -354,6 +354,9 @@
       "f_inactive": "Inactive",
       "colSearch": "Search..",
       "totalCount": "Employees",
+      "job": "Job (optional)",
+      "popupSubmit": "Add",
+      "inviteNote": "Adding creates an invite link. Pass the link or QR code to the employee in the next step.",
       "employeeRole": "Employee",
       "pcIntro": "Manage departments, titles, access and sign-up status, and invite employees with a code."
     },

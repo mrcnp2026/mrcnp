@@ -6,6 +6,7 @@ import { createEmployee, DuplicateEmployeeNo, EMPLOYEE_NO_RE, issueInvite } from
 import { isLocale } from '@/i18n/locales';
 import { cleanJobTitle, cleanPhone } from '@/lib/org';
 import { assignableGroup } from '@/lib/org-data';
+import { createAdminClient } from '@/lib/supabase/admin';
 
 export const POST = api('admin.employees.create', async (req) => {
   const me = await requireAdmin();
@@ -23,6 +24,12 @@ export const POST = api('admin.employees.create', async (req) => {
   if (jobTitle === undefined) throw new ApiError(400, 'invalid_input');
   const groupId = await assignableGroup(b.groupId);
   if (groupId === undefined) throw new ApiError(400, 'invalid_group');
+  // 직무(선택): 켜져 있는 직무만 지정할 수 있다
+  const jobId = typeof b.jobId === 'string' && b.jobId ? b.jobId : null;
+  if (jobId) {
+    const { data: job } = await createAdminClient().from('jobs').select('id').eq('id', jobId).eq('active', true).maybeSingle();
+    if (!job) throw new ApiError(400, 'invalid_input');
+  }
 
   let employeeId: string;
   try {
@@ -30,6 +37,10 @@ export const POST = api('admin.employees.create', async (req) => {
   } catch (e) {
     if (e instanceof DuplicateEmployeeNo) throw new ApiError(409, 'duplicate_no');
     throw e;
+  }
+  if (jobId) {
+    const { error } = await createAdminClient().from('profiles').update({ job_id: jobId, updated_by: me.id }).eq('id', employeeId);
+    if (error) throw new Error(`employees.create.job: ${error.code}`);
   }
   const invite = await issueInvite({ employeeId, issuedBy: me.id, via: 'admin' });
   return { employeeId, name, invite };
