@@ -4,7 +4,7 @@
 // 월 집계·엑셀 내려받기는 「월 집계」 화면(/admin/records)에 그대로 있다.
 import { loadOfficeLocations } from '@/lib/geo-data';
 import { SheetOpener } from '@/components/SheetOpener';
-import { CircleCheck } from 'lucide-react';
+import { CircleCheck, Download } from 'lucide-react';
 import { getFormatter, getTranslations } from 'next-intl/server';
 import Link from 'next/link';
 import { AddSheet } from '@/components/AddSheet';
@@ -108,6 +108,10 @@ export default async function RecordListPage({ searchParams }: { searchParams: P
         <div className="flex items-center justify-between gap-3">
           <h1 className="text-2xl font-bold">{t('title')}</h1>
           <div className="flex items-center gap-2">
+            <a href={`/api/admin/export/report?m=${to.slice(0, 7)}${sp.live === '1' ? '&live=1' : ''}`} title={tc('downloadReport', { ym: to.slice(0, 7) })} className="inline-flex h-8 items-center gap-1 rounded-button border border-nav bg-bg px-4 text-sm font-bold whitespace-nowrap text-nav">
+              <Download aria-hidden size={16} />
+              {tc('download')}
+            </a>
             <Link href="/admin/records" className="inline-flex min-h-8 items-center rounded-button border border-nav bg-bg px-4 text-sm font-bold text-nav">
               {t('toMonth')}
             </Link>

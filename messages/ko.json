@@ -17,7 +17,9 @@
     "account": "내 계정 · 비밀번호",
     "add": "새로 만들기",
     "menu": "메뉴",
-    "colSearch": "검색.."
+    "colSearch": "검색..",
+    "download": "다운로드",
+    "downloadReport": "{ym} 월별 근태확인서 (엑셀)"
   },
   "login": {
     "title": "로그인",

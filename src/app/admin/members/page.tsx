@@ -1,7 +1,7 @@
 // ④ 직원 탭 — 조직도(부서 › 팀)로 묶어 본다 (2026-10-05 의뢰인: 샤플 대조). 누가 가입(비밀번호를 만듦)했고 누가 아직인지도 한눈에.
 // 위: 전체·가입·미가입 걸러보기 / 가운데: 부서별 묶음 → 팀 → 직원 한 줄 (이름·직급·사번·가입 상태·초대 링크).
 // 이름을 누르면 직원 상세(정보 수정·로그인·기록). 직원 추가와 조직도 관리는 각각 따로 화면이 있다.
-import { CalendarCheck, Check, ChevronRight, Network } from 'lucide-react';
+import { CalendarCheck, Check, ChevronRight, Download, Network } from 'lucide-react';
 import { getTranslations } from 'next-intl/server';
 import Link from 'next/link';
 import { DetailBar } from '@/components/detail';
@@ -95,7 +95,14 @@ export default async function MembersPage({ searchParams }: { searchParams: Prom
 
   return (
     <PageShell wide>
-      <DetailBar back="/punch" backLabel={tc('back')} title={t('title')} desc={t('pcIntro')} action={{ href: '/admin/members/new', label: `+ ${t('addShort')}` }} />
+      <DetailBar back="/punch" backLabel={tc('back')} title={t('title')} desc={t('pcIntro')}
+        extra={
+          <a href="/api/admin/export/list?kind=members" className="hidden h-8 items-center gap-1 rounded-button border border-nav bg-bg px-4 text-sm font-bold whitespace-nowrap text-nav lg:inline-flex">
+            <Download aria-hidden size={16} />
+            {tc('download')}
+          </a>
+        }
+        action={{ href: '/admin/members/new', label: `+ ${t('addShort')}` }} />
       {/* 걸러보기 — 숫자가 곧 현황 (가입 9 · 미가입 2). 시프티의 「현재직원 / 미합류 / 비활성」 탭 줄 모양 */}
       <nav className="-mx-4 -mt-3 flex border-b border-border bg-bg px-2 lg:mx-0 lg:mt-0 lg:rounded-card lg:border-0" aria-label={t('filter')}>
         {tabs.map((x) => (

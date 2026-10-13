@@ -4,7 +4,7 @@
 import { loadJobs } from '@/lib/job-data';
 import { leaveTypeName } from '@/lib/leave';
 import { SHIFT_COLOR_CLASS } from '@/lib/shifts';
-import { ChevronLeft, ChevronRight } from 'lucide-react';
+import { ChevronLeft, ChevronRight, Download } from 'lucide-react';
 import { getFormatter, getTranslations } from 'next-intl/server';
 import Link from 'next/link';
 import { PageShell } from '@/components/ui';
@@ -20,7 +20,7 @@ import { kstDateTime, toKstDate } from '@/lib/time';
 const YM = /^\d{4}-(0[1-9]|1[0-2])$/;
 
 export default async function RecordCalendarPage({ searchParams }: { searchParams: Promise<{ ym?: string; q?: string; g?: string; live?: string }> }) {
-  const [t, f, sp] = await Promise.all([getTranslations('admin.recordCalendar'), getFormatter(), searchParams]);
+  const [t, tc, f, sp] = await Promise.all([getTranslations('admin.recordCalendar'), getTranslations('common'), getFormatter(), searchParams]);
   const practice = OFFICE.practiceMode && sp.live !== '1';
   const today = toKstDate(new Date());
   const ym = sp.ym && YM.test(sp.ym) && sp.ym <= today.slice(0, 7) ? sp.ym : today.slice(0, 7);
@@ -79,6 +79,10 @@ export default async function RecordCalendarPage({ searchParams }: { searchParam
           <h1 className="text-2xl font-bold">{t('title')}</h1>
           <p className="pt-1 text-sm text-faint">{t('pcIntro')}</p>
         </div>
+        <a href={`/api/admin/export/report?m=${ym}${sp.live === '1' ? '&live=1' : ''}`} title={tc('downloadReport', { ym })} className="ml-auto inline-flex h-8 items-center gap-1 rounded-button border border-nav bg-bg px-4 text-sm font-bold whitespace-nowrap text-nav">
+          <Download aria-hidden size={16} />
+          {tc('download')}
+        </a>
         <Link href={`/admin/records/list${sp.live === '1' ? '?live=1' : ''}`} className="inline-flex min-h-8 items-center rounded-button border border-nav bg-bg px-4 text-sm font-bold text-nav">
           {t('toList')}
         </Link>

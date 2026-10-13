@@ -17,7 +17,9 @@
     "account": "My account · password",
     "add": "New",
     "menu": "Menu",
-    "colSearch": "Search.."
+    "colSearch": "Search..",
+    "download": "Download",
+    "downloadReport": "{ym} monthly attendance report (Excel)"
   },
   "login": {
     "title": "Sign in",

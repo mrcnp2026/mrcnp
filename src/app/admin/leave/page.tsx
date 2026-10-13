@@ -2,7 +2,7 @@
 // 위 줄(2026-10-11 의뢰인: 시프티의 휴가 「전체」처럼): 이름 검색 · 부서로 거르기 · 기준일 · [내 휴가]. 폰 목록은 권한(관리자 · 직원)별 묶음.
 // 기준일을 바꾸면 그날 적용되는 부여 기준의 받은 · 사용 · 잔여를 본다. 입력 칸의 계산값은 언제나 오늘 기준이다.
 // ★ 4-7: 발생일수는 관리자가 직접 입력. 참고 계산값은 옆에 "참고용"으로만 보여 주고 입력 칸에 미리 채우지 않는다.
-import { ChevronRight } from 'lucide-react';
+import { ChevronRight, Download } from 'lucide-react';
 import { getFormatter, getTranslations } from 'next-intl/server';
 import Link from 'next/link';
 import { Help } from '@/components/Help';
@@ -78,6 +78,12 @@ export default async function AdminLeavePage({ searchParams }: { searchParams: P
           <h1 className="text-2xl font-bold">{t(view === 'accrual' ? 'pcAccrual' : 'pcHistory')}</h1>
           <p className="pt-1 text-sm text-faint">{t(view === 'accrual' ? 'pcAccrualIntro' : 'pcHistoryIntro')}</p>
         </div>
+        {view !== 'accrual' && (
+          <a href={`/api/admin/export/list?kind=leave&y=${sp.y && /^\d{4}$/.test(sp.y) ? sp.y : asOf.slice(0, 4)}${sp.live === '1' ? '&live=1' : ''}`} className="inline-flex h-8 items-center gap-1 rounded-button border border-nav bg-bg px-4 text-sm font-bold whitespace-nowrap text-nav">
+            <Download aria-hidden size={16} />
+            {tc('download')}
+          </a>
+        )}
         <Link href="/admin/leave/types" className="inline-flex h-8 items-center rounded-button border border-nav bg-bg px-4 text-sm font-bold whitespace-nowrap text-nav">
           {t('toTypes')}
         </Link>

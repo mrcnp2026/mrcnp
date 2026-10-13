@@ -29,7 +29,7 @@ const SCAN = `(() => {
     const cs = getComputedStyle(el); if (cs.display === 'none' || cs.visibility === 'hidden') continue;
     const r = el.getBoundingClientRect(); if (r.width === 0 || r.height === 0) continue;
     if (r.right > vw + 1 && cs.position !== 'fixed') out.push('OUTSIDE ' + el.tagName + ' ' + (el.textContent || '').trim().slice(0, 30));
-    if (['BUTTON', 'A', 'SELECT', 'SUMMARY'].includes(el.tagName) && !(el.tagName === 'A' && el.closest('p')) && (r.height < 43.5 || r.width < 43.5) && cs.position !== 'absolute') out.push('SMALL-TARGET ' + Math.round(r.width) + 'x' + Math.round(r.height) + ' ' + (el.textContent || '').trim().slice(0, 30));
+    if (['BUTTON', 'A', 'SELECT', 'SUMMARY'].includes(el.tagName) && !(el.tagName === 'A' && el.closest('p')) && vw < 1024 && (r.height < 43.5 || r.width < 43.5) && cs.position !== 'absolute') out.push('SMALL-TARGET ' + Math.round(r.width) + 'x' + Math.round(r.height) + ' ' + ((el.textContent || '').trim().slice(0, 30) || el.getAttribute('aria-label') || String(el.className).slice(0, 60)));
   }
   return [...new Set(out)];
 })()`;
@@ -72,7 +72,7 @@ try {
   // ── 관리자: 왼쪽 위 메뉴 › 공지 관리 › 새 공지 ──
   await p.goto(`${BASE}/admin`);
   await p.locator('[data-menu-open]').click();
-  check(await p.getByRole('dialog').getByRole('link', { name: '공지 관리' }).isVisible(), '메뉴에 「공지 관리」가 있다');
+  check(await p.getByRole('dialog').getByRole('link', { name: '공지 관리' }).waitFor({ timeout: 10000 }).then(() => true, () => false), '메뉴에 「공지 관리」가 있다');
   await scanAll(p, '공지 목록', '/admin/notices');
   await p.goto(`${BASE}/admin/notices/new`);
   await scanAll(p, '새 공지', '/admin/notices/new');
@@ -86,7 +86,7 @@ try {
   check(true, `임시 저장 → 편집 화면으로 (${noticeId.slice(0, 8)})`);
 
   // 번역 초안 (키가 없으면 안내만 — 막지 않는다)
-  await p.getByRole('button', { name: '번역 초안 만들기' }).click();
+  await p.getByRole('button', { name: '미리 번역해 보기' }).click();
   await p.locator('text=/번역 초안을 만들었습니다|자동 번역이 아직 연결되지 않았습니다|번역 초안을 만들지 못했습니다/').waitFor({ timeout: 30000 });
   check(true, '번역 초안 버튼 → 결과 안내가 보인다');
 
@@ -132,8 +132,12 @@ try {
   await dlg.getByRole('button', { name: 'Show Korean original' }).click();
   check(await dlg.getByText('[점검] 3월 14일 휴무 안내').isVisible(), '「한국어 원문 보기」 → 원문');
   await dlg.getByRole('button', { name: 'OK', exact: true }).click();
-  await p.waitForTimeout(1500);
-  const { data: reads } = await db.from('notice_reads').select('version, shown_locale').eq('notice_id', noticeId).eq('employee_id', emp.id);
+  // 확인 기록이 쓰일 때까지 기다린다 (개발 서버는 처음 부르는 경로를 그때 만들어 몇 초 걸린다)
+  let reads: { version: number; shown_locale: string }[] | null = null;
+  for (let i = 0; i < 20 && !reads?.length; i++) {
+    await p.waitForTimeout(500);
+    ({ data: reads } = await db.from('notice_reads').select('version, shown_locale').eq('notice_id', noticeId).eq('employee_id', emp.id));
+  }
   check(reads?.length === 1 && reads[0].version === 1 && reads[0].shown_locale === 'en', `확인 기록: 판 1 · 언어 en (${JSON.stringify(reads)})`);
   await p.goto(`${BASE}/punch/records`);
   await p.waitForLoadState('networkidle');

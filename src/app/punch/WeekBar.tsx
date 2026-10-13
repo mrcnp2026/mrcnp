@@ -50,7 +50,7 @@ export async function WeekBar({
         <span className="flex items-center">
           {nav &&
             (nav.prev ? (
-              <Link href={nav.prev} scroll={false} aria-label={t('prev')} className="flex size-11 items-center justify-center text-muted">
+              <Link href={nav.prev} scroll={false} aria-label={t('prev')} className="flex size-11 shrink-0 items-center justify-center text-muted">
                 <ChevronLeft aria-hidden size={20} />
               </Link>
             ) : (
@@ -62,7 +62,7 @@ export async function WeekBar({
           </Link>
           {nav &&
             (nav.next ? (
-              <Link href={nav.next} scroll={false} aria-label={t('next')} className="flex size-11 items-center justify-center text-muted">
+              <Link href={nav.next} scroll={false} aria-label={t('next')} className="flex size-11 shrink-0 items-center justify-center text-muted">
                 <ChevronRight aria-hidden size={20} />
               </Link>
             ) : (
