@@ -2,6 +2,7 @@
 // 휴가가 이미 다른 길로 취소돼 있으면(관리자가 직접 취소) 요청만 승인으로 닫는다.
 import { api, ApiError, readJson } from '@/lib/api';
 import { requireAdmin } from '@/lib/auth';
+import { syncEmployeeLedgerSafe } from '@/lib/leave-ledger-data';
 import { isPeriodLocked } from '@/lib/punch';
 import { assertNotOwnRequest } from '@/lib/staff-data';
 import { createAdminClient } from '@/lib/supabase/admin';
@@ -25,6 +26,7 @@ export const POST = api<{ params: Promise<{ id: string }> }>('admin.leaveChanges
     const { data, error } = await db.rpc('decide_leave', { p_id: r.leave_id, p_decision: 'cancelled', p_decided_by: me.id, p_reason: null, p_request_id: ctx.requestId });
     if (error) throw new Error(`leaveChanges.cancelLeave: ${error.code}`);
     if (data === 'not_found') throw new ApiError(404, 'not_found');
+    await syncEmployeeLedgerSafe(r.employee_id, me.id);
   }
   const { data: done, error } = await db.from('leave_change_requests').update({ status: b.decision, approved_by: me.id, decided_at: new Date().toISOString() }).eq('id', id).eq('status', 'pending').select('id');
   if (error) throw new Error(`leaveChanges.decide: ${error.code}`);

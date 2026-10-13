@@ -1,0 +1,370 @@
+'use client';
+// 휴가 원장 화면의 조작부 — 정책 시작/고치기 · 후보 만들기 · 승인/반려 · 소멸 처리 · 직접 지급. 처리하면 화면을 새로 읽는다.
+import { useTranslations } from 'next-intl';
+import Link from 'next/link';
+import { useRouter } from 'next/navigation';
+import { useState, type ReactNode } from 'react';
+import { callApi } from '@/components/client-api';
+import { ErrorNote } from '@/components/ErrorNote';
+import { Button, Card, CardTitle, Chip } from '@/components/ui';
+import type { LeavePolicy } from '@/lib/leave-ledger';
+
+export type LotLine = { id: string; employeeId: string; name: string; kind: string; grantedOn: string; usableFrom: string; usableTo: string | null; days: number; remaining: number | null; state: string; note: string | null; rule: string; years: number | null; month: number | null };
+export type BalanceLine = { employeeId: string; name: string; joinedOn: string | null; active: boolean; started: boolean; granted: number; used: number; expired: number; remaining: number; advance: number; upcoming: number; old: number | null };
+export type EntryLine = { id: number; event: string; days: number; on: string; lot: string | null; fromRequest: boolean };
+type Policy = { id: string; version: number; validFrom: string; verification: string; value: LeavePolicy };
+type History = { version: number; validFrom: string; validTo: string | null; basis: string; reason: string | null };
+type Res = { accrual?: { created: number; existing: number; noHireDate: number; excluded: number }; results?: { id: string; result: string }[]; expiry?: { expired: number; locked: number }; sync?: { added: number; locked: number } };
+
+const field = 'min-h-9 rounded-button border border-border bg-bg px-3 text-sm';
+function Table({ heads, children }: { heads: string[]; children: ReactNode }) {
+  return (
+    <div className="overflow-x-auto border border-border bg-bg">
+      <table className="w-full text-sm">
+        <thead>
+          <tr className="border-b border-border text-left">
+            {heads.map((h, i) => (
+              <th key={i} scope="col" className="px-3 py-2 whitespace-nowrap">
+                {h}
+              </th>
+            ))}
+          </tr>
+        </thead>
+        <tbody>{children}</tbody>
+      </table>
+    </div>
+  );
+}
+
+export function LedgerBoard(props: { today: string; live: boolean; practice: boolean; policy: Policy | null; history: History[]; candidates: LotLine[]; expiring: { id: string; name: string; usableTo: string; days: number }[]; balances: BalanceLine[]; emp: { id: string; name: string; lots: LotLine[]; entries: EntryLine[] } | null }) {
+  const t = useTranslations('admin.leaveLedger');
+  const router = useRouter();
+  const [busy, setBusy] = useState(false);
+  const [err, setErr] = useState<{ code: string; requestId?: string } | null>(null);
+  const [msg, setMsg] = useState<string | null>(null);
+  const [picked, setPicked] = useState<Set<string>>(new Set());
+  const [edit, setEdit] = useState(false);
+  const { policy, candidates, emp } = props;
+  const q = props.live ? '&live=1' : '';
+
+  const run = async (body: Record<string, unknown>) => {
+    setBusy(true);
+    setErr(null);
+    setMsg(null);
+    const r = await callApi<Res>('/api/admin/leave/ledger', body);
+    setBusy(false);
+    if (!r.ok) {
+      setErr(r);
+      return false;
+    }
+    const d = r.data;
+    if (d.accrual) setMsg(t('accrualDone', { created: d.accrual.created, existing: d.accrual.existing, noHire: d.accrual.noHireDate }));
+    else if (d.expiry) setMsg(t('expiryDone', { n: d.expiry.expired, locked: d.expiry.locked }));
+    else if (d.sync) setMsg(t('syncDone', { n: d.sync.added, locked: d.sync.locked }));
+    else if (d.results) {
+      const n = (k: string) => d.results!.filter((x) => x.result === k).length;
+      setMsg(t('decideDone', { ok: n('approved') + n('rejected') + n('withdrawn'), locked: n('locked'), inUse: n('in_use') }));
+    } else setMsg(t('saved'));
+    setPicked(new Set());
+    setEdit(false);
+    router.refresh();
+    return true;
+  };
+  const toggle = (id: string) =>
+    setPicked((s) => {
+      const n = new Set(s);
+      if (n.has(id)) n.delete(id);
+      else n.add(id);
+      return n;
+    });
+  const why = (l: LotLine) => (l.rule === 'monthly' ? t('rule.monthly', { n: l.month ?? 0 }) : l.rule === 'annual' || l.rule === 'fiscal_annual' ? t(`rule.${l.rule}`, { n: l.years ?? 0 }) : t.has(`rule.${l.rule}`) ? t(`rule.${l.rule}`, { n: 0 }) : t('rule.manual', { n: 0 }));
+  const range = (l: LotLine) => (l.usableTo ? t('range', { from: l.usableFrom, to: l.usableTo }) : t('rangeOpen', { from: l.usableFrom }));
+  const day = (n: number) => t('days', { n });
+
+  return (
+    <div className="flex flex-col gap-4">
+      <p className="rounded-card border border-border bg-surface p-3 text-sm text-muted">{t(props.practice ? 'stagePractice' : 'stage')}</p>
+      {err && <ErrorNote code={err.code} requestId={err.requestId} namespace="admin.leaveLedger" />}
+      {msg && <p role="status" className="rounded-card border border-border bg-bg p-3 text-sm text-ok">{msg}</p>}
+
+      <Card>
+        <CardTitle aside={policy && <Chip tone={policy.verification === 'VERIFIED' ? 'ok' : 'warn'}>{t(policy.verification === 'VERIFIED' ? 'verified' : 'temporary')}</Chip>}>{t('policyTitle')}</CardTitle>
+        {!policy ? (
+          <div className="flex flex-col items-start gap-3 pt-3">
+            <p className="text-sm text-muted">{t('policyNone')}</p>
+            <Button type="button" size="sm" disabled={busy} onClick={() => run({ action: 'seed', groupName: t('defaultGroup') })}>
+              {t('seed')}
+            </Button>
+          </div>
+        ) : (
+          <div className="flex flex-col gap-3 pt-3 text-sm">
+            <ul className="flex flex-col gap-1 text-muted">
+              <li>{t(policy.value.basis === 'hire_date' ? 'basisHire' : 'basisFiscal', { start: policy.value.fiscalStart })}</li>
+              <li>{t('ruleFirstYear', { max: policy.value.monthlyMax })}</li>
+              <li>{t('ruleAnnual', { base: policy.value.baseDays, every: policy.value.extraEveryYears, max: policy.value.maxDays })}</li>
+              <li>{t('ruleDay', { hours: policy.value.dayMinutes / 60 })}</li>
+              <li className="num text-faint">{t('policyVersion', { n: policy.version, from: policy.validFrom })}</li>
+            </ul>
+            <p className="text-xs text-faint">{t('policyCaveat')}</p>
+            <div className="flex flex-wrap gap-2">
+              <Button type="button" size="sm" variant="outline" disabled={busy} onClick={() => setEdit(!edit)}>
+                {t('policyEdit')}
+              </Button>
+              <Button type="button" size="sm" variant="outline" disabled={busy} onClick={() => run({ action: 'verify', id: policy.id, state: policy.verification === 'VERIFIED' ? 'TEMPORARY' : 'VERIFIED' })}>
+                {t(policy.verification === 'VERIFIED' ? 'markTemporary' : 'markVerified')}
+              </Button>
+            </div>
+            {edit && (
+              <form
+                className="grid gap-3 border-t border-border pt-3 md:grid-cols-2"
+                onSubmit={async (e) => {
+                  e.preventDefault();
+                  const f = new FormData(e.currentTarget);
+                  await run({ action: 'policy', expectedVersion: policy.version, validFrom: f.get('validFrom'), reason: f.get('reason'), policy: { ...policy.value, basis: f.get('basis'), fiscalStart: f.get('fiscalStart'), rounding: f.get('rounding') } });
+                }}
+              >
+                <label className="flex flex-col gap-1">
+                  <span className="font-bold">{t('fBasis')}</span>
+                  <select name="basis" defaultValue={policy.value.basis} className={field}>
+                    <option value="hire_date">{t('optHire')}</option>
+                    <option value="fiscal_year">{t('optFiscal')}</option>
+                  </select>
+                </label>
+                <label className="flex flex-col gap-1">
+                  <span className="font-bold">{t('fFiscalStart')}</span>
+                  <input name="fiscalStart" defaultValue={policy.value.fiscalStart} pattern="(0[1-9]|1[0-2])-(0[1-9]|[12][0-9]|3[01])" required className={field} autoComplete="off" />
+                </label>
+                <label className="flex flex-col gap-1">
+                  <span className="font-bold">{t('fRounding')}</span>
+                  <select name="rounding" defaultValue={policy.value.rounding} className={field}>
+                    <option value="ceil_day">{t('optCeilDay')}</option>
+                    <option value="ceil_half">{t('optCeilHalf')}</option>
+                    <option value="none">{t('optNone')}</option>
+                  </select>
+                </label>
+                <label className="flex flex-col gap-1">
+                  <span className="font-bold">{t('fValidFrom')}</span>
+                  <input name="validFrom" type="date" defaultValue={props.today} required className={field} />
+                </label>
+                <label className="flex flex-col gap-1 md:col-span-2">
+                  <span className="font-bold">{t('fReason')}</span>
+                  <input name="reason" required minLength={2} maxLength={500} className={field} autoComplete="off" />
+                </label>
+                <p className="text-xs text-faint md:col-span-2">{t('policyEditHint')}</p>
+                <div className="md:col-span-2">
+                  <Button type="submit" size="sm" disabled={busy}>
+                    {t('policySave')}
+                  </Button>
+                </div>
+              </form>
+            )}
+            {props.history.length > 0 && (
+              <ul className="num flex flex-col gap-1 border-t border-border pt-3 text-xs text-faint">
+                {props.history.map((h) => (
+                  <li key={h.version}>{t('historyLine', { n: h.version, from: h.validFrom, to: h.validTo ?? '', basis: t(h.basis === 'hire_date' ? 'optHire' : 'optFiscal'), reason: h.reason ?? '' })}</li>
+                ))}
+              </ul>
+            )}
+          </div>
+        )}
+      </Card>
+
+      {policy && (
+        <Card>
+          <CardTitle
+            aside={
+              <Button type="button" size="sm" disabled={busy} onClick={() => run({ action: 'accrue' })}>
+                {t('accrue')}
+              </Button>
+            }
+          >
+            {t('candTitle', { n: candidates.length })}
+          </CardTitle>
+          <p className="pt-1 pb-3 text-sm text-faint">{t('candIntro')}</p>
+          {candidates.length > 0 && (
+            <>
+              <div className="flex flex-wrap items-center gap-2 pb-3">
+                <button type="button" onClick={() => setPicked(new Set(picked.size === candidates.length ? [] : candidates.map((c) => c.id)))} className="inline-flex min-h-9 items-center rounded-button border border-border bg-bg px-3 text-sm font-bold text-muted">
+                  {t('pickAll')}
+                </button>
+                <Button type="button" size="sm" disabled={busy || picked.size === 0} onClick={() => run({ action: 'decide', decision: 'approve', ids: [...picked] })}>
+                  {t('approve', { n: picked.size })}
+                </Button>
+                <Button type="button" size="sm" variant="outline" disabled={busy || picked.size === 0} onClick={() => run({ action: 'decide', decision: 'reject', ids: [...picked] })}>
+                  {t('reject', { n: picked.size })}
+                </Button>
+              </div>
+              <Table heads={['', t('colName'), t('colWhy'), t('colDays'), t('colGranted'), t('colUsable')]}>
+                {candidates.map((c) => (
+                  <tr key={c.id} className="border-b border-border">
+                    <td className="w-10 px-3 py-2">
+                      <input type="checkbox" checked={picked.has(c.id)} onChange={() => toggle(c.id)} aria-label={t('pick', { name: c.name })} className="size-5 accent-primary" />
+                    </td>
+                    <td className="px-3 py-2 font-bold">{c.name}</td>
+                    <td className="px-3 py-2 text-muted">{why(c)}</td>
+                    <td className="num px-3 py-2">{day(c.days)}</td>
+                    <td className="num px-3 py-2 whitespace-nowrap">{c.grantedOn}</td>
+                    <td className="num px-3 py-2 whitespace-nowrap">{range(c)}</td>
+                  </tr>
+                ))}
+              </Table>
+            </>
+          )}
+        </Card>
+      )}
+
+      {props.expiring.length > 0 && (
+        <Card>
+          <CardTitle
+            aside={
+              <Button type="button" size="sm" variant="outline" disabled={busy} onClick={() => run({ action: 'expire' })}>
+                {t('expire', { n: props.expiring.length })}
+              </Button>
+            }
+          >
+            {t('expTitle', { n: props.expiring.length })}
+          </CardTitle>
+          <p className="pt-1 pb-3 text-sm text-faint">{t('expIntro')}</p>
+          <Table heads={[t('colName'), t('colEnded'), t('colLeft')]}>
+            {props.expiring.map((x) => (
+              <tr key={x.id} className="border-b border-border">
+                <td className="px-3 py-2 font-bold">{x.name}</td>
+                <td className="num px-3 py-2">{x.usableTo}</td>
+                <td className="num px-3 py-2">{day(x.days)}</td>
+              </tr>
+            ))}
+          </Table>
+        </Card>
+      )}
+
+      <Card>
+        <CardTitle>{t('balTitle')}</CardTitle>
+        <p className="pt-1 pb-3 text-sm text-faint">{t('balIntro')}</p>
+        <Table heads={[t('colName'), t('colJoined'), t('colGrantedSum'), t('colUsed'), t('colExpired'), t('colRemaining'), t('colOld'), t('colCompare'), '']}>
+          {props.balances.map((b) => (
+            <tr key={b.employeeId} className="border-b border-border">
+              <td className="px-3 py-2 font-bold">
+                {b.name}
+                {!b.active && <span className="ml-2 text-xs text-faint">{t('inactive')}</span>}
+              </td>
+              <td className="num px-3 py-2 whitespace-nowrap">{b.joinedOn ?? <span className="text-warn">{t('noJoined')}</span>}</td>
+              <td className="num px-3 py-2">{b.started ? day(b.granted) : ''}</td>
+              <td className="num px-3 py-2">{b.started ? day(b.used) : ''}</td>
+              <td className="num px-3 py-2">{b.started ? day(b.expired) : ''}</td>
+              <td className="num px-3 py-2 font-bold">
+                {b.started ? day(b.remaining) : ''}
+                {b.advance > 0 && <span className="block text-xs font-normal text-warn">{t('advance', { n: b.advance })}</span>}
+                {b.upcoming > 0 && <span className="block text-xs font-normal text-faint">{t('upcoming', { n: b.upcoming })}</span>}
+              </td>
+              <td className="num px-3 py-2">{b.old === null ? '' : day(b.old)}</td>
+              <td className="px-3 py-2">{!b.started ? <Chip tone="neutral">{t('cmpNotStarted')}</Chip> : b.old === null ? <Chip tone="info">{t('cmpLedgerOnly')}</Chip> : b.old === b.remaining ? <Chip tone="ok">{t('cmpSame')}</Chip> : <Chip tone="warn">{t('cmpDiff')}</Chip>}</td>
+              <td className="px-3 py-2">
+                <Link href={`/admin/leave/ledger?emp=${b.employeeId}${q}#detail`} className="font-bold text-primary underline">
+                  {t('detail')}
+                </Link>
+              </td>
+            </tr>
+          ))}
+        </Table>
+      </Card>
+
+      {emp && (
+        <Card>
+          <div id="detail" />
+          <CardTitle
+            aside={
+              <Button type="button" size="sm" variant="outline" disabled={busy} onClick={() => run({ action: 'sync', employeeId: emp.id })}>
+                {t('syncDo')}
+              </Button>
+            }
+          >
+            {t('empTitle', { name: emp.name })}
+          </CardTitle>
+          <div className="flex flex-col gap-4 pt-3">
+            <Table heads={[t('colWhy'), t('colDays'), t('colLeft'), t('colGranted'), t('colUsable'), t('colState'), '']}>
+              {emp.lots.map((l) => (
+                <tr key={l.id} className="border-b border-border">
+                  <td className="px-3 py-2">
+                    {why(l)}
+                    {l.note && <span className="block text-xs text-faint">{l.note}</span>}
+                  </td>
+                  <td className="num px-3 py-2">{day(l.days)}</td>
+                  <td className="num px-3 py-2">{l.remaining === null ? '' : day(l.remaining)}</td>
+                  <td className="num px-3 py-2 whitespace-nowrap">{l.grantedOn}</td>
+                  <td className="num px-3 py-2 whitespace-nowrap">{range(l)}</td>
+                  <td className="px-3 py-2">
+                    <Chip tone={l.state === 'APPROVED' ? 'ok' : l.state === 'CANDIDATE' ? 'info' : 'neutral'}>{t(`state.${l.state}`)}</Chip>
+                  </td>
+                  <td className="px-3 py-2">
+                    {(l.state === 'APPROVED' || l.state === 'CANDIDATE') && (
+                      <button type="button" disabled={busy} onClick={() => run({ action: 'decide', decision: 'withdraw', ids: [l.id] })} className="inline-flex h-8 items-center rounded-button border border-border bg-bg px-3 text-sm font-bold text-muted disabled:opacity-50">
+                        {t('withdraw')}
+                      </button>
+                    )}
+                  </td>
+                </tr>
+              ))}
+            </Table>
+            {emp.lots.length === 0 && <p className="text-sm text-faint">{t('empNoLots')}</p>}
+            <div>
+              <p className="pb-2 text-sm font-bold">{t('entriesTitle')}</p>
+              <Table heads={[t('colOn'), t('colEvent'), t('colChange'), t('colLot')]}>
+                {emp.entries.map((e) => (
+                  <tr key={e.id} className="border-b border-border">
+                    <td className="num px-3 py-2 whitespace-nowrap">{e.on}</td>
+                    <td className="px-3 py-2">{t(`event.${e.event}`)}</td>
+                    <td className={`num px-3 py-2 ${e.days < 0 ? 'text-warn' : 'text-ok'}`}>{t(e.days < 0 ? 'minus' : 'plus', { n: Math.abs(e.days) })}</td>
+                    <td className="num px-3 py-2">{e.lot === null ? t('lotNone') : t('lotOf', { date: e.lot })}</td>
+                  </tr>
+                ))}
+              </Table>
+            </div>
+            <form
+              className="grid gap-3 border-t border-border pt-3 text-sm md:grid-cols-4"
+              onSubmit={async (e) => {
+                e.preventDefault();
+                const el = e.currentTarget;
+                const f = new FormData(el);
+                if (await run({ action: 'manual', employeeId: emp.id, kind: f.get('kind'), days: f.get('days'), usableFrom: f.get('usableFrom'), usableTo: f.get('usableTo'), note: f.get('note') })) el.reset();
+              }}
+            >
+              <p className="font-bold md:col-span-4">{t('manualTitle')}</p>
+              <label className="flex flex-col gap-1">
+                <span>{t('fKind')}</span>
+                <select name="kind" className={field}>
+                  {['manual', 'carry', 'compensatory', 'migrated'].map((k) => (
+                    <option key={k} value={k}>
+                      {t(`kind.${k}`)}
+                    </option>
+                  ))}
+                </select>
+              </label>
+              <label className="flex flex-col gap-1">
+                <span>{t('fDays')}</span>
+                <input name="days" type="number" step="0.0625" min="0.0625" max="99" required className={field} />
+              </label>
+              <label className="flex flex-col gap-1">
+                <span>{t('fFrom')}</span>
+                <input name="usableFrom" type="date" defaultValue={props.today} required className={field} />
+              </label>
+              <label className="flex flex-col gap-1">
+                <span>{t('fTo')}</span>
+                <input name="usableTo" type="date" className={field} />
+              </label>
+              <label className="flex flex-col gap-1 md:col-span-3">
+                <span>{t('fNote')}</span>
+                <input name="note" required minLength={2} maxLength={300} className={field} autoComplete="off" />
+              </label>
+              <div className="flex items-end">
+                <Button type="submit" size="sm" disabled={busy}>
+                  {t('manualSave')}
+                </Button>
+              </div>
+              <p className="text-xs text-faint md:col-span-4">{t('manualHint')}</p>
+            </form>
+          </div>
+        </Card>
+      )}
+    </div>
+  );
+}

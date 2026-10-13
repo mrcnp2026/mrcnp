@@ -147,6 +147,7 @@ export function SideNav({ isAdmin, inboxCount = 0 }: { isAdmin: boolean; inboxCo
         sub: [
           { href: '/admin/leave', key: 'leaveHistory' },
           { href: '/admin/leave?v=accrual', key: 'leaveAccrual' },
+          { href: '/admin/leave/ledger', key: 'leaveLedger' },
         ],
       },
       { href: '/admin/inbox', key: 'requests', icon: Send, badge: inboxCount },
