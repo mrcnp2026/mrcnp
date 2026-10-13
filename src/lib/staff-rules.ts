@@ -10,7 +10,7 @@ export const MIN_ADMINS = 2;
 export const REASON_MIN = 2;
 export const REASON_MAX = 200;
 
-export type Staff = { id: string; role: 'admin' | 'employee'; active: boolean; canViewPayroll: boolean; owner?: boolean };
+export type Staff = { id: string; role: 'admin' | 'manager' | 'employee'; active: boolean; canViewPayroll: boolean; owner?: boolean };
 export type StaffRuleCode =
   | 'self_change' // 본인 것은 스스로 못 바꾼다
   | 'already' // 이미 그 상태
@@ -51,7 +51,7 @@ export function checkReinstate(actorId: string, target: Staff): StaffRuleCode | 
 }
 
 /** 관리자 지정·해제, 급여 담당 지정·해제. 바꾸지 않는 값은 undefined */
-export function checkRoleChange(args: { actor: Staff; target: Staff; all: Staff[]; role?: 'admin' | 'employee'; canViewPayroll?: boolean }): { code: StaffRuleCode } | { next: Staff } {
+export function checkRoleChange(args: { actor: Staff; target: Staff; all: Staff[]; role?: 'admin' | 'manager' | 'employee'; canViewPayroll?: boolean }): { code: StaffRuleCode } | { next: Staff } {
   const { actor, target, all } = args;
   if (target.id === actor.id) return { code: 'self_change' };
   if (target.owner) return { code: 'owner_only' };

@@ -1,6 +1,7 @@
 // 근무일정 한 건의 상세 (2026-10-11 의뢰인: 시프티의 근무일정 상세처럼) — 큰 시각 + 유형 배지 · 날짜 · 근무/휴게 → 「항목 — 값」 줄.
 // [수정](2026-10-11): 날짜별로 넣은 일정은 그 일정의 시각·유형·일정노트를 고치고, 평소 일정(템플릿·회사 규칙)은 「이 날만 다르게」 날짜별 일정을 새로 넣는다. 취소는 목록의 ✕.
 // 휴게는 그날 규칙의 휴게시간대와 일정이 겹친 만큼이다 (잔업 일정은 휴게 없음).
+import { getMe } from '@/lib/auth';
 import { getFormatter, getTranslations } from 'next-intl/server';
 import { notFound } from 'next/navigation';
 import { DetailBar, Field, FieldList } from '@/components/detail';
@@ -34,8 +35,9 @@ export default async function ScheduleDetailPage({ params, searchParams }: { par
   const branch = groupPath(groups, person.groupId);
   const clock = (d: Date) => f.dateTime(d, { hour: '2-digit', minute: '2-digit', hourCycle: 'h23' });
   const pairs = data.rule ? (daysFor(data, id, date, date)[0]?.pairs ?? []).map((p, i) => ({ p, i })).filter((x) => x.p.in || x.p.out) : [];
-  const editing = sp.edit === '1';
-  const action = editing ? undefined : { href: `/admin/schedule/${id}/${date}?i=${idx}&edit=1`, label: t('edit') };
+  const admin = (await getMe())?.role === 'admin'; // 지점관리자는 보기만 (manager-rules.ts)
+  const editing = admin && sp.edit === '1';
+  const action = editing || !admin ? undefined : { href: `/admin/schedule/${id}/${date}?i=${idx}&edit=1`, label: t('edit') };
 
   return (
     <PageShell>
@@ -60,14 +62,14 @@ export default async function ScheduleDetailPage({ params, searchParams }: { par
       )}
       <FieldList>
         <Field label={t('kind')} value={tk(it.kind)} />
-        <Field label={t('employee')} value={person.name} href={`/admin/members/${id}`} />
+        <Field label={t('employee')} value={person.name} href={admin ? `/admin/members/${id}` : undefined} />
         <Field label={t('branch')} value={branch ?? t('none')} href={branch ? '/admin/branches' : undefined} />
         <Field label={t('job')} value={job?.name ?? t('none')} href={job ? `/admin/jobs/${job.id}` : undefined} />
         <Field label={t('template')} value={it.source === 'rule' ? t('byRule') : (it.name ?? t(it.source === 'shift' ? 'byDate' : 'none'))} href={it.source === 'template' ? '/admin/shifts' : undefined} />
         <Field label={t('breakTime')} value={rest > 0 ? t('breakAuto', { t: dur(rest) }) : dur(0)} />
       </FieldList>
       <FieldList>
-        <Field label={t('note')} value={it.note ?? t('addNote')} href={it.note || editing ? undefined : `/admin/schedule/${id}/${date}?i=${idx}&edit=1`} />
+        <Field label={t('note')} value={it.note ?? t('addNote')} href={it.note || editing || !admin ? undefined : `/admin/schedule/${id}/${date}?i=${idx}&edit=1`} />
         {pairs.length === 0 && <Field label={t('records')} value={t('none')} />}
         {pairs.map(({ p, i }) => (
           <Field key={i} label={t('records')} value={`${p.in ? clock(p.in) : '–'} - ${p.out ? clock(p.out) : ''}`} href={`/admin/records/${id}/${date}?i=${i}`} />

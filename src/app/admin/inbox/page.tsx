@@ -1,6 +1,7 @@
 // ② 처리함 — 사람이 판단해야 하는 것을 한 받은함에 (마스터 5장): 연장근로 승인(7-7) · 정정 요청(7-10).
 // 그날 근무노트를 연장 요청 옆에 보여 준다 (R-10-2의 8) — 사유로 자동 복사하지 않는다.
 // 누가·언제 처리했는지 항상 보인다 (R-2의 5).
+import { scopeFilter } from '@/lib/scope';
 import { X } from 'lucide-react';
 import { getFormatter, getTranslations } from 'next-intl/server';
 import { Pager, pageOf } from '@/components/Pager';
@@ -34,7 +35,8 @@ export default async function InboxPage({ searchParams }: { searchParams: Promis
   const f = await getFormatter();
   const me = (await getMe())!;
   // 자기 요청은 다른 관리자가 처리한다 — 다른 관리자가 있을 때만 막는다 (staff-rules.ts)
-  const ownBlocked = selfDecisionBlocked(me.id, me.id, await loadStaff());
+  // 지점관리자는 자기 요청을 처리하지 못한다 — 관리자가 한다
+  const ownBlocked = me.role === 'manager' || selfDecisionBlocked(me.id, me.id, await loadStaff());
   const ownNote = <p className="text-sm text-muted">{t('selfBlocked')}</p>;
   const sp = await searchParams;
 // ★ 연습 모드에서는 모든 기록이 연습 기록이다 — 관리자 화면도 기본으로 연습 기록을 본다 (2026-10-02: 시험직원 정정 요청이 관리자에게 0건으로 보이던 문제). ?live=1이면 실제 기록
@@ -54,7 +56,8 @@ export default async function InboxPage({ searchParams }: { searchParams: Promis
   // 이름 검색 (?q) — 모든 종류의 대기 요청에 같이 적용한다
   const q = (sp.q ?? '').trim().slice(0, 40).toLowerCase();
   const hidden = new Set(await hiddenTestIds()); // 꺼져 있는 검사 전용 계정의 요청은 보이지 않는다
-  const hit = (id: string) => !hidden.has(id) && (!q || (name.get(id) ?? '').toLowerCase().includes(q));
+  const inScope = await scopeFilter(); // 지점관리자면 맡은 지점 직원의 요청만 (아래에서 표를 직접 읽는 것들을 여기서 거른다)
+  const hit = (id: string) => inScope(id) && !hidden.has(id) && (!q || (name.get(id) ?? '').toLowerCase().includes(q));
   // 한 건만 보기 (2026-10-11 의뢰인: 시프티처럼 대기중은 한 목록, 줄을 누르면 그 요청 하나를 처리하는 화면) — ?k=종류&id=요청
   const FOCUS_KINDS = ['punch', 'shift', 'leaveDelete', 'overtime', 'corrections', 'leave', 'work'] as const;
   type FocusKind = (typeof FOCUS_KINDS)[number];

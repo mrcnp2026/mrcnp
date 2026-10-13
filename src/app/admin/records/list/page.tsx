@@ -97,7 +97,8 @@ export default async function RecordListPage({ searchParams }: { searchParams: P
   const keep = { live: sp.live === '1' ? '1' : undefined };
   // + 버튼(기록 추가): 지금 운영 모드의 기록에만, 본인 것은 빼고 (직원별 기록 화면의 대리 등록과 같은 규칙)
   const me = await getMe();
-  const canAdd = practice === OFFICE.practiceMode;
+  const admin = me?.role === 'admin'; // 지점관리자는 보기만 (manager-rules.ts)
+  const canAdd = practice === OFFICE.practiceMode && admin;
   const addable = data.people.filter((p) => p.active && p.id !== me?.id && !p.employeeNo?.startsWith('e2e-')).map((p) => ({ id: p.id, name: p.name, group: groupPath(groups, p.groupId) }));
 
   return (
@@ -108,10 +109,12 @@ export default async function RecordListPage({ searchParams }: { searchParams: P
         <div className="flex items-center justify-between gap-3">
           <h1 className="text-2xl font-bold">{t('title')}</h1>
           <div className="flex items-center gap-2">
+{admin && (
             <a href={`/api/admin/export/report?m=${to.slice(0, 7)}${sp.live === '1' ? '&live=1' : ''}`} title={tc('downloadReport', { ym: to.slice(0, 7) })} className="inline-flex h-8 items-center gap-1 rounded-button border border-nav bg-bg px-4 text-sm font-bold whitespace-nowrap text-nav">
               <Download aria-hidden size={16} />
               {tc('download')}
             </a>
+            )}
             <Link href="/admin/records" className="inline-flex min-h-8 items-center rounded-button border border-nav bg-bg px-4 text-sm font-bold text-nav">
               {t('toMonth')}
             </Link>

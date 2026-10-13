@@ -1,15 +1,16 @@
 // 연장 승인·부분 승인·거부 (7-7). 관리자만. 집계분(사실)은 건드리지 않고 인정분만 정한다.
 // 동시에 두 관리자가 눌러도 DB 함수가 pending일 때만 반영한다 → 나중 사람은 'already' (R-4, R-2의 6)
 import { api, ApiError, readJson } from '@/lib/api';
-import { requireAdmin } from '@/lib/auth';
-import { assertNotOwnRequest } from '@/lib/staff-data';
+import { requireApprover, requireStaffViewer } from '@/lib/scope';
 import { createAdminClient } from '@/lib/supabase/admin';
 
 const minutes = (v: unknown) => (v === null || v === undefined ? null : Number.isInteger(v) && (v as number) >= 0 ? (v as number) : NaN);
 
 export const POST = api<{ params: Promise<{ id: string }> }>('admin.overtime.decide', async (req, ctx) => {
-  const me = await requireAdmin();
-  if (!me) throw new ApiError(403, 'forbidden');
+  // 관리자 · 지점관리자. 누구의 요청인지 읽은 뒤 requireApprover가 다시 본다(지점관리자는 맡은 지점 직원의 요청만, 자기 요청은 못 한다)
+  const viewer = await requireStaffViewer();
+  if (!viewer) throw new ApiError(403, 'forbidden');
+  const me = viewer.me;
   const { id } = await ctx.params;
   const b = await readJson(req);
   if (b.decision !== 'approved' && b.decision !== 'rejected') throw new ApiError(400, 'invalid_input');
@@ -18,7 +19,7 @@ export const POST = api<{ params: Promise<{ id: string }> }>('admin.overtime.dec
   const db = createAdminClient();
   const { data: row } = await db.from('overtime_requests').select('employee_id').eq('id', id).maybeSingle();
   if (!row) throw new ApiError(404, 'not_found');
-  await assertNotOwnRequest(me.id, row.employee_id); // 자기 연장은 다른 관리자가 인정한다
+  await requireApprover(row.employee_id); // 자기 요청은 다른 관리자가 처리한다 · 지점관리자는 맡은 지점만
   const { data, error } = await db.rpc('decide_overtime', {
     p_id: id,
     p_decision: b.decision,

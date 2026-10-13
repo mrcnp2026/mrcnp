@@ -9,7 +9,7 @@ export type Me = {
   id: string;
   name: string;
   employeeNo: string | null;
-  role: 'admin' | 'employee';
+  role: 'admin' | 'manager' | 'employee'; // manager = 지점관리자 (맡은 지점만 보고 요청을 승인한다 — scope.ts)
   locale: 'ko' | 'en' | 'vi' | 'th';
   active: boolean;
   canViewPayroll: boolean; // 부록 R-2의 7: 급여 담당자만 급여용 CSV를 받는다

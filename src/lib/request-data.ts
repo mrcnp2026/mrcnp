@@ -2,6 +2,7 @@
 import 'server-only';
 import { OFFICE } from '@/config/office';
 import { fromCorrection, fromLeave, fromLeaveChange, fromOvertime, fromPunchRequest, fromShiftRequest, fromWork, type ReqItem } from '@/lib/requests';
+import { viewerScope, within } from '@/lib/scope';
 import { createAdminClient } from '@/lib/supabase/admin';
 
 export const REQUEST_WINDOW_DAYS = 62; // 완료 목록은 최근 두 달
@@ -34,5 +35,6 @@ export async function loadRequests(opts: { employeeId?: string; practice?: boole
     const at = new Map((evs ?? []).map((e) => [e.id as string, e.punched_at as string]));
     for (const c of co) if (typeof c.target_id === 'string') c.old_punched_at = at.get(c.target_id) ?? null;
   }
-  return [...pr.map(fromPunchRequest), ...sh.map(fromShiftRequest), ...lc.map(fromLeaveChange), ...co.map(fromCorrection), ...ot.map(fromOvertime), ...lv.map(fromLeave), ...wk.map(fromWork)];
+  const all = [...pr.map(fromPunchRequest), ...sh.map(fromShiftRequest), ...lc.map(fromLeaveChange), ...co.map(fromCorrection), ...ot.map(fromOvertime), ...lv.map(fromLeave), ...wk.map(fromWork)];
+  return within(all, await viewerScope(), (r) => r.employeeId); // 지점관리자면 맡은 지점 직원 것만
 }

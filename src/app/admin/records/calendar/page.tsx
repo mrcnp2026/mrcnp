@@ -1,6 +1,7 @@
 // 출퇴근기록 달력형 (PC) — 줄 = 직원, 칸 = 그 달의 날짜 (2026-10-11 의뢰인: PC는 시프티 수준으로. `pc용/시프티 PC 화면 기록.md` 3장 「출퇴근기록 달력형」).
 // 칸: 윗줄 출근 · 아랫줄 퇴근. 하루 전부 휴가면 「휴가」, 간주 근무일은 일정 시각 + 「간주」. 오른쪽 끝은 기록이 있는 날 수와 급여용 시간 합.
 // 폰에서는 목록형으로 보낸다 — 31칸 표는 폰 폭에 맞지 않는다.
+import { getMe } from '@/lib/auth';
 import { loadJobs } from '@/lib/job-data';
 import { leaveTypeName } from '@/lib/leave';
 import { SHIFT_COLOR_CLASS } from '@/lib/shifts';
@@ -79,10 +80,14 @@ export default async function RecordCalendarPage({ searchParams }: { searchParam
           <h1 className="text-2xl font-bold">{t('title')}</h1>
           <p className="pt-1 text-sm text-faint">{t('pcIntro')}</p>
         </div>
+{(await getMe())?.role === 'admin' ? (
         <a href={`/api/admin/export/report?m=${ym}${sp.live === '1' ? '&live=1' : ''}`} title={tc('downloadReport', { ym })} className="ml-auto inline-flex h-8 items-center gap-1 rounded-button border border-nav bg-bg px-4 text-sm font-bold whitespace-nowrap text-nav">
           <Download aria-hidden size={16} />
           {tc('download')}
         </a>
+        ) : (
+          <span className="ml-auto" />
+        )}
         <Link href={`/admin/records/list${sp.live === '1' ? '?live=1' : ''}`} className="inline-flex min-h-8 items-center rounded-button border border-nav bg-bg px-4 text-sm font-bold text-nav">
           {t('toList')}
         </Link>

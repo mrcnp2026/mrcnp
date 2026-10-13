@@ -12,10 +12,12 @@ import { getMe } from '@/lib/auth';
 import { consentAt } from '@/lib/consent';
 import { buildOrgTree, groupPath } from '@/lib/org';
 import { loadOrgGroups } from '@/lib/org-data';
+import { loadManagedGroups } from '@/lib/scope';
 import { resignChecklist } from '@/lib/staff-data';
 import { createAdminClient } from '@/lib/supabase/admin';
 import { toKstDate } from '@/lib/time';
 import { NewInviteButton } from '../NewInviteButton';
+import { ManagerScope } from '../ManagerScope';
 import { ManageAction } from './ManageAction';
 import { RoleRequestCard } from './RoleRequestCard';
 import { loadJobs } from '@/lib/job-data';
@@ -42,6 +44,7 @@ export default async function MemberDetailPage({ params }: { params: Promise<{ i
   const hasPasskey = !!key;
   const joined = !!p.password_set_at || hasPasskey;
   const tree = buildOrgTree(groups);
+  const managed = p.role === 'manager' ? await loadManagedGroups(p.id) : []; // 지점관리자가 맡은 지점
   const options = tree.flatMap((d) => [{ id: d.id, label: d.name }, ...d.teams.map((x) => ({ id: x.id, label: `${d.name} › ${x.name}` }))]);
   const path = groupPath(groups, p.group_id);
   // 적용된 근무일정 틀 (2026-10-10) — 바꾸는 곳은 「근무일정 틀」 화면
@@ -63,7 +66,7 @@ export default async function MemberDetailPage({ params }: { params: Promise<{ i
   const requesterName = pendingRole ? ((await db.from('profiles').select('name').eq('id', pendingRole.requested_by).maybeSingle()).data?.name ?? '') : '';
   const changeLabel = pendingRole
     ? [
-        pendingRole.new_role !== p.role ? tm(pendingRole.new_role === 'admin' ? 'makeAdmin' : 'removeAdmin') : null,
+        pendingRole.new_role !== p.role ? tm(pendingRole.new_role === 'admin' ? 'makeAdmin' : pendingRole.new_role === 'manager' ? 'makeManager' : p.role === 'manager' ? 'removeManager' : 'removeAdmin') : null,
         pendingRole.new_role === 'admin' && pendingRole.new_can_view_payroll !== p.can_view_payroll ? tm(pendingRole.new_can_view_payroll ? 'grantPayroll' : 'revokePayroll') : null,
       ].filter(Boolean).join(' · ')
     : '';
@@ -82,6 +85,7 @@ export default async function MemberDetailPage({ params }: { params: Promise<{ i
           <p className="mt-1 flex flex-wrap items-center gap-1.5">
             <span className="num text-xs text-faint">{p.employee_no}</span>
             {p.role === 'admin' && <Chip tone="info">{t('adminChip')}</Chip>}
+            {p.role === 'manager' && <Chip tone="info">{t('managerChip')}</Chip>}
             {p.can_view_payroll && <Chip tone="info">{t('payrollChip')}</Chip>}
             {!p.active && <Chip>{t('inactive')}</Chip>}
             {p.active && (agreedAt ? <Chip tone="ok">{t('consentYes', { date: day(agreedAt) })}</Chip> : <Chip tone="warn">{t('consentNo')}</Chip>)}
@@ -168,6 +172,13 @@ export default async function MemberDetailPage({ params }: { params: Promise<{ i
             {!pendingRole && p.active && p.role !== 'admin' && (
               <ManageAction title={tm('makeAdmin')} hint={tm('makeAdminHint')} confirmLabel={tm('makeAdmin')} endpoint={`${api}/role`} body={{ role: 'admin' }} presets={[tm('preset.newAdmin'), tm('preset.handover')]} />
             )}
+            {!pendingRole && p.active && p.role === 'employee' && (
+              <ManageAction title={tm('makeManager')} hint={tm('makeManagerHint')} confirmLabel={tm('makeManager')} endpoint={`${api}/role`} body={{ role: 'manager' }} presets={[tm('preset.newManager'), tm('preset.handover')]} />
+            )}
+            {!pendingRole && p.active && p.role === 'manager' && (
+              <ManageAction title={tm('removeManager')} hint={tm('removeManagerHint')} confirmLabel={tm('removeManager')} endpoint={`${api}/role`} body={{ role: 'employee' }} presets={[tm('preset.handover'), tm('preset.mistake')]} />
+            )}
+            {p.active && p.role === 'manager' && <ManagerScope employeeId={p.id} groups={tree.flatMap((d) => [{ id: d.id, label: d.name }, ...d.teams.map((x) => ({ id: x.id, label: `${d.name} › ${x.name}` }))])} picked={managed} />}
             {!pendingRole && p.active && p.role === 'admin' && (
               <ManageAction title={tm('removeAdmin')} hint={tm('removeAdminHint')} confirmLabel={tm('removeAdmin')} endpoint={`${api}/role`} body={{ role: 'employee' }} presets={[tm('preset.handover'), tm('preset.mistake')]} />
             )}

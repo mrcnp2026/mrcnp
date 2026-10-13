@@ -1,6 +1,7 @@
 // 휴가 한 건의 상세 (2026-10-11 의뢰인: 시프티의 휴가 상세처럼) — 큰 제목(휴가 종류) · 기간 → 「항목 — 값」 줄(직원 · 유급 시간 · 차감 일수 · 생성일자).
 // 보여 주기만 한다. 승인·거절은 요청함에서, 승인 취소는 「연차 관리」의 승인된 휴가에서 한다.
 // 유급 시간 = 유급 종류면 일수 × 8시간 (lib/leave DAY_HOURS), 무급이면 0. 차감 일수 = 잔여에서 빼는 종류면 일수, 아니면 0.
+import { getMe } from '@/lib/auth';
 import { getFormatter, getTranslations } from 'next-intl/server';
 import { notFound } from 'next/navigation';
 import { DetailBar, Field, FieldList } from '@/components/detail';
@@ -36,7 +37,7 @@ export default async function LeaveDetailPage({ params }: { params: Promise<{ id
         </p>
       </section>
       <FieldList>
-        <Field label={t('employee')} value={names.get(r.employeeId) ?? t('none')} href={`/admin/members/${r.employeeId}`} />
+        <Field label={t('employee')} value={names.get(r.employeeId) ?? t('none')} href={(await getMe())?.role === 'admin' ? `/admin/members/${r.employeeId}` : undefined} />
         <Field label={t('group')} value={type?.groupName ?? t('none')} />
         <Field label={t('paidHours')} value={t('hours', { n: n(type?.isPaid ? r.days * DAY_HOURS : 0) })} />
         <Field label={t('deductDays')} value={tl('days', { n: n(type?.deductsBalance ? r.days : 0) })} />

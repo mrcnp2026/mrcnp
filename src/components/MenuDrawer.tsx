@@ -6,6 +6,7 @@
 // 메뉴는 body에 직접 붙인다 — 상단 바 안에 두면 상단 바의 겹침 순서에 갇혀 하단 탭이 메뉴 아래쪽(로그아웃)을 가린다.
 import { BriefcaseBusiness, ClipboardX, CalendarClock, LayoutDashboard, MapPin, Megaphone, Menu, Network, Settings, UserRound, Users, Wallet, X, type LucideIcon } from 'lucide-react';
 import { useTranslations } from 'next-intl';
+import { managerCanOpen } from '@/lib/manager-rules';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { useEffect, useState } from 'react';
@@ -47,7 +48,7 @@ const ADMIN: Group[] = [
   { key: 'settings', items: [{ href: '/admin/settings', key: 'config', icon: Settings }] },
 ];
 
-export function MenuDrawer({ name, isAdmin, languages }: { name: string; isAdmin: boolean; languages: { code: string; name: string }[] }) {
+export function MenuDrawer({ name, isAdmin, branchManager = false, languages }: { name: string; isAdmin: boolean; branchManager?: boolean; languages: { code: string; name: string }[] }) {
   const t = useTranslations('side');
   const path = usePathname();
   const [open, setOpen] = useState(false);
@@ -69,7 +70,9 @@ export function MenuDrawer({ name, isAdmin, languages }: { name: string; isAdmin
     };
   }, [open]);
 
-  const groups = isAdmin ? [MY, ...ADMIN] : [MY];
+  // 지점관리자에게는 열 수 있는 관리 화면만
+  const adminGroups = branchManager ? ADMIN.map((g) => ({ ...g, items: g.items.filter((i) => managerCanOpen(i.href)) })).filter((g) => g.items.length > 0) : ADMIN;
+  const groups = isAdmin ? [MY, ...adminGroups] : [MY];
   // 지금 화면 = 주소가 가장 길게 맞는 메뉴 하나 (/admin/members/groups는 「직원 목록」이 아니라 「조직도」)
   const here = groups
     .flatMap((g) => g.items)
@@ -87,7 +90,7 @@ export function MenuDrawer({ name, isAdmin, languages }: { name: string; isAdmin
             <div className="flex items-start justify-between gap-2 bg-surface px-5 pt-4 pb-4">
               <p className="min-w-0">
                 <span className="block truncate text-xl font-extrabold tracking-tight">{name}</span>
-                <span className="text-sm text-muted">{t(isAdmin ? 'roleAdmin' : 'roleEmployee')}</span>
+                <span className="text-sm text-muted">{t(branchManager ? 'roleManager' : isAdmin ? 'roleAdmin' : 'roleEmployee')}</span>
               </p>
               <button type="button" aria-label={t('close')} onClick={() => setOpen(false)} className="-mt-1 -mr-2 flex size-11 shrink-0 items-center justify-center rounded-button text-primary">
                 <X aria-hidden size={24} strokeWidth={1.75} />

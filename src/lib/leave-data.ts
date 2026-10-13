@@ -6,6 +6,7 @@ import { OFFICE } from '@/config/office';
 import { loadHolidays, loadRuleVersions } from '@/lib/attendance-data';
 import type { LeaveGrant, LeaveRequest, LeaveType } from '@/lib/leave';
 import { ruleAt } from '@/lib/rule-at';
+import { viewerScope, within } from '@/lib/scope';
 import { createAdminClient } from '@/lib/supabase/admin';
 import type { DayType } from '@/lib/types';
 
@@ -39,14 +40,14 @@ export async function loadLeaveRequests(opts: { from?: string; to?: string; empl
   if (opts.from) q = q.gte('end_date', opts.from);
   if (opts.to) q = q.lte('start_date', opts.to);
   const { data } = await q.order('start_date', { ascending: false });
-  return (data ?? []).map(toRequest);
+  return within((data ?? []).map(toRequest), await viewerScope(), (r) => r.employeeId); // 지점관리자면 맡은 지점 직원 것만
 }
 
 export async function loadLeaveGrants(employeeId?: string): Promise<LeaveGrant[]> {
   let q = createAdminClient().from('leave_grants').select('*');
   if (employeeId) q = q.eq('employee_id', employeeId);
   const { data } = await q.order('effective_from', { ascending: false });
-  return (data ?? []).map(toGrant);
+  return within((data ?? []).map(toGrant), await viewerScope(), (g) => g.employeeId);
 }
 
 /** 날짜 → 근무일/휴일 (그날 근무규칙 + 공휴일). 규칙이 없으면 null — 추측하지 않는다 */

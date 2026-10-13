@@ -39,7 +39,7 @@ export async function GET(req: NextRequest) {
     sheet = {
       title: '직원',
       cols: [{ h: '이름', w: 14 }, { h: '사번', w: 12 }, { h: '권한', w: 10 }, { h: '부서', w: 24 }, { h: '직책', w: 14 }, { h: '입사일', w: 12 }, { h: '상태', w: 10 }, { h: '가입', w: 10 }],
-      rows: staff.map((p) => [p.name, p.employee_no, p.role === 'admin' ? '관리자' : '직원', groupPath(groups, p.group_id), p.job_title, p.joined_on, p.active ? '활성' : '비활성', p.password_set_at ? '가입' : '미가입']),
+      rows: staff.map((p) => [p.name, p.employee_no, p.role === 'admin' ? '관리자' : p.role === 'manager' ? '지점관리자' : '직원', groupPath(groups, p.group_id), p.job_title, p.joined_on, p.active ? '활성' : '비활성', p.password_set_at ? '가입' : '미가입']),
     };
   } else {
     const practice = OFFICE.practiceMode && sp.get('live') !== '1';

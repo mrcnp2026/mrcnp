@@ -1,6 +1,8 @@
 // 휴가 발생 — 직원 한 명 (의뢰인 2026-10-11: 시프티의 「휴가 발생」 화면처럼) — 기준일 · 산정 기간 · 총/사용/남은 · 발생 내역(만료됨·발생됨·예정됨) · 발생 건 추가.
 // 발생 건 = 연차 부여(leave_grants) 한 줄. 기준일에 적용되는 건이 「발생됨」, 그보다 앞선 건이 「만료됨」, 시작일이 기준일 뒤인 건이 「예정됨」이다.
 // ★ 발생 일수는 관리자가 넣는다 (4-7). 자동 발생(회계연도 기준·매달 1일)과 휴가 그룹별 발생은 결정 뒤에 만든다 (결정 문서 급여-10).
+import { getMe } from '@/lib/auth';
+import { scopeFilter } from '@/lib/scope';
 import { getFormatter, getTranslations } from 'next-intl/server';
 import { notFound } from 'next/navigation';
 import { DetailBar, Field, FieldList } from '@/components/detail';
@@ -23,7 +25,9 @@ export default async function LeaveAccrualPage({ params, searchParams }: { param
     loadLeaveGrants(id),
     loadLeaveRequests({ employeeId: id, practice: sp.live === '1' ? false : undefined }),
   ]);
-  if (!p) notFound();
+  // 지점관리자는 맡은 지점 직원만 본다 · 받은 연차 입력은 관리자만
+  if (!p || !(await scopeFilter())(id)) notFound();
+  const admin = (await getMe())?.role === 'admin';
   const bal = calcLeaveBalance({ grants, requests, types, asOf });
   const sorted = [...grants].sort((a, b) => (a.effectiveFrom < b.effectiveFrom ? 1 : -1)); // 새 것이 위
   const asc = [...sorted].reverse();
@@ -95,11 +99,13 @@ export default async function LeaveAccrualPage({ params, searchParams }: { param
         )}
       </section>
 
+{admin && (
       <Card className="flex flex-col gap-3">
         <h2 className="font-bold">{t('add')}</h2>
         <p className="text-sm text-muted">{t('addHint')}</p>
         <GrantForm employeeId={id} current={null} suggested={ref ? { days: ref.days, periodLabel: ref.periodLabel, effectiveFrom: ref.effectiveFrom } : null} />
       </Card>
+      )}
       <FieldList>
         <Field label={t('hired')} value={hiredOn ?? t('none')} />
         <Field label={t('toManage')} value={t('toManageValue')} href={`/admin/leave?e=${id}#edit`} />

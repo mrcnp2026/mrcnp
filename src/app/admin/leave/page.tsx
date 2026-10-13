@@ -2,6 +2,8 @@
 // 위 줄(2026-10-11 의뢰인: 시프티의 휴가 「전체」처럼): 이름 검색 · 부서로 거르기 · 기준일 · [내 휴가]. 폰 목록은 권한(관리자 · 직원)별 묶음.
 // 기준일을 바꾸면 그날 적용되는 부여 기준의 받은 · 사용 · 잔여를 본다. 입력 칸의 계산값은 언제나 오늘 기준이다.
 // ★ 4-7: 발생일수는 관리자가 직접 입력. 참고 계산값은 옆에 "참고용"으로만 보여 주고 입력 칸에 미리 채우지 않는다.
+import { getMe } from '@/lib/auth';
+import { scopeFilter } from '@/lib/scope';
 import { ChevronRight, Download } from 'lucide-react';
 import { getFormatter, getTranslations } from 'next-intl/server';
 import Link from 'next/link';
@@ -26,6 +28,8 @@ export default async function AdminLeavePage({ searchParams }: { searchParams: P
   const tc = await getTranslations('common');
   const f = await getFormatter();
   const sp = await searchParams;
+  const admin = (await getMe())?.role === 'admin'; // 지점관리자는 보기만 (manager-rules.ts) — 받은 연차 입력 · 휴가 취소 · 다운로드는 관리자만
+  const inScope = await scopeFilter();
   const practice = OFFICE.practiceMode && sp.live !== '1';
   const today = toKstDate(new Date());
   const [{ data: ppl }, groups, types, grants, requests] = await Promise.all([
@@ -41,7 +45,7 @@ export default async function AdminLeavePage({ searchParams }: { searchParams: P
   const g = groupOptions.some((o) => o.id === sp.g) ? sp.g! : '';
   const scope = g ? groupScope(groups, g) : null;
   const q = (sp.q ?? '').trim().slice(0, 40);
-  const shown = (ppl ?? []).filter((p) => (!scope || (p.group_id && scope.has(p.group_id as string))) && (!q || (p.name as string).toLowerCase().includes(q.toLowerCase())));
+  const shown = (ppl ?? []).filter((p) => inScope(p.id as string) && (!scope || (p.group_id && scope.has(p.group_id as string))) && (!q || (p.name as string).toLowerCase().includes(q.toLowerCase())));
   const byRole = (['admin', 'employee'] as const).map((role) => ({ role, list: shown.filter((p) => (p.role === 'admin') === (role === 'admin')) })).filter((x) => x.list.length > 0);
   const balOf = (id: string) => calcLeaveBalance({ grants: grants.filter((x) => x.employeeId === id), requests: requests.filter((r) => r.employeeId === id), types, asOf });
   // 직원을 눌러도 검색 · 거르기 · 기준일은 그대로 둔다
@@ -55,7 +59,7 @@ export default async function AdminLeavePage({ searchParams }: { searchParams: P
   const name = new Map((ppl ?? []).map((p) => [p.id, p.name]));
   const leaveName = (code: string) => leaveTypeName(types, code, tl);
   // PC: 시프티처럼 「휴가 내역」(목록 · 월별)과 「휴가 발생」으로 나눈다 (2026-10-11 의뢰인 스샷 `스샷/휴가내역*.png` · `휴가발생.png`). 폰은 한 화면 그대로
-  const view: 'list' | 'month' | 'accrual' = sp.v === 'accrual' ? 'accrual' : sp.v === 'month' ? 'month' : 'list';
+  const view: 'list' | 'month' | 'accrual' = sp.v === 'accrual' && admin ? 'accrual' : sp.v === 'month' ? 'month' : 'list';
   const year = sp.y && /^\d{4}$/.test(sp.y) ? sp.y : today.slice(0, 4);
   const typeOf = new Map(types.map((x) => [x.code, x]));
   const inYear = requests.filter((r) => r.status === 'approved' && r.startDate.slice(0, 4) === year && name.has(r.employeeId)).sort((a, b) => (a.startDate > b.startDate ? -1 : 1));
@@ -78,15 +82,17 @@ export default async function AdminLeavePage({ searchParams }: { searchParams: P
           <h1 className="text-2xl font-bold">{t(view === 'accrual' ? 'pcAccrual' : 'pcHistory')}</h1>
           <p className="pt-1 text-sm text-faint">{t(view === 'accrual' ? 'pcAccrualIntro' : 'pcHistoryIntro')}</p>
         </div>
-        {view !== 'accrual' && (
+        {view !== 'accrual' && admin && (
           <a href={`/api/admin/export/list?kind=leave&y=${sp.y && /^\d{4}$/.test(sp.y) ? sp.y : asOf.slice(0, 4)}${sp.live === '1' ? '&live=1' : ''}`} className="inline-flex h-8 items-center gap-1 rounded-button border border-nav bg-bg px-4 text-sm font-bold whitespace-nowrap text-nav">
             <Download aria-hidden size={16} />
             {tc('download')}
           </a>
         )}
-        <Link href="/admin/leave/types" className="inline-flex h-8 items-center rounded-button border border-nav bg-bg px-4 text-sm font-bold whitespace-nowrap text-nav">
-          {t('toTypes')}
-        </Link>
+        {admin && (
+          <Link href="/admin/leave/types" className="inline-flex h-8 items-center rounded-button border border-nav bg-bg px-4 text-sm font-bold whitespace-nowrap text-nav">
+            {t('toTypes')}
+          </Link>
+        )}
       </div>
       {view !== 'accrual' && (
         <div className="hidden flex-col gap-3 lg:flex">
@@ -142,7 +148,7 @@ export default async function AdminLeavePage({ searchParams }: { searchParams: P
                     hours: { text: ty?.isPaid ? t('hoursValue', { h: n((ty.hours ?? 8) * units) }) : t('hoursValue', { h: 0 }) },
                     deduct: { text: t('daysValue', { d: n(ty?.deductsBalance ? r.days : 0) }) },
                     reason: { text: r.reason ?? '' },
-                    act: { text: '', node: <span className="inline-flex flex-col items-end"><LeaveCancel id={r.id} name={name.get(r.employeeId) ?? ''} /></span> },
+                    act: { text: '', node: admin ? <span className="inline-flex flex-col items-end"><LeaveCancel id={r.id} name={name.get(r.employeeId) ?? ''} /></span> : null },
                   },
                 };
               })}
@@ -197,7 +203,7 @@ export default async function AdminLeavePage({ searchParams }: { searchParams: P
           { href: '/punch/leave', label: t('mine'), on: false },
           { href: '/admin/leave', label: t('all'), on: true },
         ]}
-        gear={{ href: '/admin/leave/types', label: t('toTypes') }}
+        gear={admin ? { href: '/admin/leave/types', label: t('toTypes') } : undefined}
         labels={{ menu: tc('menu'), search: t('search'), filter: t('filter'), period: t('asOf'), from: '', to: t('asOf'), apply: t('apply'), groupAll: t('groupAll') }}
       />
       </div>
@@ -324,12 +330,13 @@ export default async function AdminLeavePage({ searchParams }: { searchParams: P
               ) : (
                 <Chip tone="warn">{t('noGrant')}</Chip>
               )}
-              <JoinedOnForm employeeId={p.id} joinedOn={hiredOn} today={today} />
+              {admin && <JoinedOnForm employeeId={p.id} joinedOn={hiredOn} today={today} />}
               {ref && (
                 <p className="rounded-button bg-surface p-2 text-xs text-muted">
                   <span className="font-semibold">{t('reference', { n: ref.days })}</span> ({ref.periodLabel}) — {ref.note}
                 </p>
               )}
+              {admin && (
               <GrantForm
                 employeeId={p.id}
                 current={
@@ -339,6 +346,7 @@ export default async function AdminLeavePage({ searchParams }: { searchParams: P
                 }
                 suggested={ref ? { days: ref.days, periodLabel: ref.periodLabel, effectiveFrom: ref.effectiveFrom } : null}
               />
+              )}
             </Card>
           );
         })}
@@ -359,7 +367,7 @@ export default async function AdminLeavePage({ searchParams }: { searchParams: P
               </span>
             </div>
             <p className="num text-sm">{r.startDate === r.endDate ? day(r.startDate) : `${day(r.startDate)} ~ ${day(r.endDate)}`}</p>
-            <LeaveCancel id={r.id} name={name.get(r.employeeId) ?? ''} />
+            {admin && <LeaveCancel id={r.id} name={name.get(r.employeeId) ?? ''} />}
           </Card>
         ))}
       </section>

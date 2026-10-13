@@ -6,6 +6,7 @@
 //   · 관리 · 회사 설정: 마우스를 올려도 펼치지 않는다 — 눌러서 들어가면 사이드 메뉴 옆에 흰 둘째 메뉴가 붙는다 (2026-10-11 시프티 실측 · 의뢰인 "두 개는 클릭")
 import { Building2, CalendarRange, ChartColumn, Clock, House, Lock, Megaphone, PanelLeftClose, PanelLeftOpen, Plane, Send, UserRoundCog, Wallet, type LucideIcon } from 'lucide-react';
 import { useTranslations } from 'next-intl';
+import { managerCanOpen } from '@/lib/manager-rules';
 import Link, { useLinkStatus } from 'next/link';
 import { useSearchParams } from 'next/navigation';
 import { useEffect, useState } from 'react';
@@ -89,7 +90,7 @@ function PanelLinks({ panel, active, onPick, t }: { panel: Panel; active: string
   );
 }
 
-export function SideNav({ isAdmin, inboxCount = 0 }: { isAdmin: boolean; inboxCount?: number }) {
+export function SideNav({ isAdmin, branchManager = false, inboxCount = 0 }: { isAdmin: boolean; branchManager?: boolean; inboxCount?: number }) {
   const t = useTranslations('side');
   const { path, pressed, setPressed } = usePressedTab();
   const query = useSearchParams();
@@ -117,7 +118,7 @@ export function SideNav({ isAdmin, inboxCount = 0 }: { isAdmin: boolean; inboxCo
       return !w;
     });
   };
-  const groups: Item[][] = [
+  const allGroups: Item[][] = [
     [
       { href: '/admin', key: 'home', icon: House },
       {
@@ -161,6 +162,21 @@ export function SideNav({ isAdmin, inboxCount = 0 }: { isAdmin: boolean; inboxCo
       { href: '/admin/settings', key: 'config', icon: Building2, panel: SETTINGS },
     ],
   ];
+
+  // 지점관리자에게는 열 수 있는 화면만 보인다 (받은 연차 입력 · 관리 · 회사 설정 등은 없다)
+  const mayOpen = (href: string) => managerCanOpen(href.split('?')[0]) && !href.includes('v=accrual');
+  const groups: Item[][] = !branchManager
+    ? allGroups
+    : allGroups
+        .map((items) =>
+          items.flatMap((i): Item[] => {
+            if (i.panel) return [];
+            if (!i.sub) return mayOpen(i.href) ? [i] : [];
+            const kept = i.sub.filter((x) => mayOpen(x.href));
+            return kept.length ? [{ ...i, href: kept.some((x) => x.href === i.href) ? i.href : kept[0].href, sub: kept }] : [];
+          }),
+        )
+        .filter((items) => items.length > 0);
 
   // 지금 화면 = 주소가 가장 잘 맞는 메뉴 하나. 주소의 길(path)이 길게 맞을수록, 그리고 ?v= · ?tab= 까지 맞으면 그쪽이 이긴다
   // (/admin/leave/types는 「휴가」가 아니라 관리의 「휴가 유형」, /admin/schedule?v=list는 「목록형」)

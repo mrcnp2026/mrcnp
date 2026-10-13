@@ -3,6 +3,7 @@
 import 'server-only';
 import { resolveDayType } from '@/config/labor-rules';
 import { OFFICE } from '@/config/office';
+import { getMe } from '@/lib/auth';
 import { loadHolidays, loadRuleVersions } from '@/lib/attendance-data';
 import { fullLeaveSet, leaveByDate, trimRuleByLeave, type LeaveOnDay, type LeaveRequest, type LeaveType } from '@/lib/leave';
 import { loadAllLeaveTypes, loadLeaveRequests } from '@/lib/leave-data';
@@ -12,6 +13,7 @@ import { addDays, weekStartOf } from '@/lib/calendar';
 import { buildOvertimeRequest } from '@/lib/overtime';
 import { computeEmployeeDays, type DayRow } from '@/lib/period';
 import { ruleAt } from '@/lib/rule-at';
+import { viewerScope, within } from '@/lib/scope';
 import { loadShifts, loadShiftTemplates } from '@/lib/shift-data';
 import { applyTemplate, deemedPair, planDay, type DayPlan, type DayShift, type ShiftTemplate } from '@/lib/shifts';
 import { createAdminClient } from '@/lib/supabase/admin';
@@ -19,7 +21,7 @@ import { toKstDate } from '@/lib/time';
 import type { HolidayRow, PunchCorrection, PunchEvent, WorkRule } from '@/lib/types';
 
 // startsOn: 입사일(joined_on), 비어 있으면 계정을 만든 날 — 그 전 날짜는 미기록·결근으로 세지 않는다 (7-8 요점 3)
-export type Person = { id: string; name: string; employeeNo: string | null; role: 'admin' | 'employee'; active: boolean; joinedOn: string | null; startsOn: string; groupId: string | null; shiftTemplateId: string | null; jobId: string | null };
+export type Person = { id: string; name: string; employeeNo: string | null; role: 'admin' | 'manager' | 'employee'; active: boolean; joinedOn: string | null; startsOn: string; groupId: string | null; shiftTemplateId: string | null; jobId: string | null };
 
 export type EventRow = PunchEvent & { ipVerified: boolean; verifiedBy: 'ip' | 'gps' | null; source: 'web' | 'qr' | 'admin'; note: string | null; clientIp: string | null; locationId: string | null };
 
@@ -96,7 +98,8 @@ export function leaveDaysFor(data: PeriodData, employeeId: string): Map<string, 
 export async function loadPeriod(from: string, to: string, practice = OFFICE.practiceMode): Promise<PeriodData> {
   const db = createAdminClient();
   const readFrom = addDays(weekStartOf(from), -1); // 자정 넘긴 퇴근의 근무일 상속 여유
-  const [versions, holidays, { data: ppl }, { data: ev }, { data: co }, { data: ot }, leaveRequests, leaveTypes, workRequests, templates, shifts] = await Promise.all([
+  const scope = await viewerScope(); // 지점관리자면 맡은 지점 직원만 (scope.ts)
+  const [versions, holidays, { data: pplAll }, { data: evAll }, { data: coAll }, { data: otAll }, leaveRequests, leaveTypes, workRequests, templates, shiftsAll] = await Promise.all([
     loadRuleVersions(),
     loadHolidays(readFrom, to),
     db.from('profiles').select('id, name, employee_no, role, active, joined_on, created_at, group_id, shift_template_id, job_id').order('name'),
@@ -113,6 +116,11 @@ export async function loadPeriod(from: string, to: string, practice = OFFICE.pra
     loadShiftTemplates(true),
     loadShifts(readFrom, to),
   ]);
+  const ppl = within(pplAll ?? [], scope, (p) => p.id as string);
+  const ev = within(evAll ?? [], scope, (e) => e.employee_id as string);
+  const co = within(coAll ?? [], scope, (c) => c.employee_id as string);
+  const ot = within(otAll ?? [], scope, (o) => o.employee_id as string);
+  const shifts = within(shiftsAll, scope, (x) => x.employeeId);
   const tplById = new Map(templates.map((t) => [t.id, t]));
   // 꺼 둔 틀은 적용되지 않은 것으로 본다 (이름·색은 지난 일정 표시에 계속 쓴다)
   const tplOfPerson = new Map((ppl ?? []).map((p) => [p.id as string, p.shift_template_id ? (tplById.get(p.shift_template_id)?.active ? tplById.get(p.shift_template_id)! : null) : null]));
@@ -271,6 +279,8 @@ export async function hiddenTestIds(): Promise<string[]> {
 
 export async function pendingCounts(practice = OFFICE.practiceMode): Promise<{ overtime: number; corrections: number; leave: number; work: number; punch: number; shift: number; leaveDelete: number; total: number }> {
   const db = createAdminClient();
+  const scope = await viewerScope();
+  if (scope) return pendingCountsIn(practice, scope);
   const hide = await hiddenTestIds();
   const skip = hide.length ? `(${hide.join(',')})` : '(00000000-0000-0000-0000-000000000000)';
   const [{ count: a }, { count: b }, { count: c }, { count: l }, { count: w }, { count: pr }, { count: sh }, { count: lc }] = await Promise.all([
@@ -284,5 +294,23 @@ export async function pendingCounts(practice = OFFICE.practiceMode): Promise<{ o
     db.from('leave_change_requests').select('id', { count: 'exact', head: true }).eq('is_test', practice).eq('status', 'pending').not('employee_id', 'in', skip),
   ]);
   const r = { overtime: (a ?? 0) + (b ?? 0), corrections: c ?? 0, leave: l ?? 0, work: w ?? 0, punch: pr ?? 0, shift: sh ?? 0, leaveDelete: lc ?? 0 };
+  return { ...r, total: r.overtime + r.corrections + r.leave + r.work + r.punch + r.shift + r.leaveDelete };
+}
+
+/** 지점관리자의 대기 요청 수 — 맡은 지점 직원 것만. 자기 요청은 세지 않는다(관리자가 처리한다) */
+async function pendingCountsIn(practice: boolean, scope: Set<string>) {
+  const db = createAdminClient();
+  const me = (await getMe())?.id;
+  const hide = new Set(await hiddenTestIds());
+  const ids = [...scope].filter((id) => id !== me && !hide.has(id));
+  const zero = { overtime: 0, corrections: 0, leave: 0, work: 0, punch: 0, shift: 0, leaveDelete: 0, total: 0 };
+  if (ids.length === 0) return zero;
+  const n = async (table: string, review = false) => {
+    let q = db.from(table).select('id', { count: 'exact', head: true }).eq('is_test', practice).in('employee_id', ids);
+    q = review ? q.eq('needs_review', true).neq('status', 'pending') : q.eq('status', 'pending');
+    return (await q).count ?? 0;
+  };
+  const [a, b, c, l, w, pr, sh, lc] = await Promise.all([n('overtime_requests'), n('overtime_requests', true), n('punch_corrections'), n('leave_requests'), n('work_requests'), n('punch_requests'), n('shift_requests'), n('leave_change_requests')]);
+  const r = { overtime: a + b, corrections: c, leave: l, work: w, punch: pr, shift: sh, leaveDelete: lc };
   return { ...r, total: r.overtime + r.corrections + r.leave + r.work + r.punch + r.shift + r.leaveDelete };
 }

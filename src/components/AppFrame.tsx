@@ -25,7 +25,8 @@ import { TopBar } from './TopBar';
 
 /** overlay: 동의를 마친 사람에게만 띄우는 것(공지 팝업) — 동의 창이 먼저다 (2026-10-05) */
 export async function AppFrame({ me, children, overlay }: { me: Me; children: ReactNode; overlay?: ReactNode }) {
-  const isAdmin = me.role === 'admin';
+  const branchManager = me.role === 'manager'; // 지점관리자: 관리 화면 틀은 같고 메뉴만 허용한 것으로 줄인다 (manager-rules.ts)
+  const isAdmin = me.role === 'admin' || branchManager;
   const t = await getTranslations('home');
   const ts = await getTranslations('side');
   const [consented, inboxCount, notices] = await Promise.all([
@@ -57,13 +58,13 @@ export async function AppFrame({ me, children, overlay }: { me: Me; children: Re
         </div>
       </header>
       <div className="lg:flex">
-        <SideNav isAdmin={isAdmin} inboxCount={inboxCount} />
+        <SideNav isAdmin={isAdmin} branchManager={branchManager} inboxCount={inboxCount} />
         {/* 폰에서는 하단 탭 바 높이 + 아이폰 하단 여백만큼 비운다 */}
         <div className="min-w-0 flex-1 pb-[calc(4rem+env(safe-area-inset-bottom))] lg:pb-0">
           <FrameHeader>
             <TopBar
               className="lg:hidden"
-              left={<MenuDrawer name={me.name} isAdmin={isAdmin} languages={languages} />}
+              left={<MenuDrawer name={me.name} isAdmin={isAdmin} branchManager={branchManager} languages={languages} />}
               right={
                 <Link href="/punch/notices" aria-label={t('notices', { n: unread })} className="relative -mr-2 flex size-11 shrink-0 items-center justify-center rounded-button text-text">
                   <Bell aria-hidden size={22} strokeWidth={1.75} />

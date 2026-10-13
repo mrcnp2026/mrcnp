@@ -232,7 +232,8 @@
     "password_mismatch": "The two passwords do not match.",
     "password_wrong": "The current password is not correct.",
     "device_required": "Please register your punch device first.",
-    "day_confirmed": "This day is confirmed. An admin must undo the confirmation before it can be changed."
+    "day_confirmed": "This day is confirmed. An admin must undo the confirmation before it can be changed.",
+    "out_of_scope": "This person is not in your branches."
   },
   "admin": {
     "nav": {
@@ -358,7 +359,8 @@
       "popupSubmit": "Add",
       "inviteNote": "Adding creates an invite link. Pass the link or QR code to the employee in the next step.",
       "employeeRole": "Employee",
-      "pcIntro": "Manage departments, titles, access and sign-up status, and invite employees with a code."
+      "pcIntro": "Manage departments, titles, access and sign-up status, and invite employees with a code.",
+      "managerChip": "Branch manager"
     },
     "more": {
       "title": "All menus",
@@ -1385,7 +1387,8 @@
         "resigned": "Left the company",
         "contractEnd": "Contract ended",
         "rejoin": "Rejoined",
-        "newPhone": "Phone replaced"
+        "newPhone": "Phone replaced",
+        "newManager": "Assigned as branch manager"
       },
       "reason_required": "Enter a reason of at least 2 characters (up to 200).",
       "self_change": "You cannot change your own account. Ask another admin.",
@@ -1558,7 +1561,18 @@
         "empty": "No employees.",
         "toRecords": "Confirm records",
         "caution": "Closing currently means confirming records day by day. Closing or reopening a whole month at once is not available yet."
-      }
+      },
+      "makeManager": "Make branch manager",
+      "makeManagerHint": "Can view records, schedules and leave of staff in assigned branches and approve or reject their requests. Cannot add, edit, confirm, close, see payroll or change settings. Pick the branches after assigning.",
+      "removeManager": "Remove branch manager",
+      "removeManagerHint": "Returns to a regular employee.",
+      "scopeTitle": "Assigned branches",
+      "scopeHint": "Only staff in the selected branches are visible to this branch manager. Selecting a department includes its teams.",
+      "scopeNoGroups": "There are no branches. Create them in the org chart first.",
+      "scopeEmpty": "No branch assigned — only their own records are visible now.",
+      "scopeSave": "Save branches",
+      "scopeSaved": "Saved.",
+      "not_manager": "Pick branches after the person is made a branch manager."
     },
     "settings": {
       "title": "Settings",
@@ -2778,7 +2792,8 @@
       "config": "Settings",
       "wideMenu": "Wide"
     },
-    "leaveLedger": "Leave ledger"
+    "leaveLedger": "Leave ledger",
+    "roleManager": "Branch manager"
   },
   "nav": {
     "home": "Home",

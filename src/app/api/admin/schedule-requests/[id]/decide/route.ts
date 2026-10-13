@@ -1,12 +1,13 @@
 // 근무일정 생성 요청 승인·거절 (의뢰인 2026-10-11). 승인: 그 날짜에 날짜별 일정을 한 건 만든다 (같은 직원·날짜·시각의 일정이 이미 있으면 그것을 쓴다). 거절: 만들지 않는다.
 import { api, ApiError, readJson } from '@/lib/api';
-import { requireAdmin } from '@/lib/auth';
-import { assertNotOwnRequest } from '@/lib/staff-data';
+import { requireApprover, requireStaffViewer } from '@/lib/scope';
 import { createAdminClient } from '@/lib/supabase/admin';
 
 export const POST = api<{ params: Promise<{ id: string }> }>('admin.scheduleRequests.decide', async (req, ctx) => {
-  const me = await requireAdmin();
-  if (!me) throw new ApiError(403, 'forbidden');
+  // 관리자 · 지점관리자. 누구의 요청인지 읽은 뒤 requireApprover가 다시 본다(지점관리자는 맡은 지점 직원의 요청만, 자기 요청은 못 한다)
+  const viewer = await requireStaffViewer();
+  if (!viewer) throw new ApiError(403, 'forbidden');
+  const me = viewer.me;
   const { id } = await ctx.params;
   if (!/^[0-9a-f-]{36}$/i.test(id)) throw new ApiError(404, 'not_found');
   const b = await readJson(req);
@@ -15,7 +16,7 @@ export const POST = api<{ params: Promise<{ id: string }> }>('admin.scheduleRequ
   const { data: r } = await db.from('shift_requests').select('id, employee_id, work_date, start_time, end_time, kind, reason, status').eq('id', id).maybeSingle();
   if (!r) throw new ApiError(404, 'not_found');
   if (r.status !== 'pending') return { result: 'already' };
-  await assertNotOwnRequest(me.id, r.employee_id); // 자기 요청은 다른 관리자가 처리한다
+  await requireApprover(r.employee_id); // 자기 요청은 다른 관리자가 처리한다 · 지점관리자는 맡은 지점만
 
   let shiftId: string | null = null;
   if (b.decision === 'approved') {

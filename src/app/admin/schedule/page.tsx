@@ -4,6 +4,7 @@
 // 그날 일정 = 날짜별로 넣은 일정(특근·잔업·하루만 다른 시각) → 없으면 평소 틀 → 없으면 회사 규칙 (lib/shifts planDay).
 // + 버튼: 날짜별 일정 넣기 (여러 명 한 번에). 날짜별로 넣은 일정만 ✕로 취소할 수 있다 — 평소 틀은 「근무일정 틀」에서 바꾼다.
 // 예전 주소(?d=하루)는 그 하루만 보는 것으로 받는다.
+import { getMe } from '@/lib/auth';
 import { Plane } from 'lucide-react';
 import { getFormatter, getTranslations } from 'next-intl/server';
 import Link from 'next/link';
@@ -35,6 +36,7 @@ const DATES_PER_PAGE = 7;
 
 export default async function AdminSchedulePage({ searchParams }: { searchParams: Promise<{ d?: string; q?: string; g?: string; from?: string; to?: string; p?: string; v?: string }> }) {
   const [t, tk, tc, f, sp] = await Promise.all([getTranslations('admin.schedule'), getTranslations('admin.shifts.kinds'), getTranslations('common'), getFormatter(), searchParams]);
+  const admin = (await getMe())?.role === 'admin'; // 지점관리자는 보기만 (manager-rules.ts)
   const today = toKstDate(new Date());
   const week = weekStartOf(today);
   const { from, to } = listRange(sp.from ?? sp.d, sp.to ?? sp.d, { from: week, to: addDays(week, 6) }, addDays);
@@ -157,10 +159,14 @@ export default async function AdminSchedulePage({ searchParams }: { searchParams
             <p className="pt-1 text-sm text-faint">{t('pcIntro')}</p>
           </div>
           <div className="flex items-center gap-2">
-            <Link href="/admin/shifts" className="inline-flex min-h-8 items-center rounded-button border border-nav bg-bg px-4 text-sm font-bold text-nav">
-              {t('toTemplates')}
-            </Link>
-            <SheetOpener id="schedule" label={t('add')} />
+            {admin && (
+              <>
+                <Link href="/admin/shifts" className="inline-flex min-h-8 items-center rounded-button border border-nav bg-bg px-4 text-sm font-bold text-nav">
+                  {t('toTemplates')}
+                </Link>
+                <SheetOpener id="schedule" label={t('add')} />
+              </>
+            )}
           </div>
         </div>
         <div className="flex flex-wrap items-center gap-2">
@@ -316,13 +322,17 @@ export default async function AdminSchedulePage({ searchParams }: { searchParams
             <Link href="/admin/schedule" className="inline-flex min-h-11 items-center font-medium text-muted">
               {t('thisWeek')}
             </Link>
-            <Link href="/admin/shifts" className="inline-flex min-h-11 items-center font-medium text-primary">
-              {t('toTemplates')} ›
-            </Link>
+            {admin && (
+              <Link href="/admin/shifts" className="inline-flex min-h-11 items-center font-medium text-primary">
+                {t('toTemplates')} ›
+              </Link>
+            )}
           </div>
           <p className="px-1 text-sm text-faint">{t('hint')}</p>
         </div>
         </div>
+      {admin && (
+        <>
       <AddSheet id="schedule" title={t('add')} modal wide>
           <Card className="flex flex-col gap-3">
             <h2 className="hidden text-sm font-medium text-muted lg:block">{t('add')}</h2>
@@ -337,6 +347,8 @@ export default async function AdminSchedulePage({ searchParams }: { searchParams
           </Card>
         </AddSheet>
       <Fab label={t('add')} items={[{ id: 'schedule', label: t('add') }]} />
+        </>
+      )}
     </PageShell>
   );
 }

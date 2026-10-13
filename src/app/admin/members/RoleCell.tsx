@@ -29,11 +29,12 @@ export function RoleCell({
   const [open, setOpen] = useState(false);
   const api = `/api/admin/employees/${employeeId}/role`;
   const admin = role === 'admin';
+  const manager = role === 'manager'; // 지점관리자 — 맡을 지점은 직원 상세에서 고른다
 
   return (
     <span className="flex flex-col gap-2">
       <span className="flex flex-wrap items-center gap-1">
-        {admin ? <Chip tone="info">{t('adminChip')}</Chip> : <span className="text-muted">{t('roleEmployee')}</span>}
+        {admin ? <Chip tone="info">{t('adminChip')}</Chip> : manager ? <Chip tone="info">{t('managerChip')}</Chip> : <span className="text-muted">{t('roleEmployee')}</span>}
         {canViewPayroll && <Chip tone="info">{t('payrollChip')}</Chip>}
         {waiting && <Chip tone="warn">{t('roleWaiting')}</Chip>}
         {!self && !waiting && (
@@ -48,6 +49,12 @@ export function RoleCell({
             <ManageAction title={tm('removeAdmin')} hint={tm('removeAdminHint')} confirmLabel={tm('removeAdmin')} endpoint={api} body={{ role: 'employee' }} presets={[tm('preset.handover'), tm('preset.mistake')]} />
           ) : (
             <ManageAction title={tm('makeAdmin')} hint={tm('makeAdminHint')} confirmLabel={tm('makeAdmin')} endpoint={api} body={{ role: 'admin' }} presets={[tm('preset.newAdmin'), tm('preset.handover')]} />
+          )}
+          {!admin && !manager && (
+            <ManageAction title={tm('makeManager')} hint={tm('makeManagerHint')} confirmLabel={tm('makeManager')} endpoint={api} body={{ role: 'manager' }} presets={[tm('preset.newManager'), tm('preset.handover')]} />
+          )}
+          {manager && (
+            <ManageAction title={tm('removeManager')} hint={tm('removeManagerHint')} confirmLabel={tm('removeManager')} endpoint={api} body={{ role: 'employee' }} presets={[tm('preset.handover'), tm('preset.mistake')]} />
           )}
           {admin && actorCanPayroll && !canViewPayroll && (
             <ManageAction title={tm('grantPayroll')} hint={tm('grantPayrollHint')} confirmLabel={tm('grantPayroll')} endpoint={api} body={{ canViewPayroll: true }} presets={[tm('preset.payrollOwner')]} />

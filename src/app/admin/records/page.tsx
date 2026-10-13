@@ -217,6 +217,7 @@ export default async function RecordsPage({ searchParams }: { searchParams: Prom
           {t('privacyWarning')}
         </p>
         {/* 사람이 보고·인쇄하는 파일 = 엑셀 확인서 (②-4 7-5 요점 4: 증빙에 CSV 선택지를 두지 않는다) */}
+{me.role === 'admin' && (
         <Card className="flex items-center justify-between gap-2">
           <div>
             <p className="font-semibold">{t('reportXlsx')}</p>
@@ -228,6 +229,7 @@ export default async function RecordsPage({ searchParams }: { searchParams: Prom
             {t('download')}
           </a>
         </Card>
+        )}
         {me.canViewPayroll && (
           <Card className="flex items-center justify-between gap-2">
             <div>

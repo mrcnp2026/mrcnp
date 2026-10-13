@@ -1,4 +1,4 @@
-// 관리자 지정·해제, 급여 담당 지정·해제 (부록 R-2). 사유 필수, 변경 기록에 남는다.
+// 관리자 · 지점관리자 지정·해제, 급여 담당 지정·해제 (부록 R-2, 지점관리자는 2026-10-13 개발-19). 사유 필수, 변경 기록에 남는다.
 // - 자기 권한은 스스로 못 바꾼다 (자기에게 급여 담당을 켜는 것 포함)
 // - 관리자가 2명 미만이 되는 해제는 차단 / 급여 담당은 급여 담당자만 지정·해제하고 0명이 되면 차단
 // - 관리자에서 내려오면 급여 담당도 함께 내려온다
@@ -15,7 +15,7 @@ export const POST = api<{ params: Promise<{ id: string }> }>('admin.employees.ro
   if (!me) throw new ApiError(403, 'forbidden');
   const { id } = await ctx.params;
   const b = await readJson(req);
-  const role = b.role === undefined ? undefined : b.role === 'admin' || b.role === 'employee' ? b.role : null;
+  const role = b.role === undefined ? undefined : b.role === 'admin' || b.role === 'manager' || b.role === 'employee' ? b.role : null;
   const canViewPayroll = b.canViewPayroll === undefined ? undefined : typeof b.canViewPayroll === 'boolean' ? b.canViewPayroll : null;
   if (role === null || canViewPayroll === null || (role === undefined && canViewPayroll === undefined)) throw new ApiError(400, 'invalid_input');
   const reason = cleanReason(b.reason);

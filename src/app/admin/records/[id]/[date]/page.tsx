@@ -2,6 +2,7 @@
 // 보여 주기만 한다. [수정]은 그 직원의 그 달 기록 화면(정정·대리 입력이 있는 곳)으로 간다 — 고치는 길은 정정뿐이다 (4-8).
 // 「출근 장소 · 퇴근 장소」: 위치로 확인된 기록은 그 출퇴근 장소의 이름, 그 밖에는 확인한 방법(사무실 인터넷 · 확인 안 됨 · 관리자 등록 · 정정)을 적는다.
 // 아래 큰 [확정하기]: 그 직원의 그날 기록을 확정한다 (의뢰인 2026-10-11: 확정한 기록만 급여에 쓰고, 확정 뒤에는 정정을 막는다). 풀기도 여기서 한다.
+import { getMe } from '@/lib/auth';
 import { getFormatter, getTranslations } from 'next-intl/server';
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
@@ -51,7 +52,7 @@ export default async function RecordDetailPage({ params, searchParams }: { param
   const open = !!pair.in && !pair.out;
   const made = eventAt(pair.in) ?? eventAt(pair.out);
   // 확정은 지금 운영 모드의 기록에만 (연습 기간에 「실제 기록 보기」로 들어온 화면에서는 하지 않는다)
-  const canConfirm = practice === OFFICE.practiceMode;
+  const canConfirm = practice === OFFICE.practiceMode && (await getMe())?.role === 'admin'; // 지점관리자는 보기만 (manager-rules.ts)
   const confirm = (await loadConfirms(date, date, practice)).get(confirmKey(id, date));
   const closed = day.pairs.every((p) => p.in && p.out);
   const others = day.pairs.map((p, i) => ({ p, i })).filter((x) => x.i !== idx && (x.p.in || x.p.out));

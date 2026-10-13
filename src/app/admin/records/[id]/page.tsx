@@ -40,8 +40,9 @@ export default async function EmployeeRecordsPage({ params, searchParams }: { pa
   const q = (m: string) => `?m=${m}${liveQ}`;
   // 대리 등록은 지금 운영 모드의 기록에만 넣는다 — 연습 기간에 "실제 기록 보기"로 들어온 화면에서는 넣지 않는다
   // 본인 기록은 대신 넣지 못한다 (스스로 넣고 스스로 승인하는 것을 막는다)
-  const self = (await getMe())?.id === id;
-  const canEnter = practice === OFFICE.practiceMode && !self;
+  const viewer = await getMe();
+  const self = viewer?.id === id;
+  const canEnter = practice === OFFICE.practiceMode && !self && viewer?.role === 'admin'; // 지점관리자는 보기만 (manager-rules.ts)
 
   const { data, rows } = await buildMonth(ym, practice);
   const person = data.people.find((p) => p.id === id);

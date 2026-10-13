@@ -1,6 +1,7 @@
 // 외근 신청 읽기. 서버 전용. 쓰기는 API 라우트가 service_role로만 (4-11).
 import 'server-only';
 import { OFFICE } from '@/config/office';
+import { viewerScope, within } from '@/lib/scope';
 import { createAdminClient } from '@/lib/supabase/admin';
 import type { WorkRequest } from '@/lib/work-requests';
 
@@ -18,5 +19,5 @@ export async function loadWorkRequests(opts: { from?: string; to?: string; emplo
   if (opts.from) q = q.gte('end_date', opts.from);
   if (opts.to) q = q.lte('start_date', opts.to);
   const { data } = await q.order('start_date', { ascending: false });
-  return (data ?? []).map(toWork);
+  return within((data ?? []).map(toWork), await viewerScope(), (w) => w.employeeId); // 지점관리자면 맡은 지점 직원 것만
 }

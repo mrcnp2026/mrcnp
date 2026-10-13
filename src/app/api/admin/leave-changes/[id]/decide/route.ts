@@ -1,15 +1,16 @@
 // 휴가 삭제 요청 승인·거절 (의뢰인 2026-10-11). 승인: 그 휴가를 취소한다 (decide_leave — 승인된 휴가만 취소되고 결정 기록이 남는다). 거절: 휴가는 그대로.
 // 휴가가 이미 다른 길로 취소돼 있으면(관리자가 직접 취소) 요청만 승인으로 닫는다.
 import { api, ApiError, readJson } from '@/lib/api';
-import { requireAdmin } from '@/lib/auth';
 import { syncEmployeeLedgerSafe } from '@/lib/leave-ledger-data';
 import { isPeriodLocked } from '@/lib/punch';
-import { assertNotOwnRequest } from '@/lib/staff-data';
+import { requireApprover, requireStaffViewer } from '@/lib/scope';
 import { createAdminClient } from '@/lib/supabase/admin';
 
 export const POST = api<{ params: Promise<{ id: string }> }>('admin.leaveChanges.decide', async (req, ctx) => {
-  const me = await requireAdmin();
-  if (!me) throw new ApiError(403, 'forbidden');
+  // 관리자 · 지점관리자. 누구의 요청인지 읽은 뒤 requireApprover가 다시 본다(지점관리자는 맡은 지점 직원의 요청만, 자기 요청은 못 한다)
+  const viewer = await requireStaffViewer();
+  if (!viewer) throw new ApiError(403, 'forbidden');
+  const me = viewer.me;
   const { id } = await ctx.params;
   if (!/^[0-9a-f-]{36}$/i.test(id)) throw new ApiError(404, 'not_found');
   const b = await readJson(req);
@@ -18,7 +19,7 @@ export const POST = api<{ params: Promise<{ id: string }> }>('admin.leaveChanges
   const { data: r } = await db.from('leave_change_requests').select('id, leave_id, employee_id, status, leave_requests(start_date)').eq('id', id).maybeSingle();
   if (!r) throw new ApiError(404, 'not_found');
   if (r.status !== 'pending') return { result: 'already' };
-  await assertNotOwnRequest(me.id, r.employee_id); // 자기 요청은 다른 관리자가 처리한다
+  await requireApprover(r.employee_id); // 자기 요청은 다른 관리자가 처리한다 · 지점관리자는 맡은 지점만
   const start = (r.leave_requests as unknown as { start_date?: string } | null)?.start_date;
   if (start && (await isPeriodLocked(r.employee_id, start))) throw new ApiError(409, 'period_locked');
 
