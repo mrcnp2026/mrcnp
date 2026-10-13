@@ -1,0 +1,768 @@
+
+
+
+
+
+
+<!DOCTYPE html>
+<html lang = "ko">
+<head>
+<meta http-equiv="Content-TYPE" content="text/html; charset=UTF-8"/>
+<meta http-equiv="X-UA-Compatible" content="IE=Edge" />
+<title>lawFullContents</title>
+<link type="text/css" rel="stylesheet" href="/lm/jquery/jquery-ui.min.css"/>
+<link type="text/css" rel="stylesheet" href="/lm/css/lmx/service/common.css">
+<link type="text/css" rel="stylesheet" href="/lm/css/lmx/service/lawdetailcontent.css" />
+<link type="text/css" rel="stylesheet" href="/lm/css/lmx/service/sub.css">
+<link type="text/css" rel="stylesheet" href="/lm/css/lmx/service/popup.css">
+
+<script type="text/javascript" src="/lm/jquery/jquery-2.2.4.js"></script>
+<script type="text/javascript" src="/lm/jquery/jquery-1.12.4.min.js"></script>
+<script type="text/javascript" src="/lm/lmxmng/javascript/searchKeyword.js"></script>
+<script type="text/javascript" src="/lm/lmxmng/javascript/link.js"></script>
+<script type="text/javascript" src="/lm/lmxmng/javascript/common.js"></script>
+<script type="text/javascript" src="/lm/lmxsrv/javascript/bookMark.js"></script>
+<script type="text/javascript" src="/lm/jquery/jquery-ui.min.js"></script>
+<script type="text/javascript" src="/lm/javascript/service/lmxUtil.js"></script>
+<script type="text/javascript" src="/lm/javascript/service/common.js"></script>
+<script type="text/javascript" src="/lm/jquery/popup.js"></script>
+<script type="text/javascript">
+	$(document).ready(function(){
+		if("" == "twoView" || "" == "threeView"){
+			$("#lawcontent").css("padding-top", "65px");
+			$(".btn_td").hide();
+		}
+		
+		var w = 0;
+		$(".JO table tbody td").each(function(){
+			if($(this).attr("width") != null && $(this).attr("width").length > 0){
+				w = 0;
+				w = $(this).attr("width") * 1.5;
+				$(this).attr("width", w);
+			}
+		});
+		
+		$(".JO table tbody td p").css("margin-top", "");
+		$(".JO table tbody td p").css("margin-bottom", "");
+		$(".JO table tbody td p").css("margin-right", "");
+		$(".JO table tbody td p").css("margin-left", "");
+		$("table p").removeClass("level1").removeClass("level2").removeClass("level3").removeClass("level4");
+		var url = parent.location.href;
+		if(url.indexOf("/lmxsrv/law/lawDetail.do") != -1) {
+	        window.parent.postMessage({type: 'lawFullContentsLoad'}, "*");
+		}
+		if(url.indexOf("/lmxsrv/law/lawFullView.do") != -1) {
+			restoreFocus();
+		}
+
+	    var url = location.href;
+		if(url.indexOf("MODE=twoView") != -1){
+			restoreFocus();
+		}
+	});
+
+	function thisJoPrint(cseq){
+		showPopup('/lm/lmxsrv/print/lawDetailPrintView.do?SEQ=39&SEQ_HISTORY=595294&SEQ_CONTENTS='+cseq, 'preview', 1024, 768);
+	}
+
+	function thisChangeHistory(){
+		saveFocus();
+		location.href = "/lm/lmxsrv/law/lawFullContent.do?SEQ=39&SEQ_HISTORY="+$("#SEQ_HISTORY").val()+"&hideBookMark=1&MODE=twoView";
+	}
+
+	//개정연혁을 보여준다
+	function thisHistoryShow(){
+		$(".historyContent").show();
+		$(".historyShow").hide();
+		$(".historyHide").show();
+	}
+
+	//개정연혁을 감춘다
+	function thisHistoryHide(){
+		$(".historyContent").hide();
+		$(".historyShow").show();
+		$(".historyHide").hide();
+	}
+
+	//트리메뉴 보기
+	function showTree(law_group){
+		parent.showTree(law_group);
+	}
+
+	//별표 이미지를 보여준다
+	function thisShowAttachImg(seq){
+		$(".showAttachImgSpan"+seq).hide();
+		$(".hideAttachImgSpan"+seq).show();
+		$(".attachImgTr"+seq).show();
+	}
+
+	//별표 이미지를 감춘다
+	function thisHideAttachImg(seq){
+		$(".showAttachImgSpan"+seq).show();
+		$(".hideAttachImgSpan"+seq).hide();
+		$(".attachImgTr"+seq).hide();
+	}
+	
+	//한눈보기 팝업
+	function oneViewImg(seq) {
+		var width = 680;
+		var height = 823;
+		var sw = (document.body.offsetWidth) - width;
+		var sh = 0;
+		var url = "/lm/lmxsrv/newLawImg.do?flSeq=" + seq;
+		window.open(url, '', 'left=' + sw + ', top=' + sh 
+				+', scrollbars=yes, toolbar=no, resizable=yes, status=no, menubar=no, width=' 
+				+ width + 'px,height=' + height + 'px' );
+	}
+
+	// 포커스 유지 함수
+	function saveFocus() {
+		const activeElement = document.activeElement;
+		if (activeElement) {
+			// id 우선, 없으면 name 사용
+			const focusKey = activeElement.id || activeElement.getAttribute("name") || activeElement.getAttribute("class");
+			if (focusKey) {
+	    		sessionStorage.setItem("lastFocusKey", focusKey);
+	    		
+	    		// 속성 체크
+	    		if (activeElement.id) {
+	    			sessionStorage.setItem("lastFocusType", "id");
+	    		} else if (activeElement.getAttribute("name")){
+	    			sessionStorage.setItem("lastFocusType", "name");
+	    		} else if (activeElement.getAttribute("class")) {
+	    			sessionStorage.setItem("lastFocusType", "class");
+	    		} else {
+	    			return;
+	    		}
+			}
+		}
+	}
+
+	function restoreFocus(){
+		const lastFocusKey = sessionStorage.getItem("lastFocusKey");
+		const lastFocusType = sessionStorage.getItem("lastFocusType");
+		
+		if (lastFocusKey && lastFocusType) {
+			var el = null;
+			if (lastFocusType === "id") {
+				el = parent.document.getElementById(lastFocusKey);
+			} else if (lastFocusType === "name") {
+				var keyName = "[name=" + lastFocusKey + "]";
+				el = parent.document.querySelector(keyName);
+			} else if (lastFocusType === "class") {
+				var keyName = "." + lastFocusKey.replaceAll(" ", ".");
+				el = $(keyName);
+			}
+			
+			if (el) {
+				el.focus();
+			}
+			sessionStorage.removeItem("lastFocusKey");
+			sessionStorage.removeItem("lastFocusType");
+		}
+	}
+</script>
+<style>
+	.sr-only {
+	    position: absolute !important;
+	    width: 1px !important;
+	    height: 1px !important;
+	    padding: 0 !important;
+	    margin: -1px !important;
+	    overflow: hidden !important;
+	    clip: rect(0, 0, 0, 0) !important;
+	    white-space: nowrap !important;
+	    border: 0 !important;
+	}
+</style>
+</head>
+<body>
+
+<!-- 2단보기 -->
+
+
+<div id="lawcontent" style="padding-top: 50px;">
+	
+	
+		
+			
+				<div class="lawname" class="ta-center">월별 건강보험료액의 상한과 하한에 관한 고시</div>
+				<div class="historyCenter" style="color:#3a3a4a;font-weight:500;text-align:center;">
+					[
+						시행 
+						<script type="text/javascript">showDate('20260101', '6');</script>
+					]
+					[
+						
+							보건복지부고시 제2025-222호
+						
+						<!-- 제/개정일자 -->
+						<script type="text/javascript">showDate('20251224', '6');</script>
+						개정
+					]
+				</div>
+				
+				<div class="historyCenter" style="color:#3a3a4a;font-weight:500;text-align:right;">
+					<!-- 소관부서 -->
+					
+						<p>[ 보건복지부 ]</p>
+					
+				</div>
+				
+			
+			
+			
+			
+			
+			
+			
+			
+			
+			
+		
+	
+		
+			
+			
+			
+			
+			
+			
+			
+			
+			
+			
+		
+	
+		
+			
+			
+			
+			
+			
+			
+			
+			
+			<!-- 조 -->
+				<a id="000001" name="000001"></a>
+				<a id="c000100000" name="c000100000"></a>
+				
+				
+					<div class="JO" id="20900747">
+				
+					
+						
+							<!-- 조 제목 -->
+							<div class="article">
+								<table border="0" cellspacing="0" cellpadding="0">
+									<tr>
+										<td>&nbsp;제1조 (목적)</td>
+										
+										<td>
+											<ul class="doc_btn">
+												<li class="ml2">
+													<a href="/lm/lmxsrv/law/joHistory.do?SEQ=39&SEQ_HISTORY=595294&SEQ_CONTENTS=20900747" target="_blank" title='조문 연혁 새창열림'>
+														<img class="image" src="/lm/images/lmx/service/newimg/icon/ico_paper.png" alt="조문 연혁" title='조문 연혁 새창열림'/>
+													</a>
+												</li>
+												<li class="ml2">
+													<a href="javascript:thisJoPrint(20900747);" title='조문 인쇄 새창열림'>
+														<img class="image" src="/lm/images/lmx/service/newimg/icon/ico_print.png" alt="조문 인쇄" title='조문 인쇄 새창열림'/>
+													</a>
+												</li>
+												
+												<li class="ml2 sns_share_sub" id="shareSub20900747">
+													<a href="javascript:void(0);" onclick="javascript:showSnsShare(20900747);">
+														<img src="/lm/images/lmx/service/newimg/icon/ico_sns.png" alt="SNS" title='SNS'/>
+													</a>
+													<div class="sns_popup" id="popup20900747">
+														<ul>
+															<li><a href="javascript:thisJoSnsShare('kakaostory', 39, 595294, 20900747, 'Y');" title="카카오스토리 공유하기  새창 열림">카카오스토리</a></li>
+							                                <li><a href="javascript:thisJoSnsShare('facebook', 39, 595294, 20900747, 'Y');" title="페이스북 공유하기  새창 열림">페이스북</a></li>
+							                                <li><a href="javascript:thisJoSnsShare('twitter', 39, 595294, 20900747, 'Y');" title="트위터 공유하기 새창 열림">트위터</a></li>
+							                                <li><a href="javascript:thisJoSnsShare('naverBlog', 39, 595294, 20900747, 'Y');" title="네이버 블로그 공유하기 새창 열림">네이버 블로그</a></li>
+							                                <li><a href="javascript:thisJoSnsShare('naverLine', 39, 595294, 20900747, 'Y');" title="네이버 라인 공유하기 새창 열림">네이버 라인</a></li>
+							                                <!--   기존 URL복사 방식
+							                                	<li><a href="javascript:thisJoClip(39, 595294, 20900747, 'Y');" title="URL 공유하기">URL</a></li>
+							                                -->
+							                                <!-- URL복사 시, URL 경로 변경  - 박상현  -->
+							                                <li><a href="javascript:thisJoRefIdClip(39, 595294, 20900747, 'Y', '000001');" title="URL 공유하기">URL</a></li>
+														</ul>
+														<button class="close" style="height:19px;line-height:1;" onclick="javascript:showSnsShare(20900747);"><img src="/lm/images/lmx/service/sub/close_icon.png" alt="닫기" style="vertical-align:middle;"></button>
+													</div>
+												</li>
+												
+											</ul>
+										</td>
+										
+									</tr>
+								</table>
+							</div>
+						
+							<!-- 조 내용 -->
+							<div class="articleText lawgroup1">
+								 <div class="none level1"><span style="0"> 이 규정은 「국민건강보험법」 제69조제6항 및 「국민건강보험법 시행령」 제32조에 따른 월별 보험료액의 상한과 하한에 관한 필요한 사항을 정함을 목적으로 한다.</span></div>
+							</div>
+						
+						
+					
+					
+				</div>
+	        
+			
+		
+	
+		
+			
+			
+			
+			
+			
+			
+			
+			
+			<!-- 조 -->
+				<a id="000002" name="000002"></a>
+				<a id="c000200000" name="c000200000"></a>
+				
+				
+					<div class="JO" id="20900748">
+				
+					
+						
+							<!-- 조 제목 -->
+							<div class="article">
+								<table border="0" cellspacing="0" cellpadding="0">
+									<tr>
+										<td>&nbsp;제2조 (월별 보험료액의 상한)</td>
+										
+										<td>
+											<ul class="doc_btn">
+												<li class="ml2">
+													<a href="/lm/lmxsrv/law/joHistory.do?SEQ=39&SEQ_HISTORY=595294&SEQ_CONTENTS=20900748" target="_blank" title='조문 연혁 새창열림'>
+														<img class="image" src="/lm/images/lmx/service/newimg/icon/ico_paper.png" alt="조문 연혁" title='조문 연혁 새창열림'/>
+													</a>
+												</li>
+												<li class="ml2">
+													<a href="javascript:thisJoPrint(20900748);" title='조문 인쇄 새창열림'>
+														<img class="image" src="/lm/images/lmx/service/newimg/icon/ico_print.png" alt="조문 인쇄" title='조문 인쇄 새창열림'/>
+													</a>
+												</li>
+												
+												<li class="ml2 sns_share_sub" id="shareSub20900748">
+													<a href="javascript:void(0);" onclick="javascript:showSnsShare(20900748);">
+														<img src="/lm/images/lmx/service/newimg/icon/ico_sns.png" alt="SNS" title='SNS'/>
+													</a>
+													<div class="sns_popup" id="popup20900748">
+														<ul>
+															<li><a href="javascript:thisJoSnsShare('kakaostory', 39, 595294, 20900748, 'Y');" title="카카오스토리 공유하기  새창 열림">카카오스토리</a></li>
+							                                <li><a href="javascript:thisJoSnsShare('facebook', 39, 595294, 20900748, 'Y');" title="페이스북 공유하기  새창 열림">페이스북</a></li>
+							                                <li><a href="javascript:thisJoSnsShare('twitter', 39, 595294, 20900748, 'Y');" title="트위터 공유하기 새창 열림">트위터</a></li>
+							                                <li><a href="javascript:thisJoSnsShare('naverBlog', 39, 595294, 20900748, 'Y');" title="네이버 블로그 공유하기 새창 열림">네이버 블로그</a></li>
+							                                <li><a href="javascript:thisJoSnsShare('naverLine', 39, 595294, 20900748, 'Y');" title="네이버 라인 공유하기 새창 열림">네이버 라인</a></li>
+							                                <!--   기존 URL복사 방식
+							                                	<li><a href="javascript:thisJoClip(39, 595294, 20900748, 'Y');" title="URL 공유하기">URL</a></li>
+							                                -->
+							                                <!-- URL복사 시, URL 경로 변경  - 박상현  -->
+							                                <li><a href="javascript:thisJoRefIdClip(39, 595294, 20900748, 'Y', '000002');" title="URL 공유하기">URL</a></li>
+														</ul>
+														<button class="close" style="height:19px;line-height:1;" onclick="javascript:showSnsShare(20900748);"><img src="/lm/images/lmx/service/sub/close_icon.png" alt="닫기" style="vertical-align:middle;"></button>
+													</div>
+												</li>
+												
+											</ul>
+										</td>
+										
+									</tr>
+								</table>
+							</div>
+						
+							<!-- 조 내용 -->
+							<div class="articleText lawgroup1">
+								 <div class=" level1"><span style="0">월별 보험료액의 상한액은 다음 각호와 같다.&lt;개정 2018. 12. 31., 2019. 12. 31., 2020. 12. 31., 2021. 12. 30., 2022. 12. 30, 2023. 12. 26., 2024. 12. 30., 2025. 12. 24.&gt;</span></div><div class="ho level1"><span style="0">1. 직장가입자의 보수월액보험료 : 9,183,480원</span></div><div class="ho level1"><span style="0">2. 직장가입자의 소득월액 보험료 및 지역가입자의 월별 보험료액 : 4,591,740원</span></div>
+							</div>
+						
+						
+					
+					
+				</div>
+	        
+			
+		
+	
+		
+			
+			
+			
+			
+			
+			
+			
+			
+			<!-- 조 -->
+				<a id="000003" name="000003"></a>
+				<a id="c000300000" name="c000300000"></a>
+				
+				
+					<div class="JO" id="20900749">
+				
+					
+						
+							<!-- 조 제목 -->
+							<div class="article">
+								<table border="0" cellspacing="0" cellpadding="0">
+									<tr>
+										<td>&nbsp;제3조 (월별 보험료액의 하한)</td>
+										
+										<td>
+											<ul class="doc_btn">
+												<li class="ml2">
+													<a href="/lm/lmxsrv/law/joHistory.do?SEQ=39&SEQ_HISTORY=595294&SEQ_CONTENTS=20900749" target="_blank" title='조문 연혁 새창열림'>
+														<img class="image" src="/lm/images/lmx/service/newimg/icon/ico_paper.png" alt="조문 연혁" title='조문 연혁 새창열림'/>
+													</a>
+												</li>
+												<li class="ml2">
+													<a href="javascript:thisJoPrint(20900749);" title='조문 인쇄 새창열림'>
+														<img class="image" src="/lm/images/lmx/service/newimg/icon/ico_print.png" alt="조문 인쇄" title='조문 인쇄 새창열림'/>
+													</a>
+												</li>
+												
+												<li class="ml2 sns_share_sub" id="shareSub20900749">
+													<a href="javascript:void(0);" onclick="javascript:showSnsShare(20900749);">
+														<img src="/lm/images/lmx/service/newimg/icon/ico_sns.png" alt="SNS" title='SNS'/>
+													</a>
+													<div class="sns_popup" id="popup20900749">
+														<ul>
+															<li><a href="javascript:thisJoSnsShare('kakaostory', 39, 595294, 20900749, 'Y');" title="카카오스토리 공유하기  새창 열림">카카오스토리</a></li>
+							                                <li><a href="javascript:thisJoSnsShare('facebook', 39, 595294, 20900749, 'Y');" title="페이스북 공유하기  새창 열림">페이스북</a></li>
+							                                <li><a href="javascript:thisJoSnsShare('twitter', 39, 595294, 20900749, 'Y');" title="트위터 공유하기 새창 열림">트위터</a></li>
+							                                <li><a href="javascript:thisJoSnsShare('naverBlog', 39, 595294, 20900749, 'Y');" title="네이버 블로그 공유하기 새창 열림">네이버 블로그</a></li>
+							                                <li><a href="javascript:thisJoSnsShare('naverLine', 39, 595294, 20900749, 'Y');" title="네이버 라인 공유하기 새창 열림">네이버 라인</a></li>
+							                                <!--   기존 URL복사 방식
+							                                	<li><a href="javascript:thisJoClip(39, 595294, 20900749, 'Y');" title="URL 공유하기">URL</a></li>
+							                                -->
+							                                <!-- URL복사 시, URL 경로 변경  - 박상현  -->
+							                                <li><a href="javascript:thisJoRefIdClip(39, 595294, 20900749, 'Y', '000003');" title="URL 공유하기">URL</a></li>
+														</ul>
+														<button class="close" style="height:19px;line-height:1;" onclick="javascript:showSnsShare(20900749);"><img src="/lm/images/lmx/service/sub/close_icon.png" alt="닫기" style="vertical-align:middle;"></button>
+													</div>
+												</li>
+												
+											</ul>
+										</td>
+										
+									</tr>
+								</table>
+							</div>
+						
+							<!-- 조 내용 -->
+							<div class="articleText lawgroup1">
+								 <div class=" level1"><span style="0">월별 보험료액의 하한액은 다음 각호와 같다.&lt;개정 2018. 12. 31., 2019. 12. 31., 2020. 12. 31., 2021. 12. 30., 2022. 12. 30., 2025. 12. 24.&gt;</span></div><div class="ho level1"><span style="0">1. 직장가입자의 보수월액보험료 : 20,160원</span></div><div class="ho level1"><span style="0">2. 지역가입자의 월별 보험료액 : 20,160원</span></div>
+							</div>
+						
+						
+					
+					
+				</div>
+	        
+			
+		
+	
+		
+			
+			
+			
+			
+			
+			
+			
+			
+			<!-- 조 -->
+				<a id="000004" name="000004"></a>
+				<a id="c000400000" name="c000400000"></a>
+				
+				
+					<div class="JO" id="20900750">
+				
+					
+						
+							<!-- 조 제목 -->
+							<div class="article">
+								<table border="0" cellspacing="0" cellpadding="0">
+									<tr>
+										<td>&nbsp;제4조 (재검토기한)</td>
+										
+										<td>
+											<ul class="doc_btn">
+												<li class="ml2">
+													<a href="/lm/lmxsrv/law/joHistory.do?SEQ=39&SEQ_HISTORY=595294&SEQ_CONTENTS=20900750" target="_blank" title='조문 연혁 새창열림'>
+														<img class="image" src="/lm/images/lmx/service/newimg/icon/ico_paper.png" alt="조문 연혁" title='조문 연혁 새창열림'/>
+													</a>
+												</li>
+												<li class="ml2">
+													<a href="javascript:thisJoPrint(20900750);" title='조문 인쇄 새창열림'>
+														<img class="image" src="/lm/images/lmx/service/newimg/icon/ico_print.png" alt="조문 인쇄" title='조문 인쇄 새창열림'/>
+													</a>
+												</li>
+												
+												<li class="ml2 sns_share_sub" id="shareSub20900750">
+													<a href="javascript:void(0);" onclick="javascript:showSnsShare(20900750);">
+														<img src="/lm/images/lmx/service/newimg/icon/ico_sns.png" alt="SNS" title='SNS'/>
+													</a>
+													<div class="sns_popup" id="popup20900750">
+														<ul>
+															<li><a href="javascript:thisJoSnsShare('kakaostory', 39, 595294, 20900750, 'Y');" title="카카오스토리 공유하기  새창 열림">카카오스토리</a></li>
+							                                <li><a href="javascript:thisJoSnsShare('facebook', 39, 595294, 20900750, 'Y');" title="페이스북 공유하기  새창 열림">페이스북</a></li>
+							                                <li><a href="javascript:thisJoSnsShare('twitter', 39, 595294, 20900750, 'Y');" title="트위터 공유하기 새창 열림">트위터</a></li>
+							                                <li><a href="javascript:thisJoSnsShare('naverBlog', 39, 595294, 20900750, 'Y');" title="네이버 블로그 공유하기 새창 열림">네이버 블로그</a></li>
+							                                <li><a href="javascript:thisJoSnsShare('naverLine', 39, 595294, 20900750, 'Y');" title="네이버 라인 공유하기 새창 열림">네이버 라인</a></li>
+							                                <!--   기존 URL복사 방식
+							                                	<li><a href="javascript:thisJoClip(39, 595294, 20900750, 'Y');" title="URL 공유하기">URL</a></li>
+							                                -->
+							                                <!-- URL복사 시, URL 경로 변경  - 박상현  -->
+							                                <li><a href="javascript:thisJoRefIdClip(39, 595294, 20900750, 'Y', '000004');" title="URL 공유하기">URL</a></li>
+														</ul>
+														<button class="close" style="height:19px;line-height:1;" onclick="javascript:showSnsShare(20900750);"><img src="/lm/images/lmx/service/sub/close_icon.png" alt="닫기" style="vertical-align:middle;"></button>
+													</div>
+												</li>
+												
+											</ul>
+										</td>
+										
+									</tr>
+								</table>
+							</div>
+						
+							<!-- 조 내용 -->
+							<div class="articleText lawgroup1">
+								 <div class="none level1"><span style="0"> 「훈령 · 예규 등의 발령 및 관리에 관한 규정」에 따라 이 고시 발령 후의 법령이나 현실여건의 변화 등을 검토하여 이 고시의 폐지, 개정 등의 조치를 하여야 하는 기한은 2026년 12월 31일까지로 한다.&lt;개정 2018. 12. 31., 2019. 12. 31., 2020. 12. 31., 2021. 12. 30., 2022. 12. 30., 2023. 12. 26, 2024. 12. 30., 2025. 12. 24.&gt;</span></div>
+							</div>
+						
+						
+					
+					
+				</div>
+	        
+			
+		
+	
+		
+			
+			
+			
+			
+			
+			
+			
+			
+			
+			<!-- 부칙 -->
+				<a name="5"></a>
+				<a name=""></a>
+				<div class="addenda">부칙 <제2018-62호,2018.3.30.></div>
+				<div class="addendaContent" id="20900751">
+                	<div class="addenda_none"><span style="0">이 고시는 2018년 7월 1일부터 시행한다.</span></div>
+                </div>
+			
+		
+	
+		
+			
+			
+			
+			
+			
+			
+			
+			
+			
+			<!-- 부칙 -->
+				<a name="7"></a>
+				<a name=""></a>
+				<div class="addenda">부칙 <제2018-312호,2018.12.31.></div>
+				<div class="addendaContent" id="20900752">
+                	<div class="addenda_none"><span style="0">이 고시는 2019년 1월 1일부터 시행한다.</span></div>
+                </div>
+			
+		
+	
+		
+			
+			
+			
+			
+			
+			
+			
+			
+			
+			<!-- 부칙 -->
+				<a name="10"></a>
+				<a name=""></a>
+				<div class="addenda">부칙 <제2019-336호,2019.12.31.></div>
+				<div class="addendaContent" id="20900753">
+                	<div class="addenda_none"><span style="0">이 고시는 2020년 1월 1일부터 시행한다.</span></div>
+                </div>
+			
+		
+	
+		
+			
+			
+			
+			
+			
+			
+			
+			
+			
+			<!-- 부칙 -->
+				<a name="14"></a>
+				<a name=""></a>
+				<div class="addenda">부칙 <제2020-341호,2020.12.31.></div>
+				<div class="addendaContent" id="20900754">
+                	<div class="addenda_none"><span style="0">이 고시는 2021년 1월 1일부터 시행한다.</span></div>
+                </div>
+			
+		
+	
+		
+			
+			
+			
+			
+			
+			
+			
+			
+			
+			<!-- 부칙 -->
+				<a name="19"></a>
+				<a name=""></a>
+				<div class="addenda">부칙 <제2021-339호, 2021.12.30.></div>
+				<div class="addendaContent" id="20900755">
+                	<div class="addenda_none"><span style="0">이 고시는 2022년 1월 1일부터 시행한다.</span></div>
+                </div>
+			
+		
+	
+		
+			
+			
+			
+			
+			
+			
+			
+			
+			
+			<!-- 부칙 -->
+				<a name="25"></a>
+				<a name=""></a>
+				<div class="addenda">부칙 <제2022-215호, 2022.09.15.></div>
+				<div class="addendaContent" id="20900756">
+                	<div class="JO"><div class="article">제1조(시행일)</div><div class="none level1"><span style="0">이 고시는 공포한 날부터 시행한다.</span></div></div><div class="JO"><div class="article">제2조(적용례)</div><div class="none level1"><span style="0">제3조제2호의 개정규정은 2022년 9월분 보험료부터 적용한다.</span></div></div>
+                </div>
+			
+		
+	
+		
+			
+			
+			
+			
+			
+			
+			
+			
+			
+			<!-- 부칙 -->
+				<a name="34"></a>
+				<a name=""></a>
+				<div class="addenda">부칙 <제2022-317호, 2022.12.30.></div>
+				<div class="addendaContent" id="20900757">
+                	<div class="addenda_none"><span style="0">이 고시는 2023년 1월 1일부터 시행한다.</span></div>
+                </div>
+			
+		
+	
+		
+			
+			
+			
+			
+			
+			
+			
+			
+			
+			<!-- 부칙 -->
+				<a name="42"></a>
+				<a name=""></a>
+				<div class="addenda">부칙 <제2023-267호, 2023.12.26.></div>
+				<div class="addendaContent" id="20900758">
+                	<div class="JO"><div class="article">제1조(시행일)</div><div class="none level1"><span style="0">이 고시는 2024년 1월 12일부터 시행한다.</span></div></div><div class="JO"><div class="article">제2조(월별 건강보험료액의 상한과 하한에 관한 적용례)</div><div class="none level1"><span style="0">제2조 개정 규정 및 제3조 규정은 2024년 1월분 보험료를 산정하는 경우부터 적용한다.</span></div></div>
+                </div>
+			
+		
+	
+		
+			
+			
+			
+			
+			
+			
+			
+			
+			
+			<!-- 부칙 -->
+				<a name="53"></a>
+				<a name=""></a>
+				<div class="addenda">부칙 <제2024-289호, 2024.12.30.></div>
+				<div class="addendaContent" id="20900759">
+                	<div class="JO"><div class="article">제1조(시행일)</div><div class="none level1"><span style="0">이 고시는 2025년 1월 1일부터 시행한다.</span></div></div><div class="JO"><div class="article">제2조(월별 건강보험료액의 상한과 하한에 관한 적용례)</div><div class="none level1"><span style="0">제2조 개정 규정 및 제3조 규정은 2025년 1월분 보험료를 산정하는 경우부터 적용한다.</span></div></div>
+                </div>
+			
+		
+	
+		
+			
+			
+			
+			
+			
+			
+			
+			
+			
+			<!-- 부칙 -->
+				<a name="65"></a>
+				<a name=""></a>
+				<div class="addenda">부칙 <제2025-222호, 2025.12.24.></div>
+				<div class="addendaContent" id="20900760">
+                	<div class="JO"><div class="article">제1조(시행일)</div><div class="none level1"><span style="0">이 고시는 2026년 1월 1일부터 시행한다.</span></div></div><div class="JO"><div class="article">제2조(월별 건강보험료액의 상한과 하한에 관한 적용례)</div><div class="none level1"><span style="0">제2조 개정 규정 및 제3조 개정 규정은 2026년 1월분 보험료를 산정하는 경우부터 적용한다.</span></div></div>
+                </div>
+			
+		
+	
+</div>
+
+
+
+<form id="linkFrom" name="linkFrom">
+    <input type="hidden" id="OC" name="OC" value='kdhcliss'/>
+    <input type="hidden" id="ID" name="ID"/>
+	<input type="hidden" id="JO" name="JO"/>
+</form>
+
+<script type="text/javascript">
+	
+	if("0" != "1"){
+		$(".historyContent").hide();
+	}else if("0" == "1"){
+		$(".historyShow").hide();
+	}
+</script>
+</body>
+</html>

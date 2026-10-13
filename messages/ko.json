@@ -1021,7 +1021,8 @@
         "withholding": "근로소득 간이세액 비율",
         "withholdingHint": "새 직원의 기본값입니다. 직원이 80 · 100 · 120% 중에서 고른 값은 덮어쓰지 않습니다.",
         "example": "예: {month} 귀속 급여의 지급 예정일은 {date}입니다 (휴일 이동 전).",
-        "missing": "급여대장 설정이 없습니다. 저장하기 전에는 정식 급여대장을 만들 수 없습니다."
+        "missing": "급여대장 설정이 없습니다. 저장하기 전에는 정식 급여대장을 만들 수 없습니다.",
+        "seed": "기본값으로 시작하기"
       },
       "s08": {
         "intro": "주민등록번호는 화면 · 인쇄 · 내려받기에서 늘 가려집니다. 원문은 급여 담당자가 사유를 적고 한 건씩 잠깐만 볼 수 있습니다. 전체를 한꺼번에 푸는 스위치는 없습니다.",
@@ -1139,7 +1140,8 @@
         "minimum-wage": "최저임금",
         "maternity_limit": "출산전후휴가 급여 상한",
         "income-tax_table": "간이세액표",
-        "income-tax_child-adjust": "자녀 세액 조정"
+        "income-tax_child-adjust": "자녀 세액 조정",
+        "health_limit": "건강보험료 상한 · 하한"
       },
       "refField": {
         "employeeRate": "근로자",
@@ -1161,7 +1163,17 @@
         "wageMin": "표의 첫 구간",
         "wageMaxExclusive": "표의 끝(미만)",
         "documentYear": "원문 연도",
-        "datasetDate": "배포일"
+        "datasetDate": "배포일",
+        "premiumUpper": "보수월액보험료 상한(전체)",
+        "premiumUpperEmployee": "상한 중 근로자 부담(절반)",
+        "premiumLower": "보수월액보험료 하한",
+        "incomePremiumUpper": "소득월액보험료 상한",
+        "noticeNo": "고시 번호",
+        "stabilityUnder150": "고용안정 · 직능: 150인 미만",
+        "stabilityPriority150": "고용안정 · 직능: 150인 이상(둘째 구간)",
+        "stability150to1000": "고용안정 · 직능: 150인 이상 1,000인 미만",
+        "stabilityOver1000": "고용안정 · 직능: 1,000인 이상",
+        "revisedOn": "원문 개정일"
       },
       "unit": {
         "pct": "퍼센트(%)로 적습니다. 예: 0.9",
@@ -1174,8 +1186,12 @@
         "official_consultation_not_notice": "공식 상담 답변에서 읽은 값입니다. 적용 고시를 확인해 주세요.",
         "only_one_child_value_collected": "자녀 1명의 조정액만 읽었습니다. 2명 이상은 조회되지 않습니다 — 확인되면 직접 입력으로 넣어 주세요.",
         "distributed_file_may_predate_latest_amendment": "배포 파일이 최신 개정 전일 수 있습니다. 개정 내용과 함께 확인해 주세요.",
-        "no_rule_above_table_max": "표의 끝(1,000만원) 이상 구간의 계산 규칙은 들어 있지 않습니다. 그 구간은 조회되지 않습니다.",
-        "manual_entry": "손으로 넣은 값입니다. 출처를 확인해 주세요."
+        "no_rule_above_table_max": "표의 끝(1,000만원)을 넘는 구간의 식을 원문에서 읽지 못했습니다. 그 구간은 조회되지 않습니다.",
+        "manual_entry": "손으로 넣은 값입니다. 출처를 확인해 주세요.",
+        "employment_tier_wording_check": "고용안정 · 직업능력개발 사업의 둘째 구간(0.45%)은 공식 안내 화면의 문구가 법령 표현과 다릅니다. 우리 회사에 해당하는 구간을 확인해 주세요.",
+        "no_rule_above_family_11": "가족 11명 초과 규칙을 원문에서 읽지 못했습니다. 그 경우는 조회되지 않습니다.",
+        "child_rule_from_table_document": "세액표 원문에 적힌 자녀 공제액입니다. 그 뒤의 개정으로 바뀐 값이 따로 있으면 시행일로 구분해 반영해 주세요.",
+        "half_not_integer": "상한의 절반이 원 단위로 나누어떨어지지 않습니다. 확인해 주세요."
       },
       "review": {
         "newValue": "새 값",
@@ -1191,8 +1207,8 @@
         "reject": "반려"
       },
       "import": {
-        "title": "수집 결과 가져오기",
-        "intro": "공식자료 수집 프로그램이 만든 파일을 올립니다. 올려도 「검토 대기」로만 들어갑니다. 같은 값은 다시 만들지 않습니다.",
+        "title": "수집 결과 파일로 넣기 (예비)",
+        "intro": "「지금 업데이트」가 되지 않을 때 쓰는 길입니다. 따로 돌린 수집 프로그램의 결과 파일을 올립니다. 올려도 「검토 대기」로만 들어갑니다.",
         "latest": "수집 결과 파일",
         "latestHint": "data 폴더의 latest.json",
         "bands": "세액표 구간 파일",
@@ -1203,7 +1219,7 @@
       },
       "manual": {
         "title": "직접 입력",
-        "intro": "수집 프로그램이 읽지 못하는 자료를 넣습니다(예: 고용보험). 이것도 「검토 대기」로 들어갑니다.",
+        "intro": "공식기관에서 읽지 못한 자료를 넣습니다. 이것도 「검토 대기」로 들어갑니다.",
         "kind": "자료",
         "validFromHint": "모르면 비워 두고, 반영할 때 확인해 넣습니다.",
         "source": "근거",
@@ -1212,7 +1228,7 @@
       },
       "calc": {
         "title": "소득세 조회",
-        "note": "조회 결과는 어디에도 저장되지 않습니다. 표에 없는 구간이나 규칙이 없는 자녀 수는 계산하지 않습니다.",
+        "note": "조회 결과는 어디에도 저장되지 않습니다. 1,000만원 초과 · 가족 11명 초과 · 자녀 수별 공제는 세액표 원문에서 읽은 규칙으로 계산하고, 규칙이 없으면 계산하지 않습니다.",
         "payDate": "지급 기준일",
         "wage": "월 과세급여(원)",
         "family": "공제대상 가족 수(본인 포함)",
@@ -1291,7 +1307,45 @@
       "payroll_tax_out_of_table": "이 급여는 세액표의 범위 밖입니다. 계산 규칙이 들어 있지 않아 조회하지 않습니다.",
       "payroll_tax_no_child_rule": "이 자녀 수에 대한 조정 규칙이 없습니다. 확인된 값을 「자료 넣기」로 넣어 주세요.",
       "invalid_input": "입력한 내용을 다시 확인해 주세요.",
-      "not_found": "찾을 수 없습니다."
+      "not_found": "찾을 수 없습니다.",
+      "refresh": {
+        "now": "지금 업데이트",
+        "running": "공식자료를 받는 중… (최대 1분)",
+        "note": "공식기관 원문을 지금 다시 받아 읽습니다. 결과는 「검토 대기」로만 들어가고 지금 쓰는 값은 바뀌지 않습니다.",
+        "okLine": "새 후보 {staged}건 · 변경 없음 {unchanged}건",
+        "failLine": "받지 못함 ({why})",
+        "runsTitle": "수집 실행 기록",
+        "runsNone": "아직 수집을 실행한 적이 없습니다.",
+        "dataTitle": "자료 이력",
+        "status": {
+          "done": "전부 받음",
+          "partial": "일부 실패",
+          "failed": "실패",
+          "running": "실행 중"
+        },
+        "trigger": {
+          "manual": "지금 업데이트",
+          "scheduled": "정기 실행",
+          "upload": "파일"
+        },
+        "source": {
+          "health": "건강보험 · 장기요양 요율",
+          "health_limits": "건강보험료 상한 · 하한",
+          "pension": "국민연금 요율",
+          "pension_limits": "국민연금 기준소득월액",
+          "employment": "고용보험 요율",
+          "accident": "산재보험 출퇴근 재해",
+          "tax": "간이세액표",
+          "tax_amendment": "세액표 개정(자녀 공제)",
+          "minimum_wage": "최저임금",
+          "maternity": "출산전후휴가 급여 상한"
+        }
+      },
+      "confirm": {
+        "download": "노무 · 세무 확인 요청서 내려받기"
+      },
+      "payroll_refresh_running": "업데이트가 이미 진행 중입니다. 잠시 뒤에 「이력」에서 결과를 확인해 주세요.",
+      "payroll_tax_no_family_rule": "가족 11명을 넘는 경우의 규칙이 없어 조회하지 않습니다."
     },
     "manage": {
       "title": "관리",

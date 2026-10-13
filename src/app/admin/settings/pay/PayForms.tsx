@@ -267,6 +267,7 @@ export function UseToggle({ path, id, on, label }: { path: string; id: string; o
 /** 통상 쓰는 값 한꺼번에 넣기 — 전부 「임시」로 들어간다 */
 export function SeedButton({ path, label }: { path: string; label: string }) {
   const { busy, err, post } = usePost();
+  // 급여대장 기본값도 같은 버튼을 쓴다(path만 다르다)
   return (
     <span className="inline-flex flex-col items-end gap-1">
       <Button type="button" size="sm" variant="outline" disabled={busy} onClick={() => post(path, { action: 'seed' })}>
@@ -334,6 +335,44 @@ export function VerifyButton({ target, id, verified }: { target: 'setting' | 'it
       </button>
       {err && <ErrorNote code={err.code} requestId={err.requestId} namespace={NS} />}
     </form>
+  );
+}
+
+type Run = { status: string; results: { source: string; ok: boolean; error?: string; found: number; staged?: number; unchanged?: number }[] };
+
+/** 「지금 업데이트」 — 공식기관 원문을 지금 다시 받아 읽는다. 결과는 검토 대기로만 들어간다 */
+export function RefreshButton() {
+  const t = useTranslations('admin.paySettings');
+  const { busy, err, post } = usePost();
+  const [run, setRun] = useState<Run | null>(null);
+  return (
+    <div className="flex flex-col gap-2">
+      <div className="flex flex-wrap items-center gap-2">
+        <Button
+          type="button"
+          size="sm"
+          disabled={busy}
+          onClick={async () => {
+            setRun(null);
+            setRun(await post<Run>('/api/admin/payroll/reference/refresh', {}));
+          }}
+        >
+          {busy ? t('refresh.running') : t('refresh.now')}
+        </Button>
+        <span className="text-xs text-faint">{t('refresh.note')}</span>
+      </div>
+      {err && <ErrorNote code={err.code} requestId={err.requestId} namespace="admin.paySettings" />}
+      {run && (
+        <ul role="status" className="flex flex-col gap-1 rounded-button bg-surface p-3 text-sm">
+          {run.results.map((r) => (
+            <li key={r.source} className="flex flex-wrap items-center justify-between gap-2">
+              <span className="font-bold">{t(`refresh.source.${r.source}`)}</span>
+              <span className={r.ok ? 'num text-muted' : 'text-warn'}>{r.ok ? t('refresh.okLine', { staged: r.staged ?? 0, unchanged: r.unchanged ?? 0 }) : t('refresh.failLine', { why: r.error ?? '' })}</span>
+            </li>
+          ))}
+        </ul>
+      )}
+    </div>
   );
 }
 

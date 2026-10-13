@@ -1,0 +1,877 @@
+
+
+<!DOCTYPE html>
+<html lang="ko"> 
+<head>
+
+<meta charset="utf-8"/>
+<meta http-equiv="X-UA-Compatible" content="IE=edge"/> 
+<!-- <meta http-equiv="Pragma" content="no-cache" />
+<meta http-equiv="Pragma" content="no-store" /> 
+<meta http-equiv="Cache-Control" content="no-cache; must-revalidate" />
+<meta http-equiv="Expires" content="-1" /> -->
+
+<meta name="viewport" content="width=640, user-scalable=no, viewport-fit=cover" />
+<meta name="description" content="" />
+<meta property="pilms_title" content="" />
+<meta property="pilms_menu" content="" />
+<meta property="pilms_filename" content="" />
+
+
+
+
+
+
+
+
+<script type="text/javascript">
+<!--
+	function addOnLoad(funcName){
+		if (window.addEventListener)	{ //Dom Standard
+			window.addEventListener( 'load' , funcName, false );
+		} else if(window.attachEvent){
+			window.attachEvent('onload', funcName); 
+		}
+	}
+	
+	var extendLoginYn = true;
+	var extendTimerPrd = 1000 * 60 * 55;  
+	
+	function extendLoginCheck(){
+		if(extendLoginYn){
+			if(confirm("5분 후에 로그인이 만료됩니다. 로그인을 연장하시겠습니까?")){
+				doExtendLogin();
+			}else{
+				extendLoginYn = false;
+			}
+		}
+	}
+	
+	function doExtendLogin(){
+		var action = "/ei/eih/cm/lg/newSessionExtend.do";
+		var form_data = "id=";
+		
+		$.ajax({
+			type: "POST",
+		    url: action,
+		    data: form_data,
+		    dataType: 'text',
+		    contentType: "application/x-www-form-urlencoded; charset=UTF-8",
+			error: function(data) {
+				//alert("error >"+data);
+				initLoginExtend();
+				location.replace("/ei/eim/cm/hm/main.do");
+			},
+			success: function(data) {
+				if(data != null && data != "") { 
+					initLoginExtend();
+					alert("연장되었습니다.");
+				} else {
+					alert("이미 세션이 만료되었습니다. 다시 로그인하시기 바랍니다.");
+					location.replace("/ei/eim/cm/hm/main.do");
+				}
+
+				
+			}
+		});
+		 
+	}
+	
+	//
+	function initLoginExtend(){
+		var timerID = setTimeout("extendLoginCheck()", extendTimerPrd); 
+	}
+	
+	function unityLogin() {
+		var action = "/ei/eih/cm/lg/processUnityLogin.do";
+		var form_data = "moelSTKN=" + "";
+		
+		$.ajax({
+			type: "POST",
+		    url: action,
+		    data: form_data,
+		    dataType: 'text',
+		    contentType: "application/x-www-form-urlencoded; charset=UTF-8",
+			error: function(data) {
+				alert("로그인에 실패하였습니다.");
+				location.replace("/ei/eim/cm/hm/main.do");
+			},
+			success: function(data) {
+				if(data != null && data != "") { 
+					fn_unityLoginResult($.parseJSON(data));
+				}
+			}
+		});
+	}
+	
+	function fn_unityLoginResult(data) {
+		var message = data.message;
+		var url = data.url;
+		
+		if(message != null && message != "") {
+			alert(message);
+		}
+		
+		if(url != null && url != "") {
+			location.replace(url);	
+		} 
+	}
+	
+	
+	
+		
+	
+-->
+</script>
+
+
+
+<link rel="shortcut icon" href="/ei/images/common/ei.ico"/>
+<script type="text/javascript">
+	document.oncontextmenu = new Function('return false');				//no right mouse
+</script>
+
+
+<script type="text/javascript">
+if(typeof jQuery == "undefined") { 
+	document.write("<script type=\"text/javascript\" src=\"/ei/raonsecure/TouchEn/jquery/jquery-1.6.3.js\"></scr"+"ipt>");
+}
+
+var brows 	= "";
+var ua 		= window.navigator.userAgent;
+
+if (ua.indexOf('MISIE') > 0 || ua.indexOf('Trident') > 0) brows = "IE";
+else if (ua.indexOf('Opera') > 0 || ua.indexOf('OPR') > 0) brows = "Opera";
+else if (ua.indexOf('Firefox') > 0 ) brows = "Firefox";
+else if (ua.indexOf('Safari') > 0 ) { 
+	if (ua.indexOf('Chrome') > 0 ) brows = "Chrome";
+	else brows = "Safari";
+}
+ 
+var isTouchEnKeyFlag = true; 
+if (   location.pathname.indexOf('/ei/eih/eg/')== 0 
+	|| location.pathname.indexOf('/ei/eih/st/') == 0 
+	|| location.pathname.indexOf('/ei/eih/cp/') == 0 
+	|| location.pathname.indexOf('/ei/eih/cm/bs/') == 0
+	|| location.pathname == "/ei/eih/common/retrieveAosPopup.do"
+	|| location.pathname == "/ei/eih/em/ml/retrieveMl0150Info.do" 
+	|| location.pathname == "/ei/eih/pm/ml/retrieveMl0150Pop.do" 
+	|| location.pathname == "/ei/eih/pm/pl/retrievePl0150Pop.do"  
+	|| location.pathname == "/ei/eih/pu/retrieveTkitPrntng.do" 
+	|| location.pathname == "/ei/eih/et/retrieveCochdPreview.do" 
+	|| location.pathname == "/ei/eih/et/retrieveDlyLaborDtlPreview.do"
+	|| location.pathname == "/ei/eih/em/pl/retrievePl0160Info.do" 
+	|| location.pathname == "/ei/eih/et/retrieveAcqsPreview.do" 
+	|| location.pathname == "/ei/eih/in/is/retrieveIsEminsrSubcrAtPrint.do" 
+	|| location.pathname == "/ei/eih/in/is/printIsEminsrSubcrList.do" 
+	|| location.pathname == "/ei/eih/et/retrieveAgentPreview.do"
+	|| location.pathname == "/ei/eih/et/retrieveFrftrPreview.do"  
+	|| location.pathname == "/ei/eih/em/ml/retrieveMl0250Info.do" 
+	|| location.pathname == "/ei/eih/in/is/retrieveIsDlyLaborDtlInfo.do" 
+	|| location.pathname == "/ei/eih/em/pl/retrievePl0160Info.do"
+	|| location.pathname == "/ei/eih/cm/hm/main.do"
+	|| location.pathname.indexOf('PrintPopup') > 0 ) {
+	isTouchEnKeyFlag = false;
+}
+
+if(location.pathname == "/ei/eih/cp/cc/ccCpaGudnce/retrieveCc315Info.do"){
+	isTouchEnKeyFlag = true;
+}
+
+if(isTouchEnKeyFlag){
+	document.write("<script type=\"text/javascript\" src=\"" + "/ei/raonsecure/TouchEn/cmn/TouchEnNx.js?version="+ new Date().getTime() + "\"></scr"+"ipt>");
+}
+</script>
+
+<script type="text/javascript">
+
+function getCookieGlobal( cookieName ) {
+	var search = cookieName + "=";
+	var cookie = document.cookie;
+	if( cookie.length > 0 ) {
+		startIndex = cookie.indexOf( cookieName );	
+		if( startIndex != -1 ) {
+			startIndex += cookieName.length;
+			endIndex = cookie.indexOf( ";", startIndex );
+			if( endIndex == -1) endIndex = cookie.length;
+			return unescape( cookie.substring( startIndex + 1, endIndex ) );
+		} else {
+			return null;
+			}
+	} else {
+		return null;
+	}
+}
+
+$(document).ready(function() {
+	var chkTouchEnKey = getCookieGlobal('chkTouchEnKey');
+	if(chkTouchEnKey=="Y" && isTouchEnKeyFlag){
+		TouchEnNx.init();
+	}
+});
+
+</script>
+
+
+
+<script type="text/javascript">
+	if(window.console == undefined) console = {log:function(){}};
+	$(document).ready(function() {
+		var iconPointImgStr = "<img src='/ei/images/eih/pu/iconPoint_o.png' alt='정보' style='vertical-align:middle;'>";
+		$(".pointIcon2").prepend(iconPointImgStr + " ");	
+		$(".pointIconTH").each(function(){
+			var title = $(this).attr("title");
+			var obj = (title == "" || title == undefined) ? "" : $("<a href='javascript:void(0);' />").attr("title", title).append(iconPointImgStr);  
+			$(this).append(obj);
+			
+			$(this).on("click", "a",function(){
+				alert($(this).attr("title"));
+			});
+		});
+		
+		//$("a.cal2, a.cal").attr("tabindex", -1);
+		$("a.cal2, a.cal").find("img").attr("alt", "달력");
+	});
+	
+	function fn_chkGo24cvplRceptNo(cvplRceptNo, msg) {
+		if(cvplRceptNo == null || cvplRceptNo.length < 10) return;
+		
+		$.ajax({
+			type : 'POST',
+			url : '/ei/et/common/selectEiAeisExist.do',
+			dataType : 'json',
+			async : false,
+			data : "cvplRceptNo=" + cvplRceptNo ,
+			success : function(data) {
+				if(data.status != "SUCC") alert(msg);
+			}
+		});
+	}	
+</script>
+<link rel="shortcut icon" href="/ei/new_images/common/favicon.ico">
+<link href="/ei/css2/eim/jquery-ui.css" rel="stylesheet" />
+<link href="/ei/css2/eim/reset.css" rel="stylesheet" />
+<link href="/ei/css2/eim/main.css" rel="stylesheet" />
+<link rel="stylesheet" href="/ei/css2/eim/slick.css">
+<link rel="stylesheet" href="/ei/css2/eim/slick-theme.css">
+<link href="/ei/css2/eim/common.css" rel="stylesheet" /><!-- 공통 css -->
+<link href="/ei/css2/eim/pb.css" rel="stylesheet" /><!-- 개인서비스 css -->
+<link rel="stylesheet" href="/ei/js/jquery/themes/base/jquery.ui.all.css"/>
+<script src="/ei/js2/eim/jquery-1.10.1.min.js"></script>
+<script src="/ei/js2/eim/jquery-ui.js"></script>
+<script src="/ei/js2/eim/ui.js"></script>
+<script src="/ei/js2/eim/slick.js" type="text/javascript" charset="utf-8"></script>
+<SCRIPT LANGUAGE=JAVASCRIPT src="/ei/js/common/comJAVAScript.js"></SCRIPT>
+<SCRIPT LANGUAGE=JAVASCRIPT src="/ei/js/common/comJAVAScript2.js"></SCRIPT>
+<SCRIPT LANGUAGE=JAVASCRIPT src="/ei/js/common/STRING.js"></SCRIPT>
+</head>
+<body>
+<div id="skipnav"><a href="#content">본문바로가기</a></div>
+<div class="wrap sub">
+	<input type="hidden" name="lMenu" id="lMenu" value="2" readonly="readonly"/>
+	<input type="hidden" name="sMenu" id="sMenu" value="22" readonly="readonly"/>
+	<!-- 헤더. s. -->
+	<header>
+		<div class="btn-back"><a href="/ei/eim/cm/hm/main.do"><span class="blind">뒤로가기</span></a><h1>고용보험료 안내</h1></div>
+		<div class="util-area">
+			<a href="/ei/eim/cm/mp/newMain.do" class="ico mypage"><span class="blind">마이페이지</span></a>
+			<a href="#" class="ico menu-open"><span class="blind">전체메뉴 열기</span></a>
+		</div>
+		<!-- gnb. s. -->
+		<div class="gnb-menu">
+			<div class="top-area">
+				<a href="/ei/eim/cm/hm/main.do" class="ico home"><span class="blind">홈</span></a>
+				<div class="util-area">
+					<a href="/ei/eim/cm/mp/newMain.do" class="ico mypage"><span class="blind">마이페이지</span></a>
+					<a href="#" class="ico menu-close"><span class="blind">전체메뉴 닫기</span></a>
+				</div>
+			</div>
+			
+
+
+
+
+
+
+
+
+
+
+
+
+
+<script type="text/javascript">
+function appDown(){
+	var chk = confirm("수급자격 신청자 온라인교육은 PC또는 모바일앱을 이용하시기 바랍니다.\n고용보험 모바일 앱을 다운로드하시겠습니까?");
+	if(chk == true){
+		var userAgent = navigator.userAgent;
+		
+		if(userAgent.toLowerCase().indexOf("android") > -1){
+			window.location.href = "market://details?id=com.keis.eim_cl_and";
+		}else if(userAgent.toLowerCase().indexOf("iphone ") > -1){
+			window.location.href = "itms-apps://itunes.apple.com/app/id930813865";
+		}else{
+			alert('미지원 기기입니다.');
+		}
+	}else if(chk == false){
+		return;
+	}
+}
+
+function fn_g24Link() {
+	var hostName = document.location.hostname;
+	
+	alert("고용24(www.work24.go.kr)에서만 신고 및 신청이 가능합니다.\n클릭시 고용24화면으로 이동합니다.");
+	
+	if(navigator.userAgent.indexOf("ei-mobile") > -1){
+		cordova.InAppBrowser.open("https://www.work24.go.kr/");
+	}else{
+		if(hostName == "10.99.9.98") {
+		  window.open("https://twww.work24.go.kr:44380");
+		 } else{
+		  window.open("https://www.work24.go.kr/");
+		 }		
+	}
+}
+
+function fn_g24PolicyLink() {
+	var userAgent = navigator.userAgent;
+
+	if(navigator.userAgent.indexOf("ei-mobile") > -1){
+		cordova.InAppBrowser.open("https://m.work24.go.kr/cm/c/f/1100/selecPolicyList.do", "_system");
+	}else{
+		window.open("https://www.work24.go.kr/cm/c/f/1100/selecPolicyList.do");
+	}
+}
+
+</script>
+<div class="body-area">
+	<div class="left-area">
+		<ul>
+			
+				
+				
+				
+					<li><a href="#menu-1">개인서비스</a></li>
+					<li><a href="#menu-2">기업서비스</a></li>
+					<li><a onclick="fn_g24PolicyLink();">고용보험 제도</a></li>
+					<li><a href="#menu-4">고객센터</a></li>
+				
+			
+			
+			
+		</ul>
+	</div>
+	<div class="right-area">
+		
+			
+			
+			
+				<ul id="menu-1">
+					<li>
+						<div class="title"><a href="#">실업급여신청</a></div>
+						<ul class="list">
+							<li><a href="/ei/eim/pu/retrievePuIncqualClmntOnlineView.do">수급자격 신청자 온라인 교육</a></li>
+							<li><a href="/ei/eim/pu/retrievePuIncqualReqdocIntnetInfo.do">수급자격 신청서 인터넷 제출</a></li>
+							<li><a href="/ei/eim/pu/retrievePuUprecogIntnetReqstCkAlt.do">실업인정 인터넷 신청</a></li>
+							<li><a href="/ei/eim/pu/retrievePuEmpymnFactDclrtView.do">취업사실신고</a></li>
+							<li><a href="/ei/eim/in/ip/retrieveIpLflyCnfrmnPrssList.do">이직확인서 처리여부 조회</a></li>
+							<li><a href="/ei/eim/in/ip/retrieveEmpymnHopeCardAgree.do">취업드림수첩 조회</a></li>
+							<li><a href="/ei/eim/pu/retrieveRciptrTrgetOnlineEmpymnMvpMainView.do">온라인 취업특강(STEP)</a></li>
+							<li><a href="/ei/eim/in/ip/retrieveIpSalaryReciptDtlList.do">실업급여 수급내역 조회</a></li>
+						</ul>
+					</li>
+					<li>
+						<div class="title"><a href="#">모성보호</a></div>
+						<ul class="list">
+							<li><a href="/ei/eim/pm/ml/retrieveMl0100Info.do">출산전후휴가 급여 신청</a></li>
+							<li><a href="/ei/eim/pm/pl/retrievePl0100Info.do">육아휴직급여 신청</a></li>
+							<li><a href="/ei/eim/pm/pl/retrievePl0200Info.do">육아기 근로시간 단축급여 신청</a></li>
+							<li><a href="/ei/eim/pm/cs/retrieveCs0100Info.do">고용보험 미적용자 출산급여 신청</a></li>
+							<li><a href="/ei/eim/pm/pa/retrievePa0100Info.do">육아휴직 급여 사후지급금 확인 요청</a></li>
+							<li><a href="/ei/eim/pm/ac/retrieveAc0100Info.do">예술인/특고 출산전후급여 신청</a></li>
+							<li><a href="/ei/eim/pm/pl/retrievePl0500Info.do">육아휴직/육아기근로시간단축 사용현황</a></li>
+						</ul>
+					</li>
+ 					<li>
+						<div class="title"><a href="#">부정행위신고</a></div>
+						<ul class="list">
+							<!-- <li><a href="/ei/eim/is/mr/createMrInjactStatemView.do">부정행위신고</a></li> -->
+							<!-- <li><a href="https://www.work24.go.kr/">부정행위신고</a></li> -->
+							<li><a onclick="fn_g24Link();">부정행위신고</a></li>
+							<!-- <li><a href="/ei/eim/is/mr/retrieveMrInjactStatemAnnymt.do">부정행위신고(익명)</a></li> -->
+							<!-- <li><a href="https://www.work24.go.kr/">부정행위신고(익명)</a></li> -->
+							<li><a onclick="fn_g24Link();">부정행위신고(익명)</a></li>
+							<!-- <li><a href="/ei/eim/is/mr/createMrStatemRwardAmtView.do">신고포상금 지급 신청</a></li> -->
+							<!-- <li><a href="https://www.work24.go.kr/">신고포상금 지급 신청</a></li> -->
+							<li><a onclick="fn_g24Link();">신고포상금 지급 신청</a></li>
+						</ul>
+					</li>
+					<li>
+						<div class="title"><a href="/ei/eim/in/lp/retrieveLpCvplPrssListCvplTypeU.do">민원처리현황(개인)</a></div>
+					</li>
+				</ul>
+				<ul id="menu-2">
+					<li>
+						<div class="title"><a href="#">고용안정</a></div>
+						<ul class="list">
+				
+						</ul>
+					</li>
+					<li>
+						<div class="title"><a href="/ei/eim/in/le/retrieveCvplPrssCurstuListEe.do">민원처리현황(기업)</a></div>
+					</li>
+				</ul>
+			
+		
+				<ul id="menu-3">
+					<li>
+						<div class="title"><a href="/ei/eim/eg/ei/eiEminsr/retrieveEi0101Info.do">고용보험이란?</a></div>
+						<ul class="list">
+							<li><a href="/ei/eim/eg/ei/eiEminsr/retrieveEi0101Info.do">의의 및 연혁</a></li>
+							<li><a href="/ei/eim/eg/ei/eiEminsr/retrieveEi0301Info.do">고용보험료 안내</a></li>
+						</ul>
+					</li>
+					<li>
+						<div class="title"><a href="/ei/eim/eg/ei/eiEminsr/retrievePb0201Info.do">개인혜택(실업급여)</a></div>
+						<ul class="list">
+							<li><a href="/ei/eim/eg/ei/eiEminsr/retrievePb0201Info.do">실업급여란?</a></li>
+							<li><a href="/ei/eim/eg/ei/eiEminsr/retrievePb0216Info.do">예술인 구직급여</a></li>
+							<li><a href="/ei/eim/eg/ei/eiEminsr/retrievePb0218Info.do">노무제공자 구직급여</a></li>
+							<li><a href="/ei/eim/eg/ei/eiEminsr/retrievePb0205Info.do">일용근로자 실업급여</a></li>
+							<li><a href="/ei/eim/eg/ei/eiEminsr/retrievePb0206Info.do">자영업자 실업급여</a></li>
+							<li><a href="/ei/eim/eg/ei/eiEminsr/retrievePb190Info.do">자격확인</a></li>
+							<li><a href="/ei/eim/eg/ei/eiEminsr/retrievePb200Info.do">실업급여 모의계산</a></li>
+							<li><a href="/ei/eim/eg/ei/eiEminsr/retrievePb0213Info.do">인터넷 실업인정 Q&A</a></li>
+							<li><a href="/ei/eim/eg/ei/eiEminsr/retrievePb0214Info.do">부정수급</a></li>
+							<li><a href="/ei/eim/eg/ei/eiEminsr/retrievePb0250Info.do">취업촉진수당 안내</a></li>
+						</ul>
+					</li>
+					<li>
+						<div class="title"><a href="/ei/eim/eg/ei/eiEminsr/retrievePb0301Info.do">개인혜택(모성보호)</a></div>
+						<ul class="list">
+							<li><a href="/ei/eim/eg/ei/eiEminsr/retrievePb0301Info.do">출산전후(유산,사산)휴가</a></li>
+							<li><a href="/ei/eim/eg/ei/eiEminsr/retrievePb0302Info.do">육아휴직(부부동시)</a></li>
+							<li><a href="/ei/eim/eg/ei/eiEminsr/retrievePb0303Info.do">육아기 근로시간 단축</a></li>
+							<li><a href="/ei/eim/eg/ei/eiEminsr/retrievePb0304Info.do">고용보험 미적용자 출산급여</a></li>
+							<li><a href="/ei/eim/eg/ei/eiEminsr/retrievePb0305Info.do">배우자 출산휴가</a></li>
+							<li><a href="/ei/eim/eg/ei/eiEminsr/retrievePb0307Info.do">예술인 출산전후급여등</a></li>
+							<li><a href="/ei/eim/eg/ei/eiEminsr/retrievePb330Info.do">모성보호 모의계산</a></li>
+						</ul>
+					</li>
+					<li>
+						<div class="title"><a href="/ei/eim/eg/ei/eiEminsr/retrieveEb0201Info.do">기업혜택</a></div>
+						<ul class="list">
+							<li><a href="/ei/eim/eg/ei/eiEminsr/retrieveEb0201Info.do">고용안정장려금</a></li>
+							<li><a href="/ei/eim/eg/ei/eiEminsr/retrieveEb0601Info.do">직장보육시설 지원</a></li>
+							<li><a href="http://hrd.go.kr">직업훈련 지원</a></li>
+							<li><a href="/ei/eim/eg/ei/eiEminsr/retrieveEi350Info.do">자영업자 고용보험 개요</a></li>
+							<li><a href="/ei/eim/eg/ei/eiEminsr/retrieveOe0802Info.do">자영업자 가입 및 납부</a></li>
+							<li><a href="/ei/eim/eg/ei/eiEminsr/retrieveEi360Info.do">자영업자 실업급여 수급안내</a></li>
+						</ul>
+					</li>
+				</ul>
+		
+				<ul id="menu-4">
+					<li>
+						<div class="title"><a href="/ei/eim/cp/cc/ccNtbd/retrieveCcNtbdList.do">고객센터</a></div>
+						<ul class="list">
+							<li><a href="/ei/eim/cp/cc/ccNtbd/retrieveCcNtbdList.do">공지사항</a></li>
+							<li><a href="/ei/eim/cp/cc/ccFaq/retrieveCcFaqList.do">자주하는 질문</a></li>
+							<li><a href="/ei/eim/cp/cc/ccJobCenSearch/retrieveCcJobCenSearchMap.do">고용센터 찾기</a></li>
+						</ul>
+					</li>
+				</ul>
+		
+
+		
+	</div>
+</div>
+
+<!-- gnb. e. -->
+
+<!-- 20210219 전체메뉴 plugin -->
+<script src="/ei/js2/eim/jquery.scroll-spy.js"></script>
+
+<script type="text/javascript">
+$(document).ready(function() {
+	
+	
+	$('.ico.menu-open').on('click', function(e) {
+		//e.preventDefault();
+		var el = $(this);
+		el.attr('data-focus','on');
+		$(".gnb-menu on").attr("tabindex","0");
+	});
+	
+	$(".right-area > ul:last-child > li > ul > li:last-child").keydown(function(e){
+		if(e.keyCode == 9){
+			$(".ico.home").focus();
+			return false;    
+		}
+	});
+	$(".ico.home").keydown(function(e){
+		if(e.keyCode == 9 && e.shiftKey){
+			$(".right-area > ul:last-child > li > ul > li:last-child").focus();
+			return false;    
+		}
+	}); 
+	
+	
+	
+	//20210219 전체메뉴 UI제어
+	$('.gnb-menu .body-area').scrollSpy({
+        target: $('.gnb-menu .left-area ul li a')
+    }).scroll();
+
+	
+	
+	// $('.left-area li:nth-child(1)').click(function() {
+	// 	$("#lMenu").val("1"); $(this).addClass("on");
+	// });
+	// $('.left-area li:nth-child(2)').click(function() {
+	// 	$("#lMenu").val("2"); $(this).addClass("on");
+	// });
+	// $('.left-area li:nth-child(3)').click(function() {
+	// 	$("#lMenu").val("3"); $(this).addClass("on");
+	// });
+	// $('.left-area li:nth-child(4)').click(function() {
+	// 	$("#lMenu").val("4"); $(this).addClass("on");
+	// });
+	
+	// $('.right-area ul:nth-child(1)').click(function() {
+	// 	if($("#lMenu").val() == "1") {
+	// 		$("#sMenu").val("11");
+	// 		$(this).addClass("on");
+	// 	}
+	// });
+	// $('.right-area ul:nth-child(2)').click(function() {
+	// 	if($("#lMenu").val() == "2") {
+	// 		$("#sMenu").val("22");
+	// 		$(this).addClass("on");
+	// 	}
+	// });
+	// $('.right-area ul:nth-child(3)').click(function() {
+	// 	if($("#lMenu").val() == "3") {
+	// 		$("#sMenu").val("33");
+	// 		$(this).addClass("on");
+	// 	}
+	// });
+	// $('.right-area ul:nth-child(4)').click(function() {
+	// 	if($("#lMenu").val() == "4") {
+	// 		$("#sMenu").val("44");
+	// 		$(this).addClass("on");
+	// 	}
+	// });
+	
+	// $(".menu-open").click(function() {
+	// 	$('.left-area li:nth-child(1)').removeClass("on");
+	// 	$('.left-area li:nth-child(2)').removeClass("on");
+	// 	$('.left-area li:nth-child(3)').removeClass("on");
+	// 	$('.left-area li:nth-child(4)').removeClass("on");
+		
+	// 	$('.right-area ul:nth-child(1)').removeClass("on");
+	// 	$('.right-area ul:nth-child(2)').removeClass("on");
+	// 	$('.right-area ul:nth-child(3)').removeClass("on");
+	// 	$('.right-area ul:nth-child(4)').removeClass("on");
+		
+	// 	if($("#sMenu").val() == "11") {
+	// 		$('.left-area li:nth-child(1)').addClass("on");
+	// 		$('.right-area ul:nth-child(1)').addClass("on");
+	// 	}
+		
+	// 	if($("#sMenu").val() == "22") {
+	// 		$('.left-area li:nth-child(2)').addClass("on");
+	// 		$('.right-area ul:nth-child(2)').addClass("on");
+	// 	}
+		
+	// 	if($("#sMenu").val() == "33") {
+	// 		$('.left-area li:nth-child(3)').addClass("on");
+	// 		$('.right-area ul:nth-child(3)').addClass("on");
+	// 	}
+		
+	// 	if($("#sMenu").val() == "44") {
+	// 		$('.left-area li:nth-child(4)').addClass("on");
+	// 		$('.right-area ul:nth-child(4)').addClass("on");
+	// 	}
+	// });
+});
+</script>
+		</div>
+		<!-- gnb. e. -->
+		<!-- 20210210 1depth 메뉴 노출
+		<div class="tab-menu">
+			<ul>
+				<li><a href="/ei/eim/cm/hm/main.do">홈</a></li>
+				<li><a href="/ei/eim/in/lp/retrieveLpCvplPrssListCvplTypeU.do">개인서비스</a></li>
+				<li class="on"><a href="/ei/eim/eg/ei/eiEminsr/retrieveEi0101Info.do">고용보험제도</a></li>
+				<li><a href="/ei/eim/cp/cc/ccNtbd/retrieveCcNtbdList.do">고객센터</a></li>
+			</ul>
+		</div>
+		<!-- 20210210 1depth 메뉴 노출 //-->
+	</header>
+	<!-- 헤더. e. -->
+	<!-- 콘테이너. s. -->
+	<div class="container">
+		<div class="content">
+			<h2 class="h2-title">고용보험료 자동계산 안내</h2>
+			<p class="txt">근로자가 내는 고용보험료와 회사가 내는 고용보험료를 조회 하실 수 있습니다.<br>회사의 근로자 수를 선택 하시고 월급여를 입력 한 후 계산 버튼을 클릭 하세요.<br>해당 입력 내용을 지우시려면 초기화 버튼을 클릭 하세요.</p>
+			<h2 class="h2-title">고용보험요율 안내</h2>
+			<!-- 고용보험율 안내. s. -->
+			<div class="insurance-info">
+				<h3 class="inner-title">실업급여</h3>
+				<div class="inner-box">
+					<div class="lef">
+						<span class="title">노동자</span>
+						<span class="value">0.9%</span>
+					</div>
+					<div class="right">
+						<span class="title">사업주</span>
+						<span class="value">0.9%</span>
+					</div>
+				</div>
+				<h3 class="inner-title">고용안정 직업능력개발 사업</h3>
+				<div class="inner-box">
+					<div class="lef">
+						<span class="title">150인 미만 기업</span>
+					</div>
+					<div class="right">
+						<span class="value">0.25%</span>
+					</div>
+				</div>
+				<div class="inner-box">
+					<div class="lef">
+						<span class="title">150인 이상 기업<br>(우선지원 대상 기업 제외)</span>
+					</div>
+					<div class="right">
+						<span class="value">0.45%</span>
+					</div>
+				</div>
+				<div class="inner-box">
+					<div class="lef">
+						<span class="title">150인 이상 기업 ~ 1000인 미만 기업<br>(우선지원 대상 기업 제외)</span>
+					</div>
+					<div class="right">
+						<span class="value">0.65%</span>
+					</div>
+				</div>
+				<div class="inner-box">
+					<div class="lef">
+						<span class="title">1000인 이상 기업 및<br>국가, 지방자체단체가 직접 행하는 사업</span>
+					</div>
+					<div class="right">
+						<span class="value">0.85%</span>
+					</div>
+				</div>
+			</div>
+			<!-- 고용보험율 안내. e. -->
+			<hr class="hr">
+			<!-- 고용보험료 계산. s. -->
+			<div class="inner-section">
+				<div class="calc-section">
+					<h2 class="h2-title">고용보험료 계산</h2>
+					<div class="inp-row">
+						<input type="number" name="pay" id="pay" value="" title="월급여를 원단위로 입력해 주세요." placeholder="월급여를 원단위로 입력해 주세요.">
+						<span class="txt-unite">원</span>
+					</div>
+					<div class="title">근로자 수</div>
+					<ul class="btn-tab">
+						<li class="on"><button title="150인 미만 보기">150인 미만</button></li>
+						<li><button title="150인 이상 1,000미만 보기">150인 이상 1,000미만</button></li>
+						<li><button title="1,000인 이상 보기">1,000인 이상</button></li>
+						<li><button title="150인 이상 보기">150인 이상<br><span class="f_small">(우선지원대상기업)</span></button></li>
+					</ul>
+					<input type="hidden" id="e3" value="0" readonly="readonly"/>
+					<div class="btn-wrap col-100">
+						<!-- <button class="btn-default">초기화</button> -->
+						<button class="btn-confim">계산하기</button>
+					</div>
+				</div>
+			</div>
+			<!-- 고용보험료 계산. e. -->
+			<div class="inner-section">
+				<div class="result-section">
+					<h2 class="h2-title">고용보험료 결과</h2>
+					<div class="inner-box">
+						<p class="title">근로자 부담액 <span class="unite">(실업급여 부담금)</span></p>
+						<div class="price-area"><span id="total" class="resultA">0</span> <span class="unite">원</span></div>
+					</div>
+					<div class="inner-box">
+						<p class="title">회사 부담액 <span class="unite">(실업급여 + 고용안정, 직업능력개발사업 요율)</span></p>
+						<div class="price-area"><span id="total01" class="resultA">0</span> <span class="unite">원</span></div>
+					</div>
+					<div class="inner-box total">
+						<span class="title">총액</span>
+						<span class="price-total"><span id="total02">0</span> <span class="unite">원</span></span>
+					</div>
+				</div>
+				<div class="btn-wrap col-100">
+						<button class="btn-default">초기화</button>
+					</div>
+			</div>
+		</div>
+	</div>
+	<!-- 콘테이너. e. -->
+	<!-- 푸터. s -->
+	
+
+<!-- foot menu -->
+<nav class="foot-nav blind">
+		<a href="#" class="home">HOME</a>
+		<a href="#" class="mypage">MY</a>
+		<a href="#" class="faq">FAQ</a>
+		<a href="#" class="job-card">취업드림수첩</a>
+		<a href="#" class="report">부정행위신고</a>
+</nav> 
+
+<!-- foot menu -->
+
+<footer>
+	<ul class="agree-list">
+		<li><a href="/ei/eim/cm/bs/retrieveBs610Info.do">이용약관</a></li>
+		<li><a href="/ei/eim/cm/bs/retrieveBs620Info.do"><strong>개인정보처리방침</strong></a></li>
+	</ul>
+	<div class="copy">&copy;고용노동부 한국고용정보원. All rights reserved.</div>
+</footer>
+
+<script>
+(
+	function(f,d,k,h){
+		var b;
+		var a=m()+"ver="+c(d);g();
+
+		function e(){
+			var o=document.getElementsByTagName(f)[0];
+			var n=document.createElement(f);
+			n.async=true;
+			n.charset="utf-8";
+			n.src=a;
+			o.parentNode.insertBefore(n,o);
+		}
+
+		function m(){
+			return window.location.protocol=="https:"?"https://tag.work.go.kr/static/00002/install.js?":"http://tag.work.go.kr/static/00002/install.js?"
+		}
+
+		function c(n){
+			var o=new Date().getTime();
+			var p=n*1000*60;
+			return n>0?Math.floor(o/p)*p:o;
+		}
+
+		function g(){
+			var n=l();
+			if(!n){
+				return false;
+			}
+			n.open("GET",a,true);
+			n.withCredentials=h;
+			n.send(null);
+			n.onload=function(){ j(); e() };
+			n.onerror=n.onabort=function(){ j() };
+			i(function(){ n.abort() }, k)
+		}
+
+		function l(){
+			var q;
+
+			var o=[function(){return new XDomainRequest()},function(){return new XMLHttpRequest()},function(){return new ActiveXObject("Msxml2.XMLHTTP")},function(){return new ActiveXObject("Msxml3.XMLHTTP")},function(){return new ActiveXObject("Microsoft.XMLHTTP")}];
+
+			for(var n=0;n<o.length;n++){
+				try{
+					q=o[n]();
+				}catch(p){
+					continue;
+				}
+				break
+			}
+			return q;
+		}
+
+		function i(o,n){
+			b=setTimeout(o,n)
+		}
+
+		function j(){
+			if(b){
+				clearTimeout(b)
+				;b=null
+			}
+		}
+	}
+)
+
+("script",60,/*{{timeout}}*/2000,/*{{withCredentials}}*/false);
+</script>
+	<!-- 푸터. e -->
+</div>
+<script>
+$(document).ready(function() {
+	$(document).on('click', '.btn-default', function(e) { //모든 값 초기화
+		$("#pay").val("");
+		$(".btn-tab li").removeClass("on");
+		$(".btn-tab li:eq(0)").attr("class", "on");
+		$("#total").text("0");
+		$("#total01").text("0");
+		$("#total02").text("0");
+	});
+	
+	$(document).on('click', '.btn-tab li', function(e) { //선택된 근로자
+		$("#e3").val($(this).index());
+	});
+	
+	$(".btn-tab > li button").click(function(e){
+		e.preventDefault();
+
+		$(this).closest("ul").find("button").each(function(i,v){
+			$(this).attr("title",$(this).text() + " 보기");
+		});
+		
+		$(this).attr("title",$(this).text() + " 열기 (선택됨)");
+
+	});
+	$(document).on('click', '.btn-confim', function(e) { //계산하기
+		var pay 	= 0; //입력한 월급여
+		var total 	= 0;
+		var total01 = 0;
+		var total02 = 0;
+			
+		if($("#pay").val() == "") {
+			alert("급여총액이 입력되지 않았습니다");
+			$("#pay").focus(); 
+			return;
+		}
+		
+		var pay = $("#pay").val() * 1;
+		
+		var e3 = 0; //선택된 근로자수
+		e3 = $("#e3").val();
+		
+		if(e3 == 0) {
+			total01 = pay*(0.009+0.0025); 
+		} else if(e3 == 1) {
+			total01 = pay*(0.009+0.0065); 
+		} else if(e3 == 2) {
+			total01 = pay*(0.009+0.0085); 
+		} else {
+			total01 = pay*(0.009+0.0045);
+		}
+		
+		var T = Number('1e'+1);
+		
+		total 	= Math.round(pay*0.009)*T/T;	//0.0045 > 0.0055 > 0.0065로 변경 ( 2013-07-01 )		> 0.008변경(20191004) > 0.009변경(20220707)
+		total02 = Math.round(total + total01)*T/T;
+		
+		//소수점제거
+		total 	= parseInt(total);
+		total01 = parseInt(total01);
+		total02 = parseInt(total02);
+
+		$("#total").text(makeMoneyType(total.toString()));
+		$("#total01").text(makeMoneyType(total01.toString()));
+		$("#total02").text(makeMoneyType(total02.toString()));
+	});
+});
+</script>
+</body>
+</html>

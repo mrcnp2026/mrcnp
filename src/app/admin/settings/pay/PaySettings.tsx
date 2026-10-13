@@ -9,17 +9,18 @@ import type { ReactNode } from 'react';
 import { Chip } from '@/components/ui';
 import { loadActiveRule } from '@/lib/attendance-data';
 import { getMe } from '@/lib/auth';
-import { loadItems, loadPolicies, loadReferences, loadSettingHistory, loadTaxPage, type ReferenceRow } from '@/lib/payroll/data';
+import { loadItems, loadPolicies, loadReferences, loadRuns, loadSettingHistory, loadTaxPage, type ReferenceRow } from '@/lib/payroll/data';
 import { pickAt, RATE_KINDS, rateToPct, type ReferenceKind } from '@/lib/payroll/reference';
 import { ALLOWANCE_KINDS, PAY_SECTIONS, payDateFor, type AllowancePolicy, type AnnualLeavePolicy, type Ledger, type PaySection, type SettingSection } from '@/lib/payroll/settings';
 import { createAdminClient } from '@/lib/supabase/admin';
 import { toKstDate } from '@/lib/time';
-import { AllowanceForm, ImportForm, ItemForm, ManualForm, ReviewForm, SeedButton, SettingForm, TaxCalc, UseToggle, VerifyButton } from './PayForms';
+import { Download } from 'lucide-react';
+import { AllowanceForm, ImportForm, ItemForm, ManualForm, RefreshButton, ReviewForm, SeedButton, SettingForm, TaxCalc, UseToggle, VerifyButton } from './PayForms';
 
 const ICONS: Record<PaySection, LucideIcon> = { 'employee-defaults': Users, ledger: ClipboardList, 'payment-items': CirclePlus, 'deduction-items': CircleMinus, 'insurance-rates': ShieldCheck, 'income-tax': TableProperties, allowances: Scale, masking: EyeOff, 'working-time': Clock };
 const TAX_KINDS: ReferenceKind[] = ['income-tax.table', 'income-tax.child-adjust'];
-const PCT_FIELDS = new Set(['employeeRate', 'employerRate', 'totalRate', 'incomeRate', 'healthRate', 'rate']);
-const KRW_FIELDS = new Set(['lower', 'upper', 'hourly', 'monthly209', 'monthlyLimit', 'child1', 'child2', 'perExtraChild', 'wageMin', 'wageMaxExclusive']);
+const PCT_FIELDS = new Set(['employeeRate', 'employerRate', 'totalRate', 'incomeRate', 'healthRate', 'rate', 'stabilityUnder150', 'stabilityPriority150', 'stability150to1000', 'stabilityOver1000']);
+const KRW_FIELDS = new Set(['lower', 'upper', 'hourly', 'monthly209', 'monthlyLimit', 'child1', 'child2', 'perExtraChild', 'wageMin', 'wageMaxExclusive', 'premiumUpper', 'premiumUpperEmployee', 'premiumLower', 'incomePremiumUpper']);
 type SP = { section?: string; v?: string; year?: string; from?: string; edit?: string; add?: string };
 
 function Band({ children, aside }: { children: ReactNode; aside?: ReactNode }) {
@@ -52,11 +53,11 @@ export async function PaySettings({ sp }: { sp: SP }) {
   /** 기준 자료의 값들을 「이름: 값」으로 */
   const payloadLines = (r: ReferenceRow) =>
     Object.entries(r.payload)
-      .filter(([k]) => t.has(`refField.${k}`))
+      .filter(([k, v]) => t.has(`refField.${k}`) && (v === null || typeof v === 'string' || typeof v === 'number'))
       .map(([k, v]) => (
         <div key={k} className="flex justify-between gap-3">
           <dt className="text-muted">{t(`refField.${k}`)}</dt>
-          <dd className="num font-bold">{v === null ? t('unset') : PCT_FIELDS.has(k) ? `${rateToPct(v)}%` : KRW_FIELDS.has(k) ? won(Number(v)) : String(v)}</dd>
+          <dd className="num font-bold">{v === null ? t('unset') : PCT_FIELDS.has(k) ? `${rateToPct(v as string)}%` : KRW_FIELDS.has(k) ? won(Number(v)) : String(v)}</dd>
         </div>
       ));
   const period = (a: string | null, b: string | null) => (a ? `${a} ~ ${b ? toKstDate(new Date(Date.parse(`${b}T00:00:00+09:00`) - 864e5)) : t('open')}` : t('review.fromMissing'));
@@ -74,7 +75,12 @@ export async function PaySettings({ sp }: { sp: SP }) {
         {section === 'ledger' && ledger && (
           <p className="num border-b border-border bg-primary-tint px-4 py-3 text-sm text-primary lg:px-6">{t('s02.example', { month: today.slice(0, 7), date: payDateFor(today.slice(0, 7), ledger) })}</p>
         )}
-        {section === 'ledger' && !cur && <p className="border-b border-border bg-warn-tint px-4 py-3 text-sm text-warn lg:px-6">{t('s02.missing')}</p>}
+        {section === 'ledger' && !cur && (
+          <div className="flex flex-wrap items-center justify-between gap-2 border-b border-border bg-warn-tint px-4 py-3 text-sm text-warn lg:px-6">
+            <p>{t('s02.missing')}</p>
+            <SeedButton path="/api/admin/payroll/settings/ledger" label={t('s02.seed')} />
+          </div>
+        )}
         {section === 'masking' && <p className="border-b border-border px-4 py-3 text-sm text-muted lg:px-6">{t('s08.intro')}</p>}
         {section === 'working-time' && (
           <div className="flex flex-col gap-1 border-b border-border px-4 py-3 text-sm lg:px-6">
@@ -369,10 +375,39 @@ export async function PaySettings({ sp }: { sp: SP }) {
           </ul>
         );
     } else if (view === 'history') {
-      const all = await loadReferences(kinds, ['PENDING_ADMIN_REVIEW', 'APPROVED', 'REJECTED', 'WITHDRAWN']);
+      const [all, runs] = await Promise.all([loadReferences(kinds, ['PENDING_ADMIN_REVIEW', 'APPROVED', 'REJECTED', 'WITHDRAWN']), loadRuns(5)]);
       const who = await names(all.map((r) => r.approvedBy));
-      inner =
-        all.length === 0 ? (
+      const collected = runs.filter((r) => r.trigger === 'manual' || r.trigger === 'scheduled');
+      inner = (
+        <>
+          <Band>{t('refresh.runsTitle')}</Band>
+          {collected.filter((r) => r.results.some((x) => 'ok' in x)).length === 0 ? (
+            <p className="px-4 py-6 text-center text-sm text-faint lg:px-6">{t('refresh.runsNone')}</p>
+          ) : (
+            <ul className="divide-y divide-border">
+              {collected
+                .filter((r) => r.results.some((x) => 'ok' in x))
+                .map((r) => (
+                  <li key={r.id} className="flex flex-col gap-1 px-4 py-3 text-sm lg:px-6">
+                    <div className="flex flex-wrap items-center gap-2">
+                      <b className="num">{f.dateTime(new Date(r.startedAt), { dateStyle: 'medium', timeStyle: 'short', timeZone: 'Asia/Seoul' })}</b>
+                      <Chip tone={r.status === 'done' ? 'ok' : r.status === 'partial' ? 'warn' : 'neutral'}>{t(`refresh.status.${r.status}`)}</Chip>
+                      <span className="text-xs text-faint">{t(`refresh.trigger.${r.trigger}`)}</span>
+                    </div>
+                    <ul className="grid gap-x-6 gap-y-0.5 text-xs lg:grid-cols-2">
+                      {r.results.map((x) => (
+                        <li key={x.source} className="flex justify-between gap-2">
+                          <span>{t.has(`refresh.source.${x.source}`) ? t(`refresh.source.${x.source}`) : x.source}</span>
+                          <span className={x.ok ? 'num text-muted' : 'text-warn'}>{x.ok ? t('refresh.okLine', { staged: x.staged ?? 0, unchanged: x.unchanged ?? 0 }) : t('refresh.failLine', { why: x.error ?? '' })}</span>
+                        </li>
+                      ))}
+                    </ul>
+                  </li>
+                ))}
+            </ul>
+          )}
+          <Band>{t('refresh.dataTitle')}</Band>
+          {all.length === 0 ? (
           <p className="px-4 py-8 text-center text-sm text-faint lg:px-6">{t('historyNone')}</p>
         ) : (
           <ul className="divide-y divide-border">
@@ -393,7 +428,9 @@ export async function PaySettings({ sp }: { sp: SP }) {
               </li>
             ))}
           </ul>
-        );
+          )}
+        </>
+      );
     } else {
       inner = (
         <>
@@ -413,6 +450,13 @@ export async function PaySettings({ sp }: { sp: SP }) {
     body = (
       <>
         <p className="border-b border-border bg-primary-tint px-4 py-3 text-sm text-primary lg:px-6">{t('ref.principle')}</p>
+        <div className="flex flex-wrap items-start justify-between gap-3 border-b border-border px-4 py-3 lg:px-6">
+          <RefreshButton />
+          <a href="/api/admin/payroll/confirm-sheet" className="inline-flex h-9 items-center gap-1 rounded-button border border-nav bg-bg px-4 text-sm font-bold whitespace-nowrap text-nav">
+            <Download aria-hidden size={16} />
+            {t('confirm.download')}
+          </a>
+        </div>
         {tabs}
         {inner}
       </>
@@ -425,7 +469,13 @@ export async function PaySettings({ sp }: { sp: SP }) {
       <>
         <div className="flex flex-wrap items-center justify-between gap-2 border-b border-border px-4 py-3 lg:px-6">
           <p className="text-sm text-muted">{t('s07.intro')}</p>
-          <SeedButton path="/api/admin/payroll/policies" label={t('s07.seed')} />
+          <span className="flex flex-wrap items-center gap-2">
+            <a href="/api/admin/payroll/confirm-sheet" className="inline-flex h-9 items-center gap-1 rounded-button border border-nav bg-bg px-4 text-sm font-bold whitespace-nowrap text-nav">
+              <Download aria-hidden size={16} />
+              {t('confirm.download')}
+            </a>
+            <SeedButton path="/api/admin/payroll/policies" label={t('s07.seed')} />
+          </span>
         </div>
         <ul className="divide-y divide-border">
           {ALLOWANCE_KINDS.map((k) => {

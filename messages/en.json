@@ -1021,7 +1021,8 @@
         "withholding": "Withholding ratio",
         "withholdingHint": "Default for new employees. A ratio an employee already chose is not overwritten.",
         "example": "Example: pay for {month} is due on {date} (before any holiday shift).",
-        "missing": "No ledger settings yet. A payroll ledger cannot be created until this is saved."
+        "missing": "No ledger settings yet. A payroll ledger cannot be created until this is saved.",
+        "seed": "Start with the defaults"
       },
       "s08": {
         "intro": "Resident numbers are always hidden on screen, in print and in downloads. Payroll staff can open one record for a short time after giving a reason. There is no switch that reveals everything.",
@@ -1139,7 +1140,8 @@
         "minimum-wage": "Minimum wage",
         "maternity_limit": "Maternity leave pay limit",
         "income-tax_table": "Simplified tax table",
-        "income-tax_child-adjust": "Child tax adjustment"
+        "income-tax_child-adjust": "Child tax adjustment",
+        "health_limit": "Health premium upper and lower limits"
       },
       "refField": {
         "employeeRate": "Employee",
@@ -1161,7 +1163,17 @@
         "wageMin": "First band",
         "wageMaxExclusive": "End of table (below)",
         "documentYear": "Document year",
-        "datasetDate": "Dataset date"
+        "datasetDate": "Dataset date",
+        "premiumUpper": "Upper limit (total premium)",
+        "premiumUpperEmployee": "Employee half of the upper limit",
+        "premiumLower": "Lower limit",
+        "incomePremiumUpper": "Upper limit on income-based premium",
+        "noticeNo": "Notice number",
+        "stabilityUnder150": "Stability and training: under 150",
+        "stabilityPriority150": "Stability and training: 150 or more (second tier)",
+        "stability150to1000": "Stability and training: 150 to under 1,000",
+        "stabilityOver1000": "Stability and training: 1,000 or more",
+        "revisedOn": "Source revised on"
       },
       "unit": {
         "pct": "Enter as a percentage, for example 0.9",
@@ -1174,8 +1186,12 @@
         "official_consultation_not_notice": "Read from an official consultation answer. Check the governing notice.",
         "only_one_child_value_collected": "Only the one-child adjustment was read. Two or more children cannot be looked up until a confirmed value is entered.",
         "distributed_file_may_predate_latest_amendment": "The distributed file may predate the latest amendment. Check it together with the amendment.",
-        "no_rule_above_table_max": "The rule for wages at or above the end of the table (KRW 10,000,000) is not included. That range cannot be looked up.",
-        "manual_entry": "Entered by hand. Check the source."
+        "no_rule_above_table_max": "The formulas above the end of the table (KRW 10,000,000) could not be read. That range cannot be looked up.",
+        "manual_entry": "Entered by hand. Check the source.",
+        "employment_tier_wording_check": "The second tier (0.45%) is worded differently on the official page than in the law. Check which tier applies to this company.",
+        "no_rule_above_family_11": "The rule for more than 11 dependants could not be read. That case cannot be looked up.",
+        "child_rule_from_table_document": "These are the child amounts written in the table document. If a later amendment changed them, apply both with their effective dates.",
+        "half_not_integer": "Half of the upper limit is not a whole number of won. Please check."
       },
       "review": {
         "newValue": "New value",
@@ -1191,8 +1207,8 @@
         "reject": "Reject"
       },
       "import": {
-        "title": "Import collected data",
-        "intro": "Upload the files made by the official data collector. They only become pending review. Identical values are not added again.",
+        "title": "Import a collector result file (fallback)",
+        "intro": "Use this when Update now does not work. Upload the result files from the separate collector program. They only become pending review.",
         "latest": "Collector result file",
         "latestHint": "latest.json in the data folder",
         "bands": "Tax band file",
@@ -1203,7 +1219,7 @@
       },
       "manual": {
         "title": "Manual entry",
-        "intro": "For data the collector cannot read, such as employment insurance. This also becomes pending review.",
+        "intro": "For data that could not be read from an official source. This also becomes pending review.",
         "kind": "Data",
         "validFromHint": "Leave empty if unknown and enter it when applying.",
         "source": "Basis",
@@ -1212,7 +1228,7 @@
       },
       "calc": {
         "title": "Tax lookup",
-        "note": "The result is not saved anywhere. Wages outside the table and child counts without a rule are not calculated.",
+        "note": "The result is not saved anywhere. Wages above KRW 10,000,000, more than 11 dependants and child deductions use the rules read from the table document; without a rule nothing is calculated.",
         "payDate": "Pay date",
         "wage": "Monthly taxable pay (KRW)",
         "family": "Dependants (including self)",
@@ -1291,7 +1307,45 @@
       "payroll_tax_out_of_table": "This wage is outside the tax table. The rule for that range is not included, so nothing is calculated.",
       "payroll_tax_no_child_rule": "There is no adjustment rule for that number of children. Enter a confirmed value under Add data.",
       "invalid_input": "Please check what you entered.",
-      "not_found": "Not found."
+      "not_found": "Not found.",
+      "refresh": {
+        "now": "Update now",
+        "running": "Fetching official data… (up to a minute)",
+        "note": "Fetches and reads the official sources again. Results only become pending review; the values in use do not change.",
+        "okLine": "{staged} new, {unchanged} unchanged",
+        "failLine": "not received ({why})",
+        "runsTitle": "Collection runs",
+        "runsNone": "No collection has been run yet.",
+        "dataTitle": "Data history",
+        "status": {
+          "done": "All received",
+          "partial": "Partly failed",
+          "failed": "Failed",
+          "running": "Running"
+        },
+        "trigger": {
+          "manual": "Update now",
+          "scheduled": "Scheduled",
+          "upload": "File"
+        },
+        "source": {
+          "health": "Health and long-term care rates",
+          "health_limits": "Health premium limits",
+          "pension": "National pension rate",
+          "pension_limits": "Pension income limits",
+          "employment": "Employment insurance rates",
+          "accident": "Accident insurance, commuting",
+          "tax": "Simplified tax table",
+          "tax_amendment": "Tax table amendment (children)",
+          "minimum_wage": "Minimum wage",
+          "maternity": "Maternity leave pay limit"
+        }
+      },
+      "confirm": {
+        "download": "Download the labor and tax confirmation form"
+      },
+      "payroll_refresh_running": "An update is already running. Check the result under History in a moment.",
+      "payroll_tax_no_family_rule": "There is no rule for more than 11 dependants, so nothing is calculated."
     },
     "manage": {
       "title": "Manage",

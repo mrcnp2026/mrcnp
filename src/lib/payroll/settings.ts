@@ -56,6 +56,12 @@ export function validateSetting(section: SettingSection, b: Record<string, unkno
   return { ok: true, value: { weeklyHours, weeklyOvertimeLimit, monthlyHours } };
 }
 
+/**
+ * 급여대장의 처음 값 (2026-10-13 의뢰인: 일단 지정해 두고 화면에서 바꾼다) — 「임시」로 들어간다.
+ * 당월 · 말일 지급, 휴일 처리는 정하지 않음, 공제는 요율로 계산(월 과세합계 기준 — 공단 고지 자료 없이도 계산이 된다), 원천징수 100%.
+ */
+export const DEFAULT_LEDGER: Ledger = { payMonth: 'CURRENT', payDayMode: 'MONTH_END', payDay: null, holidayShift: null, insuranceBasis: 'PAYROLL_BASE', withholdingRatio: 100 };
+
 export const isDate = (v: unknown): v is string => typeof v === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(v) && !Number.isNaN(Date.parse(`${v}T00:00:00Z`)) && new Date(`${v}T00:00:00Z`).toISOString().slice(0, 10) === v;
 export const cleanText = (v: unknown, max: number): string | null | undefined => {
   if (v === undefined || v === null || v === '') return null;

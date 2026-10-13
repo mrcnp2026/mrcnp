@@ -3,7 +3,7 @@
 import { existsSync, readdirSync, readFileSync } from 'node:fs';
 import path from 'node:path';
 import { describe, expect, it } from 'vitest';
-import { buildManual, canonical, estimateTax, mapCollector, parseBands, pctToRate, pickAt, rateToPct } from '@/lib/payroll/reference';
+import { buildManual, canonical, estimateTax, mapCollector, parseBands, pctToRate, pickAt, rateToPct, type ChildRule, type TaxRules } from '@/lib/payroll/reference';
 import { payDateFor, STANDARD_ALLOWANCES, STANDARD_ITEMS, validateAllowance, validateItem, validateSetting } from '@/lib/payroll/settings';
 
 describe('급여대장 설정', () => {
@@ -82,20 +82,31 @@ describe('요율 글자 변환', () => {
 });
 
 describe('소득세 조회', () => {
+  const rules: TaxRules = { wageMin: 770000, wageMaxExclusive: 10000000, topRow: null, highBands: null, family11Rule: false };
+  const row = (first: number) => [first, ...Array(10).fill(0)] as number[];
+  const at = (taxes: number[], family: number, children: number, ratio: number, childRule: ChildRule | null = null) => estimateTax({ wage: 3370000, family, children, ratio, bandTaxes: taxes, rules, childRule });
   it('교차검수 재현: 표 세액 51,510 − 자녀 1명 20,830 → 80% → 24,540원, 지방소득세 2,450원', () => {
-    expect(estimateTax({ baseTax: 51510, children: 1, ratio: 80, rule: { child1: 20830, child2: null, perExtraChild: null } })).toEqual({ ok: true, baseTax: 51510, childAdjust: 20830, afterChild: 30680, ratio: 80, incomeTax: 24540, localTax: 2450 });
+    expect(at([0, 0, 51510, 0, 0, 0, 0, 0, 0, 0, 0], 3, 1, 80, { child1: 20830, child2: 45830, perExtraChild: 33330 })).toEqual({ ok: true, baseTax: 51510, childAdjust: 20830, afterChild: 30680, ratio: 80, incomeTax: 24540, localTax: 2450, how: 'table' });
   });
   it('C08 합성: 기본세액 10,000원 · 80% → 8,000원 · 지방 800원', () => {
-    expect(estimateTax({ baseTax: 10000, children: 0, ratio: 80, rule: null })).toMatchObject({ ok: true, incomeTax: 8000, localTax: 800 });
+    expect(at(row(10000), 1, 0, 80)).toMatchObject({ ok: true, incomeTax: 8000, localTax: 800 });
   });
-  it('표에 없는 구간 · 규칙 없는 자녀 수는 계산하지 않는다 (마지막 줄이나 0으로 대신하지 않음)', () => {
-    expect(estimateTax({ baseTax: null, children: 0, ratio: 100, rule: null })).toEqual({ ok: false, why: 'no_row' });
-    expect(estimateTax({ baseTax: 50000, children: 1, ratio: 100, rule: null })).toEqual({ ok: false, why: 'no_child_rule' });
-    expect(estimateTax({ baseTax: 50000, children: 2, ratio: 100, rule: { child1: 20830, child2: null, perExtraChild: null } })).toEqual({ ok: false, why: 'no_child_rule' });
-    expect(estimateTax({ baseTax: 50000, children: 0, ratio: 90, rule: null })).toEqual({ ok: false, why: 'invalid_input' });
+  it('표에 줄이 없거나 규칙 없는 자녀 수는 계산하지 않는다 (마지막 줄이나 0으로 대신하지 않음)', () => {
+    expect(estimateTax({ wage: 3370000, family: 1, children: 0, ratio: 100, bandTaxes: null, rules, childRule: null })).toEqual({ ok: false, why: 'no_row' });
+    expect(at(row(50000), 1, 1, 100)).toEqual({ ok: false, why: 'no_child_rule' });
+    expect(at(row(50000), 1, 2, 100, { child1: 20830, child2: null, perExtraChild: null })).toEqual({ ok: false, why: 'no_child_rule' });
+    expect(at(row(50000), 1, 0, 90)).toEqual({ ok: false, why: 'invalid_input' });
+    expect(estimateTax({ wage: 12000000, family: 1, children: 0, ratio: 100, bandTaxes: null, rules, childRule: null })).toEqual({ ok: false, why: 'no_high_rule' });
+    expect(at(row(50000), 12, 0, 100)).toEqual({ ok: false, why: 'no_family_rule' });
   });
-  it('자녀 조정이 표 세액보다 크면 0원 (음수 세액 없음)', () => {
-    expect(estimateTax({ baseTax: 1000, children: 1, ratio: 100, rule: { child1: 20830, child2: null, perExtraChild: null } })).toMatchObject({ ok: true, afterChild: 0, incomeTax: 0, localTax: 0 });
+  it('자녀 공제: 2명 · 3명 이상(2명 초과 1명당) · 공제가 세액보다 크면 0원', () => {
+    const rule = { child1: 20830, child2: 45830, perExtraChild: 33330 };
+    expect(at(row(100000), 1, 2, 100, rule)).toMatchObject({ ok: true, childAdjust: 45830, incomeTax: 54170 });
+    expect(at(row(200000), 1, 4, 100, rule)).toMatchObject({ ok: true, childAdjust: 112490, incomeTax: 87510 });
+    expect(at(row(1000), 1, 1, 100, rule)).toMatchObject({ ok: true, afterChild: 0, incomeTax: 0, localTax: 0 });
+  });
+  it('표의 첫 구간보다 적은 급여는 0원', () => {
+    expect(estimateTax({ wage: 500000, family: 1, children: 0, ratio: 100, bandTaxes: null, rules, childRule: null })).toMatchObject({ ok: true, incomeTax: 0, how: 'below_table' });
   });
   it('C07 합성 경계: [1,000,000, 1,100,000) 1,000원 · 다음 구간 2,000원 — 구간은 빈틈없이 이어져야 한다', () => {
     const dash = ['-', '-', '-', '-', '-', '-', '-', '-', '-', '-', '-'];

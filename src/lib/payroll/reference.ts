@@ -2,15 +2,16 @@
 //   · 수집기(`공식자료 수집 검증/`)의 결과 파일을 「검토 후보」로 바꾼다. 값을 만들어 내지 않는다 — 수집기가 읽은 것만 옮긴다.
 //   · 간이세액표로 소득세를 조회한다. 표에 없는 구간 · 규칙이 없는 자녀 수는 계산하지 않고 그 사실을 돌려준다.
 
-export const REFERENCE_KINDS = ['pension.rate', 'pension.limit', 'health.rate', 'ltc.rate', 'employment.rate', 'accident.commute', 'minimum-wage', 'maternity.limit', 'income-tax.table', 'income-tax.child-adjust'] as const;
+export const REFERENCE_KINDS = ['pension.rate', 'pension.limit', 'health.rate', 'health.limit', 'ltc.rate', 'employment.rate', 'accident.commute', 'minimum-wage', 'maternity.limit', 'income-tax.table', 'income-tax.child-adjust'] as const;
 export type ReferenceKind = (typeof REFERENCE_KINDS)[number];
 /** S05 사회보험 요율표에 보이는 종류 (세액표 두 가지는 S06) */
-export const RATE_KINDS: ReferenceKind[] = ['pension.rate', 'pension.limit', 'health.rate', 'ltc.rate', 'employment.rate', 'accident.commute', 'minimum-wage', 'maternity.limit'];
+export const RATE_KINDS: ReferenceKind[] = ['pension.rate', 'pension.limit', 'health.rate', 'health.limit', 'ltc.rate', 'employment.rate', 'accident.commute', 'minimum-wage', 'maternity.limit'];
 
+export type Json = string | number | boolean | null | Json[] | { [k: string]: Json };
 export type TaxBand = { wageFrom: number; wageTo: number | null; taxes: number[] }; // taxes[0] = 가족 1명
 export type Candidate = {
   kind: ReferenceKind;
-  payload: Record<string, string | number | null>;
+  payload: Record<string, Json>;
   sourceUnit: string | null;
   validFrom: string | null; // 원문에서 시행일을 읽지 못하면 null — 관리자가 확인해 넣어야 승인된다
   validTo: string | null; // 이 날 전날까지
@@ -141,31 +142,78 @@ export function parseBands(file: unknown): { ok: true; bands: TaxBand[] } | { ok
 }
 
 // ── 소득세 조회 (S06 계산기) ──
+// 규칙은 전부 소득세법 시행령 [별표 2] 근로소득 간이세액표의 원문에서 읽은 것이다(수집기가 읽어 payload에 담는다). 여기서 숫자를 정하지 않는다.
 export type ChildRule = { child1: number | null; child2: number | null; perExtraChild: number | null };
+/** 1,000만원 초과 구간의 식: (1,000만원인 경우의 세액) + fixed + (over를 넘는 금액 [× 98%] × ratePct%) */
+export type HighBand = { over: number; upTo: number | null; fixed: number; pct98: boolean; ratePct: number };
+export type TaxRules = { wageMin: number; wageMaxExclusive: number; topRow: number[] | null; highBands: HighBand[] | null; family11Rule: boolean };
 export type TaxEstimate =
-  | { ok: true; baseTax: number; childAdjust: number; afterChild: number; ratio: number; incomeTax: number; localTax: number }
-  | { ok: false; why: 'no_row' | 'no_child_rule' | 'invalid_input' };
+  | { ok: true; baseTax: number; childAdjust: number; afterChild: number; ratio: number; incomeTax: number; localTax: number; how: 'below_table' | 'table' | 'top_row' | 'high_band' }
+  | { ok: false; why: 'no_row' | 'no_child_rule' | 'no_family_rule' | 'no_high_rule' | 'invalid_input' };
+
+/** 가족 수별 세액. 11명을 넘으면 별표 2 제4호: (11명 세액) − (10명 세액 − 11명 세액) × 넘는 가족 수 */
+export function familyTax(taxes: number[], family: number, rule11: boolean): number | null {
+  if (taxes.length !== 11 || !Number.isInteger(family) || family < 1) return null;
+  if (family <= 11) return taxes[family - 1];
+  if (!rule11) return null;
+  return Math.max(0, taxes[10] - (taxes[9] - taxes[10]) * (family - 11));
+}
+
+export const asChildRule = (p: Record<string, Json> | undefined): ChildRule | null => (p ? { child1: typeof p.child1 === 'number' ? p.child1 : null, child2: typeof p.child2 === 'number' ? p.child2 : null, perExtraChild: typeof p.perExtraChild === 'number' ? p.perExtraChild : null } : null);
+
+export function asTaxRules(p: Record<string, Json> | undefined): TaxRules | null {
+  if (!p || typeof p.wageMin !== 'number' || typeof p.wageMaxExclusive !== 'number') return null;
+  const top = Array.isArray(p.topRow) && p.topRow.length === 11 && p.topRow.every((x) => typeof x === 'number') ? (p.topRow as number[]) : null;
+  const high = Array.isArray(p.highBands) && p.highBands.length > 0 ? (p.highBands as unknown as HighBand[]) : null;
+  return { wageMin: p.wageMin, wageMaxExclusive: p.wageMaxExclusive, topRow: top, highBands: high, family11Rule: p.family11Rule === true };
+}
 
 /**
- * 표 세액 − 자녀 조정 → 선택 비율 → 10원 미만 버림. 지방소득세는 소득세의 10%(10원 미만 버림).
+ * 표 세액(또는 고액 구간 식) − 자녀 공제 → 선택 비율 → 10원 미만 버림. 지방소득세는 소득세의 10%(10원 미만 버림).
  * 수집기 교차검수의 예(3,370,000원 · 가족 3 · 자녀 1 · 80% → 24,540원)를 재현하는 순서다. 절사 규정 전체를 검증한 것은 아니다(임시).
- * row: 그 급여가 든 구간의 그 가족 수 세액. 없으면(표 범위 밖) 계산하지 않는다 — 마지막 줄 값으로 대신하지 않는다.
+ * bandTaxes: 그 급여가 든 구간의 가족 1~11명 세액. 표에 없는데 규칙도 없으면 계산하지 않는다 — 마지막 줄 값이나 0으로 대신하지 않는다.
+ * 표의 첫 구간(77만원)보다 적은 급여는 세액 0원이다(표가 그 위부터 시작하고 첫 구간들이 전부 「-」).
  */
-export function estimateTax(input: { baseTax: number | null; children: number; ratio: number; rule: ChildRule | null }): TaxEstimate {
-  const { baseTax, children, ratio } = input;
-  if (![80, 100, 120].includes(ratio) || !Number.isInteger(children) || children < 0 || children > 20) return { ok: false, why: 'invalid_input' };
-  if (baseTax === null) return { ok: false, why: 'no_row' };
+export function estimateTax(input: { wage: number; family: number; children: number; ratio: number; bandTaxes: number[] | null; rules: TaxRules; childRule: ChildRule | null }): TaxEstimate {
+  const { wage, family, children, ratio, rules } = input;
+  if (![80, 100, 120].includes(ratio) || !Number.isInteger(children) || children < 0 || children > 20 || !Number.isInteger(wage) || wage < 0 || !Number.isInteger(family) || family < 1 || family > 30) return { ok: false, why: 'invalid_input' };
+  // 계산은 1만 배 한 정수로 한다 (98% × 35% 같은 곱에서 소수 오차가 나지 않게)
+  let scaled: number;
+  let how: 'below_table' | 'table' | 'top_row' | 'high_band';
+  if (wage < rules.wageMin) {
+    scaled = 0;
+    how = 'below_table';
+  } else if (wage < rules.wageMaxExclusive) {
+    if (!input.bandTaxes) return { ok: false, why: 'no_row' };
+    const t = familyTax(input.bandTaxes, family, rules.family11Rule);
+    if (t === null) return { ok: false, why: 'no_family_rule' };
+    scaled = t * 10000;
+    how = 'table';
+  } else {
+    if (!rules.topRow) return { ok: false, why: 'no_high_rule' };
+    const t = familyTax(rules.topRow, family, rules.family11Rule);
+    if (t === null) return { ok: false, why: 'no_family_rule' };
+    if (wage === rules.wageMaxExclusive) {
+      scaled = t * 10000;
+      how = 'top_row';
+    } else {
+      const b = rules.highBands?.find((x) => wage > x.over && (x.upTo === null || wage <= x.upTo));
+      if (!b) return { ok: false, why: 'no_high_rule' };
+      scaled = (t + b.fixed) * 10000 + (wage - b.over) * (b.pct98 ? 98 : 100) * b.ratePct;
+      how = 'high_band';
+    }
+  }
   let childAdjust = 0;
   if (children > 0) {
-    const r = input.rule;
+    const r = input.childRule;
     const v = !r ? null : children === 1 ? r.child1 : children === 2 ? r.child2 : r.child2 !== null && r.perExtraChild !== null ? r.child2 + (children - 2) * r.perExtraChild : null;
     if (v === null) return { ok: false, why: 'no_child_rule' };
     childAdjust = v;
   }
-  const afterChild = Math.max(0, baseTax - childAdjust);
-  const incomeTax = Math.floor((afterChild * ratio) / 1000) * 10;
+  const after = Math.max(0, scaled - childAdjust * 10000);
+  const incomeTax = Math.floor((after * ratio) / 100 / 10000 / 10) * 10;
   const localTax = Math.floor(incomeTax / 100) * 10;
-  return { ok: true, baseTax, childAdjust, afterChild, ratio, incomeTax, localTax };
+  return { ok: true, baseTax: Math.floor(scaled / 10000), childAdjust, afterChild: Math.floor(after / 10000), ratio, incomeTax, localTax, how };
 }
 
 /** 승인된 판 가운데 그 날짜에 쓰는 것 (시행일 ≤ 날짜 < 끝). 없으면 null — 이전 연도 표를 대신 쓰지 않는다 */

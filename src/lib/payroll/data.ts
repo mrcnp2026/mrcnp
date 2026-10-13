@@ -5,7 +5,7 @@ import { createHash } from 'node:crypto';
 import { ApiError } from '@/lib/api';
 import { getMe, type Me } from '@/lib/auth';
 import { createAdminClient } from '@/lib/supabase/admin';
-import { canonical, type Candidate, type ChildRule, type ReferenceKind } from './reference';
+import { canonical, type Candidate, type Json, type ReferenceKind } from './reference';
 import type { AllowancePolicy, ItemInput, SettingPayload, SettingSection } from './settings';
 
 /** 급여 담당 관리자만 (관리자 + 급여 열람 권한). 일반 관리자는 급여 설정을 보지도 바꾸지도 못한다 */
@@ -170,7 +170,7 @@ export async function setVerification(target: keyof typeof VERIFY_TABLES, id: st
 }
 
 // ── 공식 기준 자료 ──
-export type ReferenceRow = { id: string; kind: ReferenceKind; origin: 'collected' | 'manual' | 'upload'; validFrom: string | null; validTo: string | null; payload: Record<string, string | number | null>; sourceUnit: string | null; payloadHash: string; state: string; warnings: string[]; source: { authority?: string; url?: string | null } | null; verification: Verify; verificationNote: string | null; reviewReason: string | null; approvedBy: string | null; approvedAt: string | null; createdAt: string };
+export type ReferenceRow = { id: string; kind: ReferenceKind; origin: 'collected' | 'manual' | 'upload'; validFrom: string | null; validTo: string | null; payload: Record<string, Json>; sourceUnit: string | null; payloadHash: string; state: string; warnings: string[]; source: { authority?: string; url?: string | null } | null; verification: Verify; verificationNote: string | null; reviewReason: string | null; approvedBy: string | null; approvedAt: string | null; createdAt: string };
 const toRef = (r: Record<string, unknown>): ReferenceRow => {
   const v = (r.validation_result ?? {}) as { warnings?: string[]; source?: ReferenceRow['source'] };
   return { id: r.id as string, kind: r.reference_kind as ReferenceKind, origin: r.origin as ReferenceRow['origin'], validFrom: r.valid_from as string | null, validTo: r.valid_to as string | null, payload: r.normalized_payload as ReferenceRow['payload'], sourceUnit: r.source_unit as string | null, payloadHash: r.payload_hash as string, state: r.state as string, warnings: v.warnings ?? [], source: v.source ?? null, verification: r.verification_state as Verify, verificationNote: r.verification_note as string | null, reviewReason: r.review_reason as string | null, approvedBy: r.approved_by as string | null, approvedAt: r.approved_at as string | null, createdAt: r.created_at as string };
@@ -192,10 +192,15 @@ export async function loadReference(id: string): Promise<ReferenceRow | null> {
  * 후보를 「검토 대기」로 넣는다 (수집 결과 가져오기 · 직접 입력 공통). 승인 상태로는 넣지 않는다.
  * 같은 종류 · 같은 값 · 같은 기간의 후보나 승인본이 이미 있으면 새로 만들지 않는다(변경 없음).
  */
-export async function stageCandidates(list: Candidate[], origin: 'collected' | 'manual' | 'upload', me: Me): Promise<{ staged: number; unchanged: number; runId: string }> {
+export async function stageCandidates(list: Candidate[], origin: 'collected' | 'manual' | 'upload', me: Me | null, inRun?: string): Promise<{ staged: number; unchanged: number; runId: string }> {
   const c = db();
-  const { data: run, error: e0 } = await c.from('payroll_refresh_runs').insert({ trigger: origin === 'manual' ? 'manual' : 'upload', actor_id: me.id, status: 'running' }).select('id').single();
-  if (e0 || !run) fail('stage.run', e0);
+  // inRun: 수집 실행(runCollector)이 이미 만든 실행 기록 안에서 부를 때 — 실행 기록을 따로 만들지도 닫지도 않는다
+  let run: { id: string } | null = inRun ? { id: inRun } : null;
+  if (!run) {
+    const made = await c.from('payroll_refresh_runs').insert({ trigger: origin === 'manual' ? 'manual' : 'upload', actor_id: me?.id ?? null, status: 'running' }).select('id').single();
+    if (made.error || !made.data) fail('stage.run', made.error);
+    run = made.data;
+  }
   let staged = 0;
   let unchanged = 0;
   const results: { kind: string; result: string }[] = [];
@@ -209,7 +214,7 @@ export async function stageCandidates(list: Candidate[], origin: 'collected' | '
     }
     const { data: row, error } = await c
       .from('payroll_reference_versions')
-      .insert({ reference_kind: cand.kind, origin, refresh_run_id: run!.id, valid_from: cand.validFrom, valid_to: cand.validTo, normalized_payload: cand.payload, source_unit: cand.sourceUnit, payload_hash: hash, state: 'PENDING_ADMIN_REVIEW', validation_result: { warnings: cand.warnings, source: { authority: cand.authority, url: cand.sourceUrl, hash: cand.sourceHash, parser: cand.parserVersion } }, created_by: me.id })
+      .insert({ reference_kind: cand.kind, origin, refresh_run_id: run!.id, valid_from: cand.validFrom, valid_to: cand.validTo, normalized_payload: cand.payload, source_unit: cand.sourceUnit, payload_hash: hash, state: 'PENDING_ADMIN_REVIEW', validation_result: { warnings: cand.warnings, source: { authority: cand.authority, url: cand.sourceUrl, hash: cand.sourceHash, parser: cand.parserVersion } }, created_by: me?.id ?? null })
       .select('id')
       .single();
     if (error || !row) fail('stage.insert', error);
@@ -227,7 +232,7 @@ export async function stageCandidates(list: Candidate[], origin: 'collected' | '
     staged++;
     results.push({ kind: cand.kind, result: 'staged' });
   }
-  await c.from('payroll_refresh_runs').update({ status: 'done', ended_at: new Date().toISOString(), source_results: results }).eq('id', run!.id);
+  if (!inRun) await c.from('payroll_refresh_runs').update({ status: 'done', ended_at: new Date().toISOString(), source_results: results }).eq('id', run!.id);
   return { staged, unchanged, runId: run!.id };
 }
 
@@ -274,6 +279,23 @@ export async function loadTaxRowsAt(referenceId: string, wage: number): Promise<
   return (data ?? []).filter((r) => r.wage_from === top && (r.wage_to === null || wage < Number(r.wage_to))).map((r) => ({ family: r.family_count, wageFrom: Number(r.wage_from), wageTo: r.wage_to === null ? null : Number(r.wage_to), baseTax: Number(r.base_tax) }));
 }
 
+/** 그 급여가 든 구간의 가족 1~11명 세액 (없으면 null) */
+export async function loadBandTaxes(referenceId: string, wage: number): Promise<{ from: number; to: number | null; taxes: number[] } | null> {
+  const rows = await loadTaxRowsAt(referenceId, wage);
+  if (rows.length !== 11) return null;
+  const taxes: number[] = [];
+  for (const r of rows) taxes[r.family - 1] = r.baseTax;
+  return { from: rows[0].wageFrom, to: rows[0].wageTo, taxes };
+}
+
+/** 수집 실행 기록 (새 것부터) */
+export type RunRow = { id: string; trigger: string; status: string; startedAt: string; endedAt: string | null; results: { source: string; authority?: string; ok?: boolean; error?: string; found?: number; staged?: number; unchanged?: number; kind?: string; result?: string }[] };
+export async function loadRuns(limit = 5): Promise<RunRow[]> {
+  const { data, error } = await db().from('payroll_refresh_runs').select('id, trigger, status, started_at, ended_at, source_results').order('started_at', { ascending: false }).limit(limit);
+  if (error) fail('loadRuns', error);
+  return (data ?? []).map((r) => ({ id: r.id, trigger: r.trigger, status: r.status, startedAt: r.started_at, endedAt: r.ended_at, results: (r.source_results ?? []) as RunRow['results'] }));
+}
+
 /** 세액표를 화면에 보일 한 쪽 (급여구간 순). from = 이 급여부터 */
 export async function loadTaxPage(referenceId: string, from: number, bands: number): Promise<{ wageFrom: number; wageTo: number | null; taxes: number[] }[]> {
   const { data, error } = await db().from('payroll_tax_rows').select('family_count, wage_from, wage_to, base_tax').eq('reference_version_id', referenceId).gte('wage_from', from).order('wage_from').order('family_count').limit(bands * 11);
@@ -287,4 +309,3 @@ export async function loadTaxPage(referenceId: string, from: number, bands: numb
   return [...out.values()];
 }
 
-export const asChildRule = (p: Record<string, string | number | null> | undefined): ChildRule | null => (p ? { child1: (p.child1 as number | null) ?? null, child2: (p.child2 as number | null) ?? null, perExtraChild: (p.perExtraChild as number | null) ?? null } : null);
