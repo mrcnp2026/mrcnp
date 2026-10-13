@@ -68,9 +68,13 @@ export function dayAnomalies(args: {
 }
 
 export type AnomalyItem = { employeeId: string; workDate: string; types: AnomalyType[] };
-/** 정책을 걸어 보이는 것만 남기고, 직원마다 막는 건수 · 확인할 건수를 센다 */
-export function summarizeAnomalies(items: readonly AnomalyItem[], policy: AnomalyPolicy): { shown: (AnomalyItem & { block: boolean })[]; byEmployee: Map<string, { block: number; check: number }>; byType: Record<AnomalyType, number> } {
-  const shown: (AnomalyItem & { block: boolean })[] = [];
+export const anomalyKey = (employeeId: string, workDate: string) => `${employeeId}|${workDate}`;
+/**
+ * 정책을 걸어 보이는 것만 남기고, 직원마다 막는 건수 · 확인할 건수를 센다.
+ * reviewed: 담당자가 「확인함」으로 표시한 날(직원|날짜). 확인만 하는 날은 확인하면 「확인할 건수」에서 빠진다. 마감을 막는 날은 확인 표시로 풀리지 않는다 — 기록을 고쳐야 한다.
+ */
+export function summarizeAnomalies(items: readonly AnomalyItem[], policy: AnomalyPolicy, reviewed?: ReadonlySet<string>): { shown: (AnomalyItem & { block: boolean; reviewed: boolean })[]; byEmployee: Map<string, { block: number; check: number }>; byType: Record<AnomalyType, number> } {
+  const shown: (AnomalyItem & { block: boolean; reviewed: boolean })[] = [];
   const byEmployee = new Map<string, { block: number; check: number }>();
   const byType = Object.fromEntries(ANOMALY_TYPES.map((t) => [t, 0])) as Record<AnomalyType, number>;
   for (const it of items) {
@@ -78,10 +82,11 @@ export function summarizeAnomalies(items: readonly AnomalyItem[], policy: Anomal
     const types = it.types.filter((t) => policy[t] !== 'off');
     if (types.length === 0) continue;
     const block = types.some((t) => policy[t] === 'block');
-    shown.push({ ...it, types, block });
+    const done = !!reviewed?.has(anomalyKey(it.employeeId, it.workDate));
+    shown.push({ ...it, types, block, reviewed: done });
     const e = byEmployee.get(it.employeeId) ?? { block: 0, check: 0 };
     if (block) e.block++;
-    else e.check++;
+    else if (!done) e.check++;
     byEmployee.set(it.employeeId, e);
   }
   return { shown, byEmployee, byType };

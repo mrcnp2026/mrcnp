@@ -6,7 +6,8 @@ import { getTranslations } from 'next-intl/server';
 import Link from 'next/link';
 import { PageShell } from '@/components/ui';
 import { OFFICE } from '@/config/office';
-import { loadCloseBoard } from '@/lib/close-data';
+import { loadCloseBoard, loadReopenRequests } from '@/lib/close-data';
+import { getMe } from '@/lib/auth';
 import { isMonth, monthSpan } from '@/lib/close-review';
 import { groupPath } from '@/lib/org';
 import { loadOrgGroups } from '@/lib/org-data';
@@ -27,7 +28,9 @@ export default async function ClosingPage({ searchParams }: { searchParams: Prom
   const practice = OFFICE.practiceMode && sp.live !== '1';
   const live = sp.live === '1';
   const [{ lines }, groups] = await Promise.all([loadCloseBoard(month, practice), loadOrgGroups()]);
-  const ids = [...new Set(lines.flatMap((l) => l.history.map((h) => h.closedBy)))];
+  const requests = await loadReopenRequests(lines.flatMap((l) => (l.close ? [l.close.id] : [])));
+  const meId = (await getMe())?.id;
+  const ids = [...new Set([...lines.flatMap((l) => l.history.map((h) => h.closedBy)), ...[...requests.values()].map((r) => r.requestedBy)])];
   const { data: who } = ids.length ? await createAdminClient().from('profiles').select('id, name').in('id', ids) : { data: [] };
   const nameOf = new Map((who ?? []).map((p) => [p.id as string, p.name as string]));
   const hm = (min: number) => `${Math.floor(min / 60)}:${String(min % 60).padStart(2, '0')}`;
@@ -44,6 +47,7 @@ export default async function ClosingPage({ searchParams }: { searchParams: Prom
     hours: hm(l.review.payableMinutes),
     hash: l.hash,
     ready: l.review.blockers === 0,
+    reopenRequest: l.close && requests.has(l.close.id) ? { id: requests.get(l.close.id)!.id, reason: requests.get(l.close.id)!.reason, by: nameOf.get(requests.get(l.close.id)!.requestedBy) ?? '', mine: requests.get(l.close.id)!.requestedBy === meId } : null,
     anomalyBlocks: l.review.anomalyBlocks,
     anomalyChecks: l.review.anomalyChecks,
     close: l.close ? { id: l.close.id, revision: l.close.revision, by: nameOf.get(l.close.closedBy) ?? '', at: toKstDate(new Date(l.close.closedAt)) } : null,

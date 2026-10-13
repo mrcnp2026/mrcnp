@@ -20,6 +20,7 @@ export type Line = {
   hours: string;
   hash: string;
   ready: boolean;
+  reopenRequest: { id: string; reason: string; by: string; mine: boolean } | null; // 다른 관리자의 확인을 기다리는 다시 열기 요청
   anomalyBlocks: number; // 마감을 막는 이상 기록(일 수)
   anomalyChecks: number; // 확인만 하는 이상 기록(일 수)
   close: { id: string; revision: number; by: string; at: string } | null;
@@ -36,6 +37,7 @@ export function CloseBoard({ month, live, lines, canClose }: { month: string; li
   const [err, setErr] = useState<{ code: string; requestId?: string } | null>(null);
   const [results, setResults] = useState<Result[]>([]);
   const [reopen, setReopen] = useState<string | null>(null);
+  const [notice, setNotice] = useState<string | null>(null);
   const ready = lines.filter((l) => l.ready && !l.close);
   const toggle = (id: string) =>
     setPicked((s) => {
@@ -47,13 +49,14 @@ export function CloseBoard({ month, live, lines, canClose }: { month: string; li
   const run = async (body: Record<string, unknown>) => {
     setBusy(true);
     setErr(null);
-    const r = await callApi<{ results?: Result[] }>('/api/admin/closing', body);
+    const r = await callApi<{ results?: Result[]; reopen?: string }>('/api/admin/closing', body);
     setBusy(false);
     if (!r.ok) {
       setErr(r);
       return false;
     }
     setResults(r.data.results ?? []);
+    setNotice(r.data.reopen === 'requested' ? t('reopenRequested') : null);
     setPicked(new Set());
     setAsk(false);
     setReopen(null);
@@ -88,6 +91,7 @@ export function CloseBoard({ month, live, lines, canClose }: { month: string; li
         </div>
       )}
       {err && <ErrorNote code={err.code} requestId={err.requestId} namespace="admin.closing" />}
+      {notice && <p role="status" className="rounded-card border border-border bg-bg p-3 text-sm text-ok">{notice}</p>}
       <div className="overflow-x-auto border border-border bg-bg">
         <table className="w-full text-sm">
           <thead>
@@ -161,7 +165,29 @@ export function CloseBoard({ month, live, lines, canClose }: { month: string; li
                     ))}
                   </td>
                   <td className="px-3 py-3">
-                    {l.close &&
+                    {l.close && l.reopenRequest && (
+                      <span className="flex min-w-56 flex-col gap-2 text-sm">
+                        <span className="text-warn">{t('reopenWaiting', { name: l.reopenRequest.by })}</span>
+                        <span className="text-xs text-muted">{l.reopenRequest.reason}</span>
+                        <span className="flex gap-2">
+                          {l.reopenRequest.mine ? (
+                            <Button type="button" size="sm" variant="outline" disabled={busy} onClick={() => run({ action: 'reopenDecide', requestId: l.reopenRequest!.id, decision: 'cancelled' })}>
+                              {t('reopenCancel')}
+                            </Button>
+                          ) : (
+                            <>
+                              <Button type="button" size="sm" disabled={busy} onClick={() => run({ action: 'reopenDecide', requestId: l.reopenRequest!.id, decision: 'approved' })}>
+                                {t('reopenApprove')}
+                              </Button>
+                              <Button type="button" size="sm" variant="outline" disabled={busy} onClick={() => run({ action: 'reopenDecide', requestId: l.reopenRequest!.id, decision: 'rejected' })}>
+                                {t('reopenReject')}
+                              </Button>
+                            </>
+                          )}
+                        </span>
+                      </span>
+                    )}
+                    {l.close && !l.reopenRequest &&
                       (reopen === l.close.id ? (
                         <form
                           className="flex min-w-64 flex-col gap-2"

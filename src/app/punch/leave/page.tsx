@@ -21,6 +21,7 @@ import { toKstDate } from '@/lib/time';
 import { loadWorkRequests } from '@/lib/work-data';
 import { CancelLeave, DeleteLeaveRequest, LeaveForm } from './LeaveForm';
 import { CancelWork, WorkForm } from './WorkForm';
+import { loadMyOpenTargets } from '@/lib/leave-promotion';
 
 export default async function LeavePage({ searchParams }: { searchParams: Promise<{ workDate?: string; new?: string }> }) {
   const me = await getMe();
@@ -48,9 +49,17 @@ export default async function LeavePage({ searchParams }: { searchParams: Promis
   // 대기 중인 내 휴가 삭제 요청 (휴가 id → 요청 id)
   const { data: changes } = await createAdminClient().from('leave_change_requests').select('id, leave_id').eq('employee_id', me.id).eq('status', 'pending');
   const deleteOf = new Map((changes ?? []).map((c) => [c.leave_id as string, c.id as string]));
+  // 회사가 보낸 연차 사용 촉진 가운데 내가 계획을 내야 하는 것
+  const promos = await loadMyOpenTargets(me.id);
 
   return (
     <PageShell wide>
+      {promos.map((p) => (
+        <Link key={p.id} href={`/punch/leave/promotion/${p.id}`} className={`num flex min-h-11 items-center justify-between gap-3 rounded-card border p-3 text-sm font-bold ${p.state === 'NOTIFIED' ? 'border-warn bg-warn-tint text-warn' : 'border-border bg-bg text-muted'}`}>
+          <span>{t(p.state === 'NOTIFIED' ? 'promoBanner' : 'promoBannerDone', { title: p.title, due: p.planDueOn })}</span>
+          <span className="shrink-0 underline">{t('promoOpen')}</span>
+        </Link>
+      ))}
       <MineBar menu={tc('menu')} title={t('title')}>
         {me.role === 'admin' && (
           <nav className="flex border-t border-border">

@@ -11,6 +11,7 @@ import { getMe } from '@/lib/auth';
 import { visibleNoticesFor } from '@/lib/notices';
 import { toKstDate } from '@/lib/time';
 import { ConfirmButton } from './ConfirmButton';
+import { unreadCount } from '@/lib/work-messages';
 
 const DAY = /^\d{4}-\d{2}-\d{2}$/;
 const field = 'num h-8 w-full min-w-0 rounded-button border border-border bg-bg px-2 text-sm text-text';
@@ -20,6 +21,7 @@ export default async function EmployeeNoticesPage({ searchParams }: { searchPara
   if (!me) redirect('/login');
   const [t, tc, f, sp] = await Promise.all([getTranslations('notices'), getTranslations('common'), getFormatter(), searchParams]);
   const all = await visibleNoticesFor(me.id, await getLocale(), new Date());
+  const unreadMsg = await unreadCount(me.id);
   // 기간: 게시 시작일(한국 날짜)로 거른다. 비워 두면 게시 중인 공지 전부 — 확인하지 않은 공지가 기간 밖이라 안 보이는 일이 없게
   const from = DAY.test(sp.from ?? '') ? sp.from! : '';
   const to = DAY.test(sp.to ?? '') ? sp.to! : '';
@@ -65,6 +67,10 @@ export default async function EmployeeNoticesPage({ searchParams }: { searchPara
   return (
     <>
       <PageShell wide>
+        <Link href="/punch/messages" className="num inline-flex min-h-11 items-center gap-2 self-start rounded-button border border-border bg-bg px-4 text-sm font-bold text-primary">
+          {t('toMessages')}
+          {unreadMsg > 0 && <span className="rounded-full bg-primary px-2 text-xs text-on-primary">{unreadMsg}</span>}
+        </Link>
         <h1 className="flex items-center gap-2 text-2xl font-semibold text-primary-deep lg:sr-only">
           <Megaphone aria-hidden size={24} strokeWidth={1.75} />
           {t('title')}

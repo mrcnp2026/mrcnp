@@ -9,7 +9,7 @@ const TABS: { href: string; key: string; also: string[] }[] = [
   { href: '/punch', key: 'tSchedule', also: ['/punch/schedule', '/punch/leave', '/punch/home-settings'] },
   { href: '/punch/records', key: 'tRecords', also: ['/punch/corrections'] },
   { href: '/punch/requests', key: 'tRequests', also: [] },
-  { href: '/punch/notices', key: 'tMessages', also: [] },
+  { href: '/punch/notices', key: 'tMessages', also: ['/punch/messages'] },
   { href: '/punch/payslips', key: 'tPayslips', also: [] },
 ];
 

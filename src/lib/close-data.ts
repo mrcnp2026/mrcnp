@@ -12,7 +12,9 @@ import { confirmKey, loadConfirms } from '@/lib/confirm-data';
 import { canonical } from '@/lib/payroll/reference';
 import { daysFor, loadPeriod, type PeriodData } from '@/lib/period-data';
 import { summarizeAnomalies } from '@/lib/anomaly';
-import { collectAnomalies, loadAnomalyPolicy } from '@/lib/anomaly-data';
+import { collectAnomalies, loadAnomalyPolicy, loadAnomalyReviews } from '@/lib/anomaly-data';
+import { loadStaff } from '@/lib/staff-data';
+import { needsSecondAdmin } from '@/lib/staff-rules';
 import { createAdminClient } from '@/lib/supabase/admin';
 
 export type CloseRow = { id: string; employeeId: string; periodFrom: string; periodTo: string; revision: number; state: 'CLOSED' | 'REOPENED'; closedBy: string; closedAt: string; reopenedBy: string | null; reopenedAt: string | null; reopenReason: string | null };
@@ -50,16 +52,17 @@ function inputHash(data: PeriodData, employeeId: string, from: string, last: str
 export async function loadCloseBoard(ym: string, practice: boolean): Promise<{ lines: CloseLine[]; data: PeriodData; from: string; last: string }> {
   const { from, to, last } = monthSpan(ym);
   const db = createAdminClient();
-  const [data, confirms, closes, { data: pr }, { data: sr }, anomalyPolicy] = await Promise.all([
+  const [data, confirms, closes, { data: pr }, { data: sr }, anomalyPolicy, reviews] = await Promise.all([
     loadPeriod(from, last, practice),
     loadConfirms(from, last, practice),
     loadCloses(ym, practice),
     db.from('punch_requests').select('employee_id').eq('is_test', practice).eq('status', 'pending').gte('work_date', from).lt('work_date', to),
     db.from('shift_requests').select('employee_id').eq('is_test', practice).eq('status', 'pending').gte('work_date', from).lt('work_date', to),
     loadAnomalyPolicy(),
+    loadAnomalyReviews(from, last, practice),
   ]);
   // 이상자 관리에서 「마감 차단」으로 정한 유형이 남아 있으면 마감하지 못한다
-  const anomalies = summarizeAnomalies(collectAnomalies(data, from, last), anomalyPolicy.policy).byEmployee;
+  const anomalies = summarizeAnomalies(collectAnomalies(data, from, last), anomalyPolicy.policy, new Set(reviews.keys())).byEmployee;
   const count = (rows: { employee_id: string }[] | null, id: string) => (rows ?? []).filter((r) => r.employee_id === id).length;
   const inMonth = (d: string) => d >= from && d <= last;
   const lines: CloseLine[] = [];
@@ -160,6 +163,47 @@ export async function reopenClose(id: string, reason: string, me: Me): Promise<v
   const { data, error } = await createAdminClient().from('attendance_closes').update({ state: 'REOPENED', reopened_by: me.id, reopened_at: new Date().toISOString(), reopen_reason: reason }).eq('id', id).eq('state', 'CLOSED').select('id');
   if (error) throw new Error(`reopenClose: ${error.code}`);
   if (!data?.length) throw new ApiError(409, 'close_not_open');
+}
+
+// ── 다시 열기의 두 번째 관리자 확인 (0038, PRD 8장) ──
+export type ReopenRequest = { id: string; closeId: string; reason: string; requestedBy: string; createdAt: string };
+/** 대기 중인 다시 열기 요청 (마감 기록 번호 → 요청) */
+export async function loadReopenRequests(closeIds: string[]): Promise<Map<string, ReopenRequest>> {
+  if (closeIds.length === 0) return new Map();
+  const { data, error } = await createAdminClient().from('attendance_reopen_requests').select('id, close_id, reason, requested_by, created_at').eq('status', 'pending').in('close_id', closeIds);
+  if (error) throw new Error(`loadReopenRequests: ${error.code}`);
+  return new Map((data ?? []).map((r) => [r.close_id as string, { id: r.id as string, closeId: r.close_id as string, reason: r.reason as string, requestedBy: r.requested_by as string, createdAt: r.created_at as string }]));
+}
+
+/**
+ * 다시 열기 — 다른 관리자가 있으면 바로 열지 않고 요청으로 남긴다(그 관리자가 확인해야 열린다). 관리자가 혼자이거나 오너면 바로 연다.
+ * 권한 변경의 「두 번째 관리자 확인」과 같은 규칙(staff-rules.ts)을 쓴다.
+ */
+export async function requestReopen(id: string, reason: string, me: Me): Promise<'reopened' | 'requested'> {
+  if (!needsSecondAdmin(me.id, await loadStaff())) {
+    await reopenClose(id, reason, me);
+    return 'reopened';
+  }
+  const db = createAdminClient();
+  const { data: c } = await db.from('attendance_closes').select('id, state').eq('id', id).maybeSingle();
+  if (!c || c.state !== 'CLOSED') throw new ApiError(409, 'close_not_open');
+  const { error } = await db.from('attendance_reopen_requests').insert({ close_id: id, reason, requested_by: me.id });
+  if (error?.code === '23505') throw new ApiError(409, 'reopen_pending');
+  if (error) throw new Error(`requestReopen: ${error.code}`);
+  return 'requested';
+}
+
+/** 요청 처리 — 확인 · 거절은 요청한 사람과 다른 관리자만, 취소는 요청한 본인만. 확인하면 요청의 사유로 마감을 연다 */
+export async function decideReopen(args: { requestId: string; decision: 'approved' | 'rejected' | 'cancelled'; me: Me }): Promise<void> {
+  const db = createAdminClient();
+  const { data: r } = await db.from('attendance_reopen_requests').select('id, close_id, reason, requested_by, status').eq('id', args.requestId).maybeSingle();
+  if (!r) throw new ApiError(404, 'not_found');
+  if (r.status !== 'pending') throw new ApiError(409, 'already');
+  if (args.decision === 'cancelled' ? r.requested_by !== args.me.id : r.requested_by === args.me.id) throw new ApiError(403, args.decision === 'cancelled' ? 'forbidden' : 'self_decision');
+  const { data: done, error } = await db.from('attendance_reopen_requests').update({ status: args.decision, decided_by: args.me.id, decided_at: new Date().toISOString() }).eq('id', r.id).eq('status', 'pending').select('id');
+  if (error) throw new Error(`decideReopen: ${error.code}`);
+  if (!done?.length) throw new ApiError(409, 'already');
+  if (args.decision === 'approved') await reopenClose(r.close_id as string, r.reason as string, args.me);
 }
 
 /**

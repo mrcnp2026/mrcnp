@@ -6,13 +6,13 @@ import Link from 'next/link';
 import { Card, CardTitle, Chip, PageShell } from '@/components/ui';
 import { OFFICE } from '@/config/office';
 import { ANOMALY_TYPES, summarizeAnomalies, type AnomalyType } from '@/lib/anomaly';
-import { collectAnomalies, loadAnomalyPolicy } from '@/lib/anomaly-data';
+import { collectAnomalies, loadAnomalyPolicy, loadAnomalyReviews } from '@/lib/anomaly-data';
 import { isMonth, monthSpan } from '@/lib/close-review';
 import { groupPath } from '@/lib/org';
 import { loadOrgGroups } from '@/lib/org-data';
 import { loadPeriod } from '@/lib/period-data';
 import { toKstDate } from '@/lib/time';
-import { PolicyForm } from './PolicyForm';
+import { PolicyForm, ReviewButton } from './PolicyForm';
 
 const shift = (ym: string, by: number) => {
   const [y, m] = ym.split('-').map(Number);
@@ -26,7 +26,8 @@ export default async function AnomaliesPage({ searchParams }: { searchParams: Pr
   const practice = OFFICE.practiceMode && sp.live !== '1';
   const { from, last } = monthSpan(month);
   const [data, groups, saved] = await Promise.all([loadPeriod(from, last, practice), loadOrgGroups(), loadAnomalyPolicy()]);
-  const sum = summarizeAnomalies(collectAnomalies(data, from, last), saved.policy);
+  const reviews = await loadAnomalyReviews(from, last, practice);
+  const sum = summarizeAnomalies(collectAnomalies(data, from, last), saved.policy, new Set(reviews.keys()));
   const only = (ANOMALY_TYPES as readonly string[]).includes(sp.k ?? '') ? (sp.k as AnomalyType) : null;
   const nameOf = new Map(data.people.map((p) => [p.id, p]));
   const rows = sum.shown
@@ -55,7 +56,8 @@ export default async function AnomaliesPage({ searchParams }: { searchParams: Pr
           )}
         </span>
         <Chip tone={blocks > 0 ? 'warn' : 'ok'}>{t('sumBlock', { n: blocks })}</Chip>
-        <Chip tone="info">{t('sumCheck', { n: sum.shown.length - blocks })}</Chip>
+        <Chip tone="info">{t('sumCheck', { n: sum.shown.filter((x) => !x.block && !x.reviewed).length })}</Chip>
+        <Chip>{t('sumReviewed', { n: sum.shown.filter((x) => !x.block && x.reviewed).length })}</Chip>
         <Link href={`/admin/closing?m=${month}${live}`} className="text-sm font-bold text-primary underline">
           {t('toClosing')}
         </Link>
@@ -103,7 +105,9 @@ export default async function AnomaliesPage({ searchParams }: { searchParams: Pr
                           ))}
                         </span>
                       </td>
-                      <td className="px-3 py-2 whitespace-nowrap">{r.block ? <span className="font-bold text-warn">{t('effectBlock')}</span> : <span className="text-muted">{t('effectCheck')}</span>}</td>
+                      <td className="px-3 py-2 whitespace-nowrap">
+                        {r.block ? <span className="font-bold text-warn">{t('effectBlock')}</span> : <ReviewButton employeeId={r.employeeId} workDate={r.workDate} types={r.types} reviewed={r.reviewed} live={sp.live === '1'} />}
+                      </td>
                       <td className="px-3 py-2 whitespace-nowrap">
                         <Link href={`/admin/records/${r.employeeId}?m=${month}${live}`} className="font-bold text-primary underline">
                           {t('toRecords')}

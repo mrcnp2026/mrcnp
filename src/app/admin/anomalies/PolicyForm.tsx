@@ -84,3 +84,25 @@ export function PolicyForm({ policy, version, counts }: { policy: AnomalyPolicy;
     </div>
   );
 }
+
+/** 「확인만」 유형의 날: 봤다고 표시하거나 거둔다. 마감을 막는 날에는 이 버튼이 없다(기록을 고쳐야 풀린다) */
+export function ReviewButton({ employeeId, workDate, types, reviewed, live }: { employeeId: string; workDate: string; types: string[]; reviewed: boolean; live: boolean }) {
+  const t = useTranslations('admin.anomalies');
+  const router = useRouter();
+  const [busy, setBusy] = useState(false);
+  return (
+    <button
+      type="button"
+      disabled={busy}
+      onClick={async () => {
+        setBusy(true);
+        await callApi('/api/admin/anomalies', { action: reviewed ? 'unreview' : 'review', employeeId, workDate, types, live });
+        setBusy(false);
+        router.refresh();
+      }}
+      className={`inline-flex h-8 items-center rounded-button border px-3 text-sm font-bold disabled:opacity-50 ${reviewed ? 'border-border bg-surface text-muted' : 'border-primary bg-bg text-primary'}`}
+    >
+      {t(reviewed ? 'reviewedUndo' : 'reviewDo')}
+    </button>
+  );
+}

@@ -4,7 +4,7 @@
 //   · 짙은 남색 196px · 한 줄 메뉴(아이콘 + 흰 글자) · 묶음 사이는 간격으로만 나눔
 //   · 근무일정 · 출퇴근기록 · 휴가: 마우스를 올리면 하위 메뉴가 **아래로** 스르륵 펼쳐진다. 그 메뉴 안에 있을 때는 펼쳐진 채로 있다
 //   · 관리 · 회사 설정: 마우스를 올려도 펼치지 않는다 — 눌러서 들어가면 사이드 메뉴 옆에 흰 둘째 메뉴가 붙는다 (2026-10-11 시프티 실측 · 의뢰인 "두 개는 클릭")
-import { Building2, CalendarRange, ChartColumn, Clock, House, Lock, Megaphone, PanelLeftClose, PanelLeftOpen, Plane, Send, UserRoundCog, Wallet, type LucideIcon } from 'lucide-react';
+import { Building2, CalendarRange, ChartColumn, Clock, House, Lock, Mail, Megaphone, PanelLeftClose, PanelLeftOpen, Plane, Send, UserRoundCog, Wallet, type LucideIcon } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 import { managerCanOpen } from '@/lib/manager-rules';
 import Link, { useLinkStatus } from 'next/link';
@@ -150,10 +150,12 @@ export function SideNav({ isAdmin, branchManager = false, inboxCount = 0 }: { is
           { href: '/admin/leave', key: 'leaveHistory' },
           { href: '/admin/leave?v=accrual', key: 'leaveAccrual' },
           { href: '/admin/leave/ledger', key: 'leaveLedger' },
+          { href: '/admin/leave/promotion', key: 'leavePromotion' },
         ],
       },
       { href: '/admin/inbox', key: 'requests', icon: Send, badge: inboxCount },
       { href: '/admin/notices', key: 'adminNotices', icon: Megaphone },
+      { href: '/admin/messages', key: 'adminMessages', icon: Mail },
       { href: '/admin/closing', key: 'closing', icon: Lock },
       {
         href: '/admin/reports/attendance',

@@ -3,7 +3,7 @@
 import { api, ApiError, readJson } from '@/lib/api';
 import { requireAdmin } from '@/lib/auth';
 import { OFFICE } from '@/config/office';
-import { closeMonth, reopenClose } from '@/lib/close-data';
+import { closeMonth, decideReopen, requestReopen } from '@/lib/close-data';
 import { isMonth } from '@/lib/close-review';
 import { toKstDate } from '@/lib/time';
 
@@ -16,7 +16,12 @@ export const POST = api('admin.closing', async (req) => {
   if (b.action === 'reopen') {
     const reason = typeof b.reason === 'string' ? b.reason.trim() : '';
     if (typeof b.id !== 'string' || !/^[0-9a-f-]{36}$/i.test(b.id) || reason.length < 2 || reason.length > 500) throw new ApiError(400, 'invalid_input');
-    await reopenClose(b.id, reason, me);
+    // 다른 관리자가 있으면 요청으로 남고(그 관리자가 확인해야 열린다), 혼자면 바로 열린다
+    return { reopen: await requestReopen(b.id, reason, me) };
+  }
+  if (b.action === 'reopenDecide') {
+    if (typeof b.requestId !== 'string' || !/^[0-9a-f-]{36}$/i.test(b.requestId) || (b.decision !== 'approved' && b.decision !== 'rejected' && b.decision !== 'cancelled')) throw new ApiError(400, 'invalid_input');
+    await decideReopen({ requestId: b.requestId, decision: b.decision, me });
     return { ok: true };
   }
   if (b.action !== 'close' || !isMonth(b.month) || !Array.isArray(b.items) || b.items.length === 0 || b.items.length > 300) throw new ApiError(400, 'invalid_input');

@@ -2,7 +2,9 @@
 // 정책(유형마다 마감 차단 / 확인 / 끔)은 회사 정책 판(payroll_policy_versions, 종류 attendance.anomaly)에 쌓는다 — 고치면 새 판, 옛 판은 남는다.
 import 'server-only';
 import { OFFICE } from '@/config/office';
-import { anomalyPolicyOf, dayAnomalies, DEFAULT_ANOMALY_POLICY, type AnomalyItem, type AnomalyPolicy } from '@/lib/anomaly';
+import { ApiError } from '@/lib/api';
+import { anomalyKey, anomalyPolicyOf, dayAnomalies, DEFAULT_ANOMALY_POLICY, type AnomalyItem, type AnomalyPolicy } from '@/lib/anomaly';
+import { createAdminClient } from '@/lib/supabase/admin';
 import type { Me } from '@/lib/auth';
 import { addDays } from '@/lib/calendar';
 import { fullLeaveSet } from '@/lib/leave';
@@ -51,4 +53,24 @@ export function collectAnomalies(data: PeriodData, from: string, to: string, now
     }
   }
   return out;
+}
+
+// ── 「확인함」 표시 (0038) ──
+export type AnomalyReview = { id: string; by: string; at: string; note: string | null };
+/** 기간 안의 확인 표시 — 열쇠는 anomalyKey(직원, 날짜) */
+export async function loadAnomalyReviews(from: string, to: string, practice: boolean): Promise<Map<string, AnomalyReview>> {
+  const { data, error } = await createAdminClient().from('attendance_anomaly_reviews').select('id, employee_id, work_date, note, reviewed_by, reviewed_at').eq('active', true).eq('is_test', practice).gte('work_date', from).lte('work_date', to);
+  if (error) throw new Error(`loadAnomalyReviews: ${error.code}`);
+  return new Map((data ?? []).map((r) => [anomalyKey(r.employee_id as string, r.work_date as string), { id: r.id as string, by: r.reviewed_by as string, at: r.reviewed_at as string, note: r.note as string | null }]));
+}
+
+/** 그 날의 이상 기록을 봤다고 표시한다. 기록을 고치는 것이 아니다 — 「확인만」 유형이 확인할 건수에서 빠질 뿐이다 */
+export async function reviewAnomaly(args: { employeeId: string; workDate: string; practice: boolean; types: string[]; note: string | null; me: Me }): Promise<void> {
+  const { error } = await createAdminClient().from('attendance_anomaly_reviews').insert({ employee_id: args.employeeId, work_date: args.workDate, is_test: args.practice, types: args.types, note: args.note, reviewed_by: args.me.id });
+  if (error && error.code !== '23505') throw new Error(`reviewAnomaly: ${error.code}`); // 23505 = 이미 확인돼 있다
+}
+export async function unreviewAnomaly(args: { employeeId: string; workDate: string; practice: boolean; me: Me }): Promise<void> {
+  const { data, error } = await createAdminClient().from('attendance_anomaly_reviews').update({ active: false, updated_by: args.me.id }).eq('employee_id', args.employeeId).eq('work_date', args.workDate).eq('is_test', args.practice).eq('active', true).select('id');
+  if (error) throw new Error(`unreviewAnomaly: ${error.code}`);
+  if (!data?.length) throw new ApiError(404, 'not_found');
 }

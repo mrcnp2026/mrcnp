@@ -7,7 +7,7 @@ import 'server-only';
 import ExcelJS from 'exceljs';
 import { OFFICE } from '@/config/office';
 import { summarizeAnomalies } from '@/lib/anomaly';
-import { collectAnomalies, loadAnomalyPolicy } from '@/lib/anomaly-data';
+import { collectAnomalies, loadAnomalyPolicy, loadAnomalyReviews } from '@/lib/anomaly-data';
 import { loadCloseBoard } from '@/lib/close-data';
 import { summarizeMonth } from '@/lib/monthly';
 import { groupScope, type OrgGroup } from '@/lib/org';
@@ -32,7 +32,7 @@ export async function buildAttendanceDeptReport(args: { ym: string; practice: bo
     loadAnomalyPolicy(),
     createAdminClient().from('staff_assignment_history').select('employee_id, group_id, valid_from, valid_to').eq('active', true),
   ]);
-  const anomalies = summarizeAnomalies(collectAnomalies(data, from, last), policy.policy).byEmployee;
+  const anomalies = summarizeAnomalies(collectAnomalies(data, from, last), policy.policy, new Set((await loadAnomalyReviews(from, last, args.practice)).keys())).byEmployee;
   const now = new Date();
   const today = toKstDate(now);
   const upTo = today < last ? today : last;

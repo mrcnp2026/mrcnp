@@ -2551,7 +2551,15 @@
       "period_locked": "This month is closed.",
       "colAnomaly": "Exceptions",
       "anomalyBlock": "Blocking {n}",
-      "anomalyCheck": "Check {n}"
+      "anomalyCheck": "Check {n}",
+      "reopenRequested": "Asked another admin to confirm reopening. It opens once they confirm.",
+      "reopenWaiting": "Waiting for confirmation · requested by {name}",
+      "reopenApprove": "Confirm and reopen",
+      "reopenReject": "Reject",
+      "reopenCancel": "Cancel request",
+      "reopen_pending": "A reopen request is already pending.",
+      "self_decision": "You cannot confirm your own request. Another admin must confirm.",
+      "already": "Already processed."
     },
     "leaveLedger": {
       "title": "Leave ledger",
@@ -2790,7 +2798,10 @@
         "unverified_place": "Not verified by office network or location.",
         "leave_day_punch": "Records on a day approved as full-day leave or off-site work."
       },
-      "payroll_version_conflict": "Another admin edited the rule first. Refresh and try again."
+      "payroll_version_conflict": "Another admin edited the rule first. Refresh and try again.",
+      "sumReviewed": "Reviewed: {n} days",
+      "reviewDo": "Mark reviewed",
+      "reviewedUndo": "Reviewed · undo"
     },
     "leaveTypeRule": {
       "title": "Request rules",
@@ -3248,6 +3259,74 @@
       "leaveNote": "Usage rate = used ÷ granted (grants usable as of the date). It is n/a when granted is 0. Advance use and expiry are shown separately. Employees whose ledger has not started are not in the totals.",
       "attFile": "attendance-report",
       "leaveFile": "leave-report"
+    },
+    "promotion": {
+      "title": "Leave use promotion",
+      "intro": "Ask staff with remaining annual leave to submit a plan, and keep the record of notice, read, plan and handling.",
+      "legal": "This screen only records the notice, its time, and the plans staff submit. The program does not judge whether the statutory promotion procedure is complete or whether unused-leave pay is waived. Have a labor attorney confirm.",
+      "createTitle": "New campaign",
+      "sample": "Please decide when you will use your remaining annual leave and submit your plan on this screen by the due date.\n\nIf no plan is submitted by the due date, the company may designate the dates and notify you.",
+      "colTitle": "Title",
+      "colBasis": "Basis date",
+      "colDue": "Plan due",
+      "colState": "State",
+      "colSent": "Sent on",
+      "state": {
+        "DRAFT": "Draft",
+        "SENT": "Sent",
+        "CLOSED": "Closed"
+      },
+      "empty": "No campaigns yet.",
+      "meta": "Basis {basis} · plan due {due}",
+      "sentOn": "sent {date}",
+      "noticeTitle": "Notice text",
+      "policyNote": "Policy note: {note}",
+      "summary": "Target {candidate} · Excluded {excluded} · No plan {notified} · Plan {plan} · Confirmed {confirmed} · Separate {exception}",
+      "colName": "Employee",
+      "colRemaining": "Remaining",
+      "colTarget": "State",
+      "colNotified": "Notified",
+      "colRead": "Read",
+      "colPlan": "Plan",
+      "colManage": "Handle",
+      "days": "{n} d",
+      "target": {
+        "CANDIDATE": "Target",
+        "EXCLUDED": "Excluded",
+        "NOTIFIED": "No plan yet",
+        "PLAN_SUBMITTED": "Plan submitted",
+        "CONFIRMED": "Confirmed",
+        "EXCEPTION": "Separate"
+      },
+      "notRead": "Unread",
+      "planMeta": "No. {n} · {at}",
+      "noTargets": "No staff had remaining annual leave on the basis date.",
+      "note": "Remaining leave is computed from the leave ledger when the campaign was created. Later leave use does not change these numbers.",
+      "fTitle": "Title",
+      "fBasis": "Basis date (remaining leave as of this day)",
+      "fDue": "Plan due date",
+      "fNotice": "Notice to staff",
+      "fPolicy": "Policy note (optional)",
+      "createHint": "Creating picks staff with leave remaining on the basis date. Until the notice is sent you can exclude or re-include targets.",
+      "create": "Create",
+      "sendConfirm": "Send the notice to {n} people. This cannot be undone.",
+      "sendYes": "Send",
+      "sendDone": "Sent to {n}.",
+      "send": "Send notice ({n})",
+      "close": "Close campaign",
+      "cancel": "Cancel",
+      "excludeReason": "Reason to exclude",
+      "excludeReasonOf": "Reason to exclude {name}",
+      "exceptionNote": "Reason for separate handling",
+      "exceptionNoteOf": "Reason for separate handling of {name}",
+      "exclude": "Exclude",
+      "include": "Include again",
+      "confirm": "Confirm",
+      "exception": "Handle separately",
+      "promotion_locked": "Not allowed in the current state.",
+      "promotion_no_targets": "There is no one to notify.",
+      "promotion_wrong_state": "This person cannot be handled in the current state.",
+      "promotion_note_required": "Enter a reason of at least 2 characters."
     }
   },
   "side": {
@@ -3354,7 +3433,8 @@
       "payroll": "Pay",
       "admin": "Manage",
       "config": "Settings",
-      "wideMenu": "Wide"
+      "wideMenu": "Wide",
+      "adminMessages": "Messages"
     },
     "leaveLedger": "Leave ledger",
     "roleManager": "Branch manager",
@@ -3367,7 +3447,9 @@
     "reportAttendance": "Attendance report",
     "reportLeave": "Leave report",
     "reportSnapshots": "Saved reports",
-    "orgChart": "Org chart"
+    "orgChart": "Org chart",
+    "adminMessages": "Work messages",
+    "leavePromotion": "Leave use promotion"
   },
   "nav": {
     "home": "Home",
@@ -3555,7 +3637,8 @@
     "colState": "Status",
     "colNote": "Note",
     "colDate": "Created",
-    "colManage": "Manage"
+    "colManage": "Manage",
+    "toMessages": "Work messages"
   },
   "leave": {
     "title": "Leave & off-site",
@@ -3626,7 +3709,10 @@
     "usageRateNone": "Usage rate: n/a (nothing granted)",
     "usageAdvance": "Used in advance: {n} d",
     "usageEnding": "{n} d must be used before {date}.",
-    "usageNote": "Calculated from the leave grants your company approved."
+    "usageNote": "Calculated from the leave grants your company approved.",
+    "promoBanner": "Please submit your leave plan: {title} (due {due})",
+    "promoBannerDone": "Leave plan submitted: {title} (editable until {due})",
+    "promoOpen": "Open"
   },
   "work": {
     "title": "Off-site / trip / remote",
@@ -3922,5 +4008,88 @@
       "out": "Off-site today"
     },
     "note": "Leave type, reason and balance are not shown."
+  },
+  "messages": {
+    "title": "Work messages",
+    "intro": "Notices from the company and inquiries you sent. Opening a message records it as read.",
+    "adminTitle": "Work messages",
+    "adminIntro": "Send notices to staff and check who read them and their replies. Sent messages cannot be edited or deleted.",
+    "composeTitle": "Send a notice",
+    "tabNotices": "Announcements",
+    "tabInbox": "Received",
+    "tabSent": "My inquiries",
+    "tabSentAdmin": "Sent notices",
+    "tabInquiries": "Inquiries",
+    "to": {
+      "all": "All staff",
+      "groups": "Pick branches / teams",
+      "people": "Pick people"
+    },
+    "fTitle": "Title",
+    "fBody": "Message",
+    "fNeedsReply": "Reply required",
+    "composeHint": "A sent message cannot be edited or deleted. The time each recipient opens it is recorded.",
+    "send": "Send",
+    "sentTo": "Sent to {n}.",
+    "ask": "Ask an admin",
+    "askTitle": "Ask an admin",
+    "askHint": "Delivered to the payroll and leave admins. Other staff cannot see it.",
+    "cancel": "Cancel",
+    "answerTo": "Answer to",
+    "fAnswer": "Answer",
+    "fReply": "Reply",
+    "answerHint": "The answer goes only to the person you pick.",
+    "answerDo": "Send answer",
+    "replyDo": "Send reply",
+    "answerDone": "Answer sent.",
+    "empty": "No messages.",
+    "unread": "Unread",
+    "kind": {
+      "notice": "Notice",
+      "inquiry": "Inquiry",
+      "system": "Automatic"
+    },
+    "needsReply": "Reply required",
+    "system": "System",
+    "readCount": "Read {read}/{all}",
+    "replyCount": "Replies {n}",
+    "toRelated": "Open related screen",
+    "readTitle": "Read by {read} of {all}",
+    "notRead": "Not read yet",
+    "readNote": "Read time is when the recipient first opened this message.",
+    "repliesTitle": "Replies ({n})",
+    "manyNote": "This went to several people, so replies from others are visible to admins only.",
+    "systemNote": "Sent automatically by the program.",
+    "message_invalid": "Check the title and message. Title up to 120, message up to 4,000 characters.",
+    "message_no_recipients": "No recipients. Pick recipients again."
+  },
+  "promotionPlan": {
+    "back": "Leave",
+    "noticeTitle": "Company notice",
+    "planTitle": "My plan",
+    "meta": "{n} days remaining (as of {basis}) · plan due {due}",
+    "state": {
+      "CANDIDATE": "Target",
+      "EXCLUDED": "Excluded",
+      "NOTIFIED": "Plan not submitted",
+      "PLAN_SUBMITTED": "Plan submitted",
+      "CONFIRMED": "Confirmed",
+      "EXCEPTION": "Handled separately"
+    },
+    "planNow": "Submitted plan (no. {n}, {at}): {dates}",
+    "closed": "The plan cannot be submitted or changed now.",
+    "decision": "Admin note: {note}",
+    "toLeave": "Go to request leave",
+    "datesTitle": "Dates to use",
+    "dateOf": "Date {n}",
+    "remove": "Remove",
+    "addDate": "Add date",
+    "fNote": "Note (optional)",
+    "hint": "Submitting a plan does not request leave. Request the actual leave on the leave screen. You can change the plan until it is closed; earlier versions stay on record.",
+    "submit": "Submit plan",
+    "resubmit": "Resubmit plan",
+    "submitted": "Submitted.",
+    "promotion_plan_invalid": "Check the dates. Enter at least one date on or after the basis date.",
+    "promotion_locked": "This campaign cannot accept plans right now."
   }
 }
