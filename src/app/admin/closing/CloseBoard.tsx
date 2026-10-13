@@ -20,6 +20,8 @@ export type Line = {
   hours: string;
   hash: string;
   ready: boolean;
+  anomalyBlocks: number; // 마감을 막는 이상 기록(일 수)
+  anomalyChecks: number; // 확인만 하는 이상 기록(일 수)
   close: { id: string; revision: number; by: string; at: string } | null;
   reopened: { revision: number; at: string; reason: string }[];
 };
@@ -91,7 +93,7 @@ export function CloseBoard({ month, live, lines, canClose }: { month: string; li
           <thead>
             <tr className="border-b border-border text-left">
               <th scope="col" className="w-10 px-3 py-2" />
-              {['colName', 'colGroup', 'colDays', 'colUnconfirmed', 'colPending', 'colHours', 'colState', 'colManage'].map((k) => (
+              {['colName', 'colGroup', 'colDays', 'colUnconfirmed', 'colPending', 'colAnomaly', 'colHours', 'colState', 'colManage'].map((k) => (
                 <th key={k} scope="col" className="px-3 py-2 whitespace-nowrap">
                   {t(k)}
                 </th>
@@ -134,6 +136,16 @@ export function CloseBoard({ month, live, lines, canClose }: { month: string; li
                             {t(`pendingOf.${p.key}`, { n: p.n })}
                           </span>
                         ))}
+                      </Link>
+                    )}
+                  </td>
+                  <td className="num px-3 py-3">
+                    {l.anomalyBlocks + l.anomalyChecks === 0 ? (
+                      0
+                    ) : (
+                      <Link href={`/admin/anomalies?m=${month}${q}`} className="flex flex-col underline">
+                        {l.anomalyBlocks > 0 && <span className="font-bold text-warn">{t('anomalyBlock', { n: l.anomalyBlocks })}</span>}
+                        {l.anomalyChecks > 0 && <span className="text-muted">{t('anomalyCheck', { n: l.anomalyChecks })}</span>}
                       </Link>
                     )}
                   </td>

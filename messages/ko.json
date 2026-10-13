@@ -233,7 +233,10 @@
     "password_wrong": "지금 비밀번호가 맞지 않습니다.",
     "device_required": "출퇴근 기기를 먼저 등록해 주세요.",
     "day_confirmed": "확정된 날의 기록입니다. 고치려면 관리자가 먼저 확정을 풀어야 합니다.",
-    "out_of_scope": "맡은 지점의 직원이 아닙니다."
+    "out_of_scope": "맡은 지점의 직원이 아닙니다.",
+    "leave_too_long": "이 휴가는 한 번에 신청할 수 있는 일수를 넘었습니다.",
+    "leave_notice": "이 휴가는 더 일찍 신청해야 합니다. 시작일을 뒤로 잡아 주세요.",
+    "leave_reason_required": "이 휴가는 사유를 적어야 합니다."
   },
   "admin": {
     "nav": {
@@ -2545,7 +2548,10 @@
       "none": "이 달에 마감할 대상이 없습니다.",
       "close_not_open": "이미 다시 열렸거나 마감 상태가 아닙니다.",
       "invalid_input": "입력한 내용을 다시 확인해 주세요.",
-      "period_locked": "마감된 달입니다."
+      "period_locked": "마감된 달입니다.",
+      "colAnomaly": "이상 기록",
+      "anomalyBlock": "차단 {n}일",
+      "anomalyCheck": "확인 {n}일"
     },
     "leaveLedger": {
       "title": "휴가 원장",
@@ -2683,7 +2689,119 @@
       "invalid_days": "일수는 0보다 크고 30분 단위여야 합니다.",
       "period_locked": "마감된 달입니다. 마감을 다시 연 뒤에 해 주세요.",
       "syncDo": "신청과 다시 맞추기",
-      "syncDone": "원장에 {n}줄을 넣었습니다. 마감된 달이라 못 넣은 것 {locked}줄."
+      "syncDone": "원장에 {n}줄을 넣었습니다. 마감된 달이라 못 넣은 것 {locked}줄.",
+      "ruleCarry": "이월: 사용 기간이 끝난 연차는 {max}일까지 다음으로 넘길 수 있고, 넘긴 연차는 {months}개월 안에 씁니다.",
+      "ruleCarryNone": "이월: 없음 — 사용 기간이 끝나면 소멸합니다.",
+      "ruleAdvance": "선사용: 받은 연차 없이 {max}일까지 미리 쓸 수 있습니다.",
+      "ruleAdvanceNone": "선사용: 허용하지 않음 — 받은 연차보다 더 쓰면 「한도 초과」로 표시됩니다.",
+      "fCarryMax": "이월 한도 (일, 0 = 이월 없음)",
+      "fCarryMonths": "이월한 연차의 사용 기간 (개월)",
+      "fAdvanceMax": "선사용 한도 (일, 0 = 허용 안 함)",
+      "colCarry": "이월",
+      "carryDo": "{n}일 이월",
+      "carryResult": {
+        "carried": "{carried}일을 이월했습니다. 소멸 {expired}일.",
+        "nothing": "이월할 연차가 없습니다.",
+        "not_expired": "아직 사용 기간이 끝나지 않았습니다.",
+        "no_policy": "이월 한도가 0입니다. 연차 생성 기준에서 먼저 정해 주세요.",
+        "locked": "마감된 달입니다. 마감을 다시 연 뒤에 해 주세요."
+      },
+      "advanceOver": "선사용 {n}일 — 한도 초과",
+      "settleTitle": "퇴사 연차 정산",
+      "settleHint": "퇴사일을 넣으면 그날 기준으로 쓰지 않고 남은 연차를 계산해 후보로 만듭니다. 승인하면 남은 연차가 원장에서 「정산」으로 0이 됩니다. 미사용 연차 수당의 금액은 급여 계산에서 정합니다. 선사용 미상계는 임금에서 자동으로 빼지 않습니다.",
+      "fRetireOn": "퇴사일",
+      "settleMake": "정산 후보 만들기",
+      "colUnused": "미사용 연차",
+      "colAdvance": "선사용 미상계",
+      "colBasis": "참고",
+      "settleLot": "{date} 지급분 {n}일",
+      "settleBasis": "입사일 기준이면 {hire}일 · 받은 연차 {got}일",
+      "settleState": {
+        "CANDIDATE": "후보",
+        "APPROVED": "승인",
+        "REJECTED": "반려",
+        "SUPERSEDED": "대체됨"
+      },
+      "settleApprove": "승인",
+      "settleReject": "반려",
+      "settleResult": {
+        "approved": "정산을 승인했습니다.",
+        "rejected": "정산 후보를 반려했습니다."
+      },
+      "leave_settlement_stale": "후보를 만든 뒤에 원장이 바뀌었습니다. 후보를 다시 만들어 주세요.",
+      "leave_settlement_done": "그 퇴사일로 승인된 정산이 이미 있습니다.",
+      "already": "이미 처리된 건입니다."
+    },
+    "anomalies": {
+      "title": "이상자 관리",
+      "intro": "출퇴근 기록에서 확인이 필요한 날을 모아 봅니다. 「마감 차단」으로 정한 유형이 남아 있으면 그 직원의 달을 마감할 수 없습니다. 고치는 것은 직원의 기록 화면에서 합니다.",
+      "prev": "이전 달",
+      "next": "다음 달",
+      "sumBlock": "마감 차단 {n}일",
+      "sumCheck": "확인 {n}일",
+      "toClosing": "마감 관리로",
+      "practice": "연습 기록 기준입니다.",
+      "listTitle": "이상 기록 {n}일",
+      "showAll": "전체 보기",
+      "empty": "이 달에는 이상 기록이 없습니다.",
+      "colDate": "날짜",
+      "colName": "이름",
+      "colGroup": "지점",
+      "colWhat": "유형",
+      "colEffect": "마감",
+      "colGo": "바로가기",
+      "effectBlock": "막음",
+      "effectCheck": "확인만",
+      "toRecords": "기록 보기",
+      "policyTitle": "유형별 기준",
+      "policyIntro": "유형마다 마감을 막을지, 확인만 할지, 보지 않을지 정합니다. 저장하면 마감 관리에 바로 적용됩니다.",
+      "policyDefault": "아직 저장한 기준이 없어 기본값으로 보고 있습니다(퇴근 누락 · 짝 없는 퇴근 · 겹침은 마감 차단).",
+      "colType": "유형",
+      "colCount": "이 달 건수",
+      "colLevel": "기준",
+      "level": {
+        "block": "마감 차단",
+        "check": "확인만",
+        "off": "보지 않음"
+      },
+      "save": "기준 저장",
+      "saved": "저장했습니다.",
+      "type": {
+        "missing_in": "출근 누락",
+        "missing_out": "퇴근 누락",
+        "orphan_out": "짝 없는 퇴근",
+        "overlap": "시간 겹침 · 뒤집힘",
+        "duplicate": "중복 기록",
+        "late": "지각",
+        "early": "조퇴",
+        "no_plan_work": "일정 없는 날 근무",
+        "unverified_place": "근무지 미확인",
+        "leave_day_punch": "휴가 · 외근일 기록"
+      },
+      "why": {
+        "missing_in": "일정이 있는데 출근 기록이 없습니다(결근일 수 있습니다).",
+        "missing_out": "출근만 있고 퇴근이 없어 근무시간을 알 수 없습니다.",
+        "orphan_out": "출근 없이 퇴근만 있습니다.",
+        "overlap": "출퇴근 시각이 서로 겹치거나 퇴근이 출근보다 앞섭니다.",
+        "duplicate": "출근 또는 퇴근을 연달아 두 번 찍었습니다.",
+        "late": "일정 시작(허용 시간 포함)보다 늦게 출근했습니다.",
+        "early": "일정이 끝나기 전에 퇴근했습니다.",
+        "no_plan_work": "쉬는 날 · 일정 없는 날에 기록이 있습니다.",
+        "unverified_place": "사무실 인터넷 · 위치 어느 쪽으로도 확인되지 않은 기록입니다.",
+        "leave_day_punch": "하루 휴가 또는 외근 · 출장 · 재택으로 승인된 날에 기록이 있습니다."
+      },
+      "payroll_version_conflict": "다른 관리자가 먼저 기준을 고쳤습니다. 화면을 새로 고친 뒤 다시 해 주세요."
+    },
+    "leaveTypeRule": {
+      "title": "신청 규칙",
+      "intro": "이 종류를 신청할 때의 제한입니다. 비워 두면 제한이 없습니다.",
+      "max": "한 번에 신청할 수 있는 최대 일수",
+      "notice": "며칠 전까지 신청 (0 = 당일도 가능)",
+      "reason": "사유를 꼭 적어야 함",
+      "save": "규칙 저장",
+      "saved": "저장했습니다.",
+      "version": "{n}판 · {from}부터",
+      "leave_version_conflict": "다른 관리자가 먼저 고쳤습니다. 화면을 새로 고친 뒤 다시 해 주세요."
     }
   },
   "side": {
@@ -2793,7 +2911,8 @@
       "wideMenu": "와이드"
     },
     "leaveLedger": "휴가 원장",
-    "roleManager": "지점관리자"
+    "roleManager": "지점관리자",
+    "anomalies": "이상자 관리"
   },
   "nav": {
     "home": "홈",

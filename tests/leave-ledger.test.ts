@@ -1,6 +1,6 @@
 // 휴가 원장 — 발생 계획 · 잔여 · 차감 배분 · 신청 맞추기 · 소멸
 import { describe, expect, it } from 'vitest';
-import { addMonths, allocate, annualDays, entriesFor, ledgerBalance, lotRemaining, planAccrual, planExpiry, planRequest, STANDARD_LEAVE_POLICY, validateLeavePolicy, type Entry, type Lot } from '@/lib/leave-ledger';
+import { addMonths, allocate, annualDays, checkTypeRule, entriesFor, ledgerBalance, lotRemaining, planAccrual, planExpiry, planOffset, planRequest, settleLeave, splitCarry, STANDARD_LEAVE_POLICY, validateLeavePolicy, validateTypeRule, type Entry, type Lot } from '@/lib/leave-ledger';
 
 const P = STANDARD_LEAVE_POLICY;
 const lot = (id: string, o: Partial<Lot> = {}): Lot => ({ id, employeeId: 'e', typeCode: 'annual', kind: 'annual', grantedOn: '2026-01-01', usableFrom: '2026-01-01', usableTo: '2027-01-01', quantityMinutes: 7200, dayMinutes: 480, state: 'APPROVED', ...o });
@@ -148,5 +148,66 @@ describe('소멸', () => {
     const lots = [lot('old', { usableTo: '2026-03-01' }), lot('live'), lot('zero', { usableTo: '2026-03-01' })];
     const es = [ent({ lotId: 'old', minutes: 960 }), ent({ lotId: 'old', event: 'use', minutes: -480, requestId: 'r' }), ent({ lotId: 'live', minutes: 480 }), ent({ lotId: 'zero', minutes: 480 }), ent({ lotId: 'zero', event: 'use', minutes: -480, requestId: 'q' })];
     expect(planExpiry(lots, es, '2026-06-01').map((e) => [e.lotId, e.minutes, e.effectiveOn, e.dedupeKey])).toEqual([['old', -480, '2026-03-01', 'expire:old']]);
+  });
+});
+
+describe('이월', () => {
+  it('한도까지만 넘기고 나머지는 소멸', () => {
+    expect(splitCarry(2400, { ...P, carryMaxDays: 3 })).toEqual({ carry: 1440, expire: 960 });
+    expect(splitCarry(480, { ...P, carryMaxDays: 3 })).toEqual({ carry: 480, expire: 0 });
+    expect(splitCarry(480, P)).toEqual({ carry: 0, expire: 480 });
+  });
+  it('이월 · 선사용 칸이 없는 옛 판은 「없음」으로 읽는다', () => {
+    const old = { basis: P.basis, fiscalStart: P.fiscalStart, dayMinutes: P.dayMinutes, monthlyMax: P.monthlyMax, baseDays: P.baseDays, extraEveryYears: P.extraEveryYears, maxDays: P.maxDays, rounding: P.rounding };
+    expect(validateLeavePolicy(old)).toEqual(P);
+    expect(validateLeavePolicy({ ...P, carryMaxDays: -1 })).toBeNull();
+  });
+});
+
+describe('선사용 상계', () => {
+  it('지급 건이 생기면 선사용을 그 건에서 갚는다', () => {
+    const es = [ent({ lotId: null, event: 'advance', minutes: -720, requestId: 'r' }), ent({ lotId: 'a', minutes: 480 })];
+    const add = planOffset([lot('a')], es, '2026-06-01', false);
+    expect(add.map((e) => [e.lotId, e.minutes])).toEqual([[null, 480], ['a', -480]]);
+    const after = [...es, ...add.map((e) => ent(e))];
+    expect(planOffset([lot('a')], after, '2026-06-01', false)).toEqual([]);
+    expect(ledgerBalance([lot('a')], after, '2026-06-01')).toMatchObject({ remaining: -240, advance: 240 });
+  });
+  it('선사용이 없으면 아무것도 하지 않는다', () => {
+    expect(planOffset([lot('a')], [ent({ lotId: 'a', minutes: 480 })], '2026-06-01', false)).toEqual([]);
+  });
+});
+
+describe('퇴사 정산', () => {
+  it('퇴사일에 쓸 수 있던 지급 건의 남은 분과 미상계 선사용', () => {
+    const lots = [lot('a'), lot('old', { usableTo: '2026-03-01' }), lot('next', { usableFrom: '2027-01-01', usableTo: '2028-01-01' })];
+    const es = [ent({ lotId: 'a', minutes: 7200 }), ent({ lotId: 'a', event: 'use', minutes: -960, requestId: 'r' }), ent({ lotId: 'old', minutes: 480 }), ent({ lotId: 'next', minutes: 7200 }), ent({ lotId: null, event: 'advance', minutes: -120, requestId: 'q' })];
+    const s = settleLeave({ lots, entries: es, retireOn: '2026-08-31', hiredOn: '2025-01-01', policy: P });
+    expect(s.lots.map((l) => [l.lotId, l.minutes])).toEqual([['a', 6240]]);
+    expect([s.unusedMinutes, s.advanceMinutes, s.hireBasisMinutes]).toEqual([6240, 120, null]);
+  });
+  it('회계연도 기준이면 입사일 기준으로 받았을 양을 참고로 낸다', () => {
+    const s = settleLeave({ lots: [lot('a', { quantityMinutes: 8 * 480 })], entries: [ent({ lotId: 'a', minutes: 8 * 480 })], retireOn: '2026-08-31', hiredOn: '2025-07-01', policy: { ...P, basis: 'fiscal_year' } });
+    // 입사일 기준: 월 발생 11일 + 1주년(2026-07-01) 15일 = 26일
+    expect(s.hireBasisMinutes).toBe(26 * 480);
+    expect(s.grantedMinutes).toBe(8 * 480);
+  });
+});
+
+describe('휴가 종류별 신청 규칙', () => {
+  const rule = { maxDaysPerRequest: 3, minNoticeDays: 2, reasonRequired: true };
+  it('한도 · 미리 신청 · 사유', () => {
+    const ok = { days: 2, startDate: '2026-10-20', today: '2026-10-13', reason: '병원' };
+    expect(checkTypeRule(rule, ok)).toBeNull();
+    expect(checkTypeRule(rule, { ...ok, days: 4 })).toBe('leave_too_long');
+    expect(checkTypeRule(rule, { ...ok, startDate: '2026-10-14' })).toBe('leave_notice');
+    expect(checkTypeRule(rule, { ...ok, startDate: '2026-10-15' })).toBeNull();
+    expect(checkTypeRule(rule, { ...ok, reason: ' ' })).toBe('leave_reason_required');
+  });
+  it('입력 검사', () => {
+    expect(validateTypeRule({ maxDaysPerRequest: '', minNoticeDays: null, reasonRequired: false })).toEqual({ maxDaysPerRequest: null, minNoticeDays: null, reasonRequired: false });
+    expect(validateTypeRule({ maxDaysPerRequest: 0, minNoticeDays: null, reasonRequired: false })).toBeNull();
+    expect(validateTypeRule({ maxDaysPerRequest: 1, minNoticeDays: 1.5, reasonRequired: false })).toBeNull();
+    expect(validateTypeRule({ maxDaysPerRequest: 1, minNoticeDays: 1 })).toBeNull();
   });
 });

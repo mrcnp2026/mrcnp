@@ -44,6 +44,8 @@ export default async function ClosingPage({ searchParams }: { searchParams: Prom
     hours: hm(l.review.payableMinutes),
     hash: l.hash,
     ready: l.review.blockers === 0,
+    anomalyBlocks: l.review.anomalyBlocks,
+    anomalyChecks: l.review.anomalyChecks,
     close: l.close ? { id: l.close.id, revision: l.close.revision, by: nameOf.get(l.close.closedBy) ?? '', at: toKstDate(new Date(l.close.closedAt)) } : null,
     reopened: l.history.filter((h) => h.state === 'REOPENED').map((h) => ({ revision: h.revision, at: h.reopenedAt ? toKstDate(new Date(h.reopenedAt)) : '', reason: h.reopenReason ?? '' })),
   }));

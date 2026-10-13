@@ -5,7 +5,10 @@ import { DetailBar } from '@/components/detail';
 import { Card, Chip, PageShell } from '@/components/ui';
 import { leaveTypeName } from '@/lib/leave';
 import { loadAllLeaveTypes } from '@/lib/leave-data';
+import { NO_TYPE_RULE } from '@/lib/leave-ledger';
+import { loadTypeRules } from '@/lib/leave-ledger-data';
 import { LeaveTypeForm, LeaveTypeToggle } from '../TypeForms';
+import { TypeRuleForm } from '../TypeRuleForm';
 
 export default async function LeaveTypePage({ params }: { params: Promise<{ code: string }> }) {
   const [t, tl, { code }] = await Promise.all([getTranslations('admin.leaveTypes'), getTranslations('leave'), params]);
@@ -15,6 +18,7 @@ export default async function LeaveTypePage({ params }: { params: Promise<{ code
   const name = leaveTypeName(all, x.code, tl);
   const groups = [...new Set(all.map((v) => v.groupName).filter((g): g is string => !!g))].sort((a, b) => a.localeCompare(b));
   const tc = await getTranslations('common');
+  const rule = (await loadTypeRules()).get(x.code); // 종류별 신청 규칙 (없으면 제한 없음)
 
   return (
     <PageShell>
@@ -30,6 +34,9 @@ export default async function LeaveTypePage({ params }: { params: Promise<{ code
           groups={groups}
           initial={{ code: x.code, name, hours: x.hours ?? 8, startTime: x.startTime ?? null, endTime: x.endTime ?? null, groupName: x.groupName ?? null, isPaid: x.isPaid, deductsBalance: x.deductsBalance, builtin: !!x.builtin }}
         />
+      </Card>
+      <Card className="flex flex-col gap-3">
+        <TypeRuleForm key={rule?.version ?? 0} code={x.code} version={rule?.version ?? 0} rule={rule?.rule ?? NO_TYPE_RULE} />
       </Card>
       <LeaveTypeToggle code={x.code} active={!!x.active} />
     </PageShell>

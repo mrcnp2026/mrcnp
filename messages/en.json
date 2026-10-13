@@ -233,7 +233,10 @@
     "password_wrong": "The current password is not correct.",
     "device_required": "Please register your punch device first.",
     "day_confirmed": "This day is confirmed. An admin must undo the confirmation before it can be changed.",
-    "out_of_scope": "This person is not in your branches."
+    "out_of_scope": "This person is not in your branches.",
+    "leave_too_long": "This leave exceeds the maximum days per request.",
+    "leave_notice": "This leave must be requested earlier. Choose a later start date.",
+    "leave_reason_required": "A reason is required for this leave."
   },
   "admin": {
     "nav": {
@@ -2545,7 +2548,10 @@
       "none": "Nobody to close in this month.",
       "close_not_open": "It was already reopened or is not closed.",
       "invalid_input": "Please check what you entered.",
-      "period_locked": "This month is closed."
+      "period_locked": "This month is closed.",
+      "colAnomaly": "Exceptions",
+      "anomalyBlock": "Blocking {n}",
+      "anomalyCheck": "Check {n}"
     },
     "leaveLedger": {
       "title": "Leave ledger",
@@ -2683,7 +2689,119 @@
       "invalid_days": "Days must be above 0 in 30-minute steps.",
       "period_locked": "That month is closed. Reopen it first.",
       "syncDo": "Re-sync with requests",
-      "syncDone": "Added {n} ledger lines. Blocked by a closed month: {locked}."
+      "syncDone": "Added {n} ledger lines. Blocked by a closed month: {locked}.",
+      "ruleCarry": "Carry-over: up to {max} days of expired leave can be carried over and used within {months} months.",
+      "ruleCarryNone": "Carry-over: none — leave expires at the end of its period.",
+      "ruleAdvance": "Advance use: up to {max} days can be used before being granted.",
+      "ruleAdvanceNone": "Advance use: not allowed — using more than granted is marked as over the limit.",
+      "fCarryMax": "Carry-over limit (days, 0 = none)",
+      "fCarryMonths": "Carried leave usable for (months)",
+      "fAdvanceMax": "Advance limit (days, 0 = not allowed)",
+      "colCarry": "Carry over",
+      "carryDo": "Carry {n} d",
+      "carryResult": {
+        "carried": "Carried over {carried} d. Expired {expired} d.",
+        "nothing": "Nothing to carry over.",
+        "not_expired": "The usable period has not ended yet.",
+        "no_policy": "The carry-over limit is 0. Set it in the leave rule first.",
+        "locked": "That month is closed. Reopen it first."
+      },
+      "advanceOver": "Used in advance: {n} d — over the limit",
+      "settleTitle": "Leave settlement on leaving",
+      "settleHint": "Enter the last day to calculate unused leave as of that date as a candidate. Approving writes the remaining leave as settled in the ledger. The payout amount is decided in payroll. Unsettled advance use is never deducted from wages automatically.",
+      "fRetireOn": "Last day",
+      "settleMake": "Create candidate",
+      "colUnused": "Unused leave",
+      "colAdvance": "Unsettled advance",
+      "colBasis": "Note",
+      "settleLot": "Grant of {date}: {n} d",
+      "settleBasis": "Hire-date basis: {hire} d · granted: {got} d",
+      "settleState": {
+        "CANDIDATE": "Candidate",
+        "APPROVED": "Approved",
+        "REJECTED": "Rejected",
+        "SUPERSEDED": "Superseded"
+      },
+      "settleApprove": "Approve",
+      "settleReject": "Reject",
+      "settleResult": {
+        "approved": "Settlement approved.",
+        "rejected": "Candidate rejected."
+      },
+      "leave_settlement_stale": "The ledger changed after the candidate was created. Create it again.",
+      "leave_settlement_done": "A settlement for that date is already approved.",
+      "already": "Already processed."
+    },
+    "anomalies": {
+      "title": "Attendance exceptions",
+      "intro": "Days whose records need a look. If a type set to block closing remains, that employee's month cannot be closed. Fix records on the employee's record screen.",
+      "prev": "Previous month",
+      "next": "Next month",
+      "sumBlock": "Blocking: {n} days",
+      "sumCheck": "To check: {n} days",
+      "toClosing": "Go to closing",
+      "practice": "Based on practice records.",
+      "listTitle": "Exception days: {n}",
+      "showAll": "Show all",
+      "empty": "No exceptions this month.",
+      "colDate": "Date",
+      "colName": "Name",
+      "colGroup": "Branch",
+      "colWhat": "Type",
+      "colEffect": "Closing",
+      "colGo": "Open",
+      "effectBlock": "Blocks",
+      "effectCheck": "Check only",
+      "toRecords": "View records",
+      "policyTitle": "Rule by type",
+      "policyIntro": "Choose for each type whether it blocks closing, is check-only, or is ignored. Saving applies to closing immediately.",
+      "policyDefault": "No saved rule yet; defaults are shown (missing clock-out, unpaired clock-out and overlap block closing).",
+      "colType": "Type",
+      "colCount": "This month",
+      "colLevel": "Rule",
+      "level": {
+        "block": "Block closing",
+        "check": "Check only",
+        "off": "Ignore"
+      },
+      "save": "Save rule",
+      "saved": "Saved.",
+      "type": {
+        "missing_in": "Missing clock-in",
+        "missing_out": "Missing clock-out",
+        "orphan_out": "Unpaired clock-out",
+        "overlap": "Overlap / reversed",
+        "duplicate": "Duplicate",
+        "late": "Late",
+        "early": "Left early",
+        "no_plan_work": "Work on a day off",
+        "unverified_place": "Place not verified",
+        "leave_day_punch": "Record on leave day"
+      },
+      "why": {
+        "missing_in": "Scheduled but no clock-in (may be an absence).",
+        "missing_out": "Clock-in without clock-out; hours are unknown.",
+        "orphan_out": "Clock-out without clock-in.",
+        "overlap": "Times overlap or clock-out is before clock-in.",
+        "duplicate": "Clocked in or out twice in a row.",
+        "late": "Clocked in after the scheduled start (with grace).",
+        "early": "Clocked out before the scheduled end.",
+        "no_plan_work": "Records on a day off or unscheduled day.",
+        "unverified_place": "Not verified by office network or location.",
+        "leave_day_punch": "Records on a day approved as full-day leave or off-site work."
+      },
+      "payroll_version_conflict": "Another admin edited the rule first. Refresh and try again."
+    },
+    "leaveTypeRule": {
+      "title": "Request rules",
+      "intro": "Limits when requesting this type. Leave blank for no limit.",
+      "max": "Maximum days per request",
+      "notice": "Request at least N days ahead (0 = same day allowed)",
+      "reason": "Reason is required",
+      "save": "Save rules",
+      "saved": "Saved.",
+      "version": "Version {n} · from {from}",
+      "leave_version_conflict": "Another admin edited it first. Refresh and try again."
     }
   },
   "side": {
@@ -2793,7 +2911,8 @@
       "wideMenu": "Wide"
     },
     "leaveLedger": "Leave ledger",
-    "roleManager": "Branch manager"
+    "roleManager": "Branch manager",
+    "anomalies": "Exceptions"
   },
   "nav": {
     "home": "Home",

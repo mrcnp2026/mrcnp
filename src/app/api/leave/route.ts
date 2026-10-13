@@ -1,5 +1,7 @@
 // 직원의 휴가 신청 (②-2 7-3, 4-7·4-11). 일수·상태·작성자는 서버가 정한다 (요청 본문의 days·status 무시).
 // 사유는 선택 (4-7). 차감 대상(연차·반차·반반차)은 잔여 − 대기보다 많이 신청할 수 없다.
+import { checkTypeRule } from '@/lib/leave-ledger';
+import { loadTypeRules } from '@/lib/leave-ledger-data';
 import { OFFICE } from '@/config/office';
 import { api, ApiError, readJson } from '@/lib/api';
 import { getMe } from '@/lib/auth';
@@ -36,6 +38,11 @@ export const POST = api('leave.create', async (req) => {
   if (!dayTypeOf) throw new ApiError(409, 'no_rule');
   const days = countLeaveDays({ type, startDate: start, endDate: end, dayTypeOf });
   if (days <= 0) throw new ApiError(400, 'no_workdays');
+
+  // 종류별 신청 규칙 (한 번에 낼 수 있는 일수 · 며칠 전까지 · 사유 필수) — 정해 둔 종류만
+  const rule = (await loadTypeRules()).get(type.code)?.rule;
+  const broke = rule ? checkTypeRule(rule, { days, startDate: start, today, reason }) : null;
+  if (broke) throw new ApiError(400, broke);
 
   const mine = await loadLeaveRequests({ employeeId: me.id, from: start, to: end });
   // 겹침: 같은 날 대기·승인 휴가의 단위 합이 하루를 넘으면 막는다 (반차 두 번 = 하루는 허용)

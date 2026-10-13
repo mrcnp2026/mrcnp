@@ -5,8 +5,8 @@ import { PageShell } from '@/components/ui';
 import { OFFICE } from '@/config/office';
 import { calcLeaveBalance } from '@/lib/leave';
 import { loadAllLeaveTypes, loadLeaveGrants, loadLeaveRequests } from '@/lib/leave-data';
-import { entriesFor, ledgerBalance, lotRemaining, minutesToDays } from '@/lib/leave-ledger';
-import { loadDefaultPolicies, loadEntries, loadExpiring, loadLots } from '@/lib/leave-ledger-data';
+import { entriesFor, ledgerBalance, lotRemaining, minutesToDays, splitCarry } from '@/lib/leave-ledger';
+import { loadDefaultPolicies, loadEntries, loadExpiring, loadLots, loadSettlements } from '@/lib/leave-ledger-data';
 import { createAdminClient } from '@/lib/supabase/admin';
 import { toKstDate } from '@/lib/time';
 import { LedgerBoard, type BalanceLine, type EntryLine, type LotLine } from './LedgerBoard';
@@ -42,6 +42,7 @@ export default async function LeaveLedgerPage({ searchParams }: { searchParams: 
       const old = calcLeaveBalance({ grants: grants.filter((g) => g.employeeId === p.id), requests: requests.filter((r) => r.employeeId === p.id), types, asOf: today });
       const started = mine.some((l) => l.state === 'APPROVED');
       return {
+        advanceOver: b.advance > Math.round((policies[0]?.policy.advanceMaxDays ?? 0) * 480),
         employeeId: p.id as string, name: p.name as string, joinedOn: (p.joined_on as string | null) ?? null, active: p.active as boolean, started,
         granted: d(b.granted), used: d(b.used), expired: d(b.expired), remaining: d(b.remaining), advance: d(b.advance), upcoming: d(b.upcoming),
         old: old.grant ? old.remaining : null,
@@ -54,6 +55,7 @@ export default async function LeaveLedgerPage({ searchParams }: { searchParams: 
     ? shown.filter((e) => e.employeeId === emp).map((e) => ({ id: e.id, event: e.event, days: d(e.minutes), on: e.effectiveOn, lot: e.lotId ? (lotLabel.get(e.lotId) ?? '') : null, fromRequest: e.requestId !== null }))
     : [];
   const p = policies[0] ?? null;
+  const settlements = emp ? await loadSettlements(emp) : [];
 
   return (
     <PageShell wide>
@@ -68,9 +70,9 @@ export default async function LeaveLedgerPage({ searchParams }: { searchParams: 
         policy={p ? { id: p.id, version: p.version, validFrom: p.validFrom, verification: p.verification, value: p.policy } : null}
         history={policies.slice(1).map((x) => ({ version: x.version, validFrom: x.validFrom, validTo: x.validTo, basis: x.policy.basis, reason: x.reason }))}
         candidates={lots.filter((l) => l.state === 'CANDIDATE').map((l) => toLine(l, remAll))}
-        expiring={expiring.map((x) => ({ id: x.lot.id, name: nameOf.get(x.lot.employeeId) ?? '', usableTo: x.lot.usableTo ?? '', days: d(x.minutes) }))}
+        expiring={expiring.map((x) => ({ id: x.lot.id, name: nameOf.get(x.lot.employeeId) ?? '', usableTo: x.lot.usableTo ?? '', days: d(x.minutes), carry: p ? d(splitCarry(x.minutes, p.policy).carry) : 0 }))}
         balances={balances}
-        emp={emp ? { id: emp, name: nameOf.get(emp) ?? '', lots: empLots, entries: empEntries } : null}
+        emp={emp ? { id: emp, name: nameOf.get(emp) ?? '', lots: empLots, entries: empEntries, settlements: settlements.map((x) => ({ id: x.id, retireOn: x.retireOn, revision: x.revision, state: x.state, unused: d(x.unusedMinutes), advance: d(x.advanceMinutes), hireBasis: x.snapshot.hireBasisMinutes === null ? null : d(x.snapshot.hireBasisMinutes), granted: d(x.snapshot.grantedMinutes), lots: x.snapshot.lots.map((l) => ({ grantedOn: l.grantedOn, days: d(l.minutes) })) })) } : null}
       />
     </PageShell>
   );

@@ -5,7 +5,9 @@
 import 'server-only';
 import { ApiError } from '@/lib/api';
 import type { Me } from '@/lib/auth';
-import { DAY_MINUTES, lotRemaining, planAccrual, planExpiry, planRequest, STANDARD_LEAVE_POLICY, validateLeavePolicy, type Entry, type LeavePolicy, type Lot, type NewEntry, type PlannedLot } from '@/lib/leave-ledger';
+import { addMonths, DAY_MINUTES, entriesFor, lotRemaining, NO_TYPE_RULE, planAccrual, planExpiry, planOffset, planRequest, settleLeave, splitCarry, STANDARD_LEAVE_POLICY, validateLeavePolicy, validateTypeRule, type Entry, type LeavePolicy, type LeaveTypeRule, type Lot, type NewEntry, type PlannedLot, type Settlement } from '@/lib/leave-ledger';
+import { addDays } from '@/lib/calendar';
+import { toKstDate } from '@/lib/time';
 import { createAdminClient } from '@/lib/supabase/admin';
 
 export const ACCRUAL_TYPE = 'annual'; // 연차 지급 건의 휴가 종류. 반차 · 반반차처럼 「차감하는 종류」는 전부 이 잔여에서 뺀다
@@ -262,6 +264,15 @@ export async function syncEmployeeLedger(employeeId: string, actorId: string | n
     // 마감에 막힌 줄이 없을 때만 다음 신청의 계산에 반영한다(막힌 신청은 원장에 없는 것으로 둔다)
     if (res.locked === 0) entries = [...entries, ...plan.map((p) => ({ id: fake--, employeeId, lotId: p.lotId, event: p.event, minutes: p.minutes, effectiveOn: p.effectiveOn, isTest: p.isTest, requestId: p.requestId }))];
   }
+  // 선사용이 남아 있고 쓸 수 있는 지급 건이 있으면 그 건에서 갚는다(운영 기준)
+  if (lots.length > 0) {
+    const off = planOffset(lots, entriesFor(entries, false), toKstDate(new Date()), false);
+    if (off.length) {
+      const res = await insertEntries(employeeId, off, actorId);
+      added += res.added;
+      locked += res.locked;
+    }
+  }
   return { added, locked };
 }
 
@@ -297,6 +308,125 @@ export async function runExpiry(args: { asOf: string; me: Me }): Promise<{ expir
   }
   if (run) await c.from('leave_runs').update({ status: locked ? 'partial' : 'done', summary: { expired, locked }, ended_at: new Date().toISOString() }).eq('id', run.id);
   return { expired, locked };
+}
+
+// ── 이월 (M5) ──
+/**
+ * 사용 기간이 끝난 지급 건의 남은 분을 정책 한도까지 새 지급 건(이월)으로 넘기고, 나머지는 소멸로 적는다.
+ * 관리자가 건마다 눌러야 한다 — 자동으로 넘기지 않는다. 이월 지급 건은 누른 관리자가 승인한 것으로 남는다.
+ */
+export async function carryLot(args: { lotId: string; me: Me }): Promise<{ result: 'carried' | 'nothing' | 'not_expired' | 'no_policy' | 'locked'; carried: number; expired: number }> {
+  const c = db();
+  const today = toKstDate(new Date());
+  const { data: row } = await c.from('leave_grant_lots').select('*').eq('id', args.lotId).maybeSingle();
+  if (!row) throw new ApiError(404, 'not_found');
+  const lot = toLot(row);
+  const policy = (await loadDefaultPolicies())[0]?.policy;
+  if (!policy || policy.carryMaxDays <= 0) return { result: 'no_policy', carried: 0, expired: 0 };
+  if (lot.state !== 'APPROVED' || lot.usableTo === null || lot.usableTo > today) return { result: 'not_expired', carried: 0, expired: 0 };
+  const left = (await loadEntries(lot.employeeId)).filter((e) => !e.isTest && e.lotId === lot.id).reduce((a, e) => a + e.minutes, 0);
+  const { carry, expire } = splitCarry(left, policy);
+  if (carry <= 0) return { result: 'nothing', carried: 0, expired: 0 };
+  // 먼저 옛 건에서 빼는 줄을 넣는다 — 마감에 막히면 새 건을 만들지 않는다
+  const out = await insertEntries(lot.employeeId, [{ lotId: lot.id, event: 'carry_out', minutes: -carry, effectiveOn: lot.usableTo, isTest: false, requestId: null, dedupeKey: `carry_out:${lot.id}` }], args.me.id);
+  if (out.locked) return { result: 'locked', carried: 0, expired: 0 };
+  const { data: made, error } = await c
+    .from('leave_grant_lots')
+    .insert({
+      employee_id: lot.employeeId, type_code: lot.typeCode, lot_kind: 'carry', accrual_from: lot.accrualFrom, accrual_to: lot.accrualTo, granted_on: lot.usableTo, usable_from: lot.usableTo, usable_to: addMonths(lot.usableTo, policy.carryValidMonths),
+      quantity_minutes: carry, day_minutes: lot.dayMinutes, basis: { rule: 'carry', from: lot.id }, source_ref: lot.id, dedupe_key: `carry:${lot.id}`, state: 'APPROVED', decided_by: args.me.id, decided_at: new Date().toISOString(), created_by: args.me.id,
+    })
+    .select('id')
+    .single();
+  let newId = made?.id as string | undefined;
+  if (error?.code === '23505') newId = ((await c.from('leave_grant_lots').select('id').eq('dedupe_key', `carry:${lot.id}`).in('state', ['CANDIDATE', 'APPROVED']).maybeSingle()).data?.id as string | undefined) ?? undefined;
+  else if (error) boom('carryLot.insert', error);
+  if (!newId) boom('carryLot.find', null);
+  const rest: NewEntry[] = [{ lotId: newId!, event: 'carry_in', minutes: carry, effectiveOn: lot.usableTo, isTest: false, requestId: null, dedupeKey: `grant:${newId}` }];
+  if (expire > 0) rest.push({ lotId: lot.id, event: 'expire', minutes: -expire, effectiveOn: lot.usableTo, isTest: false, requestId: null, dedupeKey: `expire:${lot.id}` });
+  await insertEntries(lot.employeeId, rest, args.me.id);
+  await syncEmployeeLedger(lot.employeeId, args.me.id);
+  return { result: 'carried', carried: carry, expired: expire };
+}
+
+// ── 퇴사자 연차 정산 (M5) ──
+export type SettlementRow = { id: string; employeeId: string; retireOn: string; revision: number; snapshot: Settlement; unusedMinutes: number; advanceMinutes: number; state: 'CANDIDATE' | 'APPROVED' | 'REJECTED' | 'SUPERSEDED'; createdAt: string; decidedAt: string | null };
+const toSettlement = (r: Row): SettlementRow => ({ id: r.id as string, employeeId: r.employee_id as string, retireOn: r.retire_on as string, revision: r.revision as number, snapshot: r.snapshot as Settlement, unusedMinutes: r.unused_minutes as number, advanceMinutes: r.advance_minutes as number, state: r.state as SettlementRow['state'], createdAt: r.created_at as string, decidedAt: r.decided_at as string | null });
+
+export async function loadSettlements(employeeId: string): Promise<SettlementRow[]> {
+  const { data, error } = await db().from('leave_settlements').select('*').eq('employee_id', employeeId).order('created_at', { ascending: false });
+  if (error) boom('loadSettlements', error);
+  return (data ?? []).map(toSettlement);
+}
+
+async function computeSettlement(employeeId: string, retireOn: string): Promise<Settlement> {
+  const [lots, entries, policies, { data: p }] = await Promise.all([loadLots({ employeeId }), loadEntries(employeeId), loadDefaultPolicies(), db().from('profiles').select('joined_on').eq('id', employeeId).maybeSingle()]);
+  if (!policies[0]) throw new ApiError(409, 'leave_policy_missing');
+  return settleLeave({ lots, entries: entriesFor(entries, false), retireOn, hiredOn: (p?.joined_on as string | null) ?? null, policy: policies[0].policy });
+}
+
+/** 퇴사일 기준 정산 후보를 만든다. 앞서 만든 후보는 「대체됨」으로 바꾼다. 승인하기 전에는 원장에 아무것도 넣지 않는다 */
+export async function createSettlement(args: { employeeId: string; retireOn: string; me: Me }): Promise<SettlementRow> {
+  const c = db();
+  const snapshot = await computeSettlement(args.employeeId, args.retireOn);
+  const prev = await loadSettlements(args.employeeId);
+  if (prev.some((s) => s.state === 'APPROVED' && s.retireOn === args.retireOn)) throw new ApiError(409, 'leave_settlement_done');
+  for (const s of prev.filter((x) => x.state === 'CANDIDATE')) await c.from('leave_settlements').update({ state: 'SUPERSEDED' }).eq('id', s.id).eq('state', 'CANDIDATE');
+  const revision = Math.max(0, ...prev.filter((s) => s.retireOn === args.retireOn).map((s) => s.revision)) + 1;
+  const { data, error } = await c.from('leave_settlements').insert({ employee_id: args.employeeId, retire_on: args.retireOn, revision, snapshot, unused_minutes: snapshot.unusedMinutes, advance_minutes: snapshot.advanceMinutes, created_by: args.me.id }).select('*').single();
+  if (error || !data) boom('createSettlement', error);
+  return toSettlement(data!);
+}
+
+/** 승인: 후보를 만든 뒤 원장이 바뀌지 않았을 때만. 지급 건마다 남은 분을 「정산」 줄로 0으로 만든다(퇴사일 날짜) */
+export async function decideSettlement(args: { id: string; decision: 'approve' | 'reject'; me: Me }): Promise<'approved' | 'rejected'> {
+  const c = db();
+  const { data: row } = await c.from('leave_settlements').select('*').eq('id', args.id).maybeSingle();
+  if (!row) throw new ApiError(404, 'not_found');
+  const s = toSettlement(row);
+  if (s.state !== 'CANDIDATE') throw new ApiError(409, 'already');
+  const now = new Date().toISOString();
+  if (args.decision === 'reject') {
+    const u = await c.from('leave_settlements').update({ state: 'REJECTED', decided_by: args.me.id, decided_at: now }).eq('id', s.id).eq('state', 'CANDIDATE');
+    if (u.error) boom('decideSettlement.reject', u.error);
+    return 'rejected';
+  }
+  const fresh = await computeSettlement(s.employeeId, s.retireOn);
+  if (fresh.unusedMinutes !== s.unusedMinutes || fresh.advanceMinutes !== s.advanceMinutes) throw new ApiError(409, 'leave_settlement_stale');
+  const res = await insertEntries(s.employeeId, s.snapshot.lots.map((l) => ({ lotId: l.lotId, event: 'settle' as const, minutes: -l.minutes, effectiveOn: s.retireOn, isTest: false, requestId: null, dedupeKey: `settle:${s.id}:${l.lotId}` })), args.me.id);
+  if (res.locked) throw new ApiError(409, 'period_locked');
+  const u = await c.from('leave_settlements').update({ state: 'APPROVED', decided_by: args.me.id, decided_at: now }).eq('id', s.id).eq('state', 'CANDIDATE');
+  if (u.error) boom('decideSettlement.approve', u.error);
+  return 'approved';
+}
+
+// ── 휴가 종류별 신청 규칙 (M5) ──
+/** 지금 적용되는 규칙 (종류 코드 → 규칙 · 판 번호). 판이 없는 종류는 제한 없음 */
+export async function loadTypeRules(): Promise<Map<string, { rule: LeaveTypeRule; version: number; validFrom: string }>> {
+  const { data, error } = await db().from('leave_type_policy_versions').select('type_code, payload, version, valid_from').eq('status', 'active').is('valid_to', null);
+  if (error) boom('loadTypeRules', error);
+  return new Map((data ?? []).map((r) => [r.type_code as string, { rule: validateTypeRule(r.payload) ?? NO_TYPE_RULE, version: r.version as number, validFrom: r.valid_from as string }]));
+}
+
+export async function saveTypeRule(args: { code: string; rule: LeaveTypeRule; expectedVersion: number; me: Me }): Promise<void> {
+  const c = db();
+  const { data: rows, error } = await c.from('leave_type_policy_versions').select('id, version, valid_from, valid_to').eq('type_code', args.code).eq('status', 'active').order('version', { ascending: false }).limit(1);
+  if (error) boom('saveTypeRule.read', error);
+  const last = rows?.[0];
+  if ((last?.version ?? 0) !== args.expectedVersion) throw new ApiError(409, 'leave_version_conflict');
+  const today = toKstDate(new Date());
+  // 같은 날 다시 고치면 시작일을 하루 뒤로 잡는다(판의 기간이 겹치지 않게) — 쓰는 값은 늘 가장 새 판이다
+  const validFrom = last && (last.valid_from as string) >= today ? addDays(last.valid_from as string, 1) : today;
+  if (last) {
+    const u = await c.from('leave_type_policy_versions').update({ valid_to: validFrom }).eq('id', last.id);
+    if (u.error) boom('saveTypeRule.close', u.error);
+  }
+  const ins = await c.from('leave_type_policy_versions').insert({ type_code: args.code, payload: args.rule, valid_from: validFrom, version: (last?.version ?? 0) + 1, supersedes_id: last?.id ?? null, created_by: args.me.id });
+  if (ins.error) {
+    if (last) await c.from('leave_type_policy_versions').update({ valid_to: null }).eq('id', last.id);
+    if (ins.error.code === '23505' || ins.error.code === '23P01') throw new ApiError(409, 'leave_version_conflict');
+    boom('saveTypeRule.insert', ins.error);
+  }
 }
 
 export { lotRemaining };

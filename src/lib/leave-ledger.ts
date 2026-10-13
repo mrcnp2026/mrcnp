@@ -15,9 +15,12 @@ export type LeavePolicy = {
   extraEveryYears: number; // 3년차부터 이 햇수마다 1일 가산
   maxDays: number;
   rounding: 'none' | 'ceil_half' | 'ceil_day'; // 회계연도 첫해 비례 계산의 끝수
+  carryMaxDays: number; // 사용 기간이 끝난 연차를 다음으로 넘길 수 있는 최대 일수. 0 = 이월 없음(전부 소멸)
+  carryValidMonths: number; // 이월한 연차를 쓸 수 있는 개월 수
+  advanceMaxDays: number; // 지급 건 없이 미리 쓸 수 있는 최대 일수. 0 = 선사용을 허용하지 않음(생기면 「한도 초과」로 표시)
 };
 /** 통상 방식 — 임시 입력(검증 대기 기록.md). 경영지원실의 노무 확인 뒤 「검증됨」으로 바꾼다 */
-export const STANDARD_LEAVE_POLICY: LeavePolicy = { basis: 'hire_date', fiscalStart: '01-01', dayMinutes: DAY_MINUTES, monthlyMax: 11, baseDays: 15, extraEveryYears: 2, maxDays: 25, rounding: 'ceil_day' };
+export const STANDARD_LEAVE_POLICY: LeavePolicy = { basis: 'hire_date', fiscalStart: '01-01', dayMinutes: DAY_MINUTES, monthlyMax: 11, baseDays: 15, extraEveryYears: 2, maxDays: 25, rounding: 'ceil_day', carryMaxDays: 0, carryValidMonths: 12, advanceMaxDays: 0 };
 
 const DATE = /^\d{4}-\d{2}-\d{2}$/;
 export function validateLeavePolicy(b: unknown): LeavePolicy | null {
@@ -29,7 +32,11 @@ export function validateLeavePolicy(b: unknown): LeavePolicy | null {
   if (!int(p.dayMinutes, 60, 1440) || !int(p.monthlyMax, 0, 11) || !int(p.baseDays, 1, 40) || !int(p.extraEveryYears, 1, 10) || !int(p.maxDays, 1, 60)) return null;
   if ((p.maxDays as number) < (p.baseDays as number)) return null;
   if (p.rounding !== 'none' && p.rounding !== 'ceil_half' && p.rounding !== 'ceil_day') return null;
-  return { basis: p.basis, fiscalStart: p.fiscalStart, dayMinutes: p.dayMinutes as number, monthlyMax: p.monthlyMax as number, baseDays: p.baseDays as number, extraEveryYears: p.extraEveryYears as number, maxDays: p.maxDays as number, rounding: p.rounding };
+  // 이월 · 선사용 칸은 나중에 생겼다 — 없는 옛 판은 「이월 없음 · 선사용 없음」으로 읽는다
+  const carryMaxDays = p.carryMaxDays ?? 0, carryValidMonths = p.carryValidMonths ?? 12, advanceMaxDays = p.advanceMaxDays ?? 0;
+  const half = (v: unknown, hi: number) => typeof v === 'number' && v >= 0 && v <= hi && Number.isInteger(v * 2);
+  if (!half(carryMaxDays, 60) || !int(carryValidMonths, 1, 36) || !half(advanceMaxDays, 60)) return null;
+  return { basis: p.basis, fiscalStart: p.fiscalStart, dayMinutes: p.dayMinutes as number, monthlyMax: p.monthlyMax as number, baseDays: p.baseDays as number, extraEveryYears: p.extraEveryYears as number, maxDays: p.maxDays as number, rounding: p.rounding, carryMaxDays: carryMaxDays as number, carryValidMonths: carryValidMonths as number, advanceMaxDays: advanceMaxDays as number };
 }
 
 const pad = (n: number) => String(n).padStart(2, '0');
@@ -133,7 +140,8 @@ export type LedgerEvent = 'grant' | 'use' | 'reserve' | 'release' | 'cancel' | '
 export type Entry = { id: number; employeeId: string; lotId: string | null; event: LedgerEvent; minutes: number; effectiveOn: string; isTest: boolean; requestId: string | null };
 
 /** 연습 화면이면 연습 신청에서 나온 줄만, 운영 화면이면 운영 신청에서 나온 줄만. 신청과 무관한 줄(지급 · 소멸 · 조정)은 늘 센다 */
-export const entriesFor = (entries: readonly Entry[], practice: boolean) => entries.filter((e) => (e.requestId === null ? !e.isTest : e.isTest === practice));
+// 선사용 상계(offset)는 운영 기준으로만 넣는다 — 연습 화면에서는 세지 않는다(연습 신청의 선사용과 섞이지 않게)
+export const entriesFor = (entries: readonly Entry[], practice: boolean) => entries.filter((e) => (e.event === 'offset' ? !practice : e.requestId === null ? !e.isTest : e.isTest === practice));
 
 /** 승인된 지급 건마다 남은 분 */
 export function lotRemaining(lots: readonly Lot[], entries: readonly Entry[]): Map<string, number> {
@@ -227,3 +235,57 @@ export function planExpiry(lots: readonly Lot[], entries: readonly Entry[], asOf
 
 /** 분 → 일 (넷째 자리까지) */
 export const minutesToDays = (m: number, dayMinutes = DAY_MINUTES) => Math.round((m / dayMinutes) * 10000) / 10000;
+
+// ── 이월 · 선사용 상계 · 퇴사 정산 (M5) ──
+/** 사용 기간이 끝난 지급 건의 남은 분 → 이월할 분(정책 한도까지)과 소멸할 분 */
+export function splitCarry(leftMinutes: number, policy: LeavePolicy): { carry: number; expire: number } {
+  const carry = Math.max(0, Math.min(leftMinutes, Math.round(policy.carryMaxDays * policy.dayMinutes)));
+  return { carry, expire: Math.max(0, leftMinutes - carry) };
+}
+
+/** 선사용(지급 건 없이 쓴 분)이 남아 있고 쓸 수 있는 지급 건이 생겼으면 그 지급 건에서 갚는다 — 선사용 쪽 +, 지급 건 쪽 − 한 쌍씩 */
+export function planOffset(lots: readonly Lot[], entries: readonly Entry[], asOf: string, isTest: boolean): NewEntry[] {
+  const debt = -entries.filter((e) => e.lotId === null).reduce((a, e) => a + e.minutes, 0);
+  if (debt <= 0) return [];
+  const { parts } = allocate({ lots, remaining: lotRemaining(lots, entries), minutes: debt, on: asOf });
+  const seq = entries.filter((e) => e.event === 'offset').length;
+  return parts.flatMap((p, i) => [
+    { lotId: null, event: 'offset' as const, minutes: p.minutes, effectiveOn: asOf, isTest, requestId: null, dedupeKey: `offset:${p.lotId}:${seq + i}:${isTest ? 't' : 'l'}:in` },
+    { lotId: p.lotId, event: 'offset' as const, minutes: -p.minutes, effectiveOn: asOf, isTest, requestId: null, dedupeKey: `offset:${p.lotId}:${seq + i}:${isTest ? 't' : 'l'}:out` },
+  ]);
+}
+
+export type Settlement = { lots: { lotId: string; kind: LotKind; grantedOn: string; usableTo: string | null; minutes: number }[]; unusedMinutes: number; advanceMinutes: number; hireBasisMinutes: number | null; grantedMinutes: number };
+/**
+ * 퇴사일 기준 연차 정산 내역. 미사용 = 퇴사일에 쓸 수 있던 지급 건의 남은 분. 선사용 미상계는 따로 적는다(임금에서 자동으로 빼지 않는다).
+ * hireBasisMinutes: 회계연도 기준 회사에서 「입사일 기준으로 계산했다면 받았을 총 연차」 — 받은 것(grantedMinutes)보다 많으면 차이를 더 줘야 하는지 노무 확인이 필요하다(참고 값).
+ */
+export function settleLeave(args: { lots: readonly Lot[]; entries: readonly Entry[]; retireOn: string; hiredOn: string | null; policy: LeavePolicy }): Settlement {
+  const rem = lotRemaining(args.lots, args.entries);
+  const live = args.lots.filter((l) => l.state === 'APPROVED' && l.usableFrom <= args.retireOn && (l.usableTo === null || args.retireOn < l.usableTo) && (rem.get(l.id) ?? 0) > 0);
+  const lots = live.map((l) => ({ lotId: l.id, kind: l.kind, grantedOn: l.grantedOn, usableTo: l.usableTo, minutes: rem.get(l.id)! })).sort((a, b) => a.grantedOn.localeCompare(b.grantedOn));
+  const advanceMinutes = Math.max(0, -args.entries.filter((e) => e.lotId === null).reduce((a, e) => a + e.minutes, 0));
+  const grantedMinutes = args.lots.filter((l) => l.state === 'APPROVED' && (l.kind === 'annual' || l.kind === 'monthly')).reduce((a, l) => a + l.quantityMinutes, 0);
+  const hireBasisMinutes = args.hiredOn && args.policy.basis === 'fiscal_year' ? planAccrual({ hiredOn: args.hiredOn, asOf: args.retireOn, policy: { ...args.policy, basis: 'hire_date' } }).reduce((a, l) => a + l.minutes, 0) : null;
+  return { lots, unusedMinutes: lots.reduce((a, l) => a + l.minutes, 0), advanceMinutes, hireBasisMinutes, grantedMinutes };
+}
+
+// ── 휴가 종류별 신청 규칙 (M5) ──
+export type LeaveTypeRule = { maxDaysPerRequest: number | null; minNoticeDays: number | null; reasonRequired: boolean };
+export const NO_TYPE_RULE: LeaveTypeRule = { maxDaysPerRequest: null, minNoticeDays: null, reasonRequired: false };
+export function validateTypeRule(v: unknown): LeaveTypeRule | null {
+  if (!v || typeof v !== 'object') return null;
+  const o = v as Record<string, unknown>;
+  const num = (x: unknown, hi: number) => x === null || x === undefined || x === '' ? null : typeof x === 'number' && Number.isFinite(x) && x >= 0 && x <= hi ? x : NaN;
+  const max = num(o.maxDaysPerRequest, 365), notice = num(o.minNoticeDays, 365);
+  if (Number.isNaN(max) || Number.isNaN(notice) || (max !== null && (max <= 0 || !Number.isInteger(max * 16))) || (notice !== null && !Number.isInteger(notice))) return null;
+  if (typeof o.reasonRequired !== 'boolean') return null;
+  return { maxDaysPerRequest: max, minNoticeDays: notice, reasonRequired: o.reasonRequired };
+}
+/** 신청이 그 종류의 규칙에 맞는가. 맞으면 null, 아니면 오류 코드 */
+export function checkTypeRule(rule: LeaveTypeRule, req: { days: number; startDate: string; today: string; reason: string }): 'leave_too_long' | 'leave_notice' | 'leave_reason_required' | null {
+  if (rule.maxDaysPerRequest !== null && req.days > rule.maxDaysPerRequest) return 'leave_too_long';
+  if (rule.minNoticeDays !== null && req.startDate < addDays(req.today, rule.minNoticeDays)) return 'leave_notice';
+  if (rule.reasonRequired && req.reason.trim().length < 2) return 'leave_reason_required';
+  return null;
+}

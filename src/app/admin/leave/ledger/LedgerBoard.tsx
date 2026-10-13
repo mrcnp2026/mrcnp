@@ -10,11 +10,12 @@ import { Button, Card, CardTitle, Chip } from '@/components/ui';
 import type { LeavePolicy } from '@/lib/leave-ledger';
 
 export type LotLine = { id: string; employeeId: string; name: string; kind: string; grantedOn: string; usableFrom: string; usableTo: string | null; days: number; remaining: number | null; state: string; note: string | null; rule: string; years: number | null; month: number | null };
-export type BalanceLine = { employeeId: string; name: string; joinedOn: string | null; active: boolean; started: boolean; granted: number; used: number; expired: number; remaining: number; advance: number; upcoming: number; old: number | null };
+export type SettleLine = { id: string; retireOn: string; revision: number; state: string; unused: number; advance: number; hireBasis: number | null; granted: number; lots: { grantedOn: string; days: number }[] };
+export type BalanceLine = { advanceOver: boolean; employeeId: string; name: string; joinedOn: string | null; active: boolean; started: boolean; granted: number; used: number; expired: number; remaining: number; advance: number; upcoming: number; old: number | null };
 export type EntryLine = { id: number; event: string; days: number; on: string; lot: string | null; fromRequest: boolean };
 type Policy = { id: string; version: number; validFrom: string; verification: string; value: LeavePolicy };
 type History = { version: number; validFrom: string; validTo: string | null; basis: string; reason: string | null };
-type Res = { accrual?: { created: number; existing: number; noHireDate: number; excluded: number }; results?: { id: string; result: string }[]; expiry?: { expired: number; locked: number }; sync?: { added: number; locked: number } };
+type Res = { accrual?: { created: number; existing: number; noHireDate: number; excluded: number }; results?: { id: string; result: string }[]; expiry?: { expired: number; locked: number }; sync?: { added: number; locked: number }; carry?: { result: string; carried: number; expired: number }; settle?: string };
 
 const field = 'min-h-9 rounded-button border border-border bg-bg px-3 text-sm';
 function Table({ heads, children }: { heads: string[]; children: ReactNode }) {
@@ -36,7 +37,7 @@ function Table({ heads, children }: { heads: string[]; children: ReactNode }) {
   );
 }
 
-export function LedgerBoard(props: { today: string; live: boolean; practice: boolean; policy: Policy | null; history: History[]; candidates: LotLine[]; expiring: { id: string; name: string; usableTo: string; days: number }[]; balances: BalanceLine[]; emp: { id: string; name: string; lots: LotLine[]; entries: EntryLine[] } | null }) {
+export function LedgerBoard(props: { today: string; live: boolean; practice: boolean; policy: Policy | null; history: History[]; candidates: LotLine[]; expiring: { id: string; name: string; usableTo: string; days: number; carry: number }[]; balances: BalanceLine[]; emp: { id: string; name: string; lots: LotLine[]; entries: EntryLine[]; settlements: SettleLine[] } | null }) {
   const t = useTranslations('admin.leaveLedger');
   const router = useRouter();
   const [busy, setBusy] = useState(false);
@@ -60,6 +61,8 @@ export function LedgerBoard(props: { today: string; live: boolean; practice: boo
     const d = r.data;
     if (d.accrual) setMsg(t('accrualDone', { created: d.accrual.created, existing: d.accrual.existing, noHire: d.accrual.noHireDate }));
     else if (d.expiry) setMsg(t('expiryDone', { n: d.expiry.expired, locked: d.expiry.locked }));
+    else if (d.carry) setMsg(t(`carryResult.${d.carry.result}`, { carried: d.carry.carried / 480, expired: d.carry.expired / 480 }));
+    else if (d.settle) setMsg(t(`settleResult.${d.settle}`));
     else if (d.sync) setMsg(t('syncDone', { n: d.sync.added, locked: d.sync.locked }));
     else if (d.results) {
       const n = (k: string) => d.results!.filter((x) => x.result === k).length;
@@ -103,6 +106,8 @@ export function LedgerBoard(props: { today: string; live: boolean; practice: boo
               <li>{t('ruleFirstYear', { max: policy.value.monthlyMax })}</li>
               <li>{t('ruleAnnual', { base: policy.value.baseDays, every: policy.value.extraEveryYears, max: policy.value.maxDays })}</li>
               <li>{t('ruleDay', { hours: policy.value.dayMinutes / 60 })}</li>
+              <li>{policy.value.carryMaxDays > 0 ? t('ruleCarry', { max: policy.value.carryMaxDays, months: policy.value.carryValidMonths }) : t('ruleCarryNone')}</li>
+              <li>{policy.value.advanceMaxDays > 0 ? t('ruleAdvance', { max: policy.value.advanceMaxDays }) : t('ruleAdvanceNone')}</li>
               <li className="num text-faint">{t('policyVersion', { n: policy.version, from: policy.validFrom })}</li>
             </ul>
             <p className="text-xs text-faint">{t('policyCaveat')}</p>
@@ -120,7 +125,7 @@ export function LedgerBoard(props: { today: string; live: boolean; practice: boo
                 onSubmit={async (e) => {
                   e.preventDefault();
                   const f = new FormData(e.currentTarget);
-                  await run({ action: 'policy', expectedVersion: policy.version, validFrom: f.get('validFrom'), reason: f.get('reason'), policy: { ...policy.value, basis: f.get('basis'), fiscalStart: f.get('fiscalStart'), rounding: f.get('rounding') } });
+                  await run({ action: 'policy', expectedVersion: policy.version, validFrom: f.get('validFrom'), reason: f.get('reason'), policy: { ...policy.value, basis: f.get('basis'), fiscalStart: f.get('fiscalStart'), rounding: f.get('rounding'), carryMaxDays: Number(f.get('carryMaxDays')), carryValidMonths: Number(f.get('carryValidMonths')), advanceMaxDays: Number(f.get('advanceMaxDays')) } });
                 }}
               >
                 <label className="flex flex-col gap-1">
@@ -141,6 +146,18 @@ export function LedgerBoard(props: { today: string; live: boolean; practice: boo
                     <option value="ceil_half">{t('optCeilHalf')}</option>
                     <option value="none">{t('optNone')}</option>
                   </select>
+                </label>
+                <label className="flex flex-col gap-1">
+                  <span className="font-bold">{t('fCarryMax')}</span>
+                  <input name="carryMaxDays" type="number" min="0" max="60" step="0.5" defaultValue={policy.value.carryMaxDays} required className={field} />
+                </label>
+                <label className="flex flex-col gap-1">
+                  <span className="font-bold">{t('fCarryMonths')}</span>
+                  <input name="carryValidMonths" type="number" min="1" max="36" step="1" defaultValue={policy.value.carryValidMonths} required className={field} />
+                </label>
+                <label className="flex flex-col gap-1">
+                  <span className="font-bold">{t('fAdvanceMax')}</span>
+                  <input name="advanceMaxDays" type="number" min="0" max="60" step="0.5" defaultValue={policy.value.advanceMaxDays} required className={field} />
                 </label>
                 <label className="flex flex-col gap-1">
                   <span className="font-bold">{t('fValidFrom')}</span>
@@ -225,12 +242,19 @@ export function LedgerBoard(props: { today: string; live: boolean; practice: boo
             {t('expTitle', { n: props.expiring.length })}
           </CardTitle>
           <p className="pt-1 pb-3 text-sm text-faint">{t('expIntro')}</p>
-          <Table heads={[t('colName'), t('colEnded'), t('colLeft')]}>
+          <Table heads={[t('colName'), t('colEnded'), t('colLeft'), t('colCarry')]}>
             {props.expiring.map((x) => (
               <tr key={x.id} className="border-b border-border">
                 <td className="px-3 py-2 font-bold">{x.name}</td>
                 <td className="num px-3 py-2">{x.usableTo}</td>
                 <td className="num px-3 py-2">{day(x.days)}</td>
+                <td className="px-3 py-2">
+                  {x.carry > 0 && (
+                    <button type="button" disabled={busy} onClick={() => run({ action: 'carry', lotId: x.id })} className="inline-flex h-8 items-center rounded-button border border-border bg-bg px-3 text-sm font-bold text-muted disabled:opacity-50">
+                      {t('carryDo', { n: x.carry })}
+                    </button>
+                  )}
+                </td>
               </tr>
             ))}
           </Table>
@@ -253,7 +277,7 @@ export function LedgerBoard(props: { today: string; live: boolean; practice: boo
               <td className="num px-3 py-2">{b.started ? day(b.expired) : ''}</td>
               <td className="num px-3 py-2 font-bold">
                 {b.started ? day(b.remaining) : ''}
-                {b.advance > 0 && <span className="block text-xs font-normal text-warn">{t('advance', { n: b.advance })}</span>}
+                {b.advance > 0 && <span className="block text-xs font-normal text-warn">{t(b.advanceOver ? 'advanceOver' : 'advance', { n: b.advance })}</span>}
                 {b.upcoming > 0 && <span className="block text-xs font-normal text-faint">{t('upcoming', { n: b.upcoming })}</span>}
               </td>
               <td className="num px-3 py-2">{b.old === null ? '' : day(b.old)}</td>
@@ -318,6 +342,59 @@ export function LedgerBoard(props: { today: string; live: boolean; practice: boo
                   </tr>
                 ))}
               </Table>
+            </div>
+            <div className="flex flex-col gap-3 border-t border-border pt-3 text-sm">
+              <p className="font-bold">{t('settleTitle')}</p>
+              <p className="text-xs text-faint">{t('settleHint')}</p>
+              <form
+                className="flex flex-wrap items-end gap-3"
+                onSubmit={async (e) => {
+                  e.preventDefault();
+                  await run({ action: 'settle', employeeId: emp.id, retireOn: new FormData(e.currentTarget).get('retireOn') });
+                }}
+              >
+                <label className="flex flex-col gap-1">
+                  <span>{t('fRetireOn')}</span>
+                  <input name="retireOn" type="date" required className={field} />
+                </label>
+                <Button type="submit" size="sm" variant="outline" disabled={busy}>
+                  {t('settleMake')}
+                </Button>
+              </form>
+              {emp.settlements.length > 0 && (
+                <Table heads={[t('fRetireOn'), t('colUnused'), t('colAdvance'), t('colBasis'), t('colState'), '']}>
+                  {emp.settlements.map((s) => (
+                    <tr key={s.id} className="border-b border-border align-top">
+                      <td className="num px-3 py-2 whitespace-nowrap">{s.retireOn}</td>
+                      <td className="num px-3 py-2">
+                        <span className="font-bold">{day(s.unused)}</span>
+                        {s.lots.map((l) => (
+                          <span key={l.grantedOn} className="block text-xs text-faint">
+                            {t('settleLot', { date: l.grantedOn, n: l.days })}
+                          </span>
+                        ))}
+                      </td>
+                      <td className="num px-3 py-2">{s.advance > 0 ? <span className="text-warn">{day(s.advance)}</span> : day(0)}</td>
+                      <td className="num px-3 py-2 text-xs">{s.hireBasis === null ? '' : <span className={s.hireBasis > s.granted ? 'text-warn' : 'text-faint'}>{t('settleBasis', { hire: s.hireBasis, got: s.granted })}</span>}</td>
+                      <td className="px-3 py-2">
+                        <Chip tone={s.state === 'APPROVED' ? 'ok' : s.state === 'CANDIDATE' ? 'info' : 'neutral'}>{t(`settleState.${s.state}`)}</Chip>
+                      </td>
+                      <td className="px-3 py-2 whitespace-nowrap">
+                        {s.state === 'CANDIDATE' && (
+                          <span className="flex gap-2">
+                            <Button type="button" size="sm" disabled={busy} onClick={() => run({ action: 'settleDecide', id: s.id, decision: 'approve' })}>
+                              {t('settleApprove')}
+                            </Button>
+                            <Button type="button" size="sm" variant="outline" disabled={busy} onClick={() => run({ action: 'settleDecide', id: s.id, decision: 'reject' })}>
+                              {t('settleReject')}
+                            </Button>
+                          </span>
+                        )}
+                      </td>
+                    </tr>
+                  ))}
+                </Table>
+              )}
             </div>
             <form
               className="grid gap-3 border-t border-border pt-3 text-sm md:grid-cols-4"

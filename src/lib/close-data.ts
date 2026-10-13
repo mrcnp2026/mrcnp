@@ -11,6 +11,8 @@ import { monthSpan, reviewMonth, type CloseReview, type PendingCounts } from '@/
 import { confirmKey, loadConfirms } from '@/lib/confirm-data';
 import { canonical } from '@/lib/payroll/reference';
 import { daysFor, loadPeriod, type PeriodData } from '@/lib/period-data';
+import { summarizeAnomalies } from '@/lib/anomaly';
+import { collectAnomalies, loadAnomalyPolicy } from '@/lib/anomaly-data';
 import { createAdminClient } from '@/lib/supabase/admin';
 
 export type CloseRow = { id: string; employeeId: string; periodFrom: string; periodTo: string; revision: number; state: 'CLOSED' | 'REOPENED'; closedBy: string; closedAt: string; reopenedBy: string | null; reopenedAt: string | null; reopenReason: string | null };
@@ -48,13 +50,16 @@ function inputHash(data: PeriodData, employeeId: string, from: string, last: str
 export async function loadCloseBoard(ym: string, practice: boolean): Promise<{ lines: CloseLine[]; data: PeriodData; from: string; last: string }> {
   const { from, to, last } = monthSpan(ym);
   const db = createAdminClient();
-  const [data, confirms, closes, { data: pr }, { data: sr }] = await Promise.all([
+  const [data, confirms, closes, { data: pr }, { data: sr }, anomalyPolicy] = await Promise.all([
     loadPeriod(from, last, practice),
     loadConfirms(from, last, practice),
     loadCloses(ym, practice),
     db.from('punch_requests').select('employee_id').eq('is_test', practice).eq('status', 'pending').gte('work_date', from).lt('work_date', to),
     db.from('shift_requests').select('employee_id').eq('is_test', practice).eq('status', 'pending').gte('work_date', from).lt('work_date', to),
+    loadAnomalyPolicy(),
   ]);
+  // 이상자 관리에서 「마감 차단」으로 정한 유형이 남아 있으면 마감하지 못한다
+  const anomalies = summarizeAnomalies(collectAnomalies(data, from, last), anomalyPolicy.policy).byEmployee;
   const count = (rows: { employee_id: string }[] | null, id: string) => (rows ?? []).filter((r) => r.employee_id === id).length;
   const inMonth = (d: string) => d >= from && d <= last;
   const lines: CloseLine[] = [];
@@ -74,7 +79,7 @@ export async function loadCloseBoard(ym: string, practice: boolean): Promise<{ l
       work: data.workRequests.filter((w) => w.employeeId === p.id && w.status === 'pending' && w.startDate <= last && w.endDate >= from).length,
       shift: count(sr, p.id),
     };
-    const review = reviewMonth({ days: days.map((d) => ({ workDate: d.workDate, hasRecord: eventDays.has(d.workDate) || d.pairs.length > 0, deemed: !!d.deemed, payableMinutes: d.payableMinutes, netMinutes: d.netMinutes })), confirmed, pending });
+    const review = reviewMonth({ days: days.map((d) => ({ workDate: d.workDate, hasRecord: eventDays.has(d.workDate) || d.pairs.length > 0, deemed: !!d.deemed, payableMinutes: d.payableMinutes, netMinutes: d.netMinutes })), confirmed, pending, anomalies: anomalies.get(p.id) });
     const history = closes.filter((c) => c.employeeId === p.id);
     lines.push({ employeeId: p.id, name: p.name, employeeNo: p.employeeNo, groupId: p.groupId, jobId: p.jobId, active: p.active, review, hash: inputHash(data, p.id, from, last, [...confirmed]), close: history.find((c) => c.state === 'CLOSED') ?? null, history });
   }

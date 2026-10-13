@@ -1,9 +1,9 @@
-// 휴가 원장 — 정책 시작/고치기 · 연차 후보 만들기 · 후보 승인/반려/거두기 · 직접 지급 · 소멸 처리 (PRD v1.3 36 · 38장). 관리자만.
+// 휴가 원장 — 정책 시작/고치기 · 연차 후보 만들기 · 후보 승인/반려/거두기 · 직접 지급 · 소멸 처리 · 이월 · 퇴사 정산 · 종류별 신청 규칙 (PRD v1.3 36 · 38장). 관리자만.
 // ★ 후보는 관리자가 승인해야 잔여에 들어간다. 소멸도 관리자가 눌러야 들어간다 — 자동으로 반영하지 않는다.
 import { api, ApiError, readJson } from '@/lib/api';
 import { requireAdmin } from '@/lib/auth';
-import { DAY_MINUTES, validateLeavePolicy } from '@/lib/leave-ledger';
-import { addManualLot, decideLots, runAccrual, runExpiry, saveLeavePolicy, seedLeavePolicy, setPolicyVerification, syncEmployeeLedger } from '@/lib/leave-ledger-data';
+import { DAY_MINUTES, validateLeavePolicy, validateTypeRule } from '@/lib/leave-ledger';
+import { addManualLot, carryLot, createSettlement, decideLots, decideSettlement, runAccrual, runExpiry, saveLeavePolicy, saveTypeRule, seedLeavePolicy, setPolicyVerification, syncEmployeeLedger } from '@/lib/leave-ledger-data';
 import { cleanText } from '@/lib/text';
 import { toKstDate } from '@/lib/time';
 
@@ -56,6 +56,25 @@ export const POST = api('admin.leave.ledger', async (req) => {
     // 휴가 승인 · 취소 때 원장 맞추기가 실패했거나 마감에 막혔던 것을 다시 맞춘다
     if (typeof b.employeeId !== 'string' || !UUID.test(b.employeeId)) throw new ApiError(400, 'invalid_input');
     return { sync: await syncEmployeeLedger(b.employeeId, me.id) };
+  }
+  if (b.action === 'carry') {
+    if (typeof b.lotId !== 'string' || !UUID.test(b.lotId)) throw new ApiError(400, 'invalid_input');
+    return { carry: await carryLot({ lotId: b.lotId, me }) };
+  }
+  if (b.action === 'settle') {
+    if (typeof b.employeeId !== 'string' || !UUID.test(b.employeeId) || !isDate(b.retireOn)) throw new ApiError(400, 'invalid_input');
+    await createSettlement({ employeeId: b.employeeId, retireOn: b.retireOn, me });
+    return { ok: true };
+  }
+  if (b.action === 'settleDecide') {
+    if (typeof b.id !== 'string' || !UUID.test(b.id) || (b.decision !== 'approve' && b.decision !== 'reject')) throw new ApiError(400, 'invalid_input');
+    return { settle: await decideSettlement({ id: b.id, decision: b.decision, me }) };
+  }
+  if (b.action === 'typeRule') {
+    const rule = validateTypeRule(b.rule);
+    if (typeof b.code !== 'string' || b.code.length < 1 || b.code.length > 40 || !rule || typeof b.expectedVersion !== 'number') throw new ApiError(400, 'invalid_input');
+    await saveTypeRule({ code: b.code, rule, expectedVersion: b.expectedVersion, me });
+    return { ok: true };
   }
   if (b.action === 'expire') return { expiry: await runExpiry({ asOf: today, me }) };
   throw new ApiError(400, 'invalid_input');

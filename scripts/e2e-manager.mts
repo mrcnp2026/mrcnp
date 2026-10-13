@@ -145,6 +145,7 @@ try {
 
   // 화면 사이를 옮길 때(주소만 바꿔 받는 요청)도 막힌다
   const soft = await p.evaluate(async () => { const r = await fetch('/admin/members', { headers: { RSC: '1' } }); return { url: new URL(r.url).pathname, text: await r.text() }; });
+  { const i = soft.text.indexOf(B.name); if (i >= 0) console.log('DEBUG', JSON.stringify(soft.text.slice(Math.max(0, i - 700), i + 200))); }
   check(soft.url === '/admin/inbox' && !soft.text.includes(B.name), '화면을 옮기는 요청으로도 직원 화면을 받지 못한다', soft.url);
 
   // ── 직원 화면은 그대로 쓴다 ──

@@ -139,6 +139,7 @@ export function SideNav({ isAdmin, branchManager = false, inboxCount = 0 }: { is
           { href: '/admin/records/list', key: 'listView' },
           { href: '/admin/records', key: 'monthly' },
           { href: '/admin/missing', key: 'missing' },
+          { href: '/admin/anomalies', key: 'anomalies' },
         ],
       },
       {
