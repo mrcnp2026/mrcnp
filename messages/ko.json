@@ -2993,7 +2993,7 @@
       "runMeta": "귀속 {from} ~ {to} · 지급일 {pay}",
       "reviewedBy": "검토 {name} {date}",
       "finalizedBy": "확정 {name} {date}",
-      "finalNote": "확정한 대장입니다. 금액과 항목은 바꿀 수 없습니다. 잘못된 것이 있으면 정정 판을 새로 만들어야 합니다(정정 기능은 아직 없습니다).",
+      "finalNote": "확정한 대장입니다. 금액과 항목은 바꿀 수 없습니다. 잘못된 것이 있으면 사유를 적어 정정 판을 만듭니다(이 판은 그대로 남습니다).",
       "stale": "계산한 뒤에 근태 · 계약 · 세무 · 항목 · 기준 자료 · 조정 가운데 바뀐 것이 있습니다. 다시 계산해야 검토 · 확정할 수 있습니다.",
       "hasBlocked": "차단된 직원이 {n}명 있습니다. 해결한 뒤 다시 계산하거나, 사유를 적어 대상에서 빼야 검토 · 확정할 수 있습니다.",
       "missingRef": "승인된 기준 자료가 없습니다: {list}. 회사 설정 › 급여에서 「확인 후 반영」해 주세요.",
@@ -3147,7 +3147,19 @@
       "pubOff": "공개 안 함",
       "pubWithdrawn": "회수함",
       "payroll_not_finalized": "확정한 대장만 공개할 수 있습니다.",
-      "payroll_not_published": "공개 중인 명세서가 아닙니다."
+      "payroll_not_published": "공개 중인 명세서가 아닙니다.",
+      "correct": "정정 시작",
+      "correctReason": "정정하는 사유",
+      "correctHint": "이 대장은 그대로 두고 판 번호를 올린 새 초안을 만듭니다. 대상자와 금액 조정은 그대로 옮겨 옵니다. 계약 · 근태 · 조정을 고친 뒤 계산 → 검토 → 확정하고, 정정 명세서를 따로 공개합니다. 정정 판은 지울 수 없습니다.",
+      "correctDo": "정정 판 만들기",
+      "correctionOf": "정정 사유: {reason}",
+      "toOriginal": "{n}판 보기",
+      "toRevision": "{n}판으로 가기",
+      "correctionOpen": "이 대장의 정정 {n}판을 만드는 중입니다. 확정되기 전까지는 이 판이 유효합니다.",
+      "replacedBy": "이 대장은 정정 {n}판으로 바뀌었습니다. 이 판은 기록으로 남아 있습니다.",
+      "older": "정정 전 판",
+      "payroll_correction_exists": "이미 정정 판이 있습니다. 가장 새 판에서 진행해 주세요.",
+      "payroll_superseded": "정정본이 확정돼 이 판은 더 공개할 수 없습니다. 정정본을 공개해 주세요."
     }
   },
   "side": {
@@ -3780,6 +3792,10 @@
       "INCOME_TAX": "소득세",
       "LOCAL_TAX": "지방소득세",
       "STUDENT_LOAN": "학자금 상환"
-    }
+    },
+    "correctedNote": "정정된 명세서입니다. 정정 사유: {reason}",
+    "toPrevious": "이전 명세서 보기",
+    "oldVersion": "정정되기 전의 명세서입니다. 지금 유효한 것은 정정된 명세서입니다.",
+    "toCurrent": "정정된 명세서 보기"
   }
 }

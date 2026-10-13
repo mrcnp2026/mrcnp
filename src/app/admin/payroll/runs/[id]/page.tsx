@@ -7,11 +7,11 @@ import { Card, Chip, PageShell } from '@/components/ui';
 import { getMe } from '@/lib/auth';
 import { groupPath } from '@/lib/org';
 import { loadOrgGroups } from '@/lib/org-data';
-import { loadRun, loadRunBoard } from '@/lib/payroll/run-data';
+import { loadRevisions, loadRun, loadRunBoard } from '@/lib/payroll/run-data';
 import { createAdminClient } from '@/lib/supabase/admin';
 import { toKstDate } from '@/lib/time';
 import { loadPublication } from '@/lib/payroll/publish-data';
-import { MemberToggle, PublishAll, PublishToggle, RunActions } from '../RunForms';
+import { CorrectionStart, MemberToggle, PublishAll, PublishToggle, RunActions } from '../RunForms';
 
 const TONE = { DRAFT: 'neutral', CALCULATED: 'info', REVIEWED: 'warn', FINALIZED: 'ok' } as const;
 
@@ -28,6 +28,11 @@ export default async function PayRunPage({ params }: { params: Promise<{ id: str
   const blocked = included.filter((l) => l.state === 'BLOCKED').length;
   const missing = Array.isArray(run.totals.missing) ? (run.totals.missing as unknown as string[]) : [];
   const final = run.status === 'FINALIZED';
+  // 같은 대장의 다른 판 (정정)
+  const revs = await loadRevisions(run);
+  const newer = revs.filter((r) => r.revision > run.revision).at(-1) ?? null;
+  const original = revs.find((r) => r.id === run.supersedesId) ?? null;
+  const replaced = !!newer && newer.status === 'FINALIZED'; // 정정본이 확정됐다 — 이 판은 더 공개하지 않는다
   // 확정한 대장: 직원별 공개 상태 (공개는 확정과 따로 한다)
   const pub: Map<string, { statementId: string; published: boolean; at: string | null }> = final ? await loadPublication(run.id, run.generationId) : new Map();
   const waiting = [...pub.values()].filter((x) => !x.published).length;
@@ -52,11 +57,30 @@ export default async function PayRunPage({ params }: { params: Promise<{ id: str
         </p>
       </div>
 
+      {run.revision > 1 && (
+        <p className="rounded-card border border-border bg-surface p-3 text-sm">
+          <b>{t('revision', { n: run.revision })}</b> · {t('correctionOf', { reason: run.correctionReason ?? '' })}{' '}
+          {original && (
+            <Link href={`/admin/payroll/runs/${original.id}`} className="font-bold text-primary underline">
+              {t('toOriginal', { n: original.revision })}
+            </Link>
+          )}
+        </p>
+      )}
+      {newer && (
+        <p className="rounded-card border border-warn bg-warn-tint p-3 text-sm text-warn">
+          {t(replaced ? 'replacedBy' : 'correctionOpen', { n: newer.revision })}{' '}
+          <Link href={`/admin/payroll/runs/${newer.id}`} className="font-bold underline">
+            {t('toRevision', { n: newer.revision })}
+          </Link>
+        </p>
+      )}
       {final ? (
         <Card className="flex flex-col gap-3">
           <p className="text-sm text-muted">{t('finalNote')}</p>
           <p className="num text-sm">{t('pubSummary', { on: pub.size - waiting, off: waiting })}</p>
-          <PublishAll id={run.id} waiting={waiting} />
+          {!replaced && <PublishAll id={run.id} waiting={waiting} />}
+          {!newer && <CorrectionStart id={run.id} />}
         </Card>
       ) : (
         <Card className="flex flex-col gap-3">
@@ -149,7 +173,7 @@ export default async function PayRunPage({ params }: { params: Promise<{ id: str
                   {final && pub.has(l.employeeId) && (
                     <span className="flex flex-col gap-1">
                       {pub.get(l.employeeId)!.published ? <Chip tone="ok">{t('pubOn', { date: toKstDate(new Date(pub.get(l.employeeId)!.at ?? 0)) })}</Chip> : <Chip>{t(pub.get(l.employeeId)!.at ? 'pubWithdrawn' : 'pubOff')}</Chip>}
-                      <PublishToggle id={run.id} employeeId={l.employeeId} published={pub.get(l.employeeId)!.published} name={l.name} />
+                      {(!replaced || pub.get(l.employeeId)!.published) && <PublishToggle id={run.id} employeeId={l.employeeId} published={pub.get(l.employeeId)!.published} name={l.name} />}
                     </span>
                   )}
                 </td>

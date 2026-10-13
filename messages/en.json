@@ -2993,7 +2993,7 @@
       "runMeta": "Period {from} ~ {to} · pay date {pay}",
       "reviewedBy": "Reviewed by {name} {date}",
       "finalizedBy": "Finalized by {name} {date}",
-      "finalNote": "This ledger is finalized; amounts and items cannot change. To fix an error a correction revision is needed (not available yet).",
+      "finalNote": "This ledger is finalized; amounts and items cannot change. To fix an error, create a correction revision with a reason (this revision is kept).",
       "stale": "Attendance, contracts, tax settings, items, reference data or adjustments changed after calculation. Recalculate before reviewing or finalizing.",
       "hasBlocked": "{n} employees are blocked. Resolve and recalculate, or exclude them with a reason, before reviewing or finalizing.",
       "missingRef": "No approved reference data: {list}. Approve it in Company settings › Payroll.",
@@ -3147,7 +3147,19 @@
       "pubOff": "Not published",
       "pubWithdrawn": "Withdrawn",
       "payroll_not_finalized": "Only a finalized ledger can be published.",
-      "payroll_not_published": "That payslip is not published."
+      "payroll_not_published": "That payslip is not published.",
+      "correct": "Start correction",
+      "correctReason": "Reason for correction",
+      "correctHint": "This ledger stays as is and a new draft with the next revision number is created. Members and adjustments are carried over. Fix contracts, attendance or adjustments, then calculate, review and finalize, and publish the corrected payslips separately. A correction revision cannot be deleted.",
+      "correctDo": "Create correction revision",
+      "correctionOf": "Reason for correction: {reason}",
+      "toOriginal": "View revision {n}",
+      "toRevision": "Go to revision {n}",
+      "correctionOpen": "Correction revision {n} of this ledger is in progress. This revision stays in effect until that one is finalized.",
+      "replacedBy": "This ledger was replaced by correction revision {n}. This revision is kept as a record.",
+      "older": "Before correction",
+      "payroll_correction_exists": "A correction revision already exists. Continue from the newest revision.",
+      "payroll_superseded": "A correction has been finalized, so this revision can no longer be published. Publish the correction instead."
     }
   },
   "side": {
@@ -3780,6 +3792,10 @@
       "INCOME_TAX": "Income tax",
       "LOCAL_TAX": "Local income tax",
       "STUDENT_LOAN": "Student loan repayment"
-    }
+    },
+    "correctedNote": "This payslip was corrected. Reason: {reason}",
+    "toPrevious": "View the previous payslip",
+    "oldVersion": "This is the payslip before correction. The corrected payslip is the valid one.",
+    "toCurrent": "View the corrected payslip"
   }
 }

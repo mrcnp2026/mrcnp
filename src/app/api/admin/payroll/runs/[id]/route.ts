@@ -3,7 +3,7 @@
 import { api, ApiError, readJson } from '@/lib/api';
 import { requirePayroll } from '@/lib/payroll/data';
 import { publishRun, unpublishStatement } from '@/lib/payroll/publish-data';
-import { addOverride, calculateRun, finalizeRun, reviewRun, setMember, withdrawOverride } from '@/lib/payroll/run-data';
+import { addOverride, calculateRun, finalizeRun, reviewRun, setMember, startCorrection, withdrawOverride } from '@/lib/payroll/run-data';
 
 export const maxDuration = 60;
 const UUID = /^[0-9a-f-]{36}$/i;
@@ -46,6 +46,12 @@ export const POST = api<{ params: Promise<{ id: string }> }>('admin.payroll.run'
     if (typeof b.overrideId !== 'string' || !UUID.test(b.overrideId)) throw new ApiError(400, 'invalid_input');
     await withdrawOverride({ ...common, overrideId: b.overrideId });
     return { ok: true };
+  }
+  if (b.action === 'correct') {
+    // 정정: 확정본은 그대로 두고 판 번호를 올린 새 초안을 만든다
+    const reason = typeof b.reason === 'string' ? b.reason.replace(/[\u0000-\u0008\u000B-\u001F\u007F]/g, '').trim() : '';
+    if (reason.length < 2 || reason.length > 500) throw new ApiError(400, 'payroll_reason_required');
+    return { id: (await startCorrection({ id, reason, me, requestId: ctx.requestId })).id };
   }
   // 공개 · 회수 — 확정한 대장만. 공개가 은행 지급을 뜻하지 않고, 문자 · 메일을 보내지 않는다
   if (b.action === 'publish') {

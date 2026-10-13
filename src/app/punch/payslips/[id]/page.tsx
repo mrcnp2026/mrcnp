@@ -15,7 +15,7 @@ export default async function MyPayslipPage({ params }: { params: Promise<{ id: 
   if (!/^[0-9a-f-]{36}$/i.test(id)) notFound();
   const found = await loadMySlip(me.id, id, OFFICE.practiceMode);
   if (!found) notFound();
-  const { slip, lines } = found;
+  const { slip, lines, previous, replacedBy } = found;
   const won = (v: number) => t('won', { n: f.number(v) });
   const num = (v: string | null) => (v === null ? null : f.number(Number(v), { maximumFractionDigits: 4 }));
   const name = (code: string, fallback: string) => (t.has(`line.${code}`) ? t(`line.${code}`) : fallback);
@@ -40,6 +40,24 @@ export default async function MyPayslipPage({ params }: { params: Promise<{ id: 
         </h1>
         <p className="num pt-1 text-sm text-faint">{me.name} · {t('payDate', { date: slip.payDate })}</p>
       </div>
+      {replacedBy && (
+        <p className="rounded-card border border-warn bg-warn-tint p-3 text-sm text-warn">
+          {t('oldVersion')}{' '}
+          <Link href={`/punch/payslips/${replacedBy.id}`} className="font-bold underline">
+            {t('toCurrent')}
+          </Link>
+        </p>
+      )}
+      {slip.revision > 1 && slip.current && (
+        <p className="rounded-card border border-border bg-surface p-3 text-sm">
+          {t('correctedNote', { reason: slip.correctionReason ?? '' })}{' '}
+          {previous && (
+            <Link href={`/punch/payslips/${previous.id}`} className="font-bold text-primary underline">
+              {t('toPrevious')}
+            </Link>
+          )}
+        </p>
+      )}
       <Card className="flex items-center justify-between gap-3">
         <span className="font-bold">{t('net')}</span>
         <span className="num text-2xl font-extrabold">{won(slip.net)}</span>

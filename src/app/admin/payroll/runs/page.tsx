@@ -52,6 +52,7 @@ export default async function PayRunsPage({ searchParams }: { searchParams: Prom
                     {r.periodFrom.slice(0, 7)}
                   </Link>
                   {r.revision > 1 && <span className="ml-2 text-xs text-faint">{t('revision', { n: r.revision })}</span>}
+                  {runs.some((x) => x.kind === r.kind && x.periodFrom === r.periodFrom && x.sequence === r.sequence && x.revision > r.revision) && <span className="ml-2 text-xs text-faint">{t('older')}</span>}
                 </td>
                 <td className="num px-3 py-3 whitespace-nowrap">{r.payDate}</td>
                 <td className="px-3 py-3">

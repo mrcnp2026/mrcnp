@@ -32,11 +32,11 @@ const nextDay = (d: string) => new Date(Date.parse(`${d}T00:00:00Z`) + 86400000)
 const prevDay = (d: string) => new Date(Date.parse(`${d}T00:00:00Z`) - 86400000).toISOString().slice(0, 10);
 
 export type RunStatus = 'DRAFT' | 'CALCULATED' | 'REVIEWED' | 'FINALIZED';
-export type RunRow = { id: string; kind: 'REGULAR' | 'BONUS' | 'DAILY'; title: string | null; periodFrom: string; periodTo: string; payDate: string; sequence: number; isTest: boolean; revision: number; status: RunStatus; version: number; generationId: string | null; totals: Record<string, string | number>; createdBy: string; createdAt: string; reviewedBy: string | null; reviewedAt: string | null; finalizedBy: string | null; finalizedAt: string | null };
+export type RunRow = { id: string; kind: 'REGULAR' | 'BONUS' | 'DAILY'; title: string | null; periodFrom: string; periodTo: string; payDate: string; sequence: number; isTest: boolean; revision: number; status: RunStatus; version: number; generationId: string | null; totals: Record<string, string | number>; createdBy: string; createdAt: string; reviewedBy: string | null; reviewedAt: string | null; finalizedBy: string | null; finalizedAt: string | null; supersedesId: string | null; correctionReason: string | null };
 const toRun = (r: Row): RunRow => ({
   id: r.id as string, kind: r.run_kind as RunRow['kind'], title: r.title as string | null, periodFrom: r.period_from as string, periodTo: r.period_to as string, payDate: r.pay_date as string, sequence: r.sequence as number, isTest: r.is_test as boolean, revision: r.revision as number,
   status: r.status as RunStatus, version: r.version as number, generationId: r.current_generation_id as string | null, totals: (r.totals ?? {}) as RunRow['totals'], createdBy: r.created_by as string, createdAt: r.created_at as string,
-  reviewedBy: r.reviewed_by as string | null, reviewedAt: r.reviewed_at as string | null, finalizedBy: r.finalized_by as string | null, finalizedAt: r.finalized_at as string | null,
+  reviewedBy: r.reviewed_by as string | null, reviewedAt: r.reviewed_at as string | null, finalizedBy: r.finalized_by as string | null, finalizedAt: r.finalized_at as string | null, supersedesId: r.supersedes_id as string | null, correctionReason: r.correction_reason as string | null,
 });
 
 export async function loadRuns(practice: boolean): Promise<RunRow[]> {
@@ -355,6 +355,43 @@ export async function withdrawOverride(args: { id: string; overrideId: string; m
   if (error) fail('withdrawOverride', error);
   if (!data?.length) throw new ApiError(404, 'not_found');
   await payrollAudit({ actorId: args.me.id, action: 'override.withdraw', table: 'payroll_statement_overrides', subjectId: args.overrideId, runId: run.id, employeeId: data[0].employee_id as string, requestId: args.requestId });
+}
+
+// ── 정정 판 ──
+/** 같은 대장(종류 · 기간 · 차수 · 연습/운영)의 판 전부 — 판 번호 순 */
+export async function loadRevisions(run: RunRow): Promise<RunRow[]> {
+  const { data, error } = await db().from('payroll_runs').select('*').eq('run_kind', run.kind).eq('period_from', run.periodFrom).eq('period_to', run.periodTo).eq('sequence', run.sequence).eq('is_test', run.isTest).order('revision');
+  if (error) fail('loadRevisions', error);
+  return (data ?? []).map(toRun);
+}
+
+/**
+ * 정정 시작 — 확정한 대장은 그대로 두고, 판 번호를 올린 새 초안을 만든다(사유 필수).
+ * 대상자(뺀 사람과 사유 포함)와 살아 있는 금액 조정을 그대로 옮겨 온다 → 아무것도 바꾸지 않고 계산하면 원본과 같은 결과에서 출발한다.
+ * 가장 새 판에서만 시작할 수 있고, 진행 중인 정정이 있으면 또 만들 수 없다.
+ */
+export async function startCorrection(args: { id: string; reason: string; me: Me; requestId?: string }): Promise<RunRow> {
+  const c = db();
+  const run = await loadRun(args.id);
+  if (!run) throw new ApiError(404, 'not_found');
+  if (run.status !== 'FINALIZED') throw new ApiError(409, 'payroll_not_finalized');
+  const revs = await loadRevisions(run);
+  if (revs.some((r) => r.revision > run.revision)) throw new ApiError(409, 'payroll_correction_exists');
+  const [{ data: mem }, { data: ovs }] = await Promise.all([
+    c.from('payroll_run_members').select('employee_id, employment_id, inclusion_state, exclusion_reason').eq('run_id', run.id),
+    c.from('payroll_statement_overrides').select('employee_id, item_code, kind, original_amount, proposed_amount, reason').eq('run_id', run.id).eq('active', true),
+  ]);
+  const { data, error } = await c.from('payroll_runs').insert({ run_kind: run.kind, title: run.title, period_from: run.periodFrom, period_to: run.periodTo, pay_date: run.payDate, sequence: run.sequence, is_test: run.isTest, revision: run.revision + 1, supersedes_id: run.id, correction_reason: args.reason, created_by: args.me.id }).select('*').single();
+  if (error?.code === '23505') throw new ApiError(409, 'payroll_correction_exists');
+  if (error || !data) fail('startCorrection', error);
+  const m = await c.from('payroll_run_members').insert((mem ?? []).map((x) => ({ run_id: data!.id, employee_id: x.employee_id, employment_id: x.employment_id, inclusion_state: x.inclusion_state, exclusion_reason: x.exclusion_reason })));
+  if (m.error) fail('startCorrection.members', m.error);
+  if ((ovs ?? []).length > 0) {
+    const o = await c.from('payroll_statement_overrides').insert((ovs ?? []).map((x) => ({ run_id: data!.id, employee_id: x.employee_id, item_code: x.item_code, kind: x.kind, original_amount: x.original_amount, proposed_amount: x.proposed_amount, reason: x.reason, created_by: args.me.id })));
+    if (o.error) fail('startCorrection.overrides', o.error);
+  }
+  await payrollAudit({ actorId: args.me.id, action: 'run.correct', table: 'payroll_runs', subjectId: data!.id as string, runId: data!.id as string, requestId: args.requestId, detail: { from: run.id, revision: run.revision + 1 } });
+  return toRun(data!);
 }
 
 // ── 화면용 읽기 ──

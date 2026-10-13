@@ -207,6 +207,60 @@ try {
   const { data: evs } = await db.from('payroll_publication_events').select('id, kind, reason').eq('statement_id', slipId).order('id');
   check(JSON.stringify(evs?.map((e) => e.kind)) === JSON.stringify(['PUBLISHED', 'UNPUBLISHED']) && evs![1].reason === 'e2e 검사 회수', '공개 · 회수가 기록으로 쌓인다');
   check(!!(await db.from('payroll_publication_events').delete().eq('id', evs![0].id)).error, '공개 기록은 지울 수 없다');
+
+  // ── 정정 판: 확정본은 그대로 두고 2판을 만들어 확정 · 공개한다 ──
+  check((await post(api, { action: 'publish' })).json.publish?.published === 1, '원본을 다시 공개 (정정 전 상태)');
+  check((await post(api, { action: 'correct', reason: '' })).json.error === 'payroll_reason_required', '사유 없이 정정을 시작할 수 없다');
+  page = await open(`/admin/payroll/runs/${runId}`);
+  await p.getByRole('button', { name: '정정 시작' }).click();
+  await p.locator('input[name="reason"]').last().fill('e2e 공제 누락');
+  await p.getByRole('button', { name: '정정 판 만들기' }).click();
+  await p.waitForURL((u) => /\/admin\/payroll\/runs\/[0-9a-f-]{36}$/.test(u.pathname) && !u.pathname.endsWith(runId), { timeout: 30000 });
+  const run2Id = new URL(p.url()).pathname.split('/').pop()!;
+  const api2 = `/api/admin/payroll/runs/${run2Id}`;
+  const run2 = async () => (await db.from('payroll_runs').select('status, version, revision, supersedes_id, correction_reason, current_generation_id').eq('id', run2Id).single()).data!;
+  let r2 = await run2();
+  check(r2.revision === 2 && r2.supersedes_id === runId && r2.correction_reason === 'e2e 공제 누락' && r2.status === 'DRAFT', '정정 2판이 초안으로 생긴다 (원본을 가리키고 사유가 남는다)');
+  check((await run()).status === 'FINALIZED', '원본은 확정 상태 그대로다');
+  const { data: mem2 } = await db.from('payroll_run_members').select('employee_id, inclusion_state').eq('run_id', run2Id);
+  const { data: ov2 } = await db.from('payroll_statement_overrides').select('item_code, proposed_amount').eq('run_id', run2Id).eq('active', true);
+  check(mem2?.length === mem!.length && mem2.filter((m) => m.inclusion_state === 'INCLUDED').length === 1 && ov2?.length === 1 && ov2[0].item_code === 'BONUS', '대상자(뺀 사람 포함)와 금액 조정이 그대로 옮겨진다');
+  check((await post(api, { action: 'correct', reason: '또 정정' })).json.error === 'payroll_correction_exists', '정정이 진행 중이면 또 만들 수 없다');
+  check((await post(api2, { action: 'correct', reason: '초안에서 정정' })).json.error === 'payroll_not_finalized', '확정 전인 판에서는 정정을 시작할 수 없다');
+  page = await open(`/admin/payroll/runs/${runId}`);
+  check(page.includes('정정 2판을 만드는 중입니다'), '원본 화면에 정정이 진행 중이라고 보인다');
+  check((await see('/punch/payslips')).includes('2,916,670원'), '직원: 정정본이 공개되기 전에는 원본이 그대로 보인다');
+  // 고칠 것: 공제 5,000원이 빠졌다 → 조정으로 넣고 계산 · 검토 · 확정
+  check((await post(api2, { action: 'override.add', employeeId: other!.id, itemCode: 'ETC_CUT', kind: 'DEDUCTION', amount: 5000, reason: 'e2e 누락된 공제' })).status === 200, '정정 판에 공제 조정을 넣는다');
+  check((await post(api2, { action: 'calculate', expectedVersion: r2.version })).json.calculated?.ok === 1, '정정 판 계산');
+  r2 = await run2();
+  check((await post(api2, { action: 'review', expectedVersion: r2.version })).status === 200, '정정 판 검토');
+  r2 = await run2();
+  check((await post(api2, { action: 'finalize', expectedVersion: r2.version })).status === 200 && (await run2()).status === 'FINALIZED', '정정 판 확정');
+  r2 = await run2();
+  const { data: sNew } = await db.from('payroll_statements').select('id, net_total').eq('generation_id', r2.current_generation_id).eq('employee_id', other!.id).single();
+  check(Number(sNew?.net_total) === 2911670, '정정 판의 실지급 2,911,670 (원본 2,916,670 − 공제 5,000)', String(sNew?.net_total));
+  const { data: sOld } = await db.from('payroll_statements').select('net_total').eq('id', slipId).single();
+  check(Number(sOld?.net_total) === 2916670, '원본 명세서의 금액은 바뀌지 않았다');
+  check((await see('/punch/payslips')).includes('2,916,670원'), '직원: 정정본을 확정만 하고 공개하지 않으면 아직 원본이 보인다 (자동으로 공개되지 않는다)');
+  check((await post(api, { action: 'unpublish', employeeId: other!.id, reason: 'e2e 원본 회수' })).status === 200 && (await post(api, { action: 'publish' })).json.error === 'payroll_superseded', '정정본이 확정되면 원본은 새로 공개할 수 없다');
+  // 원본을 다시 공개 상태로 만들 수 없으므로, 「원본이 공개 중일 때 정정본을 공개하면 바뀐다」는 것은 기록을 직접 넣어 만든다
+  await db.from('payroll_publication_events').insert({ statement_id: slipId, run_id: runId, employee_id: other!.id, kind: 'PUBLISHED', actor_id: emp!.id });
+  page = await open(`/admin/payroll/runs/${run2Id}`);
+  check(page.includes('정정 사유: e2e 공제 누락') && page.includes('정정 2판'), '정정 판 화면에 사유와 판 번호');
+  await p.getByRole('button', { name: '공개하지 않은 1명에게 공개' }).click();
+  await p.getByText('1명에게 공개했습니다.').waitFor({ timeout: 30000 });
+  await shot('payrun-6-correction');
+  const { data: evOld } = await db.from('payroll_publication_events').select('kind, superseding_statement_id').eq('statement_id', slipId).order('id', { ascending: false }).limit(1);
+  check(evOld?.[0]?.kind === 'SUPERSEDED' && evOld[0].superseding_statement_id === sNew!.id, '정정본을 공개하면 원본 명세서는 「정정본으로 바뀜」으로 기록된다');
+  mine = await see('/punch/payslips');
+  check(mine.includes('2,911,670원') && mine.includes('정정 2판') && !mine.includes('2,916,670원'), '직원: 목록에는 정정된 명세서만 보인다');
+  const fixed = await see(`/punch/payslips/${sNew!.id}`);
+  check(fixed.includes('정정된 명세서입니다. 정정 사유: e2e 공제 누락') && fixed.includes('2,911,670원') && fixed.includes('이전 명세서 보기'), '직원: 정정 사유와 이전 명세서로 가는 길이 보인다');
+  const old = await see(`/punch/payslips/${slipId}`);
+  check(old.includes('정정되기 전의 명세서입니다.') && old.includes('2,916,670원'), '직원: 이전 명세서는 「정정 전」이라고 표시된 채 남아 있다');
+  if (SHOTS) await q.screenshot({ path: path.join(SHOTS, 'payrun-7-myslip-corrected.png'), fullPage: true });
+  check((await open(`/admin/payroll/runs/${runId}`)).includes('이 대장은 정정 2판으로 바뀌었습니다.'), '원본 화면에 정정됐다고 보인다');
   await ctx2.close();
 
   // ── 기록 · 권한 ──

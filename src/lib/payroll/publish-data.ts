@@ -7,7 +7,7 @@ import 'server-only';
 import { ApiError } from '@/lib/api';
 import type { Me } from '@/lib/auth';
 import { createAdminClient } from '@/lib/supabase/admin';
-import { loadRun } from './run-data';
+import { loadRevisions, loadRun } from './run-data';
 import { payrollAudit } from './staff-data';
 
 const db = () => createAdminClient();
@@ -48,10 +48,25 @@ export async function publishRun(args: { runId: string; employeeIds?: string[]; 
   const run = await loadRun(args.runId);
   if (!run) throw new ApiError(404, 'not_found');
   if (run.status !== 'FINALIZED') throw new ApiError(409, 'payroll_not_finalized');
+  const revs = await loadRevisions(run);
+  if (revs.some((r) => r.revision > run.revision && r.status === 'FINALIZED')) throw new ApiError(409, 'payroll_superseded'); // 정정본이 확정됐으면 옛 판을 새로 공개하지 않는다
   const pub = await loadPublication(run.id, run.generationId);
   const targets = [...pub].filter(([id, s]) => !s.published && (!args.employeeIds || args.employeeIds.includes(id)));
   const skipped = (args.employeeIds?.length ?? pub.size) - targets.length;
   if (targets.length === 0) return { published: 0, skipped };
+  // 정정본을 공개하면, 앞 판들에서 그 직원에게 공개 중이던 명세서는 「정정본으로 바뀜」으로 적는다(숨기지 않고 이전본으로 남는다)
+  const replaced: Row[] = [];
+  for (const prev of revs.filter((r) => r.revision < run.revision && r.status === 'FINALIZED')) {
+    const before = await loadPublication(prev.id, prev.generationId);
+    for (const [employeeId, s] of targets) {
+      const old = before.get(employeeId);
+      if (old?.published) replaced.push({ statement_id: old.statementId, run_id: prev.id, employee_id: employeeId, kind: 'SUPERSEDED', superseding_statement_id: s.statementId, actor_id: args.me.id });
+    }
+  }
+  if (replaced.length > 0) {
+    const r = await db().from('payroll_publication_events').insert(replaced);
+    if (r.error) boom('publishRun.supersede', r.error);
+  }
   const { error } = await db().from('payroll_publication_events').insert(targets.map(([employeeId, s]) => ({ statement_id: s.statementId, run_id: run.id, employee_id: employeeId, kind: 'PUBLISHED', actor_id: args.me.id })));
   if (error) boom('publishRun', error);
   await payrollAudit({ actorId: args.me.id, action: 'run.publish', table: 'payroll_publication_events', runId: run.id, requestId: args.requestId, detail: { count: targets.length } });
@@ -71,29 +86,39 @@ export async function unpublishStatement(args: { runId: string; employeeId: stri
 }
 
 // ── 직원: 내 명세서 ──
-export type MySlip = { id: string; month: string; payDate: string; kind: string; revision: number; pay: number; deduction: number; net: number; publishedAt: string; isTest: boolean };
+export type MySlip = { id: string; month: string; payDate: string; kind: string; revision: number; pay: number; deduction: number; net: number; publishedAt: string; isTest: boolean; correctionReason: string | null; current: boolean };
 export type MySlipLine = { code: string; kind: 'PAYMENT' | 'DEDUCTION'; label: string; quantity: string | null; unitPrice: string | null; factor: string | null; amount: number };
 
-/** 내게 공개 중인 명세서 (새 달부터). practice = 지금 앱의 모드 — 연습 대장과 운영 대장을 섞어 보이지 않는다 */
+/** 내게 공개 중인 명세서 (새 달부터). practice = 지금 앱의 모드 — 연습 대장과 운영 대장을 섞어 보이지 않는다. 정정본으로 바뀐 이전본은 목록에 없고 정정본에서 따라 들어간다 */
 export async function loadMySlips(employeeId: string, practice: boolean): Promise<MySlip[]> {
+  return (await mySlips(employeeId, practice)).filter((x) => x.current);
+}
+
+/** 지금 공개 중인 것(current)과, 정정본으로 바뀐 이전본. 회수된 것은 없다 */
+async function mySlips(employeeId: string, practice: boolean): Promise<MySlip[]> {
   const events = await latestEvents({ employeeId });
-  const ids = [...events].filter(([, e]) => e.kind === 'PUBLISHED').map(([id]) => id);
+  const ids = [...events].filter(([, e]) => e.kind === 'PUBLISHED' || e.kind === 'SUPERSEDED').map(([id]) => id);
   if (ids.length === 0) return [];
-  const { data, error } = await db().from('payroll_statements').select('id, generation_id, pay_total, deduction_total, net_total, state, payroll_runs!inner(id, run_kind, period_from, pay_date, revision, status, is_test, current_generation_id)').eq('employee_id', employeeId).in('id', ids);
+  const { data, error } = await db().from('payroll_statements').select('id, generation_id, pay_total, deduction_total, net_total, state, payroll_runs!inner(id, run_kind, period_from, pay_date, revision, status, is_test, current_generation_id, correction_reason)').eq('employee_id', employeeId).in('id', ids);
   if (error) boom('loadMySlips', error);
   return (data ?? [])
     .map((s) => ({ s, r: s.payroll_runs as unknown as Row }))
     .filter(({ s, r }) => s.state === 'OK' && r.status === 'FINALIZED' && r.current_generation_id === s.generation_id && r.is_test === practice)
-    .map(({ s, r }) => ({ id: s.id as string, month: (r.period_from as string).slice(0, 7), payDate: r.pay_date as string, kind: r.run_kind as string, revision: r.revision as number, pay: Number(s.pay_total), deduction: Number(s.deduction_total), net: Number(s.net_total), publishedAt: events.get(s.id as string)!.at, isTest: r.is_test as boolean }))
+    .map(({ s, r }) => ({ id: s.id as string, month: (r.period_from as string).slice(0, 7), payDate: r.pay_date as string, kind: r.run_kind as string, revision: r.revision as number, pay: Number(s.pay_total), deduction: Number(s.deduction_total), net: Number(s.net_total), publishedAt: events.get(s.id as string)!.at, isTest: r.is_test as boolean, correctionReason: (r.correction_reason as string | null) ?? null, current: events.get(s.id as string)!.kind === 'PUBLISHED' }))
     .sort((a, b) => b.month.localeCompare(a.month) || b.revision - a.revision);
 }
 
 /** 내 명세서 한 장. 내 것이 아니거나 공개 중이 아니면 null (있는지 없는지도 알려 주지 않는다) */
-export async function loadMySlip(employeeId: string, statementId: string, practice: boolean): Promise<{ slip: MySlip; lines: MySlipLine[] } | null> {
-  const slip = (await loadMySlips(employeeId, practice)).find((x) => x.id === statementId);
+export async function loadMySlip(employeeId: string, statementId: string, practice: boolean): Promise<{ slip: MySlip; lines: MySlipLine[]; previous: MySlip | null; replacedBy: MySlip | null } | null> {
+  const all = await mySlips(employeeId, practice);
+  const slip = all.find((x) => x.id === statementId);
   if (!slip) return null;
+  // 같은 달의 다른 판: 이 명세서가 정정본이면 바로 앞 판(이전본), 이전본이면 지금 공개 중인 판
+  const same = all.filter((x) => x.month === slip.month && x.kind === slip.kind && x.id !== slip.id);
+  const previous = same.filter((x) => !x.current && x.revision < slip.revision).sort((a, b) => b.revision - a.revision)[0] ?? null;
+  const replacedBy = slip.current ? null : (same.find((x) => x.current) ?? null);
   const { data, error } = await db().from('payroll_statement_items').select('item_code, kind, label_ko, quantity, unit_price, factor, amount, line_no, created_at').eq('statement_id', statementId).in('kind', ['PAYMENT', 'DEDUCTION']).order('created_at').order('line_no');
   if (error) boom('loadMySlip', error);
   const t = (v: unknown) => (v === null || v === undefined ? null : String(Number(v)));
-  return { slip, lines: (data ?? []).map((i) => ({ code: i.item_code as string, kind: i.kind as 'PAYMENT' | 'DEDUCTION', label: i.label_ko as string, quantity: t(i.quantity), unitPrice: t(i.unit_price), factor: t(i.factor), amount: Number(i.amount) })) };
+  return { slip, previous, replacedBy, lines: (data ?? []).map((i) => ({ code: i.item_code as string, kind: i.kind as 'PAYMENT' | 'DEDUCTION', label: i.label_ko as string, quantity: t(i.quantity), unitPrice: t(i.unit_price), factor: t(i.factor), amount: Number(i.amount) })) };
 }

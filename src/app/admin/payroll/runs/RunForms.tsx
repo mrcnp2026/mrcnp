@@ -272,3 +272,40 @@ export function PublishToggle({ id, employeeId, published, name }: { id: string;
     </form>
   );
 }
+
+export function CorrectionStart({ id }: { id: string }) {
+  const t = useTranslations('admin.payRuns');
+  const { busy, err, send, router } = useRun(`/api/admin/payroll/runs/${id}`);
+  const [open, setOpen] = useState(false);
+  if (!open)
+    return (
+      <Button type="button" size="sm" variant="outline" onClick={() => setOpen(true)}>
+        {t('correct')}
+      </Button>
+    );
+  return (
+    <form
+      className="flex flex-col gap-2 text-sm"
+      onSubmit={async (e) => {
+        e.preventDefault();
+        const r = await send<{ id: string }>({ action: 'correct', reason: new FormData(e.currentTarget).get('reason') });
+        if (r) router.push(`/admin/payroll/runs/${r.id}`);
+      }}
+    >
+      <label className="flex flex-col gap-1">
+        <span className="font-bold">{t('correctReason')}</span>
+        <input name="reason" required minLength={2} maxLength={500} className={field} autoComplete="off" />
+      </label>
+      <p className="text-xs text-faint">{t('correctHint')}</p>
+      <span className="flex gap-2">
+        <Button type="submit" size="sm" disabled={busy}>
+          {t('correctDo')}
+        </Button>
+        <Button type="button" size="sm" variant="outline" disabled={busy} onClick={() => setOpen(false)}>
+          {t('cancel')}
+        </Button>
+      </span>
+      {err && <ErrorNote code={err.code} requestId={err.requestId} namespace="admin.payRuns" />}
+    </form>
+  );
+}
