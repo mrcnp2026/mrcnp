@@ -114,6 +114,17 @@ try {
   await shot('punch-records', '/punch/records');
   await shot('punch-corrections', '/punch/corrections');
   await shot('punch-corrections-new', '/punch/corrections?new=1', false);
+  // 정정 요청의 둘째 단계 「요청사항 검토」 — 칸을 채우고 [다음]을 누른 모습 (보내지는 않는다)
+  if (!process.env.ONLY || new RegExp(process.env.ONLY).test('punch-corrections-review')) {
+    await p.goto(BASE + '/punch/corrections?new=1');
+    await p.waitForLoadState('networkidle');
+    await p.locator('input[name=workDate]').fill(new Date(Date.now() - 15 * 3600e3).toISOString().slice(0, 10));
+    await p.locator('input[name=time]').fill('18:00');
+    await p.getByRole('button', { name: '다음: 요청사항 검토' }).click();
+    await p.locator('textarea[name=reason]').waitFor();
+    await p.screenshot({ path: path.join(OUT, 'punch-corrections-review.png') });
+    console.log('찍음', 'punch-corrections-review');
+  }
   await shot('punch-leave', '/punch/leave');
   await shot('punch-leave-new', '/punch/leave?new=leave', false);
   await shot('punch-account', '/punch/account');

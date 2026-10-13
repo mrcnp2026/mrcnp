@@ -2196,7 +2196,13 @@
     "reason_required": "Please write a reason (up to 200 characters).",
     "future_time": "You cannot request a time in the future.",
     "duplicate_request": "You already have a waiting request for this record.",
-    "backToRequests": "Requests"
+    "backToRequests": "Requests",
+    "next": "Next: review request",
+    "reviewTitle": "Review request",
+    "reviewWhat": "Request",
+    "reviewNextDay": "next day",
+    "reviewNotice": "Check the date and time before sending. The original record stays as it is, and the change counts toward working hours once an admin approves it.",
+    "reviewBack": "Close"
   },
   "install": {
     "title": "Add to your home screen",

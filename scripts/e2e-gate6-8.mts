@@ -81,6 +81,7 @@ try {
     await e.goto(`${BASE}/punch/corrections?date=${yesterday}&kind=${kind}`);
     check((await e.locator('input[name=workDate]').inputValue()) === yesterday, `배너 링크 형식(?date=&kind=)으로 열면 날짜가 미리 채워짐 (${kind})`);
     await e.locator('input[name=time]').fill(time);
+    await e.getByRole('button', { name: 'Next: review request' }).click();
     await e.locator('textarea[name=reason]').fill(kind === 'in' ? 'Forgot to clock in' : 'Forgot to clock out after client visit');
     await e.getByRole('button', { name: 'Send request' }).click();
     if (already?.length) {
@@ -93,6 +94,7 @@ try {
   }
   await e.goto(`${BASE}/punch/corrections?date=${yesterday}&kind=out`);
   await e.locator('input[name=time]').fill('20:00');
+  await e.getByRole('button', { name: 'Next: review request' }).click();
   await e.locator('textarea[name=reason]').fill('again');
   await e.getByRole('button', { name: 'Send request' }).click();
   const dupMsg = await e.getByText('already have a waiting request', { exact: false }).isVisible({ timeout: 15000 }).catch(() => false);
