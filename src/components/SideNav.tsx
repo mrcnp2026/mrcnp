@@ -163,6 +163,7 @@ export function SideNav({ isAdmin, branchManager = false, inboxCount = 0 }: { is
         sub: [
           { href: '/admin/payroll', key: 'payHours' },
           { href: '/admin/payroll/staff', key: 'payStaff' },
+          { href: '/admin/payroll/runs', key: 'payRuns' },
         ],
       },
     ],
