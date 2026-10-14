@@ -3337,7 +3337,10 @@
         "FINALIZEDNote": "No more changes",
         "PUBLISHED": "Publish",
         "PUBLISHEDNote": "Staff see payslips"
-      }
+      },
+      "diffTitle": "Correction difference — rev {from} → rev {to}",
+      "diffNone": "No one changed from the previous revision.",
+      "diffNote": "Compares the previous revision with this one by employee (calculated only). Differences are not carried to next month automatically — use an adjustment in that month if needed."
     },
     "reports": {
       "attTitle": "Attendance report",

@@ -252,6 +252,10 @@ try {
   check((await post(api2, { action: 'override.add', employeeId: other!.id, itemCode: 'ETC_CUT', kind: 'DEDUCTION', amount: 5000, reason: 'e2e 누락된 공제' })).status === 200, '정정 판에 공제 조정을 넣는다');
   check((await post(api2, { action: 'calculate', expectedVersion: r2.version })).json.calculated?.ok === 1, '정정 판 계산');
   r2 = await run2();
+  {
+    const dpage = await open(`/admin/payroll/runs/${run2Id}`);
+    check(dpage.includes('정정 차액 — 1판 → 2판') && (await p.locator('table[data-diff] tbody tr').count()) === 1 && dpage.includes('(-5,000)'), '정정 판 화면: 직원별 정정 차액(공제 +5,000 · 실지급 -5,000)');
+  }
   // ── 사회보험: 취득/상실 확인 + 고지 보험료 정산 (정정 판이 계산됐고 아직 확정 전인 지금) ──
   {
     const INS = '/api/admin/payroll/insurance';

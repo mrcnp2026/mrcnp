@@ -34,6 +34,13 @@ export default async function PayRunPage({ params, searchParams }: { params: Pro
   const newer = revs.filter((r) => r.revision > run.revision).at(-1) ?? null;
   const original = revs.find((r) => r.id === run.supersedesId) ?? null;
   const replaced = !!newer && newer.status === 'FINALIZED'; // 정정본이 확정됐다 — 이 판은 더 공개하지 않는다
+  // 정정 차액 (2026-10-14, 미구현 목록 9번): 바로 앞 판과 이 판의 직원별 지급 · 공제 · 실지급 차이. 계산하지 않은 사람 · 막힌 사람은 비교하지 않는다
+  const diff = original?.generationId && run.generationId ? await (async () => {
+    const { data } = await createAdminClient().from('payroll_statements').select('employee_id, generation_id, state, pay_total, deduction_total, net_total').in('generation_id', [original.generationId!, run.generationId!]);
+    const by = (g: string) => new Map((data ?? []).filter((x) => x.generation_id === g && x.state === 'OK').map((x) => [x.employee_id as string, { pay: Number(x.pay_total), deduction: Number(x.deduction_total), net: Number(x.net_total) }]));
+    const before = by(original.generationId!), after = by(run.generationId!);
+    return lines.filter((l) => before.has(l.employeeId) || after.has(l.employeeId)).map((l) => ({ id: l.employeeId, name: l.name, before: before.get(l.employeeId) ?? null, after: after.get(l.employeeId) ?? null })).filter((x) => !x.before || !x.after || x.before.net !== x.after.net || x.before.pay !== x.after.pay || x.before.deduction !== x.after.deduction);
+  })() : null;
   // 확정한 대장: 직원별 공개 상태 (공개는 확정과 따로 한다)
   const pub: Map<string, { statementId: string; published: boolean; at: string | null }> = final ? await loadPublication(run.id, run.generationId) : new Map();
   const waiting = [...pub.values()].filter((x) => !x.published).length;
@@ -130,6 +137,46 @@ export default async function PayRunPage({ params, searchParams }: { params: Pro
             </div>
           ))}
         </dl>
+      )}
+
+      {diff && (
+        <section className="rounded-card border border-border bg-bg px-4 py-3">
+          <h2 className="font-bold">{t('diffTitle', { from: original!.revision, to: run.revision })}</h2>
+          {diff.length === 0 ? (
+            <p className="pt-1 text-sm text-faint">{t('diffNone')}</p>
+          ) : (
+            <div className="overflow-x-auto">
+              <table className="mt-2 w-full text-sm" data-diff>
+                <thead>
+                  <tr className="border-b border-border text-left text-xs text-muted">
+                    <th scope="col" className="py-2 pr-3">{t('colName')}</th>
+                    {(['colPay', 'colDeduction', 'colNet'] as const).map((k) => (
+                      <th key={k} scope="col" className="py-2 pr-3 text-right">{t(k)}</th>
+                    ))}
+                  </tr>
+                </thead>
+                <tbody>
+                  {diff.map((d) => (
+                    <tr key={d.id} className="border-b border-border last:border-b-0">
+                      <td className="py-2 pr-3 font-semibold">{d.name}</td>
+                      {(['pay', 'deduction', 'net'] as const).map((k) => {
+                        const a = d.before?.[k], b = d.after?.[k];
+                        const gap = a !== undefined && b !== undefined ? b - a : null;
+                        return (
+                          <td key={k} className="num py-2 pr-3 text-right whitespace-nowrap">
+                            <span className="text-faint">{a === undefined ? '–' : won(a)}</span> → <span className="font-semibold">{b === undefined ? '–' : won(b)}</span>
+                            {gap !== null && gap !== 0 && <span className={`ml-1 text-xs font-bold ${gap > 0 ? 'text-ok' : 'text-danger'}`}>({gap > 0 ? '+' : ''}{f.number(gap)})</span>}
+                          </td>
+                        );
+                      })}
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
+          <p className="pt-2 text-xs text-faint">{t('diffNote')}</p>
+        </section>
       )}
 
       <div className="overflow-x-auto rounded-card border border-border bg-bg">
