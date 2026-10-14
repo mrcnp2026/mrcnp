@@ -52,7 +52,7 @@ export default async function ShiftsPage({ searchParams }: { searchParams: Promi
                 name: { text: x.name, node: <Link href={`/admin/shifts/${x.id}`} className="font-bold hover:text-primary">{x.name}</Link> },
                 time: { text: `${x.startTime} - ${x.endTime}`, node: <span className="num">{x.startTime} - {x.endTime}</span> },
                 kind: { text: x.kind !== 'none' ? t(`kinds.${x.kind}`) : '' },
-                color: { text: x.color, node: <span aria-hidden className={`inline-block size-5 rounded-button align-middle ${SHIFT_COLOR_CLASS[x.color]}`} /> },
+                color: { text: x.color, node: <span aria-hidden className={`inline-block size-5 rounded-sm align-middle ${SHIFT_COLOR_CLASS[x.color]}`} /> },
                 people: { text: String(countOf.get(x.id) ?? 0) },
                 memo: { text: x.memo ?? '' },
               },

@@ -157,20 +157,32 @@ try {
   await p.setViewportSize({ width: 1440, height: 900 });
   await p.goto(`${BASE}/admin/jobs`);
   await p.waitForLoadState('networkidle');
-  // PC 메뉴 (2026-10-11): 남색 사이드 메뉴 + 관리 화면에서는 회색 둘째 메뉴. 지금 화면은 둘째 메뉴에서 표시
+  // PC 틀 (2026-10-14 결정 사항 개발-20 · 21 · 25): 위 띠 + 앱 띠 + 메뉴 판. 설정 화면(직무)은 통합설정 공간 — 묶음 목록 + 메뉴 판, 지금 화면이 메뉴 판에 표시된다
   const panelNow = p.locator('nav.sticky').nth(1).locator('a[aria-current="page"]');
-  check((await p.locator('nav.sticky').count()) === 2 && (await panelNow.count()) === 1 && ((await panelNow.textContent()) ?? '').includes('직무'), 'PC 메뉴: 관리 화면에서는 회색 둘째 메뉴가 붙고 지금 화면(직무)이 표시됨');
+  check((await p.locator('nav.sticky').count()) === 2 && (await panelNow.count()) === 1 && ((await panelNow.textContent()) ?? '').includes('직무') && (await p.locator('nav.sticky').first().getByRole('heading', { name: '통합설정' }).count()) === 1, 'PC 통합설정: 묶음 목록 옆 메뉴 판에 지금 화면(직무)이 표시됨');
+  check(((await p.locator('main').locator('xpath=preceding-sibling::p[1]').textContent()) ?? '').replace(/\s+/g, '') === '통합설정회사설정조직직무', 'PC 통합설정: 본문 위 경로 「통합설정 › 회사설정 › 조직 › 직무」');
+  await p.goto(`${BASE}/admin/console`);
+  await p.waitForLoadState('networkidle');
+  check((await p.getByRole('heading', { level: 2, name: '회사설정' }).count()) === 1 && (await p.getByRole('heading', { level: 2, name: 'App 관리' }).count()) === 1 && (await p.locator('main a[href="/admin/leave/types"]').count()) === 1, '통합설정 첫 화면: 회사설정 · App 관리 전체 메뉴 한 장');
   await p.goto(`${BASE}/admin`);
   await p.waitForLoadState('networkidle');
-  await p.locator('nav.sticky').first().getByRole('link', { name: '출퇴근기록', exact: true }).hover();
-  check(await p.locator('nav.sticky').first().locator('a[href="/admin/records/list"]').waitFor({ state: 'visible', timeout: 3000 }).then(() => true, () => false), 'PC 메뉴: 「출퇴근기록」에 마우스를 올리면 하위 메뉴(목록형)가 아래로 펼쳐짐');
+  const rail = p.locator('nav.sticky').first();
+  check((await rail.locator('a').allTextContents()).map((x) => x.replace(/\d+/g, '').trim()).join() === '홈,인사,근태,휴가,요청,급여,소통,리포트' && (await p.locator('nav.sticky').count()) === 1, 'PC 관리자 화면: 앱 띠 8개(홈 · 인사 · 근태 · 휴가 · 요청 · 급여 · 소통 · 리포트), 홈은 메뉴 판 없이 넓게');
+  await rail.getByRole('link', { name: '근태' }).click();
+  await p.waitForURL(/\/admin\/schedule/);
+  await p.waitForLoadState('networkidle');
+  check((await p.locator('nav.sticky').nth(1).locator('a').allTextContents()).map((x) => x.trim()).join() === '달력형,목록형,달력형,목록형,월 집계,누락 기록,이상자 관리,근태 마감', 'PC 관리자 화면: 근태 메뉴 판에 근무일정 · 출퇴근기록 · 점검/마감 묶음');
   await p.waitForTimeout(400);
   await shot('44-PC-메뉴-패널');
-  // 직원 모드(PC): 왼쪽 메뉴 없이 상단 탭(시프티의 4개 + 2026-10-13 명세서) + 월 달력 (2026-10-11 의뢰인 스샷 `스샷/직원모드 홈.png`)
-  await p.goto(`${BASE}/punch`);
-  await p.waitForLoadState('networkidle');
-  const tabs = p.locator('header nav a');
-  check((await p.locator('nav.sticky').count()) === 0 && (await tabs.count()) === 5 && ((await tabs.first().getAttribute('aria-current')) === 'page'), 'PC 직원 모드: 왼쪽 메뉴 없이 상단 탭 5개(시프티의 4개 + 명세서), 첫 탭(스케줄)이 켜짐');
+  // 메뉴 검색: 이름으로 찾아 Enter로 이동
+  await p.getByRole('combobox', { name: '메뉴 검색' }).fill('인건비');
+  await p.keyboard.press('Enter');
+  check(await p.waitForURL(/\/admin\/payroll\/labor-cost/, { timeout: 15000 }).then(() => true, () => false), 'PC 메뉴 검색: 「인건비」 → 인건비 현황으로 이동');
+  // 내 화면(PC): 같은 틀 — 앱 띠 8개, 공간 전환 단추에서 「내 화면」이 켜짐 + 월 달력
+  await p.getByRole('group', { name: '화면 전환' }).getByRole('link', { name: '내 화면' }).click();
+  await p.waitForURL(/\/punch$/);
+  await p.getByText('내 근로 통계').waitFor({ timeout: 30000 }); // 화면 이동(클라이언트)이 끝나 새 본문이 그려질 때까지
+  check((await p.locator('nav.sticky').first().locator('a').allTextContents()).map((x) => x.trim()).join() === '홈,일정,출퇴근,휴가,요청,급여,소통,조직' && (await p.getByRole('group', { name: '화면 전환' }).locator('a[aria-current]').textContent()) === '내 화면', 'PC 내 화면: 같은 틀의 앱 띠 8개, 「내 화면」이 켜짐');
   check((await p.getByText('내 근로 통계').isVisible()) && (await p.getByText('내 휴가 통계').isVisible()) && (await p.locator('main .grid-cols-7 > div').count()) >= 35, 'PC 직원 홈: 내 근로 통계 · 내 휴가 통계 · 월 달력');
   await shot('44-PC-메뉴');
   check(errors.length === 0, '화면 오류 없음', errors[0] ?? '');

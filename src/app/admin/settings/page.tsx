@@ -54,7 +54,7 @@ function SetBand({ children }: { children: ReactNode }) {
 function Flag({ on, label }: { on: boolean; label: string }) {
   return (
     <p className="flex items-center gap-2 font-bold">
-      <span aria-hidden className={`flex size-4 items-center justify-center rounded-button border ${on ? 'border-primary bg-primary text-on-primary' : 'border-border bg-surface'}`}>{on && <Check size={12} strokeWidth={3} />}</span>
+      <span aria-hidden className={`flex size-4 items-center justify-center rounded-sm border ${on ? 'border-primary bg-primary text-on-primary' : 'border-border bg-surface'}`}>{on && <Check size={12} strokeWidth={3} />}</span>
       {label}
     </p>
   );

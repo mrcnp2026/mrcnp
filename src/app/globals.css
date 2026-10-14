@@ -19,6 +19,7 @@
   --color-danger-tint: var(--t-color-danger-tint);
   --color-on-primary: var(--t-color-on-primary);
   --color-nav: var(--t-color-nav);
+  --color-rail: var(--t-color-rail);
 
   --radius-card: var(--t-radius-card);
   --radius-button: var(--t-radius-button);
@@ -35,7 +36,8 @@
   --text-4xl: var(--t-text-4xl);
 
   --shadow-card: var(--t-shadow-card);
-  --font-sans: var(--font-latin), var(--font-thai), var(--font-kr), system-ui, sans-serif;
+  --shadow-pop: var(--t-shadow-pop);
+  --font-sans: "Pretendard Variable", var(--font-latin), var(--font-thai), var(--font-kr), system-ui, sans-serif; /* 2026-10-14 견본: Pretendard. 없는 글자(태국 문자)는 Noto가 받는다 */
 }
 
 html {

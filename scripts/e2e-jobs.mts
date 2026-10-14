@@ -54,7 +54,10 @@ try {
   await p.waitForLoadState('networkidle');
   await p.locator('[data-menu-open]').click();
   await p.getByRole('dialog').waitFor();
-  check((await p.getByRole('dialog').getByRole('link', { name: '직무', exact: true }).count()) === 1, '왼쪽 메뉴에 「직무」');
+  // 2026-10-14: 직무는 통합설정 › 회사설정 › 조직에 있다 — 폰 메뉴에서는 「통합설정 › 전체 메뉴」로 들어간다
+  await p.getByRole('dialog').getByRole('link', { name: '전체 메뉴', exact: true }).click();
+  await p.waitForURL(/\/admin\/console$/);
+  check(await p.locator('main a[href="/admin/jobs"]').waitFor({ timeout: 20000 }).then(() => true, () => false), '폰 메뉴 › 통합설정 전체 메뉴에 「직무」');
   await p.goto(`${BASE}/admin/jobs`);
   await p.waitForLoadState('networkidle');
   await p.locator('[data-fab]').click();

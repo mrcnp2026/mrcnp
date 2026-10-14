@@ -52,8 +52,10 @@ try {
   // ── 근무시간 ──
   await p.goto(`${BASE}/admin`);
   await p.locator('[data-menu-open]').click();
-  await p.getByRole('dialog').getByRole('link', { name: '회사 설정' }).click();
-  await p.getByRole('heading', { name: '설정' }).waitFor();
+  // 2026-10-14: 회사 설정은 통합설정 › 회사설정 › 기본 — 폰 메뉴 「통합설정 › 전체 메뉴」 → 「회사 기본」
+  await p.getByRole('dialog').getByRole('link', { name: '전체 메뉴', exact: true }).click();
+  await p.locator('main a[href="/admin/settings"]').click();
+  await p.getByRole('heading', { name: '설정', exact: true }).waitFor();
   check((await p.getByText(/부터 적용 중/).count()) === 1, '지금 적용 중인 근무시간이 보임');
   let r = await post(rule({ effectiveFrom: '2020-01-01' }));
   check(r.status === 400 && r.json.error === 'past_date', '지난 날짜부터 적용하는 규칙은 차단');

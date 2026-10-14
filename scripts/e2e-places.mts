@@ -48,7 +48,10 @@ try {
   await p.locator('[data-menu-open]').click();
   const menu = p.getByRole('dialog');
   await menu.waitFor();
-  check((await menu.getByRole('link', { name: '지점', exact: true }).count()) === 1 && (await menu.getByRole('link', { name: '출퇴근 장소', exact: true }).count()) === 1, '왼쪽 메뉴에 「지점」「출퇴근 장소」');
+  // 2026-10-14: 지점 · 출퇴근 장소는 통합설정에 있다 — 폰 메뉴 「통합설정 › 전체 메뉴」로 들어간다
+  await menu.getByRole('link', { name: '전체 메뉴', exact: true }).click();
+  await p.waitForURL(/[/]admin[/]console$/);
+  check((await p.locator('main a[href="/admin/branches"]').waitFor({ timeout: 20000 }).then(() => true, () => false)) && (await p.locator('main a[href="/admin/places"]').count()) === 1, '통합설정 전체 메뉴에 「지점 · 조직」「출퇴근 장소」');
   await shot('01-메뉴', false);
 
   // ── 출퇴근 장소 만들기 (+ 버튼 → 아래에서 올라오는 창 → 지도를 눌러 위치) ──

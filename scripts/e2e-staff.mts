@@ -225,6 +225,8 @@ try {
   await browser.close();
   const now = new Date().toISOString();
   await db.from('profiles').update({ role: 'employee', can_view_payroll: false, active: false, updated_by: null }).eq('id', target!.id);
+  // 퇴사 처리 검사가 건 로그인 차단을 푼다 — 남겨 두면 이 계정을 쓰는 다른 검사(묶음 5 · 일용직 …)가 로그인에서 멈춘다 (2026-10-14)
+  await db.auth.admin.updateUserById(target!.id, { ban_duration: 'none' });
   await db.from('profiles').update({ role: 'employee', locale: 'en', active: false, updated_by: null }).eq('id', emp!.id);
   await db.from('role_change_requests').update({ status: 'cancelled', decided_at: now }).eq('target_id', target!.id).eq('status', 'pending');
   await db.from('profiles').update({ role: 'employee', locale: 'ko', active: false, updated_by: null }).eq('id', second!.id);

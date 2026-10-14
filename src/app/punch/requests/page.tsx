@@ -42,7 +42,7 @@ export default async function MyRequestsPage({ searchParams }: { searchParams: P
   const pcItems = done ? split.done : split.pending;
   const pick = (on: boolean, label: string, href: string) => (
     <Link href={href} role="radio" aria-checked={on} className="flex min-h-8 items-center gap-2 text-sm">
-      <span aria-hidden className={`size-4 rounded-button border ${on ? 'border-primary bg-primary' : 'border-border bg-bg'}`} />
+      <span aria-hidden className={`size-4 rounded-sm border ${on ? 'border-primary bg-primary' : 'border-border bg-bg'}`} />
       {label}
     </Link>
   );

@@ -72,7 +72,7 @@ try {
   // ── 관리자: 왼쪽 위 메뉴 › 공지 관리 › 새 공지 ──
   await p.goto(`${BASE}/admin`);
   await p.locator('[data-menu-open]').click();
-  check(await p.getByRole('dialog').getByRole('link', { name: '공지 관리' }).waitFor({ timeout: 10000 }).then(() => true, () => false), '메뉴에 「공지 관리」가 있다');
+  check(await p.getByRole('dialog').locator('a[href="/admin/notices"]').waitFor({ timeout: 10000 }).then(() => true, () => false), '메뉴 「소통 › 공지」(공지 관리)가 있다'); // 2026-10-14 메뉴 개편
   await scanAll(p, '공지 목록', '/admin/notices');
   await p.goto(`${BASE}/admin/notices/new`);
   await scanAll(p, '새 공지', '/admin/notices/new');

@@ -538,8 +538,9 @@ export async function PaySettings({ sp }: { sp: SP }) {
   }
 
   return (
-    <div className="grid gap-4 lg:grid-cols-[13rem_minmax(0,1fr)] lg:items-start lg:gap-6">
-      <nav aria-label={t('menu')} className="flex gap-1 overflow-x-auto border border-border bg-bg p-1 lg:flex-col lg:overflow-visible lg:p-2">
+    <div className="grid gap-4">
+      {/* PC에서는 통합설정의 메뉴 판(App 관리 › 급여)이 같은 목록을 보여 준다 — 폰에서만 이 줄을 쓴다 (2026-10-14) */}
+      <nav aria-label={t('menu')} className="flex gap-1 overflow-x-auto border border-border bg-bg p-1 lg:hidden">
         {PAY_SECTIONS.map((s) => {
           const Icon = ICONS[s];
           const on = s === section;
@@ -551,7 +552,7 @@ export async function PaySettings({ sp }: { sp: SP }) {
           );
         })}
       </nav>
-      <section className="min-w-0 border border-border bg-bg">
+      <section className="min-w-0 overflow-hidden border border-border bg-bg lg:rounded-card">
         <div className="border-b border-border px-4 py-4 lg:px-6">
           <h2 className="text-xl font-bold">{t(`section.${section}`)}</h2>
           <p className="pt-1 text-sm text-faint">{t(`intro.${section}`)}</p>

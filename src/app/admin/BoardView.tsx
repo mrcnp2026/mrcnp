@@ -3,17 +3,17 @@
 // ★ 기준은 "오늘 하루"다. 한 사람은 한 칸에만 (요점 8): 퇴근 → 야근중 → 지각 → 근무중 → 미출근 순서로 판정.
 //   기준을 화면에 적어 둔다 (의뢰인: "이건 무슨 기준이야? 1일? 1달?"). 지난 날·월별은 기록 탭.
 // 숫자 칸을 누르면 아래 명단이 그 상태로 걸러진다 (의뢰인: "누르면 누가 지각인지 이름이 나오나?").
-// 명단은 10명씩 페이지 — 20명이어도 길게 내리지 않게.
-import { ChevronLeft, ChevronRight } from 'lucide-react';
+// 명단은 6명씩 쪽 넘김(홈의 다른 카드와 같은 모양) — 20명이어도 길게 내리지 않게.
 import { useFormatter, useTranslations } from 'next-intl';
 import { useEffect, useRef, useState } from 'react';
 import { Help } from '@/components/Help';
+import { MiniPager, PER_CARD } from '@/components/PagedList';
 import { Card } from '@/components/ui';
 import type { BoardRow, DayStatus } from '@/lib/today';
 import { BOARD_FILTER_EVENT } from './KpiRow';
 
 const ORDER: Exclude<DayStatus, 'off'>[] = ['working', 'late', 'absent', 'done', 'overtime'];
-const PER_PAGE = 10;
+const PER_PAGE = PER_CARD; // 6명씩 — 홈 카드와 같은 쪽 넘김 (2026-10-14 의뢰인)
 // 상태 글자 색: 예외(지각·야근)만 주황, 근무 중은 파랑, 나머지는 회색 (R-10-5)
 const TONE: Record<DayStatus, string> = {
   working: 'text-primary',
@@ -83,21 +83,7 @@ export function BoardView({
   const weekTone = (wm: number | null) => (wm === null || !colored ? '' : wm > limitMinutes ? 'text-danger' : wm >= cautionMinutes ? 'text-warn' : '');
 
   const statusText = (r: BoardRow) => (r.status === 'off' && r.onLeave ? t('onLeave') : r.status === 'off' && r.work ? t(`work.${r.work}`) : th(`status.${r.status}`));
-  const pager = pages > 1 && (
-    <nav aria-label={t('pages')} className="flex items-center justify-center gap-1 pt-1">
-      <button type="button" disabled={cur === 1} onClick={() => setPage(cur - 1)} aria-label={t('prevPage')} className="flex size-11 items-center justify-center text-primary disabled:text-faint">
-        <ChevronLeft aria-hidden size={20} strokeWidth={2} />
-      </button>
-      {[...Array(pages)].map((_, i) => (
-        <button key={i} type="button" onClick={() => setPage(i + 1)} aria-current={cur === i + 1 ? 'page' : undefined} className={`num flex size-11 items-center justify-center rounded-button text-sm font-bold ${cur === i + 1 ? 'bg-primary text-on-primary' : 'text-muted'}`}>
-          {i + 1}
-        </button>
-      ))}
-      <button type="button" disabled={cur === pages} onClick={() => setPage(cur + 1)} aria-label={t('nextPage')} className="flex size-11 items-center justify-center text-primary disabled:text-faint">
-        <ChevronRight aria-hidden size={20} strokeWidth={2} />
-      </button>
-    </nav>
-  );
+  const pager = <MiniPager page={cur} pages={pages} onPage={setPage} />;
 
   return (
     <div ref={listRef} className="flex scroll-mt-4 flex-col gap-3 lg:h-full">
@@ -219,27 +205,7 @@ export function BoardView({
             ))}
           </ul>
         )}
-        {pages > 1 && (
-          <nav aria-label={t('pages')} className="flex items-center justify-center gap-1 pt-1">
-            <button type="button" disabled={cur === 1} onClick={() => setPage(cur - 1)} aria-label={t('prevPage')} className="flex size-11 items-center justify-center text-primary disabled:text-faint">
-              <ChevronLeft aria-hidden size={20} strokeWidth={2} />
-            </button>
-            {[...Array(pages)].map((_, i) => (
-              <button
-                key={i}
-                type="button"
-                onClick={() => setPage(i + 1)}
-                aria-current={cur === i + 1 ? 'page' : undefined}
-                className={`num flex size-11 items-center justify-center rounded-button text-sm font-bold ${cur === i + 1 ? 'bg-primary text-on-primary' : 'text-muted'}`}
-              >
-                {i + 1}
-              </button>
-            ))}
-            <button type="button" disabled={cur === pages} onClick={() => setPage(cur + 1)} aria-label={t('nextPage')} className="flex size-11 items-center justify-center text-primary disabled:text-faint">
-              <ChevronRight aria-hidden size={20} strokeWidth={2} />
-            </button>
-          </nav>
-        )}
+        <div className="pb-2">{pager}</div>
       </Card>
       </div>
 

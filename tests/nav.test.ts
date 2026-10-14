@@ -1,0 +1,94 @@
+// 메뉴 구성표(config/nav.ts) — 틀 · 서랍 · 검색 · 통합설정이 전부 이 표를 읽는다.
+import { existsSync, readdirSync, statSync } from 'node:fs';
+import path from 'node:path';
+import { describe, expect, it } from 'vitest';
+import { ADMIN_APPS, appLeaves, appsFor, CONSOLE_APPS, locate, locateHref, MY_APPS } from '@/config/nav';
+import en from '../messages/en.json';
+import ko from '../messages/ko.json';
+
+const ROOT = path.join(__dirname, '..');
+const q = (s = '') => new URLSearchParams(s);
+const all = [...MY_APPS, ...ADMIN_APPS, ...CONSOLE_APPS];
+
+function pages(dir: string, out: string[] = []): string[] {
+  for (const f of readdirSync(dir)) {
+    const p = path.join(dir, f);
+    if (statSync(p).isDirectory()) pages(p, out);
+    else if (f === 'page.tsx') out.push(path.relative(path.join(ROOT, 'src', 'app'), dir).split(path.sep).join('/'));
+  }
+  return out;
+}
+
+describe('메뉴 구성표', () => {
+  it('모든 이름이 한국어 · 영어 번역 파일에 있다', () => {
+    const missing: string[] = [];
+    for (const m of [ko, en] as unknown as { frame: Record<string, Record<string, string>> }[]) {
+      for (const a of all) {
+        if (!m.frame.app[a.key]) missing.push(`app.${a.key}`);
+        if (!a.section && !m.frame.appFull[a.key]) missing.push(`appFull.${a.key}`);
+        for (const g of a.groups) if (g.key && !m.frame.group[g.key]) missing.push(`group.${g.key}`);
+        for (const l of appLeaves(a)) if (!m.frame.item[l.key]) missing.push(`item.${l.key}`);
+      }
+    }
+    expect(missing).toEqual([]);
+  });
+
+  it('모든 항목의 주소에 실제 화면이 있다', () => {
+    const bad = all.flatMap(appLeaves).filter((l) => {
+      const p = l.href.split('?')[0];
+      const dir = path.join(ROOT, 'src', 'app', ...p.split('/').filter(Boolean));
+      return !existsSync(path.join(dir, 'page.tsx')) && !(p.startsWith('/admin/manage/') && existsSync(path.join(ROOT, 'src', 'app', 'admin', 'manage', '[topic]', 'page.tsx')));
+    });
+    expect(bad.map((l) => l.href)).toEqual([]);
+  });
+
+  it('같은 주소가 두 항목에 들어 있지 않다', () => {
+    const hrefs = all.flatMap(appLeaves).map((l) => l.href);
+    expect(hrefs.filter((h, i) => hrefs.indexOf(h) !== i)).toEqual([]);
+  });
+
+  it('관리 화면(/admin) · 직원 화면(/punch)의 모든 화면이 어느 항목엔가 속한다 — 메뉴에서 길을 잃는 화면이 없다', () => {
+    const lost = pages(path.join(ROOT, 'src', 'app', 'admin'))
+      .concat(pages(path.join(ROOT, 'src', 'app', 'punch')))
+      .map((p) => `/${p.replace(/\[[^\]]+\]/g, 'x')}`)
+      .filter((p) => p !== '/admin/console' && !p.startsWith('/admin/manage/'))
+      .filter((p) => !locate(p, q(), 'admin').leaf);
+    expect(lost).toEqual([]);
+  });
+
+  it('주소가 길게 맞는 쪽이 이긴다 — 설정 화면은 통합설정, 처리 화면은 관리자 화면', () => {
+    const at = (p: string, s = '') => {
+      const r = locate(p, q(s), 'admin');
+      return `${r.space}/${r.app?.key}/${r.leaf?.key}`;
+    };
+    expect(at('/admin/leave')).toBe('admin/leave/leaveHistory');
+    expect(at('/admin/leave', 'v=accrual')).toBe('admin/leave/leaveAccrual');
+    expect(at('/admin/leave/req/abc')).toBe('admin/leave/leaveHistory');
+    expect(at('/admin/leave/types/annual')).toBe('console/aLeave/leaveTypes');
+    expect(at('/admin/members/groups')).toBe('admin/hr/orgGroups');
+    expect(at('/admin/members/abc')).toBe('admin/hr/members');
+    expect(at('/admin')).toBe('admin/home/adminHome');
+    expect(at('/admin/settings')).toBe('console/cBasic/setGeneral');
+    expect(at('/admin/settings', 'tab=punch')).toBe('console/aAttendance/setPunch');
+    expect(at('/admin/settings', 'tab=pay')).toBe('console/aPay/payEmployeeDefaults');
+    expect(at('/admin/settings', 'tab=pay&section=income-tax&year=2026')).toBe('console/aPay/payIncomeTax');
+    expect(at('/admin/payroll/runs/abc/def')).toBe('admin/pay/payRuns');
+    expect(at('/admin/payroll/daily/runs/abc')).toBe('admin/pay/payDaily');
+    expect(at('/admin/manage/report-snapshots')).toBe('admin/reports/reportSnapshots');
+    expect(at('/admin/console')).toBe('console/undefined/undefined');
+    expect(at('/punch')).toBe('my/home/myHome');
+    expect(at('/punch/home-settings')).toBe('my/home/myHome');
+    expect(at('/punch/corrections')).toBe('my/records/myRecords');
+    expect(at('/punch/leave/promotion/abc')).toBe('my/leave/myLeave');
+  });
+
+  it('지점관리자는 허용한 화면만, 직원은 내 화면만 본다', () => {
+    const m = appsFor('admin', 'manager').flatMap(appLeaves).map((l) => l.href);
+    expect(m).toEqual(['/admin/schedule', '/admin/schedule?v=list', '/admin/records/calendar', '/admin/records/list', '/admin/records', '/admin/missing', '/admin/leave', '/admin/inbox']);
+    expect(appsFor('console', 'manager')).toEqual([]);
+    expect(appsFor('admin', 'employee')).toEqual([]);
+    expect(appsFor('console', 'employee')).toEqual([]);
+    expect(locateHref('/admin/settings', 'manager')).toBeUndefined();
+    expect(locate('/admin/payroll', q(), 'employee').leaf).toBeUndefined();
+  });
+});

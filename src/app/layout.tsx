@@ -5,6 +5,7 @@ import { Noto_Sans, Noto_Sans_KR, Noto_Sans_Thai } from 'next/font/google';
 import { CAPTURE_INSTALL_PROMPT } from '@/components/useInstall';
 import { BRAND } from '@/config/brand';
 import { themeCssVariables } from '@/config/theme';
+import 'pretendard/dist/web/variable/pretendardvariable-dynamic-subset.css'; // 한글 · 영문 글꼴 (OFL). 쓰는 글자 조각만 내려받는다
 import './globals.css';
 
 // 7-11 요점 5: 베트남어 성조 부호·태국 문자가 □로 깨지지 않게 Noto 글꼴. 빌드는 성공해도 글자만 깨지는 곳이다 (B-18)

@@ -126,7 +126,7 @@ export default async function MyRecordsPage({ searchParams }: { searchParams: Pr
       {!data.rule && <p className="text-sm text-faint">{th('noRule')}</p>}
 
       {/* ── PC ── */}
-      <div className="hidden lg:grid lg:grid-cols-[14rem_minmax(0,1fr)] lg:gap-8">
+      <div className="hidden lg:grid lg:grid-cols-[13rem_minmax(0,1fr)] lg:gap-6">
         <aside className="flex flex-col gap-4">
           <h1 className="text-lg font-bold">{t('pc.title')}</h1>
           <nav className="flex items-center gap-1" aria-label={t('month')}>
@@ -163,7 +163,7 @@ export default async function MyRecordsPage({ searchParams }: { searchParams: Pr
             {CATS.map((c) => (
               <li key={c}>
                 <Link href={toggle(c)} role="checkbox" aria-checked={!hidden.has(c)} scroll={false} className="flex min-h-8 items-center gap-2">
-                  <span aria-hidden className={`flex size-4 items-center justify-center rounded-button border ${hidden.has(c) ? 'border-border bg-bg' : CAT_COLOR[c]}`}>
+                  <span aria-hidden className={`flex size-4 items-center justify-center rounded-sm border ${hidden.has(c) ? 'border-border bg-bg' : CAT_COLOR[c]}`}>
                     {!hidden.has(c) && <Check size={12} strokeWidth={3} className="text-on-primary" />}
                   </span>
                   <span className="flex-1">{t(CAT_KEY[c])}</span>
@@ -212,9 +212,9 @@ export default async function MyRecordsPage({ searchParams }: { searchParams: Pr
                         {live && <span className="ml-1 text-muted">{th('status.working')}</span>}
                       </td>
                       <td className="num px-3 py-2 whitespace-nowrap text-muted">{plan.items.length ? plan.items.map((it) => `${it.startTime} - ${it.endTime}`).join(', ') : t('pc.noPlan')}</td>
-                      <td className="num px-3 py-2 text-right text-muted">{dur(d.breakMinutes)}</td>
-                      <td className="num px-3 py-2 text-right">{live ? '–' : dur(d.netMinutes)}</td>
-                      <td className="num px-3 py-2 text-right font-bold">{live ? '–' : dur(d.payableMinutes)}</td>
+                      <td className="num px-3 py-2 text-right whitespace-nowrap text-muted">{dur(d.breakMinutes)}</td>
+                      <td className="num px-3 py-2 text-right whitespace-nowrap">{live ? '–' : dur(d.netMinutes)}</td>
+                      <td className="num px-3 py-2 text-right whitespace-nowrap font-bold">{live ? '–' : dur(d.payableMinutes)}</td>
                       <td className="num px-3 py-2 text-right whitespace-nowrap text-muted">{d.deemed ? '' : diffText(diff(firstIn, d.workDate, plan.items[0]?.startTime))}</td>
                       <td className="num px-3 py-2 text-right whitespace-nowrap text-muted">{d.deemed || open ? '' : diffText(diff(lastOut, d.workDate, plan.items.at(-1)?.endTime))}</td>
                       <td className="px-3 py-2">

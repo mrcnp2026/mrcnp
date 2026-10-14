@@ -134,8 +134,8 @@ try {
   await p.goto(`${BASE}/punch/requests`);
   await p.waitForLoadState('networkidle');
   check(await p.getByRole('link', { name: /\+ 휴가 신청/ }).isVisible(), 'PC에서는 새 요청으로 가는 줄이 보임');
-  // PC 직원 모드는 왼쪽 메뉴 없이 상단 탭이다 (2026-10-11 의뢰인 스샷 `스샷/직원모드 요청내역.png`)
-  check((await p.locator('header nav a[aria-current="page"]').textContent()) === '요청 내역', 'PC 상단 탭 「요청 내역」이 켜짐');
+  // PC 내 화면은 관리자 화면과 같은 틀이다 — 앱 띠에서 「요청」이 켜진다 (2026-10-14 결정 사항 개발-21)
+  check(((await p.locator('nav.sticky').first().locator('a[aria-current]').textContent()) ?? '').trim() === '요청', 'PC 앱 띠 「요청」이 켜짐');
   await shot('05-PC-내-요청');
   check(errors.length === 0, '화면 오류 없음', errors[0] ?? '');
 } catch (e) {

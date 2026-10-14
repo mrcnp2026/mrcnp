@@ -44,7 +44,7 @@ export default async function JobsPage({ searchParams }: { searchParams: Promise
               id: x.id,
               cells: {
                 name: { text: x.name, node: <Link href={`/admin/jobs/${x.id}`} className="font-bold hover:text-primary">{x.name}</Link> },
-                color: { text: x.color, node: <span aria-hidden className={`inline-block size-5 rounded-button align-middle ${SHIFT_COLOR_CLASS[x.color]}`} /> },
+                color: { text: x.color, node: <span aria-hidden className={`inline-block size-5 rounded-sm align-middle ${SHIFT_COLOR_CLASS[x.color]}`} /> },
                 people: { text: String(countOf.get(x.id) ?? 0) },
               },
             }))}

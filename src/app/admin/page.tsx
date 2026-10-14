@@ -5,6 +5,7 @@ import { ChevronRight, Inbox, NotebookPen, TriangleAlert } from 'lucide-react';
 import { getFormatter, getTranslations } from 'next-intl/server';
 import Link from 'next/link';
 import { Pager, pageOf } from '@/components/Pager';
+import { PagedList } from '@/components/PagedList';
 import { Card, CardTitle, PageShell } from '@/components/ui';
 import { LABOR, resolveDayType } from '@/config/labor-rules';
 import { OFFICE } from '@/config/office';
@@ -137,9 +138,10 @@ export default async function AdminHome({ searchParams }: { searchParams: Promis
   ];
 
   // PC 홈 카드 (2026-10-11 의뢰인 스샷 `스샷/홈.png`): 출퇴근 누락 · 공지사항 · 관리가 필요한 직원 · 휴가 현황
+  // 카드 목록은 6개씩, 넘으면 쪽 넘김 (2026-10-14 의뢰인 — components/PagedList)
   const real = active.filter((p) => !p.employeeNo?.startsWith('e2e-'));
   const [{ data: latestNotices }, { data: keys }, grants, leaveReqs, leaveTypes] = await Promise.all([
-    createAdminClient().from('notices').select('id, title, created_at').eq('status', 'published').order('created_at', { ascending: false }).limit(5),
+    createAdminClient().from('notices').select('id, title, created_at').eq('status', 'published').order('created_at', { ascending: false }).limit(30),
     createAdminClient().from('user_passkeys').select('employee_id').is('revoked_at', null),
     loadLeaveGrants(),
     loadLeaveRequests({ practice: practiceView }),
@@ -154,8 +156,7 @@ export default async function AdminHome({ searchParams }: { searchParams: Promis
   ] as const;
   const leaveRows = real
     .map((p) => ({ p, bal: calcLeaveBalance({ grants: grants.filter((g) => g.employeeId === p.id), requests: leaveReqs.filter((r) => r.employeeId === p.id), types: leaveTypes, asOf: today }) }))
-    .filter((x) => x.bal.grant)
-    .slice(0, 10);
+    .filter((x) => x.bal.grant);
   const num = (v: number) => fmt.number(v, { maximumFractionDigits: 4 });
   const cardLink = 'inline-flex min-h-8 items-center self-end text-sm font-bold text-primary';
 
@@ -202,11 +203,7 @@ export default async function AdminHome({ searchParams }: { searchParams: Promis
           {missingNames.length === 0 ? (
             <p className="flex-1 py-4 text-center text-sm text-faint">{t('cardMissingNone')}</p>
           ) : (
-            <ul className="flex-1 divide-y divide-border text-sm">
-              {missingNames.slice(0, 5).map((x) => (
-                <li key={x} className="py-1.5 font-bold">{x}</li>
-              ))}
-            </ul>
+            <PagedList className="flex-1 divide-y divide-border text-sm" items={missingNames.map((x) => <li key={x} className="py-1.5 font-bold">{x}</li>)} />
           )}
           <Link href="/admin/missing" className={cardLink}>{t('cardMissingMore')} ›</Link>
         </Card>
@@ -215,8 +212,9 @@ export default async function AdminHome({ searchParams }: { searchParams: Promis
           {(latestNotices ?? []).length === 0 ? (
             <p className="flex-1 py-4 text-center text-sm text-faint">{t('cardNoticesNone')}</p>
           ) : (
-            <ul className="flex-1 divide-y divide-border text-sm">
-              {(latestNotices ?? []).map((x) => (
+            <PagedList
+              className="flex-1 divide-y divide-border text-sm"
+              items={(latestNotices ?? []).map((x) => (
                 <li key={x.id}>
                   <Link href={`/admin/notices/${x.id}`} className="flex items-center gap-2 py-1.5 hover:text-primary">
                     <span className="min-w-0 flex-1 truncate">{x.title}</span>
@@ -224,14 +222,15 @@ export default async function AdminHome({ searchParams }: { searchParams: Promis
                   </Link>
                 </li>
               ))}
-            </ul>
+            />
           )}
           <Link href="/admin/notices" className={cardLink}>{t('cardNoticesAll')} ›</Link>
         </Card>
         <Card className="flex flex-col gap-2">
           <CardTitle aside={<span className="num text-sm text-muted">{t('totalStaff')} <b className="text-text">{real.length}</b></span>}>{t('cardCare')}</CardTitle>
-          <ul className="flex-1 text-sm">
-            {care.map((x) => (
+          <PagedList
+            className="flex-1 text-sm"
+            items={care.map((x) => (
               <li key={x.key}>
                 <Link href="/admin/members" className="flex items-center gap-2 py-1.5 hover:text-primary">
                   <span className="flex-1">{t(x.key)}</span>
@@ -240,15 +239,16 @@ export default async function AdminHome({ searchParams }: { searchParams: Promis
                 </Link>
               </li>
             ))}
-          </ul>
+          />
         </Card>
         <Card className="flex flex-col gap-2">
           <CardTitle>{t('cardLeave')}</CardTitle>
           {leaveRows.length === 0 ? (
             <p className="flex-1 py-4 text-center text-sm text-faint">{t('cardLeaveNone')}</p>
           ) : (
-            <ul className="flex-1 text-sm">
-              {leaveRows.map(({ p, bal }) => {
+            <PagedList
+              className="flex-1 text-sm"
+              items={leaveRows.map(({ p, bal }) => {
                 const over = bal.used > bal.granted;
                 const w = bal.granted > 0 ? Math.min(100, Math.round((bal.used / bal.granted) * 100)) : over ? 100 : 0;
                 return (
@@ -261,7 +261,7 @@ export default async function AdminHome({ searchParams }: { searchParams: Promis
                   </li>
                 );
               })}
-            </ul>
+            />
           )}
           <Link href="/admin/leave?v=accrual" className={cardLink}>{t('cardLeaveAll')} ›</Link>
         </Card>
@@ -296,8 +296,8 @@ export default async function AdminHome({ searchParams }: { searchParams: Promis
           <CardTitle icon={Inbox}>{t('todo')}</CardTitle>
         </div>
         {todo.every((x) => x.n === 0) && <p className="px-5 py-3 text-sm text-faint">{t('todoNone')}</p>}
-        <ul>
-          {todo.filter((x) => x.n > 0).map((x) => (
+        <PagedList
+          items={todo.filter((x) => x.n > 0).map((x) => (
             <li key={x.key}>
               <Link href={!practiceView && OFFICE.practiceMode && x.href.startsWith('/admin/inbox') ? x.href.replace('/admin/inbox', '/admin/inbox?live=1') : x.href} className="flex min-h-14 items-center gap-3 px-5">
                 <span className="flex-1">{t(x.key)}</span>
@@ -306,7 +306,7 @@ export default async function AdminHome({ searchParams }: { searchParams: Promis
               </Link>
             </li>
           ))}
-        </ul>
+        />
       </Card>
 
       <div className="flex flex-col gap-3 lg:col-span-2 lg:col-start-1 lg:row-start-1">

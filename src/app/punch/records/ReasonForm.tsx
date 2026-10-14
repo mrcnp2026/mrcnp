@@ -31,7 +31,7 @@ export function ReasonForm({ id, initial }: { id: string; initial: string | null
             setText(e.target.value);
             setSaved(false);
           }}
-          className="min-h-11 rounded-button border border-border px-3 text-base text-text"
+          className="min-h-11 w-full min-w-0 rounded-button border border-border px-3 text-base text-text"
         />
       </label>
       <Button type="submit" variant="outline" className="self-end text-sm" disabled={!text.trim()}>

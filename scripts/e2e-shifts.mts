@@ -49,7 +49,10 @@ try {
   await p.goto(`${BASE}/admin`);
   await p.locator('[data-menu-open]').click();
   await p.getByRole('dialog').waitFor();
-  check((await p.getByRole('dialog').getByRole('link', { name: '근무일정 템플릿', exact: true }).count()) === 1, '왼쪽 메뉴에 「근무일정 틀」');
+  // 2026-10-14: 근무일정 템플릿은 통합설정 › App 관리 › 근태 — 폰 메뉴 「통합설정 › 전체 메뉴」로 들어간다
+  await p.getByRole('dialog').getByRole('link', { name: '전체 메뉴', exact: true }).click();
+  await p.waitForURL(/[/]admin[/]console$/);
+  check(await p.locator('main a[href="/admin/shifts"]').waitFor({ timeout: 20000 }).then(() => true, () => false), '통합설정 전체 메뉴에 「근무일정 템플릿」');
   await p.goto(`${BASE}/admin/shifts`);
   await p.waitForLoadState('networkidle');
   check((await p.getByText(/회사 근무규칙/).count()) > 0, '목록 위에 "틀이 없는 직원은 회사 근무규칙" 안내');
