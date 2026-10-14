@@ -3,6 +3,7 @@
 import { api, ApiError, readJson } from '@/lib/api';
 import { requireAdmin } from '@/lib/auth';
 import { OFFICE } from '@/config/office';
+import { sendClosingNotice } from '@/lib/attendance-notify';
 import { closeMonth, decideReopen, requestReopen } from '@/lib/close-data';
 import { isMonth } from '@/lib/close-review';
 import { toKstDate } from '@/lib/time';
@@ -13,6 +14,11 @@ export const POST = api('admin.closing', async (req) => {
   const me = await requireAdmin();
   if (!me) throw new ApiError(403, 'forbidden');
   const b = await readJson(req);
+  if (b.action === 'notice') {
+    // 근태 마감 공지 — 전 직원에게 「○월 근태를 ○일에 마감합니다」 (업무 메시지)
+    if (!isMonth(b.month) || typeof b.due !== 'string' || !/^\d{4}-\d{2}-\d{2}$/.test(b.due)) throw new ApiError(400, 'invalid_input');
+    return sendClosingNotice({ me, month: b.month, due: b.due });
+  }
   if (b.action === 'reopen') {
     const reason = typeof b.reason === 'string' ? b.reason.trim() : '';
     if (typeof b.id !== 'string' || !/^[0-9a-f-]{36}$/i.test(b.id) || reason.length < 2 || reason.length > 500) throw new ApiError(400, 'invalid_input');

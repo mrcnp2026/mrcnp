@@ -9,7 +9,9 @@ import { groupPath } from '@/lib/org';
 import { loadOrgGroups } from '@/lib/org-data';
 import { referenceHourly } from '@/lib/payroll/contract';
 import { loadStaffPayBoard } from '@/lib/payroll/staff-data';
+import { addDays } from '@/lib/calendar';
 import { toKstDate } from '@/lib/time';
+import { ImportPanel } from './ImportPanel';
 
 export default async function StaffPayPage() {
   const tGear = await getTranslations('frame');
@@ -23,6 +25,14 @@ export default async function StaffPayPage() {
   return (
     <PageShell wide>
       <ListHead title={t('title')} desc={t('intro')} settingsHref="/admin/settings?tab=pay" settingsLabel={tGear('item.payEmployeeDefaults')} />
+      <ImportPanel
+        tomorrow={addDays(today, 1)}
+        labels={{
+          ...Object.fromEntries((['employeeNo', 'name', 'payType', 'amount', 'timeBasis', 'monthlyHours', 'annualDivisor'] as const).map((c) => [c, t(`imp.col.${c}`)])),
+          pay_MONTHLY: t('payType.MONTHLY'), pay_HOURLY: t('payType.HOURLY'), pay_ANNUAL: t('payType.ANNUAL'),
+          basis_ACTUAL: t('timeBasis.ACTUAL'), basis_ROUNDED: t('timeBasis.ROUNDED'), basis_SCHEDULE: t('timeBasis.SCHEDULE'),
+        }}
+      />
       <div className="flex flex-wrap items-center gap-2">
         <Chip tone="info">{t('sumAll', { n: lines.length })}</Chip>
         <Chip tone="ok">{t('sumReady', { n: ready })}</Chip>

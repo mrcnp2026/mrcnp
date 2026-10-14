@@ -1,8 +1,11 @@
 // 사회보험 — 취득/상실 확인 목록과 고지 보험료 묶음 (PRD v1.3 18.4 W06). 급여 담당 관리자만.
 // 프로그램이 공단에 신고하지 않는다. 「확인 완료」는 담당자가 신고 처리를 확인한 날과 근거를 적은 것이다.
 import { getTranslations } from 'next-intl/server';
+import { WarnLine } from '@/components/listframe';
 import { HelpTip } from '@/components/Help';
 import Link from 'next/link';
+import { AddSheet } from '@/components/AddSheet';
+import { SheetOpener } from '@/components/SheetOpener';
 import { Card, CardTitle, Chip, PageShell } from '@/components/ui';
 import { OFFICE } from '@/config/office';
 import { getMe } from '@/lib/auth';
@@ -35,17 +38,19 @@ export default async function InsurancePage({ searchParams }: { searchParams: Pr
         <Link href={`/admin/payroll/insurance${live ? '?live=1' : ''}`} aria-current={!notice ? 'page' : undefined} className={tab(!notice)}>{t('tabEnroll')}</Link>
         <Link href={`/admin/payroll/insurance?v=notice${live}`} aria-current={notice ? 'page' : undefined} className={tab(notice)}>{t('tabNotice')}</Link>
       </nav>
-      <p className="rounded-card border border-warn bg-warn-tint p-3 text-sm text-warn">{t(notice ? 'noticeLegal' : 'enrollLegal')}</p>
+      <WarnLine short={t(notice ? 'noticeLegalShort' : 'enrollLegalShort')}>{t(notice ? 'noticeLegal' : 'enrollLegal')}</WarnLine>
       {!notice ? (
         <>
-          <Card className="flex flex-col gap-3">
-            <CardTitle>{t('addTitle')}</CardTitle>
+          {/* 넣는 양식은 단추를 눌러 여는 창으로 — 화면은 확인할 사람 · 목록이 먼저 (2026-10-14) */}
+          <div className="flex justify-end">
+            <SheetOpener id="enroll" label={t('addTitle')} />
+          </div>
+          <AddSheet id="enroll" title={t('addTitle')} modal>
             <EnrollAdd people={people} today={today} />
-          </Card>
+          </AddSheet>
           {gaps.length > 0 && (
             <Card className="flex flex-col gap-2">
-              <CardTitle>{t('gapTitle', { n: gaps.length })}</CardTitle>
-              <p className="text-xs text-faint">{t('gapNote')}</p>
+              <CardTitle help={t('gapNote')}>{t('gapTitle', { n: gaps.length })}</CardTitle>
               <ul className="flex flex-col divide-y divide-border text-sm" data-gaps>
                 {gaps.slice(0, 50).map((g) => (
                   <li key={`${g.employeeId}${g.event}${g.qualifyOn}`} className="flex flex-wrap items-center justify-between gap-3 py-2">

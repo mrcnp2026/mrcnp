@@ -1,6 +1,7 @@
 // 퇴직급여 한 건 — 넣은 값 · 검산 · 세액 · 확정/거두기 (PRD v1.3 18.6 W08). 급여 담당 관리자만.
 // 초안은 고칠 수 있고, 확정본은 그대로 남는다(잘못됐으면 사유를 적어 거두고 새 판을 만든다).
 import { getFormatter, getTranslations } from 'next-intl/server';
+import { WarnLine } from '@/components/listframe';
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import { Card, CardTitle, Chip, PageShell } from '@/components/ui';
@@ -46,7 +47,7 @@ export default async function RetirementCasePage({ params }: { params: Promise<{
           {k.finalizedAt && ` · ${t('finalizedOn', { date: toKstDate(new Date(k.finalizedAt)) })}`}
         </p>
       </div>
-      <p className="rounded-card border border-warn bg-warn-tint p-3 text-sm text-warn">{t('legal')}</p>
+      <WarnLine short={t('legalShort')}>{t('legal')}</WarnLine>
       {k.state === 'WITHDRAWN' && <p className="rounded-card border border-border bg-surface p-3 text-sm">{t('withdrawnNote', { reason: k.reason ?? '' })}</p>}
       {k.supersedesId && (
         <p className="text-sm">

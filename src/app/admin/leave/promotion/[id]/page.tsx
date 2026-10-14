@@ -1,5 +1,6 @@
 // 연차 사용 촉진 한 건 (관리자) — 안내문, 대상마다 잔여 · 통지 · 읽음 · 사용 계획 · 처리 (PRD v1.3 37.3).
 import { getFormatter, getTranslations } from 'next-intl/server';
+import { WarnLine } from '@/components/listframe';
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import { NoticeBody } from '@/components/NoticeBody';
@@ -42,7 +43,7 @@ export default async function PromotionDetailPage({ params }: { params: Promise<
         </h1>
         <p className="num pt-1 text-sm text-faint">{t('meta', { basis: c.basisOn, due: c.planDueOn })}{c.sentAt && ` · ${t('sentOn', { date: toKstDate(new Date(c.sentAt)) })}`}</p>
       </div>
-      <p className="rounded-card border border-warn bg-warn-tint p-3 text-sm text-warn">{t('legal')}</p>
+      <WarnLine short={t('legalShort')}>{t('legal')}</WarnLine>
       <Card className="flex flex-col gap-3">
         <CardTitle>{t('noticeTitle')}</CardTitle>
         <NoticeBody text={c.noticeBody} />

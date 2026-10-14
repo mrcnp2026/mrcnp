@@ -1,8 +1,11 @@
 // 일용직 — 지급 대상자 · 근무 입력 · 일용 대장 (PRD v1.3 18.5 W07). 급여 담당 관리자만.
 // 대상자는 로그인 계정과 따로다(계정을 만들지 않는다). 세금은 하루 단위 임시 규칙, 4대보험료는 계산하지 않는다. 신고 파일 · 이체는 없다.
 import { getFormatter, getTranslations } from 'next-intl/server';
+import { WarnLine } from '@/components/listframe';
 import { HelpTip } from '@/components/Help';
 import Link from 'next/link';
+import { AddSheet } from '@/components/AddSheet';
+import { SheetOpener } from '@/components/SheetOpener';
 import { Card, CardTitle, Chip, PageShell } from '@/components/ui';
 import { OFFICE } from '@/config/office';
 import { getMe } from '@/lib/auth';
@@ -45,50 +48,79 @@ export default async function DailyPage({ searchParams }: { searchParams: Promis
           <Link key={v} href={href(v)} aria-current={view === v ? 'page' : undefined} className={tab(view === v)}>{t(`tab.${v}`)}</Link>
         ))}
       </nav>
-      <p className="rounded-card border border-warn bg-warn-tint p-3 text-sm text-warn">{t('legal')}</p>
+      <WarnLine short={t('legalShort')}>{t('legal')}</WarnLine>
 
       {view === 'payees' && (
         <>
-          <Card className="flex flex-col gap-3">
-            <CardTitle>{t('payeeTitle')}</CardTitle>
-            <PayeeAdd />
-            <p className="text-xs text-faint">{t('payeeNote')}</p>
-          </Card>
-          <ul className="flex flex-col gap-3" data-payees>
-            {payees.map((p) => (
-              <li key={p.id} className="flex flex-col gap-3 rounded-card border border-border bg-bg p-4 text-sm">
-                <div className="flex flex-wrap items-center justify-between gap-3">
-                  <span>
-                    <b className="text-base">{p.name}</b> <span className="num text-muted">{p.internalNo}</span> {!p.active && <Chip>{t('payeeInactive')}</Chip>}
-                    {(p.phone || p.note) && <span className="block text-xs text-muted">{[p.phone, p.note].filter(Boolean).join(' · ')}</span>}
-                  </span>
-                  <span className="flex flex-wrap gap-2">
-                    <EngagementAdd payeeId={p.id} today={today} name={p.name} />
-                    <PayeeToggle id={p.id} active={p.active} name={p.name} />
-                  </span>
-                </div>
-                <ul className="flex flex-col divide-y divide-border">
-                  {engagements.filter((e) => e.payeeId === p.id).map((e) => (
-                    <li key={e.id} className="flex flex-wrap items-center justify-between gap-3 py-2">
-                      <span className="num">
-                        {e.startsOn} ~ {e.endsOn ?? t('open')} · {e.project || t('noProject')} · {e.dayRate === null ? t('noRate') : won(e.dayRate)}
-                        <span className="block text-xs text-muted">
-                          {t('termsLine', { tax: t(`tax.${e.taxState}`), ei: t(`tri.${e.ei}`), np: t(`tri.${e.np}`), hi: t(`tri.${e.hi}`) })}
-                          {e.basisNote && ` · ${e.basisNote}`}
-                        </span>
-                      </span>
-                      <span className="flex items-center gap-2">
-                        {(e.taxState === 'UNKNOWN' || e.ei === 'UNKNOWN' || e.np === 'UNKNOWN' || e.hi === 'UNKNOWN') && <Chip tone="warn">{t('termsUnknown')}</Chip>}
-                        <EngagementOff id={e.id} label={t('engOffOf', { name: p.name })} />
-                      </span>
-                    </li>
+          {/* 등록 양식은 단추를 눌러 여는 창으로 — 화면은 목록이 먼저 (2026-10-14 의뢰인: 무엇을 하라는 건지 한눈에) */}
+          <div className="flex items-center gap-2">
+            <p className="text-sm text-muted">{t('payeeCount', { n: payees.filter((x) => x.active).length })}</p>
+            <SheetOpener id="payee" label={t('payeeTitle')} className="ml-auto inline-flex" />
+          </div>
+          <AddSheet id="payee" title={t('payeeTitle')} modal>
+            <div className="flex flex-col gap-3">
+              <PayeeAdd />
+              <p className="text-xs text-faint">{t('payeeNote')}</p>
+            </div>
+          </AddSheet>
+          <div className="overflow-x-auto rounded-card border border-border bg-bg" data-payees>
+            <table className="w-full text-sm">
+              <thead>
+                <tr className="border-b border-border bg-surface text-left">
+                  {[t('colPayee'), t('colEngagement'), t('colTerms'), ''].map((h, i) => (
+                    <th key={i} scope="col" className="px-3 py-2.5 text-xs font-semibold whitespace-nowrap text-muted">{h}</th>
                   ))}
-                  {engagements.every((e) => e.payeeId !== p.id) && <li className="py-2 text-faint">{t('engEmpty')}</li>}
-                </ul>
-              </li>
-            ))}
-          </ul>
-          {payees.length === 0 && <p className="rounded-card border border-border bg-bg p-4 text-sm text-faint">{t('payeeEmpty')}</p>}
+                </tr>
+              </thead>
+              <tbody>
+                {payees.length === 0 && (
+                  <tr>
+                    <td colSpan={4} className="px-3 py-8 text-center text-faint">{t('payeeEmpty')}</td>
+                  </tr>
+                )}
+                {payees.map((p) => {
+                  const mine = engagements.filter((e) => e.payeeId === p.id);
+                  return (
+                    <tr key={p.id} className={`border-b border-border align-top last:border-b-0 ${p.active ? '' : 'opacity-60'}`}>
+                      <td className="px-3 py-3 whitespace-nowrap">
+                        <b>{p.name}</b> <span className="num text-xs text-muted">{p.internalNo}</span> {!p.active && <Chip>{t('payeeInactive')}</Chip>}
+                        {(p.phone || p.note) && <span className="block text-xs text-muted">{[p.phone, p.note].filter(Boolean).join(' · ')}</span>}
+                      </td>
+                      <td className="px-3 py-3">
+                        {mine.length === 0 ? (
+                          <span className="text-faint">{t('engEmpty')}</span>
+                        ) : (
+                          <ul className="flex flex-col gap-1.5">
+                            {mine.map((e) => (
+                              <li key={e.id} className="num flex flex-wrap items-center gap-x-2">
+                                <span>{e.startsOn} ~ {e.endsOn ?? t('open')} · {e.project || t('noProject')} · {e.dayRate === null ? t('noRate') : won(e.dayRate)}</span>
+                                <EngagementOff id={e.id} label={t('engOffOf', { name: p.name })} />
+                              </li>
+                            ))}
+                          </ul>
+                        )}
+                      </td>
+                      <td className="px-3 py-3">
+                        {mine.map((e) => (
+                          <span key={e.id} className="flex flex-wrap items-center gap-1 text-xs text-muted">
+                            {t('termsLine', { tax: t(`tax.${e.taxState}`), ei: t(`tri.${e.ei}`), np: t(`tri.${e.np}`), hi: t(`tri.${e.hi}`) })}
+                            {e.basisNote && ` · ${e.basisNote}`}
+                            {(e.taxState === 'UNKNOWN' || e.ei === 'UNKNOWN' || e.np === 'UNKNOWN' || e.hi === 'UNKNOWN') && <Chip tone="warn">{t('termsUnknown')}</Chip>}
+                          </span>
+                        ))}
+                      </td>
+                      <td className="px-3 py-3 text-right whitespace-nowrap">
+                        <span className="inline-flex gap-2">
+                          <EngagementAdd payeeId={p.id} today={today} name={p.name} />
+                          <PayeeToggle id={p.id} active={p.active} name={p.name} />
+                        </span>
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
         </>
       )}
 

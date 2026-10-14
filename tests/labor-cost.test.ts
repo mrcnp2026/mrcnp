@@ -51,3 +51,22 @@ describe('sumLabor', () => {
     expect(e.months).toEqual([]);
   });
 });
+
+describe('직무별 · 항목별 (2026-10-14 인건비 표 확장)', async () => {
+  const { sumByJob, sumItems } = await import('@/lib/payroll/labor-cost');
+  it('직무별 합은 전체 합과 같고, 직무가 없는 사람은 「미배정」으로 묶는다', () => {
+    const rows = [row({ employeeId: 'a', jobId: 'j1', pay: 100, employer: 10 }), row({ employeeId: 'b', jobId: null, pay: 200, employer: 20 }), row({ employeeId: 'a', jobId: 'j1', month: '2026-10', pay: 50 })];
+    const jobs = sumByJob(rows, (id) => id ?? '미배정');
+    expect(jobs.map((j) => [j.name, j.people, j.total])).toEqual([['미배정', 1, 220], ['j1', 1, 160]]);
+    expect(jobs.reduce((s, j) => s + j.total, 0)).toBe(380);
+  });
+  it('항목별: 같은 코드끼리 더하고, 지급 먼저 · 금액이 큰 순, 받은 사람 수를 센다', () => {
+    const items = sumItems([
+      { kind: 'DEDUCTION', code: 'NP', label: '국민연금', amount: 10, employeeId: 'a' },
+      { kind: 'PAYMENT', code: 'BASE', label: '기본급', amount: 100, employeeId: 'a' },
+      { kind: 'PAYMENT', code: 'BASE', label: '기본급', amount: 200, employeeId: 'b' },
+      { kind: 'PAYMENT', code: 'OT', label: '연장', amount: 50, employeeId: 'a' },
+    ]);
+    expect(items.map((x) => [x.kind, x.code, x.amount, x.people])).toEqual([['PAYMENT', 'BASE', 300, 2], ['PAYMENT', 'OT', 50, 1], ['DEDUCTION', 'NP', 10, 1]]);
+  });
+});

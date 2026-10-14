@@ -6,6 +6,7 @@ import { createClient } from '@supabase/supabase-js';
 import { config } from 'dotenv';
 import { createHash, randomBytes } from 'node:crypto';
 import path from 'node:path';
+import ExcelJS from 'exceljs';
 import { chromium } from 'playwright-core';
 import { createPassword } from './lib/e2e-password.ts';
 
@@ -28,6 +29,7 @@ const cleanup = async () => {
 };
 await cleanup();
 await db.from('profiles').update({ active: true, role: 'admin', locale: 'ko', can_view_payroll: true }).eq('id', emp!.id);
+await db.from('profiles').update({ active: true }).eq('id', other!.id); // 엑셀 양식은 재직 중인 직원만 담는다
 {
   const { data: live } = await db.from('notices').select('id, version').eq('status', 'published');
   for (const n of live ?? []) await db.from('notice_reads').upsert({ notice_id: n.id, employee_id: emp!.id, version: n.version, shown_locale: 'ko' }, { onConflict: 'notice_id,employee_id,version', ignoreDuplicates: true });
@@ -122,6 +124,36 @@ try {
     const { data: row } = await db.from('payroll_employee_items').select('id').eq('employee_id', other!.id).eq('active', true).single();
     check((await post({ action: 'item.end', itemId: row!.id, endOn: day(1) })).status === 200 && (await db.from('payroll_employee_items').select('valid_to').eq('id', row!.id).single()).data?.valid_to === day(1), '개인 항목 끝내기 — 끝나는 날이 적힌다');
   }
+
+  // ── 엑셀 올리기 (2026-10-14) — 양식 받기 → 고쳐 올리기 → 빨간 칸 → 적용 ──
+  await cleanup(); // 계약 판을 비우고 시작한다(엑셀로 넣는 것이 첫 판이 되게)
+  await open('/admin/payroll/staff');
+  const tpl = await p.evaluate(async () => { const r = await fetch('/api/admin/payroll/staff/import'); return { status: r.status, bytes: Array.from(new Uint8Array(await r.arrayBuffer())) }; });
+  const wbI = new ExcelJS.Workbook();
+  await wbI.xlsx.load(Buffer.from(tpl.bytes) as unknown as ArrayBuffer);
+  const wsI = wbI.worksheets[0];
+  let otherRow = 0;
+  wsI.eachRow((r, n) => { if (String(r.getCell(1).value) === 'e2e-audit2') otherRow = n; });
+  check(tpl.status === 200 && otherRow > 2 && String(wsI.getRow(2).getCell(1).value) === '사번', '양식 받기: 머리줄(사번 …)과 검사 계정 줄이 들어 있다', `${tpl.status} 줄 ${otherRow}`);
+  wsI.getRow(otherRow).values = ['e2e-audit2', other!.name, '월급', 2_500_000, '끊은 급여용 시간', 209, ''];
+  const badRow = wsI.addRow(['e2e-nobody', '없는 사람', '월급', '', '끊은 급여용 시간', 209, '']).number;
+  const upload = async (wb: ExcelJS.Workbook) => {
+    await p.locator('[data-import-file]').setInputFiles({ name: 'contracts.xlsx', mimeType: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet', buffer: Buffer.from(await wb.xlsx.writeBuffer()) });
+    await p.locator('table[data-import-preview]').waitFor({ timeout: 30000 });
+    await p.waitForLoadState('networkidle');
+  };
+  await upload(wbI);
+  const prev = await p.locator('table[data-import-preview]').innerText();
+  check(prev.includes('없는 사번') && prev.includes('비어 있음') && prev.includes('바뀜') && (await p.getByRole('button', { name: /바뀐 1명 적용/ }).isDisabled()), '미리보기: 없는 사번 · 빈 금액은 빨간 칸, 틀린 줄이 있으면 적용을 막는다');
+  wsI.getRow(badRow).values = ['', '', '', '', '', '', '']; // 틀린 줄을 비운다(빈 줄은 건너뛴다)
+  await upload(wbI);
+  await p.getByText('틀린 줄 0').waitFor({ timeout: 30000 }); // 새로 올린 파일의 미리보기가 뜰 때까지
+  p.once('dialog', (d) => d.accept());
+  await p.getByRole('button', { name: /바뀐 1명 적용/ }).click();
+  await p.locator('table[data-import-preview]').getByText('저장됨').waitFor({ timeout: 30000 });
+  const { data: imported } = await db.from('payroll_contract_versions').select('amount, pay_type, monthly_hours').eq('employee_id', other!.id).eq('status', 'active');
+  check(imported?.length === 1 && Number(imported[0].amount) === 2_500_000 && imported[0].pay_type === 'MONTHLY' && Number(imported[0].monthly_hours) === 209, '적용: 바뀐 사람만 새 판으로 저장된다', JSON.stringify(imported));
+  await shot('staffpay-5-import');
 
   // ── 기록 · 권한 ──
   const { data: audit } = await db.from('payroll_audit_events').select('action, detail').eq('employee_id', other!.id).order('id', { ascending: false }).limit(20);

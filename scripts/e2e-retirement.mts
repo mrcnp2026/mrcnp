@@ -53,7 +53,7 @@ try {
 
   // ── 화면에서 만들기: 자료에서 채우기 → 값 넣기 → 검산이 바로 보인다 → 만들기 ──
   const pre = await open(p, `/admin/payroll/retirement?emp=${A.id}&kind=FINAL&to=${d(2, '12-31')}`);
-  check(pre.includes('퇴직급여') && pre.includes('노무사 확인이 필요합니다') && pre.includes(`${A.name} · 퇴직 정산`) && pre.includes('3개월 임금은 채우지 못했습니다'), '직원 · 마지막 근무일을 고르면 채운 것과 못 채운 것을 알려 준다');
+  check(pre.includes('퇴직급여') && pre.includes('노무 · 세무 확인이 필요합니다') && pre.includes(`${A.name} · 퇴직 정산`) && pre.includes('3개월 임금은 채우지 못했습니다'), '직원 · 마지막 근무일을 고르면 채운 것과 못 채운 것을 알려 준다');
   check((await p.locator('input[name="days3m"]').inputValue()) === '92', '3개월 일수는 달력으로 채운다 (10/1 ~ 12/31 = 92일)');
   check((await p.locator('[data-check]').innerText()).includes('금액을 낼 수 없음'), '임금이 비어 있으면 금액 대신 「낼 수 없음」');
   await p.locator('form:has([data-check]) input[type="date"]').first().fill(d(0, '01-01'));

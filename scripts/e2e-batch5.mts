@@ -122,7 +122,7 @@ try {
   check((await post(pAdm, '/api/admin/leave/promotion', { action: 'exclude', campaignId: campId, targetId: tA.id, reason: '검사 제외' })).status === 200 && (await post(pAdm, '/api/admin/leave/promotion', { action: 'include', campaignId: campId, targetId: tA.id })).status === 200, '대상을 뺐다가 다시 넣는다');
   check((await post(pA, `/api/leave/promotion/${tA.id}`, { dates: [day(3)], note: '' })).status === 404 && (await targets()).find((x) => x.id === tA.id)?.plan == null, '안내를 보내기 전에는 계획을 낼 수 없다(없는 것으로 보인다)');
   const board = await open(pAdm, `/admin/leave/promotion/${campId}`);
-  check(board.includes(`${MARK} 촉진`) && board.includes(A.name) && board.includes('안내 보내기 (1명)') && board.includes('노무사 확인'), '촉진 화면에 대상 · 보내기 · 법적 안내가 보인다');
+  check(board.includes(`${MARK} 촉진`) && board.includes(A.name) && board.includes('안내 보내기 (1명)') && board.includes('법적 촉진 완료 여부는 프로그램이 판단하지 않습니다'), '촉진 화면에 대상 · 보내기 · 법적 안내가 보인다');
   await pAdm.getByRole('button', { name: '안내 보내기 (1명)' }).click();
   await pAdm.getByRole('button', { name: '보내기', exact: true }).click();
   await pAdm.getByText('1명에게 보냈습니다.').waitFor({ timeout: 30000 });
@@ -178,6 +178,18 @@ try {
   check(un.status === 200 && (await reviews()).every((r) => !r.active), '표시를 거두면 꺼진다(줄은 남는다)');
   check((await post(pA, '/api/admin/anomalies', { action: 'review', employeeId: A.id, workDate: D })).status === 403, '직원은 표시할 수 없다');
   check((await open(pAdm, '/admin/anomalies')).includes('이상자 관리'), '이상자 관리 화면이 열린다');
+  // 이상자 통보 · 근태 마감 공지 (2026-10-14) — 업무 메시지로 간다. 직원은 보낼 수 없다
+  const ym = D.slice(0, 7);
+  check((await post(pA, '/api/admin/anomalies', { action: 'notify', month: ym })).status === 403, '직원은 이상자 통보를 보낼 수 없다');
+  const nt = await post(pAdm, '/api/admin/anomalies', { action: 'notify', month: ym, employeeIds: [A.id] });
+  check(nt.status === 200 && typeof nt.json.sent === 'number', '관리자는 이상자 통보를 보낸다', JSON.stringify(nt.json));
+  const cm = '2001-01'; // 마감 화면은 지난 달만 열린다 — 먼 옛날 달로 시험한다
+  check((await post(pA, '/api/admin/closing', { action: 'notice', month: cm, due: `${cm}-28` })).status === 403, '직원은 마감 공지를 보낼 수 없다');
+  const cn = await post(pAdm, '/api/admin/closing', { action: 'notice', month: cm, due: `${cm}-28` });
+  const { data: cnMsg } = await db.from('work_messages').select('id, is_test, related, title').eq('related->>type', 'closing').eq('related->>id', cm).order('created_at', { ascending: false }).limit(1).maybeSingle();
+  const { data: cnTo } = cnMsg ? await db.from('work_message_recipients').select('employee_id').eq('message_id', cnMsg.id) : { data: [] };
+  check(cn.status === 200 && cnMsg?.is_test === true && (cnTo ?? []).every((r) => testIds.has(r.employee_id as string)) && (cnTo ?? []).some((r) => r.employee_id === A.id), '마감 공지 → 업무 메시지(검사 계정끼리만), 직원이 받는다', JSON.stringify(cn.json));
+  check((await open(pAdm, `/admin/closing?m=${cm}`)).includes('공지함'), '마감 화면에 「공지함 날짜 · 몇 명」이 보인다');
 
   // ══ 4. 마감 다시 열기 — 두 번째 관리자 확인 ══
   await db.from('profiles').update({ role: 'admin' }).eq('id', B.id); // 다른 관리자가 있는 상태

@@ -2581,7 +2581,18 @@
       "reopenCancel": "Cancel request",
       "reopen_pending": "A reopen request is already pending.",
       "self_decision": "You cannot confirm your own request. Another admin must confirm.",
-      "already": "Already processed."
+      "already": "Already processed.",
+      "notice": {
+        "open": "Send closing notice",
+        "due": "Closing date",
+        "preview": "Sends everyone: “{month} attendance closes on {due}. Finish missing-punch and correction requests before then.”",
+        "send": "Send",
+        "cancel": "Close",
+        "sent": "Sent to {n}.",
+        "title": "{month} attendance closing",
+        "body": "{month} attendance closes on {due}. After that, punch records, corrections and leave for the month cannot change. Send a [Correction request] before {due} for anything missing or wrong.",
+        "last": "Sent {date} · {n} people"
+      }
     },
     "leaveLedger": {
       "title": "Leave ledger",
@@ -2832,7 +2843,19 @@
         "done": "Checked"
       },
       "unitDay": "d",
-      "unitCase": ""
+      "unitCase": "",
+      "notify": {
+        "title": "{month} attendance check",
+        "body": "Some days in your {month} punch records need checking.",
+        "how": "Check those dates under Attendance and send a [Correction request] for anything wrong.",
+        "all": "Notify {n} people with open exceptions",
+        "confirmAll": "Send a work message to the {n} people who still have exceptions. Sent messages cannot be edited or deleted. Send?",
+        "one": "Notify",
+        "confirmOne": "Send {name} a work message about this month’s open exceptions?",
+        "sent": "Sent to {n}.",
+        "sentOn": "Notified {date}",
+        "col": "Notice"
+      }
     },
     "leaveTypeRule": {
       "title": "Request rules",
@@ -2984,7 +3007,42 @@
       "previewIntro": "One month calculated from the current contract, tax settings, personal items and approved rates. It assumes no overtime, night or holiday work and no absence, and nothing is saved.",
       "previewSum": "Total",
       "previewNet": "Estimated net pay",
-      "previewBlocked": "It cannot be estimated for the reasons below."
+      "previewBlocked": "It cannot be estimated for the reasons below.",
+      "imp": {
+        "title": "Bulk entry by Excel",
+        "help": "1) [Template] downloads an Excel with the current contracts 2) change only what you need (rows are matched by employee no. — do not change it) 3) [Upload] 4) fix red cells in the preview, pick the start date and [Apply]. Nothing is saved before applying; only changed people get a new version.",
+        "template": "Template",
+        "upload": "Upload Excel",
+        "sheet": "Contracts",
+        "guide": "Do not change the employee no. Pay type: Monthly / Hourly / Annual. Time basis: Actual / Rounded / Schedule. Monthly hours only for monthly/annual, annual divisor only for annual.",
+        "col": {
+          "employeeNo": "Employee no.",
+          "name": "Name",
+          "payType": "Pay type",
+          "amount": "Amount",
+          "timeBasis": "Time basis",
+          "monthlyHours": "Monthly hours",
+          "annualDivisor": "Annual divisor"
+        },
+        "summary": "{n} rows — changed {changed} · errors {bad}",
+        "fixFirst": "Fix the red cells in Excel and upload again.",
+        "state": "Result",
+        "changed": "Changed",
+        "same": "Same",
+        "error": "Needs fixing",
+        "saved": "Saved",
+        "failed": "Not saved",
+        "badCell": "Invalid value",
+        "apply": "Apply {n} changes",
+        "applyNote": "New contracts apply from the start date; earlier dates keep the old ones.",
+        "confirm": "Save {n} contracts as new versions from {date}? Saved versions cannot be edited or deleted."
+      },
+      "import_required": "Empty",
+      "import_unknown_employee": "Unknown employee no.",
+      "import_duplicate": "Duplicate employee no.",
+      "import_no_file": "No file uploaded.",
+      "import_too_big": "File too large (2 MB max).",
+      "import_bad_file": "Wrong format. Fill in the Excel from [Template] and upload it."
     },
     "payRuns": {
       "title": "Payroll ledgers",
@@ -3366,7 +3424,8 @@
       "promotion_locked": "Not allowed in the current state.",
       "promotion_no_targets": "There is no one to notify.",
       "promotion_wrong_state": "This person cannot be handled in the current state.",
-      "promotion_note_required": "Enter a reason of at least 2 characters."
+      "promotion_note_required": "Enter a reason of at least 2 characters.",
+      "legalShort": "The app does not decide whether legal promotion is complete"
     },
     "laborCost": {
       "title": "Labor cost",
@@ -3403,7 +3462,19 @@
       "draftNote": "Amounts from ledgers that are not finalized are included. They may change; use for review only.",
       "blockedNote": "{n} blocked statements have no amounts and are not in the totals. (They are not counted as zero.)",
       "empty": "No finalized payroll ledger matches these filters.",
-      "note": "Total labor cost = total pay + employer cost (employer social insurance). It differs from total net pay. When a correction is finalized only the correction is counted. Departments are current assignments, not those of the month. Day labor and retirement pay are not included."
+      "note": "Total labor cost = total pay + employer cost (employer social insurance). It differs from total net pay. When a correction is finalized only the correction is counted. Departments are current assignments, not those of the month. Day labor and retirement pay are not included.",
+      "excel": "Download Excel",
+      "sAverage": "Average total cost per person",
+      "cJob": "Job",
+      "byJob": "By job",
+      "byPayItem": "By payment item",
+      "byDeductionItem": "By deduction item",
+      "cItem": "Item",
+      "cAmount": "Amount",
+      "cCode": "Code",
+      "xSummary": "Summary",
+      "xYear": "{year}",
+      "file": "labor-cost_{year}"
     },
     "retirement": {
       "title": "Retirement pay",
@@ -3508,7 +3579,8 @@
       "cardsState": "Status",
       "cardsKind": "Type",
       "unit": "",
-      "showAll": "Show all"
+      "showAll": "Show all",
+      "legalShort": "For manual checking — confirm with labor/tax experts before paying"
     },
     "insurance": {
       "title": "Social insurance",
@@ -3647,7 +3719,9 @@
       "insurance_withdrawn": "This batch is withdrawn.",
       "insurance_in_use": "Some rows are in a ledger. Remove them from the ledger first.",
       "payroll_finalized": "A finalized ledger cannot change. Create a correction.",
-      "version_conflict": "Someone else changed it first. Reload the screen."
+      "version_conflict": "Someone else changed it first. Reload the screen.",
+      "enrollLegalShort": "The app does not file reports with the agencies",
+      "noticeLegalShort": "Enter billed premiums by hand from the agency notice"
     },
     "daily": {
       "title": "Day labor",
@@ -3679,7 +3753,7 @@
       "engAddOf": "Add engagement for {name}",
       "engOff": "Turn off",
       "engOffOf": "Turn off engagement of {name}",
-      "engEmpty": "No engagement. Work can be entered only within an engagement.",
+      "engEmpty": "None — add an engagement before entering work",
       "eng": {
         "startsOn": "Start",
         "endsOn": "End (optional)",
@@ -3827,7 +3901,12 @@
       "payroll_stale": "Something changed after the calculation. Recalculate.",
       "payroll_wrong_status": "Not allowed in the current state.",
       "payroll_run_exists": "The same ledger already exists.",
-      "version_conflict": "Someone else changed it first. Reload."
+      "version_conflict": "Someone else changed it first. Reload.",
+      "legalShort": "Tax is a provisional calculation · social insurance is not calculated",
+      "payeeCount": "{n} active payees",
+      "colPayee": "Payee",
+      "colEngagement": "Engagement · site · day rate",
+      "colTerms": "Tax · insurance terms"
     }
   },
   "side": {

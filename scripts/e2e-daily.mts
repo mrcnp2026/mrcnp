@@ -60,6 +60,7 @@ try {
   // ── 대상자 ──
   check((await post({ action: 'payee.add', internalNo: `d-${TAG}`, name: NAME })).json.error === 'daily_internal_no', '검사 계정은 검사용 번호(e2e-)로만 대상자를 만든다(실제 목록과 섞이지 않게)');
   await open('/admin/payroll/daily');
+  await p.getByRole('button', { name: '대상자 등록' }).first().click(); // 등록 양식은 단추를 눌러 여는 창 (2026-10-14)
   await p.locator('input[name="internalNo"]').fill(`e2e-d1-${TAG}`);
   await p.locator('input[name="name"]').fill(NAME);
   await p.getByRole('button', { name: '등록', exact: true }).click();
@@ -85,7 +86,7 @@ try {
   check((await post({ action: 'engagement.add', payeeId: P1, startsOn: d(28), endsOn: d(1), project: '현장C', dayRate: '', ...unknown })).json.error === 'daily_period', '끝이 시작보다 앞이면 거부');
   check((await post({ action: 'engagement.add', payeeId: P2, startsOn: d(1), endsOn: '', project: '현장A', dayRate: '', ...unknown })).status === 200, '「모름」 상태로도 넣을 수 있다 (근거 없이)');
   const payeesPage = await open('/admin/payroll/daily');
-  check(payeesPage.includes('세금 일용근로소득으로 뗌') && payeesPage.includes('모름 있음 — 계산 안 됨') && payeesPage.includes('e2e 계약서 확인') && payeesPage.includes('세무 검증 대기'), '대상자 화면에 적용 상태 · 근거 · 「모름」 경고와 안내');
+  check(payeesPage.includes('세금 일용근로소득으로 뗌') && payeesPage.includes('모름 있음 — 계산 안 됨') && payeesPage.includes('e2e 계약서 확인') && payeesPage.includes('검증 대기'), '대상자 화면에 적용 상태 · 근거 · 「모름」 경고와 안내');
   await shot('daily-1-payees');
 
   // ── 근무 입력 ──

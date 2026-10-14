@@ -12,8 +12,8 @@ const BASE = process.env.BASE ?? 'http://localhost:4123';
 const SHOTS = process.argv[2];
 const PAGES = (process.argv[3] ?? '/admin,/admin/anomalies,/admin/payroll/runs,/admin/inbox,/admin/members,/admin/console,/admin/settings?tab=punch,/admin/settings?tab=pay&section=ledger,/admin/leave/types,/punch,/punch/payslips').split(',');
 const db = createClient(process.env.NEXT_PUBLIC_SUPABASE_URL!, process.env.SUPABASE_SERVICE_ROLE_KEY!, { auth: { persistSession: false } });
-const { data: emp } = await db.from('profiles').select('id').eq('employee_no', 'e2e-audit').single();
-await db.from('profiles').update({ active: true, role: 'admin', locale: 'ko' }).eq('id', emp!.id);
+const { data: emp } = await db.from('profiles').select('id, can_view_payroll').eq('employee_no', 'e2e-audit').single();
+await db.from('profiles').update({ active: true, role: 'admin', locale: 'ko', can_view_payroll: true }).eq('id', emp!.id); // 급여 화면도 찍는다 — 끝나면 되돌린다
 const token = randomBytes(32).toString('base64url');
 await db.from('invites').insert({ employee_id: emp!.id, token_hash: createHash('sha256').update(token).digest('hex'), issued_via: 'admin', expires_at: new Date(Date.now() + 3600e3).toISOString() });
 
@@ -43,5 +43,5 @@ try {
   await p.screenshot({ path: path.join(SHOTS, 'ph-drawer.png') });
 } finally {
   await browser.close();
-  await db.from('profiles').update({ locale: 'en' }).eq('id', emp!.id);
+  await db.from('profiles').update({ locale: 'en', can_view_payroll: emp!.can_view_payroll }).eq('id', emp!.id);
 }

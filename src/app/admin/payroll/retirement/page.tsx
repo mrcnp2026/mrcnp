@@ -3,7 +3,7 @@
 import { getFormatter, getTranslations } from 'next-intl/server';
 import { HelpTip } from '@/components/Help';
 import Link from 'next/link';
-import { StatusCards } from '@/components/listframe';
+import { StatusCards, WarnLine } from '@/components/listframe';
 import { Card, CardTitle, Chip, PageShell } from '@/components/ui';
 import { OFFICE } from '@/config/office';
 import { getMe } from '@/lib/auth';
@@ -44,7 +44,7 @@ export default async function RetirementPage({ searchParams }: { searchParams: P
           {practice && <Chip>{t('practice')}</Chip>}
         <HelpTip>{t('intro')}</HelpTip></h1>
       </div>
-      <p className="rounded-card border border-warn bg-warn-tint p-3 text-sm text-warn">{t('legal')}</p>
+      <WarnLine short={t('legalShort')}>{t('legal')}</WarnLine>
       <Card className="flex flex-col gap-4">
         <CardTitle>{t('newTitle')}</CardTitle>
         <form action="/admin/payroll/retirement" className="flex flex-wrap items-end gap-3 text-sm">

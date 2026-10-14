@@ -13,7 +13,9 @@ import { groupPath } from '@/lib/org';
 import { loadOrgGroups } from '@/lib/org-data';
 import { loadPeriod } from '@/lib/period-data';
 import { toKstDate } from '@/lib/time';
-import { PolicyForm, ReviewButton } from './PolicyForm';
+import { getMe } from '@/lib/auth';
+import { loadSentFor } from '@/lib/attendance-notify';
+import { NotifyButton, PolicyForm, ReviewButton } from './PolicyForm';
 
 const shift = (ym: string, by: number) => {
   const [y, m] = ym.split('-').map(Number);
@@ -28,6 +30,10 @@ export default async function AnomaliesPage({ searchParams }: { searchParams: Pr
   const { from, last } = monthSpan(month);
   const [data, groups, saved] = await Promise.all([loadPeriod(from, last, practice), loadOrgGroups(), loadAnomalyPolicy()]);
   const reviews = await loadAnomalyReviews(from, last, practice);
+  // 통보 기록 — 직원마다 이 달에 마지막으로 보낸 때
+  const me = (await getMe())!;
+  const sentAt = new Map<string, string>();
+  for (const x of await loadSentFor('anomaly', month, me)) for (const id of x.recipients) if (!sentAt.has(id)) sentAt.set(id, x.at);
   const sum = summarizeAnomalies(collectAnomalies(data, from, last), saved.policy, new Set(reviews.keys()));
   const only = (ANOMALY_TYPES as readonly string[]).includes(sp.k ?? '') ? (sp.k as AnomalyType) : null;
   // 처리 상태 거르기: block = 마감 차단, check = 확인 필요, done = 확인함
@@ -41,6 +47,8 @@ export default async function AnomaliesPage({ searchParams }: { searchParams: Pr
   const link = (m: string, k?: string | null, s?: string | null) => `/admin/anomalies?m=${m}${k ? `&k=${k}` : ''}${s ? `&st=${s}` : ''}${live}`;
   const count = (s: string) => sum.shown.filter((x) => stateOf(x) === s).length;
   // 유형 카드는 이 달에 한 건이라도 있었던 유형 + 마감을 막는 유형만 (꺼 둔 유형은 아래 기준표에서 본다)
+  // 아직 처리하지 않은 이상 기록이 있는 사람(통보 대상)
+  const openPeople = [...new Set(sum.shown.filter((x) => x.block || !x.reviewed).map((x) => x.employeeId))];
   const typeCards = ANOMALY_TYPES.filter((k) => saved.policy[k] !== 'off' && (sum.byType[k] > 0 || saved.policy[k] === 'block'));
 
   return (
@@ -59,7 +67,12 @@ export default async function AnomaliesPage({ searchParams }: { searchParams: Pr
           )}
         </span>
         {practice && <span className="text-sm text-faint">{t('practice')}</span>}
-        <Link href={`/admin/closing?m=${month}${live}`} className="ml-auto inline-flex h-9 items-center rounded-button border border-border bg-bg px-3.5 text-sm font-semibold text-text hover:bg-surface">
+        {openPeople.length > 0 && (
+          <span className="ml-auto">
+            <NotifyButton primary month={month} live={sp.live === '1'} label={t('notify.all', { n: openPeople.length })} confirm={t('notify.confirmAll', { n: openPeople.length })} />
+          </span>
+        )}
+        <Link href={`/admin/closing?m=${month}${live}`} className={`${openPeople.length > 0 ? '' : 'ml-auto '}inline-flex h-9 items-center rounded-button border border-border bg-bg px-3.5 text-sm font-semibold text-text hover:bg-surface`}>
           {t('toClosing')} ›
         </Link>
       </FilterBar>
@@ -88,7 +101,7 @@ export default async function AnomaliesPage({ searchParams }: { searchParams: Pr
             )}
           </>
         }
-        head={[{ label: t('colDate') }, { label: t('colName') }, { label: t('colGroup') }, { label: t('colWhat') }, { label: t('colEffect') }, { label: '' }]}
+        head={[{ label: t('colDate') }, { label: t('colName') }, { label: t('colGroup') }, { label: t('colWhat') }, { label: t('colEffect') }, { label: t('notify.col') }, { label: '' }]}
         empty={rows.length === 0 ? t('empty') : undefined}
       >
         {rows.map((r) => {
@@ -109,6 +122,13 @@ export default async function AnomaliesPage({ searchParams }: { searchParams: Pr
               </td>
               <td className="whitespace-nowrap">
                 {r.block ? <Chip tone="warn">{t('effectBlock')}</Chip> : <ReviewButton employeeId={r.employeeId} workDate={r.workDate} types={r.types} reviewed={r.reviewed} live={sp.live === '1'} />}
+              </td>
+              <td className="whitespace-nowrap">
+                {sentAt.has(r.employeeId) ? (
+                  <span className="text-xs text-muted">{t('notify.sentOn', { date: toKstDate(new Date(sentAt.get(r.employeeId)!)) })}</span>
+                ) : (
+                  (r.block || !r.reviewed) && <NotifyButton month={month} employeeIds={[r.employeeId]} live={sp.live === '1'} label={t('notify.one')} confirm={t('notify.confirmOne', { name: p?.name ?? '' })} />
+                )}
               </td>
               <td className="text-right whitespace-nowrap">
                 <Link href={`/admin/records/${r.employeeId}?m=${month}${live}`} className="font-bold text-primary hover:underline">

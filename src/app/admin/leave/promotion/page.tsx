@@ -1,7 +1,7 @@
 // 연차 사용 촉진 (관리자) — 촉진 목록과 만들기 (PRD v1.3 37.3, L17).
 // 프로그램은 통지 · 계획 · 처리의 사실과 시각을 남길 뿐, 법적 촉진 완료나 수당 면제를 정하지 않는다.
 import { getTranslations } from 'next-intl/server';
-import { ListHead } from '@/components/listframe';
+import { ListHead, WarnLine } from '@/components/listframe';
 import Link from 'next/link';
 import { redirect } from 'next/navigation';
 import { Card, CardTitle, Chip, PageShell } from '@/components/ui';
@@ -21,7 +21,7 @@ export default async function PromotionPage() {
   return (
     <PageShell wide>
       <ListHead title={t('title')} desc={t('intro')} settingsHref="/admin/settings?tab=leave" settingsLabel={tGear('item.setLeave')} />
-      <p className="rounded-card border border-warn bg-warn-tint p-3 text-sm text-warn">{t('legal')}</p>
+      <WarnLine short={t('legalShort')}>{t('legal')}</WarnLine>
       <Card>
         <CardTitle>{t('createTitle')}</CardTitle>
         <div className="pt-3">

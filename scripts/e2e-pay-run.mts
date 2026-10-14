@@ -9,6 +9,7 @@ import { createClient } from '@supabase/supabase-js';
 import { config } from 'dotenv';
 import { createHash, randomBytes } from 'node:crypto';
 import path from 'node:path';
+import ExcelJS from 'exceljs';
 import { chromium } from 'playwright-core';
 import { createPassword } from './lib/e2e-password.ts';
 
@@ -19,8 +20,18 @@ const db = createClient(process.env.NEXT_PUBLIC_SUPABASE_URL!, process.env.SUPAB
 const practice = process.env.OPERATION_MODE !== 'live';
 const { data: emp } = await db.from('profiles').select('id, name').eq('employee_no', 'e2e-audit').single();
 const { data: other } = await db.from('profiles').select('id, name').eq('employee_no', 'e2e-audit2').single();
-const year = 2090 + Math.floor(Math.random() * 9);
-const mon = 1 + Math.floor(Math.random() * 12);
+// 먼 미래의 빈 달 — 대장 · 마감 기록은 지울 수 없어서 예전 검사가 쓴 달은 피한다
+let year = 0, mon = 0;
+for (let i = 0; i < 30; i++) {
+  year = 2090 + Math.floor(Math.random() * 11); // 인건비 화면이 2100년까지만 고른다
+  mon = 1 + Math.floor(Math.random() * 12);
+  const f = `${year}-${String(mon).padStart(2, '0')}-01`;
+  const [{ count: runs }, { count: closes }] = await Promise.all([
+    db.from('payroll_runs').select('id', { count: 'exact', head: true }).eq('period_from', f),
+    db.from('attendance_closes').select('id', { count: 'exact', head: true }).eq('employee_id', other!.id).eq('period_from', f),
+  ]);
+  if (!runs && !closes) break;
+}
 const YM = `${year}-${String(mon).padStart(2, '0')}`;
 const FROM = `${YM}-01`;
 const TO = new Date(Date.UTC(year, mon, 1)).toISOString().slice(0, 10);
@@ -258,7 +269,7 @@ try {
     np = await enRow();
     check((await post(INS, { action: 'enroll.set', id: np.id, expectedVersion: np.version, state: 'CONFIRMED', confirmedOn: QD, evidence: 'e2e 접수 123' })).status === 200 && (await enRow()).state === 'CONFIRMED', '확인한 날 · 근거를 적어 확인 완료');
     const enPage = await open('/admin/payroll/insurance');
-    check(enPage.includes('사회보험') && enPage.includes(other!.name) && enPage.includes('확인 완료') && enPage.includes('e2e 접수 123') && enPage.includes('미신고') && enPage.includes('프로그램이 공단에 신고하지 않습니다'), '취득 · 상실 화면에 상태 · 근거와 「신고하지 않는다」 안내');
+    check(enPage.includes('사회보험') && enPage.includes(other!.name) && enPage.includes('확인 완료') && enPage.includes('e2e 접수 123') && enPage.includes('미신고') && enPage.includes('공단 신고는 이 프로그램이 하지 않습니다'), '취득 · 상실 화면에 상태 · 근거와 「신고하지 않는다」 안내');
     await shot('payrun-5a-insurance');
     check((await q.evaluate(async (u) => (await fetch(u, { method: 'POST', headers: { 'content-type': 'application/json' }, body: '{}' })).status, INS)) === 403, '직원은 사회보험 처리를 할 수 없다');
 
@@ -403,6 +414,15 @@ try {
   check(reg[1] === '1' && reg[4] === '2,911,670', '정규만 고르면 정정본 한 건만 (원본 2,916,670은 세지 않는다)', reg.join(' | '));
   const body = await p.locator('body').innerText();
   check(body.includes(other!.name) && body.includes('총인건비 = 지급 합계 + 사업주 부담') && body.includes('달별') && body.includes('부서별') && body.includes('직원별'), '인건비 현황에 달 · 부서 · 직원 표와 안내');
+  // 인건비 표 확장 (2026-10-14): 직무별 · 지급항목별 · 공제항목별, 1인당 평균, 엑셀
+  await open(`/admin/payroll/labor-cost?y=${year}`);
+  const payItems = await p.locator('table[data-labor="byPayItem"] tbody tr').allInnerTexts();
+  check((await p.locator('table[data-labor="byJob"]').count()) === 1 && payItems.length >= 2 && (await p.locator('table[data-labor="byDeductionItem"]').count()) === 1 && (await p.getByText('1인당 평균 총인건비').count()) === 1, '인건비 현황에 직무별 · 지급항목별 · 공제항목별 표와 1인당 평균', payItems.slice(0, 3).join(' / '));
+  const xl2 = await p.evaluate(async (u) => { const r = await fetch(u); return { status: r.status, type: r.headers.get('content-type') ?? '', bytes: Array.from(new Uint8Array(await r.arrayBuffer())) }; }, `/api/admin/payroll/labor-cost?y=${year}`);
+  const wbL = new ExcelJS.Workbook();
+  if (xl2.status === 200) await wbL.xlsx.load(Buffer.from(xl2.bytes) as unknown as ArrayBuffer);
+  check(xl2.status === 200 && xl2.type.includes('spreadsheetml') && wbL.worksheets.length === 7, '인건비 현황 엑셀 — 요약 · 월 · 부서 · 직무 · 직원 · 지급항목 · 공제항목 7장', `${xl2.status} ${wbL.worksheets.map((w) => w.name).join(',')}`);
+  check((await q.evaluate(async (u) => (await fetch(u)).status, `/api/admin/payroll/labor-cost?y=${year}`)) === 403, '직원은 인건비 엑셀을 받을 수 없다');
   await shot('payrun-9-labor-cost');
   check((await p.locator('nav a[href="/admin/payroll/labor-cost"]').count()) >= 1, '왼쪽 메뉴 급여 아래에 인건비 현황');
   check((await see('/admin/payroll/labor-cost')).includes('3,362,000') === false, '직원에게는 인건비 현황이 보이지 않는다');

@@ -107,3 +107,33 @@ export function ReviewButton({ employeeId, workDate, types, reviewed, live }: { 
     </button>
   );
 }
+
+/** 이상자 통보 — 업무 메시지로 본인에게. 누르면 한 번 더 묻는다 (보낸 메시지는 고치거나 지울 수 없다) */
+export function NotifyButton({ month, employeeIds, label, confirm, live, primary = false }: { month: string; employeeIds?: string[]; label: string; confirm: string; live: boolean; primary?: boolean }) {
+  const t = useTranslations('admin.anomalies');
+  const router = useRouter();
+  const [busy, setBusy] = useState(false);
+  const [done, setDone] = useState<number | null>(null);
+  return (
+    <span className="inline-flex items-center gap-2">
+      <button
+        type="button"
+        disabled={busy}
+        onClick={async () => {
+          if (!window.confirm(confirm)) return;
+          setBusy(true);
+          const r = await callApi<{ sent: number }>('/api/admin/anomalies', { action: 'notify', month, employeeIds, live });
+          setBusy(false);
+          if (r.ok) {
+            setDone(r.data.sent);
+            router.refresh();
+          }
+        }}
+        className={primary ? 'inline-flex h-9 items-center rounded-button bg-primary px-3.5 text-sm font-bold text-on-primary disabled:opacity-50' : 'inline-flex min-h-8 items-center text-sm font-bold whitespace-nowrap text-primary hover:underline disabled:opacity-50'}
+      >
+        {label}
+      </button>
+      {done !== null && primary && <span role="status" className="text-sm text-ok">{t('notify.sent', { n: done })}</span>}
+    </span>
+  );
+}

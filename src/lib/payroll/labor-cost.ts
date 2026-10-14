@@ -10,7 +10,10 @@ import { loadOrgGroups } from '@/lib/org-data';
 import { createAdminClient } from '@/lib/supabase/admin';
 
 export type LaborKind = 'REGULAR' | 'BONUS';
-export type LaborRow = { runId: string; kind: LaborKind; month: string; final: boolean; employeeId: string; groupId: string | null; pay: number; deduction: number; net: number; employer: number };
+export type LaborRow = { runId: string; kind: LaborKind; month: string; final: boolean; employeeId: string; groupId: string | null; jobId?: string | null; pay: number; deduction: number; net: number; employer: number };
+/** 명세서 항목 한 줄 (지급 · 공제) — 항목별 표에 쓴다 */
+export type LaborItemLine = { kind: 'PAYMENT' | 'DEDUCTION'; code: string; label: string; amount: number; employeeId: string };
+export type LaborItemSum = { kind: 'PAYMENT' | 'DEDUCTION'; code: string; label: string; amount: number; people: number };
 export type LaborSum = { statements: number; pay: number; deduction: number; net: number; employer: number; total: number };
 export type LaborReport = {
   year: number; rows: number; blocked: number; hasDraft: boolean;
@@ -18,6 +21,8 @@ export type LaborReport = {
   groups: (LaborSum & { groupId: string | null; name: string; people: number })[];
   employees: (LaborSum & { employeeId: string; name: string; employeeNo: string | null; groupId: string | null })[];
   total: LaborSum & { people: number };
+  jobs: (LaborSum & { jobId: string | null; name: string; people: number })[];
+  items: LaborItemSum[];
 };
 
 const zero = (): LaborSum => ({ statements: 0, pay: 0, deduction: 0, net: 0, employer: 0, total: 0 });
@@ -62,25 +67,52 @@ export function sumLabor(rows: readonly LaborRow[], people: ReadonlyMap<string, 
   };
 }
 
+/** 직무별 합계 (순수 계산) — 소속처럼 지금의 직무로 묶는다 */
+export function sumByJob(rows: readonly LaborRow[], jobName: (id: string | null) => string): LaborReport['jobs'] {
+  const m = new Map<string, LaborSum & { people: Set<string> }>();
+  for (const r of rows) {
+    const k = r.jobId ?? '';
+    const g = m.get(k) ?? m.set(k, { ...zero(), people: new Set() }).get(k)!;
+    add(g, r);
+    g.people.add(r.employeeId);
+  }
+  return [...m].map(([id, { people, ...x }]) => ({ jobId: id || null, name: jobName(id || null), people: people.size, ...x })).sort((a, b) => b.total - a.total);
+}
+
+/** 지급 · 공제 항목별 합계 (순수 계산) — 같은 항목 코드끼리, 금액이 큰 순 */
+export function sumItems(lines: readonly LaborItemLine[]): LaborItemSum[] {
+  const m = new Map<string, { kind: LaborItemLine['kind']; code: string; label: string; amount: number; people: Set<string> }>();
+  for (const l of lines) {
+    const k = `${l.kind}|${l.code}`;
+    const x = m.get(k) ?? m.set(k, { kind: l.kind, code: l.code, label: l.label, amount: 0, people: new Set() }).get(k)!;
+    x.amount += l.amount;
+    x.people.add(l.employeeId);
+  }
+  return [...m.values()].map(({ people, ...x }) => ({ ...x, people: people.size })).sort((a, b) => (a.kind === b.kind ? b.amount - a.amount : a.kind === 'PAYMENT' ? -1 : 1));
+}
+
 export async function buildLaborCost(args: { year: number; practice: boolean; kind: LaborKind | null; groupId: string | null; withDraft: boolean; testViewer: boolean; unassigned: string }): Promise<LaborReport> {
   const c = createAdminClient();
-  const [{ data: runs, error }, { data: staff }, orgGroups] = await Promise.all([
+  const [{ data: runs, error }, { data: staff }, { data: jobRows }, orgGroups] = await Promise.all([
     c.from('payroll_runs').select('id, run_kind, title, period_from, period_to, sequence, revision, status, current_generation_id').eq('is_test', args.practice).in('run_kind', args.kind ? [args.kind] : ['REGULAR', 'BONUS']).gte('period_from', `${args.year}-01-01`).lte('period_from', `${args.year}-12-31`),
-    c.from('profiles').select('id, name, employee_no, group_id'),
+    c.from('profiles').select('id, name, employee_no, group_id, job_id'),
+    c.from('jobs').select('id, name'),
     loadOrgGroups(),
   ]);
   if (error) throw new Error(`buildLaborCost: ${error.code}`);
   // 검사가 만든 대장(제목 e2e-)은 검사 계정에게만, 실제 대장은 실제 관리자에게만 보인다
   const usable = (runs ?? []).filter((r) => !!(r.title as string | null)?.startsWith('e2e-') === args.testViewer && r.current_generation_id && (r.status === 'FINALIZED' || (args.withDraft && r.status !== 'DRAFT')));
   const picked = pickRevisions(usable.map((r) => ({ id: r.id as string, kind: r.run_kind as LaborKind, periodFrom: r.period_from as string, periodTo: r.period_to as string, sequence: r.sequence as number, revision: r.revision as number, final: r.status === 'FINALIZED', generationId: r.current_generation_id as string })));
-  const people = new Map((staff ?? []).map((p) => [p.id as string, { name: p.name as string, employeeNo: p.employee_no as string | null, groupId: p.group_id as string | null }]));
+  const people = new Map((staff ?? []).map((p) => [p.id as string, { name: p.name as string, employeeNo: p.employee_no as string | null, groupId: p.group_id as string | null, jobId: p.job_id as string | null }]));
+  const itemLines: LaborItemLine[] = [];
   const scope = args.groupId ? groupScope(orgGroups, args.groupId) : null;
   const rows: LaborRow[] = [];
   let blocked = 0;
   for (let i = 0; i < picked.length; i += 50) {
     const part = picked.slice(i, i + 50);
-    const { data: sts, error: e2 } = await c.from('payroll_statements').select('generation_id, employee_id, state, pay_total, deduction_total, net_total, employer_total').in('generation_id', part.map((r) => r.generationId)).limit(20000);
+    const { data: sts, error: e2 } = await c.from('payroll_statements').select('id, generation_id, employee_id, state, pay_total, deduction_total, net_total, employer_total').in('generation_id', part.map((r) => r.generationId)).limit(20000);
     if (e2) throw new Error(`buildLaborCost.statements: ${e2.code}`);
+    const okIds = new Map<string, string>(); // 합계에 들어간 명세서 → 직원
     for (const s of sts ?? []) {
       const run = part.find((r) => r.generationId === s.generation_id)!;
       const groupId = people.get(s.employee_id as string)?.groupId ?? null;
@@ -89,7 +121,15 @@ export async function buildLaborCost(args: { year: number; practice: boolean; ki
         blocked++;
         continue;
       }
-      rows.push({ runId: run.id, kind: run.kind, month: run.periodFrom.slice(0, 7), final: run.final, employeeId: s.employee_id as string, groupId, pay: Number(s.pay_total), deduction: Number(s.deduction_total), net: Number(s.net_total), employer: Number(s.employer_total ?? 0) });
+      okIds.set(s.id as string, s.employee_id as string);
+      rows.push({ runId: run.id, kind: run.kind, month: run.periodFrom.slice(0, 7), final: run.final, employeeId: s.employee_id as string, groupId, jobId: people.get(s.employee_id as string)?.jobId ?? null, pay: Number(s.pay_total), deduction: Number(s.deduction_total), net: Number(s.net_total), employer: Number(s.employer_total ?? 0) });
+    }
+    // 항목별 표: 합계에 들어간 명세서의 지급 · 공제 줄 (사업주 부담 줄은 빼고)
+    const ids = [...okIds.keys()];
+    for (let j = 0; j < ids.length; j += 200) {
+      const { data: its, error: e3 } = await c.from('payroll_statement_items').select('statement_id, item_code, kind, label_ko, amount').in('statement_id', ids.slice(j, j + 200)).in('kind', ['PAYMENT', 'DEDUCTION']).limit(50000);
+      if (e3) throw new Error(`buildLaborCost.items: ${e3.code}`);
+      for (const x of its ?? []) itemLines.push({ kind: x.kind as LaborItemLine['kind'], code: x.item_code as string, label: x.label_ko as string, amount: Number(x.amount), employeeId: okIds.get(x.statement_id as string)! });
     }
   }
   const nameOf = (id: string | null) => {
@@ -97,5 +137,6 @@ export async function buildLaborCost(args: { year: number; practice: boolean; ki
     const parent = g?.parentId ? orgGroups.find((x) => x.id === g.parentId) : null;
     return g ? (parent ? `${parent.name} › ${g.name}` : g.name) : args.unassigned;
   };
-  return { year: args.year, rows: rows.length, blocked, hasDraft: rows.some((r) => !r.final), ...sumLabor(rows, people, nameOf) };
+  const jobName = new Map((jobRows ?? []).map((j) => [j.id as string, j.name as string]));
+  return { year: args.year, rows: rows.length, blocked, hasDraft: rows.some((r) => !r.final), ...sumLabor(rows, people, nameOf), jobs: sumByJob(rows, (id) => (id ? (jobName.get(id) ?? args.unassigned) : args.unassigned)), items: sumItems(itemLines) };
 }

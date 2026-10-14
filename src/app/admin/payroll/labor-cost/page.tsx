@@ -1,6 +1,7 @@
 // 인건비 현황 — 확정한 급여대장의 지급 · 공제 · 실지급 · 사업주 부담 · 총인건비를 달 · 부서 · 직원으로 본다 (PRD v1.3 18.6 W09). 급여 담당 관리자만.
 // 숫자는 저장된 명세서의 합이다(여기서 다시 계산하지 않는다). 정정본이 확정되면 앞 판은 빠진다.
 import { getFormatter, getTranslations } from 'next-intl/server';
+import { Download } from 'lucide-react';
 import { HelpTip } from '@/components/Help';
 import { Chip, PageShell } from '@/components/ui';
 import { OFFICE } from '@/config/office';
@@ -86,6 +87,12 @@ export default async function LaborCostPage({ searchParams }: { searchParams: Pr
           {t('fDraft')}
         </label>
         <button type="submit" className="inline-flex min-h-9 items-center rounded-button bg-primary px-4 text-sm font-bold text-on-primary">{t('apply')}</button>
+        {r.rows > 0 && (
+          <a href={`/api/admin/payroll/labor-cost?${new URLSearchParams({ y: String(year), ...(kind ? { k: kind } : {}), ...(groupId ? { g: groupId } : {}), ...(withDraft ? { draft: '1' } : {}), ...(sp.live === '1' ? { live: '1' } : {}) })}`} className="ml-auto inline-flex min-h-9 items-center gap-1 rounded-button border border-border bg-bg px-3.5 text-sm font-semibold text-text hover:bg-surface">
+            <Download aria-hidden size={16} />
+            {t('excel')}
+          </a>
+        )}
       </form>
       {r.hasDraft && <p className="rounded-card border border-warn bg-warn-tint p-3 text-sm text-warn">{t('draftNote')}</p>}
       {r.blocked > 0 && <p className="rounded-card border border-warn bg-warn-tint p-3 text-sm text-warn">{t('blockedNote', { n: r.blocked })}</p>}
@@ -93,15 +100,15 @@ export default async function LaborCostPage({ searchParams }: { searchParams: Pr
         <p className="rounded-card border border-border bg-bg p-4 text-sm text-faint">{t('empty')}</p>
       ) : (
         <>
-          <dl className="grid gap-3 md:grid-cols-4">
-            {([['sPeople', f.number(r.total.people)], ['cPay', won(r.total.pay)], ['cNet', won(r.total.net)], ['cTotal', won(r.total.total)]] as const).map(([k, v]) => (
+          <dl className="grid gap-3 md:grid-cols-5">
+            {([['sPeople', f.number(r.total.people)], ['cPay', won(r.total.pay)], ['cNet', won(r.total.net)], ['cTotal', won(r.total.total)], ['sAverage', won(r.total.people > 0 ? Math.round(r.total.total / r.total.people) : 0)]] as const).map(([k, v]) => (
               <div key={k} className="rounded-card border border-border bg-bg p-3">
                 <dt className="text-sm text-muted">{t(k)}</dt>
                 <dd className="num pt-1 text-xl font-extrabold">{v}</dd>
               </div>
             ))}
           </dl>
-          {([['byMonth', t('cMonth'), r.months.map((m) => row(m.month, m.month, m))], ['byGroup', t('cGroup'), r.groups.map((g) => row(g.groupId ?? 'none', t('groupPeople', { name: g.name, n: g.people }), g))], ['byEmployee', t('cEmployee'), r.employees.map((e) => row(e.employeeId, <>{e.name} <span className="num text-xs text-muted">{e.employeeNo}</span></>, e))]] as const).map(([k, first, body]) => (
+          {([['byMonth', t('cMonth'), r.months.map((m) => row(m.month, m.month, m))], ['byGroup', t('cGroup'), r.groups.map((g) => row(g.groupId ?? 'none', t('groupPeople', { name: g.name, n: g.people }), g))], ['byJob', t('cJob'), r.jobs.map((j) => row(j.jobId ?? 'none', t('groupPeople', { name: j.name, n: j.people }), j))], ['byEmployee', t('cEmployee'), r.employees.map((e) => row(e.employeeId, <>{e.name} <span className="num text-xs text-muted">{e.employeeNo}</span></>, e))]] as const).map(([k, first, body]) => (
             <section key={k} className="flex flex-col gap-2">
               <h2 className="text-lg font-bold">{t(k)}</h2>
               <div className="overflow-x-auto rounded-card border border-border bg-bg">
@@ -115,6 +122,41 @@ export default async function LaborCostPage({ searchParams }: { searchParams: Pr
               </div>
             </section>
           ))}
+          <div className="grid gap-4 lg:grid-cols-2">
+            {(['PAYMENT', 'DEDUCTION'] as const).map((kd) => {
+              const list = r.items.filter((x) => x.kind === kd);
+              return (
+                <section key={kd} className="flex flex-col gap-2">
+                  <h2 className="text-lg font-bold">{t(kd === 'PAYMENT' ? 'byPayItem' : 'byDeductionItem')}</h2>
+                  <div className="overflow-x-auto rounded-card border border-border bg-bg">
+                    <table className="w-full text-sm" data-labor={kd === 'PAYMENT' ? 'byPayItem' : 'byDeductionItem'}>
+                      <thead>
+                        <tr className="border-b border-border bg-surface text-left">
+                          <th scope="col" className="px-3 py-2.5 text-xs font-semibold text-muted">{t('cItem')}</th>
+                          <th scope="col" className="px-3 py-2.5 text-right text-xs font-semibold text-muted">{t('sPeople')}</th>
+                          <th scope="col" className="px-3 py-2.5 text-right text-xs font-semibold text-muted">{t('cAmount')}</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {list.map((x) => (
+                          <tr key={x.code} className="border-b border-border">
+                            <td className="px-3 py-2">{x.label}</td>
+                            <td className="num px-3 py-2 text-right">{f.number(x.people)}</td>
+                            <td className="num px-3 py-2 text-right font-bold">{won(x.amount)}</td>
+                          </tr>
+                        ))}
+                        <tr className="bg-surface font-bold">
+                          <td className="px-3 py-2">{t('sum')}</td>
+                          <td />
+                          <td className="num px-3 py-2 text-right">{won(list.reduce((a, x) => a + x.amount, 0))}</td>
+                        </tr>
+                      </tbody>
+                    </table>
+                  </div>
+                </section>
+              );
+            })}
+          </div>
         </>
       )}
       <p className="text-xs text-faint">{t('note')}</p>

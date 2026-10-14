@@ -15,7 +15,10 @@ import { groupPath } from '@/lib/org';
 import { loadOrgGroups } from '@/lib/org-data';
 import { createAdminClient } from '@/lib/supabase/admin';
 import { toKstDate } from '@/lib/time';
+import { addDays } from '@/lib/calendar';
+import { loadSentFor } from '@/lib/attendance-notify';
 import { CloseBoard, type Line } from './CloseBoard';
+import { ClosingNotice } from './NoticeForm';
 
 const shift = (ym: string, by: number) => {
   const [y, m] = ym.split('-').map(Number);
@@ -60,6 +63,7 @@ export default async function ClosingPage({ searchParams }: { searchParams: Prom
   const ready = rows.filter((r) => !r.close && r.ready).length;
   const link = (m: string) => `/admin/closing?m=${m}${live ? '&live=1' : ''}`;
   const next = shift(month, 1);
+  const notices = meId ? await loadSentFor('closing', month, (await getMe())!) : [];
 
   return (
     <PageShell wide>
@@ -97,11 +101,15 @@ export default async function ClosingPage({ searchParams }: { searchParams: Prom
             </div>
           ))}
         </dl>
+        {/* 마감 공지 — 전 직원에게 업무 메시지 (2026-10-14). 마지막으로 보낸 때를 옆에 */}
+        <span className="ml-auto flex items-center gap-3">
+          {notices[0] && <span className="text-xs text-muted">{t('notice.last', { date: toKstDate(new Date(notices[0].at)), n: notices[0].recipients.length })}</span>}
+          <ClosingNotice month={month} defaultDue={addDays(`${next}-01`, 4)} />
+        </span>
       </div>
       {practice && <p className="rounded-card bg-primary-tint p-3 text-sm text-primary">{t('practice')}</p>}
       {!canClose && <p className="rounded-card bg-warn-tint p-3 text-sm text-warn">{t('future')}</p>}
       {rows.length === 0 ? <p className="rounded-card bg-bg p-8 text-center text-sm text-faint">{t('none')}</p> : <CloseBoard key={month} month={month} live={live} lines={rows} canClose={canClose} />}
-      <p className="text-sm text-faint">{t('note')}</p>
     </PageShell>
   );
 }

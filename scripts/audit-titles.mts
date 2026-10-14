@@ -7,7 +7,7 @@ import { createHash, randomBytes } from 'node:crypto';
 import { readFileSync } from 'node:fs';
 import path from 'node:path';
 import { chromium } from 'playwright-core';
-import { ADMIN_APPS, appLeaves, CONSOLE_APPS, MY_APPS } from '../src/config/nav.ts';
+import { ADMIN_APPS, CONSOLE_APPS, MY_APPS } from '../src/config/nav.ts';
 import { createPassword } from './lib/e2e-password.ts';
 
 config({ path: path.join(import.meta.dirname, '..', '.env.local'), quiet: true });

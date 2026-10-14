@@ -4,7 +4,7 @@
 //   StatusCards — 상태 카드 묶음. 카드를 누르면 그 상태로 걸러지고, 다시 누르면 풀린다(주소로 — 뒤로 가기 · 새로 고침에도 그대로)
 //   ListTable   — 표: 머리는 작은 회색 글자 + 위 진한 선, 줄은 가로선만 · 높이 48px
 // 이상자 관리 · 요청함 · 연차 촉진 · 급여대장 목록 · 사회보험 · 퇴직급여 · 일용직이 같은 틀을 쓴다. 문장은 부르는 쪽이 번역 파일에서 넘긴다.
-import { Settings } from 'lucide-react';
+import { Settings, TriangleAlert } from 'lucide-react';
 import { HelpTip } from './Help';
 import Link from 'next/link';
 import type { CSSProperties, ReactNode } from 'react';
@@ -104,5 +104,18 @@ export function SettingsLink({ href, label }: { href: string; label: string }) {
     <Link href={href} aria-label={label} title={label} className="flex size-8 items-center justify-center rounded-button text-faint hover:bg-surface hover:text-primary">
       <Settings aria-hidden size={18} strokeWidth={1.75} />
     </Link>
+  );
+}
+
+/**
+ * 꼭 알아야 할 경고 — ⚠ 짧은 한 줄만 보이고, 자세한 내용은 옆 ?를 눌러 본다 (2026-10-14 의뢰인: 긴 글을 바로 늘어놓지 말 것)
+ */
+export function WarnLine({ short, children }: { short: string; children: ReactNode }) {
+  return (
+    <p className="flex items-center gap-1.5 self-start rounded-button bg-warn-tint py-0.5 pr-1 pl-3 text-sm font-semibold text-warn">
+      <TriangleAlert aria-hidden size={16} strokeWidth={2} className="shrink-0" />
+      {short}
+      <HelpTip>{children}</HelpTip>
+    </p>
   );
 }
