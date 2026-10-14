@@ -1,6 +1,7 @@
 // 소득세 조회 (S06 계산기, PRD v1.3 17.5) — 승인된 간이세액표와 자녀 공제 규칙으로만 계산한다. 결과를 어디에도 저장하지 않는다.
 // 표 범위를 넘는 급여 · 가족 11명 초과는 세액표 원문에서 읽어 둔 규칙으로 계산하고, 규칙이 없으면 계산하지 않는다.
 import { api, ApiError, readJson } from '@/lib/api';
+import { requireConsole } from '@/lib/console-pin';
 import { loadBandTaxes, loadReferences, requirePayroll } from '@/lib/payroll/data';
 import { asChildRule, asTaxRules, estimateTax, pickAt } from '@/lib/payroll/reference';
 import { isDate } from '@/lib/payroll/settings';
@@ -8,6 +9,7 @@ import { isDate } from '@/lib/payroll/settings';
 const WHY = { no_row: 'payroll_tax_out_of_table', no_high_rule: 'payroll_tax_out_of_table', no_family_rule: 'payroll_tax_no_family_rule', no_child_rule: 'payroll_tax_no_child_rule', invalid_input: 'invalid_input' } as const;
 
 export const POST = api('admin.payroll.tax.estimate', async (req) => {
+  await requireConsole(); // 통합설정 잠금 — 숫자 4자리로 연 관리자만 (2026-10-14 결정 사항 개발-29)
   await requirePayroll();
   const b = await readJson(req);
   const wage = typeof b.wage === 'string' && /^\d{1,12}$/.test(b.wage) ? Number(b.wage) : null; // 빈 칸은 0이 아니다 — 계산하지 않는다

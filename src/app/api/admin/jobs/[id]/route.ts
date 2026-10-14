@@ -2,6 +2,7 @@
 // 직원(employeeIds)은 보낸 목록으로 통째로 맞춘다 — 목록에 든 사람은 이 직무로, 이 직무이던 사람 중 빠진 사람은 「직무 없음」으로.
 // 직원이 지정된 직무는 끌 수 없다 — 먼저 다른 직무로 옮긴다.
 import { api, ApiError, readJson } from '@/lib/api';
+import { requireConsole } from '@/lib/console-pin';
 import { requireAdmin } from '@/lib/auth';
 import { validateJob } from '@/lib/jobs';
 import { createAdminClient } from '@/lib/supabase/admin';
@@ -10,6 +11,7 @@ import { syncStaffHistorySafe } from '@/lib/staff-history';
 const UUID = /^[0-9a-f-]{36}$/i;
 
 export const POST = api<{ params: Promise<{ id: string }> }>('admin.jobs.update', async (req, ctx) => {
+  await requireConsole(); // 통합설정 잠금 — 숫자 4자리로 연 관리자만 (2026-10-14 결정 사항 개발-29)
   const me = await requireAdmin();
   if (!me) throw new ApiError(403, 'forbidden');
   const { id } = await ctx.params;

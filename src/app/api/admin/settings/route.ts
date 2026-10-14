@@ -5,6 +5,7 @@
 // - 사무실 위치(GPS)는 좌표+반경. 하나라도 켜져 있으면, 사무실 인터넷이 아닌 곳에서 찍을 때 폰이 위치를 함께 보낸다 (0017)
 // 누가 바꿨는지는 변경 기록에 남는다 (표에 *_by 칸이 없어 따로 한 줄 적는다).
 import { api, ApiError, readJson } from '@/lib/api';
+import { requireConsole } from '@/lib/console-pin';
 import { requireAdmin } from '@/lib/auth';
 import { validateLocation } from '@/lib/geo';
 import { cleanLabel, normalizeCidr, validateHoliday, validateRule } from '@/lib/settings-rules';
@@ -15,6 +16,7 @@ import { toKstDate } from '@/lib/time';
 const UUID = /^[0-9a-f-]{36}$/i;
 
 export const POST = api('admin.settings', async (req, ctx) => {
+  await requireConsole(); // 통합설정 잠금 — 숫자 4자리로 연 관리자만 (2026-10-14 결정 사항 개발-29)
   const me = await requireAdmin();
   if (!me) throw new ApiError(403, 'forbidden');
   const b = await readJson(req);

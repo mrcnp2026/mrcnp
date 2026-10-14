@@ -2,6 +2,7 @@
 // 적용 직원(employeeIds)은 보낸 목록으로 통째로 맞춘다 — 목록에 든 사람은 이 틀로, 이 틀을 쓰던 사람 중 빠진 사람은 「틀 없음」(회사 규칙)으로.
 // 직원이 쓰고 있는 틀은 끌 수 없다 — 먼저 다른 틀로 옮긴다.
 import { api, ApiError, readJson } from '@/lib/api';
+import { requireConsole } from '@/lib/console-pin';
 import { requireAdmin } from '@/lib/auth';
 import { validateTemplate } from '@/lib/shifts';
 import { createAdminClient } from '@/lib/supabase/admin';
@@ -9,6 +10,7 @@ import { createAdminClient } from '@/lib/supabase/admin';
 const UUID = /^[0-9a-f-]{36}$/i;
 
 export const POST = api<{ params: Promise<{ id: string }> }>('admin.shifts.update', async (req, ctx) => {
+  await requireConsole(); // 통합설정 잠금 — 숫자 4자리로 연 관리자만 (2026-10-14 결정 사항 개발-29)
   const me = await requireAdmin();
   if (!me) throw new ApiError(403, 'forbidden');
   const { id } = await ctx.params;

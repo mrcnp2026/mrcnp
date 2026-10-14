@@ -1,6 +1,7 @@
 // 휴가 원장 — 정책 시작/고치기 · 연차 후보 만들기 · 후보 승인/반려/거두기 · 직접 지급 · 소멸 처리 · 이월 · 퇴사 정산 · 종류별 신청 규칙 (PRD v1.3 36 · 38장). 관리자만.
 // ★ 후보는 관리자가 승인해야 잔여에 들어간다. 소멸도 관리자가 눌러야 들어간다 — 자동으로 반영하지 않는다.
 import { api, ApiError, readJson } from '@/lib/api';
+import { requireConsole } from '@/lib/console-pin';
 import { requireAdmin } from '@/lib/auth';
 import { DAY_MINUTES, validateLeavePolicy, validateTypeRule } from '@/lib/leave-ledger';
 import { addManualLot, carryLot, createSettlement, decideLots, decideSettlement, runAccrual, runExpiry, saveLeavePolicy, saveTypeRule, seedLeavePolicy, setPolicyVerification, syncEmployeeLedger } from '@/lib/leave-ledger-data';
@@ -71,6 +72,7 @@ export const POST = api('admin.leave.ledger', async (req) => {
     return { settle: await decideSettlement({ id: b.id, decision: b.decision, me }) };
   }
   if (b.action === 'typeRule') {
+    await requireConsole(); // 휴가 유형의 신청 규칙은 통합설정 — 숫자 4자리로 연 관리자만
     const rule = validateTypeRule(b.rule);
     if (typeof b.code !== 'string' || b.code.length < 1 || b.code.length > 40 || !rule || typeof b.expectedVersion !== 'number') throw new ApiError(400, 'invalid_input');
     await saveTypeRule({ code: b.code, rule, expectedVersion: b.expectedVersion, me });

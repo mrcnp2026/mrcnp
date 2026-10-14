@@ -8,7 +8,7 @@ import { readFileSync } from 'node:fs';
 import path from 'node:path';
 import { chromium } from 'playwright-core';
 import { ADMIN_APPS, CONSOLE_APPS, MY_APPS } from '../src/config/nav.ts';
-import { createPassword } from './lib/e2e-password.ts';
+import { createPassword, unlockConsole } from './lib/e2e-password.ts';
 
 config({ path: path.join(import.meta.dirname, '..', '.env.local'), quiet: true });
 const BASE = process.env.BASE ?? 'http://localhost:4123';
@@ -31,6 +31,7 @@ try {
   const p = await (await b.newContext({ viewport: { width: 1440, height: 900 } })).newPage();
   await p.goto(`${BASE}/register?token=${token}`);
   await createPassword(p);
+  await unlockConsole(p, db as never, e!.id); // 통합설정 숫자 4자리 (2026-10-14)
   for (const it of items) {
     await p.goto(BASE + it.href);
     await p.waitForLoadState('networkidle');

@@ -7,7 +7,7 @@ import { config } from 'dotenv';
 import { createHash, randomBytes } from 'node:crypto';
 import path from 'node:path';
 import { chromium } from 'playwright-core';
-import { createPassword } from './lib/e2e-password.ts';
+import { createPassword, unlockConsole } from './lib/e2e-password.ts';
 
 config({ path: path.join(import.meta.dirname, '..', '.env.local'), quiet: true });
 const BASE = process.env.BASE ?? 'http://localhost:4123';
@@ -49,6 +49,7 @@ try {
   };
   await p.goto(`${BASE}/register?token=${token}`);
   await createPassword(p);
+  await unlockConsole(p, db as never, emp!.id); // 통합설정 숫자 4자리 (2026-10-14)
 
   // ── M6 이상자 관리 ──
   const an = await open('/admin/anomalies');

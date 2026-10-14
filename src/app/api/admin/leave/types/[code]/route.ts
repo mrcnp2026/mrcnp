@@ -1,11 +1,13 @@
 // 휴가 종류 고치기 · 끄기/켜기. 지우지 않는다 (4-6) — 꺼 두면 새 신청에서만 빠지고 지난 신청은 그대로 보인다.
 // 기본 종류(연차·반차 등)는 이름과 시간을 바꿀 수 없다 — 이미 쌓인 신청의 뜻이 달라지지 않게. 묶음·시각·유급·차감 여부만 바꾼다.
 import { api, ApiError, readJson } from '@/lib/api';
+import { requireConsole } from '@/lib/console-pin';
 import { requireAdmin } from '@/lib/auth';
 import { validateLeaveType } from '@/lib/leave';
 import { createAdminClient } from '@/lib/supabase/admin';
 
 export const POST = api<{ params: Promise<{ code: string }> }>('admin.leaveTypes.update', async (req, ctx) => {
+  await requireConsole(); // 통합설정 잠금 — 숫자 4자리로 연 관리자만 (2026-10-14 결정 사항 개발-29)
   const me = await requireAdmin();
   if (!me) throw new ApiError(403, 'forbidden');
   const { code } = await ctx.params;

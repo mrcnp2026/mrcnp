@@ -31,7 +31,7 @@ export function SpaceSwitch({ role }: { role: NavRole }) {
       {tabs.map((x) => {
         const on = space === x.key;
         return (
-          <Link key={x.key} href={x.href} aria-current={on ? 'true' : undefined} className={`flex h-8.5 items-center px-3.5 text-sm whitespace-nowrap ${on ? 'bg-primary-tint font-bold text-primary' : 'bg-bg text-muted hover:bg-surface'}`}>
+          <Link key={x.key} href={x.href} aria-current={on ? 'true' : undefined} onClick={space === 'console' ? relock : undefined} className={`flex h-8.5 items-center px-3.5 text-sm whitespace-nowrap ${on ? 'bg-primary-tint font-bold text-primary' : 'bg-bg text-muted hover:bg-surface'}`}>
             {t(`space.${x.key}`)}
           </Link>
         );
@@ -196,6 +196,11 @@ export function Crumb({ role }: { role: NavRole }) {
   );
 }
 
+/** 통합설정에서 나갈 때 다시 잠근다 (2026-10-14 DB 묶음 7) — 기다리지 않고 보낸다 */
+const relock = () => {
+  void fetch('/api/console/pin', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ action: 'lock' }), keepalive: true });
+};
+
 const HOW_TONE = { view: 'bg-surface text-muted', instant: 'bg-ok-tint text-ok', versioned: 'bg-primary-tint text-primary', list: 'bg-surface text-text', review: 'bg-warn-tint text-warn' } as const;
 
 /**
@@ -213,7 +218,7 @@ export function ConsoleGuide({ role }: { role: NavRole }) {
       <div className="flex flex-wrap items-center gap-x-3 gap-y-1 rounded-card bg-text px-4 py-2.5 text-sm text-on-primary">
         <span className="font-bold">{t('console.band')}</span>
         <span className="opacity-80">{t('console.bandShort')}</span>
-        <Link href="/admin" className="ml-auto font-bold underline-offset-2 hover:underline">
+        <Link href="/admin" onClick={relock} className="ml-auto font-bold underline-offset-2 hover:underline">
           {t('console.exit')} ›
         </Link>
       </div>

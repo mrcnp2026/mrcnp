@@ -10,6 +10,7 @@ export default async function AdminLayout({ children }: { children: React.ReactN
   if (!me) redirect('/login');
   if (me.role !== 'admin' && me.role !== 'manager') redirect('/punch');
   // 지점관리자: 허용한 화면만 (화면 사이를 옮길 때는 middleware가 막는다 — 여기는 처음 들어올 때)
-  if (me.role === 'manager' && !managerCanOpen((await headers()).get('x-pathname') ?? '')) redirect(MANAGER_HOME);
+  const path = (await headers()).get('x-pathname') ?? '';
+  if (me.role === 'manager' && !managerCanOpen(path)) redirect(MANAGER_HOME);
   return <AppFrame me={me}>{children}</AppFrame>;
 }

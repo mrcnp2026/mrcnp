@@ -62,7 +62,7 @@ describe('메뉴 구성표', () => {
     const lost = pages(path.join(ROOT, 'src', 'app', 'admin'))
       .concat(pages(path.join(ROOT, 'src', 'app', 'punch')))
       .map((p) => `/${p.replace(/\[[^\]]+\]/g, 'x')}`)
-      .filter((p) => p !== '/admin/console' && !p.startsWith('/admin/manage/'))
+      .filter((p) => p !== '/admin/console' && p !== '/admin/console-lock' && !p.startsWith('/admin/manage/')) // 잠금 화면은 다른 주소를 대신 그린다
       .filter((p) => !locate(p, q(), 'admin').leaf);
     expect(lost).toEqual([]);
   });

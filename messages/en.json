@@ -239,7 +239,8 @@
     "out_of_scope": "This person is not in your branches.",
     "leave_too_long": "This leave exceeds the maximum days per request.",
     "leave_notice": "This leave must be requested earlier. Choose a later start date.",
-    "leave_reason_required": "A reason is required for this leave."
+    "leave_reason_required": "A reason is required for this leave.",
+    "console_locked": "The settings console is locked. Enter your PIN again."
   },
   "admin": {
     "nav": {
@@ -1986,7 +1987,12 @@
         "payYes": "Payroll screens",
         "scopeAll": "All",
         "scopeNone": "No branch assigned",
-        "how": "To grant or remove access, change it on that employee’s screen. Admin access takes effect after another admin confirms."
+        "how": "To grant or remove access, change it on that employee’s screen. Admin access takes effect after another admin confirms.",
+        "colPin": "Console PIN",
+        "pinSet": "Set",
+        "pinNone": "Not set",
+        "pinReset": "Clear PIN",
+        "pinResetConfirm": "Clear {name}’s console PIN? They will set a new one next time."
       }
     },
     "places": {
@@ -4955,5 +4961,27 @@
       }
     },
     "howTitle": "How this screen works"
+  },
+  "consoleGate": {
+    "setTitle": "Set your 4-digit console PIN",
+    "setLead": "The settings console changes company-wide rules, so even admins need a 4-digit PIN to open it. Set it once.",
+    "openTitle": "Open settings console",
+    "openLead": "Enter your 4-digit PIN. It stays open for 30 minutes and locks again when you go back to admin mode.",
+    "newPin": "New 4-digit PIN",
+    "again": "Again",
+    "pin": "4-digit PIN",
+    "save": "Set and open",
+    "open": "Open",
+    "wrong": "Wrong PIN. {n} more wrong tries locks it for 15 minutes.",
+    "locked": "Locked after 5 wrong tries. Try again from {time}.",
+    "setNote": "Easy PINs like 0000 or 1234 are not allowed. If you forget it, another admin can clear it under Console › Permissions.",
+    "forgot": "Forgot it? Ask another admin to clear it under Console › Permissions.",
+    "back": "Back to admin mode",
+    "pin_mismatch": "The two PINs differ.",
+    "pin_weak": "Too easy (four same digits, sequences like 1234, or repeats like 1212).",
+    "pin_exists": "A PIN is already set. Please refresh.",
+    "pin_not_set": "No PIN set yet. Please refresh.",
+    "pin_locked": "Locked for 15 minutes after 5 wrong tries.",
+    "console_locked": "The settings console is locked. Enter your PIN again."
   }
 }

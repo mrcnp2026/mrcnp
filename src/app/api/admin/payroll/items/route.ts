@@ -1,10 +1,12 @@
 // 지급 · 공제 항목 — 등록/고침(새 판) · 사용 여부 · 통상 항목 한꺼번에 넣기 (PRD v1.3 17.3). 급여 담당 관리자만. 지우는 기능은 없다.
 import { api, ApiError, readJson } from '@/lib/api';
+import { requireConsole } from '@/lib/console-pin';
 import { loadItems, requirePayroll, saveItem, setItemUse } from '@/lib/payroll/data';
 import { cleanText, isDate, STANDARD_ITEMS, validateItem } from '@/lib/payroll/settings';
 import { toKstDate } from '@/lib/time';
 
 export const POST = api('admin.payroll.items', async (req) => {
+  await requireConsole(); // 통합설정 잠금 — 숫자 4자리로 연 관리자만 (2026-10-14 결정 사항 개발-29)
   const me = await requirePayroll();
   const b = await readJson(req);
   if (b.action === 'use') {

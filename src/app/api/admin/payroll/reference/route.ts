@@ -1,6 +1,7 @@
 // 공식 기준 자료 — 수집 결과 가져오기 · 직접 입력 · 확인 후 반영 · 반려 (PRD v1.3 25 · 30장). 급여 담당 관리자만.
 // ★ 가져오기와 직접 입력은 「검토 대기」까지만 만든다. 현재 쓰는 값은 관리자가 「확인 후 반영」을 눌러야 바뀐다.
 import { api, ApiError, readJson } from '@/lib/api';
+import { requireConsole } from '@/lib/console-pin';
 import { approveReference, rejectReference, requirePayroll, stageCandidates } from '@/lib/payroll/data';
 import { buildManual, mapCollector, REFERENCE_KINDS, type ReferenceKind } from '@/lib/payroll/reference';
 import { cleanText, isDate } from '@/lib/payroll/settings';
@@ -8,6 +9,7 @@ import { cleanText, isDate } from '@/lib/payroll/settings';
 export const maxDuration = 60;
 
 export const POST = api('admin.payroll.reference', async (req) => {
+  await requireConsole(); // 통합설정 잠금 — 숫자 4자리로 연 관리자만 (2026-10-14 결정 사항 개발-29)
   const me = await requirePayroll();
   const b = await readJson(req);
   if (b.action === 'import') {

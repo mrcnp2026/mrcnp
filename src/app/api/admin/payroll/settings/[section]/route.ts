@@ -1,10 +1,12 @@
 // 회사 급여 설정 저장 — 새 판을 쌓는다 (PRD v1.3 17.1 · 17.2 · 17.7 · 17.8). 급여 담당 관리자만.
 import { api, ApiError, readJson } from '@/lib/api';
+import { requireConsole } from '@/lib/console-pin';
 import { requirePayroll, saveSetting } from '@/lib/payroll/data';
 import { cleanText, DEFAULT_LEDGER, isDate, SETTING_SECTIONS, validateSetting, type SettingSection } from '@/lib/payroll/settings';
 import { toKstDate } from '@/lib/time';
 
 export const POST = api<{ params: Promise<{ section: string }> }>('admin.payroll.settings', async (req, ctx) => {
+  await requireConsole(); // 통합설정 잠금 — 숫자 4자리로 연 관리자만 (2026-10-14 결정 사항 개발-29)
   const me = await requirePayroll();
   const { section } = await ctx.params;
   if (!(SETTING_SECTIONS as readonly string[]).includes(section)) throw new ApiError(404, 'not_found');

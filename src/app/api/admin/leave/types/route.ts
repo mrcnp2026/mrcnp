@@ -1,12 +1,14 @@
 // 휴가 종류 만들기 (의뢰인 2026-10-10: "10시 반차 · 11시 반차 · 4시간 반차 등 상세히 구분"). 관리자만.
 // 차감 일수는 서버가 시간 ÷ 8로 정한다. 코드는 서버가 짓는다 (기본 종류의 코드와 겹치지 않게 c_ 로 시작).
 import { randomBytes } from 'node:crypto';
+import { requireConsole } from '@/lib/console-pin';
 import { api, ApiError, readJson } from '@/lib/api';
 import { requireAdmin } from '@/lib/auth';
 import { validateLeaveType } from '@/lib/leave';
 import { createAdminClient } from '@/lib/supabase/admin';
 
 export const POST = api('admin.leaveTypes.create', async (req) => {
+  await requireConsole(); // 통합설정 잠금 — 숫자 4자리로 연 관리자만 (2026-10-14 결정 사항 개발-29)
   const me = await requireAdmin();
   if (!me) throw new ApiError(403, 'forbidden');
   const v = validateLeaveType(await readJson(req));

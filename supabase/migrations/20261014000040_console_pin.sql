@@ -32,6 +32,8 @@ create index on public.console_pin_attempts (employee_id, created_at desc);
 alter table public.console_pins enable row level security;
 alter table public.console_pin_attempts enable row level security;
 -- 정책을 만들지 않는다 = 브라우저 요청은 전부 거부. 서버(service role)만 쓴다
+revoke all on public.console_pins from anon, authenticated;
+revoke all on public.console_pin_attempts from anon, authenticated;
 
 -- 시도 기록은 고치거나 지우지 못한다
 create or replace function public.console_pin_attempts_immutable() returns trigger language plpgsql as $$

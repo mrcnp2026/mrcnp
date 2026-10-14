@@ -16,6 +16,8 @@ import { loadOfficeLocations } from '@/lib/geo-data';
 import { loadOrgGroups } from '@/lib/org-data';
 import { PAY_SECTIONS } from '@/lib/payroll/settings';
 import { PaySettings } from './pay/PaySettings';
+import { PinReset } from './PinReset';
+import { getMe } from '@/lib/auth';
 import { ConfirmButton, HolidayForm, NetworkForm, RuleForm } from './SettingsForms';
 
 // 탭 이름 · 순서는 시프티의 회사 설정 (2026-10-11 의뢰인 스샷 `스샷/관리-회사설정*.png`). 일반 · 근무일정 · 출퇴근기록 · 휴게시간은 바꿀 수 있는 설정이고,
@@ -74,11 +76,13 @@ export default async function SettingsPage({ searchParams }: { searchParams: Pro
     tab === 'access'
       ? await (async () => {
           const db0 = createAdminClient();
-          const [{ data: ppl }, { data: scopes }, groups] = await Promise.all([
+          const [{ data: ppl }, { data: scopes }, groups, { data: pins }] = await Promise.all([
             db0.from('profiles').select('id, name, employee_no, role, can_view_payroll').eq('active', true).order('name'),
             db0.from('staff_manager_scopes').select('manager_id, group_id').eq('active', true),
             loadOrgGroups(),
+            db0.from('console_pins').select('employee_id'),
           ]);
+          const hasPin = new Set((pins ?? []).map((x) => x.employee_id as string));
           const real = (ppl ?? []).filter((x) => !(x.employee_no as string | null)?.startsWith('e2e-'));
           const gname = new Map(groups.map((g) => [g.id, g.name]));
           return {
@@ -86,7 +90,8 @@ export default async function SettingsPage({ searchParams }: { searchParams: Pro
             rows: real
               .filter((x) => x.role !== 'employee' || x.can_view_payroll)
               .sort((a, b) => (a.role === b.role ? 0 : a.role === 'admin' ? -1 : 1))
-              .map((x) => ({ id: x.id as string, name: x.name as string, no: x.employee_no as string | null, role: x.role as string, pay: !!x.can_view_payroll, scope: (scopes ?? []).filter((c) => c.manager_id === x.id).map((c) => gname.get(c.group_id as string) ?? '').filter(Boolean) })),
+              .map((x) => ({ id: x.id as string, name: x.name as string, no: x.employee_no as string | null, role: x.role as string, pay: !!x.can_view_payroll, scope: (scopes ?? []).filter((c) => c.manager_id === x.id).map((c) => gname.get(c.group_id as string) ?? '').filter(Boolean), pin: hasPin.has(x.id as string) })),
+            meId: (await getMe())?.id ?? '',
           };
         })()
       : null;
@@ -354,7 +359,7 @@ export default async function SettingsPage({ searchParams }: { searchParams: Pro
             <table className="w-full text-sm">
               <thead>
                 <tr>
-                  {[ta('colName'), ta('colRole'), ta('colPayroll'), ta('colScope'), ''].map((h, i) => (
+                  {[ta('colName'), ta('colRole'), ta('colPayroll'), ta('colScope'), ta('colPin'), ''].map((h, i) => (
                     <th key={i} scope="col" className="px-3 py-2 text-left">{h}</th>
                   ))}
                 </tr>
@@ -362,7 +367,7 @@ export default async function SettingsPage({ searchParams }: { searchParams: Pro
               <tbody>
                 {access.rows.length === 0 && (
                   <tr>
-                    <td colSpan={5} className="px-3 py-6 text-center text-faint">{ta('none')}</td>
+                    <td colSpan={6} className="px-3 py-6 text-center text-faint">{ta('none')}</td>
                   </tr>
                 )}
                 {access.rows.map((r) => (
@@ -376,6 +381,16 @@ export default async function SettingsPage({ searchParams }: { searchParams: Pro
                     </td>
                     <td className="px-3 py-3">{r.pay ? <UseMark on label={ta('payYes')} /> : <span className="text-faint">–</span>}</td>
                     <td className="px-3 py-3 text-muted">{r.role === 'manager' ? r.scope.join(' · ') || ta('scopeNone') : r.role === 'admin' ? ta('scopeAll') : '–'}</td>
+                    <td className="px-3 py-3 whitespace-nowrap">
+                      {r.role !== 'admin' ? <span className="text-faint">–</span> : r.pin ? (
+                        <span className="inline-flex items-center gap-2">
+                          <UseMark on label={ta('pinSet')} />
+                          {r.id !== access.meId && <PinReset employeeId={r.id} name={r.name} />}
+                        </span>
+                      ) : (
+                        <UseMark on={false} label={ta('pinNone')} />
+                      )}
+                    </td>
                     <td className="px-3 py-3 text-right">
                       <Link href={`/admin/members/${r.id}`} className="font-bold whitespace-nowrap text-primary">{ta('change')} ›</Link>
                     </td>

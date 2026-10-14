@@ -46,3 +46,16 @@ export async function openDrawer(p: Page): Promise<void> {
   }
   await dialog.waitFor({ timeout: 4000 });
 }
+
+/**
+ * 통합설정 숫자 4자리를 새로 정하고 연다 (2026-10-14 DB 묶음 7) — 통합설정 화면 · 저장 기능을 쓰는 검사가 로그인 뒤에 부른다.
+ * 검사 계정의 예전 숫자는 지운다(검사마다 같은 숫자로 시작). 30분 동안 열려 있다.
+ */
+export async function unlockConsole(p: Page, db: { from: (t: string) => { delete: () => { eq: (c: string, v: string) => PromiseLike<unknown> } } }, employeeId: string, pin = '2580'): Promise<void> {
+  await db.from('console_pins').delete().eq('employee_id', employeeId);
+  const res = (await p.evaluate(`(async () => {
+    const post = (b) => fetch('/api/console/pin', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify(b) }).then((r) => r.status);
+    return [await post({ action: 'set', pin: '${pin}', again: '${pin}' }), await post({ action: 'open', pin: '${pin}' })];
+  })()`)) as number[];
+  if (res.some((s) => s !== 200)) throw new Error(`unlockConsole: ${res.join(',')}`);
+}
