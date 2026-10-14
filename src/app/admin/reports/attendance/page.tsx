@@ -3,6 +3,7 @@
 import { getTranslations } from 'next-intl/server';
 import { createAdminClient } from '@/lib/supabase/admin';
 import { HelpTip } from '@/components/Help';
+import { ChevronRight } from 'lucide-react';
 import Link from 'next/link';
 import { Chip, PageShell } from '@/components/ui';
 import { OFFICE } from '@/config/office';
@@ -12,7 +13,7 @@ import { loadOrgGroups } from '@/lib/org-data';
 import { buildAttendanceDeptReport, type AttSum } from '@/lib/report-attendance';
 import { toKstDate } from '@/lib/time';
 
-const field = 'min-h-9 rounded-button border border-border bg-bg px-3 text-sm';
+const field = 'min-h-9 w-full rounded-button border border-border bg-bg px-3 text-sm lg:w-auto';
 
 export default async function AttendanceReportPage({ searchParams }: { searchParams: Promise<{ m?: string; g?: string; basis?: string; live?: string }> }) {
   const [t, sp, groups] = await Promise.all([getTranslations('admin.reports'), searchParams, loadOrgGroups()]);
@@ -49,7 +50,8 @@ export default async function AttendanceReportPage({ searchParams }: { searchPar
       <div>
         <h1 className="flex flex-wrap items-center gap-x-1 text-2xl font-bold">{t('attTitle')}<HelpTip>{t('attIntro')}</HelpTip></h1>
       </div>
-      <form action="/admin/reports/attendance" className="flex flex-wrap items-end gap-3 text-sm">
+      {/* 폰: 두 칸씩 — 조건이 첫 화면 1/3을 차지하던 것 (2026-10-15 모바일 분석 11) */}
+      <form action="/admin/reports/attendance" className="grid grid-cols-2 items-end gap-2 text-sm lg:flex lg:flex-wrap lg:gap-3">
         {sp.live === '1' && <input type="hidden" name="live" value="1" />}
         <label className="flex flex-col gap-1">
           <span className="font-bold">{t('fMonth')}</span>
@@ -73,10 +75,10 @@ export default async function AttendanceReportPage({ searchParams }: { searchPar
             <option value="current">{t('basisNow')}</option>
           </select>
         </label>
-        <button type="submit" className="inline-flex h-9 items-center rounded-button bg-primary px-4 text-sm font-bold text-on-primary">
+        <button type="submit" className="inline-flex h-9 items-center justify-center rounded-button bg-primary px-4 text-sm font-bold text-on-primary">
           {t('apply')}
         </button>
-        <a href={`/api/admin/reports/attendance?${qs}`} className="inline-flex h-9 items-center rounded-button border border-border bg-bg px-3.5 text-sm font-semibold text-text hover:bg-surface">
+        <a href={`/api/admin/reports/attendance?${qs}`} className="col-span-2 inline-flex h-9 items-center justify-center rounded-button border border-border bg-bg px-3.5 text-sm font-semibold text-text hover:bg-surface">
           {t('download')}
         </a>
       </form>
@@ -89,7 +91,23 @@ export default async function AttendanceReportPage({ searchParams }: { searchPar
       </div>
 
       <h2 className="text-lg font-bold">{t('byGroup')}</h2>
-      <div className="overflow-x-auto rounded-card border border-border bg-bg">
+      {/* 폰: 부서마다 카드 — 인원 · 인정 시간 · 초과 · 이상 · 마감 (2026-10-15: 표가 오른쪽에서 잘리던 것) */}
+      <ul className="flex flex-col gap-2 lg:hidden" data-phone-groups>
+        {[...r.groups.map((g) => ({ key: g.groupId ?? '', name: g.groupId === null ? t('unassigned') : g.name, s: g, total: false })), { key: 'total', name: t('total'), s: r.total, total: true }].map((x) => (
+          <li key={x.key} className={`rounded-card border border-border p-3 ${x.total ? 'bg-surface' : 'bg-bg'}`}>
+            <p className="font-bold">{x.name}</p>
+            <dl className="num mt-1 grid grid-cols-3 gap-x-3 gap-y-1 text-sm">
+              {([0, 2, 3, 6, 9, 11] as const).map((i) => (
+                <div key={i} className="flex flex-col">
+                  <dt className="text-xs text-faint">{t(cols[i])}</dt>
+                  <dd>{cells(x.s)[i]}</dd>
+                </div>
+              ))}
+            </dl>
+          </li>
+        ))}
+      </ul>
+      <div className="hidden overflow-x-auto rounded-card border border-border bg-bg lg:block">
         <table className="w-full text-sm">
           <thead>
             <tr className="border-b border-border bg-surface text-left">
@@ -121,7 +139,30 @@ export default async function AttendanceReportPage({ searchParams }: { searchPar
       </div>
 
       <h2 className="text-lg font-bold">{t('byEmployee', { n: r.employees.length })}</h2>
-      <div className="overflow-x-auto rounded-card border border-border bg-bg">
+      {/* 폰: 직원마다 한 줄 — 이름 · 인정 시간 · 초과 · 지각 · 마감, 누르면 그 직원의 월 기록 */}
+      <ul className="flex flex-col divide-y divide-border rounded-card border border-border bg-bg lg:hidden" data-phone-employees>
+        {r.employees.map((e) => {
+          const c = cells(e);
+          return (
+            <li key={e.employeeId}>
+              <Link href={`/admin/records/${e.employeeId}?m=${month}${sp.live === '1' ? '&live=1' : ''}`} className="flex items-center gap-3 px-3 py-2.5 active:bg-surface">
+                <span className="flex min-w-0 flex-1 flex-col">
+                  <span className="flex items-center gap-2">
+                    <b className="truncate">{e.name}</b>
+                    {e.isClosed ? <Chip tone="ok">{t('closed')}</Chip> : <Chip tone="warn">{t('open')}</Chip>}
+                  </span>
+                  <span className="num truncate text-xs text-muted">
+                    {t('cPayable')} {c[2]} · {t('cOvertime')} {c[3]} · {t('cLate')} {c[6]}
+                  </span>
+                </span>
+                <ChevronRight aria-hidden size={18} className="shrink-0 text-faint" />
+              </Link>
+            </li>
+          );
+        })}
+        {r.employees.length === 0 && <li className="p-4 text-sm text-faint">{t('empty')}</li>}
+      </ul>
+      <div className="hidden overflow-x-auto rounded-card border border-border bg-bg lg:block">
         <table className="w-full text-sm">
           <thead>
             <tr className="border-b border-border bg-surface text-left">
@@ -154,7 +195,7 @@ export default async function AttendanceReportPage({ searchParams }: { searchPar
       <p className="text-xs text-faint">{t('attNote')}</p>
 
       <h2 className="text-lg font-bold">{t('trendTitle')}</h2>
-      <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-5" data-trend>
+      <div className="grid grid-cols-2 gap-2 lg:grid-cols-5 lg:gap-3" data-trend>
         {METRICS.map((mt) => {
           const vals = trend.map((x) => (x.s ? mt.v(x.s) : null));
           const max = Math.max(1, ...vals.map((v) => v ?? 0));

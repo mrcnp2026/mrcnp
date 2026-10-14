@@ -10,6 +10,7 @@ import { Fab } from '@/components/Fab';
 import { createAdminClient } from '@/lib/supabase/admin';
 import { MineBar } from '@/components/MineBar';
 import { Row, RowList } from '@/components/list';
+import { Pager, pageOf } from '@/components/Pager';
 import { Card, CardTitle, Chip, PageShell } from '@/components/ui';
 import { getMe } from '@/lib/auth';
 import { calcLeaveBalance, leaveTypeName, monthlyLeaveUse } from '@/lib/leave';
@@ -25,7 +26,7 @@ import { CancelLeave, DeleteLeaveRequest, LeaveForm } from './LeaveForm';
 import { CancelWork, WorkForm } from './WorkForm';
 import { loadMyOpenTargets } from '@/lib/leave-promotion';
 
-export default async function LeavePage({ searchParams }: { searchParams: Promise<{ workDate?: string; new?: string; y?: string }> }) {
+export default async function LeavePage({ searchParams }: { searchParams: Promise<{ workDate?: string; new?: string; y?: string; lp?: string; wp?: string }> }) {
   const me = await getMe();
   if (!me) redirect('/login');
   const t = await getTranslations('leave');
@@ -37,6 +38,9 @@ export default async function LeavePage({ searchParams }: { searchParams: Promis
   const today = toKstDate(new Date());
   const [types, grants, requests, works] = await Promise.all([loadAllLeaveTypes(), loadLeaveGrants(me.id), loadLeaveRequests({ employeeId: me.id }), loadWorkRequests({ employeeId: me.id })]);
   const bal = calcLeaveBalance({ grants, requests, types, asOf: today });
+  // 긴 목록은 10건씩 (2026-10-15 의뢰인: 폰에서 끝없이 길어진다)
+  const reqPage = pageOf(requests, sp.lp, 10);
+  const workPage = pageOf(works, sp.wp, 10);
   // 적용 대상이 아닌 종류는 신청 양식에 내놓지 않는다 (L13 — 서버도 다시 막는다)
   const [rules, orgGroups, { data: prof }] = await Promise.all([loadTypeRules(), loadOrgGroups(), createAdminClient().from('profiles').select('group_id').eq('id', me.id).maybeSingle()]);
   const mayUse = (code: string) => {
@@ -189,11 +193,11 @@ export default async function LeavePage({ searchParams }: { searchParams: Promis
         <LeaveForm today={today} types={types.filter((x) => x.active && mayUse(x.code)).map((x) => ({ code: x.code, name: nameOf(x.code), unit: x.dayUnit, deducts: x.deductsBalance, hours: x.hours ?? x.dayUnit * 8, startTime: x.startTime ?? null, endTime: x.endTime ?? null, group: x.groupName ?? null }))} />
       </AddSheet>
 
-      <section className="order-3 flex flex-col gap-2 lg:order-5">
+      <section id="mine" className="order-3 flex scroll-mt-16 flex-col gap-2 lg:order-5">
         <h2 className="font-semibold">{t('mine')}</h2>
         {requests.length === 0 && <p className="text-sm text-faint">{t('none')}</p>}
         <RowList>
-        {requests.map((r) => (
+        {reqPage.items.map((r) => (
           <Row key={r.id} aside={<Chip tone={r.status === 'approved' ? 'ok' : r.status === 'pending' ? 'warn' : 'neutral'}>{t(`status.${r.status}`)}</Chip>}>
             <span className="font-semibold">
               {nameOf(r.typeCode)} · <span className="num">{t('days', { n: n(r.days) })}</span>
@@ -208,6 +212,7 @@ export default async function LeavePage({ searchParams }: { searchParams: Promis
           </Row>
         ))}
         </RowList>
+        <Pager page={reqPage.page} pages={reqPage.pages} param="lp" params={sp} anchor="mine" label={tc('pages')} />
       </section>
 
       {/* 외근·출장·재택 (②-3 7-11) — 연차와 같은 화면. 요약 칸은 왼쪽 「남은 연차」와 같은 줄·같은 높이 */}
@@ -231,11 +236,11 @@ export default async function LeavePage({ searchParams }: { searchParams: Promis
       <AddSheet id="work" title={tw('title')} defaultOpen={!!sp.workDate || sp.new === 'work'} modal>
         <WorkForm today={today} initialDate={sp.workDate && /^\d{4}-\d{2}-\d{2}$/.test(sp.workDate) ? sp.workDate : null} />
       </AddSheet>
-      <section className="order-6 flex flex-col gap-2">
+      <section id="work-mine" className="order-6 flex scroll-mt-16 flex-col gap-2">
         <h3 className="font-semibold">{tw('mine')}</h3>
         {works.length === 0 && <p className="text-sm text-faint">{tw('none')}</p>}
         <RowList>
-        {works.map((w) => (
+        {workPage.items.map((w) => (
           <Row key={w.id} aside={<Chip tone={w.status === 'approved' ? 'ok' : w.status === 'pending' ? 'warn' : 'neutral'}>{tw(`status.${w.status}`)}</Chip>}>
             <span className="font-semibold">
               {tw(`kind.${w.kind}`)} · {w.place}
@@ -249,6 +254,7 @@ export default async function LeavePage({ searchParams }: { searchParams: Promis
           </Row>
         ))}
         </RowList>
+        <Pager page={workPage.page} pages={workPage.pages} param="wp" params={sp} anchor="work-mine" label={tc('pages')} />
       </section>
       </div>
       <Fab label={tc('add')} items={[{ id: 'leave', label: t('request') }, { id: 'work', label: tw('title') }]} />

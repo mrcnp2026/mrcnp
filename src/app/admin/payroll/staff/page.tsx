@@ -3,6 +3,7 @@
 import { getFormatter, getTranslations } from 'next-intl/server';
 import { PayFlow } from '@/components/PayFlow';
 import { ListHead } from '@/components/listframe';
+import { ChevronRight } from 'lucide-react';
 import Link from 'next/link';
 import { Chip, PageShell } from '@/components/ui';
 import { getMe } from '@/lib/auth';
@@ -40,7 +41,28 @@ export default async function StaffPayPage() {
         <Chip tone="ok">{t('sumReady', { n: ready })}</Chip>
         <Chip tone={lines.length - ready > 0 ? 'warn' : 'neutral'}>{t('sumGap', { n: lines.length - ready })}</Chip>
       </div>
-      <div className="overflow-x-auto rounded-card border border-border bg-bg">
+      {/* 폰: 직원마다 한 줄 — 이름 · 급여 형태 · 금액 · 상태, 누르면 그 직원 화면 (2026-10-15: 표 오른쪽이 잘리던 것) */}
+      <ul className="flex flex-col divide-y divide-border rounded-card border border-border bg-bg lg:hidden" data-phone-staff>
+        {lines.map((l) => {
+          const c = l.contract;
+          return (
+            <li key={l.employeeId}>
+              <Link href={`/admin/payroll/staff/${l.employeeId}`} className="flex items-center gap-3 px-3 py-2.5 active:bg-surface">
+                <span className="flex min-w-0 flex-1 flex-col">
+                  <span className="flex items-center gap-2">
+                    <b className="truncate">{l.name}</b>
+                    {!l.active && <span className="text-xs text-faint">{t('inactive')}</span>}
+                  </span>
+                  <span className="num truncate text-xs text-muted">{c ? `${t(`payType.${c.payType}`)} · ${won(c.amount)}` : (groupPath(groups, l.groupId) ?? '')}</span>
+                </span>
+                {l.gaps.length === 0 ? <Chip tone="ok">{t('stateReady')}</Chip> : <Chip tone="warn">{t('stateGap', { n: l.gaps.length })}</Chip>}
+                <ChevronRight aria-hidden size={18} className="shrink-0 text-faint" />
+              </Link>
+            </li>
+          );
+        })}
+      </ul>
+      <div className="hidden overflow-x-auto rounded-card border border-border bg-bg lg:block">
         <table className="w-full text-sm">
           <thead>
             <tr className="border-b border-border bg-surface text-left">

@@ -10,6 +10,7 @@ import Link from 'next/link';
 import { Help, HelpTip } from '@/components/Help';
 import { ListBar } from '@/components/ListBar';
 import { PcTable } from '@/components/PcTable';
+import { Pager, pageOf } from '@/components/Pager';
 import { Card, Chip, PageShell } from '@/components/ui';
 import { OFFICE } from '@/config/office';
 import { addDays } from '@/lib/calendar';
@@ -22,7 +23,7 @@ import { toKstDate } from '@/lib/time';
 import { LeaveCancel } from '../inbox/Decisions';
 import { GrantForm, JoinedOnForm } from './GrantForm';
 
-export default async function AdminLeavePage({ searchParams }: { searchParams: Promise<{ live?: string; e?: string; q?: string; g?: string; to?: string; v?: string; y?: string }> }) {
+export default async function AdminLeavePage({ searchParams }: { searchParams: Promise<{ live?: string; e?: string; q?: string; g?: string; to?: string; v?: string; y?: string; ap?: string }> }) {
   const t = await getTranslations('admin.leave');
   const tl = await getTranslations('leave');
   const tc = await getTranslations('common');
@@ -72,6 +73,7 @@ export default async function AdminLeavePage({ searchParams }: { searchParams: P
   };
   const viewBtn = (on: boolean) => `inline-flex h-8 items-center border px-3 text-sm first:rounded-l-button last:rounded-r-button ${on ? 'z-10 border-primary bg-primary-tint font-bold text-primary' : 'border-border bg-bg text-muted'}`;
   const approved = requests.filter((r) => r.status === 'approved' && r.endDate >= addDays(today, -31)).sort((a, b) => (a.startDate < b.startDate ? -1 : 1));
+  const approvedPage = pageOf(approved, sp.ap, 10); // 폰 목록은 10건씩 (2026-10-15)
 
   return (
     <PageShell wide flush>
@@ -351,13 +353,13 @@ export default async function AdminLeavePage({ searchParams }: { searchParams: P
         })}
       </section>
 
-      <section className="mt-3 flex flex-col gap-2 lg:hidden">
+      <section id="approved" className="mt-3 flex scroll-mt-16 flex-col gap-2 lg:hidden">
         <div className="flex flex-wrap items-center gap-x-1">
           <h2 className="font-semibold">{t('approvedTitle')}</h2>
           <Help>{t('approvedHint')}</Help>
         </div>
         {approved.length === 0 && <p className="text-sm text-faint">{t('approvedNone')}</p>}
-        {approved.map((r) => (
+        {approvedPage.items.map((r) => (
           <Card key={r.id} className="flex flex-col gap-2 lg:hidden">
             <div className="flex items-baseline justify-between gap-2">
               <Link href={`/admin/leave/req/${r.id}`} className="font-semibold text-primary">{name.get(r.employeeId)} ›</Link>
@@ -369,6 +371,7 @@ export default async function AdminLeavePage({ searchParams }: { searchParams: P
             {admin && <LeaveCancel id={r.id} name={name.get(r.employeeId) ?? ''} />}
           </Card>
         ))}
+        <Pager page={approvedPage.page} pages={approvedPage.pages} param="ap" params={sp} anchor="approved" label={tc('pages')} />
       </section>
     </PageShell>
   );

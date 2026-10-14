@@ -254,7 +254,7 @@ export function ConsoleGuide({ role }: { role: NavRole }) {
       <div className="flex flex-wrap items-center gap-x-3 gap-y-1 rounded-card bg-text px-4 py-2.5 text-sm text-on-primary">
         <span className="font-bold">{t('console.band')}</span>
         <span className="opacity-80">{t('console.bandShort')}</span>
-        <Link href="/admin" onClick={relock} className="ml-auto font-bold underline-offset-2 hover:underline">
+        <Link href="/admin" onClick={relock} className="ml-auto inline-flex min-h-11 items-center font-bold underline-offset-2 hover:underline lg:min-h-0">
           {t('console.exit')} ›
         </Link>
       </div>

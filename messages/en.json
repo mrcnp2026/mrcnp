@@ -5146,7 +5146,9 @@
       "band": "Settings console · special admin mode",
       "bandNote": "Rules changed here apply to the whole company. Day-to-day work is in admin mode.",
       "exit": "Back to admin mode",
-      "bandShort": "Company-wide rules are changed here."
+      "bandShort": "Company-wide rules are changed here.",
+      "find": "Find a setting",
+      "none": "No matching setting."
     },
     "wideMenu": "Wide menu",
     "narrowMenu": "Collapse menu",

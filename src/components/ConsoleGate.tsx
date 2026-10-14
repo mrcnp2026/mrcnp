@@ -69,7 +69,7 @@ export function ConsoleGate({ mode, lockedUntil }: { mode: 'set' | 'open'; locke
         </form>
       )}
       <p className="text-xs text-faint">{t(mode === 'set' ? 'setNote' : 'forgot')}</p>
-      <Link href="/admin" className="text-sm font-bold text-primary">
+      <Link href="/admin" className="inline-flex min-h-11 items-center self-start text-sm font-bold text-primary lg:min-h-0">
         {t('back')} ›
       </Link>
     </main>

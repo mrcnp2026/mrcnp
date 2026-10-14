@@ -268,7 +268,7 @@ export default async function AdminHome({ searchParams }: { searchParams: Promis
       </div>
 
       {/* 그래프 줄 (2026-10-11 의뢰인: 막대·선·동그라미 그래프로 집계를 보는 현황판) — 동그라미: 오늘 근무 현황 · 선: 최근 14일 출근 인원 */}
-      <div className="flex flex-col gap-3 lg:grid lg:grid-cols-3 lg:gap-4">
+      <div className="order-last flex flex-col gap-3 lg:order-none lg:grid lg:grid-cols-3 lg:gap-4">
         <DonutCard
           title={t('donutTitle')}
           unit={t('chartUnit')}
