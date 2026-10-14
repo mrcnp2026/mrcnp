@@ -7,18 +7,22 @@ import { OFFICE } from '@/config/office';
 import { calcLeaveBalance } from '@/lib/leave';
 import { loadAllLeaveTypes, loadLeaveGrants, loadLeaveRequests } from '@/lib/leave-data';
 import { entriesFor, ledgerBalance, lotRemaining, minutesToDays, splitCarry } from '@/lib/leave-ledger';
-import { loadDefaultPolicies, loadEntries, loadExpiring, loadLots, loadSettlements } from '@/lib/leave-ledger-data';
+import { loadDefaultPolicies, loadEntries, loadExpiring, loadGroupPolicies, loadLots, loadPolicyGroups, loadSettlements } from '@/lib/leave-ledger-data';
+import { hiddenTestIds } from '@/lib/period-data';
 import { createAdminClient } from '@/lib/supabase/admin';
 import { toKstDate } from '@/lib/time';
 import { LedgerBoard, type BalanceLine, type EntryLine, type LotLine } from './LedgerBoard';
+import { PolicyGroups } from './PolicyGroups';
 
-export default async function LeaveLedgerPage({ searchParams }: { searchParams: Promise<{ emp?: string; live?: string }> }) {
+export default async function LeaveLedgerPage({ searchParams }: { searchParams: Promise<{ emp?: string; live?: string; pg?: string }> }) {
   const tGear = await getTranslations('frame');
   const [t, sp] = await Promise.all([getTranslations('admin.leaveLedger'), searchParams]);
   const today = toKstDate(new Date());
   const practice = OFFICE.practiceMode && sp.live !== '1';
+  const pgroups = await loadPolicyGroups(today);
+  const pg = pgroups.find((g) => g.id === sp.pg && g.ownPolicy) ?? null; // 그룹만의 기준을 고른 경우 (L06)
   const [policies, lots, entries, expiring, grants, requests, types, { data: staff }] = await Promise.all([
-    loadDefaultPolicies(),
+    pg ? loadGroupPolicies(pg) : loadDefaultPolicies(),
     loadLots(),
     loadEntries(),
     loadExpiring(today),
@@ -28,6 +32,7 @@ export default async function LeaveLedgerPage({ searchParams }: { searchParams: 
     createAdminClient().from('profiles').select('id, name, joined_on, active').order('name'),
   ]);
   const nameOf = new Map((staff ?? []).map((p) => [p.id as string, p.name as string]));
+  const hiddenSet = new Set(await hiddenTestIds());
   const shown = entriesFor(entries, practice);
   const d = (m: number) => minutesToDays(m);
   const toLine = (l: (typeof lots)[number], rem: Map<string, number>): LotLine => ({
@@ -62,7 +67,14 @@ export default async function LeaveLedgerPage({ searchParams }: { searchParams: 
   return (
     <PageShell wide>
       <ListHead title={t('title')} desc={t('intro')} settingsHref="/admin/settings?tab=leave" settingsLabel={tGear('item.setLeave')} />
+      <PolicyGroups
+        today={today}
+        current={pg?.id ?? null}
+        groups={pgroups.map((g) => ({ ...g, members: g.members.map((m) => ({ employeeId: m.employeeId, name: nameOf.get(m.employeeId) ?? '', validFrom: m.validFrom })) }))}
+        people={(staff ?? []).filter((p) => p.active && !hiddenSet.has(p.id as string)).map((p) => ({ id: p.id as string, name: p.name as string, groupId: pgroups.find((g) => !g.isDefault && g.members.some((m) => m.employeeId === p.id))?.id ?? null }))}
+      />
       <LedgerBoard
+        group={pg ? { id: pg.id, name: pg.name } : null}
         today={today}
         live={sp.live === '1'}
         practice={practice}

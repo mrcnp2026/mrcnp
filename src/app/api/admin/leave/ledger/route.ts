@@ -4,7 +4,7 @@ import { api, ApiError, readJson } from '@/lib/api';
 import { requireConsole } from '@/lib/console-pin';
 import { requireAdmin } from '@/lib/auth';
 import { DAY_MINUTES, validateLeavePolicy, validateTypeRule } from '@/lib/leave-ledger';
-import { addManualLot, carryLot, createSettlement, decideLots, decideSettlement, runAccrual, runExpiry, saveLeavePolicy, saveTypeRule, seedLeavePolicy, setPolicyVerification, syncEmployeeLedger } from '@/lib/leave-ledger-data';
+import { addManualLot, carryLot, createSettlement, decideLots, decideSettlement, runAccrual, runExpiry, saveLeavePolicy, saveTypeRule, seedLeavePolicy, setPolicyVerification, syncEmployeeLedger, addPolicyGroup, setPolicyGroup, setPolicyMember, startGroupPolicy } from '@/lib/leave-ledger-data';
 import { cleanText } from '@/lib/text';
 import { toKstDate } from '@/lib/time';
 
@@ -28,7 +28,31 @@ export const POST = api('admin.leave.ledger', async (req) => {
     const policy = validateLeavePolicy(b.policy);
     const reason = cleanText(b.reason);
     if (!policy || !isDate(b.validFrom) || typeof b.expectedVersion !== 'number' || reason.length < 2 || reason.length > 500) throw new ApiError(400, 'invalid_input');
-    await saveLeavePolicy({ policy, validFrom: b.validFrom, reason, expectedVersion: b.expectedVersion, me });
+    if (b.groupId !== undefined && b.groupId !== null && (typeof b.groupId !== 'string' || !UUID.test(b.groupId))) throw new ApiError(400, 'invalid_input');
+    await saveLeavePolicy({ policy, validFrom: b.validFrom, reason, expectedVersion: b.expectedVersion, me, groupId: (b.groupId as string | null | undefined) ?? null });
+    return { ok: true };
+  }
+  // ── 휴가 정책 그룹 (L06 · L07, 2026-10-15) ──
+  if (b.action === 'group.add') {
+    const name = cleanText(b.name).slice(0, 60);
+    if (!name || typeof b.excluded !== 'boolean') throw new ApiError(400, 'invalid_input');
+    return addPolicyGroup({ name, excluded: b.excluded, me });
+  }
+  if (b.action === 'group.set') {
+    if (typeof b.id !== 'string' || !UUID.test(b.id)) throw new ApiError(400, 'invalid_input');
+    const name = b.name === undefined ? undefined : cleanText(b.name).slice(0, 60);
+    if (name === '' || (b.excluded !== undefined && typeof b.excluded !== 'boolean') || (b.active !== undefined && b.active !== false)) throw new ApiError(400, 'invalid_input');
+    await setPolicyGroup({ id: b.id, name, excluded: b.excluded as boolean | undefined, active: b.active as false | undefined, me });
+    return { ok: true };
+  }
+  if (b.action === 'member.set') {
+    if (typeof b.employeeId !== 'string' || !UUID.test(b.employeeId) || (b.groupId !== null && (typeof b.groupId !== 'string' || !UUID.test(b.groupId))) || !isDate(b.validFrom)) throw new ApiError(400, 'invalid_input');
+    await setPolicyMember({ employeeId: b.employeeId, groupId: b.groupId as string | null, validFrom: b.validFrom, reason: cleanText(b.reason).slice(0, 300) || null, me });
+    return { ok: true };
+  }
+  if (b.action === 'group.policyStart') {
+    if (typeof b.groupId !== 'string' || !UUID.test(b.groupId)) throw new ApiError(400, 'invalid_input');
+    await startGroupPolicy({ groupId: b.groupId, me });
     return { ok: true };
   }
   if (b.action === 'verify') {

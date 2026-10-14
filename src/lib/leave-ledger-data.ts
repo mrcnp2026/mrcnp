@@ -50,9 +50,12 @@ export type PolicyRow = { id: string; groupId: string; groupName: string; policy
 
 /** 기본 그룹의 정책 판 전부 (새 것부터). 아직 시작하지 않았으면 빈 목록 */
 export async function loadDefaultPolicies(): Promise<PolicyRow[]> {
+  const { data: g } = await db().from('leave_policy_groups').select('id, name').eq('is_default', true).eq('active', true).maybeSingle();
+  return g ? loadGroupPolicies(g as { id: string; name: string }) : [];
+}
+/** 한 그룹의 정책 판 전부 (새 것부터) — 그룹만의 기준을 쓰지 않으면 빈 목록(기본 그룹 기준을 따른다) */
+export async function loadGroupPolicies(g: { id: string; name: string }): Promise<PolicyRow[]> {
   const c = db();
-  const { data: g } = await c.from('leave_policy_groups').select('id, name').eq('is_default', true).eq('active', true).maybeSingle();
-  if (!g) return [];
   const { data, error } = await c.from('leave_policy_versions').select('*').eq('group_id', g.id).eq('status', 'active').order('version', { ascending: false });
   if (error) boom('loadDefaultPolicies', error);
   return (data ?? []).flatMap((r) => {
@@ -77,9 +80,9 @@ export async function seedLeavePolicy(me: Me, groupName: string): Promise<void> 
 }
 
 /** 정책을 고친다 = 새 판. 앞 판은 새 시작일로 닫는다. 화면이 보던 판 번호가 다르면 409 */
-export async function saveLeavePolicy(args: { policy: LeavePolicy; validFrom: string; reason: string; expectedVersion: number; me: Me }): Promise<void> {
+export async function saveLeavePolicy(args: { policy: LeavePolicy; validFrom: string; reason: string; expectedVersion: number; me: Me; groupId?: string | null }): Promise<void> {
   const c = db();
-  const rows = await loadDefaultPolicies();
+  const rows = args.groupId ? await loadGroupPolicies({ id: args.groupId, name: '' }) : await loadDefaultPolicies();
   const last = rows[0];
   if (!last) throw new ApiError(409, 'leave_policy_missing');
   if (last.version !== args.expectedVersion) throw new ApiError(409, 'leave_version_conflict');
@@ -114,12 +117,20 @@ export async function runAccrual(args: { asOf: string; me: Me }): Promise<Accrua
   const policies = await loadDefaultPolicies();
   const row = policyAt(policies, args.asOf);
   if (!row) throw new ApiError(409, 'leave_policy_missing');
-  const [{ data: staff, error: e1 }, { data: members }, { data: groups }, { data: keys }] = await Promise.all([
+  const [{ data: staff, error: e1 }, { data: members }, { data: groups }, { data: keys }, { data: gvers }] = await Promise.all([
     c.from('profiles').select('id, joined_on').eq('active', true),
     c.from('leave_policy_members').select('employee_id, group_id, valid_from, valid_to').eq('active', true),
     c.from('leave_policy_groups').select('id, excluded').eq('active', true),
     c.from('leave_grant_lots').select('dedupe_key').in('state', ['CANDIDATE', 'APPROVED']).limit(20000),
+    c.from('leave_policy_versions').select('*').eq('status', 'active').neq('group_id', row.groupId),
   ]);
+  // 그룹만의 기준 (L06, 2026-10-15): 그룹 → 그 날 적용되는 판
+  const groupRow = new Map<string, PolicyRow>();
+  for (const r of gvers ?? []) {
+    const policy = validateLeavePolicy(r.payload);
+    if (!policy || !((r.valid_from as string) <= args.asOf && (r.valid_to === null || args.asOf < (r.valid_to as string)))) continue;
+    groupRow.set(r.group_id as string, { id: r.id as string, groupId: r.group_id as string, groupName: '', policy, validFrom: r.valid_from as string, validTo: r.valid_to as string | null, version: r.version as number, verification: r.verification_state as PolicyRow['verification'], reason: r.reason as string | null, createdAt: r.created_at as string });
+  }
   if (e1) boom('runAccrual.staff', e1);
   const excluded = new Set((groups ?? []).filter((g) => g.excluded).map((g) => g.id as string));
   const have = new Set((keys ?? []).map((k) => k.dedupe_key as string));
@@ -131,12 +142,13 @@ export async function runAccrual(args: { asOf: string; me: Me }): Promise<Accrua
     if (!s.joined_on) { res.noHireDate++; continue; }
     const m = (members ?? []).find((x) => x.employee_id === s.id && x.valid_from <= args.asOf && (x.valid_to === null || args.asOf < x.valid_to));
     if (m && excluded.has(m.group_id as string)) { res.excluded++; continue; }
-    for (const p of planAccrual({ hiredOn: s.joined_on as string, asOf: args.asOf, policy: row.policy, liveOnly: true })) {
+    const use = (m && groupRow.get(m.group_id as string)) || row;
+    for (const p of planAccrual({ hiredOn: s.joined_on as string, asOf: args.asOf, policy: use.policy, liveOnly: true })) {
       const key = lotKey(s.id as string, p);
       if (have.has(key)) { res.existing++; continue; }
       rows.push({
         employee_id: s.id, type_code: ACCRUAL_TYPE, lot_kind: p.kind, accrual_from: p.accrualFrom, accrual_to: p.accrualTo, granted_on: p.grantedOn, usable_from: p.usableFrom, usable_to: p.usableTo,
-        quantity_minutes: p.minutes, day_minutes: p.dayMinutes, policy_version_id: row.id, basis: p.basis, dedupe_key: key, run_id: run!.id, created_by: args.me.id,
+        quantity_minutes: p.minutes, day_minutes: p.dayMinutes, policy_version_id: use.id, basis: p.basis, dedupe_key: key, run_id: run!.id, created_by: args.me.id,
       });
     }
   }
@@ -427,6 +439,77 @@ export async function saveTypeRule(args: { code: string; rule: LeaveTypeRule; ex
     if (ins.error.code === '23505' || ins.error.code === '23P01') throw new ApiError(409, 'leave_version_conflict');
     boom('saveTypeRule.insert', ins.error);
   }
+}
+
+// ── 휴가 정책 그룹 (PRD 34.2 L06 · L07, 36.2) — 부서와 다른 개념: 연차 생성 기준 · 생성 제외를 정하는 묶음. 2026-10-15 ──
+export type PolicyGroup = { id: string; name: string; excluded: boolean; isDefault: boolean; ownPolicy: boolean; members: { id: string; employeeId: string; validFrom: string }[] };
+/** 켜진 그룹 전부 + 오늘 소속된 직원. 기본 그룹이 맨 앞 */
+export async function loadPolicyGroups(today: string): Promise<PolicyGroup[]> {
+  const c = db();
+  const [{ data: gs, error }, { data: ms }, { data: vs }] = await Promise.all([
+    c.from('leave_policy_groups').select('id, name, excluded, is_default, sort').eq('active', true).order('sort').order('created_at'),
+    c.from('leave_policy_members').select('id, employee_id, group_id, valid_from, valid_to').eq('active', true),
+    c.from('leave_policy_versions').select('group_id').eq('status', 'active'),
+  ]);
+  if (error) boom('loadPolicyGroups', error);
+  const own = new Set((vs ?? []).map((v) => v.group_id as string));
+  const now = (ms ?? []).filter((m) => (m.valid_from as string) <= today && (m.valid_to === null || today < (m.valid_to as string)));
+  return (gs ?? []).map((g) => ({
+    id: g.id as string, name: g.name as string, excluded: !!g.excluded, isDefault: !!g.is_default, ownPolicy: !g.is_default && own.has(g.id as string),
+    members: now.filter((m) => m.group_id === g.id).map((m) => ({ id: m.id as string, employeeId: m.employee_id as string, validFrom: m.valid_from as string })),
+  })).sort((a, b) => (a.isDefault === b.isDefault ? 0 : a.isDefault ? -1 : 1));
+}
+export async function addPolicyGroup(args: { name: string; excluded: boolean; me: Me }): Promise<{ id: string }> {
+  const { data, error } = await db().from('leave_policy_groups').insert({ name: args.name, excluded: args.excluded, created_by: args.me.id }).select('id').single();
+  if (error || !data) boom('addPolicyGroup', error);
+  return { id: data!.id as string };
+}
+/** 그룹 이름 · 제외 여부 고치기, 끄기(소속된 사람이 있으면 끌 수 없다 — 먼저 옮긴다) */
+export async function setPolicyGroup(args: { id: string; name?: string; excluded?: boolean; active?: boolean; me: Me }): Promise<void> {
+  const c = db();
+  const { data: g } = await c.from('leave_policy_groups').select('id, is_default').eq('id', args.id).eq('active', true).maybeSingle();
+  if (!g) throw new ApiError(404, 'not_found');
+  if (g.is_default && (args.excluded || args.active === false)) throw new ApiError(409, 'leave_group_default'); // 기본 그룹은 제외 그룹이 될 수 없고 끌 수 없다
+  if (args.active === false) {
+    const { count } = await c.from('leave_policy_members').select('id', { count: 'exact', head: true }).eq('group_id', args.id).eq('active', true).is('valid_to', null);
+    if ((count ?? 0) > 0) throw new ApiError(409, 'leave_group_in_use');
+  }
+  const patch: Row = { updated_by: args.me.id };
+  if (args.name !== undefined) patch.name = args.name;
+  if (args.excluded !== undefined) patch.excluded = args.excluded;
+  if (args.active !== undefined) patch.active = args.active;
+  const { error } = await c.from('leave_policy_groups').update(patch).eq('id', args.id);
+  if (error) boom('setPolicyGroup', error);
+}
+/**
+ * 직원을 그룹에 넣는다(그 날부터). 지금 든 그룹은 그 날로 닫는다. groupId가 null이면 기본으로 되돌린다(소속을 닫기만).
+ * 지난 날짜로 옮기면 이미 만든 연차 후보 · 지급 건은 그대로다(다음 「연차 후보 만들기」부터 새 그룹 기준) — 화면에 그렇게 적는다.
+ */
+export async function setPolicyMember(args: { employeeId: string; groupId: string | null; validFrom: string; reason: string | null; me: Me }): Promise<void> {
+  const c = db();
+  const { data: cur } = await c.from('leave_policy_members').select('id, group_id, valid_from').eq('employee_id', args.employeeId).eq('active', true).is('valid_to', null).maybeSingle();
+  if (cur && cur.group_id === args.groupId) return;
+  if (cur) {
+    // 같은 날 다시 옮기면 앞 소속을 끈다(기간이 0일이 되지 않게)
+    const u = (cur.valid_from as string) >= args.validFrom ? await c.from('leave_policy_members').update({ active: false, updated_by: args.me.id }).eq('id', cur.id) : await c.from('leave_policy_members').update({ valid_to: args.validFrom, updated_by: args.me.id }).eq('id', cur.id);
+    if (u.error) boom('setPolicyMember.close', u.error);
+  }
+  if (!args.groupId) return;
+  const { data: g } = await c.from('leave_policy_groups').select('id').eq('id', args.groupId).eq('active', true).maybeSingle();
+  if (!g) throw new ApiError(404, 'not_found');
+  const { error } = await c.from('leave_policy_members').insert({ employee_id: args.employeeId, group_id: args.groupId, valid_from: args.validFrom, reason: args.reason, created_by: args.me.id });
+  if (error?.code === '23P01') throw new ApiError(409, 'leave_member_overlap');
+  if (error) boom('setPolicyMember.insert', error);
+}
+/** 그룹만의 기준 시작 — 기본 그룹의 지금 기준을 그대로 옮겨 1판을 만든다. 그 뒤 고치면 그 그룹에만 적용된다 */
+export async function startGroupPolicy(args: { groupId: string; me: Me }): Promise<void> {
+  const c = db();
+  const base = (await loadDefaultPolicies())[0];
+  if (!base) throw new ApiError(409, 'leave_policy_missing');
+  const { data: g } = await c.from('leave_policy_groups').select('id, is_default, excluded').eq('id', args.groupId).eq('active', true).maybeSingle();
+  if (!g || g.is_default || g.excluded) throw new ApiError(409, 'leave_group_default');
+  const { error } = await c.from('leave_policy_versions').insert({ group_id: args.groupId, payload: base.policy, valid_from: '2000-01-01', version: 1, reason: 'copy:default', created_by: args.me.id });
+  if (error && error.code !== '23505' && error.code !== '23P01') boom('startGroupPolicy', error);
 }
 
 export { lotRemaining };

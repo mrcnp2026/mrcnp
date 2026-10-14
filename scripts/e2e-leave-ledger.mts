@@ -68,6 +68,45 @@ try {
   check((await post({ action: 'manual', employeeId: emp!.id, kind: 'manual', days: 1, usableFrom: '2026-10-13', usableTo: '2026-10-01', note: NOTE })).status === 400, '끝이 시작보다 앞이면 거부');
   check((await post({ action: 'decide', decision: 'approve', ids: ['x'] })).status === 400, '틀린 번호는 거부');
 
+  // ── 휴가 정책 그룹 (L06 · L07, 2026-10-15): 생성 제외 그룹 → 후보 없음 / 그룹만의 기준(기본 20일) → 20일 후보 ──
+  {
+    const { data: me0 } = await db.from('profiles').select('joined_on').eq('id', emp!.id).single();
+    const hired = new Date(Date.UTC(2025, 0, 1) + Math.floor(Math.random() * 200) * 86400e3).toISOString().slice(0, 10);
+    const GN = `e2e-그룹-${Date.now() % 100000}`;
+    let gid: string | null = null;
+    const cands = async () => (await db.from('leave_grant_lots').select('id, lot_kind, quantity_minutes').eq('employee_id', emp!.id).eq('state', 'CANDIDATE')).data ?? [];
+    try {
+      await db.from('profiles').update({ joined_on: hired }).eq('id', emp!.id);
+      const g = await post({ action: 'group.add', name: GN, excluded: true });
+      gid = (g.json.id as string) ?? null;
+      check(g.status === 200 && !!gid, '휴가 정책 그룹을 만든다(생성 제외)', JSON.stringify(g.json));
+      check((await post({ action: 'member.set', employeeId: emp!.id, groupId: gid, validFrom: '2000-01-01' })).status === 200, '직원을 그룹에 넣는다');
+      const r1 = await post({ action: 'accrue' });
+      check(r1.status === 200 && (await cands()).length === 0 && r1.json.accrual?.excluded >= 1, '생성 제외 그룹의 직원은 연차 후보가 생기지 않는다', JSON.stringify(r1.json.accrual));
+      check((await post({ action: 'group.set', id: gid, excluded: false })).status === 200 && (await post({ action: 'group.policyStart', groupId: gid })).status === 200, '제외를 풀고 그룹만의 기준을 시작한다(기본 기준을 옮겨 1판)');
+      const { data: gv } = await db.from('leave_policy_versions').select('version, payload').eq('group_id', gid).eq('status', 'active').order('version', { ascending: false }).limit(1).single();
+      const sv = await post({ action: 'policy', groupId: gid, expectedVersion: gv!.version, validFrom: '2001-01-01', reason: 'e2e 그룹 기준', policy: { ...(gv!.payload as Record<string, unknown>), baseDays: 20 } });
+      check(sv.status === 200, '그룹만의 기준을 고친다(기본 연차 20일)', JSON.stringify(sv.json));
+      await post({ action: 'accrue' });
+      const c2 = await cands();
+      check(c2.some((c) => c.lot_kind === 'annual' && c.quantity_minutes === 20 * 480), '그룹 기준으로 근속 1년 연차 20일 후보가 생긴다(기본 그룹은 15일)', JSON.stringify(c2.map((c) => [c.lot_kind, c.quantity_minutes])));
+      const pg = await (async () => { await p.goto(`${BASE}/admin/leave/ledger?pg=${gid}`); await p.waitForLoadState('networkidle'); return p.locator('main').innerText(); })();
+      check(pg.includes('휴가 정책 그룹') && pg.includes(GN) && pg.includes('그룹만의 기준') && pg.includes(`연차 생성 기준 — ${GN}`), '화면: 정책 그룹 목록 · 그 그룹의 기준');
+      await shot('ledger-0-groups');
+      check((await post({ action: 'group.set', id: gid, active: false })).json.error === 'leave_group_in_use', '소속된 직원이 있으면 그룹을 끌 수 없다');
+    } finally {
+      const left = await cands();
+      if (left.length) await post({ action: 'decide', decision: 'reject', ids: left.map((c) => c.id) });
+      await post({ action: 'member.set', employeeId: emp!.id, groupId: null, validFrom: new Date(Date.now() + 9 * 3600e3).toISOString().slice(0, 10) });
+      await db.from('leave_policy_members').update({ active: false }).eq('employee_id', emp!.id).eq('active', true);
+      if (gid) {
+        await db.from('leave_policy_versions').update({ status: 'withdrawn' }).eq('group_id', gid);
+        await db.from('leave_policy_groups').update({ active: false }).eq('id', gid);
+      }
+      await db.from('profiles').update({ joined_on: me0?.joined_on ?? null }).eq('id', emp!.id);
+    }
+  }
+
   // 입사일 → 후보 → 승인 → 휴가 사용 차감 → 취소 → 거두기 (검사 계정의 연습 신청으로)
   {
     const { data: me0 } = await db.from('profiles').select('joined_on').eq('id', emp!.id).single();

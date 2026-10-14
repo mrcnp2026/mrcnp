@@ -37,7 +37,7 @@ function Table({ heads, children }: { heads: string[]; children: ReactNode }) {
   );
 }
 
-export function LedgerBoard(props: { today: string; live: boolean; practice: boolean; policy: Policy | null; history: History[]; candidates: LotLine[]; expiring: { id: string; name: string; usableTo: string; days: number; carry: number }[]; balances: BalanceLine[]; emp: { id: string; name: string; lots: LotLine[]; entries: EntryLine[]; settlements: SettleLine[] } | null }) {
+export function LedgerBoard(props: { group?: { id: string; name: string } | null; today: string; live: boolean; practice: boolean; policy: Policy | null; history: History[]; candidates: LotLine[]; expiring: { id: string; name: string; usableTo: string; days: number; carry: number }[]; balances: BalanceLine[]; emp: { id: string; name: string; lots: LotLine[]; entries: EntryLine[]; settlements: SettleLine[] } | null }) {
   const t = useTranslations('admin.leaveLedger');
   const router = useRouter();
   const [busy, setBusy] = useState(false);
@@ -91,7 +91,7 @@ export function LedgerBoard(props: { today: string; live: boolean; practice: boo
       {msg && <p role="status" className="rounded-card border border-border bg-bg p-3 text-sm text-ok">{msg}</p>}
 
       <Card>
-        <CardTitle aside={policy && <Chip tone={policy.verification === 'VERIFIED' ? 'ok' : 'warn'}>{t(policy.verification === 'VERIFIED' ? 'verified' : 'temporary')}</Chip>}>{t('policyTitle')}</CardTitle>
+        <CardTitle aside={policy && <Chip tone={policy.verification === 'VERIFIED' ? 'ok' : 'warn'}>{t(policy.verification === 'VERIFIED' ? 'verified' : 'temporary')}</Chip>}>{props.group ? t('policyTitleGroup', { name: props.group.name }) : t('policyTitle')}</CardTitle>
         {!policy ? (
           <div className="flex flex-col items-start gap-3 pt-3">
             <p className="text-sm text-muted">{t('policyNone')}</p>
@@ -125,7 +125,7 @@ export function LedgerBoard(props: { today: string; live: boolean; practice: boo
                 onSubmit={async (e) => {
                   e.preventDefault();
                   const f = new FormData(e.currentTarget);
-                  await run({ action: 'policy', expectedVersion: policy.version, validFrom: f.get('validFrom'), reason: f.get('reason'), policy: { ...policy.value, basis: f.get('basis'), fiscalStart: f.get('fiscalStart'), rounding: f.get('rounding'), carryMaxDays: Number(f.get('carryMaxDays')), carryValidMonths: Number(f.get('carryValidMonths')), advanceMaxDays: Number(f.get('advanceMaxDays')) } });
+                  await run({ action: 'policy', groupId: props.group?.id ?? null, expectedVersion: policy.version, validFrom: f.get('validFrom'), reason: f.get('reason'), policy: { ...policy.value, basis: f.get('basis'), fiscalStart: f.get('fiscalStart'), rounding: f.get('rounding'), carryMaxDays: Number(f.get('carryMaxDays')), carryValidMonths: Number(f.get('carryValidMonths')), advanceMaxDays: Number(f.get('advanceMaxDays')) } });
                 }}
               >
                 <label className="flex flex-col gap-1">
