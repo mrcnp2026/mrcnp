@@ -63,7 +63,7 @@ export default async function MyPayPage({ searchParams }: { searchParams: Promis
   const won = (v: number) => t('won', { n: f.number(v) });
   const dash = <span className="text-faint">–</span>;
   const unset = <span className="font-normal text-faint">{tm('notSet')}</span>;
-  const tri = (v: 'YES' | 'NO' | 'UNKNOWN') => (v === 'UNKNOWN' ? unset : tm(v === 'YES' ? 'yes' : 'no'));
+  const tri = (v: 'YES' | 'NO' | 'UNKNOWN') => (v === 'UNKNOWN' ? unset : tm(v === 'YES' ? 'yesV' : 'noV'));
   const period = (from: string, to: string | null) => (to ? ts('period', { from, to }) : ts('periodOpen', { from }));
   // 지금 적용 중인 판, 없으면 곧 시작할 판(「○일부터 적용 예정」으로 보인다) — 계약을 넣었는데 칸이 통째로 비어 보이지 않게 (2026-10-14 의뢰인)
   const soon = <T extends { validFrom: string; validTo: string | null }>(rows: readonly T[]) => versionAt(rows, today) ?? [...rows].filter((r) => r.validFrom > today).sort((a, b) => a.validFrom.localeCompare(b.validFrom))[0] ?? null;

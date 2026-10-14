@@ -4776,7 +4776,7 @@
       "intro": "Your pay details and monthly payslips.",
       "profile": "My info",
       "name": "Name",
-      "no": "No",
+      "no": "Employee no.",
       "group": "Branch · Dept.",
       "job": "Job",
       "joined": "Joined",
@@ -4825,7 +4825,8 @@
       "sensitive": "Shown once sensitive data storage is decided",
       "notSet": "Not entered",
       "companyOff": "Not used by company",
-      "yes": "Yes"
+      "yesV": "Yes",
+      "noV": "No"
     }
   },
   "org": {
