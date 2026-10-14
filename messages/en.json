@@ -3460,7 +3460,13 @@
       "cDays": "Days",
       "cPeopleUsed": "People",
       "typeNone": "No approved leave in this period.",
-      "typeNote": "Includes non-annual types (family events, sick leave, etc.). Sum of approved request days, unlike the annual ledger."
+      "typeNote": "Includes non-annual types (family events, sick leave, etc.). Sum of approved request days, unlike the annual ledger.",
+      "trendTitle": "Last 6 months",
+      "trendAria": "{name} by month: {values}",
+      "hUnit": "Unit: hours",
+      "countUnit": "Unit: times",
+      "dayUnit": "Unit: days",
+      "trendNote": "Recounted per month with the same team and basis as above. The dark bar is the selected month. Months without a work rule show “–”. Unclosed months are provisional."
     },
     "promotion": {
       "title": "Leave use promotion",

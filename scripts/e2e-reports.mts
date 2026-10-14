@@ -59,6 +59,7 @@ try {
   const totalRow = p.locator('table').first().locator('tr', { hasText: '합계' }).locator('td');
   const peopleOnScreen = Number((await totalRow.nth(1).innerText()).trim());
   const closeOnScreen = (await totalRow.last().innerText()).trim();
+  check((await p.locator('[data-trend] section').count()) === 5 && (await p.locator('[data-trend] [role=img]').first().getAttribute('aria-label'))!.split(',').length === 6, '근태 리포트 아래에 최근 6개월 추이 막대 5가지 (2026-10-15)');
   await shot('report-1-attendance');
   const month = new Date(Date.now() + 9 * 3600e3).toISOString().slice(0, 7);
   const a = await xlsx(`/api/admin/reports/attendance?m=${month}`);
