@@ -5,7 +5,7 @@
 import 'server-only';
 import { ApiError } from '@/lib/api';
 import type { Me } from '@/lib/auth';
-import { addMonths, DAY_MINUTES, entriesFor, lotRemaining, NO_TYPE_RULE, planAccrual, planExpiry, planOffset, planRequest, settleLeave, splitCarry, STANDARD_LEAVE_POLICY, validateLeavePolicy, validateTypeRule, type Entry, type LeavePolicy, type LeaveTypeRule, type Lot, type NewEntry, type PlannedLot, type Settlement } from '@/lib/leave-ledger';
+import { addMonths, DAY_MINUTES, entriesFor, lotRemaining, NO_TYPE_RULE, planAccrual, planExpiry, planOffset, planRequest, settleLeave, splitCarry, STANDARD_LEAVE_POLICY, validateLeavePolicy, validateTypeRule, type Entry, type LeavePolicy, type LeaveTypeRule, type Lot, type NewEntry, type PlannedLot, type Settlement, ledgerBalance, minutesToDays } from '@/lib/leave-ledger';
 import { addDays } from '@/lib/calendar';
 import { toKstDate } from '@/lib/time';
 import { createAdminClient } from '@/lib/supabase/admin';
@@ -510,6 +510,20 @@ export async function startGroupPolicy(args: { groupId: string; me: Me }): Promi
   if (!g || g.is_default || g.excluded) throw new ApiError(409, 'leave_group_default');
   const { error } = await c.from('leave_policy_versions').insert({ group_id: args.groupId, payload: base.policy, valid_from: '2000-01-01', version: 1, reason: 'copy:default', created_by: args.me.id });
   if (error && error.code !== '23505' && error.code !== '23P01') boom('startGroupPolicy', error);
+}
+
+/**
+ * 원장을 시작한 직원(승인된 지급 건이 있는 직원)의 그 날 잔여 — 없으면 null(예전 계산을 쓴다). 2026-10-15 미구현 목록 34번:
+ * 실제 직원에게 원장으로 연차를 발생시켰는데 신청 · 화면은 예전 계산(받은 연차 입력)을 봐서 「연차 미입력」으로 막혔다.
+ * advanceMaxDays: 기본 그룹 기준의 선사용 한도(일) — 잔여보다 이만큼까지는 더 신청할 수 있다.
+ */
+export async function ledgerFor(employeeId: string, asOf: string, practice: boolean): Promise<{ grantedDays: number; usedDays: number; remainingDays: number; expiredDays: number; advanceDays: number; advanceMaxDays: number } | null> {
+  const lots = await loadLots({ employeeId, states: ['APPROVED'] });
+  if (lots.length === 0) return null;
+  const [entries, policies] = await Promise.all([loadEntries(employeeId), loadDefaultPolicies()]);
+  const b = ledgerBalance(lots, entriesFor(entries, practice), asOf);
+  const d = (m: number) => minutesToDays(m);
+  return { grantedDays: d(b.granted), usedDays: d(b.used), remainingDays: d(b.remaining), expiredDays: d(b.expired), advanceDays: d(b.advance), advanceMaxDays: policyAt(policies, asOf)?.policy.advanceMaxDays ?? 0 };
 }
 
 export { lotRemaining };

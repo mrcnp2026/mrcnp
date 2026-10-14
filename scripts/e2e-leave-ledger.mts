@@ -136,6 +136,18 @@ try {
       const bal = p.locator('tr', { hasText: emp!.name }).filter({ hasText: hired });
       check((await bal.getByText('14일', { exact: true }).count()) >= 1, '잔여 표에 받은 15일 − 사용 1일 = 14일', (await bal.first().innerText().catch(() => '')).replace(/\s+/g, ' '));
       await shot('ledger-1c-balance');
+      // 원장을 시작한 직원: 내 휴가 화면 · 신청 잔여도 원장 숫자 (2026-10-15, 미구현 34번)
+      const mine = await (async () => { await p.goto(`${BASE}/punch/leave`); await p.waitForLoadState('networkidle'); return p.locator('main').innerText(); })();
+      check(mine.includes('14일') && !mine.includes('아직 올해 연차가 입력되지 않았습니다'), '내 휴가 화면 잔여 = 원장 14일 (예전 「받은 연차 입력」이 없어도)', mine.slice(0, 160).replace(/\s+/g, ' '));
+      let far = new Date(Date.now() + 200 * 86400e3);
+      while (far.getUTCDay() !== 1) far = new Date(far.getTime() + 86400e3);
+      const fd = far.toISOString().slice(0, 10);
+      const ed = new Date(far.getTime() + 25 * 86400e3).toISOString().slice(0, 10);
+      const tooMany = await p.evaluate(async ([s0, e0]) => { const r = await fetch('/api/leave', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ typeCode: 'annual', startDate: s0, endDate: e0, reason: 'e2e 원장 잔여' }) }); return { status: r.status, json: await r.json() }; }, [fd, ed] as const);
+      check(tooMany.status === 409 && tooMany.json.error === 'insufficient_balance', '원장 잔여(14일)보다 많이 신청하면 거절 — 「연차 미입력」이 아니라 잔여 부족', JSON.stringify(tooMany.json));
+      const one = await p.evaluate(async (s0) => { const r = await fetch('/api/leave', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ typeCode: 'annual', startDate: s0, endDate: s0, reason: 'e2e 원장 잔여' }) }); return { status: r.status, json: await r.json() }; }, fd);
+      check(one.status === 200, '원장 잔여 안에서는 신청된다', JSON.stringify(one.json));
+      if (one.json.id) await db.from('leave_requests').update({ status: 'cancelled' }).eq('id', one.json.id);
       const twice = await post({ action: 'sync', employeeId: emp!.id });
       check(twice.json.sync?.added === 0, '다시 맞춰도 줄이 늘지 않는다');
       await db.from('leave_requests').update({ status: 'cancelled', decided_at: new Date().toISOString() }).eq('id', reqId!);

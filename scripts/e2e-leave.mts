@@ -17,6 +17,8 @@ const STARTED_AT = new Date().toISOString();
 const db = createClient(process.env.NEXT_PUBLIC_SUPABASE_URL!, process.env.SUPABASE_SERVICE_ROLE_KEY!, { auth: { persistSession: false } });
 const { data: emp } = await db.from('profiles').select('id').eq('employee_no', 'e2e-audit').single();
 await db.from('profiles').update({ active: true, role: 'admin', locale: 'ko' }).eq('id', emp!.id);
+// 이 검사는 예전 계산(받은 연차 입력) 경로를 본다 — 다른 검사가 남긴 승인된 지급 건이 있으면 원장 경로로 가므로 거둔다(검사 계정만)
+await db.from('leave_grant_lots').update({ state: 'WITHDRAWN' }).eq('employee_id', emp!.id).eq('state', 'APPROVED');
 const token = randomBytes(32).toString('base64url');
 await db.from('invites').insert({ employee_id: emp!.id, token_hash: createHash('sha256').update(token).digest('hex'), issued_via: 'admin', expires_at: new Date(Date.now() + 3600e3).toISOString() });
 

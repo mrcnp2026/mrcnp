@@ -10,6 +10,7 @@ import { getMe } from '@/lib/auth';
 import { addDays } from '@/lib/calendar';
 import { calcLeaveBalance, countLeaveDays, leaveWindow, roundDays } from '@/lib/leave';
 import { dayTypeResolver, loadAllLeaveTypes, loadLeaveGrants, loadLeaveRequests, loadLeaveTypes } from '@/lib/leave-data';
+import { ledgerFor } from '@/lib/leave-ledger-data';
 import { createAdminClient } from '@/lib/supabase/admin';
 import { cleanText } from '@/lib/text';
 import { toKstDate } from '@/lib/time';
@@ -67,9 +68,16 @@ export const POST = api('leave.create', async (req) => {
 
   if (type.deductsBalance) {
     const all = await loadLeaveRequests({ employeeId: me.id });
-    const bal = calcLeaveBalance({ grants: await loadLeaveGrants(me.id), requests: all, types, asOf: start });
-    if (!bal.grant) throw new ApiError(409, 'no_grant');
-    if (roundDays(bal.remaining - bal.pending - days) < 0) throw new ApiError(409, 'insufficient_balance');
+    // 원장을 시작한 직원은 원장 잔여로 본다(2026-10-15). 아직이면 예전 계산(받은 연차 입력)
+    const led = await ledgerFor(me.id, start, OFFICE.practiceMode);
+    if (led) {
+      const pending = all.filter((r) => r.status === 'pending' && types.find((x) => x.code === r.typeCode)?.deductsBalance).reduce((a, r) => a + r.days, 0);
+      if (roundDays(led.remainingDays - pending - days) < -led.advanceMaxDays) throw new ApiError(409, 'insufficient_balance');
+    } else {
+      const bal = calcLeaveBalance({ grants: await loadLeaveGrants(me.id), requests: all, types, asOf: start });
+      if (!bal.grant) throw new ApiError(409, 'no_grant');
+      if (roundDays(bal.remaining - bal.pending - days) < 0) throw new ApiError(409, 'insufficient_balance');
+    }
   }
 
   const { data, error } = await createAdminClient()

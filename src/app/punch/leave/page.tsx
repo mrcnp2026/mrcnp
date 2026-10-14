@@ -47,6 +47,11 @@ export default async function LeavePage({ searchParams }: { searchParams: Promis
   const [lots, ledgerAll] = await Promise.all([loadLots({ employeeId: me.id, states: ['APPROVED'] }), loadEntries(me.id)]);
   const ledger = entriesFor(ledgerAll, OFFICE.practiceMode);
   const lb = lots.length > 0 ? ledgerBalance(lots, ledger, today) : null;
+  // 잔여 카드: 원장을 시작한 직원은 원장 숫자(2026-10-15, 미구현 34번), 아직이면 예전 계산
+  const pendingDays = requests.filter((r) => r.status === 'pending' && types.find((x) => x.code === r.typeCode)?.deductsBalance).reduce((a, r) => a + r.days, 0);
+  const card = lb
+    ? { label: null as string | null, remaining: minutesToDays(lb.remaining), granted: minutesToDays(lb.granted), used: minutesToDays(lb.used), pending: pendingDays }
+    : bal.grant ? { label: bal.grant.periodLabel, remaining: bal.remaining, granted: bal.granted, used: bal.used, pending: bal.pending } : null;
   const rem = lotRemaining(lots, ledger);
   const ending = endingSoonest(lots, rem, today);
   const nameOf = (code: string) => leaveTypeName(types, code, t);
@@ -152,18 +157,18 @@ export default async function LeavePage({ searchParams }: { searchParams: Promis
       <div className="flex flex-col gap-3 lg:grid lg:grid-cols-2 lg:items-start lg:gap-4">
 
       <Card className="order-1 flex flex-col gap-3 p-6">
-        <CardTitle icon={CalendarDays} aside={bal.grant && <span className="text-sm text-faint">{bal.grant.periodLabel}</span>}>
+        <CardTitle icon={CalendarDays} aside={card?.label && <span className="text-sm text-faint">{card.label}</span>}>
           {t('balanceTitle')}
         </CardTitle>
-        {bal.grant ? (
+        {card ? (
           <>
-            <p className="num text-3xl font-extrabold tracking-tight">{t('days', { n: n(bal.remaining) })}</p>
+            <p className="num text-3xl font-extrabold tracking-tight">{t('days', { n: n(card.remaining) })}</p>
             <dl className="num grid grid-cols-3 gap-2 text-center">
               {(
                 [
-                  ['granted', bal.granted],
-                  ['used', bal.used],
-                  ['pending', bal.pending],
+                  ['granted', card.granted],
+                  ['used', card.used],
+                  ['pending', card.pending],
                 ] as const
               ).map(([k, v]) => (
                 <div key={k} className="rounded-button bg-surface p-2">
@@ -172,7 +177,7 @@ export default async function LeavePage({ searchParams }: { searchParams: Promis
                 </div>
               ))}
             </dl>
-            {bal.pending > 0 && <p className="text-sm text-muted">{t('pendingHint')}</p>}
+            {card.pending > 0 && <p className="text-sm text-muted">{t('pendingHint')}</p>}
           </>
         ) : (
           <p className="text-sm text-muted">{t('noGrant')}</p>
