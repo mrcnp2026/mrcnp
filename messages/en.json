@@ -2818,7 +2818,16 @@
       "payroll_version_conflict": "Another admin edited the rule first. Refresh and try again.",
       "sumReviewed": "Reviewed: {n} days",
       "reviewDo": "Mark reviewed",
-      "reviewedUndo": "Reviewed · undo"
+      "reviewedUndo": "Reviewed · undo",
+      "cardsState": "Status",
+      "cardsType": "By type",
+      "state": {
+        "block": "Blocks closing",
+        "check": "To check",
+        "done": "Checked"
+      },
+      "unitDay": "d",
+      "unitCase": ""
     },
     "leaveTypeRule": {
       "title": "Request rules",
@@ -3216,7 +3225,11 @@
       "exportDraft": "For review (not finalized)",
       "exportBlocked": "Blocked",
       "pdfOne": "Payslip PDF",
-      "pdfOneDraft": "Payslip PDF (for review)"
+      "pdfOneDraft": "Payslip PDF (for review)",
+      "cardsTitle": "Progress",
+      "unit": "",
+      "count": "{n} ledgers",
+      "showAll": "Show all"
     },
     "reports": {
       "attTitle": "Attendance report",

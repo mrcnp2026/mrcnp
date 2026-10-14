@@ -9,7 +9,7 @@ import { config } from 'dotenv';
 import { createHash, randomBytes } from 'node:crypto';
 import path from 'node:path';
 import { chromium, type Page } from 'playwright-core';
-import { createPassword } from './lib/e2e-password.ts';
+import { createPassword, openDrawer } from './lib/e2e-password.ts';
 
 config({ path: path.join(import.meta.dirname, '..', '.env.local'), quiet: true });
 const BASE = 'http://localhost:4123';
@@ -71,7 +71,7 @@ try {
 
   // ── 관리자: 왼쪽 위 메뉴 › 공지 관리 › 새 공지 ──
   await p.goto(`${BASE}/admin`);
-  await p.locator('[data-menu-open]').click();
+  await openDrawer(p);
   check(await p.getByRole('dialog').locator('a[href="/admin/notices"]').waitFor({ timeout: 10000 }).then(() => true, () => false), '메뉴 「소통 › 공지」(공지 관리)가 있다'); // 2026-10-14 메뉴 개편
   await scanAll(p, '공지 목록', '/admin/notices');
   await p.goto(`${BASE}/admin/notices/new`);

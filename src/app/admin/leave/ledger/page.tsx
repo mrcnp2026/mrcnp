@@ -1,6 +1,7 @@
 // 휴가 원장 — 연차 정책(통상 방식) · 연차 후보 만들기와 승인 · 직원별 잔여(원장과 예전 계산 대조) · 지급 건과 원장 내역 (PRD v1.3 36 · 38장).
 // ★ 대조 단계: 직원에게 보이는 잔여는 아직 예전 계산이다. 이 화면에서 두 숫자가 맞는지 본 뒤에 원장으로 바꾼다.
 import { getTranslations } from 'next-intl/server';
+import { ListHead } from '@/components/listframe';
 import { PageShell } from '@/components/ui';
 import { OFFICE } from '@/config/office';
 import { calcLeaveBalance } from '@/lib/leave';
@@ -12,6 +13,7 @@ import { toKstDate } from '@/lib/time';
 import { LedgerBoard, type BalanceLine, type EntryLine, type LotLine } from './LedgerBoard';
 
 export default async function LeaveLedgerPage({ searchParams }: { searchParams: Promise<{ emp?: string; live?: string }> }) {
+  const tGear = await getTranslations('frame');
   const [t, sp] = await Promise.all([getTranslations('admin.leaveLedger'), searchParams]);
   const today = toKstDate(new Date());
   const practice = OFFICE.practiceMode && sp.live !== '1';
@@ -59,10 +61,7 @@ export default async function LeaveLedgerPage({ searchParams }: { searchParams: 
 
   return (
     <PageShell wide>
-      <div>
-        <h1 className="text-2xl font-bold">{t('title')}</h1>
-        <p className="pt-1 text-sm text-faint">{t('intro')}</p>
-      </div>
+      <ListHead title={t('title')} desc={t('intro')} settingsHref="/admin/settings?tab=leave" settingsLabel={tGear('item.setLeave')} />
       <LedgerBoard
         today={today}
         live={sp.live === '1'}

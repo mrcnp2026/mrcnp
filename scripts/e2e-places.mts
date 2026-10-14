@@ -6,7 +6,7 @@ import { config } from 'dotenv';
 import { createHash, randomBytes } from 'node:crypto';
 import path from 'node:path';
 import { chromium } from 'playwright-core';
-import { createPassword } from './lib/e2e-password.ts';
+import { createPassword, openDrawer } from './lib/e2e-password.ts';
 
 config({ path: path.join(import.meta.dirname, '..', '.env.local'), quiet: true });
 const BASE = process.env.BASE ?? 'http://localhost:4123';
@@ -45,7 +45,7 @@ try {
 
   // ── 메뉴에 「지점」「출퇴근 장소」 ──
   await p.goto(`${BASE}/admin`);
-  await p.locator('[data-menu-open]').click();
+  await openDrawer(p);
   const menu = p.getByRole('dialog');
   await menu.waitFor();
   // 2026-10-14: 지점 · 출퇴근 장소는 통합설정에 있다 — 폰 메뉴 「통합설정 › 전체 메뉴」로 들어간다

@@ -58,12 +58,12 @@ export default async function InsurancePage({ searchParams }: { searchParams: Pr
               </ul>
             </Card>
           )}
-          <div className="overflow-x-auto border border-border bg-bg">
+          <div className="overflow-x-auto rounded-card border border-border bg-bg">
             <table className="w-full text-sm">
               <thead>
-                <tr className="border-b border-border text-left">
+                <tr className="border-b border-border bg-surface text-left">
                   {['colName', 'colInsurer', 'colEvent', 'colQualify', 'colState', 'colConfirmed', 'colManage'].map((k) => (
-                    <th key={k} scope="col" className="px-3 py-2 whitespace-nowrap">{t(k)}</th>
+                    <th key={k} scope="col" className="px-3 py-2.5 text-xs font-semibold whitespace-nowrap text-muted">{t(k)}</th>
                   ))}
                 </tr>
               </thead>
@@ -90,20 +90,20 @@ export default async function InsurancePage({ searchParams }: { searchParams: Pr
             <CardTitle>{t('manualTitle')}</CardTitle>
             <NoticeManual people={people} month={today.slice(0, 7)} live={sp.live === '1'} />
           </Card>
-          <div className="overflow-x-auto border border-border bg-bg">
+          <div className="overflow-x-auto rounded-card border border-border bg-bg">
             <table className="w-full text-sm">
               <thead>
-                <tr className="border-b border-border text-left">
+                <tr className="border-b border-border bg-surface text-left">
                   {['colMonth', 'colInsurer', 'colRows', 'colSource', 'colFileState', 'colMade'].map((k) => (
-                    <th key={k} scope="col" className="px-3 py-2 whitespace-nowrap">{t(k)}</th>
+                    <th key={k} scope="col" className="px-3 py-2.5 text-xs font-semibold whitespace-nowrap text-muted">{t(k)}</th>
                   ))}
                 </tr>
               </thead>
               <tbody>
                 {files.map((f) => (
-                  <tr key={f.id} className="border-b border-border">
+                  <tr key={f.id} className="border-b border-border last:border-b-0">
                     <td className="num px-3 py-3 whitespace-nowrap">
-                      <Link href={`/admin/payroll/insurance/notice/${f.id}${live ? '?live=1' : ''}`} className="font-bold text-primary underline">{f.month}</Link>
+                      <Link href={`/admin/payroll/insurance/notice/${f.id}${live ? '?live=1' : ''}`} className="font-bold text-primary hover:underline">{f.month}</Link>
                     </td>
                     <td className="px-3 py-3 whitespace-nowrap">{t(`insurer.${f.insurer}`)}</td>
                     <td className="num px-3 py-3">{t('rowsValue', { n: f.rows })}</td>

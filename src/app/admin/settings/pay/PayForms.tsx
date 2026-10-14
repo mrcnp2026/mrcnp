@@ -322,7 +322,7 @@ export function VerifyButton({ target, id, verified }: { target: 'setting' | 'it
   const [open, setOpen] = useState(false);
   if (!open)
     return (
-      <button type="button" onClick={() => setOpen(true)} className="text-xs font-bold text-primary underline">
+      <button type="button" onClick={() => setOpen(true)} className="text-xs font-bold text-primary hover:underline">
         {t(verified ? 'verify.undo' : 'verify.mark')}
       </button>
     );

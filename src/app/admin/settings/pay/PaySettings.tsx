@@ -143,7 +143,7 @@ export async function PaySettings({ sp }: { sp: SP }) {
           <div className="overflow-x-auto">
             <table className="w-full text-sm">
               <thead>
-                <tr className="border-b border-border text-left">
+                <tr className="border-b border-border bg-surface text-left">
                   {['item.colName', 'item.colCalc', ...(kind === 'PAYMENT' ? ['item.colFixed', 'item.colTax', 'item.colOrdinary'] : []), 'item.colAmount', 'item.colState', 'item.colUse'].map((k) => (
                     <th key={k} scope="col" className="px-4 py-2 whitespace-nowrap">
                       {t(k)}
@@ -155,7 +155,7 @@ export async function PaySettings({ sp }: { sp: SP }) {
                 {items.map((it) => (
                   <tr key={it.id} className={`border-b border-border ${it.inUse ? '' : 'opacity-60'}`}>
                     <td className="px-4 py-2">
-                      <Link href={href({ edit: it.code })} className="font-bold text-primary underline">
+                      <Link href={href({ edit: it.code })} className="font-bold text-primary hover:underline">
                         {it.koName}
                       </Link>
                       <span className="num block text-xs text-faint">
@@ -237,7 +237,7 @@ export async function PaySettings({ sp }: { sp: SP }) {
           <div className="overflow-x-auto">
             <table className="w-full text-sm">
               <thead>
-                <tr className="border-b border-border text-left">
+                <tr className="border-b border-border bg-surface text-left">
                   {['ref.colKind', 'ref.colValue', 'ref.colPeriod', 'ref.colSource', 'ref.colState'].map((k) => (
                     <th key={k} scope="col" className="px-4 py-2 whitespace-nowrap">
                       {t(k)}
@@ -250,7 +250,7 @@ export async function PaySettings({ sp }: { sp: SP }) {
                   const rows = inYear.filter((r) => r.kind === k).sort((a, b) => (a.validFrom! < b.validFrom! ? -1 : 1));
                   if (rows.length === 0)
                     return [
-                      <tr key={k} className="border-b border-border">
+                      <tr key={k} className="border-b border-border last:border-b-0">
                         <td className="px-4 py-3 font-bold">{t(`ref.${k.replace('.', '_')}`)}</td>
                         <td colSpan={4} className="px-4 py-3 text-faint">
                           {t('ref.notAcquired', { year })}
@@ -307,7 +307,7 @@ export async function PaySettings({ sp }: { sp: SP }) {
                     </thead>
                     <tbody>
                       {page.map((b) => (
-                        <tr key={b.wageFrom} className="border-b border-border">
+                        <tr key={b.wageFrom} className="border-b border-border last:border-b-0">
                           <th scope="row" className="sticky left-0 bg-bg px-3 py-1.5 text-left font-normal whitespace-nowrap">
                             {f.number(b.wageFrom)} ~ {b.wageTo === null ? '' : f.number(b.wageTo)}
                           </th>
@@ -503,7 +503,7 @@ export async function PaySettings({ sp }: { sp: SP }) {
                 </p>
                 {p?.verificationNote && <p className="text-xs text-ok">{p.verificationNote}</p>}
                 <div className="flex flex-wrap items-center gap-3">
-                  <Link href={href({ edit: k })} className="text-sm font-bold text-primary underline">
+                  <Link href={href({ edit: k })} className="text-sm font-bold text-primary hover:underline">
                     {t('s07.edit')}
                   </Link>
                   {p && <VerifyButton target="policy" id={p.id} verified={p.verification === 'VERIFIED'} />}

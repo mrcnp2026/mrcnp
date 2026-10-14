@@ -50,7 +50,7 @@ export default async function RetirementCasePage({ params }: { params: Promise<{
       {k.state === 'WITHDRAWN' && <p className="rounded-card border border-border bg-surface p-3 text-sm">{t('withdrawnNote', { reason: k.reason ?? '' })}</p>}
       {k.supersedesId && (
         <p className="text-sm">
-          <Link href={`/admin/payroll/retirement/${k.supersedesId}`} className="font-bold text-primary underline">{t('toPrevious')}</Link>
+          <Link href={`/admin/payroll/retirement/${k.supersedesId}`} className="font-bold text-primary hover:underline">{t('toPrevious')}</Link>
         </p>
       )}
       {k.state === 'DRAFT' ? (

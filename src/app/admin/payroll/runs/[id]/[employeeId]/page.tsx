@@ -64,11 +64,11 @@ export default async function PayStatementPage({ params }: { params: Promise<{ i
           ))}
           {s.state === 'BLOCKED' && (
             <li className="pt-1 text-muted">
-              <Link href={`/admin/payroll/staff/${employeeId}`} className="font-bold text-primary underline">
+              <Link href={`/admin/payroll/staff/${employeeId}`} className="font-bold text-primary hover:underline">
                 {t('toStaffPay')}
               </Link>
               {' · '}
-              <Link href={`/admin/closing?m=${run.periodFrom.slice(0, 7)}${run.isTest ? '' : '&live=1'}`} className="font-bold text-primary underline">
+              <Link href={`/admin/closing?m=${run.periodFrom.slice(0, 7)}${run.isTest ? '' : '&live=1'}`} className="font-bold text-primary hover:underline">
                 {t('toClosing')}
               </Link>
             </li>
@@ -89,12 +89,12 @@ export default async function PayStatementPage({ params }: { params: Promise<{ i
           {(['PAYMENT', 'DEDUCTION', 'EMPLOYER'] as const).map((kind) => (
             <Card key={kind}>
               <CardTitle>{t(`section.${kind}`)}</CardTitle>
-              <div className="mt-3 overflow-x-auto border border-border bg-bg">
+              <div className="mt-3 overflow-x-auto rounded-card border border-border bg-bg">
                 <table className="w-full text-sm">
                   <thead>
-                    <tr className="border-b border-border text-left">
+                    <tr className="border-b border-border bg-surface text-left">
                       {['colItem', 'colQty', 'colUnit', 'colFactor', 'colRaw', 'colAmount', 'colSource'].map((k) => (
-                        <th key={k} scope="col" className="px-3 py-2 whitespace-nowrap">
+                        <th key={k} scope="col" className="px-3 py-2.5 text-xs font-semibold whitespace-nowrap text-muted">
                           {t(k)}
                         </th>
                       ))}

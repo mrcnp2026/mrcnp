@@ -40,10 +40,10 @@ export default async function DailyRunPage({ params }: { params: Promise<{ id: s
       {stale && <p className="rounded-card border border-warn bg-warn-tint p-3 text-sm text-warn">{t('stale')}</p>}
       {blocked > 0 && <p className="rounded-card border border-warn bg-warn-tint p-3 text-sm text-warn">{t('hasBlocked', { n: blocked })}</p>}
       <DailyRunActions id={run.id} version={run.version} status={run.status} stale={stale} blocked={blocked} />
-      <div className="overflow-x-auto border border-border bg-bg">
+      <div className="overflow-x-auto rounded-card border border-border bg-bg">
         <table className="w-full text-sm" data-daily>
           <thead>
-            <tr className="border-b border-border text-left">
+            <tr className="border-b border-border bg-surface text-left">
               <th scope="col" className="px-3 py-2">{t('cPayee')}</th>
               <th scope="col" className="px-3 py-2 text-right whitespace-nowrap">{t('cDays')}</th>
               {COLS.map((k) => (

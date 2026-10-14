@@ -8,7 +8,7 @@ import { config } from 'dotenv';
 import { createHash, randomBytes } from 'node:crypto';
 import path from 'node:path';
 import { chromium } from 'playwright-core';
-import { createPassword } from './lib/e2e-password.ts';
+import { createPassword, openDrawer } from './lib/e2e-password.ts';
 
 config({ path: path.join(import.meta.dirname, '..', '.env.local'), quiet: true });
 const BASE = process.env.BASE ?? 'http://localhost:4123';
@@ -51,7 +51,7 @@ try {
 
   // ── 근무시간 ──
   await p.goto(`${BASE}/admin`);
-  await p.locator('[data-menu-open]').click();
+  await openDrawer(p);
   // 2026-10-14: 회사 설정은 통합설정 › 회사설정 › 기본 — 폰 메뉴 「통합설정 › 전체 메뉴」 → 「회사 기본」
   await p.getByRole('dialog').getByRole('link', { name: '전체 메뉴', exact: true }).click();
   await p.locator('main a[href="/admin/settings"]').click();

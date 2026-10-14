@@ -63,20 +63,20 @@ export default async function LeaveReportPage({ searchParams }: { searchParams: 
       <div className="flex flex-wrap items-center gap-2">
         <Chip tone="info">{t('startedValue', { n: r.total.started, all: r.total.people })}</Chip>
         {practice && <Chip>{t('practice')}</Chip>}
-        <Link href="/admin/leave/ledger" className="text-sm font-bold text-primary underline">
+        <Link href="/admin/leave/ledger" className="text-sm font-bold text-primary hover:underline">
           {t('toLedger')}
         </Link>
       </div>
 
       <h2 className="text-lg font-bold">{t('byGroup')}</h2>
-      <div className="overflow-x-auto border border-border bg-bg">
+      <div className="overflow-x-auto rounded-card border border-border bg-bg">
         <table className="w-full text-sm">
           <thead>
-            <tr className="border-b border-border text-left">
-              <th scope="col" className="px-3 py-2 whitespace-nowrap">{t('cGroup')}</th>
-              <th scope="col" className="px-3 py-2 whitespace-nowrap">{t('lPeople')}</th>
+            <tr className="border-b border-border bg-surface text-left">
+              <th scope="col" className="px-3 py-2.5 text-xs font-semibold whitespace-nowrap text-muted">{t('cGroup')}</th>
+              <th scope="col" className="px-3 py-2.5 text-xs font-semibold whitespace-nowrap text-muted">{t('lPeople')}</th>
               {cols.map((k) => (
-                <th key={k} scope="col" className="px-3 py-2 whitespace-nowrap">
+                <th key={k} scope="col" className="px-3 py-2.5 text-xs font-semibold whitespace-nowrap text-muted">
                   {t(k)}
                 </th>
               ))}
@@ -84,7 +84,7 @@ export default async function LeaveReportPage({ searchParams }: { searchParams: 
           </thead>
           <tbody>
             {r.groups.map((g) => (
-              <tr key={g.groupId ?? ''} className="border-b border-border">
+              <tr key={g.groupId ?? ''} className="border-b border-border last:border-b-0">
                 <td className="px-3 py-2 font-bold whitespace-nowrap">{g.groupId === null ? t('unassigned') : g.name}</td>
                 <td className="num px-3 py-2">{t('startedValue', { n: g.started, all: g.people })}</td>
                 {cells(g).map((v, i) => (
@@ -104,25 +104,25 @@ export default async function LeaveReportPage({ searchParams }: { searchParams: 
       </div>
 
       <h2 className="text-lg font-bold">{t('byEmployee', { n: r.employees.length })}</h2>
-      <div className="overflow-x-auto border border-border bg-bg">
+      <div className="overflow-x-auto rounded-card border border-border bg-bg">
         <table className="w-full text-sm">
           <thead>
-            <tr className="border-b border-border text-left">
-              <th scope="col" className="px-3 py-2 whitespace-nowrap">{t('cName')}</th>
-              <th scope="col" className="px-3 py-2 whitespace-nowrap">{t('lJoined')}</th>
+            <tr className="border-b border-border bg-surface text-left">
+              <th scope="col" className="px-3 py-2.5 text-xs font-semibold whitespace-nowrap text-muted">{t('cName')}</th>
+              <th scope="col" className="px-3 py-2.5 text-xs font-semibold whitespace-nowrap text-muted">{t('lJoined')}</th>
               {cols.map((k) => (
-                <th key={k} scope="col" className="px-3 py-2 whitespace-nowrap">
+                <th key={k} scope="col" className="px-3 py-2.5 text-xs font-semibold whitespace-nowrap text-muted">
                   {t(k)}
                 </th>
               ))}
-              <th scope="col" className="px-3 py-2 whitespace-nowrap">{t('lOld')}</th>
+              <th scope="col" className="px-3 py-2.5 text-xs font-semibold whitespace-nowrap text-muted">{t('lOld')}</th>
             </tr>
           </thead>
           <tbody>
             {r.employees.map((e) => (
-              <tr key={e.employeeId} className="border-b border-border">
+              <tr key={e.employeeId} className="border-b border-border last:border-b-0">
                 <td className="px-3 py-2 whitespace-nowrap">
-                  <Link href={`/admin/leave/ledger?emp=${e.employeeId}#detail`} className="font-bold text-primary underline">
+                  <Link href={`/admin/leave/ledger?emp=${e.employeeId}#detail`} className="font-bold text-primary hover:underline">
                     {e.name}
                   </Link>
                   {!e.active && <span className="ml-2 text-xs text-faint">{t('inactive')}</span>}

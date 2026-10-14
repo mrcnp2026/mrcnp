@@ -79,20 +79,20 @@ export default async function RetirementPage({ searchParams }: { searchParams: P
           </div>
         )}
       </Card>
-      <div className="overflow-x-auto border border-border bg-bg">
+      <div className="overflow-x-auto rounded-card border border-border bg-bg">
         <table className="w-full text-sm">
           <thead>
-            <tr className="border-b border-border text-left">
+            <tr className="border-b border-border bg-surface text-left">
               {['colName', 'colKind', 'colPeriod', 'colAmount', 'colState', 'colMade'].map((k) => (
-                <th key={k} scope="col" className="px-3 py-2 whitespace-nowrap">{t(k)}</th>
+                <th key={k} scope="col" className="px-3 py-2.5 text-xs font-semibold whitespace-nowrap text-muted">{t(k)}</th>
               ))}
             </tr>
           </thead>
           <tbody>
             {cases.map((k) => (
-              <tr key={k.id} className="border-b border-border">
+              <tr key={k.id} className="border-b border-border last:border-b-0">
                 <td className="px-3 py-3 whitespace-nowrap">
-                  <Link href={`/admin/payroll/retirement/${k.id}`} className="font-bold text-primary underline">{k.name}</Link> <span className="num text-xs text-muted">{k.employeeNo}</span>
+                  <Link href={`/admin/payroll/retirement/${k.id}`} className="font-bold text-primary hover:underline">{k.name}</Link> <span className="num text-xs text-muted">{k.employeeNo}</span>
                 </td>
                 <td className="px-3 py-3 whitespace-nowrap">{t(`kind.${k.kind}`)}{k.revision > 1 ? ` · ${t('rev', { n: k.revision })}` : ''}</td>
                 <td className="num px-3 py-3 whitespace-nowrap">{k.periodFrom} ~ {k.periodTo}</td>

@@ -20,12 +20,12 @@ type Res = { accrual?: { created: number; existing: number; noHireDate: number; 
 const field = 'min-h-9 rounded-button border border-border bg-bg px-3 text-sm';
 function Table({ heads, children }: { heads: string[]; children: ReactNode }) {
   return (
-    <div className="overflow-x-auto border border-border bg-bg">
+    <div className="overflow-x-auto rounded-card border border-border bg-bg">
       <table className="w-full text-sm">
         <thead>
-          <tr className="border-b border-border text-left">
+          <tr className="border-b border-border bg-surface text-left">
             {heads.map((h, i) => (
-              <th key={i} scope="col" className="px-3 py-2 whitespace-nowrap">
+              <th key={i} scope="col" className="px-3 py-2.5 text-xs font-semibold whitespace-nowrap text-muted">
                 {h}
               </th>
             ))}
@@ -213,7 +213,7 @@ export function LedgerBoard(props: { today: string; live: boolean; practice: boo
               </div>
               <Table heads={['', t('colName'), t('colWhy'), t('colDays'), t('colGranted'), t('colUsable')]}>
                 {candidates.map((c) => (
-                  <tr key={c.id} className="border-b border-border">
+                  <tr key={c.id} className="border-b border-border last:border-b-0">
                     <td className="w-10 px-3 py-2">
                       <input type="checkbox" checked={picked.has(c.id)} onChange={() => toggle(c.id)} aria-label={t('pick', { name: c.name })} className="size-5 accent-primary" />
                     </td>
@@ -244,7 +244,7 @@ export function LedgerBoard(props: { today: string; live: boolean; practice: boo
           <p className="pt-1 pb-3 text-sm text-faint">{t('expIntro')}</p>
           <Table heads={[t('colName'), t('colEnded'), t('colLeft'), t('colCarry')]}>
             {props.expiring.map((x) => (
-              <tr key={x.id} className="border-b border-border">
+              <tr key={x.id} className="border-b border-border last:border-b-0">
                 <td className="px-3 py-2 font-bold">{x.name}</td>
                 <td className="num px-3 py-2">{x.usableTo}</td>
                 <td className="num px-3 py-2">{day(x.days)}</td>
@@ -266,7 +266,7 @@ export function LedgerBoard(props: { today: string; live: boolean; practice: boo
         <p className="pt-1 pb-3 text-sm text-faint">{t('balIntro')}</p>
         <Table heads={[t('colName'), t('colJoined'), t('colGrantedSum'), t('colUsed'), t('colExpired'), t('colRemaining'), t('colOld'), t('colCompare'), '']}>
           {props.balances.map((b) => (
-            <tr key={b.employeeId} className="border-b border-border">
+            <tr key={b.employeeId} className="border-b border-border last:border-b-0">
               <td className="px-3 py-2 font-bold">
                 {b.name}
                 {!b.active && <span className="ml-2 text-xs text-faint">{t('inactive')}</span>}
@@ -283,7 +283,7 @@ export function LedgerBoard(props: { today: string; live: boolean; practice: boo
               <td className="num px-3 py-2">{b.old === null ? '' : day(b.old)}</td>
               <td className="px-3 py-2">{!b.started ? <Chip tone="neutral">{t('cmpNotStarted')}</Chip> : b.old === null ? <Chip tone="info">{t('cmpLedgerOnly')}</Chip> : b.old === b.remaining ? <Chip tone="ok">{t('cmpSame')}</Chip> : <Chip tone="warn">{t('cmpDiff')}</Chip>}</td>
               <td className="px-3 py-2">
-                <Link href={`/admin/leave/ledger?emp=${b.employeeId}${q}#detail`} className="font-bold text-primary underline">
+                <Link href={`/admin/leave/ledger?emp=${b.employeeId}${q}#detail`} className="font-bold text-primary hover:underline">
                   {t('detail')}
                 </Link>
               </td>
@@ -307,7 +307,7 @@ export function LedgerBoard(props: { today: string; live: boolean; practice: boo
           <div className="flex flex-col gap-4 pt-3">
             <Table heads={[t('colWhy'), t('colDays'), t('colLeft'), t('colGranted'), t('colUsable'), t('colState'), '']}>
               {emp.lots.map((l) => (
-                <tr key={l.id} className="border-b border-border">
+                <tr key={l.id} className="border-b border-border last:border-b-0">
                   <td className="px-3 py-2">
                     {why(l)}
                     {l.note && <span className="block text-xs text-faint">{l.note}</span>}
@@ -334,7 +334,7 @@ export function LedgerBoard(props: { today: string; live: boolean; practice: boo
               <p className="pb-2 text-sm font-bold">{t('entriesTitle')}</p>
               <Table heads={[t('colOn'), t('colEvent'), t('colChange'), t('colLot')]}>
                 {emp.entries.map((e) => (
-                  <tr key={e.id} className="border-b border-border">
+                  <tr key={e.id} className="border-b border-border last:border-b-0">
                     <td className="num px-3 py-2 whitespace-nowrap">{e.on}</td>
                     <td className="px-3 py-2">{t(`event.${e.event}`)}</td>
                     <td className={`num px-3 py-2 ${e.days < 0 ? 'text-warn' : 'text-ok'}`}>{t(e.days < 0 ? 'minus' : 'plus', { n: Math.abs(e.days) })}</td>

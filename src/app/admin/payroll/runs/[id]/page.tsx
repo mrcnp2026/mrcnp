@@ -62,7 +62,7 @@ export default async function PayRunPage({ params }: { params: Promise<{ id: str
         <p className="rounded-card border border-border bg-surface p-3 text-sm">
           <b>{t('revision', { n: run.revision })}</b> · {t('correctionOf', { reason: run.correctionReason ?? '' })}{' '}
           {original && (
-            <Link href={`/admin/payroll/runs/${original.id}`} className="font-bold text-primary underline">
+            <Link href={`/admin/payroll/runs/${original.id}`} className="font-bold text-primary hover:underline">
               {t('toOriginal', { n: original.revision })}
             </Link>
           )}
@@ -122,12 +122,12 @@ export default async function PayRunPage({ params }: { params: Promise<{ id: str
         </dl>
       )}
 
-      <div className="overflow-x-auto border border-border bg-bg">
+      <div className="overflow-x-auto rounded-card border border-border bg-bg">
         <table className="w-full text-sm">
           <thead>
-            <tr className="border-b border-border text-left">
+            <tr className="border-b border-border bg-surface text-left">
               {['colName', 'colGroup', 'colClose', 'colResult', 'colPay', 'colDeduction', 'colNet', final ? 'colPublish' : 'colManage'].map((k) => (
-                <th key={k} scope="col" className="px-3 py-2 whitespace-nowrap">
+                <th key={k} scope="col" className="px-3 py-2.5 text-xs font-semibold whitespace-nowrap text-muted">
                   {t(k)}
                 </th>
               ))}
@@ -137,7 +137,7 @@ export default async function PayRunPage({ params }: { params: Promise<{ id: str
             {lines.map((l) => (
               <tr key={l.employeeId} className={`border-b border-border align-top ${l.included ? '' : 'text-faint'}`}>
                 <td className="px-3 py-3">
-                  <Link href={`/admin/payroll/runs/${run.id}/${l.employeeId}`} className="font-bold text-primary underline">
+                  <Link href={`/admin/payroll/runs/${run.id}/${l.employeeId}`} className="font-bold text-primary hover:underline">
                     {l.name}
                   </Link>
                   <span className="num block text-xs text-faint">{l.employeeNo}</span>

@@ -70,19 +70,19 @@ export default async function AttendanceReportPage({ searchParams }: { searchPar
       <div className="flex flex-wrap items-center gap-2">
         {provisional === 0 && r.total.people > 0 ? <Chip tone="ok">{t('final')}</Chip> : <Chip tone="warn">{t('provisional', { n: provisional })}</Chip>}
         {practice && <Chip>{t('practice')}</Chip>}
-        <Link href={`/admin/closing?m=${month}${sp.live === '1' ? '&live=1' : ''}`} className="text-sm font-bold text-primary underline">
+        <Link href={`/admin/closing?m=${month}${sp.live === '1' ? '&live=1' : ''}`} className="text-sm font-bold text-primary hover:underline">
           {t('toClosing')}
         </Link>
       </div>
 
       <h2 className="text-lg font-bold">{t('byGroup')}</h2>
-      <div className="overflow-x-auto border border-border bg-bg">
+      <div className="overflow-x-auto rounded-card border border-border bg-bg">
         <table className="w-full text-sm">
           <thead>
-            <tr className="border-b border-border text-left">
-              <th scope="col" className="px-3 py-2 whitespace-nowrap">{t('cGroup')}</th>
+            <tr className="border-b border-border bg-surface text-left">
+              <th scope="col" className="px-3 py-2.5 text-xs font-semibold whitespace-nowrap text-muted">{t('cGroup')}</th>
               {cols.map((k) => (
-                <th key={k} scope="col" className="px-3 py-2 whitespace-nowrap">
+                <th key={k} scope="col" className="px-3 py-2.5 text-xs font-semibold whitespace-nowrap text-muted">
                   {t(k)}
                 </th>
               ))}
@@ -90,7 +90,7 @@ export default async function AttendanceReportPage({ searchParams }: { searchPar
           </thead>
           <tbody>
             {r.groups.map((g) => (
-              <tr key={g.groupId ?? ''} className="border-b border-border">
+              <tr key={g.groupId ?? ''} className="border-b border-border last:border-b-0">
                 <td className="px-3 py-2 font-bold whitespace-nowrap">{g.groupId === null ? t('unassigned') : g.name}</td>
                 {cells(g).map((v, i) => (
                   <td key={i} className="num px-3 py-2 whitespace-nowrap">{v}</td>
@@ -108,13 +108,13 @@ export default async function AttendanceReportPage({ searchParams }: { searchPar
       </div>
 
       <h2 className="text-lg font-bold">{t('byEmployee', { n: r.employees.length })}</h2>
-      <div className="overflow-x-auto border border-border bg-bg">
+      <div className="overflow-x-auto rounded-card border border-border bg-bg">
         <table className="w-full text-sm">
           <thead>
-            <tr className="border-b border-border text-left">
-              <th scope="col" className="px-3 py-2 whitespace-nowrap">{t('cName')}</th>
+            <tr className="border-b border-border bg-surface text-left">
+              <th scope="col" className="px-3 py-2.5 text-xs font-semibold whitespace-nowrap text-muted">{t('cName')}</th>
               {cols.slice(1).map((k) => (
-                <th key={k} scope="col" className="px-3 py-2 whitespace-nowrap">
+                <th key={k} scope="col" className="px-3 py-2.5 text-xs font-semibold whitespace-nowrap text-muted">
                   {t(k)}
                 </th>
               ))}
@@ -122,9 +122,9 @@ export default async function AttendanceReportPage({ searchParams }: { searchPar
           </thead>
           <tbody>
             {r.employees.map((e) => (
-              <tr key={e.employeeId} className="border-b border-border">
+              <tr key={e.employeeId} className="border-b border-border last:border-b-0">
                 <td className="px-3 py-2 whitespace-nowrap">
-                  <Link href={`/admin/records/${e.employeeId}?m=${month}${sp.live === '1' ? '&live=1' : ''}`} className="font-bold text-primary underline">
+                  <Link href={`/admin/records/${e.employeeId}?m=${month}${sp.live === '1' ? '&live=1' : ''}`} className="font-bold text-primary hover:underline">
                     {e.name}
                   </Link>
                 </td>

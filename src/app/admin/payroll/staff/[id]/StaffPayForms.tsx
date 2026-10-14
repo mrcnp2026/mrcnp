@@ -228,12 +228,12 @@ export function ItemForms({ employeeId, today, options, rows }: { employeeId: st
   return (
     <div className="flex flex-col gap-3 pt-3 text-sm">
       {rows.length > 0 && (
-        <div className="overflow-x-auto border border-border bg-bg">
+        <div className="overflow-x-auto rounded-card border border-border bg-bg">
           <table className="w-full text-sm">
             <thead>
-              <tr className="border-b border-border text-left">
+              <tr className="border-b border-border bg-surface text-left">
                 {[t('colItem'), t('colAmount'), t('colPeriod'), t('colNote'), t('colEnd')].map((h) => (
-                  <th key={h} scope="col" className="px-3 py-2 whitespace-nowrap">
+                  <th key={h} scope="col" className="px-3 py-2.5 text-xs font-semibold whitespace-nowrap text-muted">
                     {h}
                   </th>
                 ))}
@@ -241,7 +241,7 @@ export function ItemForms({ employeeId, today, options, rows }: { employeeId: st
             </thead>
             <tbody>
               {rows.map((r) => (
-                <tr key={r.id} className="border-b border-border">
+                <tr key={r.id} className="border-b border-border last:border-b-0">
                   <td className="px-3 py-2 font-bold">{r.name}</td>
                   <td className="num px-3 py-2">{r.amount ?? t('itemDefault')}</td>
                   <td className="num px-3 py-2 whitespace-nowrap">{r.validTo ? t('period', { from: r.validFrom, to: r.validTo }) : t('periodOpen', { from: r.validFrom })}</td>

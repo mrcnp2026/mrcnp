@@ -92,13 +92,13 @@ export function CloseBoard({ month, live, lines, canClose }: { month: string; li
       )}
       {err && <ErrorNote code={err.code} requestId={err.requestId} namespace="admin.closing" />}
       {notice && <p role="status" className="rounded-card border border-border bg-bg p-3 text-sm text-ok">{notice}</p>}
-      <div className="overflow-x-auto border border-border bg-bg">
+      <div className="overflow-x-auto rounded-card border border-border bg-bg">
         <table className="w-full text-sm">
           <thead>
-            <tr className="border-b border-border text-left">
+            <tr className="border-b border-border bg-surface text-left">
               <th scope="col" className="w-10 px-3 py-2" />
               {['colName', 'colGroup', 'colDays', 'colUnconfirmed', 'colPending', 'colAnomaly', 'colHours', 'colState', 'colManage'].map((k) => (
-                <th key={k} scope="col" className="px-3 py-2 whitespace-nowrap">
+                <th key={k} scope="col" className="px-3 py-2.5 text-xs font-semibold whitespace-nowrap text-muted">
                   {t(k)}
                 </th>
               ))}

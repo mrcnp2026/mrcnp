@@ -6,7 +6,7 @@ import { config } from 'dotenv';
 import { createHash, randomBytes } from 'node:crypto';
 import path from 'node:path';
 import { chromium } from 'playwright-core';
-import { createPassword } from './lib/e2e-password.ts';
+import { createPassword, openDrawer } from './lib/e2e-password.ts';
 
 config({ path: path.join(import.meta.dirname, '..', '.env.local'), quiet: true });
 const BASE = process.env.BASE ?? 'http://localhost:4123';
@@ -147,7 +147,7 @@ try {
   await p.setViewportSize({ width: 390, height: 844 });
   await p.goto(`${BASE}/punch`);
   await p.waitForLoadState('networkidle');
-  await p.locator('[data-menu-open]').click();
+  await openDrawer(p);
   const drawer = p.getByRole('dialog');
   await drawer.waitFor({ timeout: 10000 });
   const heads = await drawer.locator('p.font-extrabold').count();

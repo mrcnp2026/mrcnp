@@ -2818,7 +2818,16 @@
       "payroll_version_conflict": "다른 관리자가 먼저 기준을 고쳤습니다. 화면을 새로 고친 뒤 다시 해 주세요.",
       "sumReviewed": "확인함 {n}일",
       "reviewDo": "확인함으로 표시",
-      "reviewedUndo": "확인함 · 거두기"
+      "reviewedUndo": "확인함 · 거두기",
+      "cardsState": "처리 상태",
+      "cardsType": "유형별",
+      "state": {
+        "block": "마감 차단",
+        "check": "확인 필요",
+        "done": "확인함"
+      },
+      "unitDay": "일",
+      "unitCase": "건"
     },
     "leaveTypeRule": {
       "title": "신청 규칙",
@@ -3216,7 +3225,11 @@
       "exportDraft": "검토용 (확정 전)",
       "exportBlocked": "차단",
       "pdfOne": "명세서 PDF",
-      "pdfOneDraft": "명세서 PDF (검토용)"
+      "pdfOneDraft": "명세서 PDF (검토용)",
+      "cardsTitle": "진행 상태",
+      "unit": "건",
+      "count": "대장 {n}건",
+      "showAll": "전체 보기"
     },
     "reports": {
       "attTitle": "근태 리포트",

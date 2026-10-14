@@ -18,12 +18,12 @@ export function PolicyForm({ policy, version, counts }: { policy: AnomalyPolicy;
   const dirty = ANOMALY_TYPES.some((k) => value[k] !== policy[k]);
   return (
     <div className="flex flex-col gap-3">
-      <div className="overflow-x-auto border border-border bg-bg">
+      <div className="overflow-x-auto rounded-card border border-border bg-bg">
         <table className="w-full text-sm">
           <thead>
-            <tr className="border-b border-border text-left">
+            <tr className="border-b border-border bg-surface text-left">
               {[t('colType'), t('colCount'), t('colLevel')].map((h) => (
-                <th key={h} scope="col" className="px-3 py-2 whitespace-nowrap">
+                <th key={h} scope="col" className="px-3 py-2.5 text-xs font-semibold whitespace-nowrap text-muted">
                   {h}
                 </th>
               ))}
@@ -31,7 +31,7 @@ export function PolicyForm({ policy, version, counts }: { policy: AnomalyPolicy;
           </thead>
           <tbody>
             {ANOMALY_TYPES.map((k) => (
-              <tr key={k} className="border-b border-border">
+              <tr key={k} className="border-b border-border last:border-b-0">
                 <td className="px-3 py-2">
                   <span className="font-bold">{t(`type.${k}`)}</span>
                   <span className="block text-xs text-faint">{t(`why.${k}`)}</span>
@@ -86,6 +86,7 @@ export function PolicyForm({ policy, version, counts }: { policy: AnomalyPolicy;
 }
 
 /** 「확인만」 유형의 날: 봤다고 표시하거나 거둔다. 마감을 막는 날에는 이 버튼이 없다(기록을 고쳐야 풀린다) */
+// 줄마다 테두리 단추를 반복하지 않는다 — 글자 단추 (2026-10-14 목록 틀)
 export function ReviewButton({ employeeId, workDate, types, reviewed, live }: { employeeId: string; workDate: string; types: string[]; reviewed: boolean; live: boolean }) {
   const t = useTranslations('admin.anomalies');
   const router = useRouter();
@@ -100,7 +101,7 @@ export function ReviewButton({ employeeId, workDate, types, reviewed, live }: { 
         setBusy(false);
         router.refresh();
       }}
-      className={`inline-flex h-8 items-center rounded-button border px-3 text-sm font-bold disabled:opacity-50 ${reviewed ? 'border-border bg-surface text-muted' : 'border-primary bg-bg text-primary'}`}
+      className={`inline-flex min-h-8 items-center text-sm font-bold whitespace-nowrap disabled:opacity-50 ${reviewed ? 'text-muted hover:text-text' : 'text-primary hover:underline'}`}
     >
       {t(reviewed ? 'reviewedUndo' : 'reviewDo')}
     </button>

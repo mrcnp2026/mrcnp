@@ -33,3 +33,16 @@ export async function registerDevice(p: Page): Promise<void> {
   await button.click();
   await button.waitFor({ state: 'detached', timeout: 30000 });
 }
+
+/**
+ * 폰 왼쪽 위 메뉴(서랍)를 연다. 화면이 막 그려져 아직 단추가 살아나기 전에 누르면 열리지 않는다 —
+ * 열릴 때까지 몇 번 다시 누른다 (2026-10-14: 개발 서버가 무거울 때 공지 · 근무일정 템플릿 검사가 여기서 멈췄다)
+ */
+export async function openDrawer(p: Page): Promise<void> {
+  const dialog = p.getByRole('dialog');
+  for (let i = 0; i < 6; i++) {
+    await p.locator('[data-menu-open]').first().click();
+    if (await dialog.waitFor({ timeout: 4000 }).then(() => true, () => false)) return;
+  }
+  await dialog.waitFor({ timeout: 4000 });
+}

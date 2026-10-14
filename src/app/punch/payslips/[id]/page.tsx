@@ -72,7 +72,7 @@ export default async function MyPayslipPage({ params }: { params: Promise<{ id: 
         <p className="rounded-card border border-border bg-surface p-3 text-sm">
           {t('correctedNote', { reason: slip.correctionReason ?? '' })}{' '}
           {previous && (
-            <Link href={`/punch/payslips/${previous.id}`} className="font-bold text-primary underline">
+            <Link href={`/punch/payslips/${previous.id}`} className="font-bold text-primary hover:underline">
               {t('toPrevious')}
             </Link>
           )}

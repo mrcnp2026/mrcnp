@@ -27,8 +27,8 @@ export default async function LaborCostPage({ searchParams }: { searchParams: Pr
   const cells = (s: LaborSum) => [f.number(s.statements), won(s.pay), won(s.deduction), won(s.net), won(s.employer), won(s.total)];
   const head = (first: string) => (
     <thead>
-      <tr className="border-b border-border text-left">
-        <th scope="col" className="px-3 py-2 whitespace-nowrap">{first}</th>
+      <tr className="border-b border-border bg-surface text-left">
+        <th scope="col" className="px-3 py-2.5 text-xs font-semibold whitespace-nowrap text-muted">{first}</th>
         {COLS.map((k) => (
           <th key={k} scope="col" className="px-3 py-2 text-right whitespace-nowrap">{t(k)}</th>
         ))}
@@ -104,7 +104,7 @@ export default async function LaborCostPage({ searchParams }: { searchParams: Pr
           {([['byMonth', t('cMonth'), r.months.map((m) => row(m.month, m.month, m))], ['byGroup', t('cGroup'), r.groups.map((g) => row(g.groupId ?? 'none', t('groupPeople', { name: g.name, n: g.people }), g))], ['byEmployee', t('cEmployee'), r.employees.map((e) => row(e.employeeId, <>{e.name} <span className="num text-xs text-muted">{e.employeeNo}</span></>, e))]] as const).map(([k, first, body]) => (
             <section key={k} className="flex flex-col gap-2">
               <h2 className="text-lg font-bold">{t(k)}</h2>
-              <div className="overflow-x-auto border border-border bg-bg">
+              <div className="overflow-x-auto rounded-card border border-border bg-bg">
                 <table className="w-full text-sm" data-labor={k}>
                   {head(first)}
                   <tbody>
