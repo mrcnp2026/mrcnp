@@ -109,8 +109,10 @@ try {
 
   // ── 직원 목록이 부서 › 팀으로 묶인다 ──
   await p.goto(`${BASE}/admin/members`);
-  const sec = p.locator('section', { hasText: 'e2e-부서' }).first();
-  check((await sec.getByRole('heading', { name: /e2e-팀/ }).count()) > 0 && (await sec.getByText('검사용(자동)').count()) > 0, '직원 목록: 부서 묶음 › 팀 › 직원');
+  // 폰 폭에서는 부서 카드 안에 팀 묶음(section)이 들어 있다 — 부서 이름은 카드 머리에, 팀 묶음에는 팀 이름과 직원 (화면 개편에 맞춰 2026-10-14 검사 갱신. PC 폭은 표로 보인다)
+  await p.waitForLoadState('networkidle');
+  const teamBox = p.locator('section', { has: p.getByRole('heading', { name: /e2e-팀/ }) }).filter({ visible: true }).first();
+  check((await p.getByRole('heading', { name: /e2e-부서/ }).filter({ visible: true }).count()) > 0 && (await teamBox.count()) > 0 && (await teamBox.getByText('검사용(자동)').count()) > 0, '직원 목록: 부서 카드 › 팀 묶음 › 직원');
   await shot('org-members');
   r = await post(`/api/admin/groups/${team!.id}`, { active: false });
   check(r.status === 409 && r.json.error === 'group_in_use', '직원이 있는 팀은 숨길 수 없음');

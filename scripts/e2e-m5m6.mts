@@ -74,8 +74,9 @@ try {
   const tp = await open(`/admin/leave/types/${TYPE}`);
   check(tp.includes('신청 규칙') && tp.includes('사유를 꼭 적어야 함'), '휴가 유형 상세에 「신청 규칙」');
   const { data: before } = await db.from('leave_type_policy_versions').select('version').eq('type_code', TYPE).eq('status', 'active').is('valid_to', null).maybeSingle();
-  if (!before) {
-    const r = await post('/api/admin/leave/ledger', { action: 'typeRule', code: TYPE, expectedVersion: 0, rule: { maxDaysPerRequest: 0.25, minNoticeDays: 3, reasonRequired: true } });
+  // 늘 엄한 규칙을 새 판으로 저장하고, 이 단락 끝에서 느슨한 규칙으로 되돌린다 — 같은 검사용 종류를 쓰는 e2e-leave-types가 한도에 걸리지 않게 (2026-10-14)
+  {
+    const r = await post('/api/admin/leave/ledger', { action: 'typeRule', code: TYPE, expectedVersion: before?.version ?? 0, rule: { maxDaysPerRequest: 0.25, minNoticeDays: 3, reasonRequired: true } });
     check(r.status === 200, '신청 규칙 저장', JSON.stringify(r));
   }
   check((await post('/api/admin/leave/ledger', { action: 'typeRule', code: TYPE, expectedVersion: 999, rule: { maxDaysPerRequest: 1, minNoticeDays: 0, reasonRequired: false } })).status === 409, '판 번호가 다르면 규칙이 저장되지 않는다');
@@ -87,6 +88,9 @@ try {
     check(r1.status === 400 && (r1.json.error === 'leave_too_long' || r1.json.error === 'no_workdays'), '한도를 넘는 신청은 거부된다', JSON.stringify(r1.json));
   } finally {
     await db.from('leave_types').update({ active: false }).eq('code', TYPE);
+    const { data: cur } = await db.from('leave_type_policy_versions').select('version').eq('type_code', TYPE).eq('status', 'active').is('valid_to', null).maybeSingle();
+    const back = await post('/api/admin/leave/ledger', { action: 'typeRule', code: TYPE, expectedVersion: cur?.version ?? 0, rule: { maxDaysPerRequest: 30, minNoticeDays: 0, reasonRequired: false } });
+    check(back.status === 200, '검사가 끝나면 신청 규칙을 느슨하게 되돌린다', JSON.stringify(back));
   }
 
   // ── M5 이월 · 퇴사 정산 (검사 계정의 직접 지급 건으로) ──
