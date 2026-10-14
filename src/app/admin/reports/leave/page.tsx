@@ -1,6 +1,8 @@
 // 휴가 리포트 — 부서/전사의 받은 연차 · 사용 · 소멸 · 잔여 · 선사용 · 소진율 (PRD v1.3 37.5, L22). 관리자만.
 // 숫자는 휴가 원장의 합이다. 화면과 「엑셀 받기」가 같은 계산(buildLeaveReport)을 쓴다. 휴가 사유는 나오지 않는다.
 import { getTranslations } from 'next-intl/server';
+import { leaveTypeName } from '@/lib/leave';
+import { loadAllLeaveTypes } from '@/lib/leave-data';
 import { HelpTip } from '@/components/Help';
 import Link from 'next/link';
 import { Chip, PageShell } from '@/components/ui';
@@ -14,6 +16,8 @@ const field = 'min-h-9 rounded-button border border-border bg-bg px-3 text-sm';
 
 export default async function LeaveReportPage({ searchParams }: { searchParams: Promise<{ to?: string; g?: string; inactive?: string; live?: string }> }) {
   const [t, sp, groups] = await Promise.all([getTranslations('admin.reports'), searchParams, loadOrgGroups()]);
+  const [tl, leaveTypes] = await Promise.all([getTranslations('leave'), loadAllLeaveTypes()]);
+  const typeName = (code: string) => leaveTypeName(leaveTypes, code, tl);
   const today = toKstDate(new Date());
   const asOf = sp.to && /^\d{4}-\d{2}-\d{2}$/.test(sp.to) && !Number.isNaN(Date.parse(`${sp.to}T00:00:00Z`)) ? sp.to : today;
   const practice = OFFICE.practiceMode && sp.live !== '1';
@@ -102,6 +106,66 @@ export default async function LeaveReportPage({ searchParams }: { searchParams: 
           </tbody>
         </table>
       </div>
+
+      <h2 className="text-lg font-bold">{t('byPolicyGroup')}</h2>
+      <div className="overflow-x-auto rounded-card border border-border bg-bg">
+        <table className="w-full text-sm" data-policy-groups>
+          <thead>
+            <tr className="border-b border-border bg-surface text-left">
+              <th scope="col" className="px-3 py-2.5 text-xs font-semibold whitespace-nowrap text-muted">{t('cPolicyGroup')}</th>
+              <th scope="col" className="px-3 py-2.5 text-xs font-semibold whitespace-nowrap text-muted">{t('lPeople')}</th>
+              {cols.map((k) => (
+                <th key={k} scope="col" className="px-3 py-2.5 text-xs font-semibold whitespace-nowrap text-muted">
+                  {t(k)}
+                </th>
+              ))}
+            </tr>
+          </thead>
+          <tbody>
+            {r.policyGroups.map((g) => (
+              <tr key={g.groupId} className="border-b border-border last:border-b-0">
+                <td className="px-3 py-2 font-bold whitespace-nowrap">
+                  {g.name}
+                  {g.excluded && <span className="ml-1 text-xs font-normal text-warn">{t('excludedTag')}</span>}
+                </td>
+                <td className="num px-3 py-2">{t('startedValue', { n: g.started, all: g.people })}</td>
+                {cells(g).map((v, i) => (
+                  <td key={i} className="num px-3 py-2 whitespace-nowrap">{v}</td>
+                ))}
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+
+      <h2 className="text-lg font-bold">{t('byType', { from: r.yearFrom, to: r.asOf })}</h2>
+      <div className="overflow-x-auto rounded-card border border-border bg-bg">
+        <table className="w-full text-sm" data-type-use>
+          <thead>
+            <tr className="border-b border-border bg-surface text-left">
+              {(['cType', 'cRequests', 'cDays', 'cPeopleUsed'] as const).map((k) => (
+                <th key={k} scope="col" className="px-3 py-2.5 text-xs font-semibold whitespace-nowrap text-muted">{t(k)}</th>
+              ))}
+            </tr>
+          </thead>
+          <tbody>
+            {r.typeUse.length === 0 && (
+              <tr>
+                <td colSpan={4} className="px-3 py-4 text-center text-faint">{t('typeNone')}</td>
+              </tr>
+            )}
+            {r.typeUse.map((x) => (
+              <tr key={x.code} className="border-b border-border last:border-b-0">
+                <td className="px-3 py-2 font-bold">{typeName(x.code)}</td>
+                <td className="num px-3 py-2">{x.requests}</td>
+                <td className="num px-3 py-2">{x.days}</td>
+                <td className="num px-3 py-2">{x.people}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+      <p className="text-xs text-faint">{t('typeNote')}</p>
 
       <h2 className="text-lg font-bold">{t('byEmployee', { n: r.employees.length })}</h2>
       <div className="overflow-x-auto rounded-card border border-border bg-bg">

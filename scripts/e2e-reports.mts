@@ -71,8 +71,8 @@ try {
   const xlClosed = Number(sum.getRow(last).getCell(3).value);
   check(last > 0 && xlPeople === peopleOnScreen && closeOnScreen === `${xlClosed}/${xlPeople}명`, '화면의 합계와 엑셀의 합계가 같다 (대상 · 마감)', `화면 ${peopleOnScreen} · ${closeOnScreen} / 엑셀 ${xlPeople} · ${xlClosed}`);
   const empRows = a.wb.getWorksheet('직원별')!.rowCount - 2;
-  check(empRows === (await p.locator('table').nth(1).locator('tbody tr').count()), '직원 수가 화면과 엑셀에서 같다', String(empRows));
-  check(!JSON.stringify(a.wb.getWorksheet('직원별')!.getSheetValues()).includes('검사용'), '검사 전용 계정은 리포트에 들어가지 않는다');
+  check(empRows === (await p.locator('table:not([data-policy-groups]):not([data-type-use])').nth(1).locator('tbody tr').count()), '직원 수가 화면과 엑셀에서 같다', String(empRows));
+  check(!JSON.stringify(a.wb.getWorksheet('직원별')!.getSheetValues()).includes('검사용2') && !JSON.stringify(a.wb.getWorksheet('직원별')!.getSheetValues()).includes('검사용3'), '꺼진 검사 계정은 리포트에 들어가지 않는다 (실제 관리자에게는 검사 계정이 아예 없다 — 보는 사람에 따라 숨김)');
   const { data: groups } = await db.from('org_groups').select('id, name').eq('active', true).is('parent_id', null).limit(1);
   if (groups?.length) {
     const filtered = await open(`/admin/reports/attendance?g=${groups[0].id}&basis=current`);
@@ -85,10 +85,11 @@ try {
   // ── 휴가 리포트 ──
   const lv = await open('/admin/reports/leave');
   check(lv.includes('휴가 리포트') && lv.includes('소진율') && lv.includes('부서별'), '휴가 리포트가 열린다');
+  check(lv.includes('휴가 정책 그룹별') && (await p.locator('table[data-policy-groups] tbody tr').count()) >= 1 && lv.includes('휴가 종류별 사용'), '휴가 정책 그룹별 · 휴가 종류별 사용 표 (2026-10-15)');
   await shot('report-2-leave');
   const l = await xlsx('/api/admin/reports/leave');
-  check(l.status === 200 && JSON.stringify(l.wb.worksheets.map((w) => w.name)) === JSON.stringify(['부서별', '직원별', '메타']), '휴가 리포트 엑셀');
-  check(l.wb.getWorksheet('직원별')!.rowCount - 2 === (await p.locator('table').nth(1).locator('tbody tr').count()), '휴가 리포트도 직원 수가 화면과 엑셀에서 같다');
+  check(l.status === 200 && JSON.stringify(l.wb.worksheets.map((w) => w.name)) === JSON.stringify(['부서별', '직원별', '정책그룹별', '종류별 사용', '메타']), '휴가 리포트 엑셀');
+  check(l.wb.getWorksheet('직원별')!.rowCount - 2 === (await p.locator('table:not([data-policy-groups]):not([data-type-use])').nth(1).locator('tbody tr').count()), '휴가 리포트도 직원 수가 화면과 엑셀에서 같다');
   check(JSON.stringify(l.wb.getWorksheet('메타')!.getSheetValues()).includes('사용 ÷ 받은 연차'), '엑셀에 소진율의 분모가 적혀 있다');
   const inact = await open('/admin/reports/leave?inactive=1');
   check(inact.includes('휴가 리포트'), '퇴사자 포함 조건으로도 열린다');

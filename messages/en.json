@@ -3450,7 +3450,17 @@
       "notStarted": "Leave ledger not started (no approved grants)",
       "leaveNote": "Usage rate = used ÷ granted (grants usable as of the date). It is n/a when granted is 0. Advance use and expiry are shown separately. Employees whose ledger has not started are not in the totals.",
       "attFile": "attendance-report",
-      "leaveFile": "leave-report"
+      "leaveFile": "leave-report",
+      "byPolicyGroup": "By leave policy group",
+      "cPolicyGroup": "Policy group",
+      "excludedTag": "Excluded",
+      "byType": "Use by leave type ({from} ~ {to}, approved)",
+      "cType": "Leave type",
+      "cRequests": "Requests",
+      "cDays": "Days",
+      "cPeopleUsed": "People",
+      "typeNone": "No approved leave in this period.",
+      "typeNote": "Includes non-annual types (family events, sick leave, etc.). Sum of approved request days, unlike the annual ledger."
     },
     "promotion": {
       "title": "Leave use promotion",
