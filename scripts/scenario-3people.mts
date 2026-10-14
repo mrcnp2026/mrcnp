@@ -94,17 +94,22 @@ const DAILY = [
 ];
 // 손으로 계산한 기대값 (원)
 const hourlyA = 3000000 / 209; // 14,354.0669...
+// 월급제: 중소기업 취업자 감면 90% → 세액표 90,000 × 10% = 9,000 · 지방 900
+// 시급제: 국민연금 · 고용보험 가입 + 두루누리 80% → 832,000 × 4.5% = 37,440 × 20% = 7,488 → 10원 미만 버림 7,480 / 832,000 × 0.9% = 7,488 × 20% = 1,497.6 → 1,490 (요율은 검사용)
 const EXPECT = {
-  A: { BASE: 3000000, OVERTIME: Math.round(6 * hourlyA * 1.5), NIGHT: Math.round(1 * hourlyA * 0.5), INCOME_TAX: 90000, LOCAL_TAX: 9000 },
-  B: { BASE: 48 * 13000, PAID_LEAVE: 16 * 13000, INCOME_TAX: 10000, LOCAL_TAX: 1000 },
+  A: { BASE: 3000000, OVERTIME: Math.round(6 * hourlyA * 1.5), NIGHT: Math.round(1 * hourlyA * 0.5), INCOME_TAX: 9000, LOCAL_TAX: 900 },
+  B: { BASE: 48 * 13000, PAID_LEAVE: 16 * 13000, PENSION: 7480, EMPLOYMENT: 1490, INCOME_TAX: 10000, LOCAL_TAX: 1000 },
 };
-const sumPay = (e: Record<string, number>) => Object.entries(e).filter(([k]) => !k.includes('TAX')).reduce((a, [, v]) => a + v, 0);
-const net = (e: Record<string, number>) => sumPay(e) - (e.INCOME_TAX ?? 0) - (e.LOCAL_TAX ?? 0);
+const DEDUCT = new Set(['INCOME_TAX', 'LOCAL_TAX', 'PENSION', 'EMPLOYMENT']);
+const sumPay = (e: Record<string, number>) => Object.entries(e).filter(([k]) => !DEDUCT.has(k)).reduce((a, [, v]) => a + v, 0);
+const net = (e: Record<string, number>) => sumPay(e) - Object.entries(e).filter(([k]) => DEDUCT.has(k)).reduce((a, [, v]) => a + v, 0);
 const won = (n: number) => `${n.toLocaleString('ko-KR')}원`;
 
 // 정리할 것
 let ruleId: string | null = null;
 let refId: string | null = null;
+const tempRefs: string[] = [];
+let settingId: string | null = null;
 let noticeId: string | null = null;
 const closeIds: string[] = [];
 const payeeIds: string[] = [];
@@ -173,12 +178,13 @@ try {
   const taxBody = { action: 'tax', validFrom: FROM, reason: null, expectedVersion: 0, withholdingRatio: 100, familyCount: 1, childCount: 0, insurance: { pension: none('모의 검사'), health: none('모의 검사'), employment: none('모의 검사'), accident: none('모의 검사') }, studentLoan: { state: 'NO', monthlyAmount: null } };
   r = await post(`/api/admin/payroll/staff/${A.id}`, { action: 'contract', validFrom: FROM, reason: null, expectedVersion: 0, payType: 'MONTHLY', amount: 3000000, timeBasis: 'ACTUAL', monthlyHours: 209, annualDivisor: null, included: { overtimeHours: null, holidayHours: null, note: null } });
   check(r.status === 200, `${A.name}: 월급제 계약 3,000,000원 · 월 209시간 · 실제 시간 기준`, JSON.stringify(r.json));
-  r = await post(`/api/admin/payroll/staff/${A.id}`, taxBody);
-  check(r.status === 200, `${A.name}: 세무(본인 1명 · 100%) · 4대보험 가입 안 함(모의)`, JSON.stringify(r.json));
+  r = await post(`/api/admin/payroll/staff/${A.id}`, { ...taxBody, reliefs: { sme: { state: 'YES', rate: 90, from: FROM, to: null, note: '모의 — 감면신청서 받음' }, durunuri: { state: 'NO', note: '모의 — 대상 아님' } } });
+  check(r.status === 200, `${A.name}: 세무(본인 1명 · 100%) · 4대보험 가입 안 함 · 중소기업 취업 감면 90%`, JSON.stringify(r.json));
   r = await post(`/api/admin/payroll/staff/${B.id}`, { action: 'contract', validFrom: FROM, reason: null, expectedVersion: 0, payType: 'HOURLY', amount: 13000, timeBasis: 'ROUNDED', monthlyHours: null, annualDivisor: null, included: { overtimeHours: null, holidayHours: null, note: null } });
   check(r.status === 200, `${B.name}: 시급제 계약 13,000원 · 15분 단위로 끊은 시간 기준`, JSON.stringify(r.json));
-  r = await post(`/api/admin/payroll/staff/${B.id}`, taxBody);
-  check(r.status === 200, `${B.name}: 세무 · 보험(모의)`, JSON.stringify(r.json));
+  const yes = { state: 'YES', reportedWage: null, note: null };
+  r = await post(`/api/admin/payroll/staff/${B.id}`, { ...taxBody, insurance: { pension: yes, health: none('모의 검사'), employment: yes, accident: none('모의 검사') }, reliefs: { sme: { state: 'NO', note: '모의 — 대상 아님' }, durunuri: { state: 'YES', pensionRate: 80, employmentRate: 80, from: FROM, to: null, note: '모의 — 공단 지원 결정' } } });
+  check(r.status === 200, `${B.name}: 세무 · 국민연금 · 고용보험 가입 · 두루누리 80%`, JSON.stringify(r.json));
   // 검사용 세액표 (그 한 달에만, 실제 세액표 아님): 77만~200만 → 1만원, 200만~1000만 → 9만원 (본인 1명 기준, 가족이 많을수록 조금씩 적게)
   {
     const payload = { wageMin: 770000, wageMaxExclusive: 10000000, families: 11, bandCount: 2, e2e: `scenario-${YM}` };
@@ -188,6 +194,18 @@ try {
     const fam = (base: number) => Array.from({ length: 11 }, (_, i) => Math.max(0, base - i * 1000));
     await db.from('payroll_tax_rows').insert([...fam(10000).map((t, i) => ({ reference_version_id: refId, wage_from: 770000, wage_to: 2000000, family_count: i + 1, base_tax: t })), ...fam(90000).map((t, i) => ({ reference_version_id: refId, wage_from: 2000000, wage_to: 10000000, family_count: i + 1, base_tax: t }))]);
     check(!!refId, '검사용 세액표(그 달에만): 77만~200만원 → 소득세 10,000 / 200만~1,000만원 → 90,000 (본인 1명)');
+    // 검사용 보험 요율(그 한 달에만): 국민연금 4.5% · 상하한 39만~617만 · 고용보험 0.9%
+    for (const [kind, payload2, unit] of [['pension.rate', { employeeRate: '0.045', employerRate: '0.045', e2e: YM }, '%'], ['pension.limit', { lower: 390000, upper: 6170000, e2e: YM }, '원'], ['employment.rate', { employeeRate: '0.009', employerRate: '0.009', e2e: YM }, '%']] as const) {
+      const h = createHash('sha256').update(JSON.stringify(payload2)).digest('hex');
+      const x = await db.from('payroll_reference_versions').insert({ reference_kind: kind, origin: 'manual', valid_from: FROM, valid_to: TO, normalized_payload: payload2, source_unit: unit, payload_hash: h, state: 'APPROVED', reviewed_payload_hash: h, review_reason: 'e2e', approved_by: ADM.id, approved_at: new Date().toISOString(), created_by: ADM.id }).select('id').single();
+      if (x.data) tempRefs.push(x.data.id as string);
+    }
+    check(tempRefs.length === 3, '검사용 보험 요율(그 달에만): 국민연금 4.5% · 고용보험 0.9%');
+    // 회사 설정 「두루누리 · 중소기업 감면 사용」을 그 한 달에만 켠다(끝에 거둔다)
+    const { data: vs } = await db.from('payroll_company_setting_versions').select('version').eq('section', 'employee-defaults').order('version', { ascending: false }).limit(1);
+    const st = await db.from('payroll_company_setting_versions').insert({ section: 'employee-defaults', payload: { payType: null, durunuri: true, smeTaxCut: true }, valid_from: FROM, valid_to: TO, version: ((vs?.[0]?.version as number | undefined) ?? 0) + 1, reason: '모의 운영 검사 — 그 한 달만', created_by: ADM.id }).select('id').single();
+    settingId = (st.data?.id as string) ?? null;
+    check(!!settingId, `회사 설정: 두루누리 · 중소기업 감면 사용 (${YM} 한 달만)`, st.error?.message ?? '');
   }
   // 연장 · 야간 수당 정책: 회사 설정 그대로 둔다(지금 「쓰지 않음」이면 계산이 막혀야 한다)
   {
@@ -329,6 +347,7 @@ try {
   const qb1 = await alerts(qb);
   check(qb1.notices >= 1, `${B.name}: 확인 안 한 공지 ${qb1.notices}건`);
   r = await postOn(qb, `/api/notices/${noticeId}/confirm`, {});
+  await postOn(qa, `/api/notices/${noticeId}/confirm`, {}); // 월급제 직원도 확인 — 안 하면 홈 화면마다 공지 창이 떠서 다른 단추를 가린다
   const qb2 = await alerts(qb);
   check(qb2.notices === qb1.notices - 1, `${B.name}: 공지를 확인하면 ${qb1.notices} → ${qb2.notices}`, JSON.stringify(r.json));
 
@@ -361,7 +380,9 @@ try {
     const g = (await run()).current_generation_id;
     const { data: s } = await db.from('payroll_statements').select('id, state, blockers, pay_total, deduction_total, net_total, snapshot').eq('generation_id', g).eq('employee_id', id).single();
     const { data: lines } = s ? await db.from('payroll_statement_items').select('item_code, kind, amount, quantity').eq('statement_id', s.id) : { data: [] };
-    return { s, lines: Object.fromEntries((lines ?? []).map((l) => [l.item_code, Number(l.amount)])) as Record<string, number>, qty: Object.fromEntries((lines ?? []).map((l) => [l.item_code, l.quantity])) };
+    const mine = (lines ?? []).filter((l) => l.kind !== 'EMPLOYER');
+    const employer = (lines ?? []).filter((l) => l.kind === 'EMPLOYER').reduce((a, l) => a + Number(l.amount), 0);
+    return { s, employer, lines: Object.fromEntries(mine.map((l) => [l.item_code, Number(l.amount)])) as Record<string, number>, qty: Object.fromEntries(mine.map((l) => [l.item_code, l.quantity])) };
   };
   // 1차: 회사 설정의 연장 · 야간 수당이 「사용 안 함」이면 월급제는 막혀야 한다
   let rr = await run();
@@ -415,11 +436,20 @@ try {
   await p.getByRole('button', { name: '공개하지 않은 2명에게 공개' }).click();
   await p.getByText('2명에게 공개했습니다.').waitFor({ timeout: 30000 });
   check(true, '두 사람에게 명세서 공개');
+  check(sb.employer === 7480 + 1490, `${B.name}: 사업주 부담도 두루누리만큼 줄어든다 (국민연금 7,480 + 고용보험 1,490)`, String(sb.employer));
+  const blk = (x: { blockers?: unknown } | null) => ((x?.blockers ?? []) as { code: string }[]).map((b) => b.code);
+  check(blk(sa.s).includes('sme_applied') && blk(sb.s).includes('durunuri_pension') && blk(sb.s).includes('durunuri_employment'), '명세에 「감면 적용」 · 「두루누리 적용」 참고가 남는다');
   const slipA = await open(qa, '/punch/payslips');
   check(slipA.includes(`${YM}`) && slipA.includes(won(net(EXPECT.A))), `${A.name}: 내 급여 조회에 ${YM} 실지급 ${won(net(EXPECT.A))}`);
+  await qa.locator('main summary').first().click();
+  const detailA = await qa.locator('main').innerText();
+  check(detailA.includes('중소기업 취업 소득세 감면') && detailA.includes('90%') && detailA.includes('36,000,000원') && detailA.includes(`${FROM}부터 적용 예정`), `${A.name}: 내 급여 조회 — 연봉(월급 × 12) 36,000,000 · 중소기업 감면 90% · 적용 예정일이 보인다`);
   await shot(qa, 's7-A-myslip');
   const slipB = await open(qb, '/punch/payslips');
   check(slipB.includes(won(net(EXPECT.B))), `${B.name}: 내 급여 조회에 실지급 ${won(net(EXPECT.B))}`);
+  await qb.locator('main summary').first().click();
+  const detailB = await qb.locator('main').innerText();
+  check(detailB.includes('두루누리 적용여부') && detailB.includes('80%') && detailB.includes('13,000원'), `${B.name}: 내 급여 조회 — 시급 13,000 · 두루누리 80%`);
   await shot(qb, 's7-B-myslip');
 
   // ════ 8. 일용직 ════
@@ -468,6 +498,8 @@ try {
   if (ruleId) await db.from('work_rules').update({ active: false }).eq('id', ruleId);
   for (const [id, v] of policyBefore) await db.from('payroll_policy_versions').update({ in_use: v }).eq('id', id);
   if (refId) await db.from('payroll_reference_versions').update({ state: 'WITHDRAWN' }).eq('id', refId);
+  if (tempRefs.length) await db.from('payroll_reference_versions').update({ state: 'WITHDRAWN' }).in('id', tempRefs);
+  if (settingId) await db.from('payroll_company_setting_versions').update({ status: 'withdrawn' }).eq('id', settingId);
   for (const id of closeIds) await db.from('attendance_closes').update({ state: 'REOPENED', reopened_by: ADM.id, reopened_at: new Date().toISOString(), reopen_reason: '모의 운영 검사 끝' }).eq('id', id).eq('state', 'CLOSED');
   await withdrawPay();
   if (noticeId) await db.from('notices').update({ status: 'archived' }).eq('id', noticeId);

@@ -7,7 +7,7 @@ import { useState, type ReactNode } from 'react';
 import { callApi } from '@/components/client-api';
 import { ErrorNote } from '@/components/ErrorNote';
 import { Button } from '@/components/ui';
-import { INSURERS, PAY_TYPES, TIME_BASES, type ContractInput, type PayType, type TaxInput } from '@/lib/payroll/contract';
+import { INSURERS, PAY_TYPES, SME_RATES, TIME_BASES, UNKNOWN_RELIEFS, type ContractInput, type PayType, type TaxInput } from '@/lib/payroll/contract';
 
 const field = 'min-h-9 rounded-button border border-border bg-bg px-3 text-sm';
 type Err = { code: string; requestId?: string } | null;
@@ -130,7 +130,7 @@ export function ContractForm({ employeeId, today, version, last }: { employeeId:
   );
 }
 
-export function TaxForm({ employeeId, today, version, last }: { employeeId: string; today: string; version: number; last: TaxInput | null }) {
+export function TaxForm({ employeeId, today, version, last, reliefOn }: { employeeId: string; today: string; version: number; last: TaxInput | null; reliefOn: { sme: boolean; durunuri: boolean } }) {
   const t = useTranslations('admin.staffPay');
   const { busy, err, done, save } = useSave(employeeId);
   const [open, setOpen] = useState(false);
@@ -150,7 +150,12 @@ export function TaxForm({ employeeId, today, version, last }: { employeeId: stri
               action: 'tax', expectedVersion: version, validFrom: f.get('validFrom'), reason: f.get('reason') || null,
               withholdingRatio: Number(f.get('ratio')), familyCount: f.get('family'), childCount: f.get('child'),
               insurance: Object.fromEntries(INSURERS.map((k) => [k, { state: f.get(`${k}.state`), reportedWage: f.get(`${k}.wage`), note: f.get(`${k}.note`) || null }])),
-              studentLoan: { state: f.get('loan.state'), monthlyAmount: f.get('loan.amount') },
+              studentLoan: { state: f.get('loan.state'), monthlyAmount: f.get('loan.amount'), from: f.get('loan.from') || null, to: f.get('loan.to') || null },
+              // 회사가 끈 감면 · 지원은 화면에 없으니 앞 판의 값을 그대로 넘긴다(지우지 않는다)
+              reliefs: {
+                sme: reliefOn.sme ? { state: f.get('sme.state'), rate: f.get('sme.rate') || null, from: f.get('sme.from') || null, to: f.get('sme.to') || null, note: f.get('sme.note') || null } : (last?.reliefs.sme ?? UNKNOWN_RELIEFS.sme),
+                durunuri: reliefOn.durunuri ? { state: f.get('duru.state'), pensionRate: f.get('duru.pension') || null, employmentRate: f.get('duru.employment') || null, from: f.get('duru.from') || null, to: f.get('duru.to') || null, note: f.get('duru.note') || null } : (last?.reliefs.durunuri ?? UNKNOWN_RELIEFS.durunuri),
+              },
             });
             if (ok) setOpen(false);
           }}
@@ -199,6 +204,76 @@ export function TaxForm({ employeeId, today, version, last }: { employeeId: stri
           <Label text={t('fLoanAmount')}>
             <input name="loan.amount" type="number" min="0" step="1" defaultValue={last?.studentLoan.monthlyAmount ?? ''} className={field} />
           </Label>
+          <Label text={t('fLoanFrom')}>
+            <input name="loan.from" type="date" defaultValue={last?.studentLoan.from ?? ''} className={field} />
+          </Label>
+          <Label text={t('fLoanTo')}>
+            <input name="loan.to" type="date" defaultValue={last?.studentLoan.to ?? ''} className={field} />
+          </Label>
+          {reliefOn.sme && (
+            <fieldset className="grid gap-2 rounded-button border border-border p-3 md:col-span-2 md:grid-cols-3">
+              <legend className="px-1 font-bold">{t('smeTitle')}</legend>
+              <Label text={t('fTarget')}>
+                <select name="sme.state" defaultValue={last?.reliefs.sme.state ?? 'UNKNOWN'} className={field}>
+                  {(['UNKNOWN', 'YES', 'NO'] as const).map((s) => (
+                    <option key={s} value={s}>
+                      {t(`tri.${s}`)}
+                    </option>
+                  ))}
+                </select>
+              </Label>
+              <Label text={t('fSmeRate')}>
+                <select name="sme.rate" defaultValue={last?.reliefs.sme.rate ?? ''} className={field}>
+                  <option value="">{t('notSet')}</option>
+                  {SME_RATES.map((n) => (
+                    <option key={n} value={n}>
+                      {t('pct', { n })}
+                    </option>
+                  ))}
+                </select>
+              </Label>
+              <span className="hidden md:block" />
+              <Label text={t('fReliefFrom')}>
+                <input name="sme.from" type="date" defaultValue={last?.reliefs.sme.from ?? ''} className={field} />
+              </Label>
+              <Label text={t('fReliefTo')}>
+                <input name="sme.to" type="date" defaultValue={last?.reliefs.sme.to ?? ''} className={field} />
+              </Label>
+              <Label text={t('fReliefNote')}>
+                <input name="sme.note" maxLength={200} defaultValue={last?.reliefs.sme.note ?? ''} className={field} autoComplete="off" />
+              </Label>
+            </fieldset>
+          )}
+          {reliefOn.durunuri && (
+            <fieldset className="grid gap-2 rounded-button border border-border p-3 md:col-span-2 md:grid-cols-3">
+              <legend className="px-1 font-bold">{t('durunuriTitle')}</legend>
+              <Label text={t('fTarget')}>
+                <select name="duru.state" defaultValue={last?.reliefs.durunuri.state ?? 'UNKNOWN'} className={field}>
+                  {(['UNKNOWN', 'YES', 'NO'] as const).map((s) => (
+                    <option key={s} value={s}>
+                      {t(`tri.${s}`)}
+                    </option>
+                  ))}
+                </select>
+              </Label>
+              <Label text={t('fPensionRate')}>
+                <input name="duru.pension" type="number" min="0" max="100" step="1" defaultValue={last?.reliefs.durunuri.pensionRate ?? ''} className={field} />
+              </Label>
+              <Label text={t('fEmploymentRate')}>
+                <input name="duru.employment" type="number" min="0" max="100" step="1" defaultValue={last?.reliefs.durunuri.employmentRate ?? ''} className={field} />
+              </Label>
+              <Label text={t('fReliefFrom')}>
+                <input name="duru.from" type="date" defaultValue={last?.reliefs.durunuri.from ?? ''} className={field} />
+              </Label>
+              <Label text={t('fReliefTo')}>
+                <input name="duru.to" type="date" defaultValue={last?.reliefs.durunuri.to ?? ''} className={field} />
+              </Label>
+              <Label text={t('fReliefNote')}>
+                <input name="duru.note" maxLength={200} defaultValue={last?.reliefs.durunuri.note ?? ''} className={field} autoComplete="off" />
+              </Label>
+            </fieldset>
+          )}
+          {(reliefOn.sme || reliefOn.durunuri) && <p className="text-xs text-faint md:col-span-2">{t('reliefHint')}</p>}
           <Label text={t('fValidFrom')}>
             <input name="validFrom" type="date" required defaultValue={today} className={field} />
           </Label>

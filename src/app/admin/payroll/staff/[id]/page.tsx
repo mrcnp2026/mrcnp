@@ -8,7 +8,7 @@ import { getMe } from '@/lib/auth';
 import { groupPath } from '@/lib/org';
 import { loadOrgGroups } from '@/lib/org-data';
 import { INSURERS, referenceHourly, setupGaps, versionAt } from '@/lib/payroll/contract';
-import { loadItems } from '@/lib/payroll/data';
+import { loadItems, reliefSwitches } from '@/lib/payroll/data';
 import { previewPay } from '@/lib/payroll/run-data';
 import { loadStaffPay } from '@/lib/payroll/staff-data';
 import { createAdminClient } from '@/lib/supabase/admin';
@@ -20,12 +20,13 @@ export default async function StaffPayDetailPage({ params }: { params: Promise<{
   if (!me || me.role !== 'admin' || !me.canViewPayroll) return <PageShell><p className="rounded-card bg-warn-tint p-4 text-sm text-warn">{t('forbidden')}</p></PageShell>;
   if (!/^[0-9a-f-]{36}$/i.test(id)) notFound();
   const db = createAdminClient();
-  const [{ data: p }, pay, groups, items, { data: staff }] = await Promise.all([
+  const [{ data: p }, pay, groups, items, { data: staff }, reliefOn] = await Promise.all([
     db.from('profiles').select('id, name, employee_no, group_id, joined_on, active').eq('id', id).maybeSingle(),
     loadStaffPay(id),
     loadOrgGroups(),
     loadItems(),
     db.from('profiles').select('id, name'),
+    reliefSwitches(toKstDate(new Date())),
   ]);
   if (!p) notFound();
   const today = toKstDate(new Date());
@@ -105,13 +106,32 @@ export default async function StaffPayDetailPage({ params }: { params: Promise<{
                 </dd>
               </div>
             ))}
-            <div className="flex justify-between gap-3"><dt className="text-muted">{t('fLoan')}</dt><dd>{t(`tri.${tax.studentLoan.state}`)}{tax.studentLoan.monthlyAmount !== null && ` · ${won(tax.studentLoan.monthlyAmount)}`}</dd></div>
+            <div className="flex justify-between gap-3"><dt className="text-muted">{t('fLoan')}</dt><dd>{t(`tri.${tax.studentLoan.state}`)}{tax.studentLoan.monthlyAmount !== null && ` · ${won(tax.studentLoan.monthlyAmount)}`}{tax.studentLoan.from && ` · ${tax.studentLoan.to ? t('period', { from: tax.studentLoan.from, to: tax.studentLoan.to }) : t('periodOpen', { from: tax.studentLoan.from })}`}</dd></div>
+            {reliefOn.sme && (
+              <div className="flex justify-between gap-3">
+                <dt className="text-muted">{t('smeTitle')}</dt>
+                <dd>
+                  <span className={tax.reliefs.sme.state === 'UNKNOWN' ? 'font-bold text-warn' : ''}>{t(`tri.${tax.reliefs.sme.state}`)}</span>
+                  {tax.reliefs.sme.state === 'YES' && ` · ${t('pct', { n: tax.reliefs.sme.rate ?? 0 })} · ${tax.reliefs.sme.to ? t('period', { from: tax.reliefs.sme.from ?? '', to: tax.reliefs.sme.to }) : t('periodOpen', { from: tax.reliefs.sme.from ?? '' })}`}
+                </dd>
+              </div>
+            )}
+            {reliefOn.durunuri && (
+              <div className="flex justify-between gap-3">
+                <dt className="text-muted">{t('durunuriTitle')}</dt>
+                <dd>
+                  <span className={tax.reliefs.durunuri.state === 'UNKNOWN' ? 'font-bold text-warn' : ''}>{t(`tri.${tax.reliefs.durunuri.state}`)}</span>
+                  {tax.reliefs.durunuri.state === 'YES' && ` · ${t('insurer.pension')} ${t('pct', { n: tax.reliefs.durunuri.pensionRate ?? 0 })} · ${t('insurer.employment')} ${t('pct', { n: tax.reliefs.durunuri.employmentRate ?? 0 })} · ${tax.reliefs.durunuri.to ? t('period', { from: tax.reliefs.durunuri.from ?? '', to: tax.reliefs.durunuri.to }) : t('periodOpen', { from: tax.reliefs.durunuri.from ?? '' })}`}
+                </dd>
+              </div>
+            )}
             <div className="flex justify-between gap-3"><dt className="text-muted">{t('colFrom')}</dt><dd>{t('versionFrom', { n: tax.version, from: tax.validFrom })}</dd></div>
           </dl>
         ) : (
           <p className="pt-3 text-sm text-warn">{t('gap.no_tax')}</p>
         )}
-        <TaxForm employeeId={id} today={today} version={pay.taxes[0]?.version ?? 0} last={pay.taxes[0] ?? null} />
+        {!reliefOn.sme && !reliefOn.durunuri && <p className="pt-2 text-xs text-faint">{t('reliefOff')}</p>}
+        <TaxForm employeeId={id} today={today} version={pay.taxes[0]?.version ?? 0} last={pay.taxes[0] ?? null} reliefOn={reliefOn} />
         {pay.taxes.length > 0 && (
           <ul className="num mt-4 flex flex-col gap-1 border-t border-border pt-3 text-xs text-faint">
             {pay.taxes.map((x) => (

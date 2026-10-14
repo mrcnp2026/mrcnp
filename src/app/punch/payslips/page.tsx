@@ -2,7 +2,7 @@
 // ① 내 정보(이름 · 사번 · 지점 · 직무 · 입사일) ② 급여상세: 지금 적용 중인 계약(급여 형태 · 금액) · 고정 수당 · 세무/보험 설정 — 본인 것만
 // ③ 명세서: 해마다 목록 + 고른 달의 상세(PC는 나란히 2칸, 폰은 목록 → 한 장 화면). 관리자가 공개한 것만 보인다 (PRD v1.3 E01).
 // 계좌 · 주민등록번호는 민감정보 결정(급여-36 · 37) 전이라 넣지 않는다.
-import { ChevronLeft, ChevronRight } from 'lucide-react';
+import { ChevronDown, ChevronLeft, ChevronRight } from 'lucide-react';
 import { HelpTip } from '@/components/Help';
 import { getFormatter, getTranslations } from 'next-intl/server';
 import Link from 'next/link';
@@ -15,7 +15,7 @@ import { loadJobs } from '@/lib/job-data';
 import { groupPath } from '@/lib/org';
 import { loadOrgGroups } from '@/lib/org-data';
 import { versionAt } from '@/lib/payroll/contract';
-import { loadItems } from '@/lib/payroll/data';
+import { loadItems, reliefSwitches } from '@/lib/payroll/data';
 import { loadMySlip, loadMySlips } from '@/lib/payroll/publish-data';
 import { loadStaffPay } from '@/lib/payroll/staff-data';
 import { createAdminClient } from '@/lib/supabase/admin';
@@ -53,7 +53,7 @@ export default async function MyPayPage({ searchParams }: { searchParams: Promis
   const [t, tm, ts, f] = await Promise.all([getTranslations('payslip'), getTranslations('payslip.mine'), getTranslations('admin.staffPay'), getFormatter()]);
   const today = toKstDate(new Date());
   const [{ data: prof }, groups, jobs, pay, items, slips] = await Promise.all([
-    createAdminClient().from('profiles').select('group_id, job_id, joined_on').eq('id', me.id).maybeSingle(),
+    createAdminClient().from('profiles').select('group_id, job_id, joined_on, phone, job_title').eq('id', me.id).maybeSingle(),
     loadOrgGroups(),
     loadJobs(),
     loadStaffPay(me.id),
@@ -62,8 +62,15 @@ export default async function MyPayPage({ searchParams }: { searchParams: Promis
   ]);
   const won = (v: number) => t('won', { n: f.number(v) });
   const dash = <span className="text-faint">–</span>;
-  const contract = versionAt(pay.contracts, today);
-  const tax = versionAt(pay.taxes, today);
+  const unset = <span className="font-normal text-faint">{tm('notSet')}</span>;
+  const tri = (v: 'YES' | 'NO' | 'UNKNOWN') => (v === 'UNKNOWN' ? unset : tm(v === 'YES' ? 'yes' : 'no'));
+  const period = (from: string, to: string | null) => (to ? ts('period', { from, to }) : ts('periodOpen', { from }));
+  // 지금 적용 중인 판, 없으면 곧 시작할 판(「○일부터 적용 예정」으로 보인다) — 계약을 넣었는데 칸이 통째로 비어 보이지 않게 (2026-10-14 의뢰인)
+  const soon = <T extends { validFrom: string; validTo: string | null }>(rows: readonly T[]) => versionAt(rows, today) ?? [...rows].filter((r) => r.validFrom > today).sort((a, b) => a.validFrom.localeCompare(b.validFrom))[0] ?? null;
+  const contract = soon(pay.contracts);
+  const tax = soon(pay.taxes);
+  // 회사의 감면 · 지원 사용 여부도 보이는 판이 적용되는 날 기준으로 (앞으로 시작할 판이면 그 시작일)
+  const reliefOn = await reliefSwitches(tax && tax.validFrom > today ? tax.validFrom : today);
   const itemName = new Map(items.map((i) => [i.code, i.koName]));
   const fixed = pay.items.filter((i) => i.validFrom.localeCompare(today) !== 1 && (i.validTo === null || today.localeCompare(i.validTo) === -1)); // 오늘 적용 중인 것
 
@@ -88,38 +95,68 @@ export default async function MyPayPage({ searchParams }: { searchParams: Promis
             [tm('no'), me.employeeNo ?? dash],
             [tm('group'), groupPath(groups, prof?.group_id) ?? dash],
             [tm('job'), jobs.find((j) => j.id === prof?.job_id)?.name ?? dash],
+            [tm('jobTitle'), (prof?.job_title as string | null) || dash],
             [tm('joined'), (prof?.joined_on as string | null) ?? dash],
+            [tm('phone'), (prof?.phone as string | null) || dash],
           ]}
         />
       </Box>
 
-      <Box title={tm('detail')} aside={contract && <span className="num text-xs text-faint">{tm('since', { date: contract.validFrom })}</span>}>
-        {!contract ? (
-          <p className="text-sm text-faint">{tm('noContract')}</p>
-        ) : (
-          <div className="flex flex-col gap-5">
-            <Facts
-              rows={[
-                [tm('payType'), ts(`payType.${contract.payType}`)],
-                [ts(`payType.${contract.payType}`), won(contract.amount)],
-                [tm('fixed'), fixed.length === 0 ? dash : fixed.map((i) => `${itemName.get(i.itemCode) ?? i.itemCode}${i.amount !== null ? ` ${won(i.amount)}` : ''}`).join(' · ')],
-              ]}
-            />
-            {tax && (
-              <div className="border-t border-border pt-4">
-                <Facts
-                  rows={[
-                    [ts('fRatio'), ts('pct', { n: tax.withholdingRatio })],
-                    [ts('fFamily'), ts('familyValue', { n: tax.familyCount, c: tax.childCount })],
-                    [ts('fLoan'), ts(`tri.${tax.studentLoan.state}`)],
-                    ...(['pension', 'health', 'employment'] as const).map((k): [string, ReactNode] => [ts(`insurer.${k}`), ts(`tri.${tax.insurance[k].state}`)]),
-                  ]}
-                />
-              </div>
-            )}
-            <p className="text-xs text-faint">{tm('detailNote')}</p>
-          </div>
-        )}
+      {/* 급여상세 — 다우오피스 「내 급여 조회」와 같은 칸을 늘 보인다. 넣지 않은 값은 「미입력」 (2026-10-14 의뢰인: 칸이 통째로 빠져 「하나도 없다」로 보였다) */}
+      <Box
+        title={tm('detail')}
+        aside={contract && <span className="num text-xs text-faint">{contract.validFrom > today ? tm('upcoming', { date: contract.validFrom }) : tm('since', { date: contract.validFrom })}</span>}
+      >
+        <div className="flex flex-col gap-5">
+          {!contract && <p className="text-sm text-faint">{tm('noContract')}</p>}
+          <Facts
+            rows={[
+              [tm('payType'), contract ? ts(`payType.${contract.payType}`) : unset],
+              [tm('annual'), !contract ? unset : contract.payType === 'ANNUAL' ? won(contract.amount) : contract.payType === 'MONTHLY' ? <>{won(contract.amount * 12)} <span className="text-xs font-normal text-faint">{tm('annualFromMonthly')}</span></> : dash],
+              [tm('monthly'), !contract ? unset : contract.payType === 'MONTHLY' ? won(contract.amount) : contract.payType === 'ANNUAL' ? (contract.annualDivisor ? <>{won(Math.floor(contract.amount / contract.annualDivisor))} <span className="text-xs font-normal text-faint">{tm('monthlyFromAnnual', { n: contract.annualDivisor })}</span></> : unset) : dash],
+              ...(contract?.payType === 'HOURLY' ? [[tm('hourly'), won(contract.amount)] as [string, ReactNode]] : []),
+              [tm('fixed'), fixed.length === 0 ? dash : fixed.map((i) => `${itemName.get(i.itemCode) ?? i.itemCode}${i.amount !== null ? ` ${won(i.amount)}` : ''}`).join(' · ')],
+              [tm('fixedIncluded'), !contract ? unset : contract.included.overtimeHours || contract.included.holidayHours ? tm('includedYes', { ot: contract.included.overtimeHours ?? 0, hol: contract.included.holidayHours ?? 0 }) : tm('includedNo')],
+            ]}
+          />
+          <details className="group border-t border-border pt-4">
+            <summary className="flex min-h-9 cursor-pointer list-none items-center justify-center gap-1 text-sm font-semibold text-muted">
+              <span className="group-open:hidden">{tm('more')}</span>
+              <span className="hidden group-open:inline">{tm('less')}</span>
+              <ChevronDown aria-hidden size={16} className="transition-transform duration-[350ms] ease-in-out group-open:rotate-180" />
+            </summary>
+            <div className="flex flex-col gap-5 pt-4">
+              <Facts
+                rows={[
+                  [tm('family'), tax ? tm('people', { n: tax.familyCount }) : unset],
+                  [tm('children'), tax ? tm('people', { n: tax.childCount }) : unset],
+                  [tm('ratio'), tax ? ts('pct', { n: tax.withholdingRatio }) : unset],
+                  [tm('loan'), tax ? tri(tax.studentLoan.state) : unset],
+                  [tm('loanPeriod'), tax?.studentLoan.state === 'YES' && tax.studentLoan.from ? period(tax.studentLoan.from, tax.studentLoan.to) : dash],
+                  [tm('loanAmount'), tax?.studentLoan.state === 'YES' && tax.studentLoan.monthlyAmount !== null ? won(tax.studentLoan.monthlyAmount) : dash],
+                ]}
+              />
+              <Facts
+                rows={[
+                  [tm('sme'), !reliefOn.sme ? tm('companyOff') : tax ? tri(tax.reliefs.sme.state) : unset],
+                  [tm('smeRate'), reliefOn.sme && tax?.reliefs.sme.state === 'YES' ? ts('pct', { n: tax.reliefs.sme.rate ?? 0 }) : dash],
+                  [tm('smePeriod'), reliefOn.sme && tax?.reliefs.sme.state === 'YES' && tax.reliefs.sme.from ? period(tax.reliefs.sme.from, tax.reliefs.sme.to) : dash],
+                  [tm('duru'), !reliefOn.durunuri ? tm('companyOff') : tax ? tri(tax.reliefs.durunuri.state) : unset],
+                  [tm('duruPension'), reliefOn.durunuri && tax?.reliefs.durunuri.state === 'YES' ? ts('pct', { n: tax.reliefs.durunuri.pensionRate ?? 0 }) : dash],
+                  [tm('duruEmployment'), reliefOn.durunuri && tax?.reliefs.durunuri.state === 'YES' ? ts('pct', { n: tax.reliefs.durunuri.employmentRate ?? 0 }) : dash],
+                ]}
+              />
+              <Facts rows={(['pension', 'health', 'employment'] as const).map((k): [string, ReactNode] => [ts(`insurer.${k}`), tax ? (tax.insurance[k].state === 'UNKNOWN' ? unset : ts(`tri.${tax.insurance[k].state}`)) : unset])} />
+              <Facts
+                rows={[
+                  [tm('bank'), <span key="b" className="text-xs font-normal text-faint">{tm('sensitive')}</span>],
+                  [tm('pensionBank'), <span key="p" className="text-xs font-normal text-faint">{tm('sensitive')}</span>],
+                ]}
+              />
+            </div>
+          </details>
+          <p className="text-xs text-faint">{tm('detailNote')}</p>
+        </div>
       </Box>
 
       <section className="flex flex-col gap-3">

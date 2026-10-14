@@ -41,6 +41,13 @@ export async function loadSettingHistory(section: SettingSection): Promise<Setti
   return (data ?? []).map(toSetting);
 }
 
+/** 사원급여 기본 설정의 「두루누리 · 중소기업 감면 사용」 — 그 날 적용되는 판. 꺼져 있으면 직원별 감면을 보지도 쓰지도 않는다 */
+export async function reliefSwitches(date: string): Promise<{ sme: boolean; durunuri: boolean }> {
+  const row = (await loadSettingHistory('employee-defaults')).find((x) => x.validFrom <= date && (x.validTo === null || date < x.validTo));
+  const p = row?.payload as { durunuri?: boolean; smeTaxCut?: boolean } | undefined;
+  return { sme: !!p?.smeTaxCut, durunuri: !!p?.durunuri };
+}
+
 /**
  * 새 판 저장. expectedVersion = 화면이 보고 있던 마지막 판 번호(없었으면 0) — 그 사이 다른 담당자가 저장했으면 409.
  * 앞 판이 새 시작일 뒤까지 이어지면 새 시작일로 닫는다. 새 시작일이 앞 판의 시작일보다 앞서거나 같으면 거부한다(지난 판을 덮지 않는다).

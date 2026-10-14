@@ -53,12 +53,25 @@ export type TaxInput = {
   familyCount: number; // 본인 포함
   childCount: number; // 8세 이상 20세 이하 자녀 (가족 수에 포함된 사람)
   insurance: Record<Insurer, InsuranceState>;
-  studentLoan: { state: Tri; monthlyAmount: number | null };
+  studentLoan: { state: Tri; monthlyAmount: number | null; from: string | null; to: string | null }; // 상환 기간(끝은 그 날까지)
+  reliefs: Reliefs;
 };
+/** 감면 · 지원 (DB 묶음 8, 2026-10-14). 회사 설정(사원급여 기본)에서 켠 것만 화면에 보이고 계산에 쓴다. 옛 판은 「모름」 */
+export type SmeRelief = { state: Tri; rate: number | null; from: string | null; to: string | null; note: string | null }; // 중소기업 취업자 소득세 감면 — 감면율 %
+export type DurunuriRelief = { state: Tri; pensionRate: number | null; employmentRate: number | null; from: string | null; to: string | null; note: string | null }; // 두루누리 — 근로자 보험료 지원율 %
+export type Reliefs = { sme: SmeRelief; durunuri: DurunuriRelief };
+export const UNKNOWN_RELIEFS: Reliefs = {
+  sme: { state: 'UNKNOWN', rate: null, from: null, to: null, note: null },
+  durunuri: { state: 'UNKNOWN', pensionRate: null, employmentRate: null, from: null, to: null, note: null },
+};
+export const SME_RATES = [50, 70, 90, 100] as const; // 감면율 고르기(임시 — 검증 대기 기록). 대상에 따라 다르다
+/** 그 달(첫날~마지막 날)에 감면 · 지원 기간이 걸치는가 — 끝은 그 날까지 */
+export const reliefCovers = (r: { from: string | null; to: string | null }, from: string, last: string) => !!r.from && r.from <= last && (r.to === null || r.to >= from);
 export const UNKNOWN_TAX: TaxInput = {
   withholdingRatio: 100, familyCount: 1, childCount: 0,
   insurance: { pension: { state: 'UNKNOWN', reportedWage: null, note: null }, health: { state: 'UNKNOWN', reportedWage: null, note: null }, employment: { state: 'UNKNOWN', reportedWage: null, note: null }, accident: { state: 'UNKNOWN', reportedWage: null, note: null } },
-  studentLoan: { state: 'UNKNOWN', monthlyAmount: null },
+  studentLoan: { state: 'UNKNOWN', monthlyAmount: null, from: null, to: null },
+  reliefs: UNKNOWN_RELIEFS,
 };
 const tri = (v: unknown): v is Tri => v === 'YES' || v === 'NO' || v === 'UNKNOWN';
 
@@ -80,7 +93,64 @@ export function validateTax(b: Record<string, unknown>): Result<TaxInput> {
   const amt = num(loan.monthlyAmount);
   if (!tri(loan.state) || amt === undefined || (amt !== null && (!Number.isInteger(amt) || amt < 0 || amt > MAX_AMOUNT))) return { ok: false, code: 'tax_loan' };
   if (loan.state === 'YES' && amt === null) return { ok: false, code: 'tax_loan' };
-  return { ok: true, value: { withholdingRatio: b.withholdingRatio, familyCount: family, childCount: child, insurance, studentLoan: { state: loan.state, monthlyAmount: loan.state === 'YES' ? amt : null } } };
+  const lf = date(loan.from), lt = date(loan.to);
+  if (lf === undefined || lt === undefined || (lf && lt && lt < lf)) return { ok: false, code: 'tax_loan_period' };
+  const reliefs = validateReliefs(b.reliefs);
+  if (!reliefs.ok) return reliefs;
+  return { ok: true, value: { withholdingRatio: b.withholdingRatio, familyCount: family, childCount: child, insurance, studentLoan: { state: loan.state, monthlyAmount: loan.state === 'YES' ? amt : null, from: loan.state === 'YES' ? lf : null, to: loan.state === 'YES' ? lt : null }, reliefs: reliefs.value } };
+}
+
+const date = (v: unknown): string | null | undefined => (v === null || v === undefined || v === '' ? null : typeof v === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(v) && !Number.isNaN(Date.parse(`${v}T00:00:00Z`)) ? v : undefined);
+const pct = (v: unknown): number | null | undefined => {
+  const x = num(v);
+  return x === null ? null : x === undefined || !Number.isInteger(x) || x < 0 || x > 100 ? undefined : x;
+};
+/**
+ * 감면 · 지원 입력. 보내지 않으면 「모름」. 「예」면 비율 · 시작일 · 근거가 있어야 한다(대상인지는 사람이 근거를 보고 정한다 — 국적 · 나이로 추정하지 않는다).
+ * 「아니오」 · 「모름」이면 비율 · 기간은 버린다.
+ */
+export function validateReliefs(v: unknown): Result<Reliefs> {
+  if (v === undefined || v === null) return { ok: true, value: UNKNOWN_RELIEFS };
+  if (typeof v !== 'object') return { ok: false, code: 'tax_relief' };
+  const o = v as Record<string, unknown>;
+  const s = (o.sme && typeof o.sme === 'object' ? o.sme : {}) as Record<string, unknown>;
+  const d = (o.durunuri && typeof o.durunuri === 'object' ? o.durunuri : {}) as Record<string, unknown>;
+  const sState = s.state ?? 'UNKNOWN', dState = d.state ?? 'UNKNOWN';
+  if (!tri(sState) || !tri(dState)) return { ok: false, code: 'tax_relief' };
+  const [sf, st, df, dt] = [date(s.from), date(s.to), date(d.from), date(d.to)];
+  const [sn, dn] = [text(s.note, 200), text(d.note, 200)];
+  const [sr, pr, er] = [pct(s.rate), pct(d.pensionRate), pct(d.employmentRate)];
+  if ([sf, st, df, dt, sn, dn, sr, pr, er].some((x) => x === undefined)) return { ok: false, code: 'tax_relief' };
+  if (sState === 'YES' && (sr === null || !(SME_RATES as readonly number[]).includes(sr!) || !sf || !sn || (st && st < sf!))) return { ok: false, code: 'tax_relief_sme' };
+  if (dState === 'YES' && (pr === null || er === null || (pr === 0 && er === 0) || !df || !dn || (dt && dt < df!))) return { ok: false, code: 'tax_relief_durunuri' };
+  return {
+    ok: true,
+    value: {
+      sme: sState === 'YES' ? { state: 'YES', rate: sr!, from: sf!, to: st ?? null, note: sn! } : { state: sState, rate: null, from: null, to: null, note: sn ?? null },
+      durunuri: dState === 'YES' ? { state: 'YES', pensionRate: pr!, employmentRate: er!, from: df!, to: dt ?? null, note: dn! } : { state: dState, pensionRate: null, employmentRate: null, from: null, to: null, note: dn ?? null },
+    },
+  };
+}
+
+/**
+ * 한 달 계산에 쓸 감면 · 지원을 정한다. 회사 설정에서 끈 것은 보지 않는다.
+ * 켜져 있는데 그 직원이 「모름」이면 0원으로 넘어가지 않고 막는다(relief_unknown). 「예」라도 기간이 그 달에 걸치지 않으면 적용하지 않는다.
+ */
+export function reliefsForMonth(raw: unknown, on: { sme: boolean; durunuri: boolean }, from: string, last: string): { reliefs: { smeRate: number | null; durunuri: { pension: number; employment: number } | null }; blockers: { code: string; detail: string }[] } {
+  const r = (raw && typeof raw === 'object' ? raw : {}) as Partial<Reliefs>;
+  const sme = { ...UNKNOWN_RELIEFS.sme, ...(r.sme ?? {}) }, duru = { ...UNKNOWN_RELIEFS.durunuri, ...(r.durunuri ?? {}) };
+  const blockers: { code: string; detail: string }[] = [];
+  let smeRate: number | null = null;
+  let durunuri: { pension: number; employment: number } | null = null;
+  if (on.sme) {
+    if (sme.state === 'UNKNOWN') blockers.push({ code: 'relief_unknown', detail: 'sme' });
+    else if (sme.state === 'YES' && sme.rate && reliefCovers(sme, from, last)) smeRate = sme.rate;
+  }
+  if (on.durunuri) {
+    if (duru.state === 'UNKNOWN') blockers.push({ code: 'relief_unknown', detail: 'durunuri' });
+    else if (duru.state === 'YES' && reliefCovers(duru, from, last)) durunuri = { pension: duru.pensionRate ?? 0, employment: duru.employmentRate ?? 0 };
+  }
+  return { reliefs: { smeRate, durunuri }, blockers };
 }
 
 export type ItemAssign = { itemCode: string; amount: number | null; note: string | null };

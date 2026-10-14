@@ -5,7 +5,7 @@ import 'server-only';
 import { ApiError } from '@/lib/api';
 import type { Me } from '@/lib/auth';
 import { createAdminClient } from '@/lib/supabase/admin';
-import { INSURERS, setupGaps, UNKNOWN_TAX, versionAt, type ContractInput, type InsuranceState, type Insurer, type ItemAssign, type SetupGap, type TaxInput } from './contract';
+import { INSURERS, setupGaps, UNKNOWN_RELIEFS, UNKNOWN_TAX, versionAt, type ContractInput, type InsuranceState, type Insurer, type ItemAssign, type Reliefs, type SetupGap, type TaxInput } from './contract';
 
 const db = () => createAdminClient();
 type Row = Record<string, unknown>;
@@ -35,9 +35,11 @@ const toTax = (r: Row): TaxRow => {
   const src = (r.insurance ?? {}) as Record<string, Partial<InsuranceState>>;
   const insurance = Object.fromEntries(INSURERS.map((k) => [k, { state: src[k]?.state ?? 'UNKNOWN', reportedWage: n(src[k]?.reportedWage), note: src[k]?.note ?? null }])) as Record<Insurer, InsuranceState>;
   const loan = (r.student_loan ?? {}) as Partial<TaxInput['studentLoan']>;
+  const rel = (r.reliefs ?? {}) as Partial<Reliefs>;
   return {
     id: r.id as string, employeeId: r.employee_id as string, withholdingRatio: r.withholding_ratio as TaxRow['withholdingRatio'], familyCount: r.family_count as number, childCount: r.child_count as number, insurance,
-    studentLoan: { state: loan.state ?? UNKNOWN_TAX.studentLoan.state, monthlyAmount: n(loan.monthlyAmount) },
+    studentLoan: { state: loan.state ?? UNKNOWN_TAX.studentLoan.state, monthlyAmount: n(loan.monthlyAmount), from: loan.from ?? null, to: loan.to ?? null },
+    reliefs: { sme: { ...UNKNOWN_RELIEFS.sme, ...(rel.sme ?? {}) }, durunuri: { ...UNKNOWN_RELIEFS.durunuri, ...(rel.durunuri ?? {}) } },
     validFrom: r.valid_from as string, validTo: r.valid_to as string | null, version: r.version as number, reason: r.reason as string | null, createdBy: r.created_by as string, createdAt: r.created_at as string,
   };
 };
@@ -127,7 +129,7 @@ export async function saveContract(args: { employeeId: string; input: ContractIn
 
 export async function saveTax(args: { employeeId: string; input: TaxInput; validFrom: string; reason: string | null; expectedVersion: number; me: Me; requestId?: string }): Promise<TaxRow> {
   const i = args.input;
-  const row = await appendVersion('payroll_employee_tax_versions', args.employeeId, { withholding_ratio: i.withholdingRatio, family_count: i.familyCount, child_count: i.childCount, insurance: i.insurance, student_loan: i.studentLoan }, args);
+  const row = await appendVersion('payroll_employee_tax_versions', args.employeeId, { withholding_ratio: i.withholdingRatio, family_count: i.familyCount, child_count: i.childCount, insurance: i.insurance, student_loan: i.studentLoan, reliefs: i.reliefs }, args);
   await payrollAudit({ actorId: args.me.id, action: 'tax.save', table: 'payroll_employee_tax_versions', subjectId: row.id as string, employeeId: args.employeeId, requestId: args.requestId, detail: { version: row.version, validFrom: args.validFrom } });
   return toTax(row);
 }

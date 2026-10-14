@@ -12,8 +12,8 @@ import { summarizeMonth } from '@/lib/monthly';
 import { daysFor, leaveDaysFor, loadPeriod, workDaysFor } from '@/lib/period-data';
 import { createAdminClient } from '@/lib/supabase/admin';
 import { toKstDate } from '@/lib/time';
-import { versionAt } from './contract';
-import { loadItems, loadPolicies, loadReferences, loadSettingHistory, sha } from './data';
+import { reliefCovers, reliefsForMonth, versionAt } from './contract';
+import { loadItems, loadPolicies, loadReferences, loadSettingHistory, reliefSwitches, sha } from './data';
 import { timeFromAttendance } from './engine/attendance';
 import { calculateStatement, ENGINE_VERSION, type Blocker, type EngineInput, type EngineItem, type EngineOverride, type EngineResult, type Withholding } from './engine/engine';
 import { makeWithholding, referenceFrom, TEMP_INSURANCE_ROUNDING } from './engine/inputs';
@@ -139,11 +139,13 @@ export async function loadCalcBasis(last: string) {
     }
   }
   const { reference, missing } = referenceFrom(payloads);
+  // 사원급여 기본 설정의 「두루누리 · 중소기업 감면 사용」 (그 날 적용되는 판). 꺼져 있으면 직원별 감면을 보지 않는다
+  const reliefOn = await reliefSwitches(last);
   const table = refAt('income-tax.table');
   const rules = asTaxRules(table?.payload);
   const withholding = table && rules ? makeWithholding({ bands: await loadBands(table.id), rules, childRule: asChildRule(refAt('income-tax.child-adjust')?.payload) }) : null;
   const insuranceBasis = l.insuranceBasis === 'REPORTED_BASE' ? 'REPORTED' : l.insuranceBasis;
-  return { items, policy, reference, missing, bundle, withholding, insuranceBasis: insuranceBasis as EngineInput['insuranceBasis'] };
+  return { items, policy, reference, missing, bundle, withholding, insuranceBasis: insuranceBasis as EngineInput['insuranceBasis'], reliefOn };
 }
 
 async function buildInputs(run: RunRow): Promise<Built> {
@@ -162,7 +164,7 @@ async function buildInputs(run: RunRow): Promise<Built> {
     loadPeriod(from, last, run.isTest),
     loadConfirms(from, last, run.isTest),
   ]);
-  const { items, policy, reference, missing, bundle, withholding, insuranceBasis } = basis;
+  const { items, policy, reference, missing, bundle, withholding, insuranceBasis, reliefOn } = basis;
 
   const bonus = run.kind === 'BONUS';
   const priorOf = bonus ? await loadPrior(run) : null;
@@ -185,8 +187,11 @@ async function buildInputs(run: RunRow): Promise<Built> {
     const contract: EngineInput['contract'] = con ? { payType: con.pay_type as ContractRow['payType'], amount: Number(con.amount), monthlyHours: con.monthly_hours === null ? null : Number(con.monthly_hours), annualDivisor: con.annual_divisor === null ? null : Number(con.annual_divisor), included: { overtimeHours: inc.overtimeHours == null ? null : Number(inc.overtimeHours), holidayHours: inc.holidayHours == null ? null : Number(inc.holidayHours) } } : null;
     const ins = ((taxRow?.insurance ?? {}) as Record<string, { state?: string; reportedWage?: number | null }>) ?? {};
     const one = (k: string) => ({ state: (ins[k]?.state ?? 'UNKNOWN') as TaxRow['insurance']['pension']['state'], reportedWage: ins[k]?.reportedWage ?? null });
-    const loan = (taxRow?.student_loan ?? {}) as { state?: string; monthlyAmount?: number | null };
-    const tax: EngineInput['tax'] = taxRow ? { withholdingRatio: taxRow.withholding_ratio as 80 | 100 | 120, familyCount: taxRow.family_count as number, childCount: taxRow.child_count as number, insurance: { pension: one('pension'), health: one('health'), employment: one('employment'), accident: one('accident') }, studentLoan: { state: (loan.state ?? 'UNKNOWN') as 'YES' | 'NO' | 'UNKNOWN', monthlyAmount: loan.monthlyAmount ?? null } } : null;
+    const loan = (taxRow?.student_loan ?? {}) as { state?: string; monthlyAmount?: number | null; from?: string | null; to?: string | null };
+    // 감면 · 지원: 회사가 켠 것만, 그 달에 걸치는 기간만. 상여 대장은 소득세 감면만 본다(보험은 상여에서 계산하지 않는다)
+    const rel = taxRow ? reliefsForMonth(taxRow.reliefs, reliefOn, from, last) : null;
+    if (rel) pre.push(...rel.blockers);
+    const tax: EngineInput['tax'] = taxRow ? { withholdingRatio: taxRow.withholding_ratio as 80 | 100 | 120, familyCount: taxRow.family_count as number, childCount: taxRow.child_count as number, insurance: { pension: one('pension'), health: one('health'), employment: one('employment'), accident: one('accident') }, studentLoan: loanForMonth(loan, from, last), reliefs: rel!.reliefs } : null;
     // 달 중간에 입사 · 퇴사했거나 계약이 달 중간에 시작됐으면 일할 계산이 필요하다 — 자동으로 나누지 않는다
     const joined = (person?.joined_on as string | null) ?? null;
     const left = (emps ?? []).filter((e) => e.employee_id === id && e.ends_on !== null && (e.ends_on as string) >= from && (e.ends_on as string) < last);
@@ -426,6 +431,13 @@ export async function withdrawOverride(args: { id: string; overrideId: string; m
   await payrollAudit({ actorId: args.me.id, action: 'override.withdraw', table: 'payroll_statement_overrides', subjectId: args.overrideId, runId: run.id, employeeId: data[0].employee_id as string, requestId: args.requestId });
 }
 
+/** 학자금 상환: 상환 기간을 적었으면 그 달에 걸칠 때만 뗀다(기간이 없으면 예전처럼 매달) */
+function loanForMonth(loan: { state?: string; monthlyAmount?: number | null; from?: string | null; to?: string | null }, from: string, last: string): { state: 'YES' | 'NO' | 'UNKNOWN'; monthlyAmount: number | null } {
+  const state = (loan.state ?? 'UNKNOWN') as 'YES' | 'NO' | 'UNKNOWN';
+  if (state === 'YES' && loan.from && !reliefCovers({ from: loan.from, to: loan.to ?? null }, from, last)) return { state: 'NO', monthlyAmount: null };
+  return { state, monthlyAmount: loan.monthlyAmount ?? null };
+}
+
 // ── 예상 지급 · 공제 (대장을 만들지 않는다) ──
 /**
  * 그 날의 계약 · 세무 · 개인 항목 · 승인된 기준 자료만으로 한 달 치를 계산해 본다. 근태는 넣지 않는다(연장 · 야간 · 휴일 0, 결근 없음으로 본 값).
@@ -445,10 +457,12 @@ export async function previewPay(employeeId: string, date: string): Promise<Engi
     else items.push({ code: it.code, kind: it.kind, label: it.koName, amount, taxable: it.taxTreatment === 'EXEMPT' ? 'EXEMPT' : it.taxTreatment === 'PARTIAL' ? 'PARTIAL' : 'TAXABLE', exemptLimit: it.taxExemptLimit, insurable: it.taxTreatment !== 'EXEMPT', itemVersionId: it.id });
   }
   const one = (k: 'pension' | 'health' | 'employment' | 'accident') => ({ state: tax!.insurance[k].state, reportedWage: tax!.insurance[k].reportedWage });
+  const rel = tax ? reliefsForMonth(tax.reliefs, basis.reliefOn, `${date.slice(0, 7)}-01`, date) : null;
+  if (rel) pre.push(...rel.blockers);
   const r = calculateStatement({
     runKind: 'REGULAR',
     contract: con ? { payType: con.payType, amount: con.amount, monthlyHours: con.monthlyHours, annualDivisor: con.annualDivisor, included: { overtimeHours: con.included.overtimeHours, holidayHours: con.included.holidayHours } } : null,
-    tax: tax ? { withholdingRatio: tax.withholdingRatio, familyCount: tax.familyCount, childCount: tax.childCount, insurance: { pension: one('pension'), health: one('health'), employment: one('employment'), accident: one('accident') }, studentLoan: tax.studentLoan } : null,
+    tax: tax ? { withholdingRatio: tax.withholdingRatio, familyCount: tax.familyCount, childCount: tax.childCount, insurance: { pension: one('pension'), health: one('health'), employment: one('employment'), accident: one('accident') }, studentLoan: loanForMonth(tax.studentLoan, `${date.slice(0, 7)}-01`, date), reliefs: rel?.reliefs } : null,
     // 시급제는 일한 시간을 모르면 예상할 수 없다 → 근태 없음으로 차단된다. 월급 · 연봉제는 시간 0으로 본다
     time: con && con.payType !== 'HOURLY' ? { workedMinutes: 0, overtimeMinutes: 0, nightMinutes: 0, holidayMinutes: 0, holidayOver8Minutes: 0, paidLeaveMinutes: 0 } : null,
     partialMonth: false, items, policy: basis.policy, reference: basis.reference, insuranceBasis: basis.insuranceBasis, withholding: basis.withholding, overrides: [], prior: null,

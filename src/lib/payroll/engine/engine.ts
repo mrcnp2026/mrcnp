@@ -15,6 +15,8 @@ export type EngineTax = {
   childCount: number;
   insurance: Record<'pension' | 'health' | 'employment' | 'accident', { state: Tri; reportedWage: number | null }>;
   studentLoan: { state: Tri; monthlyAmount: number | null };
+  /** 그 달에 적용하는 감면 · 지원(넘겨주는 쪽이 회사 설정 · 기간을 보고 정한다). 없으면 적용 안 함 */
+  reliefs?: { smeRate: number | null; durunuri: { pension: number; employment: number } | null };
 };
 /** 한 가지 시간 축에서 나눈 분(分). 실제 시간에서 구한 연장과 끊은 총시간을 섞지 않는다 — 넘겨주는 쪽이 한 축으로 맞춰서 준다 */
 export type EngineTime = { workedMinutes: number; overtimeMinutes: number; nightMinutes: number; holidayMinutes: number; holidayOver8Minutes: number; paidLeaveMinutes: number };
@@ -185,10 +187,14 @@ export function calculateStatement(input: EngineInput): EngineResult {
       if (r.floor !== null) baseAmt = max(baseAmt, dec(r.floor));
       if (r.ceiling !== null) baseAmt = min(baseAmt, dec(r.ceiling));
       if (r.baseUnit) baseAmt = dec(toWon(baseAmt, { mode: 'FLOOR', unit: r.baseUnit }));
-      const trace = { basis: input.insuranceBasis, base: text(baseAmt), floor: r.floor, ceiling: r.ceiling };
+      // 두루누리: 지원율만큼 근로자 · 사업주 보험료를 줄여 뗀다(국민연금 · 고용보험만). 지원율은 사원별 입력값 — 임시(검증 대기 기록)
+      const support = key === 'pension' ? (tax.reliefs?.durunuri?.pension ?? 0) : key === 'employment' ? (tax.reliefs?.durunuri?.employment ?? 0) : 0;
+      const keep = support > 0 ? sub(dec(1), div(dec(support), dec(100))) : dec(1);
+      const trace = { basis: input.insuranceBasis, base: text(baseAmt), floor: r.floor, ceiling: r.ceiling, ...(support > 0 ? { durunuriPct: support } : {}) };
       const code = key.toUpperCase();
-      push({ code, kind: 'DEDUCTION', label: key, raw: mul(baseAmt, dec(r.employeeRate)), rounding: policy.rounding.insurance, quantity: baseAmt, factor: dec(r.employeeRate), trace });
-      push({ code: `${code}_EMPLOYER`, kind: 'EMPLOYER', label: `${key}Employer`, raw: mul(baseAmt, dec(r.employerRate)), rounding: policy.rounding.insurance, quantity: baseAmt, factor: dec(r.employerRate), trace });
+      push({ code, kind: 'DEDUCTION', label: key, raw: mul(mul(baseAmt, dec(r.employeeRate)), keep), rounding: policy.rounding.insurance, quantity: baseAmt, factor: dec(r.employeeRate), trace });
+      push({ code: `${code}_EMPLOYER`, kind: 'EMPLOYER', label: `${key}Employer`, raw: mul(mul(baseAmt, dec(r.employerRate)), keep), rounding: policy.rounding.insurance, quantity: baseAmt, factor: dec(r.employerRate), trace });
+      if (support > 0) warnings.push({ code: `durunuri_${key}`, detail: `${support}%` });
       const mine = lines.find((l) => l.code === code && l.kind === 'DEDUCTION')!;
       const theirs = lines.find((l) => l.code === `${code}_EMPLOYER`)!;
       return { employee: BigInt(mine.amount), employer: BigInt(theirs.amount) };
@@ -227,8 +233,13 @@ export function calculateStatement(input: EngineInput): EngineResult {
       else {
         const already = input.runKind === 'BONUS' ? input.prior! : { incomeTax: 0, localTax: 0 };
         const one: Rounding = { mode: 'HALF_UP', unit: 1 }; // 세액은 세액표 · 규칙이 이미 끊어서 준다
-        push({ code: 'INCOME_TAX', kind: 'DEDUCTION', label: 'incomeTax', raw: sub(dec(w.incomeTax), dec(already.incomeTax)), rounding: one, trace: { taxable: group, groupTax: w.incomeTax, already: already.incomeTax, ...w.trace } });
-        push({ code: 'LOCAL_TAX', kind: 'DEDUCTION', label: 'localTax', raw: sub(dec(w.localTax), dec(already.localTax)), rounding: one, trace: { groupTax: w.localTax, already: already.localTax } });
+        // 중소기업 취업자 감면: 세액표 소득세에 (1 − 감면율)을 곱해 10원 미만을 버린다. 지방소득세는 감면 뒤 소득세의 10%(10원 미만 버림). 임시 — 검증 대기 기록
+        const smeRate = tax.reliefs?.smeRate ?? null;
+        const groupIncome = smeRate ? Math.floor((w.incomeTax * (100 - smeRate)) / 100 / 10) * 10 : w.incomeTax;
+        const groupLocal = smeRate ? Math.floor(groupIncome / 100) * 10 : w.localTax;
+        if (smeRate) warnings.push({ code: 'sme_applied', detail: `${smeRate}%, -${(w.incomeTax - groupIncome).toLocaleString('en-US')}` });
+        push({ code: 'INCOME_TAX', kind: 'DEDUCTION', label: 'incomeTax', raw: sub(dec(groupIncome), dec(already.incomeTax)), rounding: one, trace: { taxable: group, groupTax: groupIncome, already: already.incomeTax, ...w.trace, ...(smeRate ? { smePct: smeRate, beforeRelief: w.incomeTax } : {}) } });
+        push({ code: 'LOCAL_TAX', kind: 'DEDUCTION', label: 'localTax', raw: sub(dec(groupLocal), dec(already.localTax)), rounding: one, trace: { groupTax: groupLocal, already: already.localTax } });
       }
     }
     // ── 6. 그 밖의 공제 ──
