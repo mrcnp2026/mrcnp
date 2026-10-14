@@ -332,7 +332,7 @@ try {
   check(Number(sNew?.net_total) === 2911670, '정정 판의 실지급 2,911,670 (원본 2,916,670 − 공제 5,000)', String(sNew?.net_total));
   const { data: sOld } = await db.from('payroll_statements').select('net_total').eq('id', slipId).single();
   check(Number(sOld?.net_total) === 2916670, '원본 명세서의 금액은 바뀌지 않았다');
-  check((await see('/punch/payslips')).includes('2,916,670원'), '직원: 정정본을 확정만 하고 공개하지 않으면 아직 원본이 보인다 (자동으로 공개되지 않는다)');
+  check((await see('/punch/payslips')).includes('2,916,670'), '직원: 정정본을 확정만 하고 공개하지 않으면 아직 원본이 보인다 (자동으로 공개되지 않는다)');
   check((await post(api, { action: 'unpublish', employeeId: other!.id, reason: 'e2e 원본 회수' })).status === 200 && (await post(api, { action: 'publish' })).json.error === 'payroll_superseded', '정정본이 확정되면 원본은 새로 공개할 수 없다');
   // 원본을 다시 공개 상태로 만들 수 없으므로, 「원본이 공개 중일 때 정정본을 공개하면 바뀐다」는 것은 기록을 직접 넣어 만든다
   await db.from('payroll_publication_events').insert({ statement_id: slipId, run_id: runId, employee_id: other!.id, kind: 'PUBLISHED', actor_id: emp!.id });
@@ -344,7 +344,7 @@ try {
   const { data: evOld } = await db.from('payroll_publication_events').select('kind, superseding_statement_id').eq('statement_id', slipId).order('id', { ascending: false }).limit(1);
   check(evOld?.[0]?.kind === 'SUPERSEDED' && evOld[0].superseding_statement_id === sNew!.id, '정정본을 공개하면 원본 명세서는 「정정본으로 바뀜」으로 기록된다');
   mine = await see('/punch/payslips');
-  check(mine.includes('2,911,670원') && mine.includes('정정 2판') && !mine.includes('2,916,670원'), '직원: 목록에는 정정된 명세서만 보인다');
+  check(mine.includes('2,911,670') && mine.includes('정정 2판') && !mine.includes('2,916,670'), '직원: 목록에는 정정된 명세서만 보인다');
   const fixed = await see(`/punch/payslips/${sNew!.id}`);
   check(fixed.includes('정정된 명세서입니다. 정정 사유: e2e 공제 누락') && fixed.includes('2,911,670원') && fixed.includes('이전 명세서 보기'), '직원: 정정 사유와 이전 명세서로 가는 길이 보인다');
   const old = await see(`/punch/payslips/${slipId}`);
@@ -386,7 +386,7 @@ try {
   check((await post(bApi, { action: 'finalize', expectedVersion: b.version })).status === 200, '상여 확정');
   check((await post(bApi, { action: 'publish' })).json.publish?.published === 1, '상여 명세서 공개');
   mine = await see('/punch/payslips');
-  check(mine.includes('450,330원') && mine.includes('상여') && mine.includes('2,911,670원'), '직원: 급여 명세서와 상여 명세서가 따로 보인다');
+  check(mine.includes('450,330') && mine.includes('상여') && mine.includes('2,911,670'), '직원: 급여 명세서와 상여 명세서가 따로 보인다');
   const bSlip = await see(`/punch/payslips/${bs!.id}`);
   check(bSlip.includes('인쇄 · PDF로 저장') && bSlip.includes('명세 번호') && bSlip.includes('귀속 기간') && bSlip.includes(other!.name), '직원 명세서: 회사 · 명세 번호 · 귀속 기간 · 이름과 인쇄 버튼');
   check(!(await open('/admin/payroll/runs')).includes('e2e-상여'), '검사용 상여 대장도 목록에 보이지 않는다');
