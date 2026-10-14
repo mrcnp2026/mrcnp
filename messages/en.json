@@ -620,7 +620,9 @@
       "zoomIn": "Zoom in",
       "zoomOut": "Zoom out",
       "mapCredit": "Map © OpenStreetMap",
-      "map": "Map of the requested location"
+      "map": "Map of the requested location",
+      "cardsKind": "Waiting by type",
+      "unit": ""
     },
     "records": {
       "title": "Records",
@@ -3499,7 +3501,11 @@
       "retirement_estimate": "An estimate is not finalized. Create a final or interim settlement instead.",
       "retirement_period": "Check the service start and last working day.",
       "retirement_tax_basis": "Enter the basis when you enter a tax amount.",
-      "retirement_reason": "Enter a reason of at least 2 characters."
+      "retirement_reason": "Enter a reason of at least 2 characters.",
+      "cardsState": "Status",
+      "cardsKind": "Type",
+      "unit": "",
+      "showAll": "Show all"
     },
     "insurance": {
       "title": "Social insurance",
@@ -4208,7 +4214,19 @@
     "usageNote": "Calculated from the leave grants your company approved.",
     "promoBanner": "Please submit your leave plan: {title} (due {due})",
     "promoBannerDone": "Leave plan submitted: {title} (editable until {due})",
-    "promoOpen": "Open"
+    "promoOpen": "Open",
+    "monthlyTitle": "Leave by month",
+    "monthlyKind": "Type",
+    "monthlyTotal": "Total",
+    "monthN": "M{n}",
+    "monthly": {
+      "deducted": "Annual leave used",
+      "other": "Other leave",
+      "pending": "Waiting"
+    },
+    "monthlyNote": "In days. Leave spanning several days is counted in the month it starts.",
+    "prevYear": "Previous year",
+    "nextYear": "Next year"
   },
   "work": {
     "title": "Off-site / trip / remote",

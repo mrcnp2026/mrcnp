@@ -8,6 +8,7 @@ import { Pager, pageOf } from '@/components/Pager';
 import { DetailBar } from '@/components/detail';
 import { Help } from '@/components/Help';
 import { PlaceMap } from '@/components/PlaceMap';
+import { StatusCards } from '@/components/listframe';
 import { RequestTabs } from '@/components/RequestTabs';
 import { Card, Chip, PageShell } from '@/components/ui';
 import { OFFICE } from '@/config/office';
@@ -30,8 +31,9 @@ import { CorrectionDecision, LeaveDecision, OvertimeDecision, WorkDecision } fro
 // 요청은 종류마다 한 쪽에 5건까지 — 넘으면 아래에 쪽 번호 (2026-10-06 의뢰인)
 const REQUEST_PAGE = 5;
 
-export default async function InboxPage({ searchParams }: { searchParams: Promise<{ live?: string; op?: string; cp?: string; lp?: string; wp?: string; tab?: string; dp?: string; q?: string; k?: string; id?: string; pp?: string }> }) {
+export default async function InboxPage({ searchParams }: { searchParams: Promise<{ live?: string; op?: string; cp?: string; lp?: string; wp?: string; tab?: string; dp?: string; q?: string; k?: string; id?: string; pp?: string; rk?: string }> }) {
   const t = await getTranslations('admin.inbox');
+  const tr = await getTranslations('requests');
   const f = await getFormatter();
   const me = (await getMe())!;
   // 자기 요청은 다른 관리자가 처리한다 — 다른 관리자가 있을 때만 막는다 (staff-rules.ts)
@@ -140,7 +142,12 @@ export default async function InboxPage({ searchParams }: { searchParams: Promis
     ...splitRequests((await loadRequests({ practice })).filter((x) => hit(x.employeeId))).pending,
     ...(otAll ?? []).filter((o) => hit(o.employee_id) && o.status !== 'pending').map((o) => ({ ...fromOvertime(o), status: 'pending' as const })),
   ];
-  const listPage = pageOf(listed, sp.pp, 20);
+  // 종류 카드로 거르기 (목록 틀 — components/listframe). ?rk= 는 한 건 보기(?k=)와 겹치지 않는 이름
+  const RKINDS = ['punch', 'correction', 'overtime', 'shift', 'leave', 'leaveDelete', 'work'] as const;
+  const rk = (RKINDS as readonly string[]).includes(sp.rk ?? '') ? (sp.rk as string) : null;
+  const rkLink = (k: string | null) => `/admin/inbox?${[k ? `rk=${k}` : '', sp.live === '1' ? 'live=1' : '', q ? `q=${encodeURIComponent(q)}` : ''].filter(Boolean).join('&')}`;
+  const shownList = rk ? listed.filter((x) => x.kind === rk) : listed;
+  const listPage = pageOf(shownList, sp.pp, 20);
   const focusHref = (r: { kind: string; id: string }) => `/admin/inbox?k=${r.kind === 'correction' ? 'corrections' : r.kind}&id=${r.id}${sp.live === '1' ? '&live=1' : ''}`;
   const focusCount = focus ? ot.length + co.length + leavePending.length + workPending.length + punchPending.length + shiftPending.length + delPending.length : 0;
   const empty = <p className="rounded-card bg-bg p-5 text-sm text-faint">{t('empty')}</p>;
@@ -312,6 +319,11 @@ export default async function InboxPage({ searchParams }: { searchParams: Promis
         </div>
         <RequestTabs admin active="pending" live={sp.live === '1'} q={q} counts={{ pending: listed.length }} />
         {practice && <p className="rounded-card bg-primary-tint p-3 text-sm text-primary">{t('practiceBanner')}</p>}
+        {listed.length > 0 && (
+          <div className="hidden lg:block">
+            <StatusCards groups={[{ title: t('cardsKind'), cards: RKINDS.map((k) => ({ key: k, label: tr(`kinds.${k}`), n: listed.filter((x) => x.kind === k).length, unit: t('unit'), href: rkLink(rk === k ? null : k), on: rk === k, tone: 'warn' as const })) }]} />
+          </div>
+        )}
         {listed.length === 0 && empty}
         <div className="flex flex-col gap-3 lg:hidden">
           <RequestRows items={listPage.items} leaveTypes={leaveTypes} names={names} showName hrefOf={focusHref} />

@@ -620,7 +620,9 @@
       "zoomIn": "지도 확대",
       "zoomOut": "지도 축소",
       "mapCredit": "지도 © OpenStreetMap",
-      "map": "요청한 위치 지도"
+      "map": "요청한 위치 지도",
+      "cardsKind": "종류별 대기",
+      "unit": "건"
     },
     "records": {
       "title": "기록",
@@ -3499,7 +3501,11 @@
       "retirement_estimate": "추계는 확정하는 것이 아닙니다. 퇴직 정산이나 중간정산으로 만들어 주세요.",
       "retirement_period": "계속근로 시작일과 마지막 근무일을 확인해 주세요.",
       "retirement_tax_basis": "세액을 넣으면 근거도 적어야 합니다.",
-      "retirement_reason": "사유를 2자 이상 적어 주세요."
+      "retirement_reason": "사유를 2자 이상 적어 주세요.",
+      "cardsState": "상태",
+      "cardsKind": "종류",
+      "unit": "건",
+      "showAll": "전체 보기"
     },
     "insurance": {
       "title": "사회보험",
@@ -4208,7 +4214,19 @@
     "usageNote": "회사가 승인한 연차 지급 건으로 계산한 값입니다.",
     "promoBanner": "연차 사용 계획을 내 주세요: {title} (기한 {due})",
     "promoBannerDone": "연차 사용 계획을 냈습니다: {title} (기한 {due}까지 고칠 수 있음)",
-    "promoOpen": "열기"
+    "promoOpen": "열기",
+    "monthlyTitle": "달별 휴가 사용",
+    "monthlyKind": "구분",
+    "monthlyTotal": "합계",
+    "monthN": "{n}월",
+    "monthly": {
+      "deducted": "연차 사용",
+      "other": "그 밖의 휴가",
+      "pending": "승인 대기"
+    },
+    "monthlyNote": "단위는 일입니다. 여러 날에 걸친 휴가는 시작한 달에 셉니다.",
+    "prevYear": "지난해",
+    "nextYear": "다음 해"
   },
   "work": {
     "title": "외근·출장·재택 신청",

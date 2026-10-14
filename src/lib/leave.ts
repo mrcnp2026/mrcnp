@@ -176,3 +176,24 @@ export function trimRuleByLeave(rule: WorkRule, leaves: readonly { startTime?: s
 export function leaveTypeName(types: readonly { code: string; name: string }[], code: string, tr: { (key: string): string; has: (key: string) => boolean }): string {
   return tr.has(`type.${code}`) ? tr(`type.${code}`) : (types.find((x) => x.code === code)?.name ?? code);
 }
+
+export type MonthUse = { month: number; deducted: number; other: number; pending: number };
+/**
+ * 내 휴가의 달별 사용 (2026-10-14 직원 화면 보강 — 다우오피스 「내 휴가 현황」의 월별 표).
+ * 승인된 휴가는 연차에서 빠지는 것(deducted)과 그 밖(other)으로, 대기 중인 것은 pending으로 센다.
+ * 여러 날짜에 걸친 신청은 시작한 달에 모두 센다(달을 넘는 신청은 드물고, 신청 한 건이 한 줄로 보이는 편이 맞춰 보기 쉽다).
+ */
+export function monthlyLeaveUse(requests: readonly LeaveRequest[], types: readonly LeaveType[], year: string): MonthUse[] {
+  const deducts = new Map(types.map((x) => [x.code, x.deductsBalance]));
+  const out: MonthUse[] = Array.from({ length: 12 }, (_, i) => ({ month: i + 1, deducted: 0, other: 0, pending: 0 }));
+  for (const r of requests) {
+    if (r.startDate.slice(0, 4) !== year) continue;
+    const m = out[Number(r.startDate.slice(5, 7)) - 1];
+    if (r.status === 'pending') m.pending = roundDays(m.pending + r.days);
+    else if (r.status === 'approved') {
+      if (deducts.get(r.typeCode) ?? true) m.deducted = roundDays(m.deducted + r.days);
+      else m.other = roundDays(m.other + r.days);
+    }
+  }
+  return out;
+}

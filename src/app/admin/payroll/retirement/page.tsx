@@ -2,6 +2,7 @@
 // 수동 검산이다: 직원과 마지막 근무일을 고르면 프로그램에 있는 자료로 칸을 미리 채워 주고, 담당자가 확인 · 고쳐서 건을 만든다.
 import { getFormatter, getTranslations } from 'next-intl/server';
 import Link from 'next/link';
+import { StatusCards } from '@/components/listframe';
 import { Card, CardTitle, Chip, PageShell } from '@/components/ui';
 import { OFFICE } from '@/config/office';
 import { getMe } from '@/lib/auth';
@@ -14,7 +15,7 @@ const field = 'min-h-9 rounded-button border border-border bg-bg px-3 text-sm';
 const TONE = { DRAFT: 'neutral', FINALIZED: 'ok', WITHDRAWN: 'neutral' } as const;
 const KINDS = ['ESTIMATE', 'FINAL', 'INTERIM'] as const;
 
-export default async function RetirementPage({ searchParams }: { searchParams: Promise<{ emp?: string; kind?: string; to?: string; live?: string }> }) {
+export default async function RetirementPage({ searchParams }: { searchParams: Promise<{ emp?: string; kind?: string; to?: string; live?: string; cs?: string; ck?: string }> }) {
   const [t, f, me, sp] = await Promise.all([getTranslations('admin.retirement'), getFormatter(), getMe(), searchParams]);
   if (!me || me.role !== 'admin' || !me.canViewPayroll) return <PageShell><p className="rounded-card bg-warn-tint p-4 text-sm text-warn">{t('forbidden')}</p></PageShell>;
   const practice = OFFICE.practiceMode && sp.live !== '1';
@@ -27,6 +28,12 @@ export default async function RetirementPage({ searchParams }: { searchParams: P
   const to = sp.to && /^\d{4}-\d{2}-\d{2}$/.test(sp.to) && !Number.isNaN(Date.parse(`${sp.to}T00:00:00Z`)) ? sp.to : today;
   const filled = emp ? await suggestInput({ employeeId: emp.id as string, lastDay: to, practice }) : null;
   const won = (v: number | null) => (v === null ? t('noAmountShort') : t('won', { n: f.number(v) }));
+  // 상태 · 종류 카드로 거르기 (목록 틀 — components/listframe). cs = 상태, ck = 종류
+  const STATES = ['DRAFT', 'FINALIZED', 'WITHDRAWN'] as const;
+  const cs = (STATES as readonly string[]).includes(sp.cs ?? '') ? (sp.cs as string) : null;
+  const ck = (KINDS as readonly string[]).includes(sp.ck ?? '') ? (sp.ck as string) : null;
+  const cLink = (s2: string | null, k2: string | null) => `/admin/payroll/retirement?${[s2 ? `cs=${s2}` : '', k2 ? `ck=${k2}` : '', sp.live === '1' ? 'live=1' : ''].filter(Boolean).join('&')}`;
+  const shown = cases.filter((k) => (!cs || k.state === cs) && (!ck || k.kind === ck));
 
   return (
     <PageShell wide>
@@ -79,6 +86,17 @@ export default async function RetirementPage({ searchParams }: { searchParams: P
           </div>
         )}
       </Card>
+      <StatusCards
+        groups={[
+          { title: t('cardsState'), cards: STATES.map((k) => ({ key: k, label: t(`state.${k}`), n: cases.filter((c) => c.state === k).length, unit: t('unit'), href: cLink(cs === k ? null : k, ck), on: cs === k, tone: k === 'FINALIZED' ? ('ok' as const) : undefined })) },
+          { title: t('cardsKind'), cards: KINDS.map((k) => ({ key: k, label: t(`kind.${k}`), n: cases.filter((c) => c.kind === k).length, unit: t('unit'), href: cLink(cs, ck === k ? null : k), on: ck === k })) },
+        ]}
+      />
+      {(cs || ck) && (
+        <Link href={cLink(null, null)} className="self-start text-sm font-bold text-primary">
+          {t('showAll')}
+        </Link>
+      )}
       <div className="overflow-x-auto rounded-card border border-border bg-bg">
         <table className="w-full text-sm">
           <thead>
@@ -89,7 +107,7 @@ export default async function RetirementPage({ searchParams }: { searchParams: P
             </tr>
           </thead>
           <tbody>
-            {cases.map((k) => (
+            {shown.map((k) => (
               <tr key={k.id} className="border-b border-border last:border-b-0">
                 <td className="px-3 py-3 whitespace-nowrap">
                   <Link href={`/admin/payroll/retirement/${k.id}`} className="font-bold text-primary hover:underline">{k.name}</Link> <span className="num text-xs text-muted">{k.employeeNo}</span>
@@ -103,7 +121,7 @@ export default async function RetirementPage({ searchParams }: { searchParams: P
             ))}
           </tbody>
         </table>
-        {cases.length === 0 && <p className="p-4 text-sm text-faint">{t('empty')}</p>}
+        {shown.length === 0 && <p className="p-4 text-sm text-faint">{t('empty')}</p>}
       </div>
     </PageShell>
   );

@@ -1,7 +1,7 @@
 // 직원 「연차」 탭 (②-2 게이트 5, 시프티 대조 우선 반영 ①). 잔여 · 신청 · 내 신청.
 // 대기 일수는 잔여에서 빼지 않고 따로 보여 준다 (7-3 요점 5). 사유는 선택 (4-7).
 import { SheetOpener } from '@/components/SheetOpener';
-import { CalendarDays } from 'lucide-react';
+import { CalendarDays, ChevronLeft, ChevronRight } from 'lucide-react';
 import { getFormatter, getTranslations } from 'next-intl/server';
 import Link from 'next/link';
 import { redirect } from 'next/navigation';
@@ -12,7 +12,7 @@ import { MineBar } from '@/components/MineBar';
 import { Row, RowList } from '@/components/list';
 import { Card, CardTitle, Chip, PageShell } from '@/components/ui';
 import { getMe } from '@/lib/auth';
-import { calcLeaveBalance, leaveTypeName } from '@/lib/leave';
+import { calcLeaveBalance, leaveTypeName, monthlyLeaveUse } from '@/lib/leave';
 import { loadAllLeaveTypes, loadLeaveGrants, loadLeaveRequests } from '@/lib/leave-data';
 import { endingSoonest, entriesFor, ledgerBalance, lotRemaining, minutesToDays } from '@/lib/leave-ledger';
 import { loadEntries, loadLots } from '@/lib/leave-ledger-data';
@@ -23,7 +23,7 @@ import { CancelLeave, DeleteLeaveRequest, LeaveForm } from './LeaveForm';
 import { CancelWork, WorkForm } from './WorkForm';
 import { loadMyOpenTargets } from '@/lib/leave-promotion';
 
-export default async function LeavePage({ searchParams }: { searchParams: Promise<{ workDate?: string; new?: string }> }) {
+export default async function LeavePage({ searchParams }: { searchParams: Promise<{ workDate?: string; new?: string; y?: string }> }) {
   const me = await getMe();
   if (!me) redirect('/login');
   const t = await getTranslations('leave');
@@ -45,6 +45,11 @@ export default async function LeavePage({ searchParams }: { searchParams: Promis
   // 올해가 아니면 연도도 (지난해·먼 미래 신청이 올해로 읽히지 않게)
   const day = (d: string) => f.dateTime(new Date(`${d}T12:00:00+09:00`), { year: d.slice(0, 4) === today.slice(0, 4) ? undefined : 'numeric', month: 'short', day: 'numeric', weekday: 'short' });
   const n = (v: number) => f.number(v, { maximumFractionDigits: 4 });
+  // 달별 사용 표 (2026-10-14 직원 화면 보강): 고른 해(없으면 올해)
+  const year = /^\d{4}$/.test(sp.y ?? '') ? sp.y! : today.slice(0, 4);
+  const monthly = monthlyLeaveUse(requests, types, year);
+  const total = monthly.reduce((a, m) => ({ deducted: a.deducted + m.deducted, other: a.other + m.other, pending: a.pending + m.pending }), { deducted: 0, other: 0, pending: 0 });
+  const cell = (v: number) => (v === 0 ? <span className="text-faint">–</span> : n(v));
 
   // 대기 중인 내 휴가 삭제 요청 (휴가 id → 요청 id)
   const { data: changes } = await createAdminClient().from('leave_change_requests').select('id, leave_id').eq('employee_id', me.id).eq('status', 'pending');
@@ -96,6 +101,44 @@ export default async function LeavePage({ searchParams }: { searchParams: Promis
           <p className="text-xs text-faint">{t('usageNote')}</p>
         </Card>
       )}
+
+      <section className="flex flex-col gap-2 rounded-card border border-border bg-bg p-4 lg:p-6">
+        <div className="flex items-center gap-2">
+          <h2 className="flex-1 font-bold">{t('monthlyTitle')}</h2>
+          <Link href={`/punch/leave?y=${Number(year) - 1}`} aria-label={t('prevYear')} className="flex size-9 items-center justify-center rounded-button border border-border text-muted">
+            <ChevronLeft aria-hidden size={16} />
+          </Link>
+          <span className="num min-w-14 text-center font-bold">{year}</span>
+          <Link href={`/punch/leave?y=${Number(year) + 1}`} aria-label={t('nextYear')} className="flex size-9 items-center justify-center rounded-button border border-border text-muted">
+            <ChevronRight aria-hidden size={16} />
+          </Link>
+        </div>
+        <div className="overflow-x-auto">
+          <table className="num w-full text-sm">
+            <thead>
+              <tr className="border-b border-border bg-surface">
+                <th scope="col" className="px-2 py-2 text-left text-xs font-semibold whitespace-nowrap text-muted">{t('monthlyKind')}</th>
+                {monthly.map((m) => (
+                  <th key={m.month} scope="col" className="px-2 py-2 text-right text-xs font-semibold whitespace-nowrap text-muted">{t('monthN', { n: m.month })}</th>
+                ))}
+                <th scope="col" className="px-2 py-2 text-right text-xs font-semibold whitespace-nowrap text-muted">{t('monthlyTotal')}</th>
+              </tr>
+            </thead>
+            <tbody>
+              {(['deducted', 'other', 'pending'] as const).map((k) => (
+                <tr key={k} className="border-b border-border last:border-b-0">
+                  <th scope="row" className="px-2 py-2.5 text-left font-semibold whitespace-nowrap">{t(`monthly.${k}`)}</th>
+                  {monthly.map((m) => (
+                    <td key={m.month} className={`px-2 py-2.5 text-right ${k === 'pending' && m[k] > 0 ? 'text-warn' : ''}`}>{cell(m[k])}</td>
+                  ))}
+                  <td className="px-2 py-2.5 text-right font-bold">{cell(total[k])}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+        <p className="text-xs text-faint">{t('monthlyNote')}</p>
+      </section>
 
       {/* PC: 왼쪽 = 휴가, 오른쪽 = 외근·출장·재택. 줄마다 좌우 높이를 맞춘다 — ① 요약 ② 신청 ③ 내 신청 (2026-10-06 의뢰인: 위쪽이 어긋났다) · 폰: 휴가 3칸 뒤에 외근 3칸 (order) */}
       <div className="flex flex-col gap-3">
