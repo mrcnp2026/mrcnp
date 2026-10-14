@@ -116,11 +116,14 @@ export async function loadPeriod(from: string, to: string, practice = OFFICE.pra
     loadShiftTemplates(true),
     loadShifts(readFrom, to),
   ]);
-  const ppl = within(pplAll ?? [], scope, (p) => p.id as string);
-  const ev = within(evAll ?? [], scope, (e) => e.employee_id as string);
-  const co = within(coAll ?? [], scope, (c) => c.employee_id as string);
-  const ot = within(otAll ?? [], scope, (o) => o.employee_id as string);
-  const shifts = within(shiftsAll, scope, (x) => x.employeeId);
+  // 실제 관리자에게는 검사 전용 계정(e2e-)의 사람 · 기록을 빼고 계산한다 — 현황판 · 이상자 · 마감 · 리포트 숫자에 섞이지 않게 (hiddenTestIds)
+  const hidden = new Set(await hiddenTestIds());
+  const keep = <T,>(rows: T[], idOf: (r: T) => string) => (hidden.size ? rows.filter((r) => !hidden.has(idOf(r))) : rows);
+  const ppl = keep(within(pplAll ?? [], scope, (p) => p.id as string), (p) => p.id as string);
+  const ev = keep(within(evAll ?? [], scope, (e) => e.employee_id as string), (e) => e.employee_id as string);
+  const co = keep(within(coAll ?? [], scope, (c) => c.employee_id as string), (c) => c.employee_id as string);
+  const ot = keep(within(otAll ?? [], scope, (o) => o.employee_id as string), (o) => o.employee_id as string);
+  const shifts = keep(within(shiftsAll, scope, (x) => x.employeeId), (x) => x.employeeId);
   const tplById = new Map(templates.map((t) => [t.id, t]));
   // 꺼 둔 틀은 적용되지 않은 것으로 본다 (이름·색은 지난 일정 표시에 계속 쓴다)
   const tplOfPerson = new Map((ppl ?? []).map((p) => [p.id as string, p.shift_template_id ? (tplById.get(p.shift_template_id)?.active ? tplById.get(p.shift_template_id)! : null) : null]));
@@ -272,8 +275,16 @@ export async function syncOvertimeRequests(data: PeriodData, upTo: string): Prom
 }
 
 /** 꺼져 있는 검사 전용 계정(e2e-…) — 이 계정들의 요청은 요청함·요청 숫자에 넣지 않는다 (검사가 남긴 요청이 실제 관리자에게 보이던 문제, 2026-10-11) */
+/**
+ * 보는 사람에게 숨길 검사 전용 계정(e2e-) — 실제 관리자에게는 검사 계정의 사람 · 기록 · 요청이 어디에도 나오지 않는다 (2026-10-14 의뢰인: 「요청 9건인데 열면 없다」).
+ * 검사 계정으로 보는 검사에게는 꺼 둔 검사 계정만 숨긴다(켜진 검사 계정끼리 시험한다). 로그인한 사람이 없으면(서버 작업) 실제 쪽으로 본다
+ */
 export async function hiddenTestIds(): Promise<string[]> {
-  const { data } = await createAdminClient().from('profiles').select('id').like('employee_no', 'e2e-%').eq('active', false);
+  const viewer = await getMe().catch(() => null);
+  const testView = !!viewer?.employeeNo?.startsWith('e2e-');
+  let q = createAdminClient().from('profiles').select('id').like('employee_no', 'e2e-%');
+  if (testView) q = q.eq('active', false);
+  const { data } = await q;
   return (data ?? []).map((p) => p.id as string);
 }
 

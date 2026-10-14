@@ -8,6 +8,7 @@ import Link, { useLinkStatus } from 'next/link';
 import { useSearchParams } from 'next/navigation';
 import { useEffect, useState } from 'react';
 import { appHref, appLeaves, appsFor, CONSOLE_HOME, locate, locateHref, type App, type NavRole } from '@/config/nav';
+import { useAlerts } from './Alerts';
 import { usePressedTab } from './NavTab';
 
 export const RECENT_KEY = 'nav-recent';
@@ -45,8 +46,9 @@ function Panel({ app, title, active, inboxCount, onPick, t }: { app: App; title:
   );
 }
 
-export function DeskNav({ role, inboxCount = 0 }: { role: NavRole; inboxCount?: number }) {
+export function DeskNav({ role }: { role: NavRole; inboxCount?: number }) {
   const t = useTranslations('frame');
+  const inboxCount = useAlerts().requests; // 화면을 옮길 때마다 다시 센 숫자 (components/Alerts)
   const { path, pressed, setPressed } = usePressedTab();
   const query = useSearchParams();
   const here = locate(path, query, role);

@@ -40,10 +40,19 @@ const toRun = (r: Row): RunRow => ({
 });
 
 export async function loadRuns(practice: boolean): Promise<RunRow[]> {
-  const { data, error } = await db().from('payroll_runs').select('*').eq('is_test', practice).neq('run_kind', 'DAILY').order('period_from', { ascending: false }).order('revision', { ascending: false }).limit(60); // 일용 대장은 일용직 화면에서 따로 본다
+  // 검사가 만든 대장(제목 e2e-)은 읽을 때부터 뺀다 — 뒤에서 거르면 검사 대장이 60개 자리를 차지해 실제 대장이 목록에서 사라졌다 (2026-10-14)
+  const { data, error } = await db().from('payroll_runs').select('*').eq('is_test', practice).neq('run_kind', 'DAILY').or('title.is.null,title.not.like.e2e-%').order('period_from', { ascending: false }).order('revision', { ascending: false }).limit(60); // 일용 대장은 일용직 화면에서 따로 본다
   if (error) fail('loadRuns', error);
   // 검사가 만든 대장(제목이 e2e-로 시작)은 목록에 보이지 않는다 — 검사 전용 계정을 숨기는 것과 같은 규칙
   return (data ?? []).map(toRun).filter((r) => !r.title?.startsWith('e2e-'));
+}
+/** 그 달 · 그 종류 대장의 가장 새 판 id — 「이미 있는 대장 열기」. 실제 관리자에게는 검사 대장(제목 e2e-)을 열어 주지 않는다 */
+export async function findRun(args: { practice: boolean; kind: 'REGULAR' | 'BONUS'; from: string; test: boolean }): Promise<string | null> {
+  let q = db().from('payroll_runs').select('id, title').eq('is_test', args.practice).eq('run_kind', args.kind).eq('period_from', args.from);
+  if (!args.test) q = q.or('title.is.null,title.not.like.e2e-%');
+  const { data, error } = await q.order('revision', { ascending: false }).order('created_at', { ascending: false }).limit(1);
+  if (error) fail('findRun', error);
+  return (data?.[0]?.id as string | undefined) ?? null;
 }
 export async function loadRun(id: string): Promise<RunRow | null> {
   const { data, error } = await db().from('payroll_runs').select('*').eq('id', id).maybeSingle();
@@ -89,7 +98,7 @@ export async function createRun(args: { ym: string; kind?: 'REGULAR' | 'BONUS'; 
 }
 
 // ── 계산 입력 만들기 ──
-type MemberInput = { employeeId: string; input: Omit<EngineInput, 'withholding'>; pre: Blocker[]; closeId: string | null; contractId: string | null; taxId: string | null; snapshot: Row };
+type MemberInput = { employeeId: string; input: Omit<EngineInput, 'withholding'>; pre: Blocker[]; notes: Blocker[]; closeId: string | null; contractId: string | null; taxId: string | null; snapshot: Row };
 type Built = { members: MemberInput[]; withholding: Withholding | null; bundle: Record<string, { id: string; hash: string }>; missing: ReferenceKind[]; inputHash: string };
 const REF_KINDS: ReferenceKind[] = ['pension.rate', 'pension.limit', 'health.rate', 'ltc.rate', 'employment.rate', 'income-tax.table', 'income-tax.child-adjust'];
 
@@ -167,6 +176,7 @@ async function buildInputs(run: RunRow): Promise<Built> {
   for (const m of (mem ?? []).filter((x) => x.inclusion_state === 'INCLUDED').sort((a, b) => String(a.employee_id).localeCompare(String(b.employee_id)))) {
     const id = m.employee_id as string;
     const pre: Blocker[] = [];
+    const notes: Blocker[] = []; // 계산은 되지만 담당자가 알아야 하는 것
     const person = (people ?? []).find((p) => p.id === id);
     const conRows = contracts.filter((x) => x.employee_id === id).map((x) => ({ ...x, validFrom: x.valid_from as string, validTo: x.valid_to as string | null }));
     const con = versionAt(conRows, last) as (Row & { validFrom: string }) | null;
@@ -201,13 +211,17 @@ async function buildInputs(run: RunRow): Promise<Built> {
         const att = {
           regularMinutes: num('regular_minutes'), netMinutes: s.netMinutes, payableMinutes: s.payableMinutes,
           approved: { overtime: num('approved_overtime_minutes'), night: num('approved_night_minutes'), holidayWithin8: num('approved_holiday_within8_minutes'), holidayOver8: num('approved_holiday_over8_minutes') },
-          pendingMinutes: num('pending_overtime_minutes') + num('pending_night_minutes') + num('pending_holiday_minutes') + num('unreviewed_overtime_minutes'),
+          // 확인 기준(30분) 미만이라 승인 대기에 오르지 않은 연장은 막지 않는다 — 승인할 길이 없어 영영 계산이 막혔다 (2026-10-14 모의 운영 검사에서 발견).
+          // 인정하지 않은 시간이라 연장 수당에 넣지 않고, 명세에 「참고」로 남긴다 (결정 사항 개발-31, 임시)
+          pendingMinutes: num('pending_overtime_minutes') + num('pending_night_minutes') + num('pending_holiday_minutes'),
+          unreviewedMinutes: num('unreviewed_overtime_minutes'),
           paidLeaveDays: s.paidLeaveDays, flags: String(s.row.flags ?? '').split(';').map((x) => x.trim()).filter(Boolean), unconfirmedDays: s.unconfirmedDates.length,
         };
         facts = att;
         const t = timeFromAttendance(att, (con!.time_basis as 'ACTUAL' | 'ROUNDED' | 'SCHEDULE') ?? 'ACTUAL', contract.payType);
         time = t.time;
         pre.push(...t.blockers);
+        if (att.unreviewedMinutes > 0) notes.push({ code: 'overtime_unreviewed', detail: String(att.unreviewedMinutes) });
       }
     }
     // 개인 항목 (그 달 마지막 날에 붙어 있는 것)
@@ -225,7 +239,7 @@ async function buildInputs(run: RunRow): Promise<Built> {
     // 상여: 같은 달에 앞서 확정한 명세(정규 + 앞 차수 상여)의 과세 합계와 세액을 넘긴다 → 세금은 차액만. 4대보험은 상여 대장에서 계산하지 않는다(경고로 알린다)
     const prior = bonus ? (priorOf!.get(id) ?? (priorOf!.has('*') ? { taxable: 0, incomeTax: 0, localTax: 0 } : null)) : null;
     const input: MemberInput['input'] = { runKind: bonus ? 'BONUS' : 'REGULAR', contract, tax, time, partialMonth, items: engineItems, policy, reference, insuranceBasis, overrides, prior, skipInsurance: bonus };
-    members.push({ employeeId: id, input, pre, closeId: (close?.id as string | undefined) ?? null, contractId: (con?.id as string | undefined) ?? null, taxId: (taxRow?.id as string | undefined) ?? null, snapshot: { contract, tax, time, attendance: facts, items: engineItems, overrides, partialMonth, prior, closeHash: close?.input_hash ?? null } });
+    members.push({ employeeId: id, input, pre, notes, closeId: (close?.id as string | undefined) ?? null, contractId: (con?.id as string | undefined) ?? null, taxId: (taxRow?.id as string | undefined) ?? null, snapshot: { contract, tax, time, attendance: facts, items: engineItems, overrides, partialMonth, prior, closeHash: close?.input_hash ?? null } });
   }
   const inputHash = sha({ engine: ENGINE_VERSION, policy, insuranceBasis, bundle, members: members.map((x) => ({ id: x.employeeId, pre: x.pre, close: x.closeId, contract: x.contractId, tax: x.taxId, s: x.snapshot })) });
   return { members, withholding, bundle, missing, inputHash };
@@ -270,7 +284,8 @@ async function loadPrior(run: RunRow): Promise<Map<string, { taxable: number; in
 
 /** 한 사람 계산. 근태 쪽에서 이미 막힌 것이 있으면 계산 모듈의 차단 사유와 합친다 */
 function compute(m: MemberInput, withholding: Withholding | null): EngineResult {
-  const r = calculateStatement({ ...m.input, withholding });
+  const r0 = calculateStatement({ ...m.input, withholding });
+  const r = { ...r0, warnings: [...r0.warnings, ...m.notes] } as EngineResult;
   if (m.pre.length === 0) return r;
   const blockers = [...m.pre, ...r.blockers].filter((b, i, all) => all.findIndex((x) => x.code === b.code && x.detail === b.detail) === i && !(b.code === 'no_attendance' && m.pre.length > 0 && m.closeId));
   return { state: 'BLOCKED', lines: [], totals: null, blockers, warnings: r.warnings, engineVersion: r.engineVersion };

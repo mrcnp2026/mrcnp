@@ -1,0 +1,105 @@
+'use client';
+// 알림 숫자 한곳 (2026-10-14 의뢰인: 요청 · 공지가 있으면 종에 표시, 처리하면 숫자가 바로 바뀌어야 한다)
+// 처음 값은 화면 틀(AppFrame)이 서버에서 세어 넘기고, 화면을 옮길 때마다 · 1분마다 · 창으로 돌아올 때 /api/me/alerts로 다시 센다.
+// 종 아이콘(AlertBell)과 요청 배지(앱 띠 · 하단 탭)가 같은 숫자를 쓴다.
+import { Bell, ChevronRight } from 'lucide-react';
+import { useTranslations } from 'next-intl';
+import Link from 'next/link';
+import { usePathname } from 'next/navigation';
+import { createContext, useCallback, useContext, useEffect, useRef, useState, type ReactNode } from 'react';
+
+export type AlertCounts = { notices: number; messages: number; requests: number };
+const Ctx = createContext<AlertCounts>({ notices: 0, messages: 0, requests: 0 });
+export const useAlerts = () => useContext(Ctx);
+
+export function AlertsProvider({ initial, children }: { initial: AlertCounts; children: ReactNode }) {
+  const [counts, setCounts] = useState(initial);
+  const path = usePathname();
+  const reload = useCallback(async () => {
+    try {
+      const r = await fetch('/api/me/alerts', { cache: 'no-store' });
+      if (r.ok) setCounts(await r.json());
+    } catch {
+      // 잠깐 연결이 끊겨도 앞의 숫자를 그대로 둔다
+    }
+  }, []);
+  const first = useRef(true);
+  useEffect(() => {
+    if (first.current) {
+      first.current = false;
+      return;
+    }
+    void reload();
+  }, [path, reload]);
+  useEffect(() => {
+    const id = window.setInterval(reload, 60_000);
+    const onFocus = () => document.visibilityState === 'visible' && reload();
+    document.addEventListener('visibilitychange', onFocus);
+    window.addEventListener(ALERTS_RELOAD_EVENT, reload);
+    return () => {
+      window.clearInterval(id);
+      document.removeEventListener('visibilitychange', onFocus);
+      window.removeEventListener(ALERTS_RELOAD_EVENT, reload);
+    };
+  }, [reload]);
+  return <Ctx.Provider value={counts}>{children}</Ctx.Provider>;
+}
+
+/** 승인 · 거절 · 읽음처럼 숫자가 바뀌는 일을 한 뒤 부른다 — 화면을 옮기지 않아도 바로 다시 센다 */
+export const ALERTS_RELOAD_EVENT = 'alerts-reload';
+export const reloadAlerts = () => window.dispatchEvent(new Event(ALERTS_RELOAD_EVENT));
+
+/** 종 — 공지 · 메시지 · 처리할 요청을 더한 숫자, 누르면 무엇이 몇 건인지 */
+export function AlertBell({ approver, size = 'pc' }: { approver: boolean; size?: 'pc' | 'phone' }) {
+  const t = useTranslations('alerts');
+  const c = useAlerts();
+  const path = usePathname();
+  const [open, setOpen] = useState(false);
+  const box = useRef<HTMLDivElement>(null);
+  useEffect(() => setOpen(false), [path]);
+  useEffect(() => {
+    if (!open) return;
+    const away = (e: MouseEvent) => !box.current?.contains(e.target as Node) && setOpen(false);
+    const key = (e: KeyboardEvent) => e.key === 'Escape' && setOpen(false);
+    window.addEventListener('mousedown', away);
+    window.addEventListener('keydown', key);
+    return () => {
+      window.removeEventListener('mousedown', away);
+      window.removeEventListener('keydown', key);
+    };
+  }, [open]);
+  const total = c.notices + c.messages + (approver ? c.requests : 0);
+  const rows = [
+    { key: 'notices', n: c.notices, href: '/punch/notices' },
+    { key: 'messages', n: c.messages, href: '/punch/messages' },
+    ...(approver ? [{ key: 'requests', n: c.requests, href: '/admin/inbox' }] : []),
+  ];
+  return (
+    <div ref={box} className="relative">
+      <button
+        type="button"
+        aria-label={t('label', { n: total })}
+        aria-expanded={open}
+        data-alert-bell
+        onClick={() => setOpen((o) => !o)}
+        className={`relative flex shrink-0 items-center justify-center rounded-button ${size === 'pc' ? 'size-9 text-muted hover:bg-surface' : '-mr-2 size-11 text-text'}`}
+      >
+        <Bell aria-hidden size={size === 'pc' ? 20 : 22} strokeWidth={1.75} />
+        {total > 0 && <span className="num absolute -top-0.5 -right-0.5 flex min-w-4.5 items-center justify-center rounded-chip bg-danger px-1 text-xs leading-4.5 font-bold text-on-primary">{total}</span>}
+      </button>
+      {open && (
+        <div role="menu" className="absolute top-11 right-0 z-30 w-72 rounded-card border border-border bg-bg p-2 shadow-pop">
+          <p className="px-2 pt-1 pb-2 text-sm font-bold">{t('title')}</p>
+          {rows.map((r) => (
+            <Link key={r.key} href={r.href} role="menuitem" className="flex min-h-11 items-center gap-2 rounded-button px-2 text-sm hover:bg-surface">
+              <span className="flex-1">{t(r.key)}</span>
+              <span className={`num min-w-6 rounded-chip px-2 text-center text-xs font-bold ${r.n > 0 ? 'bg-danger text-on-primary' : 'bg-surface text-faint'}`}>{r.n}</span>
+              <ChevronRight aria-hidden size={14} className="text-faint" />
+            </Link>
+          ))}
+          {total === 0 && <p className="px-2 pb-1 text-xs text-faint">{t('none')}</p>}
+        </div>
+      )}
+    </div>
+  );
+}

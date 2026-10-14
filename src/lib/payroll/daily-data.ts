@@ -153,7 +153,10 @@ async function finalizedWorkIds(payeeIds: string[], exceptRunId?: string): Promi
 
 // ── 일용 대장 ──
 export async function loadDailyRuns(args: { practice: boolean; testViewer: boolean }): Promise<RunRow[]> {
-  const { data, error } = await db().from('payroll_runs').select('id').eq('run_kind', 'DAILY').eq('is_test', args.practice).order('period_from', { ascending: false }).order('sequence', { ascending: false }).limit(60);
+  // 검사 대장(제목 e2e-)은 읽을 때부터 나눈다 — 뒤에서 거르면 검사 대장이 60개 자리를 차지해 실제 대장이 사라진다 (2026-10-14)
+  let q = db().from('payroll_runs').select('id').eq('run_kind', 'DAILY').eq('is_test', args.practice);
+  q = args.testViewer ? q.like('title', 'e2e-%') : q.or('title.is.null,title.not.like.e2e-%');
+  const { data, error } = await q.order('period_from', { ascending: false }).order('sequence', { ascending: false }).limit(60);
   if (error) boom('loadDailyRuns', error);
   const runs = (await Promise.all((data ?? []).map((r) => loadRun(r.id as string)))).filter((r): r is RunRow => !!r);
   return runs.filter((r) => !!r.title?.startsWith('e2e-') === args.testViewer);

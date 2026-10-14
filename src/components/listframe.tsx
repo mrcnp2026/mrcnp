@@ -119,3 +119,43 @@ export function WarnLine({ short, children }: { short: string; children: ReactNo
     </p>
   );
 }
+
+export type Step = { key: string; label: string; href?: string; state: 'done' | 'now' | 'todo'; note?: string };
+/**
+ * 순서 안내 — ① → ② → ③ (2026-10-14 의뢰인: 「무엇을 어디에 넣고, 무엇과 어떻게 이어지는지」가 화면에 보여야 한다)
+ * 끝낸 단계는 ✓, 지금 단계는 진하게, 남은 단계는 옅게. 누르면 그 단계 화면으로
+ */
+export function Steps({ steps, label }: { steps: Step[]; label: string }) {
+  return (
+    <nav aria-label={label} className="overflow-x-auto">
+      <ol className="flex min-w-max items-stretch gap-1">
+        {steps.map((s, i) => {
+          const body = (
+            <>
+              <span className={`num flex size-6 shrink-0 items-center justify-center rounded-chip text-xs font-bold ${s.state === 'done' ? 'bg-ok text-on-primary' : s.state === 'now' ? 'bg-primary text-on-primary' : 'bg-surface text-faint'}`}>{s.state === 'done' ? '✓' : i + 1}</span>
+              <span className="flex flex-col leading-tight">
+                <span className={`text-sm whitespace-nowrap ${s.state === 'now' ? 'font-bold text-text' : s.state === 'done' ? 'text-muted' : 'text-faint'}`}>{s.label}</span>
+                {s.note && <span className="text-xs whitespace-nowrap text-faint">{s.note}</span>}
+              </span>
+            </>
+          );
+          const cls = `flex items-center gap-2 rounded-button px-2.5 py-1.5 ${s.state === 'now' ? 'bg-primary-tint' : ''}`;
+          return (
+            <li key={s.key} className="flex items-center gap-1">
+              {i > 0 && <span aria-hidden className="text-faint">›</span>}
+              {s.href && s.state !== 'now' ? (
+                <Link href={s.href} className={`${cls} hover:bg-surface`}>
+                  {body}
+                </Link>
+              ) : (
+                <span aria-current={s.state === 'now' ? 'step' : undefined} className={cls}>
+                  {body}
+                </span>
+              )}
+            </li>
+          );
+        })}
+      </ol>
+    </nav>
+  );
+}

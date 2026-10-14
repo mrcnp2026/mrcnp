@@ -120,7 +120,10 @@ try {
   await db.from('profiles').update({ role: 'employee', locale: 'en' }).eq('id', emp.id);
   await p.goto(`${BASE}/punch`);
   await p.waitForLoadState('networkidle');
-  check(await p.getByRole('link', { name: /Notices \(1 unread\)/ }).isVisible(), '홈 상단 종 아이콘에 미확인 1');
+  // 종은 공지 · 메시지 · 요청을 합친 숫자 (2026-10-14) — 눌러서 「확인 안 한 공지 1」을 본다
+  // (홈에 공지 창이 떠 있어 종을 누를 수 없다 — 종이 읽는 숫자를 직접 본다)
+  const al = (await p.evaluate(async () => (await fetch('/api/me/alerts')).json())) as { notices: number };
+  check(al.notices === 1 && (await p.locator('[data-alert-bell]').count()) > 0, '홈 상단 종 아이콘에 미확인 1', JSON.stringify(al));
   await p.getByRole('dialog').waitFor({ timeout: 5000 });
   check(true, '홈을 열자마자 팝업이 뜬다');
   const dlg = p.getByRole('dialog');

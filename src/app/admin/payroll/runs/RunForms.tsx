@@ -40,8 +40,8 @@ export function RunCreate({ months, bonusMonths, today, live }: { months: string
       onSubmit={async (e) => {
         e.preventDefault();
         const f = new FormData(e.currentTarget);
-        const r = await send<{ id: string }>({ action: 'create', kind, month: f.get('month'), payDate: kind === 'BONUS' ? f.get('payDate') : undefined, title: kind === 'BONUS' ? f.get('title') : undefined, live });
-        if (r) router.push(`/admin/payroll/runs/${r.id}`);
+        const r = await send<{ id: string; existed?: boolean }>({ action: 'create', kind, month: f.get('month'), payDate: kind === 'BONUS' ? f.get('payDate') : undefined, title: kind === 'BONUS' ? f.get('title') : undefined, live });
+        if (r) router.push(`/admin/payroll/runs/${r.id}${r.existed ? '?existed=1' : ''}`);
       }}
     >
       <label className="flex flex-col gap-1">

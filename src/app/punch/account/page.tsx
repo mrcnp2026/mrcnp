@@ -17,6 +17,8 @@ export default async function AccountPage() {
   return (
     <>
       <PageShell>
+        {/* PC: 입력칸이 화면 끝까지 늘어나지 않게 읽기 좋은 폭으로 (2026-10-14) */}
+        <div className="flex w-full flex-col gap-3 lg:max-w-2xl">
         <h1 className="flex items-center gap-2 text-2xl font-semibold text-primary-deep">
           <UserRound aria-hidden size={24} strokeWidth={1.75} />
           {t('title')}
@@ -31,6 +33,7 @@ export default async function AccountPage() {
           {!hasPassword && <p className="text-sm text-muted">{t('createNote')}</p>}
           <PasswordForm hasPassword={hasPassword} />
         </Card>
+        </div>
       </PageShell>
     </>
   );

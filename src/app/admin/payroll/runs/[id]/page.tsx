@@ -1,6 +1,7 @@
 // 급여대장 상세 — 대상자마다 계산 결과(또는 차단 사유)를 보고 계산 → 검토 → 확정한다 (PRD v1.3 18.3 · 19장). 급여 담당 관리자만.
 // 초안 합계와 확정 합계를 섞지 않는다: 위의 합계는 이 대장이 지금 가리키는 계산 결과의 것이고, 상태를 같이 보여 준다.
 import { getFormatter, getTranslations } from 'next-intl/server';
+import { Steps } from '@/components/listframe';
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import { Card, Chip, PageShell } from '@/components/ui';
@@ -15,7 +16,7 @@ import { CorrectionStart, MemberToggle, PublishAll, PublishToggle, RunActions } 
 
 const TONE = { DRAFT: 'neutral', CALCULATED: 'info', REVIEWED: 'warn', FINALIZED: 'ok' } as const;
 
-export default async function PayRunPage({ params }: { params: Promise<{ id: string }> }) {
+export default async function PayRunPage({ params, searchParams }: { params: Promise<{ id: string }>; searchParams: Promise<{ existed?: string }> }) {
   const [t, f, me, { id }] = await Promise.all([getTranslations('admin.payRuns'), getFormatter(), getMe(), params]);
   if (!me || me.role !== 'admin' || !me.canViewPayroll) return <PageShell><p className="rounded-card bg-warn-tint p-4 text-sm text-warn">{t('forbidden')}</p></PageShell>;
   if (!/^[0-9a-f-]{36}$/i.test(id)) notFound();
@@ -57,6 +58,15 @@ export default async function PayRunPage({ params }: { params: Promise<{ id: str
           {run.finalizedAt && ` · ${t('finalizedBy', { name: nameOf.get(run.finalizedBy ?? '') ?? '', date: toKstDate(new Date(run.finalizedAt)) })}`}
         </p>
       </div>
+      {(await searchParams).existed === '1' && <p role="status" className="rounded-card bg-primary-tint p-3 text-sm font-semibold text-primary">{t('existedNote')}</p>}
+      {/* 이 대장이 어디까지 왔는가 — 만들기 → 계산 → 검토 → 확정 → 공개 (2026-10-14 의뢰인) */}
+      <Steps
+        label={t('stepsLabel')}
+        steps={(['DRAFT', 'CALCULATED', 'REVIEWED', 'FINALIZED', 'PUBLISHED'] as const).map((k, i) => {
+          const at = final ? (waiting === 0 && pub.size > 0 ? 5 : 4) : ['DRAFT', 'CALCULATED', 'REVIEWED'].indexOf(run.status) + 1;
+          return { key: k, label: t(`flowStep.${k}`), note: t(`flowStep.${k}Note`), state: i < at ? 'done' : i === at ? 'now' : 'todo' };
+        })}
+      />
 
       {run.revision > 1 && (
         <p className="rounded-card border border-border bg-surface p-3 text-sm">

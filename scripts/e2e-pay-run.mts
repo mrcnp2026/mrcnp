@@ -101,7 +101,7 @@ try {
   const made = await post('/api/admin/payroll/runs', { action: 'create', month: YM });
   const runId = made.json.id as string;
   check(made.status === 200 && !!runId, `대장 만들기 (${YM})`, JSON.stringify(made.json));
-  check((await post('/api/admin/payroll/runs', { action: 'create', month: YM })).status === 409, '같은 달 대장을 두 번 만들 수 없다');
+  { const again = await post('/api/admin/payroll/runs', { action: 'create', month: YM }); check(again.status === 200 && again.json.id === runId && again.json.existed === true, '같은 달 대장을 또 만들면 새로 만들지 않고 있던 대장을 연다', JSON.stringify(again.json)); }
   const api = `/api/admin/payroll/runs/${runId}`;
   const run = async () => (await db.from('payroll_runs').select('status, version, current_generation_id, totals').eq('id', runId).single()).data!;
   await db.from('payroll_runs').update({ title: 'e2e-검사 대장', version: (await run()).version + 1 }).eq('id', runId); // 목록에 보이지 않게

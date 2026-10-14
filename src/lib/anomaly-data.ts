@@ -34,7 +34,7 @@ export function collectAnomalies(data: PeriodData, from: string, to: string, now
   const today = toKstDate(now);
   const out: AnomalyItem[] = [];
   for (const p of data.people) {
-    if (p.employeeNo?.startsWith('e2e-')) continue;
+    // 검사 계정(e2e-)은 loadPeriod가 보는 사람에 따라 이미 뺀다(실제 관리자 → 전부 뺌, 검사 계정 → 꺼진 것만 뺌) — 여기서 또 빼면 검사 계정으로도 확인할 수 없다
     const fullLeave = fullLeaveSet(leaveDaysFor(data, p.id));
     const away = workDaysFor(data, p.id);
     const mine = data.events.filter((e) => e.employeeId === p.id);

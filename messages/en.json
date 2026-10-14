@@ -3211,7 +3211,8 @@
         "item_amount_missing": "An item has no amount ({detail}).",
         "employer_rate_missing": "No employer rate, so it is left out of employer cost ({detail}). Net pay is not affected.",
         "no_bonus_amount": "No bonus amount entered. Enter it under Adjustments or exclude this employee.",
-        "insurance_not_calculated": "Social insurance is not calculated in a bonus ledger. Settle or adjust separately if needed."
+        "insurance_not_calculated": "Social insurance is not calculated in a bonus ledger. Settle or adjust separately if needed.",
+        "overtime_unreviewed": "{detail} min of overtime below the review threshold was not queued for approval. It is not recognized, so no overtime pay was added. Use an adjustment if it must be paid."
       },
       "detail": {
         "pension": "national pension",
@@ -3298,7 +3299,21 @@
       "cardsTitle": "Progress",
       "unit": "",
       "count": "{n} ledgers",
-      "showAll": "Show all"
+      "showAll": "Show all",
+      "existedNote": "A ledger for this month already existed, so it was opened instead of creating a new one.",
+      "stepsLabel": "Progress of this ledger",
+      "flowStep": {
+        "DRAFT": "Create",
+        "DRAFTNote": "Members fixed",
+        "CALCULATED": "Calculate",
+        "CALCULATEDNote": "Amounts from records · contracts",
+        "REVIEWED": "Review",
+        "REVIEWEDNote": "No blocked people",
+        "FINALIZED": "Finalize",
+        "FINALIZEDNote": "No more changes",
+        "PUBLISHED": "Publish",
+        "PUBLISHEDNote": "Staff see payslips"
+      }
     },
     "reports": {
       "attTitle": "Attendance report",
@@ -4790,9 +4805,6 @@
       "pay": "Pay",
       "talk": "Inbox",
       "people": "People",
-      "hr": "Staff",
-      "attendance": "Time",
-      "reports": "Reports",
       "cBasic": "Basics",
       "cOrg": "Organization",
       "cAccess": "Access · Security",
@@ -4803,7 +4815,15 @@
       "aTalk": "Message settings",
       "aReports": "Report settings",
       "aPay": "Payroll settings",
-      "aHr": "Staff settings"
+      "aHr": "Staff settings",
+      "mHome": "Home",
+      "mHr": "Staff",
+      "mAttendance": "Time",
+      "mLeave": "Leave",
+      "mRequests": "Requests",
+      "mPay": "Pay",
+      "mTalk": "Notices",
+      "mReports": "Reports"
     },
     "appFull": {
       "home": "Home",
@@ -4814,9 +4834,14 @@
       "pay": "Pay",
       "talk": "Notices · Messages",
       "people": "Organization · Me",
-      "hr": "Staff",
-      "attendance": "Attendance",
-      "reports": "Reports"
+      "mHome": "Today",
+      "mHr": "Staff · Org",
+      "mAttendance": "Schedule · Attendance",
+      "mLeave": "Leave management",
+      "mRequests": "Request handling",
+      "mPay": "Payroll",
+      "mTalk": "Notices · Messages",
+      "mReports": "Attendance · Leave reports"
     },
     "group": {
       "gSchedule": "Schedule",
@@ -4983,5 +5008,39 @@
     "pin_not_set": "No PIN set yet. Please refresh.",
     "pin_locked": "Locked for 15 minutes after 5 wrong tries.",
     "console_locked": "The settings console is locked. Enter your PIN again."
+  },
+  "alerts": {
+    "label": "{n} alerts",
+    "title": "Alerts",
+    "notices": "Unconfirmed notices",
+    "messages": "Unread work messages",
+    "requests": "Requests to handle",
+    "none": "No new alerts."
+  },
+  "payFlow": {
+    "regularLabel": "Regular payroll steps",
+    "dailyLabel": "Day-labor payroll steps",
+    "regular": {
+      "staff": "Pay by employee",
+      "staffNote": "Contracts · tax · insurance",
+      "close": "Attendance closing",
+      "closeNote": "Lock the month",
+      "runs": "Payroll ledger",
+      "runsNote": "Create · calculate · review · finalize",
+      "publish": "Publish payslips",
+      "publishNote": "Staff see payslips",
+      "after": "Insurance · labor cost",
+      "afterNote": "Reconcile · overview"
+    },
+    "daily": {
+      "payee": "Register payees",
+      "payeeNote": "Name · internal no.",
+      "engagement": "Engagement",
+      "engagementNote": "Site · day rate · tax terms",
+      "work": "Enter work",
+      "workNote": "By date · confirm",
+      "run": "Day-labor ledger",
+      "runNote": "Everyone with work in the period"
+    }
   }
 }

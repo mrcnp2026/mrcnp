@@ -102,9 +102,11 @@ export function InquiryCompose() {
   const [open, setOpen] = useState(false);
   if (!open)
     return (
-      <Button type="button" size="sm" onClick={() => setOpen(true)}>
-        {t('ask')}
-      </Button>
+      <div className="flex justify-end">
+        <Button type="button" size="sm" onClick={() => setOpen(true)}>
+          {t('ask')}
+        </Button>
+      </div>
     );
   return (
     <form

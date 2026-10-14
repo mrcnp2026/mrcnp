@@ -1,6 +1,7 @@
 // 사원별 급여 — 직원마다 지금 적용되는 계약과 세무 설정, 급여 계산에 더 필요한 것 (PRD v1.3 18.1 W02 계약 탭). 급여 담당 관리자만.
 // 계약 금액과 월 예상 실지급은 다른 값이다 — 여기는 계약만 보인다. 고치는 것은 직원을 눌러 들어간 화면에서 한다.
 import { getFormatter, getTranslations } from 'next-intl/server';
+import { PayFlow } from '@/components/PayFlow';
 import { ListHead } from '@/components/listframe';
 import Link from 'next/link';
 import { Chip, PageShell } from '@/components/ui';
@@ -25,6 +26,7 @@ export default async function StaffPayPage() {
   return (
     <PageShell wide>
       <ListHead title={t('title')} desc={t('intro')} settingsHref="/admin/settings?tab=pay" settingsLabel={tGear('item.payEmployeeDefaults')} />
+      <PayFlow now="staff" />
       <ImportPanel
         tomorrow={addDays(today, 1)}
         labels={{

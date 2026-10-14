@@ -1,6 +1,7 @@
 // 인건비 현황 — 확정한 급여대장의 지급 · 공제 · 실지급 · 사업주 부담 · 총인건비를 달 · 부서 · 직원으로 본다 (PRD v1.3 18.6 W09). 급여 담당 관리자만.
 // 숫자는 저장된 명세서의 합이다(여기서 다시 계산하지 않는다). 정정본이 확정되면 앞 판은 빠진다.
 import { getFormatter, getTranslations } from 'next-intl/server';
+import { PayFlow } from '@/components/PayFlow';
 import { Download } from 'lucide-react';
 import { HelpTip } from '@/components/Help';
 import { Chip, PageShell } from '@/components/ui';
@@ -55,6 +56,7 @@ export default async function LaborCostPage({ searchParams }: { searchParams: Pr
           {r.hasDraft && <Chip tone="warn">{t('draftChip')}</Chip>}
         <HelpTip>{t('intro')}</HelpTip></h1>
       </div>
+      <PayFlow now="after" />
       <form action="/admin/payroll/labor-cost" className="flex flex-wrap items-end gap-3 text-sm">
         {sp.live === '1' && <input type="hidden" name="live" value="1" />}
         <label className="flex flex-col gap-1">

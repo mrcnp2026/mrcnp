@@ -26,6 +26,7 @@ if (!target) {
   target = { id: u.user!.id };
 }
 await db.from('profiles').update({ active: true, role: 'admin', locale: 'ko' }).eq('id', emp!.id);
+await db.from('profiles').update({ active: true }).eq('id', target!.id); // 꺼진 검사 계정은 검사 화면에서도 숨는다(hiddenTestIds) — 검사 동안만 켠다
 const token = randomBytes(32).toString('base64url');
 await db.from('invites').insert({ employee_id: emp!.id, token_hash: createHash('sha256').update(token).digest('hex'), issued_via: 'admin', expires_at: new Date(Date.now() + 3600e3).toISOString() });
 
@@ -156,6 +157,7 @@ try {
 
   }
   // ── 기록 탭 → 직원 화면으로 들어가는 길 + 현황판 출근율 ──
+  await db.from('profiles').update({ active: false }).eq('id', target!.id); // 검사 동안 켜 둔 대상 계정을 끈 뒤에 본다
   check((await (await p.goto(`${BASE}/admin/records?m=${YM}`), p.getByText('검사용2(자동)')).count()) === 0, '꺼져 있는 검사 계정은 기록 탭 목록에 보이지 않음');
   await p.getByText('검사용(자동)', { exact: true }).first().click();
   await p.getByRole('link', { name: /날짜별 기록 보기/ }).first().click();
@@ -196,6 +198,7 @@ try {
   }
   console.log(`정리: 검사 계정의 연장 확인 요청 ${ot?.length ?? 0}건을 닫음`);
   await db.from('profiles').update({ role: 'employee', locale: 'en', active: false }).eq('id', emp!.id);
+  await db.from('profiles').update({ active: false }).eq('id', target!.id);
   await db.from('user_passkeys').update({ revoked_at: new Date().toISOString(), device_label: 'E2E 가상 인증기 (자동 확인용)' }).eq('employee_id', emp!.id).is('revoked_at', null).gte('created_at', STARTED_AT);
   await db.from('invites').update({ revoked_at: new Date().toISOString() }).eq('employee_id', emp!.id).is('used_at', null).is('revoked_at', null);
   console.log(`시험 날짜 ${DAY} · 실패 ${fails}건`);

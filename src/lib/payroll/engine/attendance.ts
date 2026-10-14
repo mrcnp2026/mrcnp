@@ -9,7 +9,8 @@ export type AttendanceFacts = {
   netMinutes: number; // 실제 근로 합계
   payableMinutes: number; // 끊는 단위를 적용한 급여용 시간 합계
   approved: { overtime: number; night: number; holidayWithin8: number; holidayOver8: number };
-  pendingMinutes: number; // 승인 대기 + 미검토 연장 · 야간 · 휴일
+  pendingMinutes: number; // 승인 대기 연장 · 야간 · 휴일 (확인 기준 미만이라 대기에 오르지 않은 분은 넣지 않는다)
+  unreviewedMinutes?: number; // 확인 기준 미만의 연장 — 인정하지 않은 시간이라 지급하지 않고 참고로만 남긴다
   paidLeaveDays: number;
   flags: string[]; // 'block:…' / 'warn:…'
   unconfirmedDays: number;

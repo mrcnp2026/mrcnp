@@ -85,7 +85,7 @@ export async function suggestInput(args: { employeeId: string; lastDay: string; 
 export async function loadCases(args: { practice: boolean; testViewer: boolean }): Promise<(RetirementCase & { name: string; employeeNo: string | null })[]> {
   const c = db();
   const [{ data, error }, { data: people }] = await Promise.all([
-    c.from('payroll_retirement_cases').select('*').eq('is_test', args.practice).order('created_at', { ascending: false }).limit(200),
+    c.from('payroll_retirement_cases').select('*').eq('is_test', args.practice).order('created_at', { ascending: false }).limit(5000), // 검사 건이 쌓여도 실제 건이 밀려나지 않게 넉넉히(뒤에서 검사 · 실제를 나눈다)
     c.from('profiles').select('id, name, employee_no'),
   ]);
   if (error) boom('loadCases', error);

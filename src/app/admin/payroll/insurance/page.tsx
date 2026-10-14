@@ -1,6 +1,7 @@
 // 사회보험 — 취득/상실 확인 목록과 고지 보험료 묶음 (PRD v1.3 18.4 W06). 급여 담당 관리자만.
 // 프로그램이 공단에 신고하지 않는다. 「확인 완료」는 담당자가 신고 처리를 확인한 날과 근거를 적은 것이다.
 import { getTranslations } from 'next-intl/server';
+import { PayFlow } from '@/components/PayFlow';
 import { WarnLine } from '@/components/listframe';
 import { HelpTip } from '@/components/Help';
 import Link from 'next/link';
@@ -34,6 +35,7 @@ export default async function InsurancePage({ searchParams }: { searchParams: Pr
           {practice && notice && <Chip>{t('practice')}</Chip>}
         <HelpTip>{t('intro')}</HelpTip></h1>
       </div>
+      <PayFlow now="after" />
       <nav className="flex border-b border-border">
         <Link href={`/admin/payroll/insurance${live ? '?live=1' : ''}`} aria-current={!notice ? 'page' : undefined} className={tab(!notice)}>{t('tabEnroll')}</Link>
         <Link href={`/admin/payroll/insurance?v=notice${live}`} aria-current={notice ? 'page' : undefined} className={tab(notice)}>{t('tabNotice')}</Link>

@@ -32,10 +32,10 @@ export const MY_APPS: App[] = [
 ];
 
 export const ADMIN_APPS: App[] = [
-  { key: 'home', icon: House, groups: one([{ href: '/admin', key: 'adminHome', exact: true }]) },
-  { key: 'hr', icon: Users, groups: one([{ href: '/admin/members', key: 'members' }, { href: '/admin/members/groups', key: 'orgGroups' }]) },
+  { key: 'mHome', icon: House, groups: one([{ href: '/admin', key: 'adminHome', exact: true }]) },
+  { key: 'mHr', icon: Users, groups: one([{ href: '/admin/members', key: 'members' }, { href: '/admin/members/groups', key: 'orgGroups' }]) },
   {
-    key: 'attendance',
+    key: 'mAttendance',
     icon: Clock,
     groups: [
       { key: 'gSchedule', items: [{ href: '/admin/schedule', key: 'scheduleCal' }, { href: '/admin/schedule?v=list', key: 'scheduleList' }] },
@@ -43,10 +43,10 @@ export const ADMIN_APPS: App[] = [
       { key: 'gCheck', items: [{ href: '/admin/missing', key: 'missing' }, { href: '/admin/anomalies', key: 'anomalies' }, { href: '/admin/closing', key: 'closing' }] },
     ],
   },
-  { key: 'leave', icon: Plane, groups: one([{ href: '/admin/leave', key: 'leaveHistory' }, { href: '/admin/leave?v=accrual', key: 'leaveAccrual' }, { href: '/admin/leave/ledger', key: 'leaveLedger' }, { href: '/admin/leave/promotion', key: 'leavePromotion' }]) },
-  { key: 'requests', icon: Send, groups: one([{ href: '/admin/inbox', key: 'inbox', badge: 'inbox' }]) },
+  { key: 'mLeave', icon: Plane, groups: one([{ href: '/admin/leave', key: 'leaveHistory' }, { href: '/admin/leave?v=accrual', key: 'leaveAccrual' }, { href: '/admin/leave/ledger', key: 'leaveLedger' }, { href: '/admin/leave/promotion', key: 'leavePromotion' }]) },
+  { key: 'mRequests', icon: Send, groups: one([{ href: '/admin/inbox', key: 'inbox', badge: 'inbox' }]) },
   {
-    key: 'pay',
+    key: 'mPay',
     icon: Wallet,
     groups: [
       { key: 'gPayPrep', items: [{ href: '/admin/payroll/staff', key: 'payStaff' }, { href: '/admin/payroll', key: 'payHours' }] },
@@ -55,8 +55,8 @@ export const ADMIN_APPS: App[] = [
       { key: 'gPayView', items: [{ href: '/admin/payroll/labor-cost', key: 'payLabor' }] },
     ],
   },
-  { key: 'talk', icon: Megaphone, groups: one([{ href: '/admin/notices', key: 'adminNotices' }, { href: '/admin/messages', key: 'adminMessages' }]) },
-  { key: 'reports', icon: ChartColumn, groups: one([{ href: '/admin/reports/attendance', key: 'reportAttendance' }, { href: '/admin/reports/leave', key: 'reportLeave' }, { href: '/admin/manage/report-snapshots', key: 'reportSnapshots' }]) },
+  { key: 'mTalk', icon: Megaphone, groups: one([{ href: '/admin/notices', key: 'adminNotices' }, { href: '/admin/messages', key: 'adminMessages' }]) },
+  { key: 'mReports', icon: ChartColumn, groups: one([{ href: '/admin/reports/attendance', key: 'reportAttendance' }, { href: '/admin/reports/leave', key: 'reportLeave' }, { href: '/admin/manage/report-snapshots', key: 'reportSnapshots' }]) },
 ];
 
 // 통합설정 — 문서 07의 6장 분류 표. section: company = 회사설정, apps = App 관리

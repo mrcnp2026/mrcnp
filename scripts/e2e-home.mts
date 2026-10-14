@@ -169,8 +169,8 @@ try {
   await p.waitForLoadState('networkidle');
   const rail = p.locator('nav.sticky').first();
   const labelsOf = async (n: typeof rail) => Promise.all((await n.locator('a').all()).map((a) => a.getAttribute('aria-label')));
-  check((await labelsOf(rail)).join() === '홈,인사,근태,휴가,요청,급여,소통,리포트' && (await p.locator('nav.sticky').count()) === 1, 'PC 관리자 화면: 앱 띠 8개(홈 · 인사 · 근태 · 휴가 · 요청 · 급여 · 소통 · 리포트), 홈은 메뉴 판 없이 넓게');
-  await rail.getByRole('link', { name: '근태', exact: true }).click();
+  check((await labelsOf(rail)).join() === '오늘 현황,직원 · 조직,근무일정 · 출퇴근,휴가 관리,요청 처리,급여 관리,공지 · 메시지,근태 · 휴가 리포트' && (await p.locator('nav.sticky').count()) === 1, 'PC 관리자 모드: 앱 띠 8개(풀어 쓴 이름), 홈은 메뉴 판 없이 넓게');
+  await rail.getByRole('link', { name: '근무일정 · 출퇴근', exact: true }).click();
   await p.waitForURL(/\/admin\/schedule/);
   await p.waitForLoadState('networkidle');
   check((await p.locator('nav.sticky').nth(1).locator('a').allTextContents()).map((x) => x.trim()).join() === '달력형,목록형,달력형,목록형,월 집계,누락 기록,이상자 관리,근태 마감', 'PC 관리자 화면: 근태 메뉴 판에 근무일정 · 출퇴근기록 · 점검/마감 묶음');

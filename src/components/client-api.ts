@@ -14,6 +14,8 @@ export async function callApi<T>(path: string, body?: unknown): Promise<ApiResul
   }
   const json = (await res.json().catch(() => ({}))) as { error?: string; requestId?: string };
   if (!res.ok) return { ok: false, code: json.error ?? 'generic', requestId: json.requestId ?? res.headers.get('x-request-id') ?? undefined };
+  // 승인 · 거절 · 읽음 같은 처리 뒤에는 종 · 요청 배지 숫자를 바로 다시 센다 (components/Alerts)
+  if (typeof window !== 'undefined') window.dispatchEvent(new Event('alerts-reload'));
   return { ok: true, data: json as T };
 }
 

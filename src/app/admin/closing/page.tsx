@@ -2,6 +2,7 @@
 // 마감하려면 그 달에 기록이 있는 날이 전부 확정돼 있고 대기 중인 요청이 없어야 한다. 마감하면 DB가 그 달의 근태 변경을 막는다.
 // 급여는 이 마감 기록을 본다 — 급여용 잠금을 따로 두지 않는다.
 import { ChevronLeft, ChevronRight } from 'lucide-react';
+import { PayFlow } from '@/components/PayFlow';
 import { HelpTip } from '@/components/Help';
 import { getTranslations } from 'next-intl/server';
 import Link from 'next/link';
@@ -70,6 +71,7 @@ export default async function ClosingPage({ searchParams }: { searchParams: Prom
       <div>
         <h1 className="flex flex-wrap items-center gap-x-1 text-2xl font-bold">{t('title')}<SettingsLink href="/admin/settings?tab=closing" label={tGear('item.setClosing')} /><HelpTip>{t('intro')}</HelpTip></h1>
       </div>
+      <PayFlow now="close" />
       <div className="flex flex-wrap items-center gap-3">
         <span className="inline-flex items-center">
           <Link href={link(shift(month, -1))} aria-label={t('prev')} className="inline-flex size-9 items-center justify-center rounded-l-button border border-border bg-bg text-muted">

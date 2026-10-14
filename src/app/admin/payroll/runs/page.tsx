@@ -1,5 +1,6 @@
 // 급여대장 목록 — 달마다 정규 대장을 만들고 상태(초안 → 계산됨 → 검토됨 → 확정)를 본다 (PRD v1.3 18.3 W04). 급여 담당 관리자만.
 import { getFormatter, getTranslations } from 'next-intl/server';
+import { PayFlow } from '@/components/PayFlow';
 import Link from 'next/link';
 import { ListHead, ListTable, StatusCards } from '@/components/listframe';
 import { Card, CardTitle, Chip, PageShell } from '@/components/ui';
@@ -32,6 +33,7 @@ export default async function PayRunsPage({ searchParams }: { searchParams: Prom
   return (
     <PageShell wide>
       <ListHead title={t('title')} desc={t('intro')} settingsHref="/admin/settings?tab=pay&section=ledger" settingsLabel={tf('item.payLedger')} />
+      <PayFlow now="runs" />
       {practice && <p className="rounded-card border border-border bg-surface p-3 text-sm text-muted">{t('practice')}</p>}
       <Card>
         <CardTitle>{t('createTitle')}</CardTitle>

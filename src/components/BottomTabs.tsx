@@ -4,6 +4,7 @@
 // 탭에 없는 화면(현황·직원·급여·공지·설정·내 계정)은 왼쪽 위 메뉴(MenuDrawer). 넓은 화면은 왼쪽 메뉴(SideNav)가 맡는다.
 import { BellRing, CalendarDays, CalendarRange, House, ListChecks, type LucideIcon } from 'lucide-react';
 import { useTranslations } from 'next-intl';
+import { useAlerts } from './Alerts';
 import { NavTab, usePressedTab } from './NavTab';
 
 type Tab = { key: 'home' | 'requests' | 'schedule' | 'attendance' | 'leave'; icon: LucideIcon; mine: string; all?: string; also?: string[] };
@@ -16,7 +17,8 @@ const TABS: Tab[] = [
 ];
 
 // 배지는 요청 탭에만, 0이면 숨긴다 (승인할 요청 수 — 관리자만)
-export function BottomTabs({ isAdmin, inboxCount = 0 }: { isAdmin: boolean; inboxCount?: number }) {
+export function BottomTabs({ isAdmin }: { isAdmin: boolean; inboxCount?: number }) {
+  const inboxCount = useAlerts().requests; // 화면을 옮길 때마다 다시 센 숫자
   const t = useTranslations('nav');
   const { path, pressed, setPressed } = usePressedTab();
   const under = (href: string) => path === href || path.startsWith(`${href}/`);

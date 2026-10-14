@@ -3211,7 +3211,8 @@
         "item_amount_missing": "항목의 금액이 없습니다 ({detail}).",
         "employer_rate_missing": "사업주 부담 요율이 없어 사업주 부담 합계에서 빠졌습니다 ({detail}). 직원 실지급에는 영향이 없습니다.",
         "no_bonus_amount": "상여 금액을 넣지 않았습니다. 「금액 조정」에서 넣거나 대상에서 빼 주세요.",
-        "insurance_not_calculated": "상여 대장에서는 4대보험을 계산하지 않습니다. 필요하면 정산 · 조정으로 맞춰 주세요."
+        "insurance_not_calculated": "상여 대장에서는 4대보험을 계산하지 않습니다. 필요하면 정산 · 조정으로 맞춰 주세요.",
+        "overtime_unreviewed": "확인 기준(30분) 미만이라 승인 대기에 오르지 않은 연장 {detail}분이 있습니다. 인정하지 않은 시간이라 연장 수당에 넣지 않았습니다. 지급해야 하면 「금액 조정」으로 넣어 주세요."
       },
       "detail": {
         "pension": "국민연금",
@@ -3298,7 +3299,21 @@
       "cardsTitle": "진행 상태",
       "unit": "건",
       "count": "대장 {n}건",
-      "showAll": "전체 보기"
+      "showAll": "전체 보기",
+      "existedNote": "이 달의 대장이 이미 있어서, 새로 만들지 않고 그 대장을 열었습니다.",
+      "stepsLabel": "이 대장의 진행",
+      "flowStep": {
+        "DRAFT": "만들기",
+        "DRAFTNote": "대상 직원이 정해짐",
+        "CALCULATED": "계산",
+        "CALCULATEDNote": "기록 · 계약으로 금액 계산",
+        "REVIEWED": "검토",
+        "REVIEWEDNote": "막힌 사람이 없는지 확인",
+        "FINALIZED": "확정",
+        "FINALIZEDNote": "더 바뀌지 않음",
+        "PUBLISHED": "공개",
+        "PUBLISHEDNote": "직원이 명세서를 봄"
+      }
     },
     "reports": {
       "attTitle": "근태 리포트",
@@ -4790,9 +4805,6 @@
       "pay": "급여",
       "talk": "소통",
       "people": "조직",
-      "hr": "인사",
-      "attendance": "근태",
-      "reports": "리포트",
       "cBasic": "기본",
       "cOrg": "조직",
       "cAccess": "권한 · 보안",
@@ -4803,7 +4815,15 @@
       "aTalk": "메시지 · 공지 설정",
       "aReports": "리포트 설정",
       "aPay": "급여 설정",
-      "aHr": "인사 설정"
+      "aHr": "인사 설정",
+      "mHome": "홈",
+      "mHr": "직원",
+      "mAttendance": "근태",
+      "mLeave": "휴가",
+      "mRequests": "요청",
+      "mPay": "급여",
+      "mTalk": "공지",
+      "mReports": "리포트"
     },
     "appFull": {
       "home": "홈",
@@ -4814,9 +4834,14 @@
       "pay": "급여",
       "talk": "소통",
       "people": "조직 · 내 정보",
-      "hr": "인사",
-      "attendance": "근태",
-      "reports": "리포트"
+      "mHome": "오늘 현황",
+      "mHr": "직원 · 조직",
+      "mAttendance": "근무일정 · 출퇴근",
+      "mLeave": "휴가 관리",
+      "mRequests": "요청 처리",
+      "mPay": "급여 관리",
+      "mTalk": "공지 · 메시지",
+      "mReports": "근태 · 휴가 리포트"
     },
     "group": {
       "gSchedule": "근무일정",
@@ -4983,5 +5008,39 @@
     "pin_not_set": "아직 숫자를 정하지 않았습니다. 새로 고침해 주세요.",
     "pin_locked": "5번 틀려서 15분 동안 잠겼습니다.",
     "console_locked": "통합설정이 잠겼습니다. 숫자 4자리를 다시 넣어 주세요."
+  },
+  "alerts": {
+    "label": "알림 {n}건",
+    "title": "알림",
+    "notices": "확인 안 한 공지",
+    "messages": "읽지 않은 업무 메시지",
+    "requests": "처리할 요청",
+    "none": "새 알림이 없습니다."
+  },
+  "payFlow": {
+    "regularLabel": "정규 급여 순서",
+    "dailyLabel": "일용직 급여 순서",
+    "regular": {
+      "staff": "사원별 급여",
+      "staffNote": "계약 · 세무 · 보험 넣기",
+      "close": "근태 마감",
+      "closeNote": "그 달 기록 확정",
+      "runs": "급여대장",
+      "runsNote": "만들기 · 계산 · 검토 · 확정",
+      "publish": "명세서 공개",
+      "publishNote": "직원이 명세서를 봄",
+      "after": "보험 대조 · 인건비",
+      "afterNote": "고지액 대조 · 현황"
+    },
+    "daily": {
+      "payee": "대상자 등록",
+      "payeeNote": "이름 · 내부번호",
+      "engagement": "고용 기간",
+      "engagementNote": "현장 · 일당 · 세금 조건",
+      "work": "근무 입력",
+      "workNote": "날짜별 · 확정",
+      "run": "일용 대장",
+      "runNote": "기간의 근무가 있는 사람 전원 계산"
+    }
   }
 }
