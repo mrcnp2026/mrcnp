@@ -6,7 +6,7 @@ import { addDays } from '@/lib/calendar';
 import type { DayType, WorkRule } from '@/lib/types';
 
 // 시간 단위 (2026-10-10): hours = 그 휴가의 길이(시간), dayUnit = 차감 일수(시간 ÷ 8, 최대 1). startTime·endTime = 종류에 정해 둔 시각 (없으면 null)
-export type LeaveType = { code: string; name: string; isPaid: boolean; deductsBalance: boolean; dayUnit: number; hours?: number; startTime?: string | null; endTime?: string | null; groupName?: string | null; builtin?: boolean; active?: boolean };
+export type LeaveType = { code: string; name: string; nameEn?: string | null; isPaid: boolean; deductsBalance: boolean; dayUnit: number; hours?: number; startTime?: string | null; endTime?: string | null; groupName?: string | null; builtin?: boolean; active?: boolean };
 export type LeaveGrant = { id: string; employeeId: string; periodLabel: string; grantedDays: number; carriedDays: number; basis: 'hire_date' | 'fiscal_year'; effectiveFrom: string; note: string | null };
 export type LeaveStatus = 'pending' | 'approved' | 'rejected' | 'cancelled';
 export type LeaveRequest = { id: string; employeeId: string; typeCode: string; startDate: string; endDate: string; days: number; reason: string | null; status: LeaveStatus; startTime?: string | null; endTime?: string | null; createdAt?: string; decidedAt?: string | null; approvedBy?: string | null };
@@ -173,8 +173,11 @@ export function trimRuleByLeave(rule: WorkRule, leaves: readonly { startTime?: s
 }
 
 /** 휴가 종류 이름 — 기본 종류는 번역(leave.type.코드), 관리자가 만든 종류는 적어 둔 이름 */
-export function leaveTypeName(types: readonly { code: string; name: string }[], code: string, tr: { (key: string): string; has: (key: string) => boolean }): string {
-  return tr.has(`type.${code}`) ? tr(`type.${code}`) : (types.find((x) => x.code === code)?.name ?? code);
+export function leaveTypeName(types: readonly { code: string; name: string; nameEn?: string | null }[], code: string, tr: { (key: string): string; has: (key: string) => boolean }): string {
+  if (tr.has(`type.${code}`)) return tr(`type.${code}`);
+  const x = types.find((y) => y.code === code);
+  // 회사가 만든 종류의 영어 이름 (L11, 2026-10-15 — 종류별 규칙에 담는다). 영어 화면이면 그것, 없으면 한국어 이름
+  return (tr.has('localeTag') && tr('localeTag') === 'en' && x?.nameEn) || x?.name || code;
 }
 
 export type MonthUse = { month: number; deducted: number; other: number; pending: number };

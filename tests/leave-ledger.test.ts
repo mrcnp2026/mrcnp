@@ -1,3 +1,4 @@
+import { leaveTypeName } from '@/lib/leave';
 // 휴가 원장 — 발생 계획 · 잔여 · 차감 배분 · 신청 맞추기 · 소멸
 import { describe, expect, it } from 'vitest';
 import { addMonths, allocate, annualDays, checkTypeRule, entriesFor, ledgerBalance, lotRemaining, planAccrual, planExpiry, planOffset, planRequest, settleLeave, splitCarry, STANDARD_LEAVE_POLICY, validateLeavePolicy, validateTypeRule, type Entry, type Lot, isTypeTarget, offWeekday } from '@/lib/leave-ledger';
@@ -203,6 +204,15 @@ describe('휴가 종류별 신청 규칙', () => {
     expect(validateTypeRule({ maxDaysPerRequest: null, minNoticeDays: null, reasonRequired: false, weekdays: [1, 2, 3, 4, 5, 6, 7] })!.weekdays).toBeNull();
     expect(validateTypeRule({ maxDaysPerRequest: null, minNoticeDays: null, reasonRequired: false, weekdays: [0] })).toBeNull();
   });
+  it('영어 이름 (L11): 40자까지, 영어 화면에서만 쓰인다', () => {
+    const r = validateTypeRule({ maxDaysPerRequest: null, minNoticeDays: null, reasonRequired: false, nameEn: ' 10am half day ' })!;
+    expect(r.nameEn).toBe('10am half day');
+    expect(validateTypeRule({ maxDaysPerRequest: null, minNoticeDays: null, reasonRequired: false, nameEn: 'x'.repeat(41) })).toBeNull();
+    const types = [{ code: 'c1', name: '10시 반차', nameEn: '10am half day' }];
+    const tr = (tag: string) => Object.assign((k: string) => (k === 'localeTag' ? tag : k), { has: (k: string) => k === 'localeTag' });
+    expect(leaveTypeName(types, 'c1', tr('en'))).toBe('10am half day');
+    expect(leaveTypeName(types, 'c1', tr('ko'))).toBe('10시 반차');
+  });
   it('적용 대상 (L13): 비우면 모두 · 직원 · 부서(밑의 팀 포함)', () => {
     const g1 = '11111111-1111-1111-1111-111111111111', team = '22222222-2222-2222-2222-222222222222', me = '33333333-3333-3333-3333-333333333333';
     const all = validateTypeRule({ maxDaysPerRequest: null, minNoticeDays: null, reasonRequired: false })!;
@@ -215,7 +225,7 @@ describe('휴가 종류별 신청 규칙', () => {
     expect(isTypeTarget(byPerson, { id: me, groupId: null }, new Map())).toBe(true);
     expect(validateTypeRule({ maxDaysPerRequest: null, minNoticeDays: null, reasonRequired: false, targets: { groupIds: ['x'], employeeIds: [] } })).toBeNull();
   });
-  const rule = { maxDaysPerRequest: 3, minNoticeDays: 2, reasonRequired: true, weekdays: null, targets: { groupIds: [], employeeIds: [] } };
+  const rule = { maxDaysPerRequest: 3, minNoticeDays: 2, reasonRequired: true, weekdays: null, targets: { groupIds: [], employeeIds: [] }, nameEn: null };
   it('한도 · 미리 신청 · 사유', () => {
     const ok = { days: 2, startDate: '2026-10-20', today: '2026-10-13', reason: '병원' };
     expect(checkTypeRule(rule, ok)).toBeNull();
@@ -225,7 +235,7 @@ describe('휴가 종류별 신청 규칙', () => {
     expect(checkTypeRule(rule, { ...ok, reason: ' ' })).toBe('leave_reason_required');
   });
   it('입력 검사', () => {
-    expect(validateTypeRule({ maxDaysPerRequest: '', minNoticeDays: null, reasonRequired: false })).toEqual({ maxDaysPerRequest: null, minNoticeDays: null, reasonRequired: false, weekdays: null, targets: { groupIds: [], employeeIds: [] } });
+    expect(validateTypeRule({ maxDaysPerRequest: '', minNoticeDays: null, reasonRequired: false })).toEqual({ maxDaysPerRequest: null, minNoticeDays: null, reasonRequired: false, weekdays: null, targets: { groupIds: [], employeeIds: [] }, nameEn: null });
     expect(validateTypeRule({ maxDaysPerRequest: 0, minNoticeDays: null, reasonRequired: false })).toBeNull();
     expect(validateTypeRule({ maxDaysPerRequest: 1, minNoticeDays: 1.5, reasonRequired: false })).toBeNull();
     expect(validateTypeRule({ maxDaysPerRequest: 1, minNoticeDays: 1 })).toBeNull();

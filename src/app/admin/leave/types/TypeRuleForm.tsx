@@ -11,7 +11,7 @@ import type { LeaveTypeRule } from '@/lib/leave-ledger';
 
 const field = 'min-h-9 rounded-button border border-border bg-bg px-3 text-sm';
 
-export function TypeRuleForm({ code, version, rule, groups, people }: { code: string; version: number; rule: LeaveTypeRule; groups: { id: string; name: string }[]; people: { id: string; name: string }[] }) {
+export function TypeRuleForm({ code, version, rule, groups, people, builtin }: { code: string; version: number; rule: LeaveTypeRule; groups: { id: string; name: string }[]; people: { id: string; name: string }[]; builtin: boolean }) {
   const t = useTranslations('admin.leaveTypeRule');
   const router = useRouter();
   const [busy, setBusy] = useState(false);
@@ -29,7 +29,7 @@ export function TypeRuleForm({ code, version, rule, groups, people }: { code: st
         setBusy(true);
         setErr(null);
         setDone(false);
-        const r = await callApi('/api/admin/leave/ledger', { action: 'typeRule', code, expectedVersion: version, rule: { maxDaysPerRequest: num(f.get('max')), minNoticeDays: num(f.get('notice')), reasonRequired: f.get('reason') === 'on', weekdays: f.getAll('wd').length ? f.getAll('wd').map(Number) : null, targets: { groupIds: f.getAll('tg').map(String), employeeIds: f.getAll('te').map(String) } } });
+        const r = await callApi('/api/admin/leave/ledger', { action: 'typeRule', code, expectedVersion: version, rule: { maxDaysPerRequest: num(f.get('max')), minNoticeDays: num(f.get('notice')), reasonRequired: f.get('reason') === 'on', weekdays: f.getAll('wd').length ? f.getAll('wd').map(Number) : null, targets: { groupIds: f.getAll('tg').map(String), employeeIds: f.getAll('te').map(String) }, nameEn: String(f.get('nameEn') ?? '').trim() || null } });
         setBusy(false);
         if (!r.ok) return setErr(r);
         setDone(true);
@@ -39,6 +39,13 @@ export function TypeRuleForm({ code, version, rule, groups, people }: { code: st
     >
       <h2 className="font-bold">{t('title')}</h2>
       <p className="text-muted">{t('intro')}</p>
+      {!builtin && (
+        <label className="flex flex-col gap-1">
+          <span>{t('nameEn')}</span>
+          <input name="nameEn" maxLength={40} defaultValue={rule.nameEn ?? ''} lang="en" className={field} autoComplete="off" />
+          <span className="text-xs text-faint">{t('nameEnHint')}</span>
+        </label>
+      )}
       <label className="flex flex-col gap-1">
         <span>{t('max')}</span>
         <input name="max" type="number" min="0.0625" max="365" step="0.0625" defaultValue={rule.maxDaysPerRequest ?? ''} className={field} />

@@ -13,9 +13,14 @@ import type { DayType } from '@/lib/types';
 const hm = (t: string | null) => (t ? t.slice(0, 5) : null);
 /** 휴가 종류 전부 (꺼 둔 것 포함) — 지난 신청의 이름·단위를 계속 보여 주려면 꺼 둔 종류도 필요하다 */
 export const loadAllLeaveTypes = cache(async (): Promise<LeaveType[]> => {
-  const { data } = await createAdminClient().from('leave_types').select('code, name, is_paid, deducts_balance, day_unit, hours, start_time, end_time, group_name, builtin, active').order('sort').order('name');
+  const db = createAdminClient();
+  const [{ data }, { data: rules }] = await Promise.all([
+    db.from('leave_types').select('code, name, is_paid, deducts_balance, day_unit, hours, start_time, end_time, group_name, builtin, active').order('sort').order('name'),
+    db.from('leave_type_policy_versions').select('type_code, payload').eq('status', 'active').is('valid_to', null),
+  ]);
+  const en = new Map((rules ?? []).map((r) => [r.type_code as string, ((r.payload as { nameEn?: unknown } | null)?.nameEn as string | undefined) ?? null]));
   return (data ?? []).map((t) => ({
-    code: t.code, name: t.name, isPaid: t.is_paid, deductsBalance: t.deducts_balance, dayUnit: Number(t.day_unit), hours: Number(t.hours),
+    code: t.code, name: t.name, nameEn: en.get(t.code) ?? null, isPaid: t.is_paid, deductsBalance: t.deducts_balance, dayUnit: Number(t.day_unit), hours: Number(t.hours),
     startTime: hm(t.start_time), endTime: hm(t.end_time), groupName: t.group_name, builtin: t.builtin, active: t.active,
   }));
 });

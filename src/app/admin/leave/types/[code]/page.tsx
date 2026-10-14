@@ -46,7 +46,7 @@ export default async function LeaveTypePage({ params }: { params: Promise<{ code
         />
       </Card>
       <Card className="flex flex-col gap-3">
-        <TypeRuleForm key={rule?.version ?? 0} code={x.code} version={rule?.version ?? 0} rule={rule?.rule ?? NO_TYPE_RULE} groups={orgGroups.map((g) => ({ id: g.id, name: groupPath(orgGroups, g.id) ?? g.name }))} people={(staff ?? []).filter((p) => !hide.has(p.id as string)).map((p) => ({ id: p.id as string, name: p.name as string }))} />
+        <TypeRuleForm builtin={!!x.builtin} key={rule?.version ?? 0} code={x.code} version={rule?.version ?? 0} rule={rule?.rule ?? NO_TYPE_RULE} groups={orgGroups.map((g) => ({ id: g.id, name: groupPath(orgGroups, g.id) ?? g.name }))} people={(staff ?? []).filter((p) => !hide.has(p.id as string)).map((p) => ({ id: p.id as string, name: p.name as string }))} />
       </Card>
       <LeaveTypeToggle code={x.code} active={!!x.active} />
       </TwoPane>

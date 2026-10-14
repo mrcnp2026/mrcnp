@@ -273,8 +273,8 @@ export function settleLeave(args: { lots: readonly Lot[]; entries: readonly Entr
 // ── 휴가 종류별 신청 규칙 (M5) ──
 // 2026-10-15 추가 (PRD 34.2 L12 · L13): 신청할 수 있는 요일 · 적용 대상. 판으로 쌓이는 규칙(leave_type_policy_versions.payload)에 담는다 — DB 변경 없음
 //   weekdays: 1=월 … 7=일, 비우면(null) 회사 근무일 그대로 · targets: 부서/팀 · 직원, 둘 다 비우면 모두
-export type LeaveTypeRule = { maxDaysPerRequest: number | null; minNoticeDays: number | null; reasonRequired: boolean; weekdays: number[] | null; targets: { groupIds: string[]; employeeIds: string[] } };
-export const NO_TYPE_RULE: LeaveTypeRule = { maxDaysPerRequest: null, minNoticeDays: null, reasonRequired: false, weekdays: null, targets: { groupIds: [], employeeIds: [] } };
+export type LeaveTypeRule = { maxDaysPerRequest: number | null; minNoticeDays: number | null; reasonRequired: boolean; weekdays: number[] | null; targets: { groupIds: string[]; employeeIds: string[] }; nameEn: string | null };
+export const NO_TYPE_RULE: LeaveTypeRule = { maxDaysPerRequest: null, minNoticeDays: null, reasonRequired: false, weekdays: null, targets: { groupIds: [], employeeIds: [] }, nameEn: null };
 const ID = /^[0-9a-f-]{36}$/i;
 export function validateTypeRule(v: unknown): LeaveTypeRule | null {
   if (!v || typeof v !== 'object') return null;
@@ -294,7 +294,10 @@ export function validateTypeRule(v: unknown): LeaveTypeRule | null {
   const ids = (v: unknown) => (v === undefined ? [] : Array.isArray(v) && v.length <= 500 && v.every((x) => typeof x === 'string' && ID.test(x)) ? [...new Set(v as string[])] : null);
   const groupIds = ids(tg.groupIds), employeeIds = ids(tg.employeeIds);
   if (!groupIds || !employeeIds) return null;
-  return { maxDaysPerRequest: max, minNoticeDays: notice, reasonRequired: o.reasonRequired, weekdays, targets: { groupIds, employeeIds } };
+  // 영어 이름 (L11) — 회사가 만든 종류만 쓴다(기본 종류는 번역이 있다)
+  const nameEn = o.nameEn === undefined || o.nameEn === null || o.nameEn === '' ? null : typeof o.nameEn === 'string' && o.nameEn.trim().length >= 1 && o.nameEn.trim().length <= 40 ? o.nameEn.trim() : undefined;
+  if (nameEn === undefined) return null;
+  return { maxDaysPerRequest: max, minNoticeDays: notice, reasonRequired: o.reasonRequired, weekdays, targets: { groupIds, employeeIds }, nameEn };
 }
 /** 신청이 그 종류의 규칙에 맞는가. 맞으면 null, 아니면 오류 코드 */
 export function checkTypeRule(rule: LeaveTypeRule, req: { days: number; startDate: string; today: string; reason: string }): 'leave_too_long' | 'leave_notice' | 'leave_reason_required' | null {

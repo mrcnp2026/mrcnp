@@ -2918,7 +2918,9 @@
         "5": "Fri",
         "6": "Sat",
         "7": "Sun"
-      }
+      },
+      "nameEn": "English name",
+      "nameEnHint": "Shown on English screens. Blank = the Korean name is shown."
     },
     "staffPay": {
       "title": "Pay by employee",
@@ -4459,7 +4461,8 @@
     },
     "monthlyNote": "In days. Leave spanning several days is counted in the month it starts.",
     "prevYear": "Previous year",
-    "nextYear": "Next year"
+    "nextYear": "Next year",
+    "localeTag": "en"
   },
   "work": {
     "title": "Off-site / trip / remote",
