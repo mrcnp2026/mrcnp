@@ -5,6 +5,7 @@
 // - 사무실 위치(GPS)는 좌표+반경. 하나라도 켜져 있으면, 사무실 인터넷이 아닌 곳에서 찍을 때 폰이 위치를 함께 보낸다 (0017)
 // 누가 바꿨는지는 변경 기록에 남는다 (표에 *_by 칸이 없어 따로 한 줄 적는다).
 import { api, ApiError, readJson } from '@/lib/api';
+import { putSetting } from '@/lib/settings';
 import { requireConsole } from '@/lib/console-pin';
 import { requireAdmin } from '@/lib/auth';
 import { validateLocation } from '@/lib/geo';
@@ -26,6 +27,13 @@ export const POST = api('admin.settings', async (req, ctx) => {
     auditStaffAction({ actorId: me.id, targetId, table, event, reason: event, detail: { ...detail, requestId: ctx.requestId } });
 
   switch (b.action) {
+    case 'schedule.mode': {
+      if (b.mode !== 'approval' && b.mode !== 'direct') throw new ApiError(400, 'invalid_input');
+      const r = await putSetting('schedule.request_mode', b.mode, today, me.id);
+      if (r === 'duplicate') throw new ApiError(409, 'setting_same_day'); // 같은 날 두 번 바꾸지 않는다(이력 한 줄)
+      await note('app_settings', me.id, 'schedule.mode', { mode: b.mode });
+      return { ok: true };
+    }
     case 'rule.add': {
       const v = validateRule(b, today);
       if (!v.ok) throw new ApiError(400, v.code);

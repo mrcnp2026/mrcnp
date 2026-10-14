@@ -1,6 +1,8 @@
 // 설정 (더보기 › 설정) — 근무시간 · 휴일 · 사무실 인터넷 주소를 화면에서 바꾼다 (2026-10-05: 지금까지는 개발자가 DB·열쇠 파일을 고쳐야 했다).
 // 근무시간은 이력이다: 고치지 않고 "언제부터 적용"되는 새 규칙을 넣는다 (② 4-1). 휴일·주소는 지우지 않고 빼거나 끈다 (변경 기록에 남는다).
 import { getFormatter, getTranslations } from 'next-intl/server';
+import { getSettingAt } from '@/lib/settings';
+import { ScheduleModeForm } from './ScheduleModeForm';
 import { HelpTip } from '@/components/Help';
 import { headers } from 'next/headers';
 import Link from 'next/link';
@@ -71,6 +73,8 @@ export default async function SettingsPage({ searchParams }: { searchParams: Pro
     );
   }
   const info = INFO[tab];
+  const tsm = await getTranslations('admin.settings.scheduleMode');
+  const scheduleMode = (await getSettingAt('schedule.request_mode', toKstDate(new Date()))) as 'approval' | 'direct';
   // 권한 한 화면 (2026-10-14 문서 07 ④-4): 관리자 · 지점관리자 · 급여 담당을 표로. 바꾸기는 직원 화면에서(다른 관리자 확인 규칙을 그대로 쓴다)
   const access =
     tab === 'access'
@@ -210,6 +214,11 @@ export default async function SettingsPage({ searchParams }: { searchParams: Pro
                 <UseMark on={r.on} label={ti(`${tab}.${r.k}.value`)} />
               </SettingRow>
             ))}
+          {tab === 'request' && (
+            <SettingRow label={tsm('label')} desc={tsm('desc')}>
+              <ScheduleModeForm mode={scheduleMode} />
+            </SettingRow>
+          )}
           {tab === 'general' && (
             <>
               <SetRow label={tp('weekStart')}>
@@ -405,6 +414,12 @@ export default async function SettingsPage({ searchParams }: { searchParams: Pro
 
       {/* ── 폰 ── */}
       <div className="flex flex-col gap-3 lg:hidden">
+      {tab === 'request' && (
+        <Card className="flex flex-col gap-2">
+          <CardTitle help={tsm('desc')}>{tsm('label')}</CardTitle>
+          <ScheduleModeForm mode={scheduleMode} />
+        </Card>
+      )}
       <Card className="flex flex-col gap-3">
         <CardTitle help={t('ruleNote')}>{t('ruleTitle')}</CardTitle>
         {current ? (

@@ -1995,6 +1995,15 @@
         "pinNone": "Not set",
         "pinReset": "Clear PIN",
         "pinResetConfirm": "Clear {name}’s console PIN? They will set a new one next time."
+      },
+      "scheduleMode": {
+        "label": "Schedule request mode",
+        "desc": "How employee schedule requests are handled. Direct: the shift is created without approval and the request is recorded as approved by the employee. Not allowed in closed months.",
+        "approval": "Admin approval (current)",
+        "direct": "Employee confirms directly",
+        "save": "Save",
+        "saved": "Saved. Applies from today.",
+        "setting_same_day": "Already changed today. Change it again tomorrow."
       }
     },
     "places": {

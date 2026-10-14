@@ -29,6 +29,8 @@ export const SETTINGS = {
   'leave.basis': { group: 7, kind: 'choice', options: ['hire_date', 'fiscal_year'], default: 'hire_date' },
   'leave.allow_half': { group: 7, kind: 'bool', default: true },
   'leave.allow_quarter': { group: 7, kind: 'bool', default: false },
+  // 그룹 5 — 근무일정 요청 (PRD 35.3 · A17, 2026-10-15): 관리자 승인(지금까지) / 직원이 바로 확정(승인 없이 일정이 생기고, 관리자에게는 기록으로 남는다)
+  'schedule.request_mode': { group: 5, kind: 'choice', options: ['approval', 'direct'], default: 'approval' },
   // 그룹 8 — 정정·잠금
   'correction.window_days': { group: 8, kind: 'int', min: 1, max: 90, unit: 'count', default: 31 },
   // 그룹 11 — 공지

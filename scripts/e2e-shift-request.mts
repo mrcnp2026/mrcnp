@@ -7,7 +7,7 @@ import { config } from 'dotenv';
 import { createHash, randomBytes } from 'node:crypto';
 import path from 'node:path';
 import { chromium } from 'playwright-core';
-import { createPassword } from './lib/e2e-password.ts';
+import { createPassword, unlockConsole } from './lib/e2e-password.ts';
 
 config({ path: path.join(import.meta.dirname, '..', '.env.local'), quiet: true });
 const BASE = process.env.BASE ?? 'http://localhost:4123';
@@ -168,6 +168,23 @@ try {
     await p.waitForURL(new RegExp(`/admin/schedule/${other!.id}/${MON}$`), { timeout: 20000 });
     const day1 = (await db.from('shifts').select('start_time, active').eq('employee_id', other!.id).eq('work_date', MON).eq('active', true)).data;
     check(day1?.length === 1 && day1[0].start_time === '07:30:00', '그 날짜에만 날짜별 일정이 새로 들어감', JSON.stringify(day1));
+  }
+
+  // ── 직원이 바로 확정하는 방식 (A17, 2026-10-15): 먼 앞날(2098년)부터 「바로 확정」으로 정해 두고 그 날짜로 요청 → 승인 없이 일정이 생긴다 ──
+  {
+    const DY = `2098-0${1 + Math.floor(Math.random() * 9)}-1${Math.floor(Math.random() * 9)}`;
+    const FROM = '2098-01-01';
+    const { data: had } = await db.from('app_settings').select('key').eq('key', 'schedule.request_mode').eq('effective_from', FROM);
+    if (!had?.length) await db.from('app_settings').insert({ key: 'schedule.request_mode', value: 'direct', effective_from: FROM, updated_by: emp!.id });
+    const r = await post('/api/schedule-requests', { date: DY, startTime: '10:00', endTime: '15:00', kind: 'extra', reason: '검사용 바로 확정' });
+    const { data: req } = await db.from('shift_requests').select('status, approved_by, shift_id').eq('id', r.json.id ?? '').maybeSingle();
+    const { data: made } = req?.shift_id ? await db.from('shifts').select('employee_id, work_date, active').eq('id', req.shift_id).maybeSingle() : { data: null };
+    check(r.status === 200 && r.json.direct === true && req?.status === 'approved' && req.approved_by === emp!.id && made?.work_date === DY && made.active === true, '바로 확정 방식: 승인 없이 그 날 일정이 생기고, 요청은 「승인(본인)」으로 남는다', JSON.stringify({ r: r.json, req }));
+    if (req?.shift_id) await db.from('shifts').update({ active: false }).eq('id', req.shift_id);
+    await unlockConsole(p, db, emp!.id);
+    const st = await (async () => { await p.goto(`${BASE}/admin/settings?tab=request`); await p.waitForLoadState('networkidle'); return p.locator('main').innerText(); })();
+    check(st.includes('근무일정 요청 방식') && st.includes('직원이 바로 확정'), '통합설정 › 요청 설정에 「근무일정 요청 방식」');
+    await db.from('console_pins').delete().eq('employee_id', emp!.id);
   }
 
   for (const w of [320, 390]) {

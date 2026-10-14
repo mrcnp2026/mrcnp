@@ -31,10 +31,10 @@ export function ShiftRequestForm({ today, templates }: { today: string; template
         e.preventDefault();
         setBusy(true);
         setErr(null);
-        const r = await callApi('/api/schedule-requests', { date, startTime: start, endTime: end, kind, reason });
+        const r = await callApi<{ id: string; direct?: boolean }>('/api/schedule-requests', { date, startTime: start, endTime: end, kind, reason });
         setBusy(false);
         if (!r.ok) return setErr(r);
-        router.push('/punch/requests');
+        router.push(r.data.direct ? '/punch/schedule' : '/punch/requests'); // 바로 확정 방식이면 일정에 이미 들어갔다
         router.refresh();
       }}
     >
