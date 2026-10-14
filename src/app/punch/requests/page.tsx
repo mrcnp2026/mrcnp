@@ -1,6 +1,7 @@
 // 요청 — 내 요청 (의뢰인 2026-10-10: 시프티의 「요청」 탭처럼) — 정정 · 연장근로 확인 · 휴가 · 외근/출장/재택을 한 목록으로, 대기중/완료 탭.
 // 새 요청은 + 버튼에서 종류를 골라 그 양식으로 간다 (양식과 처리 길은 기존 그대로다).
 import { getTranslations } from 'next-intl/server';
+import { HelpTip } from '@/components/Help';
 import Link from 'next/link';
 import { redirect } from 'next/navigation';
 import { Fab } from '@/components/Fab';
@@ -49,7 +50,11 @@ export default async function MyRequestsPage({ searchParams }: { searchParams: P
 
   return (
     <PageShell wide>
-      <h1 className="sr-only">{t('title')}</h1>
+      {/* 폰은 위 줄(MineBar)이 제목을 맡는다 · PC는 제목 + ? 설명 */}
+      <h1 className="sr-only lg:not-sr-only lg:flex lg:items-center lg:gap-x-1 lg:text-2xl lg:font-bold">
+        {t('title')}
+        <HelpTip>{t('intro')}</HelpTip>
+      </h1>
       <div className="hidden lg:grid lg:grid-cols-[14rem_minmax(0,1fr)] lg:gap-8">
         <aside className="flex flex-col gap-4">
           <h2 className="text-lg font-bold">{t('pcTitle')}</h2>

@@ -1,5 +1,6 @@
 // 더보기 › 공지 — 목록 (상태는 계산: 임시·예약·게시 중·종료·보관, 요점 13) + 확인 현황 (요점 17). 삭제 버튼은 없다.
 import { ChevronDown, ChevronRight, Plus } from 'lucide-react';
+import { HelpTip } from '@/components/Help';
 import { getFormatter, getTranslations } from 'next-intl/server';
 import Link from 'next/link';
 import { Card, Chip, PageShell } from '@/components/ui';
@@ -36,7 +37,9 @@ export default async function NoticesPage() {
   return (
     <PageShell wide>
       <header className="flex items-center justify-between gap-2">
-        <h1 className="text-2xl font-semibold text-primary-deep">{t('title')}</h1>
+        <div className="min-w-0">
+          <h1 className="flex flex-wrap items-center gap-x-1 text-2xl font-bold">{t('title')}<HelpTip>{t('intro')}</HelpTip></h1>
+        </div>
         <Link href="/admin/notices/new" className="inline-flex min-h-11 items-center gap-1 rounded-button bg-primary px-4 font-semibold text-on-primary">
           <Plus aria-hidden size={18} strokeWidth={1.75} />
           {t('new')}

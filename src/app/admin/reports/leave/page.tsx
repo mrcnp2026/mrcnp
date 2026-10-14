@@ -1,6 +1,7 @@
 // 휴가 리포트 — 부서/전사의 받은 연차 · 사용 · 소멸 · 잔여 · 선사용 · 소진율 (PRD v1.3 37.5, L22). 관리자만.
 // 숫자는 휴가 원장의 합이다. 화면과 「엑셀 받기」가 같은 계산(buildLeaveReport)을 쓴다. 휴가 사유는 나오지 않는다.
 import { getTranslations } from 'next-intl/server';
+import { HelpTip } from '@/components/Help';
 import Link from 'next/link';
 import { Chip, PageShell } from '@/components/ui';
 import { OFFICE } from '@/config/office';
@@ -29,8 +30,7 @@ export default async function LeaveReportPage({ searchParams }: { searchParams: 
   return (
     <PageShell wide>
       <div>
-        <h1 className="text-2xl font-bold">{t('leaveTitle')}</h1>
-        <p className="pt-1 text-sm text-faint">{t('leaveIntro')}</p>
+        <h1 className="flex flex-wrap items-center gap-x-1 text-2xl font-bold">{t('leaveTitle')}<HelpTip>{t('leaveIntro')}</HelpTip></h1>
       </div>
       <form action="/admin/reports/leave" className="flex flex-wrap items-end gap-3 text-sm">
         {sp.live === '1' && <input type="hidden" name="live" value="1" />}

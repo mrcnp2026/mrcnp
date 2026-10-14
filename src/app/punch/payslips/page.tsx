@@ -3,6 +3,7 @@
 // ③ 명세서: 해마다 목록 + 고른 달의 상세(PC는 나란히 2칸, 폰은 목록 → 한 장 화면). 관리자가 공개한 것만 보인다 (PRD v1.3 E01).
 // 계좌 · 주민등록번호는 민감정보 결정(급여-36 · 37) 전이라 넣지 않는다.
 import { ChevronLeft, ChevronRight } from 'lucide-react';
+import { HelpTip } from '@/components/Help';
 import { getFormatter, getTranslations } from 'next-intl/server';
 import Link from 'next/link';
 import { redirect } from 'next/navigation';
@@ -77,8 +78,7 @@ export default async function MyPayPage({ searchParams }: { searchParams: Promis
   return (
     <PageShell wide>
       <div>
-        <h1 className="text-2xl font-bold">{tm('title')}</h1>
-        <p className="pt-1 text-sm text-faint">{tm('intro')}</p>
+        <h1 className="flex flex-wrap items-center gap-x-1 text-2xl font-bold">{tm('title')}<HelpTip>{tm('intro')}</HelpTip></h1>
       </div>
 
       <Box title={tm('profile')}>

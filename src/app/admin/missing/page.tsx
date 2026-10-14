@@ -2,9 +2,9 @@
 // 날짜별 묶음. 한 줄 = 시각(출근 누락: 그날 일정 / 퇴근 누락: 출근 시각 – 없음) · 직무 색 막대 · 이름 · 지점/직무 · ›(그 직원 기록).
 // 보여 주기만 한다 — 채우는 길은 직원의 정정 요청이나 그 직원 기록 화면의 「기록 넣기」다 (4-8).
 import { ChevronRight } from 'lucide-react';
+import { HelpTip } from '@/components/Help';
 import { getFormatter, getTranslations } from 'next-intl/server';
 import Link from 'next/link';
-import { Help } from '@/components/Help';
 import { RowList } from '@/components/list';
 import { Chip, PageShell } from '@/components/ui';
 import { OFFICE } from '@/config/office';
@@ -65,9 +65,8 @@ export default async function MissingPage({ searchParams }: { searchParams: Prom
 
   return (
     <PageShell wide>
-      <div className="flex flex-wrap items-center gap-x-1 px-1">
-        <h1 className="text-2xl font-extrabold tracking-tight">{t('title')}</h1>
-        <Help>{t('intro', { h: OFFICE.missingOutGraceHours, m: OFFICE.missingInGraceMin })}</Help>
+      <div className="px-1">
+        <h1 className="flex flex-wrap items-center gap-x-1 text-2xl font-bold">{t('title')}<HelpTip>{t('intro', { h: OFFICE.missingOutGraceHours, m: OFFICE.missingInGraceMin })}</HelpTip></h1>
       </div>
       {practice && <p className="rounded-card bg-primary-tint p-3 text-sm text-primary">{t('practiceBanner')}</p>}
       <RangeForm key={`${from}${to}`} from={from} to={to} tab={tabKind} today={today} live={sp.live === '1'} />

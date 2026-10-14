@@ -42,6 +42,17 @@ describe('메뉴 구성표', () => {
     expect(bad.map((l) => l.href)).toEqual([]);
   });
 
+  it('통합설정의 모든 항목에 「이 화면 쓰는 법」 종류가 있고, 번역이 있다 (2026-10-14 의뢰인)', () => {
+    expect(CONSOLE_APPS.flatMap(appLeaves).filter((l) => !l.how).map((l) => l.key)).toEqual([]);
+    for (const m of [ko, en] as unknown as { frame: { how: Record<string, { tag: string; text: string }> } }[]) for (const l of CONSOLE_APPS.flatMap(appLeaves)) expect(m.frame.how[l.how!]?.text).toBeTruthy();
+  });
+
+  it('관리자 모드와 통합설정의 앱 이름이 겹치지 않는다 (2026-10-14 의뢰인)', () => {
+    const fr = (ko as unknown as { frame: { app: Record<string, string>; appFull: Record<string, string> } }).frame;
+    const admin = new Set(ADMIN_APPS.flatMap((a) => [fr.app[a.key], fr.appFull[a.key]]));
+    expect(CONSOLE_APPS.map((a) => fr.app[a.key]).filter((x) => admin.has(x))).toEqual([]);
+  });
+
   it('같은 주소가 두 항목에 들어 있지 않다', () => {
     const hrefs = all.flatMap(appLeaves).map((l) => l.href);
     expect(hrefs.filter((h, i) => hrefs.indexOf(h) !== i)).toEqual([]);

@@ -382,7 +382,7 @@
       "accountHint": "Change password"
     },
     "diag": {
-      "title": "Diagnostics",
+      "title": "Connection diagnostics",
       "subtitle": "Values the server actually saw for this request. Use this when the office check looks wrong.",
       "thisDevice": "This device",
       "ip": "Address used",
@@ -611,7 +611,7 @@
       "backToList": "Back to requests",
       "focusTitle": "Request",
       "focusGone": "This request has already been handled or cannot be found.",
-      "pcTitle": "Requests",
+      "pcTitle": "Request inbox",
       "pcIntro": "Review staff requests, approve or reject them, and check their status.",
       "panelClose": "Close",
       "totalCount": "Requests",
@@ -625,7 +625,7 @@
       "unit": ""
     },
     "records": {
-      "title": "Records",
+      "title": "Monthly totals",
       "month": "Month",
       "prev": "Previous month",
       "next": "Next month",
@@ -677,7 +677,8 @@
       "groupAll": "All departments",
       "groupFilter": "Filter by department or team",
       "toList": "Record list",
-      "payableCol": "Payable"
+      "payableCol": "Payable",
+      "intro": "Each employee’s hours, payable hours, lateness and absences for the month. Click a name for their daily records."
     },
     "notices": {
       "title": "Notices",
@@ -740,10 +741,11 @@
       "colConfirmed": "Confirmed",
       "colAudience": "Audience",
       "audAll": "All staff",
-      "audSelected": "Only {n} selected"
+      "audSelected": "Only {n} selected",
+      "intro": "Write notices for staff and see who confirmed them. Use [New notice]; after an edit you can ask staff to confirm again."
     },
     "payroll": {
-      "title": "Payroll",
+      "title": "Hours summary",
       "subtitle": "Monthly hours summary · payroll file",
       "noAccess": "Only payroll managers can see this screen. Current payroll managers: {names}. A payroll manager can give this permission to another admin in the Role column of the staff list.",
       "building": "Payslips (base pay, allowances, insurance, tax) are being built. For now: hours summary and the payroll file.",
@@ -1450,7 +1452,7 @@
         "toTypes": "Manage leave types"
       },
       "accrualRule": {
-        "title": "Leave accrual rule",
+        "title": "Accrual rule",
         "intro": "How annual leave accrues. A reference value is calculated from the hire date; a manager confirms and enters the grant.",
         "colWho": "Service",
         "colDays": "Days",
@@ -1547,7 +1549,7 @@
         "toMonthly": "Go to monthly summary"
       },
       "reportSnapshots": {
-        "title": "Report snapshots",
+        "title": "Saved reports",
         "intro": "A report saved as it was at one point in time. Live values are on the monthly summary screen.",
         "colName": "Snapshot",
         "colItems": "Report items",
@@ -2367,7 +2369,8 @@
       "colDiffIn": "In vs plan",
       "colDiffOut": "Out vs plan",
       "diffPlus": "+ {n}",
-      "diffMinus": "- {n}"
+      "diffMinus": "- {n}",
+      "pcIntro": "Punch records for the chosen period, one per line. Click a line to fix or add that day; the circle on the right confirms the day."
     },
     "recordDetail": {
       "title": "Attendance record",
@@ -2507,7 +2510,7 @@
       "pcIntro": "See each employee's clock-in and clock-out times for the month. The colour band under a cell is the job colour."
     },
     "closing": {
-      "title": "Closing",
+      "title": "Attendance closing",
       "intro": "Close each employee’s attendance month by month. Once closed, punches, corrections, leave and shifts for that month cannot be added or changed.",
       "prev": "Previous month",
       "next": "Next month",
@@ -4143,7 +4146,8 @@
     "colNote": "Note",
     "colDate": "Created",
     "colManage": "Manage",
-    "toMessages": "Work messages"
+    "toMessages": "Work messages",
+    "intro": "Notices from the company. Open the ones that need confirming and press [Confirm]."
   },
   "leave": {
     "title": "Leave & off-site",
@@ -4415,7 +4419,8 @@
     "pcPending": "Pending",
     "pcDone": "Completed",
     "pcShowPending": "Show pending",
-    "pcShowDone": "Show completed"
+    "pcShowDone": "Show completed",
+    "intro": "Requests you sent (leave, corrections, overtime, schedule, out-of-office) and their status. You can cancel ones still waiting."
   },
   "scheduleRequest": {
     "title": "Schedule request",
@@ -4687,8 +4692,8 @@
     "bell": "Notices",
     "space": {
       "label": "Switch view",
-      "my": "My view",
-      "admin": "Admin view",
+      "my": "Staff mode",
+      "admin": "Admin mode",
       "console": "Settings console"
     },
     "app": {
@@ -4707,13 +4712,13 @@
       "cOrg": "Organization",
       "cAccess": "Access · Security",
       "cData": "Logs · Data",
-      "aAttendance": "Attendance",
-      "aLeave": "Leave",
-      "aRequests": "Requests",
-      "aTalk": "Messages · Notices",
-      "aReports": "Reports",
-      "aPay": "Payroll",
-      "aHr": "Staff"
+      "aAttendance": "Attendance settings",
+      "aLeave": "Leave settings",
+      "aRequests": "Request settings",
+      "aTalk": "Message settings",
+      "aReports": "Report settings",
+      "aPay": "Payroll settings",
+      "aHr": "Staff settings"
     },
     "appFull": {
       "home": "Home",
@@ -4745,14 +4750,14 @@
     },
     "item": {
       "myHome": "Home",
-      "mySchedule": "My schedule",
+      "mySchedule": "Schedule",
       "myRecords": "My attendance",
-      "myLeave": "My leave",
-      "myRequests": "My requests",
+      "myLeave": "Leave · Out",
+      "myRequests": "Requests",
       "payslips": "My pay",
       "myRetirement": "Estimated retirement pay",
       "notices": "Notices",
-      "messages": "Messages",
+      "messages": "Work messages",
       "orgChart": "Org chart",
       "account": "My account",
       "adminHome": "Home",
@@ -4786,7 +4791,7 @@
       "setGeneral": "Company basics",
       "setNotify": "Notifications",
       "setAdvanced": "Advanced",
-      "branches": "Branches · Org",
+      "branches": "Branches",
       "jobs": "Jobs",
       "setBranch": "Branch rules",
       "setAccess": "Permissions",
@@ -4811,8 +4816,8 @@
       "messageRules": "Message automation",
       "setReport": "Report rules",
       "reportTemplates": "Report snapshot templates",
-      "payEmployeeDefaults": "Employee pay",
-      "payLedger": "Payroll ledger",
+      "payEmployeeDefaults": "Employee pay defaults",
+      "payLedger": "Ledger defaults",
       "payWorkingTime": "Working time",
       "payMasking": "Resident number masking",
       "payPaymentItems": "Payment items",
@@ -4839,10 +4844,37 @@
       "apps": "App management",
       "lead": "Set the rules for the company and each area here. Day-to-day processing lives in the admin view.",
       "companyLead": "Company-wide rules — company info · organization · access · logs",
-      "appsLead": "Rules per area — attendance · leave · requests · messages · reports · payroll · staff"
+      "appsLead": "Rules per area — attendance · leave · requests · messages · reports · payroll · staff",
+      "band": "Settings console · special admin mode",
+      "bandNote": "Rules changed here apply to the whole company. Day-to-day work is in admin mode.",
+      "exit": "Back to admin mode",
+      "bandShort": "Company-wide rules are changed here."
     },
     "wideMenu": "Wide menu",
     "narrowMenu": "Collapse menu",
-    "wideShort": "Wide"
+    "wideShort": "Wide",
+    "how": {
+      "view": {
+        "tag": "View only",
+        "text": "This is how the app works now. You cannot change it here — ask the developer if it needs to change."
+      },
+      "instant": {
+        "tag": "Applies at once",
+        "text": "Add / turn off / remove take effect immediately. Nothing else to save."
+      },
+      "versioned": {
+        "tag": "Save to apply",
+        "text": "Change the values and press [Save]. Saved values apply from the start date; earlier dates keep the old values."
+      },
+      "list": {
+        "tag": "List",
+        "text": "Use [+ Add] to create, click a line to edit and press [Save]. Items are turned off, not deleted."
+      },
+      "review": {
+        "tag": "Approve to apply",
+        "text": "Enter or fetch the official data, then the payroll staff checks and [Approves] it. Values are not used before approval."
+      }
+    },
+    "howTitle": "How this screen works"
   }
 }

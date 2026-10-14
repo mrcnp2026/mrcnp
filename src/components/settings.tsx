@@ -6,6 +6,7 @@
 // 문장은 여기 쓰지 않는다 — 부르는 쪽이 번역 파일에서 읽어 넘긴다.
 import { Check, Minus } from 'lucide-react';
 import Link from 'next/link';
+import { HelpTip } from './Help';
 import type { ReactNode } from 'react';
 
 export function SettingBox({ children, className = '' }: { children: ReactNode; className?: string }) {
@@ -19,9 +20,10 @@ export function SettingGroup({ children }: { children: ReactNode }) {
 export function SettingRow({ label, desc, children, wide = false }: { label: ReactNode; desc?: ReactNode; children?: ReactNode; wide?: boolean }) {
   return (
     <div className={`flex gap-3 border-b border-border py-5 last:border-b-0 ${wide ? 'flex-col' : 'flex-col lg:flex-row lg:items-center lg:gap-6'}`}>
-      <div className="min-w-0 flex-1">
+      {/* 설명은 이름 옆 ? 말풍선으로 (2026-10-14 의뢰인: 긴 글을 바로 늘어놓지 말 것) */}
+      <div className="flex min-w-0 flex-1 items-center gap-0.5">
         <p className="text-base font-semibold lg:text-lg">{label}</p>
-        {desc && <div className="pt-0.5 text-sm text-muted">{desc}</div>}
+        {desc && <HelpTip>{desc}</HelpTip>}
       </div>
       {children !== undefined && <div className={`flex min-w-0 flex-col gap-2 text-sm ${wide ? '' : 'lg:max-w-md lg:items-end lg:text-right'}`}>{children}</div>}
     </div>

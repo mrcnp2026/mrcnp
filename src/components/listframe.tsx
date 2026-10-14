@@ -5,6 +5,7 @@
 //   ListTable   — 표: 머리는 작은 회색 글자 + 위 진한 선, 줄은 가로선만 · 높이 48px
 // 이상자 관리 · 요청함 · 연차 촉진 · 급여대장 목록 · 사회보험 · 퇴직급여 · 일용직이 같은 틀을 쓴다. 문장은 부르는 쪽이 번역 파일에서 넘긴다.
 import { Settings } from 'lucide-react';
+import { HelpTip } from './Help';
 import Link from 'next/link';
 import type { CSSProperties, ReactNode } from 'react';
 
@@ -12,15 +13,15 @@ export function ListHead({ title, desc, settingsHref, settingsLabel, actions }: 
   return (
     <div className="flex flex-wrap items-start gap-3">
       <div className="min-w-0 flex-1">
-        <h1 className="flex items-center gap-2 text-2xl font-bold">
+        <h1 className="flex flex-wrap items-center gap-x-1 text-2xl font-bold">
           {title}
+          {desc && <HelpTip>{desc}</HelpTip>}
           {settingsHref && (
             <Link href={settingsHref} aria-label={settingsLabel} title={settingsLabel} className="flex size-8 items-center justify-center rounded-button text-faint hover:bg-surface hover:text-primary">
               <Settings aria-hidden size={18} strokeWidth={1.75} />
             </Link>
           )}
         </h1>
-        {desc && <p className="pt-1 text-sm text-muted">{desc}</p>}
       </div>
       {actions && <div className="flex flex-wrap items-center gap-2">{actions}</div>}
     </div>

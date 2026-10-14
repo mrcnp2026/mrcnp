@@ -1,6 +1,7 @@
 // 일용직 — 지급 대상자 · 근무 입력 · 일용 대장 (PRD v1.3 18.5 W07). 급여 담당 관리자만.
 // 대상자는 로그인 계정과 따로다(계정을 만들지 않는다). 세금은 하루 단위 임시 규칙, 4대보험료는 계산하지 않는다. 신고 파일 · 이체는 없다.
 import { getFormatter, getTranslations } from 'next-intl/server';
+import { HelpTip } from '@/components/Help';
 import Link from 'next/link';
 import { Card, CardTitle, Chip, PageShell } from '@/components/ui';
 import { OFFICE } from '@/config/office';
@@ -34,11 +35,10 @@ export default async function DailyPage({ searchParams }: { searchParams: Promis
   return (
     <PageShell wide>
       <div>
-        <h1 className="flex flex-wrap items-center gap-2 text-2xl font-bold">
+        <h1 className="flex flex-wrap items-center gap-x-1 text-2xl font-bold">
           {t('title')}
           {practice && view !== 'payees' && <Chip>{t('practice')}</Chip>}
-        </h1>
-        <p className="pt-1 text-sm text-faint">{t('intro')}</p>
+        <HelpTip>{t('intro')}</HelpTip></h1>
       </div>
       <nav className="flex border-b border-border">
         {VIEWS.map((v) => (

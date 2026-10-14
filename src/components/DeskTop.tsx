@@ -9,6 +9,7 @@ import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import { appLeaves, appsFor, CONSOLE_HOME, locate, type NavRole, type Space } from '@/config/nav';
 import { MANAGER_HOME } from '@/lib/manager-rules';
 import { RECENT_KEY } from './DeskNav';
+import { HelpTip } from './Help';
 
 function useSpace(role: NavRole) {
   const path = usePathname();
@@ -192,5 +193,38 @@ export function Crumb({ role }: { role: NavRole }) {
         </span>
       ))}
     </p>
+  );
+}
+
+const HOW_TONE = { view: 'bg-surface text-muted', instant: 'bg-ok-tint text-ok', versioned: 'bg-primary-tint text-primary', list: 'bg-surface text-text', review: 'bg-warn-tint text-warn' } as const;
+
+/**
+ * 통합설정 표시 (2026-10-14 의뢰인: 통합설정은 관리자 화면과 엄격히 구분, 들어간 화면이 이미 적용된 건지 · 저장해야 적용되는지 한눈에)
+ * ① 짙은 띠: 지금 통합설정(특별관리자 모드)에 있다 + 관리자 모드로 나가기
+ * ② 「이 화면 쓰는 법」: 보기 전용 · 바로 적용 · 저장해야 적용 · 목록 · 확인 후 적용 가운데 하나 (config/nav.ts의 how)
+ */
+export function ConsoleGuide({ role }: { role: NavRole }) {
+  const t = useTranslations('frame');
+  const at = useSpace(role);
+  if (at.space !== 'console') return null;
+  const how = at.leaf?.how;
+  return (
+    <div data-noprint className="flex flex-col gap-3 px-4 pt-4 lg:px-8">
+      <div className="flex flex-wrap items-center gap-x-3 gap-y-1 rounded-card bg-text px-4 py-2.5 text-sm text-on-primary">
+        <span className="font-bold">{t('console.band')}</span>
+        <span className="opacity-80">{t('console.bandShort')}</span>
+        <Link href="/admin" className="ml-auto font-bold underline-offset-2 hover:underline">
+          {t('console.exit')} ›
+        </Link>
+      </div>
+      {how && (
+        <p className={`flex items-center gap-1 self-start rounded-button py-0.5 pr-1 pl-3 text-sm ${HOW_TONE[how]}`}>
+          <span className="font-bold whitespace-nowrap">
+            {t('howTitle')} · {t(`how.${how}.tag`)}
+          </span>
+          <HelpTip label={t('howTitle')}>{t(`how.${how}.text`)}</HelpTip>
+        </p>
+      )}
+    </div>
   );
 }

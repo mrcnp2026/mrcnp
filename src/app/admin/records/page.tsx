@@ -3,6 +3,7 @@
 // 색은 예외에만(지각·미기록·미승인) + 글자/아이콘을 함께.
 // 직원 이름(넓은 화면)·「날짜별 기록 보기」(폰)를 누르면 그 직원의 하루 단위 기록으로 간다 (records/[id]).
 import { ChevronDown, ChevronLeft, ChevronRight, Download, ShieldAlert } from 'lucide-react';
+import { HelpTip } from '@/components/Help';
 import { getTranslations } from 'next-intl/server';
 import Link from 'next/link';
 import { GroupFilter } from '@/components/GroupFilter';
@@ -56,7 +57,9 @@ export default async function RecordsPage({ searchParams }: { searchParams: Prom
     <PageShell wide>
       <ScopeSwitch kind="attendance" current="all" />
       <header className="flex flex-wrap items-center justify-between gap-2">
-        <h1 className="text-2xl font-extrabold tracking-tight">{t('title')}</h1>
+        <div className="min-w-0">
+          <h1 className="flex flex-wrap items-center gap-x-1 text-2xl font-bold">{t('title')}<HelpTip>{t('intro')}</HelpTip></h1>
+        </div>
         <nav className="flex items-center gap-1" aria-label={t('month')}>
           <Link href={q(shift(ym, -1))} className="flex min-h-11 min-w-11 items-center justify-center" aria-label={t('prev')}>
             <ChevronLeft aria-hidden size={22} strokeWidth={1.75} />

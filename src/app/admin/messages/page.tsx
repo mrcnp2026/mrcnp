@@ -1,5 +1,6 @@
 // 업무 메시지 (관리자) — 통지 보내기, 보낸 통지와 읽음 수, 직원에게서 온 문의 (PRD v1.3 37.4, L19).
 import { getTranslations } from 'next-intl/server';
+import { HelpTip } from '@/components/Help';
 import Link from 'next/link';
 import { NoticeCompose } from '@/components/MessageForms';
 import { MessageList } from '@/components/MessageViews';
@@ -20,8 +21,7 @@ export default async function AdminMessagesPage({ searchParams }: { searchParams
   return (
     <PageShell wide>
       <div>
-        <h1 className="text-2xl font-bold">{t('adminTitle')}</h1>
-        <p className="pt-1 text-sm text-faint">{t('adminIntro')}</p>
+        <h1 className="flex flex-wrap items-center gap-x-1 text-2xl font-bold">{t('adminTitle')}<HelpTip>{t('adminIntro')}</HelpTip></h1>
       </div>
       <Card>
         <CardTitle>{t('composeTitle')}</CardTitle>

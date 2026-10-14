@@ -3,6 +3,7 @@
 // 합계는 그날 보이는 사람들의 근무 시간(휴게 제외) 합이다. 줄을 누르면 그 기록의 상세(큰 시각 + 항목—값), 거기서 [수정]으로 그 직원의 그 달 기록(정정·대리 입력).
 // 월 집계·엑셀 내려받기는 「월 집계」 화면(/admin/records)에 그대로 있다.
 import { loadOfficeLocations } from '@/lib/geo-data';
+import { HelpTip } from '@/components/Help';
 import { SheetOpener } from '@/components/SheetOpener';
 import { CircleCheck, Download } from 'lucide-react';
 import { getFormatter, getTranslations } from 'next-intl/server';
@@ -109,7 +110,9 @@ export default async function RecordListPage({ searchParams }: { searchParams: P
       {/* PC: 목록형 표 — 제목 · [월 집계] [기록 추가] / 기간 · 검색 · 부서 / 합계 / 표 */}
       <div className="hidden flex-col gap-4 lg:flex">
         <div className="flex items-center justify-between gap-3">
-          <h1 className="flex items-center gap-2 text-2xl font-bold">{t('title')}{admin && <SettingsLink href="/admin/settings?tab=punch" label={tGear('item.setPunch')} />}</h1>
+          <div className="min-w-0">
+            <h1 className="flex flex-wrap items-center gap-x-1 text-2xl font-bold">{t('title')}{admin && <SettingsLink href="/admin/settings?tab=punch" label={tGear('item.setPunch')} />}<HelpTip>{t('pcIntro')} {t('hint')}</HelpTip></h1>
+          </div>
           <div className="flex items-center gap-2">
 {admin && (
             <a href={`/api/admin/export/report?m=${to.slice(0, 7)}${sp.live === '1' ? '&live=1' : ''}`} title={tc('downloadReport', { ym: to.slice(0, 7) })} className="inline-flex h-8 items-center gap-1 rounded-button border border-border bg-bg px-3.5 text-sm font-semibold whitespace-nowrap text-text hover:bg-surface">
@@ -149,7 +152,7 @@ export default async function RecordListPage({ searchParams }: { searchParams: P
             </span>
           </p>
         </form>
-        <p className="text-xs text-faint">{practice ? t('practice') : t('live')} · {t('hint')}</p>
+        <p className="text-xs text-faint">{practice ? t('practice') : t('live')}</p>
         <div className="overflow-x-auto rounded-card border border-border bg-bg shadow-card">
           <table className="w-full text-left text-sm">
             <thead>

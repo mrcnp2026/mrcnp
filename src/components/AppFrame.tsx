@@ -14,7 +14,7 @@ import { pendingCounts } from '@/lib/period-data';
 import { BottomTabs } from './BottomTabs';
 import { ConsentGate } from './ConsentGate';
 import { DeskNav } from './DeskNav';
-import { AccountMenu, ConsoleLink, Crumb, MenuSearch, SpaceSwitch } from './DeskTop';
+import { AccountMenu, ConsoleGuide, ConsoleLink, Crumb, MenuSearch, SpaceSwitch } from './DeskTop';
 import { FrameHeader } from './FrameHeader';
 import { LanguageSwitcher } from './LanguageSwitcher';
 import { Logo } from './Logo';
@@ -74,6 +74,7 @@ export async function AppFrame({ me, children, overlay }: { me: Me; children: Re
               }
             />
           </FrameHeader>
+          <ConsoleGuide role={role} />
           <Crumb role={role} />
           {children}
         </div>

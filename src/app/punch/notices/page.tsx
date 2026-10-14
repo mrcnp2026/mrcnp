@@ -1,6 +1,7 @@
 // 직원 「공지」 목록 — 대상이고 게시 중인 공지 전부 (②-5 7-15). 언어는 메뉴의 언어 버튼을 따른다.
 // PC: 시프티 직원 모드의 「메시지」 — 왼쪽 좁은 칸(기간 · 수) + 오른쪽 표(메시지명 · 상태 · 노트 · 생성일자 · 관리) (2026-10-11 의뢰인 스샷 `스샷/직원모드 메세지.png`)
 import { Megaphone } from 'lucide-react';
+import { HelpTip } from '@/components/Help';
 import { getFormatter, getLocale, getTranslations } from 'next-intl/server';
 import Link from 'next/link';
 import { redirect } from 'next/navigation';
@@ -71,10 +72,12 @@ export default async function EmployeeNoticesPage({ searchParams }: { searchPara
           {t('toMessages')}
           {unreadMsg > 0 && <span className="rounded-full bg-primary px-2 text-xs text-on-primary">{unreadMsg}</span>}
         </Link>
-        <h1 className="flex items-center gap-2 text-2xl font-semibold text-primary-deep lg:sr-only">
-          <Megaphone aria-hidden size={24} strokeWidth={1.75} />
-          {t('title')}
-        </h1>
+        <div>
+          <h1 className="flex flex-wrap items-center gap-x-1 text-2xl font-semibold text-primary-deep lg:font-bold lg:text-text">
+            <Megaphone aria-hidden size={24} strokeWidth={1.75} className="lg:hidden" />
+            {t('title')}
+          <HelpTip>{t('intro')}</HelpTip></h1>
+        </div>
         <div className="hidden lg:grid lg:grid-cols-[14rem_minmax(0,1fr)] lg:gap-8">
           <aside className="flex flex-col gap-4">
             <h2 className="text-lg font-bold">{t('pcTitle')}</h2>

@@ -553,10 +553,6 @@ export async function PaySettings({ sp }: { sp: SP }) {
         })}
       </nav>
       <section className="min-w-0 overflow-hidden border border-border bg-bg lg:rounded-card">
-        <div className="border-b border-border px-4 py-4 lg:px-6">
-          <h2 className="text-xl font-bold">{t(`section.${section}`)}</h2>
-          <p className="pt-1 text-sm text-faint">{t(`intro.${section}`)}</p>
-        </div>
         {body}
       </section>
     </div>

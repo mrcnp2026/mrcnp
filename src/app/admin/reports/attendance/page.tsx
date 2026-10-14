@@ -1,6 +1,7 @@
 // 근태 리포트 — 부서/전사의 한 달 근태 합계와 직원별 내역 (PRD v1.3 35.4, A21). 관리자만.
 // 화면과 「엑셀 받기」가 같은 계산(buildAttendanceDeptReport)을 쓴다 — 조건이 같으면 숫자가 같다. 금액은 없다.
 import { getTranslations } from 'next-intl/server';
+import { HelpTip } from '@/components/Help';
 import Link from 'next/link';
 import { Chip, PageShell } from '@/components/ui';
 import { OFFICE } from '@/config/office';
@@ -33,8 +34,7 @@ export default async function AttendanceReportPage({ searchParams }: { searchPar
   return (
     <PageShell wide>
       <div>
-        <h1 className="text-2xl font-bold">{t('attTitle')}</h1>
-        <p className="pt-1 text-sm text-faint">{t('attIntro')}</p>
+        <h1 className="flex flex-wrap items-center gap-x-1 text-2xl font-bold">{t('attTitle')}<HelpTip>{t('attIntro')}</HelpTip></h1>
       </div>
       <form action="/admin/reports/attendance" className="flex flex-wrap items-end gap-3 text-sm">
         {sp.live === '1' && <input type="hidden" name="live" value="1" />}

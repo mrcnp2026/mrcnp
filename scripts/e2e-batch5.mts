@@ -181,9 +181,16 @@ try {
 
   // ══ 4. 마감 다시 열기 — 두 번째 관리자 확인 ══
   await db.from('profiles').update({ role: 'admin' }).eq('id', B.id); // 다른 관리자가 있는 상태
-  const y = 1970 + Math.floor(Math.random() * 25), m = String(1 + Math.floor(Math.random() * 12)).padStart(2, '0');
-  const next = m === '12' ? `${y + 1}-01-01` : `${y}-${String(Number(m) + 1).padStart(2, '0')}-01`;
-  const cl = await db.from('attendance_closes').insert({ employee_id: A.id, period_from: `${y}-${m}-01`, period_to: next, is_test: practice, input_hash: 'e2e', closed_by: ADM.id }).select('id').single();
+  // 먼 옛날의 무작위 달 — 마감 기록은 지울 수 없어서 예전 검사가 쓴 달과 겹치면 다른 달로 다시 고른다
+  let y = 0, m = '', next = '';
+  const tryClose = () => {
+    y = 1900 + Math.floor(Math.random() * 95);
+    m = String(1 + Math.floor(Math.random() * 12)).padStart(2, '0');
+    next = m === '12' ? `${y + 1}-01-01` : `${y}-${String(Number(m) + 1).padStart(2, '0')}-01`;
+    return db.from('attendance_closes').insert({ employee_id: A.id, period_from: `${y}-${m}-01`, period_to: next, is_test: practice, input_hash: 'e2e', closed_by: ADM.id }).select('id').single();
+  };
+  let cl = await tryClose();
+  for (let i = 0; i < 20 && cl.error?.code === '23505'; i++) cl = await tryClose();
   if (cl.error) throw new Error(`마감 준비: ${cl.error.message}`);
   closeId = cl.data.id as string;
   const stateOf = async () => (await db.from('attendance_closes').select('state, reopened_by, reopen_reason').eq('id', closeId!).single()).data!;

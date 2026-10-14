@@ -5,6 +5,7 @@
 // + 버튼: 날짜별 일정 넣기 (여러 명 한 번에). 날짜별로 넣은 일정만 ✕로 취소할 수 있다 — 평소 틀은 「근무일정 틀」에서 바꾼다.
 // 예전 주소(?d=하루)는 그 하루만 보는 것으로 받는다.
 import { getMe } from '@/lib/auth';
+import { HelpTip } from '@/components/Help';
 import { Plane } from 'lucide-react';
 import { getFormatter, getTranslations } from 'next-intl/server';
 import Link from 'next/link';
@@ -157,8 +158,7 @@ export default async function AdminSchedulePage({ searchParams }: { searchParams
       <div className="hidden flex-col gap-4 lg:flex">
         <div className="flex items-center justify-between gap-3">
           <div className="min-w-0">
-            <h1 className="flex items-center gap-2 text-2xl font-bold">{t('title')}{admin && <SettingsLink href="/admin/settings?tab=work" label={tGear('item.setWork')} />}</h1>
-            <p className="pt-1 text-sm text-faint">{t('pcIntro')}</p>
+            <h1 className="flex flex-wrap items-center gap-x-1 text-2xl font-bold">{t('title')}{admin && <SettingsLink href="/admin/settings?tab=work" label={tGear('item.setWork')} />}<HelpTip>{t('pcIntro')}</HelpTip></h1>
           </div>
           <div className="flex items-center gap-2">
             {admin && (

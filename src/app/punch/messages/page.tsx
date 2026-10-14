@@ -1,5 +1,6 @@
 // 업무 메시지 (직원) — 받은 메시지 · 보낸 문의, 관리자에게 문의하기 (PRD v1.3 37.4, L19). 본인이 받은 것 · 보낸 것만.
 import { getTranslations } from 'next-intl/server';
+import { HelpTip } from '@/components/Help';
 import Link from 'next/link';
 import { redirect } from 'next/navigation';
 import { InquiryCompose } from '@/components/MessageForms';
@@ -21,8 +22,7 @@ export default async function MyMessagesPage({ searchParams }: { searchParams: P
   return (
     <PageShell>
       <div>
-        <h1 className="text-2xl font-bold">{t('title')}</h1>
-        <p className="pt-1 text-sm text-faint">{t('intro')}</p>
+        <h1 className="flex flex-wrap items-center gap-x-1 text-2xl font-bold">{t('title')}<HelpTip>{t('intro')}</HelpTip></h1>
       </div>
       <nav className="flex border-b border-border">
         <Link href="/punch/notices" className={tab(false)}>

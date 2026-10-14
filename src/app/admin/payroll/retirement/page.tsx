@@ -1,6 +1,7 @@
 // 퇴직급여 — 추계 · 퇴직 정산 · 중간정산 건의 목록과 새로 만들기 (PRD v1.3 18.6 W08). 급여 담당 관리자만.
 // 수동 검산이다: 직원과 마지막 근무일을 고르면 프로그램에 있는 자료로 칸을 미리 채워 주고, 담당자가 확인 · 고쳐서 건을 만든다.
 import { getFormatter, getTranslations } from 'next-intl/server';
+import { HelpTip } from '@/components/Help';
 import Link from 'next/link';
 import { StatusCards } from '@/components/listframe';
 import { Card, CardTitle, Chip, PageShell } from '@/components/ui';
@@ -38,11 +39,10 @@ export default async function RetirementPage({ searchParams }: { searchParams: P
   return (
     <PageShell wide>
       <div>
-        <h1 className="flex flex-wrap items-center gap-2 text-2xl font-bold">
+        <h1 className="flex flex-wrap items-center gap-x-1 text-2xl font-bold">
           {t('title')}
           {practice && <Chip>{t('practice')}</Chip>}
-        </h1>
-        <p className="pt-1 text-sm text-faint">{t('intro')}</p>
+        <HelpTip>{t('intro')}</HelpTip></h1>
       </div>
       <p className="rounded-card border border-warn bg-warn-tint p-3 text-sm text-warn">{t('legal')}</p>
       <Card className="flex flex-col gap-4">

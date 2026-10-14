@@ -8,7 +8,9 @@
 import { Building2, CalendarRange, ChartColumn, Clock, Database, FileBarChart, House, type LucideIcon, Megaphone, MessagesSquare, Network, Plane, Send, ShieldCheck, SlidersHorizontal, UserRound, Users, Wallet } from 'lucide-react';
 import { managerCanOpen } from '@/lib/manager-rules';
 
-export type Leaf = { href: string; key: string; exact?: boolean; also?: string[]; badge?: 'inbox' };
+// how: 통합설정 화면 맨 위 「이 화면 쓰는 법」 띠의 종류 (2026-10-14 의뢰인: 이미 적용된 건지 · 저장해야 적용되는지 · 보기만인지 한눈에)
+export type How = 'view' | 'instant' | 'versioned' | 'list' | 'review';
+export type Leaf = { href: string; key: string; exact?: boolean; also?: string[]; badge?: 'inbox'; how?: How };
 export type Group = { key: string | null; items: Leaf[] };
 export type App = { key: string; icon: LucideIcon; groups: Group[]; section?: 'company' | 'apps' };
 export type Space = 'my' | 'admin' | 'console';
@@ -60,35 +62,35 @@ export const ADMIN_APPS: App[] = [
 // 통합설정 — 문서 07의 6장 분류 표. section: company = 회사설정, apps = App 관리
 export const CONSOLE_HOME = '/admin/console';
 export const CONSOLE_APPS: App[] = [
-  { key: 'cBasic', section: 'company', icon: Building2, groups: one([{ href: '/admin/settings', key: 'setGeneral' }, { href: tab('notify'), key: 'setNotify' }, { href: tab('advanced'), key: 'setAdvanced' }]) },
-  { key: 'cOrg', section: 'company', icon: Network, groups: one([{ href: '/admin/branches', key: 'branches' }, { href: '/admin/jobs', key: 'jobs' }, { href: tab('branch'), key: 'setBranch' }]) },
-  { key: 'cAccess', section: 'company', icon: ShieldCheck, groups: one([{ href: tab('access'), key: 'setAccess' }, { href: tab('security'), key: 'setSecurity' }]) },
-  { key: 'cData', section: 'company', icon: Database, groups: one([{ href: '/admin/diag', key: 'diag' }]) },
+  { key: 'cBasic', section: 'company', icon: Building2, groups: one([{ href: '/admin/settings', key: 'setGeneral', how: 'instant' }, { href: tab('notify'), key: 'setNotify', how: 'view' }, { href: tab('advanced'), key: 'setAdvanced', how: 'view' }]) },
+  { key: 'cOrg', section: 'company', icon: Network, groups: one([{ href: '/admin/branches', key: 'branches', how: 'list' }, { href: '/admin/jobs', key: 'jobs', how: 'list' }, { href: tab('branch'), key: 'setBranch', how: 'view' }]) },
+  { key: 'cAccess', section: 'company', icon: ShieldCheck, groups: one([{ href: tab('access'), key: 'setAccess', how: 'view' }, { href: tab('security'), key: 'setSecurity', how: 'view' }]) },
+  { key: 'cData', section: 'company', icon: Database, groups: one([{ href: '/admin/diag', key: 'diag', how: 'view' }]) },
   {
     key: 'aAttendance',
     section: 'apps',
     icon: Clock,
     groups: [
-      { key: 'gRule', items: [{ href: tab('work'), key: 'setWork' }, { href: tab('punch'), key: 'setPunch' }, { href: tab('break'), key: 'setBreak' }, { href: tab('closing'), key: 'setClosing' }] },
-      { key: 'gPlace', items: [{ href: '/admin/places', key: 'places' }] },
-      { key: 'gShift', items: [{ href: '/admin/manage/shift-kinds', key: 'shiftKinds' }, { href: '/admin/shifts', key: 'shifts' }, { href: '/admin/manage/schedule-patterns', key: 'schedulePatterns' }] },
+      { key: 'gRule', items: [{ href: tab('work'), key: 'setWork', how: 'versioned' }, { href: tab('punch'), key: 'setPunch', how: 'instant' }, { href: tab('break'), key: 'setBreak', how: 'versioned' }, { href: tab('closing'), key: 'setClosing', how: 'view' }] },
+      { key: 'gPlace', items: [{ href: '/admin/places', key: 'places', how: 'list' }] },
+      { key: 'gShift', items: [{ href: '/admin/manage/shift-kinds', key: 'shiftKinds', how: 'view' }, { href: '/admin/shifts', key: 'shifts', how: 'list' }, { href: '/admin/manage/schedule-patterns', key: 'schedulePatterns', how: 'view' }] },
     ],
   },
-  { key: 'aLeave', section: 'apps', icon: Plane, groups: one([{ href: tab('leave'), key: 'setLeave' }, { href: '/admin/leave/types', key: 'leaveTypes' }, { href: '/admin/manage/leave-groups', key: 'leaveGroups' }, { href: '/admin/manage/accrual-rule', key: 'accrualRule' }]) },
-  { key: 'aRequests', section: 'apps', icon: Send, groups: one([{ href: tab('request'), key: 'setRequest' }, { href: '/admin/manage/approval-rules', key: 'approvalRules' }]) },
-  { key: 'aTalk', section: 'apps', icon: Megaphone, groups: one([{ href: tab('message'), key: 'setMessage' }, { href: '/admin/manage/message-templates', key: 'messageTemplates' }, { href: '/admin/manage/message-rules', key: 'messageRules' }]) },
-  { key: 'aReports', section: 'apps', icon: FileBarChart, groups: one([{ href: tab('report'), key: 'setReport' }, { href: '/admin/manage/report-templates', key: 'reportTemplates' }]) },
+  { key: 'aLeave', section: 'apps', icon: Plane, groups: one([{ href: tab('leave'), key: 'setLeave', how: 'view' }, { href: '/admin/leave/types', key: 'leaveTypes', how: 'list' }, { href: '/admin/manage/leave-groups', key: 'leaveGroups', how: 'view' }, { href: '/admin/manage/accrual-rule', key: 'accrualRule', how: 'view' }]) },
+  { key: 'aRequests', section: 'apps', icon: Send, groups: one([{ href: tab('request'), key: 'setRequest', how: 'view' }, { href: '/admin/manage/approval-rules', key: 'approvalRules', how: 'view' }]) },
+  { key: 'aTalk', section: 'apps', icon: Megaphone, groups: one([{ href: tab('message'), key: 'setMessage', how: 'view' }, { href: '/admin/manage/message-templates', key: 'messageTemplates', how: 'view' }, { href: '/admin/manage/message-rules', key: 'messageRules', how: 'view' }]) },
+  { key: 'aReports', section: 'apps', icon: FileBarChart, groups: one([{ href: tab('report'), key: 'setReport', how: 'view' }, { href: '/admin/manage/report-templates', key: 'reportTemplates', how: 'view' }]) },
   {
     key: 'aPay',
     section: 'apps',
     icon: Wallet,
     groups: [
-      { key: 'gPayBase', items: [{ href: tab('pay'), key: 'payEmployeeDefaults' }, { href: pay('ledger'), key: 'payLedger' }, { href: pay('working-time'), key: 'payWorkingTime' }, { href: pay('masking'), key: 'payMasking' }] },
-      { key: 'gPayItems', items: [{ href: pay('payment-items'), key: 'payPaymentItems' }, { href: pay('deduction-items'), key: 'payDeductionItems' }, { href: pay('allowances'), key: 'payAllowances' }] },
-      { key: 'gPayRates', items: [{ href: pay('insurance-rates'), key: 'payInsuranceRates' }, { href: pay('income-tax'), key: 'payIncomeTax' }] },
+      { key: 'gPayBase', items: [{ href: tab('pay'), key: 'payEmployeeDefaults', how: 'versioned' }, { href: pay('ledger'), key: 'payLedger', how: 'versioned' }, { href: pay('working-time'), key: 'payWorkingTime', how: 'versioned' }, { href: pay('masking'), key: 'payMasking', how: 'versioned' }] },
+      { key: 'gPayItems', items: [{ href: pay('payment-items'), key: 'payPaymentItems', how: 'list' }, { href: pay('deduction-items'), key: 'payDeductionItems', how: 'list' }, { href: pay('allowances'), key: 'payAllowances', how: 'versioned' }] },
+      { key: 'gPayRates', items: [{ href: pay('insurance-rates'), key: 'payInsuranceRates', how: 'review' }, { href: pay('income-tax'), key: 'payIncomeTax', how: 'review' }] },
     ],
   },
-  { key: 'aHr', section: 'apps', icon: SlidersHorizontal, groups: one([{ href: tab('staff'), key: 'setStaff' }, { href: '/admin/manage/work-info', key: 'workInfo' }, { href: tab('esign'), key: 'setEsign' }]) },
+  { key: 'aHr', section: 'apps', icon: SlidersHorizontal, groups: one([{ href: tab('staff'), key: 'setStaff', how: 'view' }, { href: '/admin/manage/work-info', key: 'workInfo', how: 'view' }, { href: tab('esign'), key: 'setEsign', how: 'view' }]) },
 ];
 
 const leavesOf = (app: App) => app.groups.flatMap((g) => g.items);

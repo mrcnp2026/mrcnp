@@ -2,6 +2,7 @@
 // `스샷/관리-근무일정-근무일정유형.png` · `관리-휴가-휴가그룹.png` · `관리-휴가-휴가발생규칙.png` · `관리-승인규칙*.png`).
 // 지금은 앱에 정해져 있는 내용을 표로 보여 주는 화면이다(바꾸는 기능은 없다 — 화면 아래에 그렇게 적는다). 메시지 두 화면은 아직 없는 기능이라 빈 표에 그렇게 적는다.
 import { Check } from 'lucide-react';
+import { HelpTip } from '@/components/Help';
 import { getFormatter, getTranslations } from 'next-intl/server';
 import Link from 'next/link';
 import { notFound, redirect } from 'next/navigation';
@@ -161,8 +162,7 @@ export default async function ManageInfoPage({ params }: { params: Promise<{ top
     <PageShell wide>
       <div className="flex items-start gap-4">
         <div className="min-w-0 flex-1">
-          <h1 className="text-2xl font-bold">{head.title}</h1>
-          <p className="pt-1 text-sm text-faint">{head.intro}</p>
+          <h1 className="flex flex-wrap items-center gap-x-1 text-2xl font-bold">{head.title}<HelpTip>{head.intro}</HelpTip></h1>
         </div>
         {link && (
           <Link href={link.href} className="inline-flex min-h-8 items-center rounded-button border border-border bg-bg px-3.5 text-sm font-semibold whitespace-nowrap text-text hover:bg-surface">

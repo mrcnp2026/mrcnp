@@ -2,6 +2,7 @@
 // 칸: 윗줄 출근 · 아랫줄 퇴근. 하루 전부 휴가면 「휴가」, 간주 근무일은 일정 시각 + 「간주」. 오른쪽 끝은 기록이 있는 날 수와 급여용 시간 합.
 // 폰에서는 목록형으로 보낸다 — 31칸 표는 폰 폭에 맞지 않는다.
 import { getMe } from '@/lib/auth';
+import { HelpTip } from '@/components/Help';
 import { loadJobs } from '@/lib/job-data';
 import { leaveTypeName } from '@/lib/leave';
 import { SHIFT_COLOR_CLASS } from '@/lib/shifts';
@@ -80,8 +81,7 @@ export default async function RecordCalendarPage({ searchParams }: { searchParam
     <PageShell wide>
       <div className="flex items-center justify-between gap-3">
         <div className="min-w-0">
-          <h1 className="flex items-center gap-2 text-2xl font-bold">{t('title')}{admin && <SettingsLink href="/admin/settings?tab=punch" label={tGear('item.setPunch')} />}</h1>
-          <p className="pt-1 text-sm text-faint">{t('pcIntro')}</p>
+          <h1 className="flex flex-wrap items-center gap-x-1 text-2xl font-bold">{t('title')}{admin && <SettingsLink href="/admin/settings?tab=punch" label={tGear('item.setPunch')} />}<HelpTip>{t('pcIntro')}</HelpTip></h1>
         </div>
 {(await getMe())?.role === 'admin' ? (
         <a href={`/api/admin/export/report?m=${ym}${sp.live === '1' ? '&live=1' : ''}`} title={tc('downloadReport', { ym })} className="ml-auto inline-flex h-8 items-center gap-1 rounded-button border border-border bg-bg px-3.5 text-sm font-semibold whitespace-nowrap text-text hover:bg-surface">

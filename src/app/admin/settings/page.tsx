@@ -1,6 +1,7 @@
 // 설정 (더보기 › 설정) — 근무시간 · 휴일 · 사무실 인터넷 주소를 화면에서 바꾼다 (2026-10-05: 지금까지는 개발자가 DB·열쇠 파일을 고쳐야 했다).
 // 근무시간은 이력이다: 고치지 않고 "언제부터 적용"되는 새 규칙을 넣는다 (② 4-1). 휴일·주소는 지우지 않고 빼거나 끈다 (변경 기록에 남는다).
 import { getFormatter, getTranslations } from 'next-intl/server';
+import { HelpTip } from '@/components/Help';
 import { headers } from 'next/headers';
 import Link from 'next/link';
 import type { ReactNode } from 'react';
@@ -13,6 +14,7 @@ import { hhmm, toKstDate } from '@/lib/time';
 import { isOfficeIp, parseCidr, traceClientIp } from '@/lib/verify-location';
 import { loadOfficeLocations } from '@/lib/geo-data';
 import { loadOrgGroups } from '@/lib/org-data';
+import { PAY_SECTIONS } from '@/lib/payroll/settings';
 import { PaySettings } from './pay/PaySettings';
 import { ConfirmButton, HolidayForm, NetworkForm, RuleForm } from './SettingsForms';
 
@@ -52,10 +54,16 @@ export default async function SettingsPage({ searchParams }: { searchParams: Pro
   const tab: Tab = (TABS as readonly string[]).includes(sp.tab ?? '') ? (sp.tab as Tab) : 'general';
   // 급여 탭은 9개 화면이 있는 따로 된 구성이다 (PRD v1.3 4.1 · 17장) — PC · 폰 같은 화면
   if (tab === 'pay') {
+    // 화면 제목 = 메뉴 이름 (2026-10-14 의뢰인) — employee-defaults → payEmployeeDefaults
+    const section = (PAY_SECTIONS as readonly string[]).includes(sp.section ?? '') ? (sp.section as string) : 'employee-defaults';
+    const tfp = await getTranslations('frame');
     const tpay = await getTranslations('admin.paySettings');
     return (
       <PageShell wide>
-        <h1 className="text-2xl font-bold">{tpay('title')}</h1>
+        <h1 className="flex flex-wrap items-center gap-x-1 text-2xl font-bold">
+          {tfp(`item.pay${section.split('-').map((x) => x[0].toUpperCase() + x.slice(1)).join('')}`)}
+          <HelpTip>{tpay(`intro.${section}`)}</HelpTip>
+        </h1>
         <PaySettings sp={sp} />
       </PageShell>
     );
@@ -86,6 +94,7 @@ export default async function SettingsPage({ searchParams }: { searchParams: Pro
   const ti = await getTranslations('admin.settings.info');
   const t = await getTranslations('admin.settings');
   const ts = await getTranslations('side');
+  const tf = await getTranslations('frame'); // 화면 제목 = 메뉴 이름 (2026-10-14 의뢰인)
   const tp = await getTranslations('admin.settings.pc');
   const tm = await getTranslations('admin.more');
   const f = await getFormatter();
@@ -172,8 +181,7 @@ export default async function SettingsPage({ searchParams }: { searchParams: Pro
       <div className="hidden lg:flex lg:flex-col lg:gap-4">
         <div className="flex items-start gap-4">
           <div className="min-w-0 flex-1">
-            <h1 className="text-2xl font-bold">{ts(`s_${tab}`)}</h1>
-            <p className="pt-1 text-sm text-faint">{tp(tab === 'general' ? 'descGeneral' : tab === 'work' ? 'descWork' : tab === 'punch' ? 'descPunch' : tab === 'break' ? 'descBreak' : `desc_${tab}`)}</p>
+            <h1 className="flex flex-wrap items-center gap-x-1 text-2xl font-bold">{tf(`item.set${tab[0].toUpperCase()}${tab.slice(1)}`)}<HelpTip>{tp(tab === 'general' ? 'descGeneral' : tab === 'work' ? 'descWork' : tab === 'punch' ? 'descPunch' : tab === 'break' ? 'descBreak' : `desc_${tab}`)}</HelpTip></h1>
           </div>
           {(tab === 'work' || tab === 'punch' || tab === 'break') && ruleForm}
         </div>
@@ -378,7 +386,6 @@ export default async function SettingsPage({ searchParams }: { searchParams: Pro
             <p className="pt-3 text-sm text-faint">{ta('how')}</p>
           </SettingBox>
         )}
-        {info && <p className="text-sm text-faint">{tp('fixedNote')}</p>}
       </div>
 
       {/* ── 폰 ── */}

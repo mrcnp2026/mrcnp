@@ -7,7 +7,7 @@ import { scopeFilter } from '@/lib/scope';
 import { ChevronRight, Download } from 'lucide-react';
 import { getFormatter, getTranslations } from 'next-intl/server';
 import Link from 'next/link';
-import { Help } from '@/components/Help';
+import { Help, HelpTip } from '@/components/Help';
 import { ListBar } from '@/components/ListBar';
 import { PcTable } from '@/components/PcTable';
 import { Card, Chip, PageShell } from '@/components/ui';
@@ -79,8 +79,7 @@ export default async function AdminLeavePage({ searchParams }: { searchParams: P
       {/* ── PC 머리: 제목 + 설명 / [휴가 유형] ── */}
       <div className="hidden items-start gap-4 lg:flex">
         <div className="min-w-0 flex-1">
-          <h1 className="text-2xl font-bold">{t(view === 'accrual' ? 'pcAccrual' : 'pcHistory')}</h1>
-          <p className="pt-1 text-sm text-faint">{t(view === 'accrual' ? 'pcAccrualIntro' : 'pcHistoryIntro')}</p>
+          <h1 className="flex flex-wrap items-center gap-x-1 text-2xl font-bold">{t(view === 'accrual' ? 'pcAccrual' : 'pcHistory')}<HelpTip>{t(view === 'accrual' ? 'pcAccrualIntro' : 'pcHistoryIntro')}</HelpTip></h1>
         </div>
         {view !== 'accrual' && admin && (
           <a href={`/api/admin/export/list?kind=leave&y=${sp.y && /^\d{4}$/.test(sp.y) ? sp.y : asOf.slice(0, 4)}${sp.live === '1' ? '&live=1' : ''}`} className="inline-flex h-8 items-center gap-1 rounded-button border border-border bg-bg px-3.5 text-sm font-semibold whitespace-nowrap text-text hover:bg-surface">

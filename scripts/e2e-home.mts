@@ -180,10 +180,10 @@ try {
   await p.keyboard.press('Enter');
   check(await p.waitForURL(/\/admin\/payroll\/labor-cost/, { timeout: 15000 }).then(() => true, () => false), 'PC 메뉴 검색: 「인건비」 → 인건비 현황으로 이동');
   // 내 화면(PC): 같은 틀 — 앱 띠 8개, 공간 전환 단추에서 「내 화면」이 켜짐 + 월 달력
-  await p.getByRole('group', { name: '화면 전환' }).getByRole('link', { name: '내 화면' }).click();
+  await p.getByRole('group', { name: '화면 전환' }).getByRole('link', { name: '직원 모드' }).click();
   await p.waitForURL(/\/punch$/);
   await p.getByText('내 근로 통계').waitFor({ timeout: 30000 }); // 화면 이동(클라이언트)이 끝나 새 본문이 그려질 때까지
-  check((await labelsOf(p.locator('nav.sticky').first())).join() === '홈,근무일정,출퇴근기록,휴가,요청,급여,소통,조직 · 내 정보' && (await p.getByRole('group', { name: '화면 전환' }).locator('a[aria-current]').textContent()) === '내 화면', 'PC 내 화면: 같은 틀의 앱 띠 8개, 「내 화면」이 켜짐');
+  check((await labelsOf(p.locator('nav.sticky').first())).join() === '홈,근무일정,출퇴근기록,휴가,요청,급여,소통,조직 · 내 정보' && (await p.getByRole('group', { name: '화면 전환' }).locator('a[aria-current]').textContent()) === '직원 모드', 'PC 직원 모드: 같은 틀의 앱 띠 8개, 「직원 모드」가 켜짐');
   check((await p.getByText('내 근로 통계').isVisible()) && (await p.getByText('내 휴가 통계').isVisible()) && (await p.locator('main .grid-cols-7 > div').count()) >= 35, 'PC 직원 홈: 내 근로 통계 · 내 휴가 통계 · 월 달력');
   await shot('44-PC-메뉴');
   check(errors.length === 0, '화면 오류 없음', errors[0] ?? '');

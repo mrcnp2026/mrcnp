@@ -1,6 +1,7 @@
 // 예상 퇴직금 (직원, PRD v1.3 E02) — 「오늘 그만둔다면」의 어림값. 본인 것만. 저장하지 않고 열 때마다 다시 계산한다.
 // 자료가 모자라면 숫자 대신 무엇이 없는지 적는다(0원으로 보이지 않게). 나에게 공개된 명세서의 금액만 쓴다.
 import { getFormatter, getTranslations } from 'next-intl/server';
+import { HelpTip } from '@/components/Help';
 import Link from 'next/link';
 import { redirect } from 'next/navigation';
 import { Card, CardTitle, Chip, PageShell } from '@/components/ui';
@@ -30,11 +31,10 @@ export default async function MyRetirementPage() {
         ‹ {t('back')}
       </Link>
       <div>
-        <h1 className="flex flex-wrap items-center gap-2 text-2xl font-bold">
+        <h1 className="flex flex-wrap items-center gap-x-1 text-2xl font-bold">
           {t('title')}
           <Chip tone="warn">{t('estimateChip')}</Chip>
-        </h1>
-        <p className="pt-1 text-sm text-faint">{t('intro')}</p>
+        <HelpTip>{t('intro')}</HelpTip></h1>
       </div>
       <Card className="flex items-center justify-between gap-3">
         <span className="font-bold">{t('amount')}</span>

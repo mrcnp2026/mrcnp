@@ -40,7 +40,7 @@ try {
     await p.waitForLoadState('networkidle');
     await p.screenshot({ path: path.join(SHOTS, `${name}.png`), fullPage: true });
   };
-  const ready = () => p.getByRole('heading', { name: '출근/퇴근 누락 기록' }).waitFor({ timeout: 30000 });
+  const ready = () => p.getByRole('heading', { name: '누락 기록' }).waitFor({ timeout: 30000 });
   const tabN = async (name: string) => Number(((await p.getByRole('link', { name: new RegExp(`^${name}`) }).first().textContent()) ?? '').replace(/\D/g, ''));
   await p.goto(`${BASE}/register?token=${token}`);
   await createPassword(p);
