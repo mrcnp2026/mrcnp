@@ -20,12 +20,12 @@ export default async function LaborCostPage({ searchParams }: { searchParams: Pr
   if (!me || me.role !== 'admin' || !me.canViewPayroll) return <PageShell><p className="rounded-card bg-warn-tint p-4 text-sm text-warn">{t('forbidden')}</p></PageShell>;
   const thisYear = Number(toKstDate(new Date()).slice(0, 4));
   const year = /^\d{4}$/.test(sp.y ?? '') && Number(sp.y) >= 2000 && Number(sp.y) <= 2100 ? Number(sp.y) : thisYear;
-  const kind: LaborKind | null = sp.k === 'REGULAR' || sp.k === 'BONUS' ? sp.k : null;
+  const kind: LaborKind | null = sp.k === 'REGULAR' || sp.k === 'BONUS' || sp.k === 'DAILY' ? sp.k : null;
   const options = buildOrgTree(groups).flatMap((d) => [{ id: d.id, label: d.name }, ...d.teams.map((x) => ({ id: x.id, label: `${d.name} › ${x.name}` }))]);
   const groupId = options.some((o) => o.id === sp.g) ? sp.g! : null;
   const practice = OFFICE.practiceMode && sp.live !== '1';
   const withDraft = sp.draft === '1';
-  const r = await buildLaborCost({ year, practice, kind, groupId, withDraft, testViewer: !!me.employeeNo?.startsWith('e2e-'), unassigned: t('unassigned') });
+  const r = await buildLaborCost({ year, practice, kind, groupId, withDraft, testViewer: !!me.employeeNo?.startsWith('e2e-'), unassigned: t('unassigned'), daily: { group: t('daily.group'), wage: t('daily.wage'), nontax: t('daily.nontax'), incomeTax: t('daily.incomeTax'), localTax: t('daily.localTax'), other: t('daily.other') } });
   const won = (v: number) => f.number(v);
   const cells = (s: LaborSum) => [f.number(s.statements), won(s.pay), won(s.deduction), won(s.net), won(s.employer), won(s.total)];
   const head = (first: string) => (
@@ -73,6 +73,7 @@ export default async function LaborCostPage({ searchParams }: { searchParams: Pr
             <option value="">{t('all')}</option>
             <option value="REGULAR">{t('kind.REGULAR')}</option>
             <option value="BONUS">{t('kind.BONUS')}</option>
+            <option value="DAILY">{t('kind.DAILY')}</option>
           </select>
         </label>
         <label className="flex flex-col gap-1">

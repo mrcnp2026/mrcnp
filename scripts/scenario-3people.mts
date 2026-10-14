@@ -488,8 +488,7 @@ try {
   step('9. 인건비 현황');
   const labor = await open(p, `/admin/payroll/labor-cost?y=${Y}`);
   const total = sumPay(EXPECT.A) + sumPay(EXPECT.B);
-  check(labor.includes(total.toLocaleString('ko-KR')), `인건비 현황(${Y}년)에 ${YM} 정규 급여 지급 합계 ${won(total)}`);
-  log.push(`(인건비 현황에 일용직 ${won(940000)}이 ${labor.includes((total + 940000).toLocaleString('ko-KR')) ? '들어 있다' : '들어 있지 않다 — 미구현 목록 16번'})`);
+  check(labor.includes((total + 940000).toLocaleString('ko-KR')) && labor.includes('일용직(소속 없음)'), `인건비 현황(${Y}년)에 ${YM} 지급 합계 = 정규 ${won(total)} + 일용직 ${won(940000)} = ${won(total + 940000)}, 일용직은 「일용직(소속 없음)」 묶음`);
   await shot(p, 's9-labor');
   check(errors.length === 0, '화면 오류 없음', errors.slice(0, 3).join(' | '));
 } finally {

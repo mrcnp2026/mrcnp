@@ -3233,7 +3233,8 @@
         "relief_unknown": "감면 · 지원 대상 여부가 「모름」입니다({detail}). 사원별 급여 › 세무에서 정해 주세요.",
         "sme_applied": "중소기업 취업자 소득세 감면을 적용했습니다({detail}원).",
         "durunuri_pension": "두루누리 지원으로 국민연금을 {detail} 줄여 뗐습니다(사업주 몫도 같이).",
-        "durunuri_employment": "두루누리 지원으로 고용보험을 {detail} 줄여 뗐습니다(사업주 몫도 같이)."
+        "durunuri_employment": "두루누리 지원으로 고용보험을 {detail} 줄여 뗐습니다(사업주 몫도 같이).",
+        "below_minimum_wage": "계약의 시간당 임금이 그 달 최저시급보다 낮습니다({detail}원). 고정 수당 등 최저임금에 넣는 임금을 더해 확인해 주세요(계산은 막지 않았습니다)."
       },
       "detail": {
         "pension": "국민연금",
@@ -3485,7 +3486,8 @@
       "all": "전체",
       "kind": {
         "REGULAR": "정규 급여",
-        "BONUS": "상여"
+        "BONUS": "상여",
+        "DAILY": "일용직"
       },
       "unassigned": "미배정",
       "cStatements": "명세서 수",
@@ -3518,7 +3520,15 @@
       "cCode": "코드",
       "xSummary": "요약",
       "xYear": "{year}년",
-      "file": "인건비현황_{year}"
+      "file": "인건비현황_{year}",
+      "daily": {
+        "group": "일용직(소속 없음)",
+        "wage": "일당(과세)",
+        "nontax": "비과세 지급",
+        "incomeTax": "소득세",
+        "localTax": "지방소득세",
+        "other": "그 밖의 공제"
+      }
     },
     "retirement": {
       "title": "퇴직급여",

@@ -46,6 +46,7 @@ export type EngineInput = {
   overrides: EngineOverride[];
   prior?: { taxable: number; incomeTax: number; localTax: number } | null; // 상여: 같은 징수 묶음에서 앞서 낸 명세의 과세 합계와 세액
   skipInsurance?: boolean; // 상여 대장: 4대보험을 여기서 계산하지 않는다(정기 급여에서 이미 냈거나 정산으로 맞춘다) — 경고로 알린다
+  minimumHourly?: number | null; // 그 달에 적용되는 최저시급(승인된 기준 자료). 계약의 시간당 임금이 이보다 낮으면 「참고」로 알린다(막지 않는다)
 };
 
 export type LineKind = 'PAYMENT' | 'DEDUCTION' | 'EMPLOYER';
@@ -94,6 +95,9 @@ export function calculateStatement(input: EngineInput): EngineResult {
       hourly = div(monthly, dec(String(c.monthlyHours)));
     }
   }
+  // 최저임금 참고 (2026-10-14): 계약의 시간당 임금(시급 · 월급 ÷ 월 환산 시간)이 최저시급보다 낮으면 알린다.
+  // 실제 최저임금 판단은 산입 범위(고정 수당 · 상여 등)를 따져야 해서 여기서 막지 않는다 — 담당자가 확인할 신호다
+  if (hourly !== null && input.minimumHourly && Number(text(hourly)) < input.minimumHourly) warnings.push({ code: 'below_minimum_wage', detail: `${Math.floor(Number(text(hourly))).toLocaleString('en-US')} < ${input.minimumHourly.toLocaleString('en-US')}` });
   const needHourly = (what: string): Dec | null => {
     if (hourly === null && c) block(c.payType === 'ANNUAL' && c.annualDivisor === null ? 'no_annual_divisor' : 'no_monthly_hours', what);
     return hourly;

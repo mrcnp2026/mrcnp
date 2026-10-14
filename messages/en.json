@@ -3233,7 +3233,8 @@
         "relief_unknown": "Relief eligibility is Unknown ({detail}). Set it in Pay by employee › Tax.",
         "sme_applied": "SME employee income tax cut applied ({detail} KRW).",
         "durunuri_pension": "Durunuri support reduced the pension contribution by {detail} (employer share too).",
-        "durunuri_employment": "Durunuri support reduced the employment insurance contribution by {detail} (employer share too)."
+        "durunuri_employment": "Durunuri support reduced the employment insurance contribution by {detail} (employer share too).",
+        "below_minimum_wage": "The contract hourly wage is below the minimum wage for the month ({detail} KRW). Check with included allowances (calculation was not blocked)."
       },
       "detail": {
         "pension": "national pension",
@@ -3485,7 +3486,8 @@
       "all": "All",
       "kind": {
         "REGULAR": "Regular pay",
-        "BONUS": "Bonus"
+        "BONUS": "Bonus",
+        "DAILY": "Day labor"
       },
       "unassigned": "Unassigned",
       "cStatements": "Statements",
@@ -3518,7 +3520,15 @@
       "cCode": "Code",
       "xSummary": "Summary",
       "xYear": "{year}",
-      "file": "labor-cost_{year}"
+      "file": "labor-cost_{year}",
+      "daily": {
+        "group": "Day labor (no team)",
+        "wage": "Day wage (taxable)",
+        "nontax": "Non-taxable pay",
+        "incomeTax": "Income tax",
+        "localTax": "Local income tax",
+        "other": "Other deductions"
+      }
     },
     "retirement": {
       "title": "Retirement pay",

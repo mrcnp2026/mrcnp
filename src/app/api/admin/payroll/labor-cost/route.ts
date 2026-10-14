@@ -23,14 +23,14 @@ export async function GET(req: Request): Promise<Response> {
   const y = u.searchParams.get('y') ?? '';
   const year = /^\d{4}$/.test(y) && Number(y) >= 2000 && Number(y) <= 2100 ? Number(y) : thisYear;
   const k = u.searchParams.get('k');
-  const kind: LaborKind | null = k === 'REGULAR' || k === 'BONUS' ? k : null;
+  const kind: LaborKind | null = k === 'REGULAR' || k === 'BONUS' || k === 'DAILY' ? k : null;
   const groups = await loadOrgGroups();
   const g = u.searchParams.get('g');
   const groupId = g && groups.some((x) => x.id === g) ? g : null;
   const practice = OFFICE.practiceMode && u.searchParams.get('live') !== '1';
   const withDraft = u.searchParams.get('draft') === '1';
   const t = await getTranslations({ locale: 'ko', namespace: 'admin.laborCost' });
-  const r = await buildLaborCost({ year, practice, kind, groupId, withDraft, testViewer: !!me.employeeNo?.startsWith('e2e-'), unassigned: t('unassigned') });
+  const r = await buildLaborCost({ year, practice, kind, groupId, withDraft, testViewer: !!me.employeeNo?.startsWith('e2e-'), unassigned: t('unassigned'), daily: { group: t('daily.group'), wage: t('daily.wage'), nontax: t('daily.nontax'), incomeTax: t('daily.incomeTax'), localTax: t('daily.localTax'), other: t('daily.other') } });
   const fileName = `${t('file', { year })}.xlsx`;
   const { error } = await createAdminClient().from('download_logs').insert({ actor_id: me.id, kind: 'labor_cost', scope: `${year}${kind ? `/${kind}` : ''}${groupId ? `/${groupId}` : ''}${withDraft ? '/draft' : ''}`, file_name: fileName });
   if (error) return deny(500, 'download_log_failed');
