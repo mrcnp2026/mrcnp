@@ -11,7 +11,7 @@ import type { LeaveTypeRule } from '@/lib/leave-ledger';
 
 const field = 'min-h-9 rounded-button border border-border bg-bg px-3 text-sm';
 
-export function TypeRuleForm({ code, version, rule }: { code: string; version: number; rule: LeaveTypeRule }) {
+export function TypeRuleForm({ code, version, rule, groups, people }: { code: string; version: number; rule: LeaveTypeRule; groups: { id: string; name: string }[]; people: { id: string; name: string }[] }) {
   const t = useTranslations('admin.leaveTypeRule');
   const router = useRouter();
   const [busy, setBusy] = useState(false);
@@ -29,7 +29,7 @@ export function TypeRuleForm({ code, version, rule }: { code: string; version: n
         setBusy(true);
         setErr(null);
         setDone(false);
-        const r = await callApi('/api/admin/leave/ledger', { action: 'typeRule', code, expectedVersion: version, rule: { maxDaysPerRequest: num(f.get('max')), minNoticeDays: num(f.get('notice')), reasonRequired: f.get('reason') === 'on' } });
+        const r = await callApi('/api/admin/leave/ledger', { action: 'typeRule', code, expectedVersion: version, rule: { maxDaysPerRequest: num(f.get('max')), minNoticeDays: num(f.get('notice')), reasonRequired: f.get('reason') === 'on', weekdays: f.getAll('wd').length ? f.getAll('wd').map(Number) : null, targets: { groupIds: f.getAll('tg').map(String), employeeIds: f.getAll('te').map(String) } } });
         setBusy(false);
         if (!r.ok) return setErr(r);
         setDone(true);
@@ -51,6 +51,36 @@ export function TypeRuleForm({ code, version, rule }: { code: string; version: n
         <input name="reason" type="checkbox" defaultChecked={rule.reasonRequired} className="size-5 accent-primary" />
         {t('reason')}
       </label>
+      <fieldset className="flex flex-col gap-1">
+        <legend>{t('weekdays')}</legend>
+        <div className="flex flex-wrap gap-2">
+          {[1, 2, 3, 4, 5, 6, 7].map((d) => (
+            <label key={d} className="flex min-h-9 items-center gap-1.5 rounded-button border border-border px-2.5">
+              <input type="checkbox" name="wd" value={d} defaultChecked={!rule.weekdays || rule.weekdays.includes(d)} className="size-4 accent-primary" />
+              {t(`wd.${d}`)}
+            </label>
+          ))}
+        </div>
+        <span className="text-xs text-faint">{t('weekdaysHint')}</span>
+      </fieldset>
+      <fieldset className="flex flex-col gap-1">
+        <legend>{t('targets')}</legend>
+        <div className="flex max-h-48 flex-col gap-1 overflow-y-auto rounded-button border border-border p-2">
+          {groups.map((g) => (
+            <label key={g.id} className="flex min-h-8 items-center gap-2">
+              <input type="checkbox" name="tg" value={g.id} defaultChecked={rule.targets.groupIds.includes(g.id)} className="size-4 accent-primary" />
+              {g.name}
+            </label>
+          ))}
+          {people.map((p) => (
+            <label key={p.id} className="flex min-h-8 items-center gap-2">
+              <input type="checkbox" name="te" value={p.id} defaultChecked={rule.targets.employeeIds.includes(p.id)} className="size-4 accent-primary" />
+              {p.name}
+            </label>
+          ))}
+        </div>
+        <span className="text-xs text-faint">{t('targetsHint')}</span>
+      </fieldset>
       {err && <ErrorNote code={err.code} requestId={err.requestId} namespace="admin.leaveTypeRule" />}
       <div className="flex items-center gap-3">
         <Button type="submit" size="sm" disabled={busy || !save.dirty}>

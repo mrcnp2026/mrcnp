@@ -128,11 +128,11 @@ try {
 
   // ── 6. 한국어로 바꾸기 → 시각과 무관, 화면만 바뀜 ──
   await e.goto(`${BASE}/punch`);
-  await e.locator('select').selectOption('ko');
+  await e.locator('select:not([aria-label="찾을 곳"]):not([aria-label="Search in"])').selectOption('ko');
   await e.getByText('시험 직원님, 안녕하세요').waitFor({ timeout: 10000 });
   ok('직원이 언어를 한국어로 바꾸면 화면이 바뀜');
   await shot(e, '08_직원_홈_한국어');
-  await e.locator('select').selectOption('en');
+  await e.locator('select:not([aria-label="찾을 곳"]):not([aria-label="Search in"])').selectOption('en');
   await e.getByText('Hello, 시험 직원').waitFor({ timeout: 10000 });
 } catch (err) {
   bad(`중단: ${(err as Error).message.split('\n')[0]}`);

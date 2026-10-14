@@ -240,7 +240,9 @@
     "leave_too_long": "This leave exceeds the maximum days per request.",
     "leave_notice": "This leave must be requested earlier. Choose a later start date.",
     "leave_reason_required": "A reason is required for this leave.",
-    "console_locked": "The settings console is locked. Enter your PIN again."
+    "console_locked": "The settings console is locked. Enter your PIN again.",
+    "leave_not_target": "You are not eligible for this leave type.",
+    "leave_weekday": "This leave type cannot be requested on that weekday."
   },
   "admin": {
     "nav": {
@@ -2872,7 +2874,20 @@
       "save": "Save rules",
       "saved": "Saved.",
       "version": "Version {n} · from {from}",
-      "leave_version_conflict": "Another admin edited it first. Refresh and try again."
+      "leave_version_conflict": "Another admin edited it first. Refresh and try again.",
+      "weekdays": "Allowed weekdays",
+      "weekdaysHint": "Requests including other weekdays are blocked. All checked = no limit.",
+      "targets": "Who can use it",
+      "targetsHint": "Only the selected teams (with sub-teams) and people can request this type. Nothing selected = everyone.",
+      "wd": {
+        "1": "Mon",
+        "2": "Tue",
+        "3": "Wed",
+        "4": "Thu",
+        "5": "Fri",
+        "6": "Sat",
+        "7": "Sun"
+      }
     },
     "staffPay": {
       "title": "Pay by employee",

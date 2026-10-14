@@ -271,8 +271,11 @@ export function settleLeave(args: { lots: readonly Lot[]; entries: readonly Entr
 }
 
 // ── 휴가 종류별 신청 규칙 (M5) ──
-export type LeaveTypeRule = { maxDaysPerRequest: number | null; minNoticeDays: number | null; reasonRequired: boolean };
-export const NO_TYPE_RULE: LeaveTypeRule = { maxDaysPerRequest: null, minNoticeDays: null, reasonRequired: false };
+// 2026-10-15 추가 (PRD 34.2 L12 · L13): 신청할 수 있는 요일 · 적용 대상. 판으로 쌓이는 규칙(leave_type_policy_versions.payload)에 담는다 — DB 변경 없음
+//   weekdays: 1=월 … 7=일, 비우면(null) 회사 근무일 그대로 · targets: 부서/팀 · 직원, 둘 다 비우면 모두
+export type LeaveTypeRule = { maxDaysPerRequest: number | null; minNoticeDays: number | null; reasonRequired: boolean; weekdays: number[] | null; targets: { groupIds: string[]; employeeIds: string[] } };
+export const NO_TYPE_RULE: LeaveTypeRule = { maxDaysPerRequest: null, minNoticeDays: null, reasonRequired: false, weekdays: null, targets: { groupIds: [], employeeIds: [] } };
+const ID = /^[0-9a-f-]{36}$/i;
 export function validateTypeRule(v: unknown): LeaveTypeRule | null {
   if (!v || typeof v !== 'object') return null;
   const o = v as Record<string, unknown>;
@@ -280,7 +283,18 @@ export function validateTypeRule(v: unknown): LeaveTypeRule | null {
   const max = num(o.maxDaysPerRequest, 365), notice = num(o.minNoticeDays, 365);
   if (Number.isNaN(max) || Number.isNaN(notice) || (max !== null && (max <= 0 || !Number.isInteger(max * 16))) || (notice !== null && !Number.isInteger(notice))) return null;
   if (typeof o.reasonRequired !== 'boolean') return null;
-  return { maxDaysPerRequest: max, minNoticeDays: notice, reasonRequired: o.reasonRequired };
+  // 예전 판에는 아래 두 칸이 없다 → 제한 없음
+  let weekdays: number[] | null = null;
+  if (o.weekdays !== undefined && o.weekdays !== null) {
+    if (!Array.isArray(o.weekdays) || o.weekdays.length === 0 || o.weekdays.length > 7 || !o.weekdays.every((d) => Number.isInteger(d) && d >= 1 && d <= 7)) return null;
+    weekdays = [...new Set(o.weekdays as number[])].sort();
+    if (weekdays.length === 7) weekdays = null; // 일곱 요일 전부 = 제한 없음
+  }
+  const tg = (o.targets ?? { groupIds: [], employeeIds: [] }) as Record<string, unknown>;
+  const ids = (v: unknown) => (v === undefined ? [] : Array.isArray(v) && v.length <= 500 && v.every((x) => typeof x === 'string' && ID.test(x)) ? [...new Set(v as string[])] : null);
+  const groupIds = ids(tg.groupIds), employeeIds = ids(tg.employeeIds);
+  if (!groupIds || !employeeIds) return null;
+  return { maxDaysPerRequest: max, minNoticeDays: notice, reasonRequired: o.reasonRequired, weekdays, targets: { groupIds, employeeIds } };
 }
 /** 신청이 그 종류의 규칙에 맞는가. 맞으면 null, 아니면 오류 코드 */
 export function checkTypeRule(rule: LeaveTypeRule, req: { days: number; startDate: string; today: string; reason: string }): 'leave_too_long' | 'leave_notice' | 'leave_reason_required' | null {
@@ -288,6 +302,19 @@ export function checkTypeRule(rule: LeaveTypeRule, req: { days: number; startDat
   if (rule.minNoticeDays !== null && req.startDate < addDays(req.today, rule.minNoticeDays)) return 'leave_notice';
   if (rule.reasonRequired && req.reason.trim().length < 2) return 'leave_reason_required';
   return null;
+}
+
+/** 그 직원이 이 종류의 적용 대상인가 — 대상을 정하지 않았으면 모두. 부서를 고르면 그 밑의 팀도 포함(scopes: 고른 부서 → 포함되는 소속 id) */
+export function isTypeTarget(rule: LeaveTypeRule, person: { id: string; groupId: string | null }, scopes: ReadonlyMap<string, ReadonlySet<string>>): boolean {
+  const { groupIds, employeeIds } = rule.targets;
+  if (groupIds.length === 0 && employeeIds.length === 0) return true;
+  if (employeeIds.includes(person.id)) return true;
+  return !!person.groupId && groupIds.some((g) => scopes.get(g)?.has(person.groupId!));
+}
+/** 신청 기간의 근무일 가운데 허용 요일이 아닌 날이 있는가 (1=월 … 7=일) */
+export function offWeekday(rule: LeaveTypeRule, workdays: readonly string[]): string | null {
+  if (!rule.weekdays) return null;
+  return workdays.find((d) => !rule.weekdays!.includes(((new Date(`${d}T00:00:00Z`).getUTCDay() + 6) % 7) + 1)) ?? null;
 }
 
 /** 지금 쓸 수 있는 지급 건 가운데 가장 먼저 끝나는, 남은 분이 있는 건 (없으면 null) */

@@ -14,8 +14,10 @@ import { Card, CardTitle, Chip, PageShell } from '@/components/ui';
 import { getMe } from '@/lib/auth';
 import { calcLeaveBalance, leaveTypeName, monthlyLeaveUse } from '@/lib/leave';
 import { loadAllLeaveTypes, loadLeaveGrants, loadLeaveRequests } from '@/lib/leave-data';
-import { endingSoonest, entriesFor, ledgerBalance, lotRemaining, minutesToDays } from '@/lib/leave-ledger';
-import { loadEntries, loadLots } from '@/lib/leave-ledger-data';
+import { endingSoonest, entriesFor, isTypeTarget, ledgerBalance, lotRemaining, minutesToDays } from '@/lib/leave-ledger';
+import { groupScope } from '@/lib/org';
+import { loadOrgGroups } from '@/lib/org-data';
+import { loadEntries, loadLots, loadTypeRules } from '@/lib/leave-ledger-data';
 import { OFFICE } from '@/config/office';
 import { toKstDate } from '@/lib/time';
 import { loadWorkRequests } from '@/lib/work-data';
@@ -35,6 +37,12 @@ export default async function LeavePage({ searchParams }: { searchParams: Promis
   const today = toKstDate(new Date());
   const [types, grants, requests, works] = await Promise.all([loadAllLeaveTypes(), loadLeaveGrants(me.id), loadLeaveRequests({ employeeId: me.id }), loadWorkRequests({ employeeId: me.id })]);
   const bal = calcLeaveBalance({ grants, requests, types, asOf: today });
+  // 적용 대상이 아닌 종류는 신청 양식에 내놓지 않는다 (L13 — 서버도 다시 막는다)
+  const [rules, orgGroups, { data: prof }] = await Promise.all([loadTypeRules(), loadOrgGroups(), createAdminClient().from('profiles').select('group_id').eq('id', me.id).maybeSingle()]);
+  const mayUse = (code: string) => {
+    const r = rules.get(code)?.rule;
+    return !r || isTypeTarget(r, { id: me.id, groupId: (prof?.group_id as string | null) ?? null }, new Map(r.targets.groupIds.map((g) => [g, groupScope(orgGroups, g)])));
+  };
   // 휴가 원장(지급 건이 승인된 직원만): 받은 연차 · 사용 · 잔여 · 소진율 · 곧 끝나는 연차 (PRD 37.5, L21). 위의 잔여 카드는 아직 예전 계산이다(대조 단계)
   const [lots, ledgerAll] = await Promise.all([loadLots({ employeeId: me.id, states: ['APPROVED'] }), loadEntries(me.id)]);
   const ledger = entriesFor(ledgerAll, OFFICE.practiceMode);
@@ -173,7 +181,7 @@ export default async function LeavePage({ searchParams }: { searchParams: Promis
 
       {/* 폰: 양식은 + 버튼을 누르면 올라온다 (2026-10-10 의뢰인) · PC: 제자리에 펼쳐 둔다 */}
       <AddSheet id="leave" title={t('request')} defaultOpen={sp.new === 'leave'} modal>
-        <LeaveForm today={today} types={types.filter((x) => x.active).map((x) => ({ code: x.code, name: nameOf(x.code), unit: x.dayUnit, deducts: x.deductsBalance, hours: x.hours ?? x.dayUnit * 8, startTime: x.startTime ?? null, endTime: x.endTime ?? null, group: x.groupName ?? null }))} />
+        <LeaveForm today={today} types={types.filter((x) => x.active && mayUse(x.code)).map((x) => ({ code: x.code, name: nameOf(x.code), unit: x.dayUnit, deducts: x.deductsBalance, hours: x.hours ?? x.dayUnit * 8, startTime: x.startTime ?? null, endTime: x.endTime ?? null, group: x.groupName ?? null }))} />
       </AddSheet>
 
       <section className="order-3 flex flex-col gap-2 lg:order-5">

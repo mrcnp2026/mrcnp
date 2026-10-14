@@ -54,7 +54,7 @@ try {
   // ── M6 이상자 관리 ──
   const an = await open('/admin/anomalies');
   check(an.includes('이상자 관리') && an.includes('유형별 기준') && an.includes('퇴근 누락') && an.includes('근무지 미확인'), '이상자 관리 화면: 목록과 유형별 기준');
-  check((await p.locator('select').count()) === 10, '유형 10개마다 기준을 고른다');
+  check((await p.locator('main select').count()) === 10, '유형 10개마다 기준을 고른다');
   await shot('m6-1-anomalies');
   const { data: pol } = await db.from('payroll_policy_versions').select('version, validated_payload').eq('policy_kind', 'attendance.anomaly').eq('status', 'active').is('valid_to', null).maybeSingle();
   if (!pol) {
@@ -87,6 +87,19 @@ try {
     // 규칙: 한 번에 0.25일까지 · 3일 전까지 · 사유 필수. 이 종류는 0.5일짜리라 한도에 먼저 걸린다
     const r1 = await post('/api/leave', { typeCode: TYPE, startDate: day(30), reason: '검사' });
     check(r1.status === 400 && (r1.json.error === 'leave_too_long' || r1.json.error === 'no_workdays'), '한도를 넘는 신청은 거부된다', JSON.stringify(r1.json));
+    // 적용 대상(L13) · 허용 요일(L12) — 2026-10-15
+    const ver = async () => (await db.from('leave_type_policy_versions').select('version').eq('type_code', TYPE).eq('status', 'active').is('valid_to', null).maybeSingle()).data?.version ?? 0;
+    const OTHER = '00000000-0000-4000-8000-000000000001';
+    let rr = await post('/api/admin/leave/ledger', { action: 'typeRule', code: TYPE, expectedVersion: await ver(), rule: { maxDaysPerRequest: 30, minNoticeDays: 0, reasonRequired: false, targets: { groupIds: [], employeeIds: [OTHER] } } });
+    let mon = new Date(Date.now() + 60 * 86400e3);
+    while (mon.getUTCDay() !== 1) mon = new Date(mon.getTime() + 86400e3);
+    const r2 = await post('/api/leave', { typeCode: TYPE, startDate: mon.toISOString().slice(0, 10), reason: '검사' });
+    check(rr.status === 200 && r2.status === 403 && r2.json.error === 'leave_not_target', '적용 대상이 아닌 직원의 신청은 서버가 막는다', JSON.stringify(r2.json));
+    let tue = new Date(Date.now() + 60 * 86400e3);
+    while (tue.getUTCDay() !== 2) tue = new Date(tue.getTime() + 86400e3);
+    rr = await post('/api/admin/leave/ledger', { action: 'typeRule', code: TYPE, expectedVersion: await ver(), rule: { maxDaysPerRequest: 30, minNoticeDays: 0, reasonRequired: false, weekdays: [1], targets: { groupIds: [], employeeIds: [emp!.id] } } });
+    const r3 = await post('/api/leave', { typeCode: TYPE, startDate: tue.toISOString().slice(0, 10), reason: '검사' });
+    check(rr.status === 200 && r3.status === 400 && r3.json.error === 'leave_weekday', '월요일만 허용한 종류를 화요일에 신청하면 막는다', JSON.stringify(r3.json));
   } finally {
     await db.from('leave_types').update({ active: false }).eq('code', TYPE);
     const { data: cur } = await db.from('leave_type_policy_versions').select('version').eq('type_code', TYPE).eq('status', 'active').is('valid_to', null).maybeSingle();

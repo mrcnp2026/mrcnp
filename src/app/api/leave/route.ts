@@ -1,6 +1,8 @@
 // 직원의 휴가 신청 (②-2 7-3, 4-7·4-11). 일수·상태·작성자는 서버가 정한다 (요청 본문의 days·status 무시).
 // 사유는 선택 (4-7). 차감 대상(연차·반차·반반차)은 잔여 − 대기보다 많이 신청할 수 없다.
-import { checkTypeRule } from '@/lib/leave-ledger';
+import { checkTypeRule, isTypeTarget, offWeekday } from '@/lib/leave-ledger';
+import { groupScope } from '@/lib/org';
+import { loadOrgGroups } from '@/lib/org-data';
 import { loadTypeRules } from '@/lib/leave-ledger-data';
 import { OFFICE } from '@/config/office';
 import { api, ApiError, readJson } from '@/lib/api';
@@ -43,6 +45,15 @@ export const POST = api('leave.create', async (req) => {
   const rule = (await loadTypeRules()).get(type.code)?.rule;
   const broke = rule ? checkTypeRule(rule, { days, startDate: start, today, reason }) : null;
   if (broke) throw new ApiError(400, broke);
+  if (rule) {
+    // 적용 대상(L13) · 허용 요일(L12) — 화면에서 고르지 못하게 해도 서버가 다시 막는다
+    const [{ data: prof }, groups] = await Promise.all([createAdminClient().from('profiles').select('group_id').eq('id', me.id).maybeSingle(), loadOrgGroups()]);
+    const scopes = new Map(rule.targets.groupIds.map((g) => [g, groupScope(groups, g)]));
+    if (!isTypeTarget(rule, { id: me.id, groupId: (prof?.group_id as string | null) ?? null }, scopes)) throw new ApiError(403, 'leave_not_target');
+    const workdays: string[] = [];
+    for (let d = start; d <= end; d = addDays(d, 1)) if (dayTypeOf(d) === 'workday') workdays.push(d);
+    if (offWeekday(rule, workdays)) throw new ApiError(400, 'leave_weekday');
+  }
 
   const mine = await loadLeaveRequests({ employeeId: me.id, from: start, to: end });
   // 겹침: 같은 날 대기·승인 휴가의 단위 합이 하루를 넘으면 막는다 (반차 두 번 = 하루는 허용)
