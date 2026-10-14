@@ -12,7 +12,8 @@ export type SlipPdfInput = {
   lines: { code: string; kind: 'PAYMENT' | 'DEDUCTION' | 'EMPLOYER'; label: string; quantity: string | null; unitPrice: string | null; factor: string | null; amount: number }[];
 };
 
-export async function slipPdfResponse(a: SlipPdfInput): Promise<Response> {
+/** 명세서 한 장의 PDF와 파일 이름 — 응답 한 장(slipPdfResponse)과 대장 전체 묶음이 같이 쓴다 */
+export async function slipPdfBytes(a: SlipPdfInput): Promise<{ bytes: Uint8Array; file: string; draftLabel: string; fileLabel: string }> {
   const [t, groups] = await Promise.all([getTranslations({ locale: a.locale, namespace: 'payslip' }), loadOrgGroups()]);
   const nf = new Intl.NumberFormat(a.locale, { maximumFractionDigits: 4 });
   const num = (v: string | null) => (v === null ? '' : nf.format(Number(v)));
@@ -34,6 +35,11 @@ export async function slipPdfResponse(a: SlipPdfInput): Promise<Response> {
   });
   // 파일 이름: 급여명세_귀속월_사번_revN.pdf — 주민번호 · 계좌는 넣지 않는다
   const file = `${t('pdfFile')}_${a.month.replace('-', '')}_${(a.employeeNo ?? '').replace(/[^\w가-힣-]/g, '')}_rev${a.revision}${a.draft ? `_${t('pdfDraft')}` : ''}.pdf`;
+  return { bytes, file, draftLabel: t('pdfDraft'), fileLabel: t('pdfFile') };
+}
+
+export async function slipPdfResponse(a: SlipPdfInput): Promise<Response> {
+  const { bytes, file } = await slipPdfBytes(a);
   return new Response(bytes as unknown as BodyInit, {
     headers: {
       'content-type': 'application/pdf',

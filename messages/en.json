@@ -3397,7 +3397,9 @@
       },
       "diffTitle": "Correction difference — rev {from} → rev {to}",
       "diffNone": "No one changed from the previous revision.",
-      "diffNote": "Compares the previous revision with this one by employee (calculated only). Differences are not carried to next month automatically — use an adjustment in that month if needed."
+      "diffNote": "Compares the previous revision with this one by employee (calculated only). Differences are not carried to next month automatically — use an adjustment in that month if needed.",
+      "pdfAll": "Download all payslips (PDF)",
+      "pdfAllDraft": "Download all payslips (PDF, for review)"
     },
     "reports": {
       "attTitle": "Attendance report",

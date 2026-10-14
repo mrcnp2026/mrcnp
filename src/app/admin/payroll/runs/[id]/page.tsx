@@ -118,9 +118,14 @@ export default async function PayRunPage({ params, searchParams }: { params: Pro
 
       {run.kind === 'BONUS' && !final && <p className="rounded-card border border-border bg-surface p-3 text-sm text-muted">{t('bonusNote')}</p>}
       {run.generationId && (
-        <a href={`/api/admin/payroll/runs/${run.id}/export`} className="inline-flex h-8 items-center gap-1 self-start rounded-button border border-border bg-bg px-3.5 text-sm font-semibold text-text hover:bg-surface">
-          {t('exportDo')}
-        </a>
+        <div className="flex flex-wrap gap-2">
+          <a href={`/api/admin/payroll/runs/${run.id}/export`} className="inline-flex h-8 items-center gap-1 rounded-button border border-border bg-bg px-3.5 text-sm font-semibold text-text hover:bg-surface">
+            {t('exportDo')}
+          </a>
+          <a href={`/api/admin/payroll/runs/${run.id}/pdf-all`} className="inline-flex h-8 items-center gap-1 rounded-button border border-border bg-bg px-3.5 text-sm font-semibold text-text hover:bg-surface">
+            {t(final ? 'pdfAll' : 'pdfAllDraft')}
+          </a>
+        </div>
       )}
       {run.generationId && (
         <dl className="grid gap-3 text-sm md:grid-cols-5">

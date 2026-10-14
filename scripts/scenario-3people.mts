@@ -430,6 +430,10 @@ try {
   await p.getByRole('button', { name: '확정', exact: true }).last().click();
   await p.getByText('확정한 대장입니다.').waitFor({ timeout: 30000 });
   check((await run()).status === 'FINALIZED', '검토 → 확정');
+  {
+    const pdf = await p.evaluate(async (u) => { const r = await fetch(u); const b = new Uint8Array(await r.arrayBuffer()); return { status: r.status, type: r.headers.get('content-type') ?? '', head: String.fromCharCode(...b.slice(0, 5)), size: b.length }; }, `/api/admin/payroll/runs/${runId}/pdf-all`);
+    check(pdf.status === 200 && pdf.type === 'application/pdf' && pdf.head === '%PDF-' && pdf.size > 5000, '대장 전체 명세서 PDF 한 파일 (계산된 2명)', JSON.stringify(pdf));
+  }
   const slipBefore = await open(qa, '/punch/payslips');
   check(!slipBefore.includes(won(net(EXPECT.A))), `${A.name}: 공개 전에는 내 급여에 금액이 없다`);
   await open(p, `/admin/payroll/runs/${runId}`);
