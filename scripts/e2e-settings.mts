@@ -54,7 +54,7 @@ try {
   await p.goto(`${BASE}/admin`);
   await openDrawer(p);
   // 2026-10-14: 회사 설정은 통합설정 › 회사설정 › 기본 — 폰 메뉴 「통합설정 › 전체 메뉴」 → 「회사 기본」
-  await p.getByRole('dialog').getByRole('link', { name: '전체 메뉴', exact: true }).click();
+  await p.getByRole('dialog').locator('a[href="/admin/console"]').click();
   await p.locator('main a[href="/admin/settings"]').click();
   await p.getByRole('heading', { name: '설정', exact: true }).waitFor();
   check((await p.getByText(/부터 적용 중/).count()) === 1, '지금 적용 중인 근무시간이 보임');

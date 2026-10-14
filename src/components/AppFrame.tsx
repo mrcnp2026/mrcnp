@@ -78,7 +78,7 @@ export async function AppFrame({ me, children, overlay }: { me: Me; children: Re
           {children}
         </div>
       </div>
-      <BottomTabs isAdmin={isAdmin} inboxCount={inboxCount} />
+      <BottomTabs role={role} />
       {consented ? overlay : <ConsentGate version={CONSENT.version} languages={languages} />}
     </AlertsProvider>
   );

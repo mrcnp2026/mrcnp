@@ -42,7 +42,7 @@ export function AddToHomeAndContinue({ next }: { next: string }) {
 }
 
 /** 직원 홈의 작은 버튼: 설치만 (이동 없음) */
-export function AddToHomeButton() {
+export function AddToHomeButton({ compact = false }: { compact?: boolean }) {
   const t = useTranslations('install');
   const { state, promptInstall } = useInstall();
   const [sheet, setSheet] = useState(false);
@@ -51,6 +51,7 @@ export function AddToHomeButton() {
     <>
       <Button
         variant="outline"
+        size={compact ? 'sm' : undefined}
         className="w-full"
         onClick={async () => {
           if ((await promptInstall()) === 'unavailable') setSheet(true);

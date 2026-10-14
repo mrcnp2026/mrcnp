@@ -72,6 +72,8 @@ try {
   // ── 관리자: 왼쪽 위 메뉴 › 공지 관리 › 새 공지 ──
   await p.goto(`${BASE}/admin`);
   await openDrawer(p);
+  await p.getByRole('dialog').getByRole('tab', { name: '관리자 모드' }).click(); // 2026-10-15 서랍 개편: 모드별 메뉴 · 앱 묶음은 접혀 있다 — 「메뉴 찾기」로 찾는다
+  await p.getByRole('dialog').getByRole('searchbox').fill('공지');
   check(await p.getByRole('dialog').locator('a[href="/admin/notices"]').waitFor({ timeout: 10000 }).then(() => true, () => false), '메뉴 「소통 › 공지」(공지 관리)가 있다'); // 2026-10-14 메뉴 개편
   await scanAll(p, '공지 목록', '/admin/notices');
   await p.goto(`${BASE}/admin/notices/new`);

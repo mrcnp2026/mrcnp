@@ -157,7 +157,7 @@ try {
   // 8. 직원 화면
   await p.goto(`${BASE}/punch/leave`);
   check(await p.getByRole('heading', { name: '휴가·외근' }).waitFor({ timeout: 15000 }).then(() => true, () => false), '직원 연차 화면 열림');
-  check(await p.getByRole('link', { name: '휴가·외근' }).isVisible(), '하단 탭에 휴가·외근');
+  check(await p.locator('nav.fixed').getByRole('link', { name: '휴가', exact: true }).isVisible(), '하단 탭에 휴가'); // 2026-10-15 하단 탭 모드별 개편
 } finally {
   await browser.close();
   await db.from('profiles').update({ role: 'employee', locale: 'en', active: false }).eq('id', emp!.id);

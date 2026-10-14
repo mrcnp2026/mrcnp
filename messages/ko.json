@@ -4193,7 +4193,10 @@
     "payLabor": "인건비 현황",
     "payRetirement": "퇴직급여",
     "payInsurance": "사회보험",
-    "payDaily": "일용직"
+    "payDaily": "일용직",
+    "modes": "모드",
+    "findMenu": "메뉴 찾기",
+    "noMenu": "맞는 메뉴가 없습니다."
   },
   "nav": {
     "home": "홈",
@@ -4222,7 +4225,19 @@
         "all": "전체 일정"
       }
     },
-    "schedule": "근무일정"
+    "schedule": "근무일정",
+    "tab": {
+      "home": "홈",
+      "punch": "출퇴근",
+      "leave": "휴가",
+      "requests": "요청",
+      "myPay": "내 급여",
+      "status": "현황",
+      "work": "근태",
+      "all": "전체",
+      "allTitle": "전체 메뉴",
+      "close": "닫기"
+    }
   },
   "records": {
     "title": "내 기록",

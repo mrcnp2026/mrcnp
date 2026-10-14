@@ -51,7 +51,7 @@ try {
   await openDrawer(p);
   await p.getByRole('dialog').waitFor();
   // 2026-10-14: 근무일정 템플릿은 통합설정 › App 관리 › 근태 — 폰 메뉴 「통합설정 › 전체 메뉴」로 들어간다
-  await p.getByRole('dialog').getByRole('link', { name: '전체 메뉴', exact: true }).click();
+  await p.getByRole('dialog').locator('a[href="/admin/console"]').click();
   await p.waitForURL(/[/]admin[/]console$/);
   check(await p.locator('main a[href="/admin/shifts"]').waitFor({ timeout: 20000 }).then(() => true, () => false), '통합설정 전체 메뉴에 「근무일정 템플릿」');
   await p.goto(`${BASE}/admin/shifts`);

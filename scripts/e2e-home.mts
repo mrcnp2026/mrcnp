@@ -151,9 +151,24 @@ try {
   await openDrawer(p);
   const drawer = p.getByRole('dialog');
   await drawer.waitFor({ timeout: 10000 });
-  const heads = await drawer.locator('p.font-extrabold').count();
-  check(heads >= 4, '폰 메뉴: 대분류 제목이 굵은 글자 + 색 막대', `${heads}개`);
+  // 2026-10-15 서랍 개편(의뢰인: 「메뉴가 너무 많아 한참 내려야 한다」): 모드 탭 · 지금 모드 메뉴만 · 앱 묶음은 접힘 · 메뉴 찾기
+  const tabs = drawer.getByRole('tab');
+  check((await tabs.count()) === 2 && (await drawer.getByRole('tab', { name: '직원 모드' }).getAttribute('aria-selected')) === 'true', '폰 메뉴: [직원 모드 | 관리자 모드] 탭, 직원 화면에서는 직원 모드가 골라져 있다');
+  check((await drawer.locator('a[href^="/admin"]').count()) === 0, '폰 메뉴(직원 모드): 관리자 메뉴가 섞여 있지 않다');
   await shot('43-폰-메뉴');
+  await drawer.getByRole('tab', { name: '관리자 모드' }).click();
+  const folded = drawer.locator('[data-drawer-list] button[aria-expanded]');
+  const fc = await folded.count();
+  check(fc >= 4 && (await drawer.locator('[data-drawer-list] button[aria-expanded="true"]').count()) === 0, '폰 메뉴(관리자 모드): 앱 묶음은 접혀 있다(지금 앱이 아니므로)', `${fc}묶음`);
+  const listH = await drawer.locator('[data-drawer-list]').evaluate((e) => [e.scrollHeight, e.clientHeight]);
+  check(listH[0] <= listH[1], '폰 메뉴(관리자 모드): 스크롤 없이 한 화면에 다 보인다', `${listH[0]}/${listH[1]}px`);
+  await folded.first().click();
+  check((await folded.first().getAttribute('aria-expanded')) === 'true', '폰 메뉴: 묶음을 누르면 펼쳐진다');
+  await drawer.getByRole('searchbox').fill('급여대장');
+  check((await drawer.locator('[data-drawer-list] a').count()) >= 1 && (await drawer.locator('[data-drawer-list] button[aria-expanded]').count()) === 0, '폰 메뉴: 「메뉴 찾기」에 쓰면 맞는 항목만 한 목록으로');
+  await drawer.getByRole('searchbox').fill('없는메뉴zz');
+  check((await drawer.getByText('맞는 메뉴가 없습니다.').count()) === 1, '폰 메뉴: 맞는 것이 없으면 안내');
+  await shot('43b-폰-메뉴-관리자');
   await p.keyboard.press('Escape');
   await p.setViewportSize({ width: 1440, height: 900 });
   await p.goto(`${BASE}/admin/jobs`);

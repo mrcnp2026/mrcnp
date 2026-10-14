@@ -48,6 +48,17 @@ export async function openDrawer(p: Page): Promise<void> {
 }
 
 /**
+ * 폰 메뉴 서랍에서 항목을 찾아 누른다 (2026-10-15 서랍 개편 — 앱 묶음이 접혀 있어 「메뉴 찾기」 칸으로 찾는다).
+ * view를 주면 먼저 그 모드 탭을 누른다. 서랍은 이미 열려 있어야 한다.
+ */
+export async function drawerGo(p: Page, name: string, view?: '직원 모드' | '관리자 모드'): Promise<void> {
+  const dialog = p.getByRole('dialog');
+  if (view) await dialog.getByRole('tab', { name: view }).click();
+  await dialog.getByRole('searchbox').fill(name);
+  await dialog.locator('[data-drawer-list] a').filter({ hasText: name }).first().click();
+}
+
+/**
  * 통합설정 숫자 4자리를 새로 정하고 연다 (2026-10-14 DB 묶음 7) — 통합설정 화면 · 저장 기능을 쓰는 검사가 로그인 뒤에 부른다.
  * 검사 계정의 예전 숫자는 지운다(검사마다 같은 숫자로 시작). 30분 동안 열려 있다.
  */

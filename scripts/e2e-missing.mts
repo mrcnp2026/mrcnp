@@ -6,7 +6,7 @@ import { config } from 'dotenv';
 import { createHash, randomBytes } from 'node:crypto';
 import path from 'node:path';
 import { chromium } from 'playwright-core';
-import { createPassword, openDrawer } from './lib/e2e-password.ts';
+import { createPassword, openDrawer, drawerGo } from './lib/e2e-password.ts';
 
 config({ path: path.join(import.meta.dirname, '..', '.env.local'), quiet: true });
 const BASE = process.env.BASE ?? 'http://localhost:4123';
@@ -50,7 +50,7 @@ try {
   await p.waitForLoadState('networkidle');
   await openDrawer(p);
   await p.getByRole('dialog').waitFor();
-  await p.getByRole('dialog').getByRole('link', { name: '누락 기록', exact: true }).click();
+  await drawerGo(p, '누락 기록', '관리자 모드');
   await p.waitForURL(/\/admin\/missing/);
   await ready();
   check(true, '왼쪽 메뉴 「누락 기록」 → 화면이 열림');

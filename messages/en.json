@@ -4193,7 +4193,10 @@
     "payLabor": "Labor cost",
     "payRetirement": "Retirement pay",
     "payInsurance": "Social insurance",
-    "payDaily": "Day labor"
+    "payDaily": "Day labor",
+    "modes": "Mode",
+    "findMenu": "Find a menu",
+    "noMenu": "No matching menu."
   },
   "nav": {
     "home": "Home",
@@ -4222,7 +4225,19 @@
         "all": "All schedules"
       }
     },
-    "schedule": "Schedule"
+    "schedule": "Schedule",
+    "tab": {
+      "home": "Home",
+      "punch": "Clock",
+      "leave": "Leave",
+      "requests": "Requests",
+      "myPay": "My pay",
+      "status": "Today",
+      "work": "Attendance",
+      "all": "All",
+      "allTitle": "All menus",
+      "close": "Close"
+    }
   },
   "records": {
     "title": "My records",

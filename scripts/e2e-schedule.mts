@@ -49,14 +49,26 @@ try {
   await p.goto(`${BASE}/register?token=${token}`);
   await createPassword(p);
 
-  // ── 하단 탭 5개 · 근무일정 탭 ──
+  // ── 하단 탭 (2026-10-15 모드별): 관리자 = 현황 · 요청 · 근태 · 휴가 · 전체 — 근무일정은 「전체」 격자에서 ──
   await p.goto(`${BASE}/admin`);
   await p.waitForLoadState('networkidle');
-  const tabs = p.locator('nav.fixed a');
-  check((await tabs.count()) === 5, '하단 탭이 5개 (홈·요청·근무일정·출퇴근기록·휴가)', String(await tabs.count()));
-  await p.locator('nav.fixed').getByRole('link', { name: '근무일정' }).click();
+  const tabNames = (await p.locator('nav.fixed li').allTextContents()).map((x) => x.replace(/\d+/g, '').trim()); // 요청 배지 숫자는 뺀다
+  check(tabNames.join() === '현황,요청,근태,휴가,전체', '관리자 하단 탭 5칸 (현황 · 요청 · 근태 · 휴가 · 전체)', tabNames.join());
+  check(((await p.locator('nav.fixed a[aria-current="page"]').textContent()) ?? '').includes('현황'), '관리자 홈에서 「현황」 탭이 켜져 있음');
+  await p.locator('nav.fixed').getByRole('button', { name: '전체' }).click();
+  const all = p.locator('[data-all-apps]');
+  await all.waitFor();
+  check((await all.locator('a').count()) >= 8, '「전체」: 관리자 앱 + 통합설정 아이콘 격자', String(await all.locator('a').count()));
+  await all.getByRole('link', { name: '근무일정 · 출퇴근' }).click();
   await p.waitForURL(/\/admin\/schedule/);
-  check(true, '관리자는 「근무일정」 탭에서 전체 일정이 먼저 열림');
+  check(true, '「전체 › 근무일정 · 출퇴근」 → 전체 일정');
+  check(((await p.locator('nav.fixed a[aria-current="page"]').textContent()) ?? '').includes('근태'), '일정 화면에서는 「근태」 탭이 켜져 있음');
+  await p.goto(`${BASE}/punch`);
+  await p.waitForLoadState('networkidle');
+  const myTabs = (await p.locator('nav.fixed li').allTextContents()).map((x) => x.trim());
+  check(myTabs.join() === '홈,출퇴근,휴가,요청,내 급여', '직원 모드 하단 탭 5칸 (홈 · 출퇴근 · 휴가 · 요청 · 내 급여)', myTabs.join());
+  await p.goto(`${BASE}/admin/schedule`);
+  await p.waitForLoadState('networkidle');
   await p.waitForLoadState('networkidle');
   await p.getByRole('search').waitFor({ timeout: 20000 });
   check((await p.getByRole('search').count()) === 1 && (await p.getByRole('button', { name: '기간 고르기' }).count()) === 1 && (await p.getByRole('link', { name: '내 일정', exact: true }).count()) === 1, '위 줄: 검색 · 기간 · [내 일정]');

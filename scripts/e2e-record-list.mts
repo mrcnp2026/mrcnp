@@ -47,10 +47,10 @@ try {
   // ── 하단 탭 → 목록 ──
   await p.goto(`${BASE}/admin`);
   await p.waitForLoadState('networkidle');
-  await p.locator('nav.fixed').getByRole('link', { name: '출퇴근기록' }).click();
+  await p.locator('nav.fixed').getByRole('link', { name: '근태', exact: true }).click(); // 2026-10-15 관리자 하단 탭: 현황 · 요청 · 근태 · 휴가 · 전체
   await p.waitForURL(/\/admin\/records\/list/);
   await ready();
-  check(true, '하단 「출퇴근기록」 탭 → 날짜별 기록 목록');
+  check(true, '하단 「근태」 탭 → 날짜별 기록 목록');
   const month1 = `${kst(0).slice(0, 8)}01`;
   check((await p.getByRole('button', { name: '기간 고르기' }).textContent())!.includes(`${md(month1)} - ${md(kst(0))}`), '기본 기간은 이번 달 1일 ~ 오늘', (await p.getByRole('button', { name: '기간 고르기' }).textContent()) ?? '');
   // 로고 줄 없이 ☰가 검색 줄 안에 있고, 누르면 왼쪽 메뉴가 열린다 (2026-10-11)
