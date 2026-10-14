@@ -5,7 +5,7 @@ import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import { Chip, PageShell } from '@/components/ui';
 import { getMe } from '@/lib/auth';
-import { loadDailyBoard } from '@/lib/payroll/daily-data';
+import { loadDailyBoard, loadDailyRevisions } from '@/lib/payroll/daily-data';
 import { DailyRunActions } from '../../DailyForms';
 
 const RTONE = { DRAFT: 'neutral', CALCULATED: 'info', REVIEWED: 'warn', FINALIZED: 'ok' } as const;
@@ -17,6 +17,9 @@ export default async function DailyRunPage({ params }: { params: Promise<{ id: s
   const board = await loadDailyBoard(id, me);
   if (!board) notFound();
   const { run, lines, stale } = board;
+  const revs = await loadDailyRevisions(run);
+  const newer = revs.filter((r) => r.revision > run.revision).at(-1) ?? null;
+  const prev = run.supersedesId ? revs.find((r) => r.id === run.supersedesId) ?? null : null;
   const won = (v: number | null) => (v === null ? '' : t('won', { n: f.number(v) }));
   const blocked = lines.filter((l) => l.state === 'BLOCKED').length;
   const ok = lines.filter((l) => l.state === 'OK');
@@ -34,12 +37,30 @@ export default async function DailyRunPage({ params }: { params: Promise<{ id: s
           <Chip tone={RTONE[run.status]}>{t(`rState.${run.status}`)}</Chip>
           {run.status !== 'FINALIZED' && <Chip tone="warn">{t('draftChip')}</Chip>}
           {run.isTest && <Chip>{t('practice')}</Chip>}
+          {run.revision > 1 && <Chip tone="info">{t('revision', { n: run.revision })}</Chip>}
         </h1>
         <p className="num pt-1 text-sm text-faint">{t('runMeta', { month: run.periodFrom.slice(0, 7), payDate: run.payDate })}</p>
       </div>
+      {prev && (
+        <p className="rounded-card border border-border bg-surface p-3 text-sm">
+          {t('correctionOf', { reason: run.correctionReason ?? '' })}{' '}
+          <Link href={`/admin/payroll/daily/runs/${prev.id}`} className="font-bold text-primary">{t('seePrev', { n: prev.revision })} ›</Link>
+        </p>
+      )}
+      {newer && (
+        <p className="rounded-card border border-warn bg-warn-tint p-3 text-sm text-warn">
+          {t('hasNewer', { n: newer.revision })}{' '}
+          <Link href={`/admin/payroll/daily/runs/${newer.id}`} className="font-bold">{t('seeNewer')} ›</Link>
+        </p>
+      )}
+      {run.generationId && (
+        <a href={`/api/admin/payroll/daily/runs/${run.id}/export`} className="inline-flex min-h-9 items-center gap-1 self-start rounded-button border border-border bg-bg px-3.5 text-sm font-semibold text-text hover:bg-surface">
+          {t('excel')}
+        </a>
+      )}
       {stale && <p className="rounded-card border border-warn bg-warn-tint p-3 text-sm text-warn">{t('stale')}</p>}
       {blocked > 0 && <p className="rounded-card border border-warn bg-warn-tint p-3 text-sm text-warn">{t('hasBlocked', { n: blocked })}</p>}
-      <DailyRunActions id={run.id} version={run.version} status={run.status} stale={stale} blocked={blocked} />
+      <DailyRunActions id={run.id} version={run.version} status={run.status} stale={stale} blocked={blocked} latest={!newer} />
       <div className="overflow-x-auto rounded-card border border-border bg-bg">
         <table className="w-full text-sm" data-daily>
           <thead>

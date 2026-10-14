@@ -3,7 +3,7 @@ import { api, ApiError, readJson } from '@/lib/api';
 import { OFFICE } from '@/config/office';
 import { requirePayroll } from '@/lib/payroll/data';
 import { toDailyItems, type DailyTerms } from '@/lib/payroll/daily';
-import { addEngagement, addPayee, addWork, calculateDaily, createDailyRun, finalizeDaily, reviewDaily, setEngagement, setPayeeActive, setWorkStatus } from '@/lib/payroll/daily-data';
+import { addEngagement, addPayee, addWork, calculateDaily, createDailyRun, finalizeDaily, reviewDaily, setEngagement, setPayeeActive, setWorkStatus, startDailyCorrection } from '@/lib/payroll/daily-data';
 
 export const maxDuration = 60;
 const UUID = /^[0-9a-f-]{36}$/i;
@@ -64,6 +64,11 @@ export const POST = api('admin.payroll.daily', async (req, ctx) => {
     case 'run.create':
       if (typeof b.month !== 'string' || !/^\d{4}-(0[1-9]|1[0-2])$/.test(b.month) || !isDate(b.payDate)) throw new ApiError(400, 'invalid_input');
       return createDailyRun({ month: b.month, payDate: b.payDate, practice, me, requestId });
+    case 'run.correct': {
+      const reason = typeof b.reason === 'string' ? b.reason.trim() : '';
+      if (!isId(b.id) || reason.length < 2 || reason.length > 500) throw new ApiError(400, 'payroll_reason_required');
+      return startDailyCorrection({ id: b.id, reason, me, requestId });
+    }
     case 'run.calculate':
     case 'run.review':
     case 'run.finalize': {

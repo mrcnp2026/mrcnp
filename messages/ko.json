@@ -3960,7 +3960,35 @@
       "payeeCount": "사용 중인 대상자 {n}명",
       "colPayee": "대상자",
       "colEngagement": "고용 기간 · 현장 · 일당",
-      "colTerms": "세금 · 보험 조건"
+      "colTerms": "세금 · 보험 조건",
+      "correct": "정정하기",
+      "correctReason": "정정 사유 (2자 이상)",
+      "correctStart": "정정 판 만들기",
+      "correctHint": "확정한 대장은 바뀌지 않습니다. 정정 판을 만들어 근무 줄을 고친 뒤 다시 계산 · 검토 · 확정합니다. 인건비 현황은 가장 새로 확정한 판만 셉니다.",
+      "revision": "{n}판",
+      "correctionOf": "정정 판입니다 — 사유: {reason}.",
+      "seePrev": "{n}판 보기",
+      "hasNewer": "이 대장은 {n}판으로 정정되었습니다. 이 판은 기록으로만 남습니다.",
+      "seeNewer": "새 판 보기",
+      "excel": "지급명세 엑셀 받기",
+      "x": {
+        "file": "일용 지급명세_{month}_{n}차_{rev}판",
+        "sheetPayee": "대상자별",
+        "sheetDay": "날짜별",
+        "sheetMeta": "정보",
+        "payee": "대상자",
+        "no": "내부번호",
+        "date": "근무일",
+        "draft": "검토용 — 확정 전",
+        "final": "확정",
+        "month": "근무월",
+        "payDate": "지급일",
+        "status": "상태",
+        "made": "만든 시각",
+        "by": "내려받은 사람",
+        "rule": "세금 규칙",
+        "sum": "합계"
+      }
     }
   },
   "side": {

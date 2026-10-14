@@ -3960,7 +3960,35 @@
       "payeeCount": "{n} active payees",
       "colPayee": "Payee",
       "colEngagement": "Engagement · site · day rate",
-      "colTerms": "Tax · insurance terms"
+      "colTerms": "Tax · insurance terms",
+      "correct": "Correct",
+      "correctReason": "Reason (2+ chars)",
+      "correctStart": "Create correction",
+      "correctHint": "The finalized ledger does not change. Create a correction, fix work lines, then calculate · review · finalize again. Labor cost counts only the newest finalized revision.",
+      "revision": "Rev {n}",
+      "correctionOf": "This is a correction — reason: {reason}.",
+      "seePrev": "See rev {n}",
+      "hasNewer": "This ledger was corrected to rev {n}. This revision is kept as a record.",
+      "seeNewer": "See newer",
+      "excel": "Download statements (Excel)",
+      "x": {
+        "file": "day-labor_{month}_{n}_rev{rev}",
+        "sheetPayee": "By payee",
+        "sheetDay": "By day",
+        "sheetMeta": "Info",
+        "payee": "Payee",
+        "no": "Internal no.",
+        "date": "Work date",
+        "draft": "For review — not finalized",
+        "final": "Finalized",
+        "month": "Work month",
+        "payDate": "Pay date",
+        "status": "Status",
+        "made": "Generated",
+        "by": "Downloaded by",
+        "rule": "Tax rule",
+        "sum": "Total"
+      }
     }
   },
   "side": {

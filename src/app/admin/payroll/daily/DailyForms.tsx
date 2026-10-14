@@ -215,12 +215,31 @@ export function DailyRunCreate({ month, payDate, live }: { month: string; payDat
   );
 }
 
-export function DailyRunActions({ id, version, status, stale, blocked }: { id: string; version: number; status: string; stale: boolean; blocked: number }) {
+export function DailyRunActions({ id, version, status, stale, blocked, latest }: { id: string; version: number; status: string; stale: boolean; blocked: number; latest: boolean }) {
   const t = useTranslations('admin.daily');
-  const { busy, err, send } = useCall();
+  const { busy, err, send, router } = useCall();
   const [ask, setAsk] = useState(false);
   const [msg, setMsg] = useState<string | null>(null);
-  if (status === 'FINALIZED') return null;
+  const [reason, setReason] = useState('');
+  if (status === 'FINALIZED') {
+    if (!latest) return null;
+    // 확정한 대장 고치기 — 원본은 그대로 두고 정정 판을 만든다 (2026-10-14)
+    return (
+      <div className="flex flex-col gap-2 text-sm">
+        {ask ? (
+          <div className="flex flex-wrap items-center gap-2">
+            <input value={reason} onChange={(e) => setReason(e.target.value)} maxLength={500} placeholder={t('correctReason')} aria-label={t('correctReason')} className="h-9 min-w-0 flex-1 rounded-button border border-border bg-bg px-3 sm:max-w-md" />
+            <Button type="button" size="sm" disabled={busy || reason.trim().length < 2} onClick={async () => { const r = await send<{ id: string }>({ action: 'run.correct', id, reason }); if (r) router.push(`/admin/payroll/daily/runs/${r.id}`); }}>{t('correctStart')}</Button>
+            <Button type="button" size="sm" variant="outline" disabled={busy} onClick={() => setAsk(false)}>{t('cancel')}</Button>
+          </div>
+        ) : (
+          <Button type="button" size="sm" variant="outline" className="self-start" onClick={() => setAsk(true)}>{t('correct')}</Button>
+        )}
+        <p className="text-xs text-faint">{t('correctHint')}</p>
+        <Fail err={err} />
+      </div>
+    );
+  }
   const base = { id, expectedVersion: version };
   const canReview = status === 'CALCULATED' && !stale && blocked === 0, canFinalize = status === 'REVIEWED' && !stale && blocked === 0;
   return (

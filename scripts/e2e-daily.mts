@@ -175,6 +175,36 @@ try {
   const { data: s2 } = await db.from('payroll_daily_statements').select('gross_total, work_days').eq('generation_id', r2.current_generation_id).eq('payee_id', P1).single();
   check(c3.json.calculated?.ok === 1 && Number(s2?.gross_total) === 200000 && Number(s2?.work_days) === 1, '2차 대장에는 새 근무만 들어간다 (1차에 든 2.5일은 다시 세지 않는다)', JSON.stringify(s2));
 
+  // ── 지급명세 엑셀 (2026-10-14) ──
+  const xl = await p.evaluate(async (u) => { const r = await fetch(u); return { status: r.status, type: r.headers.get('content-type') ?? '', size: (await r.arrayBuffer()).byteLength }; }, `/api/admin/payroll/daily/runs/${RUN}/export`);
+  const { count: logs } = await db.from('download_logs').select('id', { count: 'exact', head: true }).eq('kind', 'daily_statements').eq('scope', RUN);
+  check(xl.status === 200 && xl.type.includes('spreadsheetml') && xl.size > 3000 && (logs ?? 0) >= 1, '지급명세 엑셀을 받는다 (반출 기록이 남는다)', JSON.stringify(xl));
+  check((await open(`/admin/payroll/daily/runs/${RUN}`)).includes('지급명세 엑셀 받기'), '대장 화면에 「지급명세 엑셀 받기」');
+
+  // ── 정정 판 (2026-10-14): 확정한 1차를 고친다 — 원본은 그대로, 새 판에서 근무 하나를 무효로 하고 다시 계산 · 확정 ──
+  check((await post({ action: 'run.correct', id: RUN, reason: '' })).json.error === 'payroll_reason_required', '사유 없이 정정할 수 없다');
+  const cr = await post({ action: 'run.correct', id: RUN, reason: 'e2e 근무일 잘못 넣음' });
+  const CR = cr.json.id as string;
+  check(cr.status === 200 && !!CR, '정정 판을 만든다', JSON.stringify(cr.json));
+  check((await post({ action: 'run.correct', id: RUN, reason: '또 정정' })).json.error === 'payroll_correction_exists', '진행 중인 정정이 있으면 또 만들 수 없다');
+  const crun = async () => (await db.from('payroll_runs').select('status, version, current_generation_id, revision, supersedes_id').eq('id', CR).single()).data!;
+  let cv = await crun();
+  check(cv.revision === 2 && cv.supersedes_id === RUN, '정정 판은 2판이고 1판을 가리킨다');
+  const half = (await rows(P1)).find((x) => x.segment_key === 'B')!;
+  check((await post({ action: 'work.status', id: half.id, expectedVersion: half.version, status: 'VOID' })).status === 200, '정정 중에는 원본에 든 근무(0.5공수 구간)를 무효로 할 수 있다');
+  await post({ action: 'run.calculate', id: CR, expectedVersion: cv.version });
+  cv = await crun();
+  const { data: cs } = await db.from('payroll_daily_statements').select('gross_total, work_days').eq('generation_id', cv.current_generation_id).eq('payee_id', P1).single();
+  check(Number(cs?.work_days) === 2 && Number(cs?.gross_total) === 360000, '정정 판 계산: 0.5공수(10만원)가 빠져 2공수 · 360,000 (원본의 근무를 다시 센다)', JSON.stringify(cs));
+  await post({ action: 'run.review', id: CR, expectedVersion: cv.version });
+  cv = await crun();
+  await post({ action: 'run.finalize', id: CR, expectedVersion: cv.version });
+  check((await crun()).status === 'FINALIZED' && (await run()).status === 'FINALIZED', '정정 판 확정 — 원본도 그대로 남는다');
+  const orig = await open(`/admin/payroll/daily/runs/${RUN}`);
+  check(orig.includes('2판으로 정정되었습니다') && !orig.includes('정정하기'), '원본 화면: 「2판으로 정정되었습니다」 · 더는 정정할 수 없다');
+  const corr = await open(`/admin/payroll/daily/runs/${CR}`);
+  check(corr.includes('정정 판입니다') && corr.includes('e2e 근무일 잘못 넣음') && corr.includes('2판'), '정정 판 화면: 사유 · 판 번호');
+
   // ── 다른 화면과 섞이지 않는다 · 권한 · 기록 ──
   const list = await open('/admin/payroll/daily?v=runs');
   check(list.includes(`${M} 일용 1차`) && list.includes(`${M} 일용 2차`) && list.includes('확정') && (await p.locator('nav a[href="/admin/payroll/daily"]').count()) >= 1, '일용 대장 목록과 왼쪽 메뉴');

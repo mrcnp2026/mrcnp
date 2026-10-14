@@ -95,8 +95,8 @@ export async function setEngagement(args: { id: string; endsOn?: string | null; 
 }
 
 // ── 근무 입력 ──
-export type WorkRow = DailyWork & { payeeId: string; engagementId: string; segmentKey: string; basisNote: string | null; version: number; isTest: boolean };
-const toWork = (r: Row): WorkRow => ({ id: r.id as string, payeeId: r.payee_id as string, engagementId: r.engagement_id as string, workDate: r.work_date as string, project: r.project as string, segmentKey: r.segment_key as string, quantity: Number(r.quantity), dayRate: Number(r.day_rate), items: toDailyItems(r.items) ?? [], basisNote: r.basis_note as string | null, status: r.status as WorkRow['status'], version: r.version as number, isTest: r.is_test as boolean });
+export type WorkRow = DailyWork & { payeeId: string; engagementId: string; segmentKey: string; basisNote: string | null; version: number; isTest: boolean; createdAt: string };
+const toWork = (r: Row): WorkRow => ({ id: r.id as string, payeeId: r.payee_id as string, engagementId: r.engagement_id as string, workDate: r.work_date as string, project: r.project as string, segmentKey: r.segment_key as string, quantity: Number(r.quantity), dayRate: Number(r.day_rate), items: toDailyItems(r.items) ?? [], basisNote: r.basis_note as string | null, status: r.status as WorkRow['status'], version: r.version as number, isTest: r.is_test as boolean, createdAt: r.created_at as string });
 
 export async function loadWork(args: { month: string; practice: boolean; payeeIds: string[] }): Promise<WorkRow[]> {
   if (args.payeeIds.length === 0) return [];
@@ -130,7 +130,11 @@ export async function setWorkStatus(args: { id: string; expectedVersion: number;
   if (!w) throw new ApiError(404, 'not_found');
   await myPayee(w.payee_id as string, args.me);
   if (w.version !== args.expectedVersion) throw new ApiError(409, 'version_conflict');
-  if (args.status === 'VOID' && (await finalizedWorkIds([w.payee_id as string])).has(w.id as string)) throw new ApiError(409, 'daily_work_in_run');
+  if (args.status === 'VOID') {
+    // 정정 중인 대장(그 대장을 고치는 새 판이 아직 확정 전)의 근무는 정정 판에서 고칠 수 있게 무효로 할 수 있다 (2026-10-14)
+    const { data: open } = await c.from('payroll_runs').select('supersedes_id').eq('run_kind', 'DAILY').neq('status', 'FINALIZED').not('supersedes_id', 'is', null);
+    if ((await finalizedWorkIds([w.payee_id as string], new Set((open ?? []).map((r) => r.supersedes_id as string)))).has(w.id as string)) throw new ApiError(409, 'daily_work_in_run');
+  }
   const { data, error } = await c.from('payroll_daily_work').update({ status: args.status, version: args.expectedVersion + 1, updated_by: args.me.id }).eq('id', args.id).eq('version', args.expectedVersion).select('id');
   if (error) boom('setWorkStatus', error);
   if (!data?.length) throw new ApiError(409, 'version_conflict');
@@ -138,11 +142,11 @@ export async function setWorkStatus(args: { id: string; expectedVersion: number;
 }
 
 /** 확정한 일용 대장에 이미 들어간 근무 줄 (두 대장에 들어가지 않게) */
-async function finalizedWorkIds(payeeIds: string[], exceptRunId?: string): Promise<Set<string>> {
+async function finalizedWorkIds(payeeIds: string[], exceptRunIds: ReadonlySet<string> = new Set()): Promise<Set<string>> {
   if (payeeIds.length === 0) return new Set();
   const c = db();
   const { data: sts } = await c.from('payroll_daily_statements').select('run_id, generation_id, snapshot').in('payee_id', payeeIds).eq('state', 'OK').limit(5000);
-  const runIds = [...new Set((sts ?? []).map((s) => s.run_id as string))].filter((id) => id !== exceptRunId);
+  const runIds = [...new Set((sts ?? []).map((s) => s.run_id as string))].filter((id) => !exceptRunIds.has(id));
   if (runIds.length === 0) return new Set();
   const { data: runs } = await c.from('payroll_runs').select('id, current_generation_id').in('id', runIds).eq('status', 'FINALIZED');
   const live = new Set((runs ?? []).map((r) => r.current_generation_id as string));
@@ -178,6 +182,30 @@ export async function createDailyRun(args: { month: string; payDate: string; pra
   return { id: data!.id as string };
 }
 
+/** 같은 일용 대장(근무월 · 차수 · 연습/운영)의 판 전부 — 판 번호 순 */
+export async function loadDailyRevisions(run: RunRow): Promise<RunRow[]> {
+  const { data, error } = await db().from('payroll_runs').select('id').eq('run_kind', 'DAILY').eq('period_from', run.periodFrom).eq('period_to', run.periodTo).eq('sequence', run.sequence).eq('is_test', run.isTest).order('revision');
+  if (error) boom('loadDailyRevisions', error);
+  return (await Promise.all((data ?? []).map((r) => loadRun(r.id as string)))).filter((r): r is RunRow => !!r);
+}
+
+/**
+ * 일용 대장 정정 시작 (2026-10-14, 미구현 목록 12번) — 확정한 대장은 그대로 두고 판 번호를 올린 새 초안을 만든다(사유 필수).
+ * 정정 판에서 근무 줄을 고치거나(무효 · 새로 넣기) 그대로 다시 계산 → 검토 → 확정. 인건비 현황은 가장 새 확정 판만 센다.
+ * 가장 새 판에서만, 진행 중인 정정이 없을 때만.
+ */
+export async function startDailyCorrection(args: { id: string; reason: string; me: Me; requestId?: string }): Promise<{ id: string }> {
+  const run = await loadRun(args.id);
+  if (!run || run.kind !== 'DAILY' || !!run.title?.startsWith('e2e-') !== isTestNo(args.me.employeeNo)) throw new ApiError(404, 'not_found');
+  if (run.status !== 'FINALIZED') throw new ApiError(409, 'payroll_not_finalized');
+  if ((await loadDailyRevisions(run)).some((r) => r.revision > run.revision)) throw new ApiError(409, 'payroll_correction_exists');
+  const { data, error } = await db().from('payroll_runs').insert({ run_kind: 'DAILY', title: run.title, period_from: run.periodFrom, period_to: run.periodTo, pay_date: run.payDate, sequence: run.sequence, is_test: run.isTest, revision: run.revision + 1, supersedes_id: run.id, correction_reason: args.reason, created_by: args.me.id }).select('id').single();
+  if (error?.code === '23505') throw new ApiError(409, 'payroll_correction_exists');
+  if (error || !data) boom('startDailyCorrection', error);
+  await payrollAudit({ actorId: args.me.id, action: 'daily.run.correct', table: 'payroll_runs', subjectId: data!.id as string, runId: data!.id as string, requestId: args.requestId, detail: { from: run.id, revision: run.revision + 1 } });
+  return { id: data!.id as string };
+}
+
 const mustRun = async (id: string, expectedVersion: number, me: Me): Promise<RunRow> => {
   const run = await loadRun(id);
   if (!run || run.kind !== 'DAILY' || !!run.title?.startsWith('e2e-') !== isTestNo(me.employeeNo)) throw new ApiError(404, 'not_found');
@@ -196,10 +224,21 @@ type Built = { payee: Payee; works: WorkRow[]; terms: DailyTerms | null; result:
 async function build(run: RunRow, me: Me): Promise<{ built: Built; inputHash: string }> {
   const { payees, engagements } = await loadPayees(isTestNo(me.employeeNo));
   const all = await loadWork({ month: run.periodFrom.slice(0, 7), practice: run.isTest, payeeIds: payees.map((p) => p.id) });
-  const used = await finalizedWorkIds(payees.map((p) => p.id), run.id);
+  // 같은 대장의 판들(원본 · 정정 판)은 서로의 근무를 「이미 쓴 것」으로 보지 않는다 — 정정 판이 원본의 근무를 다시 계산한다
+  const revs = await loadDailyRevisions(run);
+  const family = new Set(revs.map((r) => r.id));
+  const used = await finalizedWorkIds(payees.map((p) => p.id), family);
+  // 정정 판은 원본(앞 판들)에 들었던 근무 + 정정을 시작한 뒤 새로 넣은 근무만 다시 계산한다 — 다른 차수 대장에 들어갈 근무를 끌어오지 않는다
+  let scopeIds: Set<string> | null = null;
+  if (run.supersedesId) {
+    const gens = revs.filter((r) => r.revision < run.revision && r.generationId).map((r) => r.generationId as string);
+    const { data: prevSts } = gens.length ? await db().from('payroll_daily_statements').select('snapshot').in('generation_id', gens) : { data: [] as { snapshot: unknown }[] };
+    scopeIds = new Set((prevSts ?? []).flatMap((x) => ((x.snapshot as { workIds?: string[] } | null)?.workIds ?? [])));
+  }
+  const inScope = (w: WorkRow) => !scopeIds || scopeIds.has(w.id) || w.createdAt >= run.createdAt;
   const built: Built = [];
   for (const p of payees) {
-    const works = all.filter((w) => w.payeeId === p.id && w.status !== 'VOID' && !used.has(w.id));
+    const works = all.filter((w) => w.payeeId === p.id && w.status !== 'VOID' && !used.has(w.id) && inScope(w));
     if (works.length === 0) continue;
     // 적용 상태는 근무 줄이 가리키는 고용 기간에서. 줄마다 다른 기간이면 하나라도 「모름」이면 막는다
     const es = [...new Set(works.map((w) => w.engagementId))].map((id) => engagements.find((e) => e.id === id) ?? null);
