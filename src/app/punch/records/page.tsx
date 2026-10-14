@@ -13,6 +13,7 @@ import { getMe } from '@/lib/auth';
 import { judgeLateness } from '@/lib/lateness';
 import { isYearMonth, monthRange } from '@/lib/month-data';
 import { daysFor, loadPeriod } from '@/lib/period-data';
+import { addDays, weekStartOf } from '@/lib/calendar';
 import { kstDateTime, toKstDate } from '@/lib/time';
 import { ReasonForm } from './ReasonForm';
 
@@ -96,6 +97,11 @@ export default async function MyRecordsPage({ searchParams }: { searchParams: Pr
     return `/punch/records${u.size ? `?${u}` : ''}`;
   };
   const pcRows = rows.filter((r) => !hidden.has(catOf(r)));
+  // 주간 누적 (2026-10-14 직원 화면 보강): 표를 주(월~일)로 묶고 주마다 근무 · 급여용 시간 합계 줄. 합계는 숨긴 종류도 포함한 그 주의 전부(지금 근무 중인 오늘은 뺀다)
+  const weeks = [...new Set(pcRows.map((r) => weekStartOf(r.d.workDate)))];
+  const weekSum = (w: string) =>
+    rows.filter((r) => weekStartOf(r.d.workDate) === w && !(r.open && r.d.workDate === today)).reduce((a, r) => ({ net: a.net + r.d.netMinutes, pay: a.pay + r.d.payableMinutes }), { net: 0, pay: 0 });
+  const md = (d: string) => f.dateTime(new Date(`${d}T12:00:00+09:00`), { month: 'numeric', day: 'numeric' });
   const diff = (at: Date | undefined, date: string, hhmm: string | undefined) => (at && hhmm ? Math.round((at.getTime() - kstDateTime(date, hhmm).getTime()) / 60000) : null);
   const diffText = (v: number | null) => (v === null || v === 0 ? '' : `${v > 0 ? '+' : '-'} ${dur(Math.abs(v))}`);
 
@@ -199,7 +205,8 @@ export default async function MyRecordsPage({ searchParams }: { searchParams: Pr
                     </td>
                   </tr>
                 )}
-                {pcRows.map((r) => {
+                {weeks.flatMap((w) => [
+                ...pcRows.filter((r) => weekStartOf(r.d.workDate) === w).map((r) => {
                   const { d, firstIn, lastOut, open, req, corrected, pendingCorr } = r;
                   const plan = data.planFor(me.id, d.workDate);
                   const live = open && d.workDate === today;
@@ -230,7 +237,14 @@ export default async function MyRecordsPage({ searchParams }: { searchParams: Pr
                       </td>
                     </tr>
                   );
-                })}
+                }),
+                <tr key={`w${w}`} className="bg-surface">
+                  <td colSpan={4} className="px-3 py-2 text-xs font-bold text-muted">{t('pc.weekTotal', { from: md(w), to: md(addDays(w, 6)) })}</td>
+                  <td className="num px-3 py-2 text-right text-sm font-bold whitespace-nowrap">{dur(weekSum(w).net)}</td>
+                  <td className="num px-3 py-2 text-right text-sm font-bold whitespace-nowrap">{dur(weekSum(w).pay)}</td>
+                  <td colSpan={3} className="px-3 py-2 text-xs text-faint">{weekSum(w).net > OFFICE.weeklyLimitHours * 60 ? <span className="font-bold text-danger">{t('pc.weekOver', { h: OFFICE.weeklyLimitHours })}</span> : t('pc.weekLeft', { left: dur(Math.max(0, OFFICE.weeklyLimitHours * 60 - weekSum(w).net)), h: OFFICE.weeklyLimitHours })}</td>
+                </tr>,
+                ])}
               </tbody>
             </table>
           </div>

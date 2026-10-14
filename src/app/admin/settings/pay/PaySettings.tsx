@@ -229,7 +229,7 @@ export async function PaySettings({ sp }: { sp: SP }) {
                 <input type="number" name="from" min={0} step={1000} defaultValue={from || ''} className="num h-9 w-36 rounded-button border border-border bg-bg px-2 text-sm" />
               </label>
             )}
-            <button type="submit" className="inline-flex h-9 items-center rounded-button border border-nav bg-bg px-4 text-sm font-bold text-nav">
+            <button type="submit" className="inline-flex h-9 items-center rounded-button border border-border bg-bg px-3.5 text-sm font-semibold text-text hover:bg-surface">
               {t('ref.lookup')}
             </button>
             <span className="num text-xs text-faint">{t('ref.lookupNote', { year })}</span>
@@ -452,7 +452,7 @@ export async function PaySettings({ sp }: { sp: SP }) {
         <p className="border-b border-border bg-primary-tint px-4 py-3 text-sm text-primary lg:px-6">{t('ref.principle')}</p>
         <div className="flex flex-wrap items-start justify-between gap-3 border-b border-border px-4 py-3 lg:px-6">
           <RefreshButton />
-          <a href="/api/admin/payroll/confirm-sheet" className="inline-flex h-9 items-center gap-1 rounded-button border border-nav bg-bg px-4 text-sm font-bold whitespace-nowrap text-nav">
+          <a href="/api/admin/payroll/confirm-sheet" className="inline-flex h-9 items-center gap-1 rounded-button border border-border bg-bg px-3.5 text-sm font-semibold whitespace-nowrap text-text hover:bg-surface">
             <Download aria-hidden size={16} />
             {t('confirm.download')}
           </a>
@@ -470,7 +470,7 @@ export async function PaySettings({ sp }: { sp: SP }) {
         <div className="flex flex-wrap items-center justify-between gap-2 border-b border-border px-4 py-3 lg:px-6">
           <p className="text-sm text-muted">{t('s07.intro')}</p>
           <span className="flex flex-wrap items-center gap-2">
-            <a href="/api/admin/payroll/confirm-sheet" className="inline-flex h-9 items-center gap-1 rounded-button border border-nav bg-bg px-4 text-sm font-bold whitespace-nowrap text-nav">
+            <a href="/api/admin/payroll/confirm-sheet" className="inline-flex h-9 items-center gap-1 rounded-button border border-border bg-bg px-3.5 text-sm font-semibold whitespace-nowrap text-text hover:bg-surface">
               <Download aria-hidden size={16} />
               {t('confirm.download')}
             </a>

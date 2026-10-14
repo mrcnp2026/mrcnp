@@ -4,6 +4,7 @@
 import { ChevronLeft, ChevronRight } from 'lucide-react';
 import { getTranslations } from 'next-intl/server';
 import Link from 'next/link';
+import { SettingsLink } from '@/components/listframe';
 import { PageShell } from '@/components/ui';
 import { OFFICE } from '@/config/office';
 import { loadCloseBoard, loadReopenRequests } from '@/lib/close-data';
@@ -21,6 +22,7 @@ const shift = (ym: string, by: number) => {
 };
 
 export default async function ClosingPage({ searchParams }: { searchParams: Promise<{ m?: string; live?: string }> }) {
+  const tGear = await getTranslations('frame');
   const [t, sp] = await Promise.all([getTranslations('admin.closing'), searchParams]);
   const today = toKstDate(new Date());
   // 기본은 지난달 — 마감은 달이 끝난 뒤에 한다
@@ -61,7 +63,7 @@ export default async function ClosingPage({ searchParams }: { searchParams: Prom
   return (
     <PageShell wide>
       <div>
-        <h1 className="text-2xl font-bold">{t('title')}</h1>
+        <h1 className="flex items-center gap-2 text-2xl font-bold">{t('title')}<SettingsLink href="/admin/settings?tab=closing" label={tGear('item.setClosing')} /></h1>
         <p className="pt-1 text-sm text-faint">{t('intro')}</p>
       </div>
       <div className="flex flex-wrap items-center gap-3">

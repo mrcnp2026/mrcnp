@@ -4036,7 +4036,10 @@
       "newCorrection": "출퇴근기록 정정 요청",
       "deemed": "간주 근무",
       "noPlan": "무일정",
-      "empty": "고른 종류의 기록이 없습니다."
+      "empty": "고른 종류의 기록이 없습니다.",
+      "weekTotal": "주간 누적 ({from} ~ {to})",
+      "weekLeft": "주 {h}시간까지 {left} 남음",
+      "weekOver": "주 {h}시간을 넘었습니다"
     }
   },
   "corrections": {

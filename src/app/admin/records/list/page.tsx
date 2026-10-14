@@ -12,6 +12,7 @@ import { ConfirmAll } from '@/components/ConfirmRecords';
 import { Fab } from '@/components/Fab';
 import { ListBar } from '@/components/ListBar';
 import { Pager, pageOf } from '@/components/Pager';
+import { SettingsLink } from '@/components/listframe';
 import { Card, Chip, PageShell } from '@/components/ui';
 import { getMe } from '@/lib/auth';
 import { OFFICE } from '@/config/office';
@@ -30,6 +31,7 @@ const DATES_PER_PAGE = 7;
 type Line = { key: string; idx: number; id: string; name: string; sub: string; color: string; date: string; start: string; end: string | null; deemed: boolean; confirmed: boolean; open: boolean; outside: boolean; sort: number };
 
 export default async function RecordListPage({ searchParams }: { searchParams: Promise<{ q?: string; g?: string; from?: string; to?: string; live?: string; p?: string }> }) {
+  const tGear = await getTranslations('frame');
   const [t, tc, f, sp] = await Promise.all([getTranslations('admin.recordList'), getTranslations('common'), getFormatter(), searchParams]);
   const practice = OFFICE.practiceMode && sp.live !== '1';
   const today = toKstDate(new Date());
@@ -107,15 +109,15 @@ export default async function RecordListPage({ searchParams }: { searchParams: P
       {/* PC: 목록형 표 — 제목 · [월 집계] [기록 추가] / 기간 · 검색 · 부서 / 합계 / 표 */}
       <div className="hidden flex-col gap-4 lg:flex">
         <div className="flex items-center justify-between gap-3">
-          <h1 className="text-2xl font-bold">{t('title')}</h1>
+          <h1 className="flex items-center gap-2 text-2xl font-bold">{t('title')}{admin && <SettingsLink href="/admin/settings?tab=punch" label={tGear('item.setPunch')} />}</h1>
           <div className="flex items-center gap-2">
 {admin && (
-            <a href={`/api/admin/export/report?m=${to.slice(0, 7)}${sp.live === '1' ? '&live=1' : ''}`} title={tc('downloadReport', { ym: to.slice(0, 7) })} className="inline-flex h-8 items-center gap-1 rounded-button border border-nav bg-bg px-4 text-sm font-bold whitespace-nowrap text-nav">
+            <a href={`/api/admin/export/report?m=${to.slice(0, 7)}${sp.live === '1' ? '&live=1' : ''}`} title={tc('downloadReport', { ym: to.slice(0, 7) })} className="inline-flex h-8 items-center gap-1 rounded-button border border-border bg-bg px-3.5 text-sm font-semibold whitespace-nowrap text-text hover:bg-surface">
               <Download aria-hidden size={16} />
               {tc('download')}
             </a>
             )}
-            <Link href="/admin/records" className="inline-flex min-h-8 items-center rounded-button border border-nav bg-bg px-4 text-sm font-bold text-nav">
+            <Link href="/admin/records" className="inline-flex min-h-8 items-center rounded-button border border-border bg-bg px-3.5 text-sm font-semibold text-text hover:bg-surface">
               {t('toMonth')}
             </Link>
             {canAdd && <SheetOpener id="record" label={t('add')} />}
@@ -153,19 +155,19 @@ export default async function RecordListPage({ searchParams }: { searchParams: P
             <thead>
               <tr>
                 {(['colEmployee', 'colDate', 'colTime', 'colPlan', 'colPlaceIn', 'colPlaceOut'] as const).map((k) => (
-                  <th key={k} scope="col" className="px-4 py-2.5">
+                  <th key={k} scope="col" className="px-2.5 py-2.5">
                     {t(k)}
                   </th>
                 ))}
                 {(['colBreak', 'colTotal', 'colPayable', 'colDiffIn', 'colDiffOut'] as const).map((k) => (
-                  <th key={k} scope="col" className="px-4 py-2.5 text-right">
+                  <th key={k} scope="col" className="px-2.5 py-2.5 text-right">
                     {t(k)}
                   </th>
                 ))}
-                <th scope="col" className="px-4 py-2.5">
+                <th scope="col" className="px-2.5 py-2.5">
                   {t('colState')}
                 </th>
-                <th scope="col" className="px-4 py-2.5 text-center">
+                <th scope="col" className="px-2.5 py-2.5 text-center">
                   {t('colConfirmed')}
                 </th>
               </tr>
@@ -182,33 +184,33 @@ export default async function RecordListPage({ searchParams }: { searchParams: P
                 .sort((a, b) => b.date.localeCompare(a.date) || a.name.localeCompare(b.name))
                 .map((r) => (
                   <tr key={r.key}>
-                    <td className="px-4 py-2.5">
+                    <td className="px-2.5 py-2.5 whitespace-nowrap">
                       <Link href={`/admin/records/${r.id}/${r.date}${sp.live === '1' ? '?live=1' : ''}`} className="font-bold hover:text-primary">
                         {r.name}
                       </Link>
                       {r.sub && <span className="block text-xs text-faint">{r.sub}</span>}
                     </td>
-                    <td className="num px-4 py-2.5 whitespace-nowrap">{f.dateTime(kstDateTime(r.date, '12:00'), { month: '2-digit', day: '2-digit', weekday: 'short' })}</td>
-                    <td className="num px-4 py-2.5 whitespace-nowrap">{r.time}</td>
-                    <td className="num px-4 py-2.5 text-muted">{r.plan}</td>
-                    <td className="px-4 py-2.5 text-muted">{r.placeIn}</td>
-                    <td className="px-4 py-2.5 text-muted">{r.placeOut}</td>
-                    <td className="num px-4 py-2.5 text-right text-muted">{t('min', { n: r.breakMin })}</td>
-                    <td className="num px-4 py-2.5 text-right">{hm(r.net)}</td>
-                    <td className="num px-4 py-2.5 text-right font-bold">{hm(r.payable)}</td>
+                    <td className="num px-2.5 py-2.5 whitespace-nowrap">{f.dateTime(kstDateTime(r.date, '12:00'), { month: '2-digit', day: '2-digit', weekday: 'short' })}</td>
+                    <td className="num px-2.5 py-2.5 whitespace-nowrap">{r.time}</td>
+                    <td className="num px-2.5 py-2.5 whitespace-nowrap text-muted">{r.plan}</td>
+                    <td className="px-2.5 py-2.5 text-muted">{r.placeIn}</td>
+                    <td className="px-2.5 py-2.5 text-muted">{r.placeOut}</td>
+                    <td className="num px-2.5 py-2.5 text-right whitespace-nowrap text-muted">{t('min', { n: r.breakMin })}</td>
+                    <td className="num px-2.5 py-2.5 text-right whitespace-nowrap">{hm(r.net)}</td>
+                    <td className="num px-2.5 py-2.5 text-right font-bold whitespace-nowrap">{hm(r.payable)}</td>
                     {[r.diffIn, r.diffOut].map((v, i) => (
-                      <td key={i} className={`num px-4 py-2.5 text-right whitespace-nowrap ${v !== null && ((i === 0 && v > 0) || (i === 1 && v < 0)) ? 'text-warn' : 'text-muted'}`}>
+                      <td key={i} className={`num px-2.5 py-2.5 text-right whitespace-nowrap ${v !== null && ((i === 0 && v > 0) || (i === 1 && v < 0)) ? 'text-warn' : 'text-muted'}`}>
                         {v === null || v === 0 ? '' : t(v > 0 ? 'diffPlus' : 'diffMinus', { n: Math.abs(v) < 60 ? t('min', { n: Math.abs(v) }) : hm(Math.abs(v)) })}
                       </td>
                     ))}
-                    <td className="px-4 py-2.5">
+                    <td className="px-2.5 py-2.5">
                       <span className="flex flex-wrap gap-1">
                         {r.deemed && <Chip>{t('deemed')}</Chip>}
                         {r.open && r.date !== today && <Chip tone="warn">{t('noOut')}</Chip>}
                         {r.open && r.date === today && <Chip tone="info">{t('working')}</Chip>}
                       </span>
                     </td>
-                    <td className="px-4 py-2.5 text-center">
+                    <td className="px-2.5 py-2.5 text-center">
                       <CircleCheck aria-label={t(r.confirmed ? 'confirmed' : 'unconfirmed')} size={20} className={`inline ${r.confirmed ? 'text-primary' : 'text-border'}`} />
                     </td>
                   </tr>

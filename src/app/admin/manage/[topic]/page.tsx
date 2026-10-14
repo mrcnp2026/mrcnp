@@ -165,7 +165,7 @@ export default async function ManageInfoPage({ params }: { params: Promise<{ top
           <p className="pt-1 text-sm text-faint">{head.intro}</p>
         </div>
         {link && (
-          <Link href={link.href} className="inline-flex min-h-8 items-center rounded-button border border-nav bg-bg px-4 text-sm font-bold whitespace-nowrap text-nav">
+          <Link href={link.href} className="inline-flex min-h-8 items-center rounded-button border border-border bg-bg px-3.5 text-sm font-semibold whitespace-nowrap text-text hover:bg-surface">
             {link.label}
           </Link>
         )}

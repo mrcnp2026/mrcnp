@@ -63,7 +63,7 @@ export default async function AttendanceReportPage({ searchParams }: { searchPar
         <button type="submit" className="inline-flex h-9 items-center rounded-button bg-primary px-4 text-sm font-bold text-on-primary">
           {t('apply')}
         </button>
-        <a href={`/api/admin/reports/attendance?${qs}`} className="inline-flex h-9 items-center rounded-button border border-nav bg-bg px-4 text-sm font-bold text-nav">
+        <a href={`/api/admin/reports/attendance?${qs}`} className="inline-flex h-9 items-center rounded-button border border-border bg-bg px-3.5 text-sm font-semibold text-text hover:bg-surface">
           {t('download')}
         </a>
       </form>

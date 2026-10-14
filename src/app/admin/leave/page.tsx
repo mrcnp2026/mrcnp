@@ -83,13 +83,13 @@ export default async function AdminLeavePage({ searchParams }: { searchParams: P
           <p className="pt-1 text-sm text-faint">{t(view === 'accrual' ? 'pcAccrualIntro' : 'pcHistoryIntro')}</p>
         </div>
         {view !== 'accrual' && admin && (
-          <a href={`/api/admin/export/list?kind=leave&y=${sp.y && /^\d{4}$/.test(sp.y) ? sp.y : asOf.slice(0, 4)}${sp.live === '1' ? '&live=1' : ''}`} className="inline-flex h-8 items-center gap-1 rounded-button border border-nav bg-bg px-4 text-sm font-bold whitespace-nowrap text-nav">
+          <a href={`/api/admin/export/list?kind=leave&y=${sp.y && /^\d{4}$/.test(sp.y) ? sp.y : asOf.slice(0, 4)}${sp.live === '1' ? '&live=1' : ''}`} className="inline-flex h-8 items-center gap-1 rounded-button border border-border bg-bg px-3.5 text-sm font-semibold whitespace-nowrap text-text hover:bg-surface">
             <Download aria-hidden size={16} />
             {tc('download')}
           </a>
         )}
         {admin && (
-          <Link href="/admin/leave/types" className="inline-flex h-8 items-center rounded-button border border-nav bg-bg px-4 text-sm font-bold whitespace-nowrap text-nav">
+          <Link href="/admin/leave/types" className="inline-flex h-8 items-center rounded-button border border-border bg-bg px-3.5 text-sm font-semibold whitespace-nowrap text-text hover:bg-surface">
             {t('toTypes')}
           </Link>
         )}

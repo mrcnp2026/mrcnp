@@ -4036,7 +4036,10 @@
       "newCorrection": "Request a correction",
       "deemed": "Deemed work",
       "noPlan": "No shift",
-      "empty": "No records of the chosen kinds."
+      "empty": "No records of the chosen kinds.",
+      "weekTotal": "Week total ({from} – {to})",
+      "weekLeft": "{left} left until {h} h/week",
+      "weekOver": "Over {h} h/week"
     }
   },
   "corrections": {

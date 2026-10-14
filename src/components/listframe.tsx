@@ -96,3 +96,12 @@ export function ListTable({ head, children, empty, count }: { head: { label: str
     </div>
   );
 }
+
+/** 제목 옆 ⚙ — 이 화면의 기준이 있는 통합설정으로 (관리자에게만 보이게 부르는 쪽이 정한다) */
+export function SettingsLink({ href, label }: { href: string; label: string }) {
+  return (
+    <Link href={href} aria-label={label} title={label} className="flex size-8 items-center justify-center rounded-button text-faint hover:bg-surface hover:text-primary">
+      <Settings aria-hidden size={18} strokeWidth={1.75} />
+    </Link>
+  );
+}

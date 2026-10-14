@@ -101,7 +101,7 @@ export default async function PayRunPage({ params }: { params: Promise<{ id: str
 
       {run.kind === 'BONUS' && !final && <p className="rounded-card border border-border bg-surface p-3 text-sm text-muted">{t('bonusNote')}</p>}
       {run.generationId && (
-        <a href={`/api/admin/payroll/runs/${run.id}/export`} className="inline-flex h-8 items-center gap-1 self-start rounded-button border border-nav bg-bg px-4 text-sm font-bold text-nav">
+        <a href={`/api/admin/payroll/runs/${run.id}/export`} className="inline-flex h-8 items-center gap-1 self-start rounded-button border border-border bg-bg px-3.5 text-sm font-semibold text-text hover:bg-surface">
           {t('exportDo')}
         </a>
       )}

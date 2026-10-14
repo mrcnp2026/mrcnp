@@ -12,6 +12,7 @@ import { AddSheet } from '@/components/AddSheet';
 import { Fab } from '@/components/Fab';
 import { ListBar } from '@/components/ListBar';
 import { Pager, pageOf } from '@/components/Pager';
+import { SettingsLink } from '@/components/listframe';
 import { Card, Chip, PageShell } from '@/components/ui';
 import { addDays, isoWeekday, weekStartOf } from '@/lib/calendar';
 import { loadJobs } from '@/lib/job-data';
@@ -35,6 +36,7 @@ import { ScheduleMonth, type MonthCell } from './ScheduleMonth';
 const DATES_PER_PAGE = 7;
 
 export default async function AdminSchedulePage({ searchParams }: { searchParams: Promise<{ d?: string; q?: string; g?: string; from?: string; to?: string; p?: string; v?: string }> }) {
+  const tGear = await getTranslations('frame');
   const [t, tk, tc, f, sp] = await Promise.all([getTranslations('admin.schedule'), getTranslations('admin.shifts.kinds'), getTranslations('common'), getFormatter(), searchParams]);
   const admin = (await getMe())?.role === 'admin'; // 지점관리자는 보기만 (manager-rules.ts)
   const today = toKstDate(new Date());
@@ -155,13 +157,13 @@ export default async function AdminSchedulePage({ searchParams }: { searchParams
       <div className="hidden flex-col gap-4 lg:flex">
         <div className="flex items-center justify-between gap-3">
           <div className="min-w-0">
-            <h1 className="text-2xl font-bold">{t('title')}</h1>
+            <h1 className="flex items-center gap-2 text-2xl font-bold">{t('title')}{admin && <SettingsLink href="/admin/settings?tab=work" label={tGear('item.setWork')} />}</h1>
             <p className="pt-1 text-sm text-faint">{t('pcIntro')}</p>
           </div>
           <div className="flex items-center gap-2">
             {admin && (
               <>
-                <Link href="/admin/shifts" className="inline-flex min-h-8 items-center rounded-button border border-nav bg-bg px-4 text-sm font-bold text-nav">
+                <Link href="/admin/shifts" className="inline-flex min-h-8 items-center rounded-button border border-border bg-bg px-3.5 text-sm font-semibold text-text hover:bg-surface">
                   {t('toTemplates')}
                 </Link>
                 <SheetOpener id="schedule" label={t('add')} />

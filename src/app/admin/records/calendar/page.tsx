@@ -8,6 +8,7 @@ import { SHIFT_COLOR_CLASS } from '@/lib/shifts';
 import { ChevronLeft, ChevronRight, Download } from 'lucide-react';
 import { getFormatter, getTranslations } from 'next-intl/server';
 import Link from 'next/link';
+import { SettingsLink } from '@/components/listframe';
 import { PageShell } from '@/components/ui';
 import { resolveDayType } from '@/config/labor-rules';
 import { OFFICE } from '@/config/office';
@@ -21,6 +22,8 @@ import { kstDateTime, toKstDate } from '@/lib/time';
 const YM = /^\d{4}-(0[1-9]|1[0-2])$/;
 
 export default async function RecordCalendarPage({ searchParams }: { searchParams: Promise<{ ym?: string; q?: string; g?: string; live?: string }> }) {
+  const tGear = await getTranslations('frame');
+  const admin = (await getMe())?.role === 'admin'; // ⚙ 기준 바로가기는 관리자에게만 (지점관리자는 통합설정에 못 들어간다)
   const [t, tc, f, sp] = await Promise.all([getTranslations('admin.recordCalendar'), getTranslations('common'), getFormatter(), searchParams]);
   const practice = OFFICE.practiceMode && sp.live !== '1';
   const today = toKstDate(new Date());
@@ -77,18 +80,18 @@ export default async function RecordCalendarPage({ searchParams }: { searchParam
     <PageShell wide>
       <div className="flex items-center justify-between gap-3">
         <div className="min-w-0">
-          <h1 className="text-2xl font-bold">{t('title')}</h1>
+          <h1 className="flex items-center gap-2 text-2xl font-bold">{t('title')}{admin && <SettingsLink href="/admin/settings?tab=punch" label={tGear('item.setPunch')} />}</h1>
           <p className="pt-1 text-sm text-faint">{t('pcIntro')}</p>
         </div>
 {(await getMe())?.role === 'admin' ? (
-        <a href={`/api/admin/export/report?m=${ym}${sp.live === '1' ? '&live=1' : ''}`} title={tc('downloadReport', { ym })} className="ml-auto inline-flex h-8 items-center gap-1 rounded-button border border-nav bg-bg px-4 text-sm font-bold whitespace-nowrap text-nav">
+        <a href={`/api/admin/export/report?m=${ym}${sp.live === '1' ? '&live=1' : ''}`} title={tc('downloadReport', { ym })} className="ml-auto inline-flex h-8 items-center gap-1 rounded-button border border-border bg-bg px-3.5 text-sm font-semibold whitespace-nowrap text-text hover:bg-surface">
           <Download aria-hidden size={16} />
           {tc('download')}
         </a>
         ) : (
           <span className="ml-auto" />
         )}
-        <Link href={`/admin/records/list${sp.live === '1' ? '?live=1' : ''}`} className="inline-flex min-h-8 items-center rounded-button border border-nav bg-bg px-4 text-sm font-bold text-nav">
+        <Link href={`/admin/records/list${sp.live === '1' ? '?live=1' : ''}`} className="inline-flex min-h-8 items-center rounded-button border border-border bg-bg px-3.5 text-sm font-semibold text-text hover:bg-surface">
           {t('toList')}
         </Link>
       </div>

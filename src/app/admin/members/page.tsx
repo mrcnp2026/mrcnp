@@ -107,7 +107,7 @@ export default async function MembersPage({ searchParams }: { searchParams: Prom
       <DetailBar back="/punch" backLabel={tc('back')} title={t('title')} desc={t('pcIntro')}
         extra={
           <>
-          <a href="/api/admin/export/list?kind=members" className="hidden h-8 items-center gap-1 rounded-button border border-nav bg-bg px-4 text-sm font-bold whitespace-nowrap text-nav lg:inline-flex">
+          <a href="/api/admin/export/list?kind=members" className="hidden h-8 items-center gap-1 rounded-button border border-border bg-bg px-3.5 text-sm font-semibold whitespace-nowrap text-text hover:bg-surface lg:inline-flex">
             <Download aria-hidden size={16} />
             {tc('download')}
           </a>
