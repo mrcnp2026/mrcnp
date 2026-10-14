@@ -11,6 +11,7 @@ import { visibleNoticesNow } from '@/lib/notices';
 import { pendingCounts } from '@/lib/period-data';
 import { unreadCount } from '@/lib/work-messages';
 import { AlertBell, AlertsProvider } from './Alerts';
+import { PhoneSearchLink } from './DeskTop';
 import { BottomTabs } from './BottomTabs';
 import { ConsentGate } from './ConsentGate';
 import { DeskNav } from './DeskNav';
@@ -65,7 +66,10 @@ export async function AppFrame({ me, children, overlay }: { me: Me; children: Re
               className="lg:hidden"
               left={<MenuDrawer name={me.name} role={role} languages={languages} />}
               right={
-                <AlertBell approver={isAdmin} size="phone" />
+                <>
+                  <PhoneSearchLink />
+                  <AlertBell approver={isAdmin} size="phone" />
+                </>
               }
             />
           </FrameHeader>

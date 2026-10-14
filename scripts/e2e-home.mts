@@ -176,10 +176,19 @@ try {
   check((await p.locator('nav.sticky').nth(1).locator('a').allTextContents()).map((x) => x.trim()).join() === '달력형,목록형,달력형,목록형,월 집계,누락 기록,이상자 관리,근태 마감', 'PC 관리자 화면: 근태 메뉴 판에 근무일정 · 출퇴근기록 · 점검/마감 묶음');
   await p.waitForTimeout(400);
   await shot('44-PC-메뉴-패널');
-  // 메뉴 검색: 이름으로 찾아 Enter로 이동
-  await p.getByRole('combobox', { name: '메뉴 검색' }).fill('인건비');
+  // 위쪽 검색: 아래 화살표로 메뉴를 골라 Enter → 그 화면, 그냥 Enter → 통합 검색 결과 (2026-10-14)
+  const box = p.getByRole('combobox', { name: '검색' });
+  await box.fill('인건비');
+  await p.keyboard.press('ArrowDown');
   await p.keyboard.press('Enter');
-  check(await p.waitForURL(/\/admin\/payroll\/labor-cost/, { timeout: 15000 }).then(() => true, () => false), 'PC 메뉴 검색: 「인건비」 → 인건비 현황으로 이동');
+  check(await p.waitForURL(/\/admin\/payroll\/labor-cost/, { timeout: 15000 }).then(() => true, () => false), 'PC 위쪽 검색: 「인건비」 → ↓ → Enter → 인건비 현황으로 이동');
+  await box.fill('인건비');
+  await p.keyboard.press('Enter');
+  await p.waitForURL(/\/admin\/search\?q=/, { timeout: 15000 });
+  await p.getByRole('heading', { name: '통합 검색' }).waitFor({ timeout: 15000 });
+  const found = await p.locator('main').innerText();
+  check(found.includes('「인건비」 정확히 일치') && found.includes('인건비 현황') && (await p.getByRole('link', { name: /^전체\(\d+\)$/ }).count()) === 1, 'PC 위쪽 검색: 그냥 Enter → 통합 검색 결과(전체 탭 · 정확히 일치 건수 · 메뉴 결과)');
+  await shot('45-통합검색');
   // 내 화면(PC): 같은 틀 — 앱 띠 8개, 공간 전환 단추에서 「내 화면」이 켜짐 + 월 달력
   await p.getByRole('group', { name: '화면 전환' }).getByRole('link', { name: '직원 모드' }).click();
   await p.waitForURL(/\/punch$/);

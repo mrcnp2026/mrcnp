@@ -63,6 +63,7 @@ describe('메뉴 구성표', () => {
       .concat(pages(path.join(ROOT, 'src', 'app', 'punch')))
       .map((p) => `/${p.replace(/\[[^\]]+\]/g, 'x')}`)
       .filter((p) => p !== '/admin/console' && p !== '/admin/console-lock' && !p.startsWith('/admin/manage/')) // 잠금 화면은 다른 주소를 대신 그린다
+      .filter((p) => p !== '/admin/search' && p !== '/punch/search') // 통합 검색은 위쪽 검색창에서 연다(메뉴 항목 아님)
       .filter((p) => !locate(p, q(), 'admin').leaf);
     expect(lost).toEqual([]);
   });

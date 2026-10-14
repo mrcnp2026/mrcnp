@@ -4995,7 +4995,7 @@
       "setEsign": "E-contracts"
     },
     "search": {
-      "placeholder": "Search menus",
+      "placeholder": "Search",
       "recent": "Recently used",
       "none": "No matching menu."
     },
@@ -5097,5 +5097,84 @@
       "run": "Day-labor ledger",
       "runNote": "Everyone with work in the period"
     }
+  },
+  "search": {
+    "title": "Search",
+    "intro": "Find menus, staff, requests, leave, notices, work messages and pay at once. Only what you can see is shown. Korean initials (ㅎㄱㄷ) also work.",
+    "placeholder": "Search",
+    "scope": "Search in",
+    "submit": "Search",
+    "all": "All",
+    "kind": {
+      "menu": "Menus",
+      "people": "Staff",
+      "requests": "Requests",
+      "leave": "Leave",
+      "notices": "Notices",
+      "messages": "Work messages",
+      "pay": "Pay"
+    },
+    "exact": "{n} exact matches for “{q}”",
+    "more": "Show related results",
+    "less": "Exact matches only",
+    "related": "{n} related",
+    "none": "Nothing found.",
+    "noneExact": "No exact matches.",
+    "empty": "Type something to search.",
+    "seeAll": "See all {n} in {kind}",
+    "noGroup": "No team",
+    "system": "Automatic",
+    "days": "{n} d",
+    "req": {
+      "correction": "Record correction",
+      "overtime": "Overtime",
+      "leave": "Leave",
+      "work": "Field · trip · remote",
+      "punch": "Clock-in/out request",
+      "shift": "Schedule request",
+      "leaveDelete": "Leave deletion"
+    },
+    "status": {
+      "pending": "Pending",
+      "approved": "Approved",
+      "rejected": "Rejected",
+      "cancelled": "Cancelled"
+    },
+    "notice": {
+      "live": "Live",
+      "scheduled": "Scheduled",
+      "ended": "Ended",
+      "draft": "Draft",
+      "archived": "Archived",
+      "confirmed": "Confirmed",
+      "unconfirmed": "Not confirmed"
+    },
+    "msg": {
+      "sent": "Sent",
+      "received": "Received"
+    },
+    "pay": {
+      "run": "{month} {kind} ledger",
+      "ledger": "Payroll ledger",
+      "slip": "{month} payslip",
+      "mine": "My pay",
+      "kind": {
+        "REGULAR": "pay",
+        "BONUS": "bonus",
+        "DAILY": "day-labor"
+      },
+      "status": {
+        "DRAFT": "Draft",
+        "CALCULATED": "Calculated",
+        "REVIEWED": "Reviewed",
+        "FINALIZED": "Finalized"
+      }
+    },
+    "header": {
+      "scopeLabel": "Search in",
+      "allResults": "See all results for “{q}”",
+      "menuHits": "Go to"
+    },
+    "relatedChip": "Related"
   }
 }

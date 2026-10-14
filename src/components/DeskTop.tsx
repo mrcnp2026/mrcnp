@@ -8,6 +8,7 @@ import { usePathname, useRouter, useSearchParams } from 'next/navigation';
 import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import { appLeaves, appsFor, CONSOLE_HOME, locate, type NavRole, type Space } from '@/config/nav';
 import { MANAGER_HOME } from '@/lib/manager-rules';
+import { SEARCH_KINDS, type SearchKind } from '@/lib/search';
 import { RECENT_KEY } from './DeskNav';
 import { HelpTip } from './Help';
 
@@ -59,9 +60,11 @@ export function MenuSearch({ role }: { role: NavRole }) {
   const router = useRouter();
   const path = usePathname();
   const box = useRef<HTMLDivElement>(null);
+  const ts = useTranslations('search');
   const [q, setQ] = useState('');
+  const [scope, setScope] = useState<'all' | SearchKind>('all');
   const [open, setOpen] = useState(false);
-  const [pick, setPick] = useState(0);
+  const [pick, setPick] = useState(-1); // -1 = 「전체 검색 결과 보기」 (Enter를 누르면 통합 검색 화면으로)
   const [recent, setRecent] = useState<string[]>([]);
   const all = useMemo(
     () =>
@@ -86,14 +89,28 @@ export function MenuSearch({ role }: { role: NavRole }) {
     return () => window.removeEventListener('mousedown', away);
   }, [open]);
   const word = q.trim().toLowerCase();
-  const list = word ? all.filter((x) => `${x.name} ${x.where}`.toLowerCase().includes(word)).slice(0, 8) : recent.flatMap((h) => all.find((x) => x.href === h) ?? []);
+  const list = word ? (scope === 'all' || scope === 'menu' ? all.filter((x) => `${x.name} ${x.where}`.toLowerCase().includes(word)).slice(0, 6) : []) : recent.flatMap((h) => all.find((x) => x.href === h) ?? []);
+  // 통합 검색 (2026-10-14 의뢰인: 다우오피스 위쪽 검색) — 관리자 모드에서는 /admin/search, 그 밖에는 /punch/search
+  const searchAll = () => {
+    const p = new URLSearchParams({ q: q.trim() });
+    if (scope !== 'all') p.set('s', scope);
+    go(`${path.startsWith('/admin') ? '/admin' : '/punch'}/search?${p.toString()}`);
+  };
   const go = (href: string) => {
     setOpen(false);
     router.push(href);
   };
   return (
-    <div ref={box} className="relative w-full max-w-md">
-      <label className="flex h-9 items-center gap-2 rounded-chip border border-border bg-bg px-3.5 text-faint focus-within:border-primary">
+    <div ref={box} className="relative w-full max-w-lg">
+      <label className="flex h-9 items-center gap-2 rounded-chip border border-border bg-bg pr-3.5 pl-1 text-faint focus-within:border-primary">
+        <select value={scope} onChange={(e) => setScope(e.target.value as 'all' | SearchKind)} aria-label={ts('header.scopeLabel')} className="h-7 shrink-0 rounded-chip bg-surface px-2 text-xs font-semibold text-text outline-none">
+          <option value="all">{ts('all')}</option>
+          {SEARCH_KINDS.map((k) => (
+            <option key={k} value={k}>
+              {ts(`kind.${k}`)}
+            </option>
+          ))}
+        </select>
         <Search aria-hidden size={16} strokeWidth={1.75} />
         <input
           type="search"
@@ -106,14 +123,15 @@ export function MenuSearch({ role }: { role: NavRole }) {
           onFocus={() => setOpen(true)}
           onChange={(e) => {
             setQ(e.target.value);
-            setPick(0);
+            setPick(-1);
             setOpen(true);
           }}
           onKeyDown={(e) => {
             if (e.key === 'Escape') setOpen(false);
             else if (e.key === 'ArrowDown') setPick((i) => Math.min(i + 1, list.length - 1));
-            else if (e.key === 'ArrowUp') setPick((i) => Math.max(i - 1, 0));
-            else if (e.key === 'Enter' && list[pick]) go(list[pick].href);
+            else if (e.key === 'ArrowUp') setPick((i) => Math.max(i - 1, word ? -1 : 0));
+            else if (e.key === 'Enter' && pick >= 0 && list[pick]) go(list[pick].href);
+            else if (e.key === 'Enter' && word) searchAll();
             else return;
             e.preventDefault();
           }}
@@ -123,7 +141,14 @@ export function MenuSearch({ role }: { role: NavRole }) {
       {open && (word || list.length > 0) && (
         <div id="menu-search-list" role="listbox" className="absolute inset-x-0 top-11 z-30 overflow-hidden rounded-card border border-border bg-bg py-1.5 shadow-pop">
           {!word && <p className="px-3.5 pt-1 pb-1.5 text-xs font-bold text-faint">{t('search.recent')}</p>}
-          {list.length === 0 && <p className="px-3.5 py-3 text-sm text-muted">{t('search.none')}</p>}
+          {word && (
+            <button type="button" role="option" aria-selected={pick === -1} onMouseEnter={() => setPick(-1)} onClick={searchAll} className={`flex min-h-10 w-full items-center gap-2 px-3.5 text-left text-sm font-bold ${pick === -1 ? 'bg-primary-tint text-primary' : 'text-text'}`}>
+              <Search aria-hidden size={14} strokeWidth={2} />
+              <span className="truncate">{ts('header.allResults', { q: q.trim() })}</span>
+            </button>
+          )}
+          {word && list.length > 0 && <p className="px-3.5 pt-2 pb-1 text-xs font-bold text-faint">{ts('header.menuHits')}</p>}
+          {!word && list.length === 0 && <p className="px-3.5 py-3 text-sm text-muted">{t('search.none')}</p>}
           {list.map((x, i) => (
             <button key={x.href} type="button" role="option" aria-selected={i === pick} onMouseEnter={() => setPick(i)} onClick={() => go(x.href)} className={`flex min-h-10 w-full items-center gap-3 px-3.5 text-left text-sm ${i === pick ? 'bg-primary-tint text-primary' : 'text-text'}`}>
               <span className="font-bold">{x.name}</span>
@@ -133,6 +158,17 @@ export function MenuSearch({ role }: { role: NavRole }) {
         </div>
       )}
     </div>
+  );
+}
+
+/** 폰 위 띠의 돋보기 — 지금 모드의 통합 검색 화면으로 */
+export function PhoneSearchLink() {
+  const t = useTranslations('search');
+  const path = usePathname();
+  return (
+    <Link href={`${path.startsWith('/admin') ? '/admin' : '/punch'}/search`} aria-label={t('title')} className="flex size-11 items-center justify-center text-text">
+      <Search aria-hidden size={22} strokeWidth={1.75} />
+    </Link>
   );
 }
 

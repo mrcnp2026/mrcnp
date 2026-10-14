@@ -4995,7 +4995,7 @@
       "setEsign": "전자계약"
     },
     "search": {
-      "placeholder": "메뉴 검색",
+      "placeholder": "검색",
       "recent": "최근 사용",
       "none": "찾는 메뉴가 없습니다."
     },
@@ -5097,5 +5097,84 @@
       "run": "일용 대장",
       "runNote": "기간의 근무가 있는 사람 전원 계산"
     }
+  },
+  "search": {
+    "title": "통합 검색",
+    "intro": "메뉴 · 직원 · 요청 · 휴가 · 공지 · 업무 메시지 · 급여를 한 번에 찾습니다. 내가 볼 수 있는 것만 나옵니다. 초성(ㅎㄱㄷ)으로도 찾을 수 있습니다.",
+    "placeholder": "찾을 말",
+    "scope": "찾을 곳",
+    "submit": "검색",
+    "all": "전체",
+    "kind": {
+      "menu": "메뉴",
+      "people": "직원",
+      "requests": "요청",
+      "leave": "휴가",
+      "notices": "공지",
+      "messages": "업무 메시지",
+      "pay": "급여"
+    },
+    "exact": "「{q}」 정확히 일치 {n}건",
+    "more": "관련결과 더보기",
+    "less": "정확히 일치만 보기",
+    "related": "관련결과 {n}건",
+    "none": "찾은 것이 없습니다.",
+    "noneExact": "정확히 일치하는 것이 없습니다.",
+    "empty": "찾을 말을 넣어 주세요.",
+    "seeAll": "{kind} {n}건 모두 보기",
+    "noGroup": "소속 없음",
+    "system": "자동 알림",
+    "days": "{n}일",
+    "req": {
+      "correction": "출퇴근기록 정정",
+      "overtime": "연장근로",
+      "leave": "휴가",
+      "work": "외근 · 출장 · 재택",
+      "punch": "출근/퇴근 요청",
+      "shift": "근무일정 요청",
+      "leaveDelete": "휴가 삭제"
+    },
+    "status": {
+      "pending": "대기",
+      "approved": "승인",
+      "rejected": "거절",
+      "cancelled": "취소"
+    },
+    "notice": {
+      "live": "게시 중",
+      "scheduled": "게시 예정",
+      "ended": "기간 끝남",
+      "draft": "임시 저장",
+      "archived": "보관",
+      "confirmed": "확인함",
+      "unconfirmed": "확인 안 함"
+    },
+    "msg": {
+      "sent": "보낸 메시지",
+      "received": "받은 메시지"
+    },
+    "pay": {
+      "run": "{month} {kind} 대장",
+      "ledger": "급여대장",
+      "slip": "{month} 급여명세서",
+      "mine": "내 급여",
+      "kind": {
+        "REGULAR": "급여",
+        "BONUS": "상여",
+        "DAILY": "일용"
+      },
+      "status": {
+        "DRAFT": "초안",
+        "CALCULATED": "계산됨",
+        "REVIEWED": "검토됨",
+        "FINALIZED": "확정"
+      }
+    },
+    "header": {
+      "scopeLabel": "찾을 곳",
+      "allResults": "「{q}」 전체 검색 결과 보기",
+      "menuHits": "바로 가기"
+    },
+    "relatedChip": "관련"
   }
 }
