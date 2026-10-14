@@ -5,6 +5,7 @@ import { AddSheet } from '@/components/AddSheet';
 import { OpenSheetButton } from '@/components/Fab';
 import { Field, FieldList } from '@/components/list';
 import { DetailBar } from '@/components/detail';
+import { TwoPane } from '@/components/settings';
 import { Card, Chip, PageShell } from '@/components/ui';
 import { groupPath } from '@/lib/org';
 import { loadOrgGroups } from '@/lib/org-data';
@@ -31,8 +32,10 @@ export default async function ShiftPage({ params }: { params: Promise<{ id: stri
     .map((p) => ({ id: p.id as string, name: p.name as string, group: groupPath(groups, p.group_id), other: p.shift_template_id && p.shift_template_id !== id ? (nameOf.get(p.shift_template_id) ?? null) : null, on: p.shift_template_id === id }));
   const span = spanMinutes(x);
 
+  const tf = await getTranslations('frame');
   return (
     <PageShell wide>
+      <TwoPane title={tf('item.shifts')} current={`/admin/shifts/${id}`} items={all.map((s) => ({ href: `/admin/shifts/${s.id}`, label: s.name, off: !s.active }))}>
       <DetailBar plain back={x.active ? '/admin/shifts' : '/admin/shifts?tab=off'} backLabel={tc('back')} title={t('title')} extra={<OpenSheetButton sheet="shift-edit">{t('edit')}</OpenSheetButton>} />
       <div className="flex flex-wrap items-center gap-2 px-1">
         <span aria-hidden className={`size-7 shrink-0 rounded-button ${SHIFT_COLOR_CLASS[x.color]}`} />
@@ -69,6 +72,7 @@ export default async function ShiftPage({ params }: { params: Promise<{ id: stri
           </Card>
         </AddSheet>
       </div>
+      </TwoPane>
     </PageShell>
   );
 }

@@ -2,6 +2,7 @@
 import { getTranslations } from 'next-intl/server';
 import { notFound } from 'next/navigation';
 import { DetailBar } from '@/components/detail';
+import { TwoPane } from '@/components/settings';
 import { Card, Chip, PageShell } from '@/components/ui';
 import { leaveTypeName } from '@/lib/leave';
 import { loadAllLeaveTypes } from '@/lib/leave-data';
@@ -20,8 +21,10 @@ export default async function LeaveTypePage({ params }: { params: Promise<{ code
   const tc = await getTranslations('common');
   const rule = (await loadTypeRules()).get(x.code); // 종류별 신청 규칙 (없으면 제한 없음)
 
+  const tf = await getTranslations('frame');
   return (
-    <PageShell>
+    <PageShell wide>
+      <TwoPane title={tf('item.leaveTypes')} current={`/admin/leave/types/${code}`} items={all.map((v) => ({ href: `/admin/leave/types/${v.code}`, label: leaveTypeName(all, v.code, tl), off: !v.active }))}>
       <DetailBar plain back={x.active ? '/admin/leave/types' : '/admin/leave/types?tab=off'} backLabel={tc('back')} title={t('title')} />
       <div className="flex flex-wrap items-center gap-2 px-1">
         <h1 className="text-2xl font-extrabold tracking-tight">{name}</h1>
@@ -39,6 +42,7 @@ export default async function LeaveTypePage({ params }: { params: Promise<{ code
         <TypeRuleForm key={rule?.version ?? 0} code={x.code} version={rule?.version ?? 0} rule={rule?.rule ?? NO_TYPE_RULE} />
       </Card>
       <LeaveTypeToggle code={x.code} active={!!x.active} />
+      </TwoPane>
     </PageShell>
   );
 }

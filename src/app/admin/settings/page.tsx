@@ -1,10 +1,10 @@
 // 설정 (더보기 › 설정) — 근무시간 · 휴일 · 사무실 인터넷 주소를 화면에서 바꾼다 (2026-10-05: 지금까지는 개발자가 DB·열쇠 파일을 고쳐야 했다).
 // 근무시간은 이력이다: 고치지 않고 "언제부터 적용"되는 새 규칙을 넣는다 (② 4-1). 휴일·주소는 지우지 않고 빼거나 끈다 (변경 기록에 남는다).
-import { Check } from 'lucide-react';
 import { getFormatter, getTranslations } from 'next-intl/server';
 import { headers } from 'next/headers';
 import Link from 'next/link';
 import type { ReactNode } from 'react';
+import { SettingBox, SettingGroup, SettingRow, UseMark } from '@/components/settings';
 import { Card, CardTitle, Chip, PageShell } from '@/components/ui';
 import { OFFICE } from '@/config/office';
 import { addDays } from '@/lib/calendar';
@@ -12,6 +12,7 @@ import { createAdminClient } from '@/lib/supabase/admin';
 import { hhmm, toKstDate } from '@/lib/time';
 import { isOfficeIp, parseCidr, traceClientIp } from '@/lib/verify-location';
 import { loadOfficeLocations } from '@/lib/geo-data';
+import { loadOrgGroups } from '@/lib/org-data';
 import { PaySettings } from './pay/PaySettings';
 import { ConfirmButton, HolidayForm, NetworkForm, RuleForm } from './SettingsForms';
 
@@ -35,28 +36,12 @@ const INFO: Partial<Record<Tab, { k: string; on: boolean; href?: string }[]>> = 
   security: [{ k: 'login', on: true }, { k: 'audit', on: true }, { k: 'consent', on: true }, { k: 'ip', on: false }],
 };
 
-/** PC 설정 줄: 왼쪽 굵은 항목 이름 — 오른쪽 값·설명 (시프티 회사 설정의 줄 모양) */
-function SetRow({ label, children, last = false }: { label: string; children: ReactNode; last?: boolean }) {
+// PC 설정 줄 — 통합설정 부품(components/settings.tsx). side: 짧은 값은 오른쪽에, 아니면(표 · 양식 · 설명) 이름 아래에 펼친다
+function SetRow({ label, children, side = false }: { label: string; children: ReactNode; side?: boolean; last?: boolean }) {
   return (
-    <div className={`grid grid-cols-[15rem_minmax(0,1fr)] gap-6 px-6 py-4 ${last ? '' : 'border-b border-border'}`}>
-      <p className="font-bold">{label}</p>
-      <div className="flex min-w-0 flex-col gap-2 text-sm">{children}</div>
-    </div>
-  );
-}
-
-/** PC 설정 묶음 제목: 회색 띠 */
-function SetBand({ children }: { children: ReactNode }) {
-  return <h2 className="border-b border-border bg-surface px-6 py-2 text-sm font-bold text-muted">{children}</h2>;
-}
-
-/** 켜짐/꺼짐 표시 — 체크 네모 + 글자 (바꿀 수 없는 설정도 지금 상태를 같은 모양으로 보인다) */
-function Flag({ on, label }: { on: boolean; label: string }) {
-  return (
-    <p className="flex items-center gap-2 font-bold">
-      <span aria-hidden className={`flex size-4 items-center justify-center rounded-sm border ${on ? 'border-primary bg-primary text-on-primary' : 'border-border bg-surface'}`}>{on && <Check size={12} strokeWidth={3} />}</span>
-      {label}
-    </p>
+    <SettingRow label={label} wide={!side}>
+      {children}
+    </SettingRow>
   );
 }
 
@@ -76,6 +61,28 @@ export default async function SettingsPage({ searchParams }: { searchParams: Pro
     );
   }
   const info = INFO[tab];
+  // 권한 한 화면 (2026-10-14 문서 07 ④-4): 관리자 · 지점관리자 · 급여 담당을 표로. 바꾸기는 직원 화면에서(다른 관리자 확인 규칙을 그대로 쓴다)
+  const access =
+    tab === 'access'
+      ? await (async () => {
+          const db0 = createAdminClient();
+          const [{ data: ppl }, { data: scopes }, groups] = await Promise.all([
+            db0.from('profiles').select('id, name, employee_no, role, can_view_payroll').eq('active', true).order('name'),
+            db0.from('staff_manager_scopes').select('manager_id, group_id').eq('active', true),
+            loadOrgGroups(),
+          ]);
+          const real = (ppl ?? []).filter((x) => !(x.employee_no as string | null)?.startsWith('e2e-'));
+          const gname = new Map(groups.map((g) => [g.id, g.name]));
+          return {
+            staff: real.length,
+            rows: real
+              .filter((x) => x.role !== 'employee' || x.can_view_payroll)
+              .sort((a, b) => (a.role === b.role ? 0 : a.role === 'admin' ? -1 : 1))
+              .map((x) => ({ id: x.id as string, name: x.name as string, no: x.employee_no as string | null, role: x.role as string, pay: !!x.can_view_payroll, scope: (scopes ?? []).filter((c) => c.manager_id === x.id).map((c) => gname.get(c.group_id as string) ?? '').filter(Boolean) })),
+          };
+        })()
+      : null;
+  const ta = await getTranslations('admin.settings.access');
   const ti = await getTranslations('admin.settings.info');
   const t = await getTranslations('admin.settings');
   const ts = await getTranslations('side');
@@ -170,18 +177,25 @@ export default async function SettingsPage({ searchParams }: { searchParams: Pro
           </div>
           {(tab === 'work' || tab === 'punch' || tab === 'break') && ruleForm}
         </div>
-        <div className="border border-border bg-bg">
+        <SettingBox>
           {info &&
-            info.map((r, i) => (
-              <SetRow key={r.k} label={ti(`${tab}.${r.k}.label`)} last={i === info.length - 1}>
-                <Flag on={r.on} label={ti(`${tab}.${r.k}.value`)} />
-                <p className="text-muted">{ti(`${tab}.${r.k}.note`)}</p>
-                {r.href && (
-                  <Link href={r.href} className="inline-flex min-h-8 items-center self-start font-bold text-primary">
-                    {tp('go')} ›
-                  </Link>
-                )}
-              </SetRow>
+            info.map((r) => (
+              <SettingRow
+                key={r.k}
+                label={ti(`${tab}.${r.k}.label`)}
+                desc={
+                  <>
+                    {ti(`${tab}.${r.k}.note`)}
+                    {r.href && (
+                      <Link href={r.href} className="ml-2 font-bold whitespace-nowrap text-primary">
+                        {tp('go')} ›
+                      </Link>
+                    )}
+                  </>
+                }
+              >
+                <UseMark on={r.on} label={ti(`${tab}.${r.k}.value`)} />
+              </SettingRow>
             ))}
           {tab === 'general' && (
             <>
@@ -189,9 +203,9 @@ export default async function SettingsPage({ searchParams }: { searchParams: Pro
                 <p className="font-bold">{tp('weekStartValue')}</p>
                 <p className="text-muted">{tp('weekStartNote')}</p>
               </SetRow>
-              <SetRow label={tp('companyHolidays')} last>
+              <SetRow label={tp('companyHolidays')}>
                 <p className="text-muted">{t('holidayNote')}</p>
-                <table className="num w-full max-w-3xl border border-border text-sm">
+                <table className="num w-full max-w-3xl text-sm">
                   <thead>
                     <tr className="bg-surface">
                       <th scope="col" className="px-3 py-2 text-left">{tp('colDate')}</th>
@@ -231,26 +245,26 @@ export default async function SettingsPage({ searchParams }: { searchParams: Pro
                     <p className="font-bold">{t('since', { date: day(current.effective_from) })}</p>
                     <p className="text-muted">{t('ruleAddHint')}</p>
                   </SetRow>
-                  <SetRow label={tp('workHours')}>
+                  <SetRow side label={tp('workHours')}>
                     <p className="num font-bold">{hhmm(current.start_time)} ~ {hhmm(current.end_time)}</p>
                   </SetRow>
-                  <SetRow label={t('workdays')}>
+                  <SetRow side label={t('workdays')}>
                     <p className="font-bold">{(current.workdays as number[]).map((d) => weekdays[d - 1]).join(' · ')}</p>
                   </SetRow>
-                  <SetRow label={t('restDay')}>
+                  <SetRow side label={t('restDay')}>
                     <p className="font-bold">{weekdays[current.weekly_rest_day - 1]}</p>
                   </SetRow>
-                  <SetRow label={t('graceShort')}>
+                  <SetRow side label={t('graceShort')}>
                     <p className="num font-bold">{t('minutes', { n: current.late_grace_min })}</p>
                   </SetRow>
                 </>
               )}
               <SetRow label={tp('deemed')}>
-                <Flag on label={tp('use')} />
+                <UseMark on label={tp('use')} />
                 <p className="text-muted">{tp('deemedNote')}</p>
               </SetRow>
-              <SetBand>{tp('upcomingBand')}</SetBand>
-              {upcoming.length === 0 && <p className="px-6 py-4 text-sm text-faint">{tp('noRuleChange')}</p>}
+              <SettingGroup>{tp('upcomingBand')}</SettingGroup>
+              {upcoming.length === 0 && <p className="pb-5 text-sm text-faint">{tp('noRuleChange')}</p>}
               {upcoming.map((r) => (
                 <SetRow key={r.id} label={t('upcoming', { date: day(r.effective_from) })}>
                   {ruleLine(r)}
@@ -263,28 +277,28 @@ export default async function SettingsPage({ searchParams }: { searchParams: Pro
           )}
           {tab === 'punch' && (
             <>
-              <SetBand>{tp('bandPunch')}</SetBand>
+              <SettingGroup>{tp('bandPunch')}</SettingGroup>
               <SetRow label={tp('pcPunch')}>
-                <Flag on={false} label={tp('notUse')} />
+                <UseMark on={false} label={tp('notUse')} />
                 <p className="text-muted">{tp('pcPunchNote')}</p>
               </SetRow>
-              <SetBand>{tp('bandRound')}</SetBand>
-              <SetRow label={tp('roundIn')}>
+              <SettingGroup>{tp('bandRound')}</SettingGroup>
+              <SetRow side label={tp('roundIn')}>
                 <p className="num font-bold">{current?.round_step_min ? tp('roundInValue', { n: current.round_step_min }) : tp('roundNone')}</p>
               </SetRow>
               <SetRow label={tp('roundOut')}>
                 <p className="num font-bold">{current?.round_step_min ? tp('roundOutValue', { n: current.round_step_min }) : tp('roundNone')}</p>
                 <p className="text-muted">{t('roundHint')}</p>
               </SetRow>
-              <SetBand>{tp('bandPlace')}</SetBand>
+              <SettingGroup>{tp('bandPlace')}</SettingGroup>
               <SetRow label={t('networkTitle')}>
                 <p className={`font-bold ${here ? 'text-ok' : 'text-warn'}`}>{trace.ip ? t(here ? 'hereYes' : 'hereNo', { ip: trace.ip }) : t('hereUnknown')}</p>
                 <p className="text-muted">{t('networkNote')}</p>
                 <div className="max-w-3xl">{networkList}</div>
                 <NetworkForm currentIp={trace.ip} currentKnown={here} />
               </SetRow>
-              <SetRow label={t('locationTitle')} last>
-                <Flag on={locations.some((l) => l.active)} label={t('placesCount', { n: locations.filter((l) => l.active).length })} />
+              <SetRow label={t('locationTitle')}>
+                <UseMark on={locations.some((l) => l.active)} label={t('placesCount', { n: locations.filter((l) => l.active).length })} />
                 <p className="text-muted">{t(locations.some((l) => l.active) ? 'gpsOn' : 'gpsOff')}</p>
                 <Link href="/admin/places" className="inline-flex min-h-8 items-center self-start font-bold text-primary">
                   {t('placesLink')} ›
@@ -295,11 +309,11 @@ export default async function SettingsPage({ searchParams }: { searchParams: Pro
           {tab === 'break' && (
             <>
               <SetRow label={tp('autoBreak')}>
-                <Flag on={breaks.length > 0} label={breaks.length > 0 ? tp('byClock') : tp('notUse')} />
+                <UseMark on={breaks.length > 0} label={breaks.length > 0 ? tp('byClock') : tp('notUse')} />
                 {breaks.length === 0 ? (
                   <p className="text-faint">{tp('breakNone')}</p>
                 ) : (
-                  <table className="num w-full max-w-xl border border-border text-sm">
+                  <table className="num w-full max-w-xl text-sm">
                     <thead>
                       <tr className="bg-surface">
                         <th scope="col" className="px-3 py-2 text-left">{tp('colBreakStart')}</th>
@@ -318,13 +332,52 @@ export default async function SettingsPage({ searchParams }: { searchParams: Pro
                 )}
                 <p className="text-muted">{tp('breakNote')}</p>
               </SetRow>
-              <SetRow label={tp('manualBreak')} last>
-                <Flag on={false} label={tp('notUse')} />
+              <SetRow label={tp('manualBreak')}>
+                <UseMark on={false} label={tp('notUse')} />
                 <p className="text-muted">{tp('manualBreakNote')}</p>
               </SetRow>
             </>
           )}
-        </div>
+        </SettingBox>
+        {access && (
+          <SettingBox className="pb-4">
+            <SettingGroup>{ta('title')}</SettingGroup>
+            <p className="pb-3 text-sm text-muted">{ta('desc', { n: access.staff })}</p>
+            <table className="w-full text-sm">
+              <thead>
+                <tr>
+                  {[ta('colName'), ta('colRole'), ta('colPayroll'), ta('colScope'), ''].map((h, i) => (
+                    <th key={i} scope="col" className="px-3 py-2 text-left">{h}</th>
+                  ))}
+                </tr>
+              </thead>
+              <tbody>
+                {access.rows.length === 0 && (
+                  <tr>
+                    <td colSpan={5} className="px-3 py-6 text-center text-faint">{ta('none')}</td>
+                  </tr>
+                )}
+                {access.rows.map((r) => (
+                  <tr key={r.id}>
+                    <td className="px-3 py-3 font-semibold">
+                      {r.name}
+                      {r.no && <span className="num pl-2 text-xs font-normal text-faint">{r.no}</span>}
+                    </td>
+                    <td className="px-3 py-3">
+                      {r.role === 'employee' ? <span className="text-faint">{ts('roleEmployee')}</span> : <Chip tone={r.role === 'admin' ? 'info' : 'neutral'}>{ts(r.role === 'admin' ? 'roleAdmin' : 'roleManager')}</Chip>}
+                    </td>
+                    <td className="px-3 py-3">{r.pay ? <UseMark on label={ta('payYes')} /> : <span className="text-faint">–</span>}</td>
+                    <td className="px-3 py-3 text-muted">{r.role === 'manager' ? r.scope.join(' · ') || ta('scopeNone') : r.role === 'admin' ? ta('scopeAll') : '–'}</td>
+                    <td className="px-3 py-3 text-right">
+                      <Link href={`/admin/members/${r.id}`} className="font-bold whitespace-nowrap text-primary">{ta('change')} ›</Link>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+            <p className="pt-3 text-sm text-faint">{ta('how')}</p>
+          </SettingBox>
+        )}
         {info && <p className="text-sm text-faint">{tp('fixedNote')}</p>}
       </div>
 

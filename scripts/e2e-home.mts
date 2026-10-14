@@ -167,8 +167,9 @@ try {
   await p.goto(`${BASE}/admin`);
   await p.waitForLoadState('networkidle');
   const rail = p.locator('nav.sticky').first();
-  check((await rail.locator('a').allTextContents()).map((x) => x.replace(/\d+/g, '').trim()).join() === '홈,인사,근태,휴가,요청,급여,소통,리포트' && (await p.locator('nav.sticky').count()) === 1, 'PC 관리자 화면: 앱 띠 8개(홈 · 인사 · 근태 · 휴가 · 요청 · 급여 · 소통 · 리포트), 홈은 메뉴 판 없이 넓게');
-  await rail.getByRole('link', { name: '근태' }).click();
+  const labelsOf = async (n: typeof rail) => Promise.all((await n.locator('a').all()).map((a) => a.getAttribute('aria-label')));
+  check((await labelsOf(rail)).join() === '홈,인사,근태,휴가,요청,급여,소통,리포트' && (await p.locator('nav.sticky').count()) === 1, 'PC 관리자 화면: 앱 띠 8개(홈 · 인사 · 근태 · 휴가 · 요청 · 급여 · 소통 · 리포트), 홈은 메뉴 판 없이 넓게');
+  await rail.getByRole('link', { name: '근태', exact: true }).click();
   await p.waitForURL(/\/admin\/schedule/);
   await p.waitForLoadState('networkidle');
   check((await p.locator('nav.sticky').nth(1).locator('a').allTextContents()).map((x) => x.trim()).join() === '달력형,목록형,달력형,목록형,월 집계,누락 기록,이상자 관리,근태 마감', 'PC 관리자 화면: 근태 메뉴 판에 근무일정 · 출퇴근기록 · 점검/마감 묶음');
@@ -182,7 +183,7 @@ try {
   await p.getByRole('group', { name: '화면 전환' }).getByRole('link', { name: '내 화면' }).click();
   await p.waitForURL(/\/punch$/);
   await p.getByText('내 근로 통계').waitFor({ timeout: 30000 }); // 화면 이동(클라이언트)이 끝나 새 본문이 그려질 때까지
-  check((await p.locator('nav.sticky').first().locator('a').allTextContents()).map((x) => x.trim()).join() === '홈,일정,출퇴근,휴가,요청,급여,소통,조직' && (await p.getByRole('group', { name: '화면 전환' }).locator('a[aria-current]').textContent()) === '내 화면', 'PC 내 화면: 같은 틀의 앱 띠 8개, 「내 화면」이 켜짐');
+  check((await labelsOf(p.locator('nav.sticky').first())).join() === '홈,근무일정,출퇴근기록,휴가,요청,급여,소통,조직 · 내 정보' && (await p.getByRole('group', { name: '화면 전환' }).locator('a[aria-current]').textContent()) === '내 화면', 'PC 내 화면: 같은 틀의 앱 띠 8개, 「내 화면」이 켜짐');
   check((await p.getByText('내 근로 통계').isVisible()) && (await p.getByText('내 휴가 통계').isVisible()) && (await p.locator('main .grid-cols-7 > div').count()) >= 35, 'PC 직원 홈: 내 근로 통계 · 내 휴가 통계 · 월 달력');
   await shot('44-PC-메뉴');
   check(errors.length === 0, '화면 오류 없음', errors[0] ?? '');

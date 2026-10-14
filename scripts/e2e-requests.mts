@@ -135,7 +135,7 @@ try {
   await p.waitForLoadState('networkidle');
   check(await p.getByRole('link', { name: /\+ 휴가 신청/ }).isVisible(), 'PC에서는 새 요청으로 가는 줄이 보임');
   // PC 내 화면은 관리자 화면과 같은 틀이다 — 앱 띠에서 「요청」이 켜진다 (2026-10-14 결정 사항 개발-21)
-  check(((await p.locator('nav.sticky').first().locator('a[aria-current]').textContent()) ?? '').trim() === '요청', 'PC 앱 띠 「요청」이 켜짐');
+  check((await p.locator('nav.sticky').first().locator('a[aria-current]').getAttribute('aria-label')) === '요청', 'PC 앱 띠 「요청」이 켜짐');
   await shot('05-PC-내-요청');
   check(errors.length === 0, '화면 오류 없음', errors[0] ?? '');
 } catch (e) {

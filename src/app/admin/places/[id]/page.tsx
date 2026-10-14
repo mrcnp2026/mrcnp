@@ -8,6 +8,7 @@ import { OpenSheetButton } from '@/components/Fab';
 import { Field, FieldList, RowList } from '@/components/list';
 import { PlaceMap } from '@/components/PlaceMap';
 import { DetailBar } from '@/components/detail';
+import { TwoPane } from '@/components/settings';
 import { Card, Chip, PageShell } from '@/components/ui';
 import { loadGroupLocationLinks, loadOfficeLocations } from '@/lib/geo-data';
 import { groupPath } from '@/lib/org';
@@ -24,8 +25,10 @@ export default async function PlacePage({ params }: { params: Promise<{ id: stri
   const branches = links.filter((k) => k.locationId === id).map((k) => ({ id: k.groupId, path: groupPath(groups, k.groupId) })).filter((b) => b.path);
   const labels = { zoomIn: t('zoomIn'), zoomOut: t('zoomOut'), credit: t('mapCredit'), map: t('map') };
 
+  const tf = await getTranslations('frame');
   return (
     <PageShell wide>
+      <TwoPane title={tf('item.places')} current={`/admin/places/${id}`} items={all.map((l) => ({ href: `/admin/places/${l.id}`, label: l.label ?? t('unnamed'), off: !l.active }))}>
       <DetailBar plain back={p.active ? '/admin/places' : '/admin/places?tab=off'} backLabel={tc('back')} title={t('title')} extra={<OpenSheetButton sheet="place-edit">{t('edit')}</OpenSheetButton>} />
       <div className="flex flex-wrap items-center gap-2 px-1">
         <h1 className="text-2xl font-extrabold tracking-tight">{p.label ?? t('unnamed')}</h1>
@@ -68,6 +71,7 @@ export default async function PlacePage({ params }: { params: Promise<{ id: stri
           </Card>
         </AddSheet>
       </div>
+      </TwoPane>
     </PageShell>
   );
 }

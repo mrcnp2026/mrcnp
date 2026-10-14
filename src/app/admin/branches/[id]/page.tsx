@@ -7,7 +7,9 @@ import { notFound } from 'next/navigation';
 import { AddSheet } from '@/components/AddSheet';
 import { OpenSheetButton } from '@/components/Fab';
 import { Field, FieldList, RowList } from '@/components/list';
+import { loadOrgGroups } from '@/lib/org-data';
 import { DetailBar } from '@/components/detail';
+import { TwoPane } from '@/components/settings';
 import { Card, Chip, PageShell } from '@/components/ui';
 import { loadGroupLocationLinks, loadOfficeLocations } from '@/lib/geo-data';
 import { createAdminClient } from '@/lib/supabase/admin';
@@ -31,8 +33,10 @@ export default async function BranchPage({ params }: { params: Promise<{ id: str
   const mine = locations.filter((l) => picked.includes(l.id));
   const choices = locations.filter((l) => l.active || picked.includes(l.id)).map((l) => ({ id: l.id, label: l.label ?? t('unnamedPlace'), address: l.address ?? null }));
 
+  const tf = await getTranslations('frame');
   return (
     <PageShell wide>
+      <TwoPane title={tf('item.branches')} current={`/admin/branches/${id}`} items={(await loadOrgGroups()).map((x) => ({ href: `/admin/branches/${x.id}`, label: x.name, off: !x.active }))}>
       <DetailBar plain back={g.active ? '/admin/branches' : '/admin/branches?tab=off'} backLabel={tc('back')} title={t('title')} extra={<OpenSheetButton sheet="branch-edit">{t('edit')}</OpenSheetButton>} />
       <div className="flex flex-wrap items-center gap-2 px-1">
         <h1 className="text-2xl font-extrabold tracking-tight">{g.name}</h1>
@@ -79,6 +83,7 @@ export default async function BranchPage({ params }: { params: Promise<{ id: str
           </Card>
         </AddSheet>
       </div>
+      </TwoPane>
     </PageShell>
   );
 }

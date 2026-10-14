@@ -7,6 +7,7 @@ import { useState, type ReactNode } from 'react';
 import { callApi } from '@/components/client-api';
 import { DateTimeInput } from '@/components/DateTimeInput';
 import { ErrorNote } from '@/components/ErrorNote';
+import { useSaveRule } from '@/components/useSaveRule';
 import { Button } from '@/components/ui';
 
 const field = 'min-h-11 w-full rounded-button border border-border bg-bg px-3 text-base text-text';
@@ -85,16 +86,28 @@ export function RuleForm({ initial, tomorrow, weekdays }: { initial: RuleValues;
   const [rest, setRest] = useState(initial.weeklyRestDay);
   return (
     <Fold label={t('ruleAdd')}>
-      {(close) => (
+      {(close) => <RuleFields t={t} close={close} post={post} busy={busy} err={err} initial={initial} tomorrow={tomorrow} weekdays={weekdays} days={days} setDays={setDays} rest={rest} setRest={setRest} />}
+    </Fold>
+  );
+}
+
+// 양식 몸통 — 열릴 때마다 새로 그려져야 저장 규칙(처음 값)이 그때의 값으로 잡힌다
+function RuleFields({ t, close, post, busy, err, initial, tomorrow, weekdays, days, setDays, rest, setRest }: { t: ReturnType<typeof useTranslations>; close: () => void; post: ReturnType<typeof useSettingsPost>['post']; busy: boolean; err: ReturnType<typeof useSettingsPost>['err']; initial: RuleValues; tomorrow: string; weekdays: string[]; days: number[]; setDays: (d: number[]) => void; rest: number; setRest: (n: number) => void }) {
+  const rule = useSaveRule();
+  return (
         <form
+          ref={rule.ref}
           className="flex flex-col gap-3"
           onSubmit={async (e) => {
             e.preventDefault();
             const fd = new FormData(e.currentTarget);
-            if (await post({ action: 'rule.add', ...Object.fromEntries(fd), workdays: days, weeklyRestDay: rest })) close();
+            if (await post({ action: 'rule.add', ...Object.fromEntries([...fd].filter(([k]) => !k.startsWith('_'))), workdays: days, weeklyRestDay: rest })) close();
           }}
         >
           <p className="text-sm text-muted">{t('ruleAddHint')}</p>
+          {/* 단추로 고르는 값도 저장 규칙의 비교에 넣는다(서버로는 보내지 않는다) */}
+          <input type="hidden" name="_days" value={days.join(',')} />
+          <input type="hidden" name="_rest" value={rest} />
           <label className="flex flex-col gap-1 text-sm text-muted">
             {t('effectiveFrom')}
             <DateTimeInput name="effectiveFrom" type="date" required defaultValue={tomorrow} className={`num ${field}`} />
@@ -184,13 +197,11 @@ export function RuleForm({ initial, tomorrow, weekdays }: { initial: RuleValues;
             <Button type="button" variant="outline" className="flex-1" onClick={close}>
               {t('cancel')}
             </Button>
-            <Button type="submit" className="flex-1" disabled={busy || days.length === 0}>
+            <Button type="submit" className="flex-1" disabled={busy || days.length === 0 || !rule.dirty}>
               {t('save')}
             </Button>
           </div>
         </form>
-      )}
-    </Fold>
   );
 }
 

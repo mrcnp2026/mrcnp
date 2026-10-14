@@ -4,6 +4,7 @@ import { notFound } from 'next/navigation';
 import { AddSheet } from '@/components/AddSheet';
 import { OpenSheetButton } from '@/components/Fab';
 import { DetailBar } from '@/components/detail';
+import { TwoPane } from '@/components/settings';
 import { Card, Chip, PageShell } from '@/components/ui';
 import { loadJobs } from '@/lib/job-data';
 import { groupPath } from '@/lib/org';
@@ -25,8 +26,10 @@ export default async function JobPage({ params }: { params: Promise<{ id: string
     .filter((p) => !p.employee_no?.startsWith('e2e-') || p.job_id === id)
     .map((p) => ({ id: p.id as string, name: p.name as string, group: groupPath(groups, p.group_id), other: p.job_id && p.job_id !== id ? (nameOf.get(p.job_id) ?? null) : null, on: p.job_id === id }));
 
+  const tf = await getTranslations('frame');
   return (
     <PageShell wide>
+      <TwoPane title={tf('item.jobs')} current={`/admin/jobs/${id}`} items={all.map((j) => ({ href: `/admin/jobs/${j.id}`, label: j.name, off: !j.active }))}>
       <DetailBar plain back={x.active ? '/admin/jobs' : '/admin/jobs?tab=off'} backLabel={tc('back')} title={t('title')} extra={<OpenSheetButton sheet="job-edit">{t('edit')}</OpenSheetButton>} />
       <div className="flex flex-wrap items-center gap-2 px-1">
         <span aria-hidden className={`size-7 shrink-0 rounded-button ${SHIFT_COLOR_CLASS[x.color]}`} />
@@ -49,6 +52,7 @@ export default async function JobPage({ params }: { params: Promise<{ id: string
           </Card>
         </AddSheet>
       </div>
+      </TwoPane>
     </PageShell>
   );
 }

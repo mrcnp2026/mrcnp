@@ -6,6 +6,7 @@ import { useRouter } from 'next/navigation';
 import { useState, type ReactNode } from 'react';
 import { callApi } from '@/components/client-api';
 import { ErrorNote } from '@/components/ErrorNote';
+import { useSaveRule } from '@/components/useSaveRule';
 import { Button } from '@/components/ui';
 import type { ItemRow } from '@/lib/payroll/data';
 import { MANUAL_FIELDS, RATE_KINDS, type ReferenceKind } from '@/lib/payroll/reference';
@@ -49,7 +50,8 @@ function Row({ label, hint, children }: { label: string; hint?: string; children
   );
 }
 
-function Foot({ busy, err, done, label }: { busy: boolean; err: Err; done: boolean; label: string }) {
+// still: 처음 값에서 바뀐 것이 없다 — 저장 단추를 끈다 (저장 규칙, components/useSaveRule)
+function Foot({ busy, err, done, label, still = false }: { busy: boolean; err: Err; done: boolean; label: string; still?: boolean }) {
   const t = useTranslations('admin.paySettings');
   const tc = useTranslations('common');
   return (
@@ -57,7 +59,7 @@ function Foot({ busy, err, done, label }: { busy: boolean; err: Err; done: boole
       {err && <ErrorNote code={err.code} requestId={err.requestId} namespace={NS} />}
       {done && <p role="status" className="text-sm font-semibold text-ok">{t('saved')}</p>}
       <div className="flex justify-end">
-        <Button type="submit" size="sm" disabled={busy}>
+        <Button type="submit" size="sm" disabled={busy || still}>
           {busy ? tc('working') : label}
         </Button>
       </div>
@@ -96,15 +98,17 @@ export function SettingForm({ section, current, version, today }: { section: Set
   const l = current as Ledger | null;
   const m = current as Masking | null;
   const w = current as WorkingTime | null;
+  const rule = useSaveRule();
   return (
     <form
+      ref={rule.ref}
       className="flex flex-col gap-4"
       onSubmit={async (ev) => {
         ev.preventDefault();
         const fd = new FormData(ev.currentTarget);
         const b: Record<string, unknown> = Object.fromEntries(fd);
         if (section === 'employee-defaults') Object.assign(b, { durunuri: fd.get('durunuri') === 'on', smeTaxCut: fd.get('smeTaxCut') === 'on' });
-        await post(`/api/admin/payroll/settings/${section}`, { ...b, expectedVersion: version });
+        if (await post(`/api/admin/payroll/settings/${section}`, { ...b, expectedVersion: version })) rule.settle();
       }}
     >
       {section === 'employee-defaults' && (
@@ -181,7 +185,7 @@ export function SettingForm({ section, current, version, today }: { section: Set
         </>
       )}
       <When first={version === 0} today={today} />
-      <Foot busy={busy} err={err} done={done} label={t('save')} />
+      <Foot busy={busy} err={err} done={done} label={t('save')} still={version > 0 && !rule.dirty} />
     </form>
   );
 }
@@ -190,8 +194,10 @@ export function SettingForm({ section, current, version, today }: { section: Set
 export function ItemForm({ kind, item, today }: { kind: 'PAYMENT' | 'DEDUCTION'; item?: ItemRow; today: string }) {
   const t = useTranslations('admin.paySettings');
   const { busy, err, done, post } = usePost();
+  const rule = useSaveRule();
   return (
     <form
+      ref={rule.ref}
       className="flex flex-col gap-4"
       onSubmit={async (ev) => {
         ev.preventDefault();
@@ -245,7 +251,7 @@ export function ItemForm({ kind, item, today }: { kind: 'PAYMENT' | 'DEDUCTION';
         <input name="sort" type="number" min={0} max={9999} defaultValue={item?.sort ?? 0} className={`num ${field} lg:max-w-32`} />
       </Row>
       <When first={!item} today={today} />
-      <Foot busy={busy} err={err} done={done} label={t(item ? 'saveNew' : 'add')} />
+      <Foot busy={busy} err={err} done={done} label={t(item ? 'saveNew' : 'add')} still={!!item && !rule.dirty} />
     </form>
   );
 }
@@ -282,12 +288,14 @@ export function SeedButton({ path, label }: { path: string; label: string }) {
 export function AllowanceForm({ kind, current, version, today }: { kind: AllowanceKind; current: AllowancePolicy | null; version: number; today: string }) {
   const t = useTranslations('admin.paySettings');
   const { busy, err, done, post } = usePost();
+  const rule = useSaveRule();
   return (
     <form
+      ref={rule.ref}
       className="flex flex-col gap-4"
       onSubmit={async (ev) => {
         ev.preventDefault();
-        await post('/api/admin/payroll/policies', { ...Object.fromEntries(new FormData(ev.currentTarget)), kind, expectedVersion: version });
+        if (await post('/api/admin/payroll/policies', { ...Object.fromEntries(new FormData(ev.currentTarget)), kind, expectedVersion: version })) rule.settle();
       }}
     >
       <Row label={t(kind === 'shutdown' ? 's07.share' : 's07.premium')} hint={t(kind === 'shutdown' ? 's07.shareHint' : 's07.premiumHint')}>
@@ -302,7 +310,7 @@ export function AllowanceForm({ kind, current, version, today }: { kind: Allowan
         <input name="note" maxLength={300} defaultValue={current?.note ?? ''} className={field} autoComplete="off" />
       </Row>
       <When first={version === 0} today={today} />
-      <Foot busy={busy} err={err} done={done} label={t('saveNew')} />
+      <Foot busy={busy} err={err} done={done} label={t('saveNew')} still={version > 0 && !rule.dirty} />
     </form>
   );
 }

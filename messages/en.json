@@ -21,7 +21,8 @@
     "download": "Download",
     "downloadReport": "{ym} monthly attendance report (Excel)",
     "prevPage": "Previous page",
-    "nextPage": "Next page"
+    "nextPage": "Next page",
+    "unsaved": "You have unsaved changes. Leave this screen?"
   },
   "login": {
     "title": "Sign in",
@@ -1968,6 +1969,20 @@
             "note": "The company logo is shown in the top bar and on the sign-in screen."
           }
         }
+      },
+      "access": {
+        "title": "Who has which access",
+        "desc": "Of {n} active employees, only admins, branch managers and payroll staff are listed. Everyone else has employee access.",
+        "colName": "Name",
+        "colRole": "Access",
+        "colPayroll": "Payroll",
+        "colScope": "Scope",
+        "change": "Change",
+        "none": "No one has admin access.",
+        "payYes": "Payroll screens",
+        "scopeAll": "All",
+        "scopeNone": "No branch assigned",
+        "how": "To grant or remove access, change it on that employee’s screen. Admin access takes effect after another admin confirms."
       }
     },
     "places": {
@@ -4476,7 +4491,31 @@
     "pdfFile": "payslip",
     "hRevision": "Revision",
     "pdfNote": "This payslip shows the values stored in the program. If an amount looks wrong, tell the payroll admin. A payslip does not mean the payment has been made.",
-    "toRetirement": "See estimated retirement pay"
+    "toRetirement": "See estimated retirement pay",
+    "mine": {
+      "title": "My pay",
+      "intro": "Your pay details and monthly payslips.",
+      "profile": "My info",
+      "name": "Name",
+      "no": "Employee no.",
+      "group": "Branch · Dept.",
+      "job": "Job",
+      "joined": "Joined",
+      "detail": "Pay details",
+      "since": "Effective {date}",
+      "noContract": "Your pay details are not registered yet. Please ask the payroll staff.",
+      "payType": "Pay type",
+      "fixed": "Fixed allowances",
+      "detailNote": "These are the values in effect now. Tell the payroll staff if anything needs changing.",
+      "slips": "Payslips",
+      "year": "Year",
+      "prevYear": "Previous year",
+      "nextYear": "Next year",
+      "colMonth": "Month",
+      "colPayDate": "Pay date",
+      "pick": "Pick a month on the left to see the payslip here.",
+      "open": "Open"
+    }
   },
   "org": {
     "title": "Org chart",
@@ -4676,7 +4715,7 @@
       "myRecords": "My attendance",
       "myLeave": "My leave",
       "myRequests": "My requests",
-      "payslips": "Payslips",
+      "payslips": "My pay",
       "myRetirement": "Estimated retirement pay",
       "notices": "Notices",
       "messages": "Messages",
@@ -4767,6 +4806,9 @@
       "lead": "Set the rules for the company and each area here. Day-to-day processing lives in the admin view.",
       "companyLead": "Company-wide rules — company info · organization · access · logs",
       "appsLead": "Rules per area — attendance · leave · requests · messages · reports · payroll · staff"
-    }
+    },
+    "wideMenu": "Wide menu",
+    "narrowMenu": "Collapse menu",
+    "wideShort": "Wide"
   }
 }

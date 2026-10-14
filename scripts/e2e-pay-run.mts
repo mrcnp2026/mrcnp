@@ -190,7 +190,7 @@ try {
     return q.locator('body').innerText();
   };
   let mine = await see('/punch/payslips');
-  check(mine.includes('내 명세서') && mine.includes('아직 공개된 명세서가 없습니다.'), '직원: 공개 전에는 내 명세서가 비어 있다');
+  check(mine.includes('내 급여 조회') && mine.includes('아직 공개된 명세서가 없습니다.'), '직원: 공개 전에는 내 명세서가 비어 있다');
   check(!(await see(`/punch/payslips/${slipId}`)).includes('2,916,670'), '직원: 공개 전에는 주소를 직접 쳐도 금액이 보이지 않는다');
   page = await open(`/admin/payroll/runs/${runId}`);
   check(page.includes('공개 중 0명 · 공개 안 함 1명'), '관리자: 확정한 대장에 공개 상태가 보인다');

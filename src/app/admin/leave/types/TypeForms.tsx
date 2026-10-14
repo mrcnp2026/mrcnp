@@ -4,6 +4,7 @@ import { useTranslations } from 'next-intl';
 import { useRouter } from 'next/navigation';
 import { useState } from 'react';
 import { CLOSE_SHEET_EVENT } from '@/components/AddSheet';
+import { useSaveRule } from '@/components/useSaveRule';
 import { callApi } from '@/components/client-api';
 import { DateTimeInput } from '@/components/DateTimeInput';
 import { ErrorNote } from '@/components/ErrorNote';
@@ -28,8 +29,10 @@ export function LeaveTypeForm({ initial, sheet, groups }: { initial?: TypeValues
   const [paid, setPaid] = useState(initial?.isPaid ?? true);
   const [deducts, setDeducts] = useState(initial?.deductsBalance ?? true);
   const check = 'flex min-h-11 items-center gap-3 text-base text-text';
+  const rule = useSaveRule(); // 고치기(initial 있음)에서만 쓴다 — 새로 만들기는 늘 저장할 수 있다
   return (
     <form
+      ref={rule.ref}
       className="flex flex-col gap-3"
       onSubmit={async (e) => {
         e.preventDefault();
@@ -51,7 +54,10 @@ export function LeaveTypeForm({ initial, sheet, groups }: { initial?: TypeValues
         if (!res.ok) return setErr(res);
         if (sheet) window.dispatchEvent(new CustomEvent(CLOSE_SHEET_EVENT, { detail: sheet }));
         if (!initial) form.reset();
-        else setSaved(true);
+        else {
+          setSaved(true);
+          rule.settle();
+        }
         router.refresh();
       }}
     >
@@ -107,7 +113,9 @@ export function LeaveTypeForm({ initial, sheet, groups }: { initial?: TypeValues
       </label>
       {err && <ErrorNote code={err.code} requestId={err.requestId} namespace="admin.leaveTypes" />}
       {saved && <p className="text-sm font-semibold text-ok">{t('saved')}</p>}
-      <Button type="submit" disabled={busy}>
+      {/* 상태로 고르는 값도 저장 규칙의 비교에 넣는다(서버로는 보내지 않는다 — 몸통은 위에서 따로 만든다) */}
+      <input type="hidden" name="_state" value={JSON.stringify([hours, fixed, start, end, paid, deducts])} />
+      <Button type="submit" disabled={busy || (!!initial && !rule.dirty)}>
         {t(initial ? 'save' : 'create')}
       </Button>
     </form>

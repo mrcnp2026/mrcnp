@@ -2,11 +2,11 @@
 // PC(1024px~) 왼쪽 틀 — 앱 띠(아이콘 + 짧은 이름) + 메뉴 판(앱 이름 → 묶음 제목 → 항목). 직원 · 관리자가 같은 틀을 쓴다 (2026-10-14 결정 사항 개발-21).
 // 통합설정에서는 앱 띠 자리에 「회사설정 / App 관리」 묶음 목록이 놓인다 (개발-20, 문서 07 6장).
 // 무엇이 어디에 있는지는 config/nav.ts 한곳에서 정한다. 폰에서는 보이지 않는다(하단 탭 + 서랍 메뉴).
-import { LayoutGrid } from 'lucide-react';
+import { LayoutGrid, PanelLeftClose, PanelLeftOpen } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 import Link, { useLinkStatus } from 'next/link';
 import { useSearchParams } from 'next/navigation';
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { appHref, appLeaves, appsFor, CONSOLE_HOME, locate, locateHref, type App, type NavRole } from '@/config/nav';
 import { usePressedTab } from './NavTab';
 
@@ -67,6 +67,32 @@ export function DeskNav({ role, inboxCount = 0 }: { role: NavRole; inboxCount?: 
 
   const apps = appsFor(at.space, role);
 
+  // 와이드 메뉴 (2026-10-13 의뢰인 결정 사항 개발-18을 새 틀에 다시 살림, 2026-10-14):
+  // 앱 띠 맨 아래 단추로 좁게(아이콘 + 짧은 이름) ↔ 넓게(아이콘 옆 온전한 이름). 서랍처럼 0.35초 ease-in-out. 고른 모양은 이 브라우저에 기억한다
+  const [wide, setWide] = useState(false);
+  const [ready, setReady] = useState(false);
+  useEffect(() => {
+    try {
+      if (localStorage.getItem('nav-wide') === '1') setWide(true);
+    } catch {
+      // 저장이 막혀 있으면 기억하지 못할 뿐이다
+    }
+    const id = requestAnimationFrame(() => setReady(true)); // 처음 그릴 때는 움직이지 않고 고른 모양으로 바로 놓는다
+    return () => cancelAnimationFrame(id);
+  }, []);
+  const toggleWide = () =>
+    setWide((w) => {
+      try {
+        localStorage.setItem('nav-wide', w ? '0' : '1');
+      } catch {
+        // 위와 같음
+      }
+      return !w;
+    });
+  // 전역 규칙(globals.css의 transition)이 보통 클래스를 이긴다 — 서랍 움직임은 !로 0.35초 ease-in-out을 지킨다
+  const move = ready ? 'transition-all! duration-350! ease-in-out!' : '';
+  const Toggle = wide ? PanelLeftClose : PanelLeftOpen;
+
   if (at.space === 'console') {
     const sections = (['company', 'apps'] as const).map((s) => ({ s, apps: apps.filter((a) => a.section === s) }));
     const allOn = !at.app;
@@ -103,20 +129,26 @@ export function DeskNav({ role, inboxCount = 0 }: { role: NavRole; inboxCount?: 
 
   return (
     <>
-      <nav aria-label={t(`space.${at.space}`)} className="sticky top-14 z-10 hidden h-[calc(100dvh-3.5rem)] w-18 shrink-0 flex-col items-center gap-0.5 overflow-y-auto border-r border-border bg-rail py-2.5 lg:flex">
+      <nav aria-label={t(`space.${at.space}`)} className={`sticky top-14 z-10 hidden h-[calc(100dvh-3.5rem)] shrink-0 flex-col gap-0.5 overflow-x-hidden overflow-y-auto border-r border-border bg-rail px-1.5 py-2.5 lg:flex ${move} ${wide ? 'w-49' : 'w-18'}`}>
         {apps.map((a) => {
           const on = at.app?.key === a.key;
           const Icon = a.icon;
           const href = appHref(a);
           const badge = inboxCount > 0 && appLeaves(a).some((l) => l.badge === 'inbox');
           return (
-            <Link key={a.key} href={href} aria-current={on ? 'true' : undefined} title={t(`appFull.${a.key}`)} onClick={() => setPressed(href)} className={`relative flex w-15 flex-col items-center gap-1 rounded-card pt-2 pb-1.5 text-xs ${on ? 'font-bold text-primary' : 'font-medium text-muted hover:bg-bg'}`}>
-              <span className={`flex size-8 items-center justify-center rounded-button ${on ? 'bg-primary text-on-primary' : ''}`}>
+            <Link key={a.key} href={href} aria-current={on ? 'true' : undefined} aria-label={t(`appFull.${a.key}`)} title={wide ? undefined : t(`appFull.${a.key}`)} onClick={() => setPressed(href)} className={`relative block w-full shrink-0 overflow-hidden rounded-card ${move} ${wide ? 'h-10.5' : 'h-15'} ${on ? 'font-bold text-primary' : 'font-medium text-muted hover:bg-bg'} ${on && wide ? 'bg-primary-tint' : ''}`}>
+              <span className={`absolute flex size-8 items-center justify-center rounded-button ${move} ${wide ? 'top-1.25 left-1.5' : 'top-1.5 left-3.5'} ${on && !wide ? 'bg-primary text-on-primary' : ''}`}>
                 <Icon aria-hidden size={18} strokeWidth={on ? 2.25 : 1.75} />
               </span>
-              <span className="whitespace-nowrap">{t(`app.${a.key}`)}</span>
+              {/* 좁을 때: 아이콘 아래 짧은 이름 · 넓을 때: 아이콘 오른쪽 온전한 이름 — 한쪽이 옆으로 밀리며 사라지고 다른 쪽이 나타난다 */}
+              <span aria-hidden className={`absolute inset-x-0 bottom-1 text-center text-xs whitespace-nowrap ${move} ${wide ? 'translate-x-6 opacity-0' : 'opacity-100'}`}>
+                {t(`app.${a.key}`)}
+              </span>
+              <span aria-hidden className={`absolute top-1/2 left-11.5 -translate-y-1/2 text-sm whitespace-nowrap ${move} ${wide ? 'opacity-100' : '-translate-x-4 opacity-0'}`}>
+                {t(`appFull.${a.key}`)}
+              </span>
               {badge && (
-                <span className="absolute top-0.5 right-1">
+                <span className={`absolute ${move} ${wide ? 'top-3 right-2.5' : 'top-0.5 right-1'}`}>
                   <Count n={inboxCount} />
                 </span>
               )}
@@ -126,6 +158,17 @@ export function DeskNav({ role, inboxCount = 0 }: { role: NavRole; inboxCount?: 
             </Link>
           );
         })}
+        <button type="button" onClick={toggleWide} aria-pressed={wide} aria-label={t(wide ? 'narrowMenu' : 'wideMenu')} title={t(wide ? 'narrowMenu' : 'wideMenu')} className={`relative mt-auto block w-full shrink-0 overflow-hidden rounded-card text-muted hover:bg-bg hover:text-text ${move} ${wide ? 'h-10.5' : 'h-15'}`}>
+          <span className={`absolute flex size-8 items-center justify-center ${move} ${wide ? 'top-1.25 left-1.5' : 'top-1.5 left-3.5'}`}>
+            <Toggle aria-hidden size={18} strokeWidth={1.75} />
+          </span>
+          <span aria-hidden className={`absolute inset-x-0 bottom-1 text-center text-xs whitespace-nowrap ${move} ${wide ? 'translate-x-6 opacity-0' : 'opacity-100'}`}>
+            {t('wideShort')}
+          </span>
+          <span aria-hidden className={`absolute top-1/2 left-11.5 -translate-y-1/2 text-sm whitespace-nowrap ${move} ${wide ? 'opacity-100' : '-translate-x-4 opacity-0'}`}>
+            {t('narrowMenu')}
+          </span>
+        </button>
       </nav>
       {/* 항목이 하나뿐인 앱(홈 · 요청 …)은 메뉴 판 없이 본문을 넓게 쓴다 */}
       {at.app && appLeaves(at.app).length > 1 && <Panel app={at.app} title={t(`appFull.${at.app.key}`)} active={active} inboxCount={inboxCount} onPick={setPressed} t={t} />}

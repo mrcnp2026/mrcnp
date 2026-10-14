@@ -3,6 +3,7 @@
 import { useTranslations } from 'next-intl';
 import { useRouter } from 'next/navigation';
 import { useState } from 'react';
+import { useSaveRule } from '@/components/useSaveRule';
 import { callApi } from '@/components/client-api';
 import { ErrorNote } from '@/components/ErrorNote';
 import { Button } from '@/components/ui';
@@ -17,8 +18,10 @@ export function TypeRuleForm({ code, version, rule }: { code: string; version: n
   const [done, setDone] = useState(false);
   const [err, setErr] = useState<{ code: string; requestId?: string } | null>(null);
   const num = (v: FormDataEntryValue | null) => (v === null || v === '' ? null : Number(v));
+  const save = useSaveRule();
   return (
     <form
+      ref={save.ref}
       className="flex flex-col gap-3 text-sm"
       onSubmit={async (e) => {
         e.preventDefault();
@@ -30,6 +33,7 @@ export function TypeRuleForm({ code, version, rule }: { code: string; version: n
         setBusy(false);
         if (!r.ok) return setErr(r);
         setDone(true);
+        save.settle();
         router.refresh();
       }}
     >
@@ -49,7 +53,7 @@ export function TypeRuleForm({ code, version, rule }: { code: string; version: n
       </label>
       {err && <ErrorNote code={err.code} requestId={err.requestId} namespace="admin.leaveTypeRule" />}
       <div className="flex items-center gap-3">
-        <Button type="submit" size="sm" disabled={busy}>
+        <Button type="submit" size="sm" disabled={busy || !save.dirty}>
           {t('save')}
         </Button>
         {done && (
