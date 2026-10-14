@@ -444,16 +444,16 @@ try {
   const blk = (x: { blockers?: unknown } | null) => ((x?.blockers ?? []) as { code: string }[]).map((b) => b.code);
   check(blk(sa.s).includes('sme_applied') && blk(sb.s).includes('durunuri_pension') && blk(sb.s).includes('durunuri_employment'), '명세에 「감면 적용」 · 「두루누리 적용」 참고가 남는다');
   const slipA = await open(qa, '/punch/payslips');
-  check(slipA.includes(`${YM}`) && slipA.includes(won(net(EXPECT.A))), `${A.name}: 내 급여 조회에 ${YM} 실지급 ${won(net(EXPECT.A))}`);
-  await qa.locator('main summary').first().click();
+  check(slipA.includes(`${YM}`) && slipA.includes(won(net(EXPECT.A)).replace('원', '')), `${A.name}: 내 급여 조회에 ${YM} 실지급 ${won(net(EXPECT.A))}`);
+  await qa.locator('main summary', { hasText: '자세히 보기' }).click();
   const detailA = await qa.locator('main').innerText();
-  check(detailA.includes('중소기업 취업 소득세 감면') && detailA.includes('90%') && detailA.includes('36,000,000원') && detailA.includes(`${FROM}부터 적용 예정`), `${A.name}: 내 급여 조회 — 연봉(월급 × 12) 36,000,000 · 중소기업 감면 90% · 적용 예정일이 보인다`);
+  check(detailA.includes('중소기업 취업 소득세 감면') && /\b90\s*%/.test(detailA) && detailA.includes('36,000,000'), `${A.name}: 내 급여 조회 — 연봉(월급 × 12) 36,000,000 · 중소기업 감면 90%가 보인다`); // 2026-10-15: 「적용 예정」 같은 설명 문장은 뺐다(의뢰인)
   await shot(qa, 's7-A-myslip');
   const slipB = await open(qb, '/punch/payslips');
-  check(slipB.includes(won(net(EXPECT.B))), `${B.name}: 내 급여 조회에 실지급 ${won(net(EXPECT.B))}`);
-  await qb.locator('main summary').first().click();
+  check(slipB.includes(won(net(EXPECT.B)).replace('원', '')), `${B.name}: 내 급여 조회에 실지급 ${won(net(EXPECT.B))}`);
+  await qb.locator('main summary', { hasText: '자세히 보기' }).click();
   const detailB = await qb.locator('main').innerText();
-  check(detailB.includes('두루누리 적용여부') && detailB.includes('80%') && detailB.includes('13,000원'), `${B.name}: 내 급여 조회 — 시급 13,000 · 두루누리 80%`);
+  check(detailB.includes('두루누리 적용여부') && /\b80\s*%/.test(detailB) && detailB.includes('13,000'), `${B.name}: 내 급여 조회 — 시급 13,000 · 두루누리 80%`);
   await shot(qb, 's7-B-myslip');
 
   // ════ 8. 일용직 ════

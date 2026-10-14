@@ -10,7 +10,8 @@ import { managerCanOpen } from '@/lib/manager-rules';
 
 // how: 통합설정 화면 맨 위 「이 화면 쓰는 법」 띠의 종류 (2026-10-14 의뢰인: 이미 적용된 건지 · 저장해야 적용되는지 · 보기만인지 한눈에)
 export type How = 'view' | 'instant' | 'versioned' | 'list' | 'review';
-export type Leaf = { href: string; key: string; exact?: boolean; also?: string[]; badge?: 'inbox'; how?: How };
+// pcOnly: 폰에서는 같은 화면이 다른 모양으로만 그려져 고를 의미가 없는 항목 — 폰 서랍에서 뺀다 (2026-10-15 의뢰인: 폰 근무일정 「달력형」이 눌러도 그대로)
+export type Leaf = { href: string; key: string; exact?: boolean; also?: string[]; badge?: 'inbox'; how?: How; pcOnly?: boolean };
 export type Group = { key: string | null; items: Leaf[] };
 export type App = { key: string; icon: LucideIcon; groups: Group[]; section?: 'company' | 'apps' };
 export type Space = 'my' | 'admin' | 'console';
@@ -38,7 +39,7 @@ export const ADMIN_APPS: App[] = [
     key: 'mAttendance',
     icon: Clock,
     groups: [
-      { key: 'gSchedule', items: [{ href: '/admin/schedule', key: 'scheduleCal' }, { href: '/admin/schedule?v=list', key: 'scheduleList' }] },
+      { key: 'gSchedule', items: [{ href: '/admin/schedule', key: 'scheduleCal', pcOnly: true }, { href: '/admin/schedule?v=list', key: 'scheduleList' }] },
       { key: 'gRecords', items: [{ href: '/admin/records/calendar', key: 'recordsCal' }, { href: '/admin/records/list', key: 'recordsList' }, { href: '/admin/records', key: 'recordsMonthly' }] },
       { key: 'gCheck', items: [{ href: '/admin/missing', key: 'missing' }, { href: '/admin/anomalies', key: 'anomalies' }, { href: '/admin/closing', key: 'closing' }] },
     ],

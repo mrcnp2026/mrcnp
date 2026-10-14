@@ -193,7 +193,7 @@ try {
   // 직원 내 기록: 정정됨 + 연장 인정 표시
   await e.goto(`${BASE}/punch/records`);
   const my = await e.locator('main').innerText();
-  check(my.includes('Corrected') && my.includes('Overtime: approved'), '직원 "내 기록"에 정정됨·연장 인정 상태가 보임');
+  check(my.includes('Corrected') && my.includes('over (approved)'), '직원 "내 근태현황"(월간)에 정정됨·초과 승인 상태가 보임'); // 2026-10-15 달력 모양으로 바뀜
   await noHScroll(e, '직원 내 기록');
   await shot(e, '게이트8_04_직원_내기록');
 } catch (err) {

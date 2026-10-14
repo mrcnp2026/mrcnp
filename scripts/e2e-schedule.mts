@@ -127,10 +127,12 @@ try {
   check((await p.getByRole('button', { name: '기간 고르기' }).textContent())?.includes('01.01 - 01.31') ?? false, '기간이 너무 길면 31일로 줄임', (await p.getByRole('button', { name: '기간 고르기' }).textContent()) ?? '');
 
   // ── 내 일정 ──
-  await p.goto(`${BASE}/punch/schedule`);
+  // 2026-10-15: 내 일정은 「내 근태현황」 주간 달력 — 다음 주로 넘겨 금 · 토 칸을 본다
+  await p.goto(`${BASE}/punch/schedule?v=week&d=${FRI}`);
   await p.waitForLoadState('networkidle');
-  check((await p.getByText('17:30', { exact: true }).count()) === 1 && (await p.getByText('20:30', { exact: true }).count()) === 1 && (await p.getByText('08:00', { exact: true }).count()) >= 1 && (await p.getByText('휴일 근무(특근)').count()) === 1 && (await p.locator('main section h3').count()) === 14, '내 일정에 다음 주 잔업·특근이 보임');
-  check((await p.getByText('이번 주').count()) > 0 && (await p.getByText('다음 주').count()) > 0 && (await p.getByText(/계획 \d+시간/).count()) === 2, '이번 주·다음 주 묶음과 계획 시간');
+  const wk = await p.locator('[data-week-days]').innerText();
+  check((await p.locator('[data-week-days] > li').count()) === 7 && wk.includes('20:30') && wk.includes('08:00') && wk.includes('휴일 근무(특근)'), '내 일정(주간)에 다음 주 잔업·특근이 보임', wk.replace(/\s+/g, ' ').slice(0, 200));
+  check((await p.getByRole('tab', { name: '주간' }).getAttribute('aria-selected')) === 'true' && (await p.locator('[data-week-summary]').count()) === 1, '근무일정은 주간 보기가 먼저 · 주간 요약');
   await shot('04-내-일정');
 
   // ── 취소 ──

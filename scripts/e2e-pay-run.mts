@@ -209,7 +209,7 @@ try {
   await p.getByText('1명에게 공개했습니다.').waitFor({ timeout: 30000 });
   await shot('payrun-4-published');
   mine = await see('/punch/payslips');
-  check(mine.includes(`${YM} 급여`) && mine.includes('2,916,670원'), '직원: 공개하면 목록에 그 달과 실지급액이 보인다');
+  check(mine.includes(YM) && mine.includes('2,916,670'), '직원: 공개하면 목록에 그 달과 실지급액이 보인다'); // 2026-10-15 다우오피스 모양: 금액 칸에 「원」 없이 숫자만
   const slip = await see(`/punch/payslips/${slipId}`);
   check(slip.includes('기본급') && slip.includes('3,000,000원') && slip.includes('소득세') && slip.includes('84,850원') && slip.includes('2,916,670원'), '직원: 명세서에 항목과 금액');
   check(!slip.includes('사업주') && !slip.includes('e2e 특별 지급'), '직원: 사업주 부담 · 조정 사유는 보이지 않는다');
@@ -247,7 +247,7 @@ try {
   check((await post(api2, { action: 'correct', reason: '초안에서 정정' })).json.error === 'payroll_not_finalized', '확정 전인 판에서는 정정을 시작할 수 없다');
   page = await open(`/admin/payroll/runs/${runId}`);
   check(page.includes('정정 2판을 만드는 중입니다'), '원본 화면에 정정이 진행 중이라고 보인다');
-  check((await see('/punch/payslips')).includes('2,916,670원'), '직원: 정정본이 공개되기 전에는 원본이 그대로 보인다');
+  check((await see('/punch/payslips')).includes('2,916,670'), '직원: 정정본이 공개되기 전에는 원본이 그대로 보인다');
   // 고칠 것: 공제 5,000원이 빠졌다 → 조정으로 넣고 계산 · 검토 · 확정
   check((await post(api2, { action: 'override.add', employeeId: other!.id, itemCode: 'ETC_CUT', kind: 'DEDUCTION', amount: 5000, reason: 'e2e 누락된 공제' })).status === 200, '정정 판에 공제 조정을 넣는다');
   check((await post(api2, { action: 'calculate', expectedVersion: r2.version })).json.calculated?.ok === 1, '정정 판 계산');

@@ -67,7 +67,7 @@ export function MenuDrawer({ name, role, languages }: { name: string; role: NavR
   const appName = (a: App) => tf(`appFull.${a.key}`);
   const word = q.trim().toLowerCase();
   const found = word
-    ? apps.flatMap((a) => appLeaves(a).map((l) => ({ href: l.href, label: tf(`item.${l.key}`), where: appName(a) }))).filter((x) => `${x.label} ${x.where}`.toLowerCase().includes(word))
+    ? apps.flatMap((a) => a.groups.flatMap((g) => g.items.filter((l) => !l.pcOnly).map((l) => ({ href: l.href, label: tf(`item.${l.key}`), where: g.key ? `${appName(a)} › ${tf(`group.${g.key}`)}` : appName(a) })))).filter((x) => `${x.label} ${x.where}`.toLowerCase().includes(word))
     : [];
   const toggle = (k: string) =>
     setUnfold((s) => {
@@ -136,7 +136,7 @@ export function MenuDrawer({ name, role, languages }: { name: string; role: NavR
                 ) : (
                   <>
                     {apps.map((a) => {
-                      const leaves = appLeaves(a);
+                      const leaves = appLeaves(a).filter((l) => !l.pcOnly);
                       const Icon = a.icon;
                       const mine = leaves.some((l) => l.href === here);
                       // 항목이 하나뿐인 앱은 펼치지 않고 바로 그 화면으로
@@ -157,11 +157,33 @@ export function MenuDrawer({ name, role, languages }: { name: string; role: NavR
                           </button>
                           {isOpen && (
                             <div className="flex flex-col pb-1 pl-8">
-                              {leaves.map((l) => (
-                                <Link key={l.href} href={l.href} onClick={() => setOpen(false)} aria-current={here === l.href ? 'page' : undefined} className={`${row(here === l.href)} text-sm`}>
-                                  {tf(`item.${l.key}`)}
-                                </Link>
-                              ))}
+                              {/* 묶음 이름이 있는 앱(근무일정 · 출퇴근 등)은 이름을 붙인다 — 빼면 「달력형 · 목록형」이 두 번씩 보였다 (2026-10-15 의뢰인) */}
+                              {a.groups.map((g) => {
+                                const items = g.items.filter((l) => !l.pcOnly);
+                                if (items.length === 0) return null;
+                                if (!g.key) return items.map((l) => (
+                                  <Link key={l.href} href={l.href} onClick={() => setOpen(false)} aria-current={here === l.href ? 'page' : undefined} className={`${row(here === l.href)} text-sm`}>
+                                    {tf(`item.${l.key}`)}
+                                  </Link>
+                                ));
+                                // 묶음에 항목이 하나만 남으면 묶음 이름 한 줄로
+                                if (items.length === 1)
+                                  return (
+                                    <Link key={g.key} href={items[0].href} onClick={() => setOpen(false)} aria-current={here === items[0].href ? 'page' : undefined} className={`${row(here === items[0].href)} text-sm`}>
+                                      {tf(`group.${g.key}`)}
+                                    </Link>
+                                  );
+                                return (
+                                  <div key={g.key} className="flex flex-col">
+                                    <p className="px-3 pt-2 pb-0.5 text-xs font-semibold text-faint">{tf(`group.${g.key}`)}</p>
+                                    {items.map((l) => (
+                                      <Link key={l.href} href={l.href} onClick={() => setOpen(false)} aria-current={here === l.href ? 'page' : undefined} className={`${row(here === l.href)} text-sm`}>
+                                        {tf(`item.${l.key}`)}
+                                      </Link>
+                                    ))}
+                                  </div>
+                                );
+                              })}
                             </div>
                           )}
                         </div>
