@@ -9,7 +9,7 @@ import { ApiError } from '@/lib/api';
 import { getMe, type Me } from '@/lib/auth';
 import { scopeIds } from '@/lib/manager-rules';
 import { loadStaff } from '@/lib/staff-data';
-import { selfDecisionBlocked } from '@/lib/staff-rules';
+import { approvalBlocked } from '@/lib/staff-rules';
 import { createAdminClient } from '@/lib/supabase/admin';
 
 /** 그 지점관리자가 맡은 지점 */
@@ -58,12 +58,14 @@ export async function requireStaffViewer(): Promise<{ me: Me; readOnly: boolean 
 export async function requireApprover(employeeId: string): Promise<Me> {
   const me = await getMe();
   if (!me) throw new ApiError(403, 'forbidden');
-  if (me.role === 'admin') {
-    if (selfDecisionBlocked(me.id, employeeId, await loadStaff())) throw new ApiError(403, 'self_decision');
-    return me;
-  }
-  if (me.role !== 'manager') throw new ApiError(403, 'forbidden');
-  if (employeeId === me.id) throw new ApiError(403, 'self_decision');
-  if (!(await managerScope(me.id)).has(employeeId)) throw new ApiError(403, 'out_of_scope');
+  if (me.role !== 'admin' && me.role !== 'manager') throw new ApiError(403, 'forbidden');
+  // 등급별 승인 규칙 (개발-39): 최고관리자 · 대표자 = 누구든 / 총괄관리자 = 최고 · 대표 것 못 함, 본인 것은 다른 관리자가 / 지점관리자 = 일반직원만
+  const all = await loadStaff();
+  const actor = all.find((s) => s.id === me.id);
+  const target = all.find((s) => s.id === employeeId);
+  if (!actor || !target) throw new ApiError(404, 'not_found');
+  const blocked = approvalBlocked(actor, target, all);
+  if (blocked) throw new ApiError(403, blocked);
+  if (me.role === 'manager' && !(await managerScope(me.id)).has(employeeId)) throw new ApiError(403, 'out_of_scope');
   return me;
 }

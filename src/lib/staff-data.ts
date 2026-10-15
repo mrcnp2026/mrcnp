@@ -2,13 +2,16 @@
 import 'server-only';
 import { OFFICE } from '@/config/office';
 import { ApiError } from '@/lib/api';
-import { selfDecisionBlocked, type Staff } from '@/lib/staff-rules';
+import { selfDecisionBlocked, type AdminLevel, type Staff } from '@/lib/staff-rules';
 import { createAdminClient } from '@/lib/supabase/admin';
 
 export async function loadStaff(): Promise<Staff[]> {
-  const { data, error } = await createAdminClient().from('profiles').select('id, role, active, can_view_payroll, employee_no');
+  const { data, error } = await createAdminClient().from('profiles').select('id, role, active, can_view_payroll, employee_no, admin_level');
   if (error) throw new Error(`loadStaff: ${error.code}`);
-  return (data ?? []).map((p) => ({ id: p.id, role: p.role, active: p.active, canViewPayroll: p.can_view_payroll, owner: p.employee_no === OFFICE.ownerEmployeeNo }));
+  return (data ?? []).map((p) => {
+    const level = p.role === 'admin' ? ((p.admin_level as AdminLevel | null) ?? (p.employee_no === OFFICE.ownerEmployeeNo ? 'ceo' : 'general')) : null;
+    return { id: p.id, role: p.role, active: p.active, canViewPayroll: p.can_view_payroll, level, owner: level === 'super' || level === 'ceo' };
+  });
 }
 
 /** 요청 결정 API가 부른다: 본인 요청인데 다른 관리자가 있으면 거절 (403 self_decision) */

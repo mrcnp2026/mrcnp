@@ -242,7 +242,9 @@
     "leave_reason_required": "A reason is required for this leave.",
     "console_locked": "The settings console is locked. Enter your PIN again.",
     "leave_not_target": "You are not eligible for this leave type.",
-    "leave_weekday": "This leave type cannot be requested on that weekday."
+    "leave_weekday": "This leave type cannot be requested on that weekday.",
+    "rank": "Your role cannot decide this person's request. Ask a higher admin.",
+    "level_taken": "Only one super admin and one CEO are allowed. Change the current one to general admin first."
   },
   "admin": {
     "nav": {
@@ -369,7 +371,10 @@
       "inviteNote": "Adding creates an invite link. Pass the link or QR code to the employee in the next step.",
       "employeeRole": "Employee",
       "pcIntro": "Manage departments, titles, access and sign-up status, and invite employees with a code.",
-      "managerChip": "Branch manager"
+      "managerChip": "Branch manager",
+      "levelSuper": "Super admin",
+      "levelCeo": "CEO",
+      "levelGeneral": "General admin"
     },
     "more": {
       "title": "All menus",
@@ -625,7 +630,8 @@
       "mapCredit": "Map © OpenStreetMap",
       "map": "Map of the requested location",
       "cardsKind": "Waiting by type",
-      "unit": ""
+      "unit": "",
+      "rankBlocked": "A higher admin (CEO or super admin) handles this."
     },
     "records": {
       "title": "Monthly totals",
@@ -1585,7 +1591,11 @@
       "scopeEmpty": "No branch assigned — only their own records are visible now.",
       "scopeSave": "Save branches",
       "scopeSaved": "Saved.",
-      "not_manager": "Pick branches after the person is made a branch manager."
+      "not_manager": "Pick branches after the person is made a branch manager.",
+      "setLevel": "Make {level}",
+      "setLevelHint": "Super admin and CEO approve and edit everything (their own too); general admins do everything except for them. One each.",
+      "rank": "Your role cannot change this person.",
+      "level_taken": "Only one super admin and one CEO are allowed. Change the current one to general admin first."
     },
     "settings": {
       "title": "Settings",

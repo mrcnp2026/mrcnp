@@ -16,7 +16,7 @@ import { getMe } from '@/lib/auth';
 import { addDays } from '@/lib/calendar';
 import { hiddenTestIds, loadPeriod, pendingCounts, syncOvertimeRequests } from '@/lib/period-data';
 import { loadStaff } from '@/lib/staff-data';
-import { selfDecisionBlocked } from '@/lib/staff-rules';
+import { approvalBlocked } from '@/lib/staff-rules';
 import { createAdminClient } from '@/lib/supabase/admin';
 import { toKstDate } from '@/lib/time';
 import Link from 'next/link';
@@ -38,8 +38,15 @@ export default async function InboxPage({ searchParams }: { searchParams: Promis
   const me = (await getMe())!;
   // 자기 요청은 다른 관리자가 처리한다 — 다른 관리자가 있을 때만 막는다 (staff-rules.ts)
   // 지점관리자는 자기 요청을 처리하지 못한다 — 관리자가 한다
-  const ownBlocked = me.role === 'manager' || selfDecisionBlocked(me.id, me.id, await loadStaff());
+  // 등급별 승인 규칙 (개발-39): 처리할 수 없는 사람의 요청은 단추 대신 안내 — 본인 것 · 상위 등급 것
+  const staffAll = await loadStaff();
+  const actorStaff = staffAll.find((x) => x.id === me.id);
+  const cannot = (id: string) => {
+    const target = staffAll.find((x) => x.id === id);
+    return !actorStaff || !target ? false : !!approvalBlocked(actorStaff, target, staffAll);
+  };
   const ownNote = <p className="text-sm text-muted">{t('selfBlocked')}</p>;
+  const rankNote = <p className="text-sm text-muted">{t('rankBlocked')}</p>;
   const sp = await searchParams;
 // ★ 연습 모드에서는 모든 기록이 연습 기록이다 — 관리자 화면도 기본으로 연습 기록을 본다 (2026-10-02: 시험직원 정정 요청이 관리자에게 0건으로 보이던 문제). ?live=1이면 실제 기록
   const practice = OFFICE.practiceMode && sp.live !== '1';
@@ -196,7 +203,7 @@ export default async function InboxPage({ searchParams }: { searchParams: Promis
             {o.status !== 'pending' && (
               <p className="text-xs text-muted">{t('decidedBy', { status: t(`status.${o.status}`), who: name.get(o.approved_by) ?? '—' })}</p>
             )}
-            {ownBlocked && o.employee_id === me.id ? ownNote : <OvertimeDecision id={o.id} name={name.get(o.employee_id) ?? ''} facts={{ overtime: o.overtime_minutes, night: o.night_minutes, holiday: o.holiday_minutes }} />}
+            {cannot(o.employee_id) ? (o.employee_id === me.id ? ownNote : rankNote) : <OvertimeDecision id={o.id} name={name.get(o.employee_id) ?? ''} facts={{ overtime: o.overtime_minutes, night: o.night_minutes, holiday: o.holiday_minutes }} />}
           </Card>
         ))}
       </div>
@@ -219,7 +226,7 @@ export default async function InboxPage({ searchParams }: { searchParams: Promis
             </div>
             <p className="num">{line}</p>
             <p className="text-sm"><span className="text-muted">{t('reason')}: </span>{c.reason}</p>
-            {ownBlocked && c.employee_id === me.id ? ownNote : <CorrectionDecision id={c.id} name={name.get(c.employee_id) ?? ''} />}
+            {cannot(c.employee_id) ? (c.employee_id === me.id ? ownNote : rankNote) : <CorrectionDecision id={c.id} name={name.get(c.employee_id) ?? ''} />}
           </Card>
         ))}
       </div>
@@ -248,7 +255,7 @@ export default async function InboxPage({ searchParams }: { searchParams: Promis
             {clash.length > 0 && (
               <p className="rounded-button border border-warn bg-warn-tint p-2 text-sm text-warn">{t('leaveClash', { dates: clash.map(dayLabel).join(', ') })}</p>
             )}
-            {ownBlocked && r.employeeId === me.id ? ownNote : <LeaveDecision id={r.id} name={name.get(r.employeeId) ?? ''} summary={summary} />}
+            {cannot(r.employeeId) ? (r.employeeId === me.id ? ownNote : rankNote) : <LeaveDecision id={r.id} name={name.get(r.employeeId) ?? ''} summary={summary} />}
           </Card>
         ))}
       </div>
@@ -277,7 +284,7 @@ export default async function InboxPage({ searchParams }: { searchParams: Promis
               {t(`workKind.${w.kind}`)} · <span className="font-normal">{t('place')}: {w.place}</span>
             </p>
             {w.reason && <p className="text-sm"><span className="text-muted">{t('reason')}: </span>{w.reason}</p>}
-            {ownBlocked && w.employeeId === me.id ? ownNote : <WorkDecision id={w.id} name={name.get(w.employeeId) ?? ''} summary={`${t(`workKind.${w.kind}`)} (${when})`} />}
+            {cannot(w.employeeId) ? (w.employeeId === me.id ? ownNote : rankNote) : <WorkDecision id={w.id} name={name.get(w.employeeId) ?? ''} summary={`${t(`workKind.${w.kind}`)} (${when})`} />}
           </Card>
         ))}
       </div>
@@ -373,7 +380,7 @@ export default async function InboxPage({ searchParams }: { searchParams: Promis
                     ) : (
                       <p className="rounded-button bg-surface p-2 text-xs text-muted">{t('mapNone')}</p>
                     ))}
-                  {r.employee_id === me.id && ownBlocked ? ownNote : <LeaveDecision id={r.id} name={who} summary={what} url={`/api/admin/punch-requests/${r.id}/decide`} keys={['confirmPunch', 'confirmPunchReject']} />}
+                  {cannot(r.employee_id) ? (r.employee_id === me.id ? ownNote : rankNote) : <LeaveDecision id={r.id} name={who} summary={what} url={`/api/admin/punch-requests/${r.id}/decide`} keys={['confirmPunch', 'confirmPunchReject']} />}
                 </li>
               );
             })}
@@ -400,7 +407,7 @@ export default async function InboxPage({ searchParams }: { searchParams: Promis
                     <span className="num text-sm">{what}</span>
                   </div>
                   {r.reason && <p className="text-sm text-muted">{r.reason}</p>}
-                  {r.employee_id === me.id && ownBlocked ? ownNote : <LeaveDecision id={r.id} name={who} summary={what} url={`/api/admin/schedule-requests/${r.id}/decide`} keys={['confirmShift', 'confirmShiftReject']} />}
+                  {cannot(r.employee_id) ? (r.employee_id === me.id ? ownNote : rankNote) : <LeaveDecision id={r.id} name={who} summary={what} url={`/api/admin/schedule-requests/${r.id}/decide`} keys={['confirmShift', 'confirmShiftReject']} />}
                 </li>
               );
             })}
@@ -426,7 +433,7 @@ export default async function InboxPage({ searchParams }: { searchParams: Promis
                   </span>
                   <p className="num text-sm">{what}</p>
                   {r.reason && <p className="text-sm text-muted">{r.reason}</p>}
-                  {r.employee_id === me.id && ownBlocked ? ownNote : <LeaveDecision id={r.id} name={who} summary={what} url={`/api/admin/leave-changes/${r.id}/decide`} keys={['confirmLeaveDelete', 'confirmLeaveDeleteReject']} />}
+                  {cannot(r.employee_id) ? (r.employee_id === me.id ? ownNote : rankNote) : <LeaveDecision id={r.id} name={who} summary={what} url={`/api/admin/leave-changes/${r.id}/decide`} keys={['confirmLeaveDelete', 'confirmLeaveDeleteReject']} />}
                 </li>
               );
             })}

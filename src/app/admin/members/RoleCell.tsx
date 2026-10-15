@@ -16,6 +16,8 @@ export function RoleCell({
   self,
   waiting,
   actorCanPayroll,
+  level = null,
+  actorTop = false,
 }: {
   employeeId: string;
   role: string;
@@ -23,6 +25,8 @@ export function RoleCell({
   self: boolean;
   waiting: boolean; // 권한 변경이 다른 관리자의 확인을 기다리는 중
   actorCanPayroll: boolean; // 지금 보는 관리자가 급여 담당자인가
+  level?: 'super' | 'ceo' | 'general' | null; // 관리자 구분 (개발-39)
+  actorTop?: boolean; // 지금 보는 사람이 최고관리자 · 대표자 — 관리자 구분을 바꿀 수 있다
 }) {
   const t = useTranslations('admin.members');
   const tm = useTranslations('admin.manage');
@@ -34,7 +38,7 @@ export function RoleCell({
   return (
     <span className="flex flex-col gap-2">
       <span className="flex flex-wrap items-center gap-1">
-        {admin ? <Chip tone="info">{t('adminChip')}</Chip> : manager ? <Chip tone="info">{t('managerChip')}</Chip> : <span className="text-muted">{t('roleEmployee')}</span>}
+        {admin ? <Chip tone="info">{t(level === 'super' ? 'levelSuper' : level === 'ceo' ? 'levelCeo' : 'levelGeneral')}</Chip> : manager ? <Chip tone="info">{t('managerChip')}</Chip> : <span className="text-muted">{t('roleEmployee')}</span>}
         {canViewPayroll && <Chip tone="info">{t('payrollChip')}</Chip>}
         {waiting && <Chip tone="warn">{t('roleWaiting')}</Chip>}
         {!self && !waiting && (
@@ -45,6 +49,12 @@ export function RoleCell({
       </span>
       {open && (
         <span className="block w-80 rounded-button border border-border bg-bg">
+          {admin && actorTop &&
+            (['super', 'ceo', 'general'] as const)
+              .filter((x) => x !== (level ?? 'general'))
+              .map((x) => (
+                <ManageAction key={x} title={tm('setLevel', { level: t(x === 'super' ? 'levelSuper' : x === 'ceo' ? 'levelCeo' : 'levelGeneral') })} hint={tm('setLevelHint')} confirmLabel={tm('setLevel', { level: t(x === 'super' ? 'levelSuper' : x === 'ceo' ? 'levelCeo' : 'levelGeneral') })} endpoint={`/api/admin/employees/${employeeId}/level`} body={{ level: x }} presets={[tm('preset.handover'), tm('preset.mistake')]} />
+              ))}
           {admin ? (
             <ManageAction title={tm('removeAdmin')} hint={tm('removeAdminHint')} confirmLabel={tm('removeAdmin')} endpoint={api} body={{ role: 'employee' }} presets={[tm('preset.handover'), tm('preset.mistake')]} />
           ) : (

@@ -1,6 +1,6 @@
 // 직원 관리 규칙 (부록 R-2): 퇴사·복직·권한·폰 해제
 import { describe, expect, it } from 'vitest';
-import { checkDeviceRevoke, checkPhoneRevoke, checkReinstate, checkResign, checkRoleChange, cleanReason, needsSecondAdmin, selfDecisionBlocked, type Staff } from '@/lib/staff-rules';
+import { checkDeviceRevoke, checkPhoneRevoke, checkReinstate, checkResign, checkRoleChange, approvalBlocked, checkLevelChange, cleanReason, needsSecondAdmin, selfDecisionBlocked, type Staff } from '@/lib/staff-rules';
 
 const s = (id: string, role: 'admin' | 'employee' = 'employee', canViewPayroll = false, active = true): Staff => ({ id, role, active, canViewPayroll });
 const A = s('a', 'admin', true);
@@ -136,5 +136,47 @@ describe('오너 계정 (2026-10-06 의뢰인: admin은 오너가 쓴다 — 모
     expect(checkRoleChange({ actor: owner, target: owner, all, role: 'employee' })).toEqual({ code: 'self_change' });
     expect(checkResign('o', owner, all)).toBe('self_change');
     expect(checkPhoneRevoke('o', 'o', all)).toBe('self_change');
+  });
+});
+
+// 권한 5단계 승인 규칙 (2026-10-15 의뢰인, 결정 사항 개발-39)
+describe('approvalBlocked — 등급별 승인', () => {
+  const S = (id: string, role: Staff['role'], level: Staff['level'] = null): Staff => ({ id, role, active: true, canViewPayroll: false, level, owner: level === 'super' || level === 'ceo' });
+  const sup = S('sup', 'admin', 'super');
+  const ceo = S('ceo', 'admin', 'ceo');
+  const g1 = S('g1', 'admin', 'general');
+  const g2 = S('g2', 'admin', 'general');
+  const mg = S('mg', 'manager');
+  const mg2 = S('mg2', 'manager');
+  const em = S('em', 'employee');
+  const all = [sup, ceo, g1, g2, mg, mg2, em];
+  it('최고관리자 · 대표자는 누구 것이든, 본인 것도', () => {
+    for (const a of [sup, ceo]) for (const t of all) expect(approvalBlocked(a, t, all)).toBeNull();
+  });
+  it('총괄관리자: 최고 · 대표 것은 못 함, 다른 총괄 · 지점관리자 · 직원은 됨, 본인 것은 못 함', () => {
+    expect(approvalBlocked(g1, sup, all)).toBe('rank');
+    expect(approvalBlocked(g1, ceo, all)).toBe('rank');
+    expect(approvalBlocked(g1, g2, all)).toBeNull();
+    expect(approvalBlocked(g1, mg, all)).toBeNull();
+    expect(approvalBlocked(g1, em, all)).toBeNull();
+    expect(approvalBlocked(g1, g1, all)).toBe('self_decision');
+  });
+  it('지점관리자: 일반직원만, 본인 · 다른 지점관리자 · 관리자는 못 함', () => {
+    expect(approvalBlocked(mg, em, all)).toBeNull();
+    expect(approvalBlocked(mg, mg, all)).toBe('self_decision');
+    expect(approvalBlocked(mg, mg2, all)).toBe('rank');
+    expect(approvalBlocked(mg, g1, all)).toBe('rank');
+  });
+  it('일반직원은 승인하지 못함', () => {
+    expect(approvalBlocked(em, mg, all)).toBe('rank');
+  });
+  it('관리자 구분은 최고관리자 · 대표자만, 자기 것은 못 바꿈', () => {
+    expect(checkLevelChange(g1, g2, 'ceo')).toBe('owner_only');
+    expect(checkLevelChange(ceo, ceo, 'general')).toBe('self_change');
+    expect(checkLevelChange(ceo, g1, 'super')).toBeNull();
+    expect(checkLevelChange(ceo, mg, 'general')).toBe('rank');
+  });
+  it('총괄관리자는 최고 · 대표의 권한을 못 바꾸고, 최고관리자는 대표자 것을 바꿀 수 있다', () => {
+    expect('code' in checkRoleChange({ actor: g1, target: ceo, all, role: 'employee' }) && (checkRoleChange({ actor: g1, target: ceo, all, role: 'employee' }) as { code: string }).code).toBe('owner_only');
   });
 });

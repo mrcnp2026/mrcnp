@@ -1,5 +1,6 @@
 // 지금 요청한 사람이 누구인가. 서버 전용.
 import 'server-only';
+import { OFFICE } from '@/config/office';
 import { cache } from 'react';
 import { authTimeOf, sessionRevoked } from '@/lib/login-rules';
 import { createAdminClient } from '@/lib/supabase/admin';
@@ -13,6 +14,8 @@ export type Me = {
   locale: 'ko' | 'en' | 'vi' | 'th';
   active: boolean;
   canViewPayroll: boolean; // 부록 R-2의 7: 급여 담당자만 급여용 CSV를 받는다
+  adminLevel: 'super' | 'ceo' | 'general' | null; // 관리자 구분 (개발-39) — 관리자가 아니면 null
+  top: boolean; // 최고관리자 · 대표자 — 모든 승인 · 수정, 본인 것도
 };
 
 /**
@@ -29,7 +32,7 @@ export const getMe = cache(async (): Promise<Me | null> => {
   const db = createAdminClient();
   const { data: p } = await db
     .from('profiles')
-    .select('id, name, employee_no, role, locale, active, can_view_payroll, sessions_revoked_at')
+    .select('id, name, employee_no, role, locale, active, can_view_payroll, sessions_revoked_at, admin_level')
     .eq('id', uid)
     .maybeSingle();
   if (!p || !p.active) return null;
@@ -39,6 +42,8 @@ export const getMe = cache(async (): Promise<Me | null> => {
   return {
     id: p.id, name: p.name, employeeNo: p.employee_no, role: p.role, locale: p.locale, active: p.active,
     canViewPayroll: p.can_view_payroll,
+    adminLevel: p.role === 'admin' ? ((p.admin_level as Me['adminLevel']) ?? (p.employee_no === OFFICE.ownerEmployeeNo ? 'ceo' : 'general')) : null,
+    top: p.role === 'admin' && ((p.admin_level ?? (p.employee_no === OFFICE.ownerEmployeeNo ? 'ceo' : null)) === 'super' || (p.admin_level ?? (p.employee_no === OFFICE.ownerEmployeeNo ? 'ceo' : null)) === 'ceo'),
   };
 });
 

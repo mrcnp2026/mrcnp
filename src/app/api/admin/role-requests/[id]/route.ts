@@ -34,7 +34,7 @@ export const POST = api<{ params: Promise<{ id: string }> }>('admin.roleRequests
   if (!done?.length) throw new ApiError(409, 'already');
 
   if (decision === 'approved') {
-    const { error: e2 } = await db.from('profiles').update({ role: r.new_role, can_view_payroll: r.new_can_view_payroll, updated_by: me.id }).eq('id', r.target_id);
+    const { error: e2 } = await db.from('profiles').update({ role: r.new_role, can_view_payroll: r.new_can_view_payroll, admin_level: r.new_role === 'admin' ? 'general' : null, updated_by: me.id }).eq('id', r.target_id);
     if (e2) throw new Error(`roleRequests.apply: ${e2.code}`);
     await auditStaffAction({
       actorId: me.id, targetId: r.target_id, event: 'role_changed', reason: r.reason,

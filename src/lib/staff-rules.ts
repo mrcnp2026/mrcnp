@@ -10,7 +10,10 @@ export const MIN_ADMINS = 2;
 export const REASON_MIN = 2;
 export const REASON_MAX = 200;
 
-export type Staff = { id: string; role: 'admin' | 'manager' | 'employee'; active: boolean; canViewPayroll: boolean; owner?: boolean };
+// 권한 5단계 (2026-10-15 의뢰인, 결정 사항 개발-39 · DB 묶음 11): 관리자 안의 구분 level — super 최고관리자 · ceo 대표자 · general 총괄관리자.
+//   owner = 최고관리자 또는 대표자(「최상위」) — 모든 승인 · 수정, 본인 것도. 각 1명.
+export type AdminLevel = 'super' | 'ceo' | 'general';
+export type Staff = { id: string; role: 'admin' | 'manager' | 'employee'; active: boolean; canViewPayroll: boolean; owner?: boolean; level?: AdminLevel | null };
 export type StaffRuleCode =
   | 'self_change' // 본인 것은 스스로 못 바꾼다
   | 'already' // 이미 그 상태
@@ -19,7 +22,8 @@ export type StaffRuleCode =
   | 'min_payroll' // 급여 담당자가 0명이 된다
   | 'payroll_only_grant' // 급여 담당자만 급여 담당을 지정·해제한다
   | 'payroll_needs_admin' // 급여 담당은 관리자여야 한다
-  | 'owner_only'; // 오너 계정은 오너만 바꾼다
+  | 'owner_only' // 최고관리자 · 대표자 계정은 최고관리자 · 대표자만 바꾼다
+  | 'rank'; // 내 등급으로 처리할 수 없는 사람의 요청
 
 const isOwner = (all: Staff[], id: string) => all.some((s) => s.id === id && s.owner && s.active);
 
@@ -40,7 +44,7 @@ function floors(all: Staff[], target: Staff, next: Staff): StaffRuleCode | null 
 
 export function checkResign(actorId: string, target: Staff, all: Staff[]): StaffRuleCode | null {
   if (target.id === actorId) return 'self_change';
-  if (target.owner) return 'owner_only';
+  if (target.owner && !isOwner(all, actorId)) return 'owner_only';
   if (!target.active) return 'already';
   return floors(all, target, { ...target, active: false });
 }
@@ -54,7 +58,7 @@ export function checkReinstate(actorId: string, target: Staff): StaffRuleCode | 
 export function checkRoleChange(args: { actor: Staff; target: Staff; all: Staff[]; role?: 'admin' | 'manager' | 'employee'; canViewPayroll?: boolean }): { code: StaffRuleCode } | { next: Staff } {
   const { actor, target, all } = args;
   if (target.id === actor.id) return { code: 'self_change' };
-  if (target.owner) return { code: 'owner_only' };
+  if (target.owner && !actor.owner) return { code: 'owner_only' };
   if (!target.active) return { code: 'employee_inactive' };
   const role = args.role ?? target.role;
   // 관리자에서 내려오면 급여 담당도 함께 내려온다
@@ -70,7 +74,7 @@ export function checkRoleChange(args: { actor: Staff; target: Staff; all: Staff[
 /** 로그인 초기화(예전의 폰 등록 해제): 자기 것은 스스로 못 한다 (R-2의 2). 다른 관리자가 한다. 비밀번호 변경은 본인이 「내 계정」에서 한다 */
 export function checkPhoneRevoke(actorId: string, targetId: string, all: Staff[] = []): StaffRuleCode | null {
   if (actorId === targetId) return 'self_change';
-  return isOwner(all, targetId) ? 'owner_only' : null;
+  return isOwner(all, targetId) && !isOwner(all, actorId) ? 'owner_only' : null;
 }
 
 /**
@@ -97,6 +101,35 @@ export function selfDecisionBlocked(actorId: string, employeeId: string, all: St
  * 권한 변경에 두 번째 관리자의 확인이 필요한가 (R-2의 8) — 요청자 말고 다른 활성 관리자가 있으면 필요하다.
  * 관리자가 혼자면 확인해 줄 사람이 없으므로 바로 반영한다 (그래야 첫 두 번째 관리자를 지정할 수 있다).
  */
+/**
+ * 요청 승인 · 거절 · 취소를 이 사람이 할 수 있는가 (개발-39)
+ *   최고관리자 · 대표자: 누구 것이든 (본인 것도)
+ *   총괄관리자: 최고관리자 · 대표자 것은 못 함. 본인 것은 다른 관리자가 있으면 못 함
+ *   지점관리자: 일반직원 것만 (맡은 지점인지는 scope.ts가 본다). 본인 것은 못 함
+ */
+export function approvalBlocked(actor: Staff, target: Staff, all: Staff[]): 'self_decision' | 'rank' | null {
+  if (actor.role === 'admin' && actor.owner) return null;
+  if (actor.role === 'admin') {
+    if (target.id !== actor.id && target.owner) return 'rank';
+    return selfDecisionBlocked(actor.id, target.id, all) ? 'self_decision' : null;
+  }
+  if (actor.role === 'manager') {
+    if (target.id === actor.id) return 'self_decision';
+    return target.role === 'employee' ? null : 'rank';
+  }
+  return 'rank';
+}
+
+/** 관리자 구분(최고관리자 · 대표자 · 총괄관리자) 바꾸기 — 최고관리자 · 대표자만, 자기 것은 못 바꾼다(스스로 잠김 방지) */
+export function checkLevelChange(actor: Staff, target: Staff, level: AdminLevel): StaffRuleCode | null {
+  if (!actor.owner || actor.role !== 'admin') return 'owner_only';
+  if (target.id === actor.id) return 'self_change';
+  if (!target.active) return 'employee_inactive';
+  if (target.role !== 'admin') return 'rank';
+  if ((target.level ?? 'general') === level) return 'already';
+  return null;
+}
+
 export function needsSecondAdmin(actorId: string, all: Staff[]): boolean {
   if (isOwner(all, actorId)) return false;
   return all.some((s) => s.id !== actorId && s.active && s.role === 'admin');

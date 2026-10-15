@@ -21,7 +21,7 @@ import { RoleCell } from './RoleCell';
 
 // 탭 (2026-10-11 의뢰인: 시프티의 직원 관리처럼) — 현재직원(가입을 마친 사람) · 미합류(초대했지만 아직 가입 전) · 비활성(퇴사 등으로 꺼 둔 사람)
 type Filter = 'current' | 'pending' | 'inactive';
-type Row = { id: string; name: string; employeeNo: string | null; role: string; active: boolean; groupId: string | null; jobTitle: string | null; canViewPayroll: boolean; joinedOn: string | null; jobId: string | null };
+type Row = { id: string; name: string; employeeNo: string | null; role: string; active: boolean; groupId: string | null; jobTitle: string | null; canViewPayroll: boolean; joinedOn: string | null; jobId: string | null; level: 'super' | 'ceo' | 'general' | null };
 
 export default async function MembersPage({ searchParams }: { searchParams: Promise<{ f?: string }> }) {
   const t = await getTranslations('admin.members');
@@ -32,7 +32,7 @@ export default async function MembersPage({ searchParams }: { searchParams: Prom
   const me = (await getMe())!;
   const [{ data: people }, { data: keys }, groups, { data: roleReqs }, jobs] = await Promise.all([
     // (맨 끝) 직무: 표의 직무 열과 추가 팝업의 고르기 칸
-    db.from('profiles').select('id, name, employee_no, role, active, group_id, job_title, password_set_at, can_view_payroll, joined_on, job_id').order('name'),
+    db.from('profiles').select('id, name, employee_no, role, active, group_id, job_title, password_set_at, can_view_payroll, joined_on, job_id, admin_level').order('name'),
     db.from('user_passkeys').select('employee_id').is('revoked_at', null),
     loadOrgGroups(),
     db.from('role_change_requests').select('target_id').eq('status', 'pending'),
@@ -45,7 +45,7 @@ export default async function MembersPage({ searchParams }: { searchParams: Prom
   // 검사 전용 계정(e2e-audit, e2e-audit2)은 검사 중에만 켜진다 — 꺼져 있으면 목록에 안 보이게
   const all: Row[] = (people ?? [])
     .filter((p) => p.active || !p.employee_no?.startsWith('e2e-audit'))
-    .map((p) => ({ id: p.id, name: p.name, employeeNo: p.employee_no, role: p.role, active: p.active, groupId: p.group_id, jobTitle: p.job_title, canViewPayroll: p.can_view_payroll, joinedOn: p.joined_on, jobId: p.job_id }));
+    .map((p) => ({ id: p.id, name: p.name, employeeNo: p.employee_no, role: p.role, active: p.active, groupId: p.group_id, jobTitle: p.job_title, canViewPayroll: p.can_view_payroll, joinedOn: p.joined_on, jobId: p.job_id, level: (p.role === 'admin' ? (p.admin_level ?? 'general') : null) as 'super' | 'ceo' | 'general' | null }));
   const active = all.filter((p) => p.active);
   const inactive = all.filter((p) => !p.active);
   const joined = active.filter((p) => withPhone.has(p.id));
@@ -174,13 +174,13 @@ export default async function MembersPage({ searchParams }: { searchParams: Prom
           ]}
           rows={list.map((p) => {
             const ok = withPhone.has(p.id);
-            const roleText = [p.role === 'admin' ? t('adminChip') : p.role === 'manager' ? t('managerChip') : t('employeeRole'), p.canViewPayroll ? t('payrollChip') : ''].filter(Boolean).join(' ');
+            const roleText = [p.role === 'admin' ? t(p.level === 'super' ? 'levelSuper' : p.level === 'ceo' ? 'levelCeo' : 'levelGeneral') : p.role === 'manager' ? t('managerChip') : t('employeeRole'), p.canViewPayroll ? t('payrollChip') : ''].filter(Boolean).join(' ');
             return {
               id: p.id,
               dim: !p.active,
               cells: {
                 name: { text: p.name, node: <Link href={`/admin/members/${p.id}`} className="font-bold hover:text-primary">{p.name}</Link> },
-                role: { text: roleText, node: <RoleCell employeeId={p.id} role={p.role} canViewPayroll={p.canViewPayroll} self={p.id === me.id} waiting={roleWaiting.has(p.id)} actorCanPayroll={me.canViewPayroll} /> },
+                role: { text: roleText, node: <RoleCell employeeId={p.id} role={p.role} canViewPayroll={p.canViewPayroll} self={p.id === me.id} waiting={roleWaiting.has(p.id)} actorCanPayroll={me.canViewPayroll} level={p.level} actorTop={me.top} /> },
                 no: { text: p.employeeNo ?? '' },
                 group: { text: groupPath(groups, p.groupId) ?? t('unassigned') },
                 title: { text: p.jobTitle ?? '' },

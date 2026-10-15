@@ -60,7 +60,7 @@ export default async function MemberDetailPage({ params }: { params: Promise<{ i
     : [];
   const api = `/api/admin/employees/${p.id}`;
   // 오너는 다른 관리자가 있어도 자기 출퇴근 기기를 직접 해제한다 (staff-rules.checkDeviceRevoke)
-  const soleAdmin = self && (me.employeeNo === OFFICE.ownerEmployeeNo || ((await db.from('profiles').select('id', { count: 'exact', head: true }).eq('role', 'admin').eq('active', true).neq('id', me.id)).count ?? 0) === 0);
+  const soleAdmin = self && (me.top || ((await db.from('profiles').select('id', { count: 'exact', head: true }).eq('role', 'admin').eq('active', true).neq('id', me.id)).count ?? 0) === 0);
   // 대기 중인 권한 변경 (두 번째 관리자 확인, R-2의 8)
   const { data: pendingRole } = await db.from('role_change_requests').select('id, new_role, new_can_view_payroll, reason, requested_by').eq('target_id', p.id).eq('status', 'pending').maybeSingle();
   const requesterName = pendingRole ? ((await db.from('profiles').select('name').eq('id', pendingRole.requested_by).maybeSingle()).data?.name ?? '') : '';

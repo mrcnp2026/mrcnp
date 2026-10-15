@@ -39,7 +39,7 @@ export const POST = api<{ params: Promise<{ id: string }> }>('admin.employees.ro
     return { ok: true, pending: true, requestId: made.id };
   }
 
-  const { error } = await createAdminClient().from('profiles').update({ role: r.next.role, can_view_payroll: r.next.canViewPayroll, updated_by: me.id }).eq('id', id);
+  const { error } = await createAdminClient().from('profiles').update({ role: r.next.role, can_view_payroll: r.next.canViewPayroll, admin_level: r.next.role === 'admin' ? (target.level ?? 'general') : null, updated_by: me.id }).eq('id', id);
   if (error) throw new Error(`role.update: ${error.code}`);
   await auditStaffAction({
     actorId: me.id, targetId: id, event: 'role_changed', reason,
