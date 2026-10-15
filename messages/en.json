@@ -640,7 +640,7 @@
       "unit": "",
       "rankBlocked": "A higher admin (CEO or super admin) handles this.",
       "mapBase": "Clock-in place: {name} (radius {r}m)",
-      "mapNoPoint": "The requester's actual position is not stored, so it is not shown on the map (pending decision 출퇴근-7)."
+      "mapNoPoint": "This request has no location (it could not be read, or the request was sent before locations were stored), so only the base place is shown."
     },
     "records": {
       "title": "Monthly totals",
@@ -4667,7 +4667,7 @@
       },
       "location": {
         "name": "Location",
-        "detail": "If the company turns on the office-location check, your location is checked only at the moment you punch away from the office internet. Only a location confirmed inside the office radius is stored; any other location is not stored. You are not tracked at other times."
+        "detail": "If the company turns on the office-location check, your location is checked only at the moment you punch away from the office internet. A location confirmed inside the office radius is stored with the punch. If you send a punch request from outside the radius, the location at that moment (about 1 m precision) is stored with the request so the reviewing admin can see it on a map. No other location is stored, and you are not tracked at other times."
       }
     },
     "purposeTitle": "Purpose",
@@ -4790,7 +4790,7 @@
     "pcShowDone": "Show completed",
     "intro": "Requests you sent (leave, corrections, overtime, schedule, out-of-office) and their status. You can cancel ones still waiting.",
     "mapBase": "Clock-in place: {name} (radius {r}m)",
-    "mapNoPoint": "The requester's actual position is not stored, so it is not shown on the map (pending decision 출퇴근-7)."
+    "mapNoPoint": "This request has no location (it could not be read, or the request was sent before locations were stored), so only the base place is shown."
   },
   "scheduleRequest": {
     "title": "Schedule request",

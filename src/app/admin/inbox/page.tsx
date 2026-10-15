@@ -389,7 +389,7 @@ export default async function InboxPage({ searchParams }: { searchParams: Promis
                     ) : (
                       <p className="rounded-button bg-surface p-2 text-xs text-muted">{t('mapNone')}</p>
                     ))}
-                  {/* 기준 출퇴근 장소 지도 (2026-10-15 의뢰인: 우측 패널에 지도가 없다) — 요청한 사람의 위치는 위치 수집 결정(출퇴근-7) 전이라 저장하지 않으므로, 기준 장소와 거리만 보인다 */}
+                  {/* 기준 출퇴근 장소 지도 (2026-10-15 의뢰인: 우측 패널에 지도가 없다) — 요청한 사람의 위치가 없는 요청(위치를 못 받았거나 저장 전에 낸 요청)이면 기준 장소와 거리만 보인다 */}
                   {focus && !(OFFICE.requestLocation && typeof r.lat === 'number') && baseOf.get(r.employee_id) && (() => {
                     const b = baseOf.get(r.employee_id)!;
                     return (
