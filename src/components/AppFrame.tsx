@@ -44,8 +44,11 @@ export async function AppFrame({ me, children, overlay }: { me: Me; children: Re
         <div className="flex w-66 shrink-0 items-center">
           <Logo height={28} priority />
         </div>
-        <MenuSearch role={role} />
-        <div className="ml-auto flex items-center gap-1.5">
+        {/* 검색창은 가운데 (2026-10-16 의뢰인: 직원 모드에서 오른쪽 버튼이 적어 왼쪽으로 쏠려 보였다) */}
+        <div className="flex min-w-0 flex-1 justify-center">
+          <MenuSearch role={role} />
+        </div>
+        <div className="flex shrink-0 items-center justify-end gap-1.5 lg:min-w-66">
           <SpaceSwitch role={role} />
           <span className="ml-1.5">
             <AlertBell approver={isAdmin} />

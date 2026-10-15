@@ -4586,7 +4586,15 @@
     "colDate": "Created",
     "colManage": "Manage",
     "toMessages": "Work messages",
-    "intro": "Notices from the company. Open the ones that need confirming and press [Confirm]."
+    "intro": "Notices from the company. Open the ones that need confirming and press [Confirm].",
+    "tabAll": "All",
+    "tabUnread": "Not confirmed",
+    "colTitle": "Title",
+    "colBody": "Content",
+    "colPosted": "Posted",
+    "colConfirm": "Confirm",
+    "searchTitle": "Search titles",
+    "emptyUnread": "No notices left to confirm."
   },
   "leave": {
     "title": "Leave & off-site",

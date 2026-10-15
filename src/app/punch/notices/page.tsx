@@ -1,5 +1,6 @@
 // 직원 「공지」 목록 — 대상이고 게시 중인 공지 전부 (②-5 7-15). 언어는 메뉴의 언어 버튼을 따른다.
-// PC: 시프티 직원 모드의 「메시지」 — 왼쪽 좁은 칸(기간 · 수) + 오른쪽 표(메시지명 · 상태 · 노트 · 생성일자 · 관리) (2026-10-11 의뢰인 스샷 `스샷/직원모드 메세지.png`)
+// PC: 한 칸 — 「전체 · 확인 안 함」 탭 + 표(제목 · 상태 · 내용 · 게시일 · 확인). 제목으로만 찾는다.
+// 2026-10-16 의뢰인: 시프티 「메시지」를 따라 만든 시작일 · 종료일 칸과 칸마다 붙은 검색, 「업무 메시지」 버튼이 공지에는 필요 없다(업무 메시지는 메뉴 · 알림에서 간다).
 import { Megaphone } from 'lucide-react';
 import { HelpTip } from '@/components/Help';
 import { getFormatter, getLocale, getTranslations } from 'next-intl/server';
@@ -7,34 +8,25 @@ import Link from 'next/link';
 import { redirect } from 'next/navigation';
 import { NoticeBody } from '@/components/NoticeBody';
 import { PcTable } from '@/components/PcTable';
-import { Button, Card, Chip, PageShell } from '@/components/ui';
+import { Card, Chip, PageShell } from '@/components/ui';
 import { getMe } from '@/lib/auth';
 import { visibleNoticesFor } from '@/lib/notices';
 import { toKstDate } from '@/lib/time';
 import { ConfirmButton } from './ConfirmButton';
-import { unreadCount } from '@/lib/work-messages';
 
-const DAY = /^\d{4}-\d{2}-\d{2}$/;
-const field = 'num h-8 w-full min-w-0 rounded-button border border-border bg-bg px-2 text-sm text-text';
 
-export default async function EmployeeNoticesPage({ searchParams }: { searchParams: Promise<{ from?: string; to?: string; open?: string }> }) {
+export default async function EmployeeNoticesPage({ searchParams }: { searchParams: Promise<{ f?: string; open?: string }> }) {
   const me = await getMe();
   if (!me) redirect('/login');
   const [t, tc, f, sp] = await Promise.all([getTranslations('notices'), getTranslations('common'), getFormatter(), searchParams]);
   const all = await visibleNoticesFor(me.id, await getLocale(), new Date());
-  const unreadMsg = await unreadCount(me.id);
-  // 기간: 게시 시작일(한국 날짜)로 거른다. 비워 두면 게시 중인 공지 전부 — 확인하지 않은 공지가 기간 밖이라 안 보이는 일이 없게
-  const from = DAY.test(sp.from ?? '') ? sp.from! : '';
-  const to = DAY.test(sp.to ?? '') ? sp.to! : '';
-  const list = all.filter((n) => {
-    const d = toKstDate(n.startsAt);
-    return (!from || d >= from) && (!to || d <= to);
-  });
-  const unread = list.filter((n) => !n.confirmed).length;
+  // 탭: 전체 / 확인 안 함 (?f=unread)
+  const onlyUnread = sp.f === 'unread';
+  const unread = all.filter((n) => !n.confirmed).length;
+  const list = onlyUnread ? all.filter((n) => !n.confirmed) : all;
   const hrefOf = (open?: string) => {
     const q = new URLSearchParams();
-    if (from) q.set('from', from);
-    if (to) q.set('to', to);
+    if (onlyUnread) q.set('f', 'unread');
     if (open) q.set('open', open);
     return q.size ? `/punch/notices?${q}` : '/punch/notices';
   };
@@ -68,48 +60,24 @@ export default async function EmployeeNoticesPage({ searchParams }: { searchPara
   return (
     <>
       <PageShell wide>
-        <Link href="/punch/messages" className="num inline-flex min-h-11 items-center gap-2 self-start rounded-button border border-border bg-bg px-4 text-sm font-bold text-primary">
-          {t('toMessages')}
-          {unreadMsg > 0 && <span className="rounded-full bg-primary px-2 text-xs text-on-primary">{unreadMsg}</span>}
-        </Link>
         <div>
           <h1 className="flex flex-wrap items-center gap-x-1 text-2xl font-semibold text-primary-deep lg:font-bold lg:text-text">
             <Megaphone aria-hidden size={24} strokeWidth={1.75} className="lg:hidden" />
             {t('title')}
           <HelpTip>{t('intro')}</HelpTip></h1>
         </div>
-        <div className="hidden lg:grid lg:grid-cols-[14rem_minmax(0,1fr)] lg:gap-8">
-          <aside className="flex flex-col gap-4">
-            <h2 className="text-lg font-bold">{t('pcTitle')}</h2>
-            <form action="/punch/notices" className="flex flex-col gap-2">
-              <label className="flex flex-col gap-1 text-sm text-muted">
-                {t('from')}
-                <input type="date" name="from" defaultValue={from} className={field} />
-              </label>
-              <label className="flex flex-col gap-1 text-sm text-muted">
-                {t('to')}
-                <input type="date" name="to" defaultValue={to} className={field} />
-              </label>
-              <Button type="submit" variant="outline" size="sm">
-                {t('load')}
-              </Button>
-              {(from || to) && (
-                <Link href="/punch/notices" className="text-sm font-semibold text-primary">
-                  {t('allPeriod')}
+        <div className="hidden flex-col gap-3 lg:flex">
+          <nav className="flex items-center gap-1 border-b border-border" aria-label={t('title')}>
+            {([['all', t('tabAll'), all.length], ['unread', t('tabUnread'), unread]] as const).map(([k, label, n]) => {
+              const on = (k === 'unread') === onlyUnread;
+              return (
+                <Link key={k} href={k === 'unread' ? '/punch/notices?f=unread' : '/punch/notices'} aria-current={on ? 'page' : undefined} className={`-mb-px flex min-h-11 items-center gap-2 border-b-2 px-3 text-sm font-bold ${on ? 'border-primary text-primary' : 'border-transparent text-muted hover:text-text'}`}>
+                  {label}
+                  <span className={`num rounded-chip px-2 text-xs ${k === 'unread' && n > 0 ? 'bg-warn-tint text-warn' : 'bg-surface text-muted'}`}>{n}</span>
                 </Link>
-              )}
-            </form>
-            <dl className="num flex flex-col gap-1 border-t border-border pt-3 text-sm">
-              <div className="flex items-center justify-between gap-2">
-                <dt className="text-muted">{t('countAll')}</dt>
-                <dd className="rounded-button bg-surface px-2 font-bold">{list.length}</dd>
-              </div>
-              <div className="flex items-center justify-between gap-2">
-                <dt className="text-muted">{t('countNew')}</dt>
-                <dd className={`rounded-button px-2 font-bold ${unread ? 'bg-warn-tint text-warn' : 'bg-surface'}`}>{unread}</dd>
-              </div>
-            </dl>
-          </aside>
+              );
+            })}
+          </nav>
           <section className="flex min-w-0 flex-col gap-3">
             {opened && (
               <Card className="flex flex-col gap-2">
@@ -123,13 +91,13 @@ export default async function EmployeeNoticesPage({ searchParams }: { searchPara
               </Card>
             )}
             <PcTable
-              labels={{ search: tc('colSearch'), empty: t('pcEmpty') }}
+              labels={{ search: t('searchTitle'), empty: t(onlyUnread ? 'emptyUnread' : 'empty') }}
               cols={[
-                { key: 'name', label: t('colName') },
-                { key: 'state', label: t('colState') },
-                { key: 'note', label: t('colNote'), sort: false },
-                { key: 'date', label: t('colDate') },
-                { key: 'manage', label: t('colManage'), search: false, sort: false },
+                { key: 'name', label: t('colTitle') },
+                { key: 'state', label: t('colState'), search: false },
+                { key: 'note', label: t('colBody'), search: false, sort: false },
+                { key: 'date', label: t('colPosted'), search: false },
+                { key: 'manage', label: t('colConfirm'), search: false, sort: false },
               ]}
               rows={list.map((n) => ({
                 id: n.id,

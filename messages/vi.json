@@ -406,7 +406,15 @@
     "confirmed": "Đã xem",
     "new": "Mới",
     "countAll": "Thông báo hiện có",
-    "countNew": "Chưa xác nhận"
+    "countNew": "Chưa xác nhận",
+    "tabAll": "All",
+    "tabUnread": "Not confirmed",
+    "colTitle": "Title",
+    "colBody": "Content",
+    "colPosted": "Posted",
+    "colConfirm": "Confirm",
+    "searchTitle": "Search titles",
+    "emptyUnread": "No notices left to confirm."
   },
   "account": {
     "title": "Tài khoản của tôi",

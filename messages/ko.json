@@ -4586,7 +4586,15 @@
     "colDate": "생성일자",
     "colManage": "관리",
     "toMessages": "업무 메시지",
-    "intro": "회사가 올린 공지입니다. 확인이 필요한 공지는 열어서 [확인]을 눌러 주세요."
+    "intro": "회사가 올린 공지입니다. 확인이 필요한 공지는 열어서 [확인]을 눌러 주세요.",
+    "tabAll": "전체",
+    "tabUnread": "확인 안 함",
+    "colTitle": "제목",
+    "colBody": "내용",
+    "colPosted": "게시일",
+    "colConfirm": "확인",
+    "searchTitle": "제목 검색",
+    "emptyUnread": "확인하지 않은 공지가 없습니다."
   },
   "leave": {
     "title": "휴가·외근",
