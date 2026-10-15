@@ -1,12 +1,13 @@
 // 권한 등급 한 번에 바꾸기 — 최고관리자 · 대표자 · 총괄관리자 · 지점관리자 · 일반직원 (2026-10-15 의뢰인: `스샷/스샷2/권한3.png` — 상세에서 등급을 직접 부여할 수 없었다).
 // 규칙(결정 사항 개발-39): 최고관리자 · 대표자로 지정하거나 그 사람을 바꾸는 것은 최고관리자 · 대표자만. 본인 것은 못 바꾼다.
 //   등급(role)이 바뀌면 기존 권한 변경 절차(request_staff_role_atomic — 다른 관리자 확인, 최소 관리자 수)를 그대로 탄다.
-//   관리자끼리의 구분(최고 · 대표 · 총괄)만 바뀌면 바로 반영한다(각 1명 — DB가 두 번째를 막는다).
+//   관리자끼리의 구분(최고 · 대표 · 총괄)만 바뀌면 바로 반영한다.
+// 2026-10-15 의뢰인: 화면에는 최고관리자 · 일반직원 두 가지만. 최고관리자는 대표자를 포함해 최대 3명(MAX_TOP — DB도 막는다, 묶음 13).
 import { api, ApiError, readJson } from '@/lib/api';
 import { atomicRpc } from '@/lib/atomic-rpc';
 import { requireAdmin } from '@/lib/auth';
 import { auditStaffAction, loadStaff } from '@/lib/staff-data';
-import { cleanReason, gradeOf, type Grade } from '@/lib/staff-rules';
+import { cleanReason, gradeOf, MAX_TOP, type Grade } from '@/lib/staff-rules';
 import { createAdminClient } from '@/lib/supabase/admin';
 
 const GRADES: Grade[] = ['super', 'ceo', 'general', 'manager', 'employee'];
@@ -29,7 +30,8 @@ export const POST = api<{ params: Promise<{ id: string }> }>('admin.employees.gr
   const top = (g: Grade) => g === 'super' || g === 'ceo';
   if ((target.owner || top(grade)) && !actor.owner) throw new ApiError(403, 'owner_only');
   const now = gradeOf(target);
-  if (now === grade) throw new ApiError(409, 'already');
+  if (now === grade || (top(now) && top(grade))) throw new ApiError(409, 'already');
+  if (top(grade) && all.filter((s) => s.active && top(gradeOf(s))).length >= MAX_TOP) throw new ApiError(409, 'super_full');
 
   const role = top(grade) || grade === 'general' ? 'admin' : grade;
   const db = createAdminClient();

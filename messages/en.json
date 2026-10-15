@@ -244,11 +244,14 @@
     "leave_not_target": "You are not eligible for this leave type.",
     "leave_weekday": "This leave type cannot be requested on that weekday.",
     "rank": "Your role cannot decide this person's request. Ask a higher admin.",
-    "level_taken": "Only one super admin and one CEO are allowed. Change the current one to general admin first.",
+    "level_taken": "Up to 3 super admins (including the CEO). Change one of them to employee first.",
     "db_update_required": "Required database changes have not been applied. Contact an administrator.",
     "leave_duration_mismatch": "The leave duration does not match the scheduled work time excluding breaks. Check the start time and leave type.",
     "payroll_duplicate_payment": "The same work is included in another finalized run. Check regular/daily runs and revisions.",
-    "pin_busy": "Another attempt overlapped. Please try again."
+    "pin_busy": "Another attempt overlapped. Please try again.",
+    "super_full": "Up to 3 super admins (including the CEO). Change one of them to employee first.",
+    "top_only": "Only a super admin can do this.",
+    "pending_exists": "A request is waiting. Handle it in the inbox first."
   },
   "admin": {
     "nav": {
@@ -929,7 +932,19 @@
       "cancelConfirm": "Cancel it",
       "self_change": "You cannot cancel a correction on your own record. Ask another admin.",
       "already": "It is already cancelled or not approved. Please refresh.",
-      "byGps": "Confirmed by GPS"
+      "byGps": "Confirmed by GPS",
+      "fix": "Fix",
+      "fixOf": "Fix {what}",
+      "fixTitle": "{what} — direct fix",
+      "fixAction": {
+        "modify": "Change time",
+        "void": "Delete record"
+      },
+      "fixTime": "New time",
+      "fixNextDay": "Next day (after midnight)",
+      "fixVoidWarn": "This record will count as not made. The original punch and the reason are kept.",
+      "fixSave": "Change",
+      "fixVoidConfirm": "Delete"
     },
     "org": {
       "title": "Org chart",
@@ -1612,7 +1627,7 @@
       "setLevel": "Make {level}",
       "setLevelHint": "Super admin and CEO approve and edit everything (their own too); general admins do everything except for them. One each.",
       "rank": "Your role cannot change this person.",
-      "level_taken": "Only one super admin and one CEO are allowed. Change the current one to general admin first.",
+      "level_taken": "Up to 3 super admins (including the CEO). Change one of them to employee first.",
       "gradeTitle": "Role",
       "gradePick": "Role of this employee",
       "gradeNow": "current",
@@ -1629,12 +1644,14 @@
         "employee": "Employee"
       },
       "gradeHint": {
-        "super": "Approves and edits everything, incl. own requests",
+        "super": "Approves and edits everything, can add, edit or delete leave and punch records directly, incl. own requests",
         "ceo": "Approves and edits everything, incl. own requests",
         "general": "Approves and edits everything except CEO and super admin",
         "manager": "Approves or rejects requests of employees in their branch only",
         "employee": "Own work only"
-      }
+      },
+      "gradeTopNow": "Now {n} of max 3 — {names}",
+      "super_full": "Up to 3 super admins (including the CEO). Change one of them to employee first."
     },
     "settings": {
       "title": "Settings",
@@ -4572,7 +4589,19 @@
     "monthlyNote": "In days. Leave spanning several days is counted in the month it starts.",
     "prevYear": "Previous year",
     "nextYear": "Next year",
-    "localeTag": "en"
+    "localeTag": "en",
+    "directAdd": "Add leave directly",
+    "directEdit": "Edit this leave",
+    "directHint": "Super admin override — approved at once without balance, deadline or type rules. Overlaps and confirmed days are still blocked.",
+    "directReason": "Reason for override",
+    "directReasonHint": "Required — kept in the decision log.",
+    "directDone": "Added and approved {n} day(s).",
+    "directAddSave": "Add and approve",
+    "directEditSave": "Save and approve",
+    "directEditOpen": "Edit",
+    "directClose": "Close",
+    "directList": "Approved and pending leave (last 30)",
+    "directListNone": "No approved or pending leave."
   },
   "work": {
     "title": "Off-site / trip / remote",

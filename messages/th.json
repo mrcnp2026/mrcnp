@@ -218,7 +218,10 @@
     "password_mismatch": "รหัสผ่านสองช่องไม่ตรงกัน",
     "password_wrong": "รหัสผ่านปัจจุบันไม่ถูกต้อง",
     "device_required": "กรุณาลงทะเบียนอุปกรณ์ลงเวลาก่อน",
-    "day_confirmed": "วันนี้ยืนยันแล้ว ผู้ดูแลต้องยกเลิกการยืนยันก่อนจึงจะแก้ไขได้"
+    "day_confirmed": "วันนี้ยืนยันแล้ว ผู้ดูแลต้องยกเลิกการยืนยันก่อนจึงจะแก้ไขได้",
+    "super_full": "Up to 3 super admins (including the CEO). Change one of them to employee first.",
+    "top_only": "Only a super admin can do this.",
+    "pending_exists": "A request is waiting. Handle it in the inbox first."
   },
   "side": {
     "menu": "เมนู",

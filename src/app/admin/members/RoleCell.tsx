@@ -26,8 +26,10 @@ export function RoleCell({
 }) {
   const t = useTranslations('admin.members');
   const tm = useTranslations('admin.manage');
-  const grade = role === 'admin' ? (level ?? 'general') : role === 'manager' ? 'manager' : 'employee';
-  const top = grade === 'super' || grade === 'ceo';
+  // 대표자(ceo)는 최고관리자로 보인다 (2026-10-15 의뢰인: 등급 두 가지)
+  const lv = role === 'admin' ? (level ?? 'general') : role === 'manager' ? 'manager' : 'employee';
+  const grade = lv === 'ceo' ? 'super' : lv;
+  const top = grade === 'super';
   return (
     <span className="flex flex-wrap items-center gap-1">
       {grade === 'employee' ? <span className="text-muted">{tm('grade.employee')}</span> : <Chip tone="info">{tm(`grade.${grade}`)}</Chip>}

@@ -84,7 +84,7 @@ try {
   r = await post(api, { workDate: '2099-01-05', kind: 'in', time: '09:00', reason: '시험 사유' });
   check(r.status === 400 && r.json.error === 'future_time', '미래 날짜 차단');
   r = await post(`/api/admin/employees/${emp!.id}/punch`, { workDate: DAY, kind: 'in', time: '09:00', reason: '시험 사유' });
-  check(r.status === 403 && r.json.error === 'proxy_self', '본인 기록은 대신 넣지 못함');
+  check(r.status === 403 && r.json.error === 'self_decision', '본인 기록은 대신 넣지 못함', JSON.stringify(r.json.error)); // 2026-10-15 승인 규칙 통합 뒤 이름이 self_decision
 
   // ── 화면에서 넣기: 출근 ──
   await p.goto(`${BASE}/admin/records/${target!.id}?m=${YM}`);

@@ -1,5 +1,6 @@
 'use client';
 // 휴가 신청 양식. 일수는 서버가 근무일만 세어 정한다 — 화면은 보내기만 한다.
+// direct: 최고관리자 직권 추가 · 고치기(2026-10-15 의뢰인) — 같은 양식으로 api/admin/leave/direct에 보낸다. 사유는 필수(결정 기록에 남는다).
 import { useTranslations } from 'next-intl';
 import { useRouter } from 'next/navigation';
 import { useState } from 'react';
@@ -10,10 +11,13 @@ import { Button, Card } from '@/components/ui';
 
 const field = 'min-h-11 w-full rounded-button border border-border bg-bg px-3 text-base text-text';
 
-export function LeaveForm({ today, types }: { today: string; types: { code: string; name: string; unit: number; deducts: boolean; hours: number; startTime: string | null; endTime: string | null; group: string | null }[] }) {
+export type DirectLeave = { employeeId: string; replaceId?: string; initial?: { typeCode: string; startDate: string; endDate: string; startTime: string | null } };
+
+export function LeaveForm({ today, types, direct }: { today: string; types: { code: string; name: string; unit: number; deducts: boolean; hours: number; startTime: string | null; endTime: string | null; group: string | null }[]; direct?: DirectLeave }) {
   const t = useTranslations('leave');
   const router = useRouter();
-  const [code, setCode] = useState(types[0]?.code ?? 'annual');
+  const init = direct?.initial;
+  const [code, setCode] = useState(init && types.some((x) => x.code === init.typeCode) ? init.typeCode : (types[0]?.code ?? 'annual'));
   const [busy, setBusy] = useState(false);
   const [sent, setSent] = useState<number | null>(null);
   const [err, setErr] = useState<{ code: string; requestId?: string } | null>(null);
@@ -37,7 +41,8 @@ export function LeaveForm({ today, types }: { today: string; types: { code: stri
           setBusy(true);
           setErr(null);
           setSent(null);
-          const r = await callApi<{ days: number }>('/api/leave', {
+          const r = await callApi<{ days: number }>(direct ? '/api/admin/leave/direct' : '/api/leave', {
+            ...(direct ? { employeeId: direct.employeeId, replaceId: direct.replaceId ?? null, adminReason: fd.get('reason') } : {}),
             typeCode: code,
             startDate: fd.get('startDate'),
             endDate: oneDay ? fd.get('startDate') : fd.get('endDate'),
@@ -47,11 +52,12 @@ export function LeaveForm({ today, types }: { today: string; types: { code: stri
           setBusy(false);
           if (!r.ok) return setErr(r);
           setSent(r.data.days);
-          form.reset();
+          if (!direct?.replaceId) form.reset();
           router.refresh();
         }}
       >
-        <h2 className="font-semibold">{t('request')}</h2>
+        <h2 className="font-semibold">{t(direct ? (direct.replaceId ? 'directEdit' : 'directAdd') : 'request')}</h2>
+        {direct && <p className="text-sm text-muted">{t('directHint')}</p>}
         <label className="flex flex-col gap-1 text-sm text-muted">
           {t('typeLabel')}
           <select value={code} onChange={(e) => setCode(e.target.value)} className={field}>
@@ -79,32 +85,32 @@ export function LeaveForm({ today, types }: { today: string; types: { code: stri
         <div className={`grid gap-3 ${oneDay ? '' : 'grid-cols-2'}`}>
           <label className="flex flex-col gap-1 text-sm text-muted">
             {oneDay ? t('date') : t('start')}
-            <DateTimeInput name="startDate" type="date" required defaultValue={today} className={`num ${field}`} />
+            <DateTimeInput name="startDate" type="date" required defaultValue={init?.startDate ?? today} className={`num ${field}`} />
           </label>
           {!oneDay && (
             <label className="flex flex-col gap-1 text-sm text-muted">
               {t('end')}
-              <DateTimeInput name="endDate" type="date" required defaultValue={today} className={`num ${field}`} />
+              <DateTimeInput name="endDate" type="date" required defaultValue={init?.endDate ?? today} className={`num ${field}`} />
             </label>
           )}
         </div>
         {oneDay && !cur?.startTime && (
           <label className="flex flex-col gap-1 text-sm text-muted">
             {t('startTime')}
-            <DateTimeInput name="startTime" type="time" required className={`num ${field}`} />
+            <DateTimeInput name="startTime" type="time" required defaultValue={init?.startTime ?? undefined} className={`num ${field}`} />
             <span className="text-xs text-faint">{t('startTimeHint', { h: cur?.hours ?? 0 })}</span>
           </label>
         )}
         <p className="text-xs text-faint">{t('workdaysOnly')}</p>
         <label className="flex flex-col gap-1 text-sm text-muted">
-          {t('reason')}
-          <textarea name="reason" maxLength={200} rows={2} className="w-full rounded-button border border-border bg-bg p-3 text-base text-text" />
-          <span className="text-xs text-faint">{t('reasonHint')}</span>
+          {t(direct ? 'directReason' : 'reason')}
+          <textarea name="reason" maxLength={200} rows={2} required={!!direct} minLength={direct ? 2 : undefined} className="w-full rounded-button border border-border bg-bg p-3 text-base text-text" />
+          <span className="text-xs text-faint">{t(direct ? 'directReasonHint' : 'reasonHint')}</span>
         </label>
         {err && <ErrorNote code={err.code} requestId={err.requestId} namespace="leave" />}
-        {sent !== null && <p className="text-sm font-semibold text-ok">{t('sent', { n: sent })}</p>}
+        {sent !== null && <p className="text-sm font-semibold text-ok">{t(direct ? 'directDone' : 'sent', { n: sent })}</p>}
         <Button type="submit" disabled={busy} className="w-full">
-          {t('submit')}
+          {t(direct ? (direct.replaceId ? 'directEditSave' : 'directAddSave') : 'submit')}
         </Button>
       </form>
     </Card>

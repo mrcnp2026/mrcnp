@@ -14,6 +14,11 @@ export const REASON_MAX = 200;
 //   owner = 최고관리자 또는 대표자(「최상위」) — 모든 승인 · 수정, 본인 것도. 각 1명.
 export type AdminLevel = 'super' | 'ceo' | 'general';
 /** 다섯 등급 (개발-39) — 화면 · API가 같은 이름을 쓴다 */
+/** 최고관리자(대표자 포함) 최대 인원 — 2026-10-15 의뢰인. DB도 같은 수로 막는다(묶음 13) */
+export const MAX_TOP = 3;
+/** 화면에서 고를 수 있는 등급 — 최고관리자 · 일반직원 두 가지(총괄 · 지점관리자는 숨기고 기능은 남긴다, 2026-10-15 의뢰인) */
+export const SHOWN_GRADES = ['super', 'employee'] as const;
+
 export type Grade = 'super' | 'ceo' | 'general' | 'manager' | 'employee';
 export function gradeOf(s: Pick<Staff, 'role' | 'level'>): Grade {
   return s.role === 'admin' ? (s.level ?? 'general') : s.role;

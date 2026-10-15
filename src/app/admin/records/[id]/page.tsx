@@ -15,6 +15,7 @@ import { buildMonth, isYearMonth, monthRange } from '@/lib/month-data';
 import { daysFor, leaveDaysFor, workDaysFor } from '@/lib/period-data';
 import { toKstDate } from '@/lib/time';
 import { CancelCorrection } from './CancelCorrection';
+import { DirectFix } from './DirectFix';
 import { ProxyEntry } from './ProxyEntry';
 
 function shift(ym: string, n: number) {
@@ -42,7 +43,10 @@ export default async function EmployeeRecordsPage({ params, searchParams }: { pa
   // 본인 기록은 대신 넣지 못한다 (스스로 넣고 스스로 승인하는 것을 막는다)
   const viewer = await getMe();
   const self = viewer?.id === id;
-  const canEnter = practice === OFFICE.practiceMode && !self && viewer?.role === 'admin'; // 지점관리자는 보기만 (manager-rules.ts)
+  // 최고관리자는 본인 것도 직접 처리한다 (2026-10-15 의뢰인) — 그 밖의 관리자는 본인 것을 못 넣는다
+  const canEnter = practice === OFFICE.practiceMode && (!self || !!viewer?.top) && viewer?.role === 'admin'; // 지점관리자는 보기만 (manager-rules.ts)
+  // 찍힌 기록의 직권 수정 · 삭제는 최고관리자만 (2026-10-15 의뢰인)
+  const canFix = canEnter && !!viewer?.top;
 
   const { data, rows } = await buildMonth(ym, practice);
   const person = data.people.find((p) => p.id === id);
@@ -165,6 +169,7 @@ export default async function EmployeeRecordsPage({ params, searchParams }: { pa
                           <span>{t('rawPunched')}</span>
                           {!e.ipVerified && <span className="text-warn">{th('outside')}</span>}
                           {e.verifiedBy === 'gps' && <span className="text-ok">{t('byGps')}</span>}
+                          {canFix && <DirectFix eventId={e.id} label={`${ti(`kind.${e.kind}`)} ${hm(e.punchedAt)}`} time={hm(e.punchedAt)} canNextDay={e.kind === 'out'} />}
                         </li>
                       ))}
                       {corr.map((c) => {
@@ -179,7 +184,7 @@ export default async function EmployeeRecordsPage({ params, searchParams }: { pa
                                     ? ti('modifyLine', { from: target ? hm(target.punchedAt) : '', to: hm(c.newPunchedAt) })
                                     : ti('voidLine', { time: target ? hm(target.punchedAt) : '' })}
                               </span>
-                              <span>{c.correctionType === 'add_missing' && c.requestedBy !== c.employeeId ? t('byAdmin', { who: nameOf.get(c.requestedBy) ?? '' }) : t('byRequest')}</span>
+                              <span>{c.requestedBy !== c.employeeId ? t('byAdmin', { who: nameOf.get(c.requestedBy) ?? '' }) : t('byRequest')}</span>
                               <span className={c.status === 'pending' ? 'text-warn' : c.status === 'cancelled' ? 'line-through' : ''}>{ti(`status.${c.status}`)}</span>
                             </span>
                             <span className="break-words whitespace-pre-wrap">{t('reasonLine', { reason: c.reason })}</span>
@@ -205,7 +210,7 @@ export default async function EmployeeRecordsPage({ params, searchParams }: { pa
           <ProxyEntry employeeId={id} name={person.name} kinds={['in', 'out']} today={today} />
         </Card>
       )}
-      {self && <p className="text-sm text-muted">{t('selfNote')}</p>}
+      {self && !canEnter && <p className="text-sm text-muted">{t('selfNote')}</p>}
       <p className="text-xs text-faint">{t('footNote')}</p>
       </div>
       </div>

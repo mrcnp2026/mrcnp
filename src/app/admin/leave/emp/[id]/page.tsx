@@ -13,9 +13,12 @@ import { loadAllLeaveTypes, loadLeaveGrants, loadLeaveRequests } from '@/lib/lea
 import { createAdminClient } from '@/lib/supabase/admin';
 import { toKstDate } from '@/lib/time';
 import { GrantForm } from '../../GrantForm';
+import { LeaveForm } from '@/app/punch/leave/LeaveForm';
+import { leaveTypeName } from '@/lib/leave';
+import { DirectLeaveRow } from './DirectLeaveRow';
 
 export default async function LeaveAccrualPage({ params, searchParams }: { params: Promise<{ id: string }>; searchParams: Promise<{ to?: string; live?: string }> }) {
-  const [t, tl, f, { id }, sp] = await Promise.all([getTranslations('admin.leaveAccrual'), getTranslations('admin.leave'), getFormatter(), params, searchParams]);
+  const [t, tl, tv, f, { id }, sp] = await Promise.all([getTranslations('admin.leaveAccrual'), getTranslations('admin.leave'), getTranslations('leave'), getFormatter(), params, searchParams]);
   if (!/^[0-9a-f-]{36}$/i.test(id)) notFound();
   const today = toKstDate(new Date());
   const asOf = sp.to && /^\d{4}-\d{2}-\d{2}$/.test(sp.to) && !Number.isNaN(Date.parse(`${sp.to}T00:00:00Z`)) ? sp.to : today;
@@ -27,7 +30,12 @@ export default async function LeaveAccrualPage({ params, searchParams }: { param
   ]);
   // 지점관리자는 맡은 지점 직원만 본다 · 받은 연차 입력은 관리자만
   if (!p || !(await scopeFilter())(id)) notFound();
-  const admin = (await getMe())?.role === 'admin';
+  const viewer = await getMe();
+  const admin = viewer?.role === 'admin';
+  // 최고관리자 직권 추가 · 고치기 · 삭제 (2026-10-15 의뢰인) — 지금 운영 모드의 기록에만
+  const top = !!viewer?.top && sp.live !== '1';
+  const typeOptions = types.filter((x) => x.active).map((x) => ({ code: x.code, name: leaveTypeName(types, x.code, tv), unit: x.dayUnit, deducts: x.deductsBalance, hours: x.hours ?? x.dayUnit * 8, startTime: x.startTime ?? null, endTime: x.endTime ?? null, group: x.groupName ?? null }));
+  const live = requests.filter((r) => r.status === 'approved' || r.status === 'pending').sort((a, b) => (a.startDate < b.startDate ? 1 : -1)).slice(0, 30);
   const bal = calcLeaveBalance({ grants, requests, types, asOf });
   const sorted = [...grants].sort((a, b) => (a.effectiveFrom < b.effectiveFrom ? 1 : -1)); // 새 것이 위
   const asc = [...sorted].reverse();
@@ -98,6 +106,32 @@ export default async function LeaveAccrualPage({ params, searchParams }: { param
           </ul>
         )}
       </section>
+
+      {top && (
+        <section className="flex flex-col gap-2" data-direct-leave>
+          <h2 className="px-1 font-bold">{tv('directList')}</h2>
+          {live.length === 0 && <p className="rounded-card bg-bg p-5 text-sm text-faint">{tv('directListNone')}</p>}
+          {live.length > 0 && (
+            <ul className="-mx-4 divide-y divide-border border-y border-border bg-bg lg:mx-0 lg:rounded-card lg:border">
+              {live.map((r) => (
+                <li key={r.id} className="flex flex-col gap-2 px-5 py-3">
+                  <span className="flex flex-wrap items-center gap-2">
+                    <span className="num font-bold">
+                      {dot(r.startDate)}
+                      {r.endDate !== r.startDate && ` - ${dot(r.endDate)}`}
+                      {r.startTime && ` ${r.startTime}-${r.endTime ?? ''}`}
+                    </span>
+                    <span className="text-sm text-muted">{leaveTypeName(types, r.typeCode, tv)} · {tv('days', { n: n(r.days) })}</span>
+                    {r.status === 'pending' && <Chip tone="warn">{tv('status.pending')}</Chip>}
+                  </span>
+                  <DirectLeaveRow today={today} types={typeOptions} name={p.name as string} approved={r.status === 'approved'} direct={{ employeeId: id, replaceId: r.id, initial: { typeCode: r.typeCode, startDate: r.startDate, endDate: r.endDate, startTime: r.startTime ?? null } }} />
+                </li>
+              ))}
+            </ul>
+          )}
+          <LeaveForm today={today} types={typeOptions} direct={{ employeeId: id }} />
+        </section>
+      )}
 
 {admin && (
       <Card className="flex flex-col gap-3">

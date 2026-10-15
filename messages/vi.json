@@ -218,7 +218,10 @@
     "password_mismatch": "Hai mật khẩu không giống nhau.",
     "password_wrong": "Mật khẩu hiện tại không đúng.",
     "device_required": "Vui lòng đăng ký thiết bị chấm công trước.",
-    "day_confirmed": "Ngày này đã được xác nhận. Quản trị viên phải bỏ xác nhận trước khi sửa."
+    "day_confirmed": "Ngày này đã được xác nhận. Quản trị viên phải bỏ xác nhận trước khi sửa.",
+    "super_full": "Up to 3 super admins (including the CEO). Change one of them to employee first.",
+    "top_only": "Only a super admin can do this.",
+    "pending_exists": "A request is waiting. Handle it in the inbox first."
   },
   "side": {
     "menu": "Menu",
