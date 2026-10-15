@@ -97,9 +97,12 @@ try {
   check((await qb.locator('header a[href="/punch/search"]').count()) >= 1, '폰 위 띠에 돋보기(통합 검색)');
 
   // ── PC 위쪽 검색창: 찾을 곳 고르기 → Enter → 결과 ──
+  await qa.setViewportSize({ width: 1440, height: 900 }); // 위쪽 검색창은 PC 틀에 있다
   await qa.goto(`${BASE}/punch`);
   await qa.waitForLoadState('networkidle');
-  await qa.getByRole('combobox', { name: '찾을 곳' }).first().selectOption('notices');
+  // 2026-10-15: 「찾을 곳」은 아이콘 팝업(검색.png) — 단추를 눌러 고른다
+  await qa.locator('[data-scope-button]').first().dispatchEvent('click'); // 이 검사가 만든 공지 팝업이 위에 떠 있을 수 있다
+  await qa.locator('[data-scope-menu]').getByRole('menuitemradio', { name: '공지' }).dispatchEvent('click');
   await qa.getByRole('combobox', { name: '검색' }).fill(TAG);
   await qa.keyboard.press('Enter');
   await qa.waitForURL(/\/punch\/search\?q=.*&s=notices/, { timeout: 15000 });

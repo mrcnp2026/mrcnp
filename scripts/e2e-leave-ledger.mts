@@ -124,7 +124,7 @@ try {
       await p.waitForLoadState('networkidle');
       check((await p.locator('tr', { hasText: emp!.name }).getByText('근속 1년 연차').count()) >= 1, '후보 표에 「근속 1년 연차」');
       await shot('ledger-1b-candidates');
-      const ins = await db.from('leave_requests').insert({ employee_id: emp!.id, type_code: 'annual', start_date: today, end_date: today, days: 1, status: 'approved', is_test: true, reason: 'e2e-원장', requested_by: emp!.id }).select('id').single();
+      const ins = await db.from('leave_requests').insert({ employee_id: emp!.id, type_code: 'annual', start_date: today, end_date: today, work_dates: [today], days: 1, status: 'approved', is_test: true, reason: 'e2e-원장', requested_by: emp!.id }).select('id').single();
       reqId = ins.data?.id ?? null;
       check(!!reqId, '연습 휴가 신청 넣기', ins.error?.message ?? '');
       const ok = await post({ action: 'decide', decision: 'approve', ids: (cands ?? []).map((c) => c.id) });
@@ -139,7 +139,7 @@ try {
       // 원장을 시작한 직원: 내 휴가 화면 · 신청 잔여도 원장 숫자 (2026-10-15, 미구현 34번)
       const mine = await (async () => { await p.goto(`${BASE}/punch/leave`); await p.waitForLoadState('networkidle'); return p.locator('main').innerText(); })();
       check(mine.includes('14일') && !mine.includes('아직 올해 연차가 입력되지 않았습니다'), '내 휴가 화면 잔여 = 원장 14일 (예전 「받은 연차 입력」이 없어도)', mine.slice(0, 160).replace(/\s+/g, ' '));
-      let far = new Date(Date.now() + 200 * 86400e3);
+      let far = new Date(Date.now() + 30 * 86400e3); // 연차 사용 기한(1년) 안의 날짜로
       while (far.getUTCDay() !== 1) far = new Date(far.getTime() + 86400e3);
       const fd = far.toISOString().slice(0, 10);
       const ed = new Date(far.getTime() + 25 * 86400e3).toISOString().slice(0, 10);
@@ -153,7 +153,8 @@ try {
       await db.from('leave_requests').update({ status: 'cancelled', decided_at: new Date().toISOString() }).eq('id', reqId!);
       const back = await post({ action: 'sync', employeeId: emp!.id });
       const { data: l2 } = await db.from('leave_ledger').select('event, minutes').eq('request_id', reqId!).order('id');
-      check(back.json.sync?.added === 1 && l2?.length === 2 && l2[1].event === 'cancel' && l2[1].minutes === 480, '취소하면 되돌리는 줄이 들어간다', JSON.stringify(l2));
+      // 묶음 12부터는 취소하는 순간 DB가 되돌림 줄을 넣는다 → 앱이 다시 맞춰도 더할 줄이 없다(0줄)
+      check((back.json.sync?.added ?? 0) <= 1 && l2?.length === 2 && l2[1].event === 'cancel' && l2[1].minutes === 480, '취소하면 되돌리는 줄이 들어간다', JSON.stringify(l2));
       const wd = await post({ action: 'decide', decision: 'withdraw', ids: (cands ?? []).map((c) => c.id) });
       check(wd.json.results?.every((r: { result: string }) => r.result === 'withdrawn'), '쓴 것이 전부 취소된 건은 거둘 수 있다', JSON.stringify(wd.json.results));
     } finally {

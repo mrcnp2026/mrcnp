@@ -36,7 +36,7 @@ try {
   const { data: sc } = await db.from('staff_manager_scopes').select('id').eq('manager_id', M.id).eq('group_id', gDept).eq('active', true);
   if (!sc?.length) await db.from('staff_manager_scopes').insert({ manager_id: M.id, group_id: gDept });
   const req = async (id: string, start: string) => {
-    const r = await db.from('leave_requests').insert({ employee_id: id, type_code: 'sick', start_date: start, end_date: start, days: 1, status: 'pending', is_test: practice, reason: MARK, requested_by: id }).select('id').single();
+    const r = await db.from('leave_requests').insert({ employee_id: id, type_code: 'sick', start_date: start, end_date: start, work_dates: [start], days: 1, status: 'pending', is_test: practice, reason: MARK, requested_by: id }).select('id').single();
     if (r.error) throw new Error(r.error.message);
     made.push(r.data.id as string);
     return r.data.id as string;

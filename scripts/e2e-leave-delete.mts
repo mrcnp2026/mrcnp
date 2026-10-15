@@ -34,7 +34,7 @@ const tidy = async () => {
 };
 await tidy();
 const leave = async (employeeId: string, date: string, status = 'approved') =>
-  (await db.from('leave_requests').insert({ employee_id: employeeId, type_code: 'sick', start_date: date, end_date: date, days: 1, reason: 'e2e 검사', status, requested_by: employeeId, is_test: true }).select('id').single()).data!.id as string;
+  (await db.from('leave_requests').insert({ employee_id: employeeId, type_code: 'sick', start_date: date, end_date: date, work_dates: [date], days: 1, reason: 'e2e 검사', status, requested_by: employeeId, is_test: true }).select('id').single()).data!.id as string;
 
 let fails = 0;
 const check = (ok: boolean, what: string, extra = '') => {
@@ -62,10 +62,14 @@ try {
   // ── 내 휴가: 승인된 휴가에 [삭제 요청] ──
   const mine = await leave(emp!.id, D1);
   const minePending = await leave(emp!.id, D2, 'pending');
-  await p.goto(`${BASE}/punch/leave`);
-  await p.waitForLoadState('networkidle');
-  await p.waitForTimeout(500);
-  const row = p.locator('main li', { hasText: '2029' }).filter({ hasText: '승인' }).first();
+  // 「내 신청」은 10건씩 나뉜다(2026-10-15) — 검사 계정에 같은 날짜의 지난 검사 기록이 쌓여 있어 이번 건이 2쪽 이후에 있을 수 있다
+  const row = p.locator('#mine li', { hasText: '2029' }).filter({ hasText: '승인' }).filter({ has: p.getByRole('button', { name: '삭제 요청' }) }).first();
+  for (let pg = 1; pg <= 30; pg++) {
+    await p.goto(`${BASE}/punch/leave${pg > 1 ? `?lp=${pg}` : ''}`);
+    await p.waitForLoadState('networkidle');
+    await p.waitForTimeout(300);
+    if ((await row.count()) > 0) break;
+  }
   check((await row.getByRole('button', { name: '삭제 요청' }).count()) === 1, '승인된 앞날 휴가에 [삭제 요청] 단추');
   await row.getByRole('button', { name: '삭제 요청' }).click();
   check(await row.getByRole('button', { name: '삭제 요청 보내기' }).isDisabled(), '사유 없이는 보낼 수 없음');
@@ -90,10 +94,14 @@ try {
   check((await p.locator('main li', { hasText: '휴가 삭제' }).count()) >= 1, '내 요청 목록에 「휴가 삭제」 한 줄');
 
   // ── 요청 거두기 ──
-  await p.goto(`${BASE}/punch/leave`);
-  await p.waitForLoadState('networkidle');
-  await p.waitForTimeout(500);
-  await p.getByRole('button', { name: '요청 거두기' }).first().click();
+  const pull = p.getByRole('button', { name: '요청 거두기' }).first();
+  for (let pg = 1; pg <= 30; pg++) {
+    await p.goto(`${BASE}/punch/leave${pg > 1 ? `?lp=${pg}` : ''}`);
+    await p.waitForLoadState('networkidle');
+    await p.waitForTimeout(300);
+    if ((await pull.count()) > 0) break;
+  }
+  await pull.click();
   await p.getByText('삭제 요청 중').first().waitFor({ state: 'hidden', timeout: 20000 });
   check((await statusOf('leave_change_requests', ch![0].id)) === 'cancelled' && (await statusOf('leave_requests', mine)) === 'approved', '요청을 거두면 요청만 취소되고 휴가는 남음');
 

@@ -112,7 +112,9 @@ try {
   await shot('staffpay-3-tax');
 
   // ── 개인 항목 ──
-  const { data: items } = await db.from('payroll_item_versions').select('code, ko_name').eq('status', 'active').eq('in_use', true).is('valid_to', null).limit(1);
+  // 자동 계산 항목(기본급 · 연장 · 4대보험 · 세금 등)은 개인 항목으로 붙일 수 없다(검수 R02, 2026-10-15) — 그 밖의 항목으로 검사한다
+  const AUTO = ['BASE', 'BASE_PAY', 'PAID_LEAVE', 'OVERTIME', 'NIGHT', 'HOLIDAY', 'HOLIDAY_OVER8', 'OVERTIME_PAY', 'NIGHT_PAY', 'HOLIDAY_PAY', 'UNPAID_LEAVE_CUT', 'LATENESS_CUT', 'PENSION', 'HEALTH', 'LTC', 'EMPLOYMENT', 'INCOME_TAX', 'LOCAL_TAX', 'NATIONAL_PENSION', 'HEALTH_INSURANCE', 'LONG_TERM_CARE', 'EMPLOYMENT_INSURANCE', 'LOCAL_INCOME_TAX'];
+  const { data: items } = await db.from('payroll_item_versions').select('code, ko_name').eq('status', 'active').eq('in_use', true).is('valid_to', null).not('code', 'in', `(${AUTO.join(',')})`).limit(1);
   if (!items?.length) console.log('ℹ️ 쓸 수 있는 지급 · 공제 항목이 없어 개인 항목 검사는 건너뛴다');
   else {
     const code = items[0].code as string;

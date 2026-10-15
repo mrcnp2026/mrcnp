@@ -71,7 +71,7 @@ try {
   check(r.status === 400 && r.json.error === 'invalid_days', '0.25 단위가 아니면 거절', r.json.error);
 
   // 2. 반차 신청 → 0.5일
-  r = await post('/api/leave', { typeCode: 'half', startDate: DAY, reason: '' });
+  r = await post('/api/leave', { typeCode: 'half', startDate: DAY, startTime: '09:00', reason: '' });
   check(r.status === 200 && r.json.days === 0.5, '반차 신청 = 0.5일 (서버가 셈)', JSON.stringify(r.json));
   const halfId = r.json.id as string;
   // 3. 같은 날 연차(1일) → 반차와 합쳐 하루 넘음 → 겹침
@@ -83,7 +83,7 @@ try {
   r = await post('/api/leave', { typeCode: 'annual', startDate: next.toISOString().slice(0, 10), endDate: next.toISOString().slice(0, 10) });
   check(r.status === 409 && r.json.error === 'insufficient_balance', '잔여(대기 제외)보다 많으면 거절', r.json.error);
   // 5. 직원이 days·status를 보내도 무시
-  r = await post('/api/leave', { typeCode: 'quarter', startDate: next.toISOString().slice(0, 10), days: 9, status: 'approved' });
+  r = await post('/api/leave', { typeCode: 'quarter', startDate: next.toISOString().slice(0, 10), startTime: '09:00', days: 9, status: 'approved' });
   const { data: q } = await db.from('leave_requests').select('days, status, is_test').eq('id', r.json.id).single();
   check(r.status === 200 && Number(q?.days) === 0.25 && q?.status === 'pending' && q?.is_test === true, '본문의 days·status 무시, 연습 기록', JSON.stringify(q));
   r = await post(`/api/leave/${r.json.id}/cancel`);
