@@ -1,10 +1,13 @@
 // 출퇴근기록 달력형 (PC) — 줄 = 직원, 칸 = 그 달의 날짜 (2026-10-11 의뢰인: PC는 시프티 수준으로. `pc용/시프티 PC 화면 기록.md` 3장 「출퇴근기록 달력형」).
 // 칸: 윗줄 출근 · 아랫줄 퇴근. 하루 전부 휴가면 「휴가」, 간주 근무일은 일정 시각 + 「간주」. 오른쪽 끝은 기록이 있는 날 수와 급여용 시간 합.
-// 폰에서는 목록형으로 보낸다 — 31칸 표는 폰 폭에 맞지 않는다.
+// 폰(2026-10-15 의뢰인 · 결정 사항 개발-38): 31칸 표를 밀어 보지 않고 월 달력 — 날짜마다 출근 · 지각 · 퇴근 미기록 · 휴가 인원, 날짜를 누르면 아래에 그날 직원 목록(?pd=날짜).
 import { getMe } from '@/lib/auth';
 import { HelpTip } from '@/components/Help';
 import { loadJobs } from '@/lib/job-data';
 import { leaveTypeName } from '@/lib/leave';
+import { judgeLateness } from '@/lib/lateness';
+import { MineBar } from '@/components/MineBar';
+import { Chip } from '@/components/ui';
 import { SHIFT_COLOR_CLASS } from '@/lib/shifts';
 import { ChevronLeft, ChevronRight, Download } from 'lucide-react';
 import { getFormatter, getTranslations } from 'next-intl/server';
@@ -22,7 +25,7 @@ import { kstDateTime, toKstDate } from '@/lib/time';
 
 const YM = /^\d{4}-(0[1-9]|1[0-2])$/;
 
-export default async function RecordCalendarPage({ searchParams }: { searchParams: Promise<{ ym?: string; q?: string; g?: string; live?: string }> }) {
+export default async function RecordCalendarPage({ searchParams }: { searchParams: Promise<{ ym?: string; q?: string; g?: string; live?: string; pd?: string }> }) {
   const tGear = await getTranslations('frame');
   const admin = (await getMe())?.role === 'admin'; // ⚙ 기준 바로가기는 관리자에게만 (지점관리자는 통합설정에 못 들어간다)
   const [t, tc, f, sp] = await Promise.all([getTranslations('admin.recordCalendar'), getTranslations('common'), getFormatter(), searchParams]);
@@ -72,13 +75,146 @@ export default async function RecordCalendarPage({ searchParams }: { searchParam
         }
         // 휴가는 유형 이름으로 적는다(연차 · 반차 …) — 하루 전부면 칸 전체, 일부면 시각 아래에 작게
         const onLeave = leave.get(d) ?? [];
-        return { d, in: first ? clock(first) : null, out: last ? clock(last) : null, open: open && d !== today, deemed: !!r?.deemed, leave: isFullDayLeave(onLeave), leaveNames: [...new Set(onLeave.map((l) => leaveTypeName(data.leaveTypes, l.typeCode, tl)))].join(' · ') };
+        const rule = data.ruleFor(p.id, d) ?? data.rule;
+        const late = !!first && !r?.deemed && r?.dayType === 'workday' && !!rule && judgeLateness({ punchedAt: first, workDate: d, rule, isHoliday: false }).verdict === 'late';
+        return { d, in: first ? clock(first) : null, out: last ? clock(last) : null, open: open && d !== today, deemed: !!r?.deemed, late, leave: isFullDayLeave(onLeave), anyLeave: onLeave.length > 0, leaveNames: [...new Set(onLeave.map((l) => leaveTypeName(data.leaveTypes, l.typeCode, tl)))].join(' · ') };
       });
       return { p, cells, worked, payable, color: (p.jobId ? jobColor.get(p.jobId) : null) ?? null };
     });
 
+  // ── 폰 월 달력 ──
+  const pd = sp.pd && /^\d{4}-\d{2}-\d{2}$/.test(sp.pd) && sp.pd.startsWith(ym) && sp.pd <= today ? sp.pd : today.startsWith(ym) ? today : to;
+  const gridFrom = addDays(from, -(isoWeekday(from) % 7));
+  const gridTo = addDays(to, 6 - (isoWeekday(to) % 7));
+  const cellsOf = (d: string) => rows.map((r) => ({ r, c: r.cells.find((c) => c.d === d) })).filter((x): x is { r: (typeof rows)[number]; c: (typeof rows)[number]['cells'][number] } => !!x.c);
+  const phoneDays: { d: string; inMonth: boolean; came: number; late: number; open: number; leave: number }[] = [];
+  for (let d = gridFrom; d <= gridTo; d = addDays(d, 1)) {
+    const xs = cellsOf(d);
+    phoneDays.push({ d, inMonth: d >= from && d <= to, came: xs.filter((x) => x.c.in).length, late: xs.filter((x) => x.c.late).length, open: xs.filter((x) => x.c.open).length, leave: xs.filter((x) => x.c.anyLeave).length });
+  }
+  const sunday = addDays(from, -(isoWeekday(from) % 7));
+  const weekdayNames = [...Array(7)].map((_, i) => f.dateTime(kstDateTime(addDays(sunday, i), '12:00'), { weekday: 'short' }));
+  const dayList = cellsOf(pd).filter((x) => x.c.in || x.c.out || x.c.anyLeave);
+
   return (
     <PageShell wide>
+      <div className="flex flex-col gap-3 lg:hidden" data-phone-records>
+        <MineBar menu={tc('menu')} title={t('title')} side={{ href: `/admin/records/list${sp.live === '1' ? '?live=1' : ''}`, label: t('toList') }}>
+          <form action="/admin/records/calendar" className="flex items-center gap-2 px-4 pb-2">
+            <input type="hidden" name="ym" value={ym} />
+            {sp.live === '1' && <input type="hidden" name="live" value="1" />}
+            <input type="search" name="q" defaultValue={q} placeholder={t('search')} aria-label={t('search')} maxLength={40} className="h-10 min-w-0 flex-1 rounded-button border border-border bg-bg px-3 text-sm" />
+            <select name="g" defaultValue={g} aria-label={t('filter')} className="h-10 max-w-32 rounded-button border border-border bg-surface px-2 text-sm text-muted">
+              <option value="">{t('groupAll')}</option>
+              {groupOptions.map((o) => (
+                <option key={o.id} value={o.id}>
+                  {o.label}
+                </option>
+              ))}
+            </select>
+            <button type="submit" className="h-10 shrink-0 rounded-button border border-border bg-bg px-3 text-sm text-muted">
+              {t('find')}
+            </button>
+          </form>
+        </MineBar>
+        <nav aria-label={t('month')} className="flex items-center justify-center gap-1">
+          <Link href={link({ ym: prevYm })} aria-label={t('prev')} className="flex size-11 items-center justify-center text-text">
+            <ChevronLeft aria-hidden size={20} />
+          </Link>
+          <span className="num min-w-28 text-center text-lg font-bold">{f.dateTime(kstDateTime(from, '12:00'), { year: 'numeric', month: 'long' })}</span>
+          {nextFirst.slice(0, 7) <= today.slice(0, 7) ? (
+            <Link href={link({ ym: nextFirst.slice(0, 7) })} aria-label={t('next')} className="flex size-11 items-center justify-center text-text">
+              <ChevronRight aria-hidden size={20} />
+            </Link>
+          ) : (
+            <span className="size-11" />
+          )}
+          <Link href={link({ ym: today.slice(0, 7), pd: today })} className="ml-1 inline-flex min-h-9 items-center rounded-button border border-border bg-bg px-3 text-sm text-muted">
+            {t('thisMonth')}
+          </Link>
+        </nav>
+        <div className="-mx-4 border-y border-border bg-bg">
+          <div className="grid grid-cols-7 border-b border-border text-center text-xs">
+            {weekdayNames.map((w, i) => (
+              <span key={w} className={`py-1.5 ${i === 0 ? 'text-danger' : 'text-muted'}`}>
+                {w}
+              </span>
+            ))}
+          </div>
+          <div className="grid grid-cols-7">
+            {phoneDays.map((c) =>
+              c.inMonth && c.d <= today ? (
+                <Link key={c.d} href={link({ pd: c.d })} scroll={false} aria-current={c.d === pd ? 'date' : undefined} className={`flex min-h-16 flex-col items-center gap-0.5 border-b border-border py-1 ${c.d === pd ? 'bg-primary-tint' : ''}`}>
+                  <span className={`num flex size-6 items-center justify-center rounded-chip text-sm ${c.d === today ? 'bg-text font-bold text-on-primary' : redDay(c.d) ? 'text-danger' : ''}`}>{Number(c.d.slice(8))}</span>
+                  {c.came > 0 && <span className="num text-xs font-semibold text-primary">{t('cellCame', { n: c.came })}</span>}
+                  <span className="flex gap-0.5">
+                    {c.late > 0 && <span aria-hidden className="size-1.5 rounded-chip bg-danger" />}
+                    {c.open > 0 && <span aria-hidden className="size-1.5 rounded-chip bg-warn" />}
+                    {c.leave > 0 && <span aria-hidden className="size-1.5 rounded-chip bg-primary" />}
+                  </span>
+                </Link>
+              ) : (
+                <span key={c.d} className={`flex min-h-16 flex-col items-center border-b border-border py-1 ${c.inMonth ? '' : 'opacity-40'}`}>
+                  <span className={`num flex size-6 items-center justify-center text-sm ${c.inMonth ? 'text-faint' : redDay(c.d) ? 'text-danger' : ''}`}>{Number(c.d.slice(8))}</span>
+                </span>
+              ),
+            )}
+          </div>
+        </div>
+        <ul className="flex flex-wrap gap-x-4 gap-y-1 px-1 text-xs text-muted">
+          {(
+            [
+              ['bg-danger', 'dotLate'],
+              ['bg-warn', 'dotOpen'],
+              ['bg-primary', 'dotLeave'],
+            ] as const
+          ).map(([c, k]) => (
+            <li key={k} className="flex items-center gap-1.5">
+              <span aria-hidden className={`size-2 rounded-chip ${c}`} />
+              {t(k)}
+            </li>
+          ))}
+        </ul>
+        <section data-phone-day>
+          {(() => {
+            const day = phoneDays.find((x) => x.d === pd);
+            return (
+              <h2 className="num flex flex-wrap items-baseline justify-between gap-x-2 px-1 pb-2 font-bold">
+                {f.dateTime(kstDateTime(pd, '12:00'), { month: 'long', day: 'numeric', weekday: 'short' })}
+                <span className="text-sm font-medium text-muted">{t('daySummary', { came: day?.came ?? 0, late: day?.late ?? 0, leave: day?.leave ?? 0 })}</span>
+              </h2>
+            );
+          })()}
+          {dayList.length === 0 ? (
+            <p className="rounded-card bg-bg p-5 text-sm text-faint">{t('emptyDay')}</p>
+          ) : (
+            <ul className="-mx-4 divide-y divide-border border-y border-border bg-bg">
+              {dayList.map(({ r, c }) => (
+                <li key={r.p.id}>
+                  <Link href={c.in || c.out ? `/admin/records/${r.p.id}/${pd}${sp.live === '1' ? '?live=1' : ''}` : `/admin/records/${r.p.id}?ym=${ym}`} className="flex min-h-14 items-center gap-3 py-2 pr-4 pl-5">
+                    <span className="num flex w-14 shrink-0 flex-col text-sm leading-snug">
+                      <span className={`font-semibold ${c.late ? 'text-danger' : ''}`}>{c.in ?? '–'}</span>
+                      <span className={c.open ? 'font-bold text-warn' : 'text-muted'}>{c.out ?? '–'}</span>
+                    </span>
+                    <span aria-hidden className={`w-1 shrink-0 self-stretch rounded-chip ${r.color ? SHIFT_COLOR_CLASS[r.color] : 'bg-border'}`} />
+                    <span className="flex min-w-0 flex-1 flex-col">
+                      <span className="font-bold">{r.p.name}</span>
+                      <span className="truncate text-sm text-muted">{groupPath(groups, r.p.groupId)}</span>
+                    </span>
+                    <span className="flex shrink-0 flex-col items-end gap-1">
+                      {c.late && <Chip tone="warn">{t('late')}</Chip>}
+                      {c.open && <Chip tone="warn">{t('noOut')}</Chip>}
+                      {c.deemed && <Chip>{t('deemed')}</Chip>}
+                      {c.anyLeave && <Chip tone="info">{c.leaveNames || t('leave')}</Chip>}
+                    </span>
+                  </Link>
+                </li>
+              ))}
+            </ul>
+          )}
+        </section>
+      </div>
+      <div className="hidden flex-col gap-4 lg:flex">
       <div className="flex items-center justify-between gap-3">
         <div className="min-w-0">
           <h1 className="flex flex-wrap items-center gap-x-1 text-2xl font-bold">{t('title')}{admin && <SettingsLink href="/admin/settings?tab=punch" label={tGear('item.setPunch')} />}<HelpTip>{t('pcIntro')}</HelpTip></h1>
@@ -194,6 +330,7 @@ export default async function RecordCalendarPage({ searchParams }: { searchParam
             ))}
           </tbody>
         </table>
+      </div>
       </div>
     </PageShell>
   );

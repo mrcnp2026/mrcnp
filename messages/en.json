@@ -2531,7 +2531,16 @@
       "hint": "Top line is clock-in, bottom line is clock-out. Totals show days with records and payable time. Click a cell to open that day.",
       "hm": "{h}h {m}m",
       "noOut": "No clock-out",
-      "pcIntro": "See each employee's clock-in and clock-out times for the month. The colour band under a cell is the job colour."
+      "pcIntro": "See each employee's clock-in and clock-out times for the month. The colour band under a cell is the job colour.",
+      "find": "Find",
+      "month": "Month",
+      "cellCame": "{n}",
+      "dotLate": "Late",
+      "dotOpen": "No clock-out",
+      "dotLeave": "Leave",
+      "daySummary": "In {came} · late {late} · leave {leave}",
+      "emptyDay": "No records on this day.",
+      "late": "Late"
     },
     "closing": {
       "title": "Attendance closing",
