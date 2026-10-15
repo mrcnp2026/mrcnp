@@ -15,7 +15,7 @@ import { Card, Chip, PageShell } from '@/components/ui';
 import { OFFICE } from '@/config/office';
 import { addDays } from '@/lib/calendar';
 import { leaveTypeName, suggestGrant } from '@/lib/leave';
-import { leaveBalanceFor } from '@/lib/leave-balance-data';
+import { leaveBalancesFor } from '@/lib/leave-balance-data';
 import { loadAllLeaveTypes, loadLeaveGrants, loadLeaveRequests } from '@/lib/leave-data';
 import { buildOrgTree, groupScope } from '@/lib/org';
 import { loadOrgGroups } from '@/lib/org-data';
@@ -49,9 +49,11 @@ export default async function AdminLeavePage({ searchParams }: { searchParams: P
   const q = (sp.q ?? '').trim().slice(0, 40);
   const shown = (ppl ?? []).filter((p) => inScope(p.id as string) && (!scope || (p.group_id && scope.has(p.group_id as string))) && (!q || (p.name as string).toLowerCase().includes(q.toLowerCase())));
   const byRole = (['admin', 'employee'] as const).map((role) => ({ role, list: shown.filter((p) => (p.role === 'admin') === (role === 'admin')) })).filter((x) => x.list.length > 0);
-  const balances = new Map(await Promise.all((ppl ?? []).filter((p) => inScope(p.id)).map(async (p) => [p.id, await leaveBalanceFor({ employeeId: p.id, practice, grants: grants.filter((x) => x.employeeId === p.id), requests: requests.filter((r) => r.employeeId === p.id), types, asOf })] as const)));
+  // 직원마다 원장을 따로 읽지 않고 한 번에 (검수 R21)
+  const argsFor = (d: string) => (ppl ?? []).filter((p) => inScope(p.id)).map((p) => ({ employeeId: p.id as string, practice, grants: grants.filter((x) => x.employeeId === p.id), requests: requests.filter((r) => r.employeeId === p.id), types, asOf: d }));
+  const balances = await leaveBalancesFor(argsFor(asOf), asOf, practice);
   const balOf = (id: string) => balances.get(id)!;
-  const todayBalances = asOf === today ? balances : new Map(await Promise.all((ppl ?? []).filter((p) => inScope(p.id)).map(async (p) => [p.id, await leaveBalanceFor({ employeeId: p.id, practice, grants: grants.filter((x) => x.employeeId === p.id), requests: requests.filter((r) => r.employeeId === p.id), types, asOf: today })] as const)));
+  const todayBalances = asOf === today ? balances : await leaveBalancesFor(argsFor(today), today, practice);
   // 직원을 눌러도 검색 · 거르기 · 기준일은 그대로 둔다
   const pick = (id: string) => {
     const u = new URLSearchParams({ e: id });

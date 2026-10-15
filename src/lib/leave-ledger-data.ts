@@ -525,6 +525,35 @@ export async function ledgerFor(employeeId: string, asOf: string, practice: bool
   return { grantedDays: d(b.granted), usedDays: d(b.used), remainingDays: d(b.remaining), expiredDays: d(b.expired), advanceDays: d(b.advance), advanceMaxDays: policyAt(policies, asOf)?.policy.advanceMaxDays ?? 0 };
 }
 
+/**
+ * 여러 직원의 원장 잔여를 한 번에 — 관리자 휴가 화면용 (검수 R21, 2026-10-15: 직원마다 ledgerFor를 부르면 30명에 요청 수백 건).
+ * 지급 건 · 원장 줄은 한 번씩만 읽고, 정책은 그룹마다 한 번만 읽는다. 결과는 ledgerFor와 같다.
+ */
+export async function ledgerForMany(employeeIds: readonly string[], asOf: string, practice: boolean): Promise<Map<string, NonNullable<Awaited<ReturnType<typeof ledgerFor>>>>> {
+  const out = new Map<string, NonNullable<Awaited<ReturnType<typeof ledgerFor>>>>();
+  const want = new Set(employeeIds);
+  const lots = (await loadLots({ states: ['APPROVED'] })).filter((l) => want.has(l.employeeId));
+  if (lots.length === 0) return out;
+  const withLots = [...new Set(lots.map((l) => l.employeeId))];
+  const entries = (await loadEntries()).filter((e) => withLots.includes(e.employeeId));
+  const policyCache = new Map<string, Promise<PolicyRow[]>>();
+  const d = (m: number) => minutesToDays(m);
+  for (const id of withLots) {
+    const key = await policyKeyFor(id, asOf);
+    if (!policyCache.has(key)) policyCache.set(key, policiesForEmployee(id, asOf));
+    const policies = await policyCache.get(key)!;
+    const b = ledgerBalance(lots.filter((l) => l.employeeId === id), entriesFor(entries.filter((e) => e.employeeId === id), practice), asOf);
+    out.set(id, { grantedDays: d(b.granted), usedDays: d(b.used), remainingDays: d(b.remaining), expiredDays: d(b.expired), advanceDays: d(b.advance), advanceMaxDays: policyAt(policies, asOf)?.policy.advanceMaxDays ?? 0 });
+  }
+  return out;
+}
+
+/** 정책 묶음을 가르는 열쇠 — 직원이 속한 그룹(없으면 기본) */
+async function policyKeyFor(employeeId: string, asOf: string): Promise<string> {
+  const { data } = await db().from('leave_policy_members').select('group_id').eq('employee_id', employeeId).eq('active', true).lte('valid_from', asOf).or(`valid_to.is.null,valid_to.gt.${asOf}`).maybeSingle();
+  return (data?.group_id as string | undefined) ?? 'default';
+}
+
 export { lotRemaining };
 
 /** 신청 시점의 그룹과 그 그룹의 정책 판. 독립 기준이 없으면 기본 기준을 따른다. */

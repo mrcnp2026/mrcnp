@@ -38,17 +38,22 @@ const step = (s: string) => {
 
 // ── 달 고르기: 2090~2098년의 4 · 7 · 11월(고정 공휴일이 없는 달) 중 대장 · 마감이 없는 달 ──
 let Y = 0, M = 0;
-for (let i = 0; i < 40; i++) {
-  Y = 2090 + Math.floor(Math.random() * 9);
+let found = false;
+for (let i = 0; i < 200; i++) {
+  Y = 2030 + Math.floor(Math.random() * 70); // 지난 실행이 쌓여 2090년대는 다 찼다 — 넓게(화면이 받는 2100년까지)
   M = [4, 7, 11][Math.floor(Math.random() * 3)];
   const f = `${Y}-${String(M).padStart(2, '0')}-01`;
-  const [{ count: runs }, { count: closes }, { count: rules }] = await Promise.all([
+  const last = new Date(Date.UTC(Y, M, 0)).toISOString().slice(0, 10);
+  const [{ count: runs }, { count: closes }, { count: rules }, { count: leaves }] = await Promise.all([
     db.from('payroll_runs').select('id', { count: 'exact', head: true }).eq('period_from', f),
     db.from('attendance_closes').select('id', { count: 'exact', head: true }).in('employee_id', [A.id, B.id]).eq('period_from', f),
     db.from('work_rules').select('id', { count: 'exact', head: true }).gte('effective_from', `${Y}-01-01`).lte('effective_from', `${Y}-12-31`),
+    // 지난 실행의 휴가가 남은 달은 피한다 — 묶음 12부터 같은 날 겹치는 휴가는 DB가 막는다
+    db.from('leave_requests').select('id', { count: 'exact', head: true }).in('employee_id', [A.id, B.id]).in('status', ['pending', 'approved']).gte('start_date', f).lte('start_date', last),
   ]);
-  if (!runs && !closes && !rules) break;
+  if (!runs && !closes && !rules && !leaves) { found = true; break; }
 }
+if (!found) throw new Error('비어 있는 검사용 달을 찾지 못했습니다');
 const YM = `${Y}-${String(M).padStart(2, '0')}`;
 const FROM = `${YM}-01`;
 const TO = new Date(Date.UTC(Y, M, 1)).toISOString().slice(0, 10); // 다음 달 1일 (끝 미포함)
@@ -292,10 +297,13 @@ try {
   const { data: lr } = await db.from('leave_requests').select('employee_id, days, status').in('id', Object.values(leaveIds));
   const used = (id: string) => (lr ?? []).filter((x) => x.employee_id === id && x.status === 'approved').reduce((a, x) => a + Number(x.days), 0);
   check(used(A.id) === 1 && used(B.id) === 2, `승인된 휴가: ${A.name} 1일 · ${B.name} 2일(반차 0.5 + 0.5 + 연차 1)`, `${used(A.id)} / ${used(B.id)}`);
-  const leaveA = await open(qa, `/punch/leave?y=${Y}`);
-  check(leaveA.includes('4일') || leaveA.includes('4.0'), `${A.name}: 내 휴가 화면에 남은 연차 4일`);
-  const leaveB = await open(qb, `/punch/leave?y=${Y}`);
-  check(leaveB.includes('3일') || leaveB.includes('3.0'), `${B.name}: 내 휴가 화면에 남은 연차 3일`);
+  // 남은 연차 — 서버가 계산한 잔여로 확인한다 (2026-10-15: 예전 검사는 화면 글자에 「4일」이 있는지만 봐서 날짜 「14일」에 걸려 우연히 통과했다.
+  //   화면의 「남은 연차」 카드는 오늘 기준이고, 이 검사의 연차는 ${Y}년부터 유효하다)
+  const overA = await postOn(qa, '/api/leave', { typeCode: 'annual', startDate: W(1, 0), endDate: W(1, 4), reason: '잔여 확인' }); // 5일 > 남은 4일 (A의 연차 W(2,0)과 겹치지 않게)
+  check(overA.status === 409 && overA.json.error === 'insufficient_balance', `${A.name}: 남은 연차 4일(5 − 사용 1) — 5일은 거절`, JSON.stringify(overA.json));
+  const overB = await postOn(qb, '/api/leave', { typeCode: 'annual', startDate: W(2, 0), endDate: W(2, 3), reason: '잔여 확인' }); // 4일 > 남은 3일
+  check(overB.status === 409 && overB.json.error === 'insufficient_balance', `${B.name}: 남은 연차 3일(5 − 사용 2) — 4일은 거절`, JSON.stringify(overB.json));
+  for (const o of [overA, overB]) if (o.json.id) await db.from('leave_requests').update({ status: 'cancelled' }).eq('id', o.json.id);
   await shot(qb, 's4-B-leave');
 
   // ════ 5. 관리가 필요한 직원 · 통보 · 공지 → 직원 쪽 숫자 ════
@@ -303,6 +311,8 @@ try {
   // 이상자 · 리포트 · 마감 화면은 「지난 날」만 판정한다(앞날은 아직 모른다) → 이번 달의 지난 평일 하루에 관리자 대리 입력으로 지각 기록을 만든다
   const kstNow = new Date(Date.now() + 9 * 3600e3);
   const NOW_YM = kstNow.toISOString().slice(0, 7);
+  // 입사 전 날짜는 이상 기록에서 빠진다(원래 규칙) — B는 입사일이 비어 계정을 만든 날(10-05)부터 센다. 이 단계 동안만 입사일을 이달 1일로
+  await db.from('profiles').update({ joined_on: `${NOW_YM}-01` }).eq('id', B.id);
   let PAST = '';
   for (let n = 1; n <= 20 && !PAST; n++) {
     const d = new Date(kstNow.getTime() - n * 86400e3);
@@ -332,6 +342,7 @@ try {
     const { data: msg } = await db.from('work_message_recipients').select('message_id').eq('employee_id', B.id).is('read_at', null).order('created_at', { ascending: false }).limit(1);
     const body = await open(qb, `/punch/messages/${msg?.[0]?.message_id}`);
     check(body.includes(PAST), `${B.name}: 통보 메시지에 지각한 날(${PAST})이 적혀 있다`);
+    await db.from('profiles').update({ joined_on: null }).eq('id', B.id);
     const qb2m = await alerts(qb);
     check(qb2m.messages === qb0.messages, `${B.name}: 메시지를 열면 안 읽은 수가 다시 ${qb2m.messages}`);
     const rep = await open(p, `/admin/reports/attendance?m=${NOW_YM}`);
