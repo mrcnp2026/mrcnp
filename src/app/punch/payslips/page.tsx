@@ -25,9 +25,10 @@ import { toKstDate } from '@/lib/time';
 type V = ReactNode | null | undefined;
 
 /** 이름표 + 옅은 파란 칸. num이면 오른쪽 맞춤, 값이 없으면 빈 칸 */
-function Field({ label, value, num = false, unit, range }: { label: string; value?: V; num?: boolean; unit?: string; range?: [V, V] }) {
+function Field({ label, value, num = false, unit, range, fill = false }: { label: string; value?: V; num?: boolean; unit?: string; range?: [V, V]; fill?: boolean }) {
   const box = (v: V, k?: string) => (
-    <span key={k} className={`flex min-h-8 min-w-0 flex-1 items-center bg-primary-tint px-2.5 text-sm ${num ? 'num justify-end' : ''}`}>
+    // 칸: 아주 옅은 파랑 회색 · 높이 28px · PC는 다우오피스처럼 정해진 폭 (2026-10-15 의뢰인: 파란 칸이 색 · 크기 모두 과하다)
+    <span key={k} className={`flex h-7 min-w-0 flex-1 items-center rounded-sm bg-rail px-2 text-sm ${fill ? '' : `lg:flex-none ${range ? 'lg:w-24' : 'lg:w-44'}`} ${num ? 'num justify-end' : ''}`}>
       {v ?? ''}
     </span>
   );
@@ -87,7 +88,7 @@ export default async function MyPayPage({ searchParams }: { searchParams: Promis
   const pickedId = inYear.find((s) => s.id === sp.s)?.id ?? (m ? inYear.find((s) => s.month.startsWith(m))?.id : inYear[0]?.id);
   const picked = pickedId ? await loadMySlip(me.id, pickedId, OFFICE.practiceMode) : null;
   const group = groupPath(groups, prof?.group_id) ?? null;
-  const box = 'flex min-h-8 items-center bg-primary-tint px-2.5 text-sm';
+  const box = 'flex h-7 items-center rounded-sm bg-rail px-2 text-sm';
 
   return (
     <PageShell wide>
@@ -237,10 +238,10 @@ export default async function MyPayPage({ searchParams }: { searchParams: Promis
 
           <div className="hidden border border-border bg-bg lg:block" data-slip-panel>
             <dl className="grid grid-cols-2 gap-x-6 gap-y-2.5 border-b border-border px-5 py-4">
-              <Field label={tm('empName')} value={picked ? me.name : null} />
-              <Field label={tm('dept')} value={picked ? group : null} />
-              <Field label={tm('payTotal')} num value={picked ? n(picked.slip.pay) : null} />
-              <Field label={tm('dedTotal')} num value={picked ? n(picked.slip.deduction) : null} />
+              <Field fill label={tm('empName')} value={picked ? me.name : null} />
+              <Field fill label={tm('dept')} value={picked ? group : null} />
+              <Field fill label={tm('payTotal')} num value={picked ? n(picked.slip.pay) : null} />
+              <Field fill label={tm('dedTotal')} num value={picked ? n(picked.slip.deduction) : null} />
             </dl>
             {picked && (
               <>
