@@ -6,7 +6,7 @@ import { Plane } from 'lucide-react';
 import Link from 'next/link';
 import { SHIFT_COLOR_CLASS, type PlanItem, type ShiftColor } from '@/lib/shifts';
 
-export type GridCell = { leave: string | null; items: { it: PlanItem; href: string; color: ShiftColor | null; tag: string | null }[] };
+export type GridCell = { leave: string | null; items: { it: PlanItem; href: string; color: ShiftColor | null; tag: string | null; place?: string | null }[] };
 export type GridRow = { id: string; name: string; sub: string; total: string; cells: GridCell[] };
 export type GridDay = { date: string; label: string; holiday: string | null; red: boolean; today: boolean; count: number };
 
@@ -55,7 +55,7 @@ export function ScheduleGrid({ days, rows, dense, labels }: { days: GridDay[]; r
                         {!dense && <span className="truncate text-xs">{c.leave}</span>}
                       </div>
                     )}
-                    {c.items.map(({ it, href, color, tag }) => (
+                    {c.items.map(({ it, href, color, tag, place }) => (
                       <Link key={`${it.shiftId ?? it.source}${it.startTime}`} href={href} className={`flex overflow-hidden rounded-button hover:brightness-95 ${color ? TINT[color] : 'bg-surface'}`}>
                         <span aria-hidden className={`w-1 shrink-0 ${color ? SHIFT_COLOR_CLASS[color] : 'bg-border'}`} />
                         {dense ? (
@@ -69,7 +69,7 @@ export function ScheduleGrid({ days, rows, dense, labels }: { days: GridDay[]; r
                               {it.startTime} - {it.endTime}
                             </span>
                             <span className="flex items-center justify-between gap-1 text-xs text-muted">
-                              <span className="truncate">{it.name ?? ''}</span>
+                              <span className="truncate">{[place, it.name].filter(Boolean).join(' · ')}</span>
                               {tag && <span className="shrink-0 rounded-button bg-nav px-1.5 text-on-primary">{tag}</span>}
                             </span>
                           </span>

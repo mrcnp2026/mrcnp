@@ -2232,7 +2232,14 @@
       "colTemplate": "Template",
       "colNote": "Note",
       "colTotal": "Total",
-      "listTotal": "Shifts"
+      "listTotal": "Shifts",
+      "leaveHours": "{n}h",
+      "find": "Find",
+      "prevMonth": "Previous month",
+      "nextMonth": "Next month",
+      "cellWork": "{n}",
+      "cellLeave": "off {n}",
+      "emptyDay": "No schedules on this day."
     },
     "leaveTypes": {
       "title": "Leave types",

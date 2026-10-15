@@ -6,7 +6,7 @@ import { Plane } from 'lucide-react';
 import Link from 'next/link';
 import { SHIFT_COLOR_CLASS, type ShiftColor } from '@/lib/shifts';
 
-export type MonthEntry = { key: string; name: string; time: string | null; href: string | null; color: ShiftColor | null; tag: string | null };
+export type MonthEntry = { key: string; name: string; time: string | null; href: string | null; color: ShiftColor | null; tag: string | null; sub?: string | null };
 export type MonthCell = { date: string; day: string; inMonth: boolean; red: boolean; today: boolean; holiday: string | null; entries: MonthEntry[] };
 
 const SHOW = 4;
@@ -15,11 +15,19 @@ function EntryCard({ e }: { e: MonthEntry }) {
   const body = (
     <>
       <span aria-hidden className={`w-1 shrink-0 ${e.time ? (e.color ? SHIFT_COLOR_CLASS[e.color] : 'bg-border') : 'bg-muted'}`} />
-      <span className="flex min-w-0 flex-1 items-center gap-1 px-1.5 py-0.5">
-        {!e.time && <Plane aria-hidden size={12} className="shrink-0 text-muted" />}
-        <span className="truncate font-bold">{e.name}</span>
-        {e.time && <span className="num shrink-0 text-muted">{e.time}</span>}
-        {e.tag && <span className="ml-auto shrink-0 rounded-button bg-nav px-1 text-on-primary">{e.tag}</span>}
+      <span className="flex min-w-0 flex-1 flex-col px-1.5 py-0.5">
+        <span className="flex min-w-0 items-center gap-1">
+          {!e.time && <Plane aria-hidden size={12} className="shrink-0 text-muted" />}
+          <span className="truncate font-bold">{e.name}</span>
+          {e.time && <span className="num shrink-0 text-muted">{e.time}</span>}
+        </span>
+        {/* 둘째 줄: 지점(일정) 또는 휴가 종류 · 시간, 오른쪽에 유형 꼬리표 */}
+        {(e.sub || e.tag) && (
+          <span className="flex min-w-0 items-center gap-1 text-faint">
+            <span className="truncate">{e.sub}</span>
+            {e.tag && <span className="ml-auto shrink-0 rounded-button bg-nav px-1 text-on-primary">{e.tag}</span>}
+          </span>
+        )}
       </span>
     </>
   );

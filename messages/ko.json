@@ -2232,7 +2232,14 @@
       "colTemplate": "근무일정 템플릿",
       "colNote": "일정노트",
       "colTotal": "총 시간",
-      "listTotal": "총 일정 수"
+      "listTotal": "총 일정 수",
+      "leaveHours": "{n}H",
+      "find": "찾기",
+      "prevMonth": "지난달",
+      "nextMonth": "다음 달",
+      "cellWork": "{n}명",
+      "cellLeave": "휴 {n}",
+      "emptyDay": "이 날은 일정이 없습니다."
     },
     "leaveTypes": {
       "title": "휴가 유형",

@@ -4,6 +4,9 @@
 // 그날 일정 = 날짜별로 넣은 일정(특근·잔업·하루만 다른 시각) → 없으면 평소 틀 → 없으면 회사 규칙 (lib/shifts planDay).
 // + 버튼: 날짜별 일정 넣기 (여러 명 한 번에). 날짜별로 넣은 일정만 ✕로 취소할 수 있다 — 평소 틀은 「근무일정 틀」에서 바꾼다.
 // 예전 주소(?d=하루)는 그 하루만 보는 것으로 받는다.
+// 2026-10-15 의뢰인: 근무일정은 관리자가 전 직원의 일정(몇 시 · 어느 지점 · 정상/간주 · 휴가 · 시급/월급)을 한눈에 보고 조정하는 메뉴(결정 사항 개발-37).
+//   PC: 카드에 지점 · 휴가 종류와 시간 · 급여 형태(급여 담당만). 월 보기는 늘 그달 전체(예전엔 기간 없이 열면 이번 주 2줄만 나왔다)
+//   폰(개발-38): PC 표를 밀어 보지 않고 월 달력(날짜마다 근무 · 휴가 인원) + 날짜를 누르면 아래에 그날 직원 목록 (?pm=달 &pd=날짜)
 import { getMe } from '@/lib/auth';
 import { HelpTip } from '@/components/Help';
 import { Plane } from 'lucide-react';
@@ -11,13 +14,12 @@ import { getFormatter, getTranslations } from 'next-intl/server';
 import Link from 'next/link';
 import { AddSheet } from '@/components/AddSheet';
 import { Fab } from '@/components/Fab';
-import { ListBar } from '@/components/ListBar';
-import { Pager, pageOf } from '@/components/Pager';
+import { MineBar } from '@/components/MineBar';
 import { SettingsLink } from '@/components/listframe';
 import { Card, Chip, PageShell } from '@/components/ui';
 import { addDays, isoWeekday, weekStartOf } from '@/lib/calendar';
 import { loadJobs } from '@/lib/job-data';
-import { isFullDayLeave } from '@/lib/leave';
+import { isFullDayLeave, leaveTypeName, type LeaveOnDay } from '@/lib/leave';
 import { listRange } from '@/lib/list-range';
 import { buildOrgTree, groupPath, groupScope } from '@/lib/org';
 import { loadOrgGroups } from '@/lib/org-data';
@@ -34,16 +36,37 @@ import { ScheduleDay, type DayLine } from './ScheduleDay';
 import { ScheduleGrid, type GridDay, type GridRow } from './ScheduleGrid';
 import { ScheduleMonth, type MonthCell } from './ScheduleMonth';
 
-const DATES_PER_PAGE = 7;
-
-export default async function AdminSchedulePage({ searchParams }: { searchParams: Promise<{ d?: string; q?: string; g?: string; from?: string; to?: string; p?: string; v?: string }> }) {
+export default async function AdminSchedulePage({ searchParams }: { searchParams: Promise<{ d?: string; q?: string; g?: string; from?: string; to?: string; p?: string; v?: string; pm?: string; pd?: string }> }) {
   const tGear = await getTranslations('frame');
-  const [t, tk, tc, f, sp] = await Promise.all([getTranslations('admin.schedule'), getTranslations('admin.shifts.kinds'), getTranslations('common'), getFormatter(), searchParams]);
-  const admin = (await getMe())?.role === 'admin'; // 지점관리자는 보기만 (manager-rules.ts)
+  const [t, tk, tc, tl, tp, f, sp, me] = await Promise.all([getTranslations('admin.schedule'), getTranslations('admin.shifts.kinds'), getTranslations('common'), getTranslations('leave'), getTranslations('admin.staffPay'), getFormatter(), searchParams, getMe()]);
+  const admin = me?.role === 'admin'; // 지점관리자는 보기만 (manager-rules.ts)
   const today = toKstDate(new Date());
   const week = weekStartOf(today);
-  const { from, to } = listRange(sp.from ?? sp.d, sp.to ?? sp.d, { from: week, to: addDays(week, 6) }, addDays);
-  const [data, groups, jobs, { data: named }] = await Promise.all([loadPeriod(from, to), loadOrgGroups(), loadJobs(), createAdminClient().from('holidays').select('the_date, label').gte('the_date', from).lte('the_date', to)]);
+  const isDay = (v?: string): v is string => !!v && /^\d{4}-\d{2}-\d{2}$/.test(v) && !Number.isNaN(Date.parse(`${v}T00:00:00Z`));
+  const monthOf = (ym: string) => ({ from: `${ym}-01`, to: addDays(`${addDays(`${ym}-01`, 31).slice(0, 7)}-01`, -1) });
+  // 월 보기는 늘 그달 1일 ~ 말일
+  const { from, to } = sp.v === 'month' ? monthOf((isDay(sp.from) ? sp.from : isDay(sp.d) ? sp.d : today).slice(0, 7)) : listRange(sp.from ?? sp.d, sp.to ?? sp.d, { from: week, to: addDays(week, 6) }, addDays);
+  // 폰 월 달력: 고른 달(pm)과 날짜(pd)
+  const pm = /^\d{4}-\d{2}$/.test(sp.pm ?? '') ? sp.pm! : isDay(sp.pd) ? sp.pd.slice(0, 7) : isDay(sp.d) ? sp.d.slice(0, 7) : today.slice(0, 7);
+  const pmRange = monthOf(pm);
+  const pdRaw = sp.pd ?? sp.d; // 예전 주소 ?d=하루 도 그 날을 고른다
+  const pd = isDay(pdRaw) && pdRaw.startsWith(pm) ? pdRaw : today.startsWith(pm) ? today : pmRange.from;
+  const pGridFrom = addDays(pmRange.from, -(isoWeekday(pmRange.from) % 7));
+  const pGridTo = addDays(pmRange.to, 6 - (isoWeekday(pmRange.to) % 7));
+  const loadFrom = from < pGridFrom ? from : pGridFrom;
+  const loadTo = to > pGridTo ? to : pGridTo;
+  const [data, groups, jobs, { data: named }, { data: cons }] = await Promise.all([
+    loadPeriod(loadFrom, loadTo),
+    loadOrgGroups(),
+    loadJobs(),
+    createAdminClient().from('holidays').select('the_date, label').gte('the_date', loadFrom).lte('the_date', loadTo),
+    // 시급 · 월급 · 연봉 표시는 급여 담당 관리자에게만 (급여 정보)
+    me?.canViewPayroll ? createAdminClient().from('payroll_contract_versions').select('employee_id, pay_type, valid_from, valid_to').eq('status', 'active').lte('valid_from', today) : Promise.resolve({ data: [] as { employee_id: string; pay_type: string; valid_from: string; valid_to: string | null }[] }),
+  ]);
+  const payOf = new Map((cons ?? []).filter((c) => c.valid_to === null || today < (c.valid_to as string)).map((c) => [c.employee_id as string, tp(`payType.${c.pay_type as 'MONTHLY'}`)]));
+  // 그날 휴가 글: 「연차 8H」 · 「반차 4H (13:00 - 17:00)」
+  const leaveText = (lv: LeaveOnDay[] | undefined) =>
+    lv?.length ? lv.map((x) => `${leaveTypeName(data.leaveTypes, x.typeCode, tl)} ${t('leaveHours', { n: Math.round(x.unit * 8 * 10) / 10 })}${x.startTime ? ` (${x.startTime.slice(0, 5)} - ${(x.endTime ?? '').slice(0, 5)})` : ''}`).join(', ') : null;
   const holidayName = new Map((named ?? []).map((h) => [h.the_date as string, h.label as string]));
   const jobOf = new Map(jobs.map((j) => [j.id, j]));
   const groupOptions = buildOrgTree(groups).flatMap((d) => [{ id: d.id, label: d.name }, ...d.teams.map((x) => ({ id: x.id, label: `${d.name} › ${x.name}` }))]);
@@ -68,7 +91,6 @@ export default async function AdminSchedulePage({ searchParams }: { searchParams
       return { d, onLeave, rows, total: rows.reduce((a, r) => a + spanMinutes(r.it), 0) };
     })
     .filter((b) => b.rows.length > 0 || b.onLeave.length > 0);
-  const page = pageOf(blocks, sp.p, DATES_PER_PAGE);
   const hm = (min: number) => t('hm', { h: Math.floor(min / 60), m: min % 60 });
   const formDate = from === to || today < from || today > to ? from : today;
 
@@ -92,16 +114,17 @@ export default async function AdminSchedulePage({ searchParams }: { searchParams
     const job = p.jobId ? jobOf.get(p.jobId) : undefined;
     let total = 0;
     const cells = days.map((d) => {
-      const leave = isFullDayLeave(leaveOf.get(p.id)?.get(d));
+      const lv = leaveOf.get(p.id)?.get(d);
+      const leave = isFullDayLeave(lv);
       const items = leave ? [] : data.planFor(p.id, d).items;
       if (items.length) count.set(d, (count.get(d) ?? 0) + 1);
       total += items.reduce((a, it) => a + spanMinutes(it), 0);
       return {
-        leave: leave ? t('onLeave') : null,
-        items: items.map((it, i) => ({ it, href: `/admin/schedule/${p.id}/${d}?i=${i}`, color: job?.color ?? it.color, tag: it.kind !== 'none' ? tk(it.kind) : null })),
+        leave: leaveText(lv),
+        items: items.map((it, i) => ({ it, href: `/admin/schedule/${p.id}/${d}?i=${i}`, color: job?.color ?? it.color, tag: it.kind !== 'none' ? tk(it.kind) : null, place: groupPath(groups, p.groupId) ?? null })),
       };
     });
-    return { id: p.id, name: p.name, sub: [groupPath(groups, p.groupId), job?.name].filter(Boolean).join(' / '), total: hm(total), cells };
+    return { id: p.id, name: p.name, sub: [groupPath(groups, p.groupId), job?.name, payOf.get(p.id)].filter(Boolean).join(' / '), total: hm(total), cells };
   });
   const isRed = (d: string) => isoWeekday(d) >= 6 || holidayName.has(d) || (data.rule ? resolveDayType(d, data.rule, data.holidays) === 'holiday' : false);
   // 월 보기 = 진짜 달력(일~토). 칸마다 그날의 휴가 → 일정(시작 시각 순). 달 밖의 날은 빈 칸으로 흐리게
@@ -112,8 +135,8 @@ export default async function AdminSchedulePage({ searchParams }: { searchParams
     for (let d = gridStart; d <= gridEnd; d = addDays(d, 1)) {
       const inMonth = d >= from && d <= to;
       const seen = inMonth ? gridPeople : [];
-      const onLeave = seen.filter((p) => isFullDayLeave(leaveOf.get(p.id)?.get(d)));
-      const off = new Set(onLeave.map((p) => p.id));
+      const onLeave = seen.filter((p) => (leaveOf.get(p.id)?.get(d)?.length ?? 0) > 0);
+      const off = new Set(seen.filter((p) => isFullDayLeave(leaveOf.get(p.id)?.get(d))).map((p) => p.id));
       const rows = seen
         .filter((p) => !off.has(p.id))
         .flatMap((p) => data.planFor(p.id, d).items.map((it, i) => ({ p, it, i })))
@@ -126,8 +149,8 @@ export default async function AdminSchedulePage({ searchParams }: { searchParams
         today: d === today,
         holiday: holidayName.get(d) ?? null,
         entries: [
-          ...onLeave.map((p) => ({ key: `l${p.id}`, name: p.name, time: null, href: null, color: null, tag: t('onLeave') })),
-          ...rows.map(({ p, it, i }) => ({ key: `${p.id}${i}`, name: p.name, time: `${it.startTime} - ${it.endTime}`, href: `/admin/schedule/${p.id}/${d}?i=${i}`, color: (p.jobId ? jobOf.get(p.jobId)?.color : undefined) ?? it.color, tag: it.kind !== 'none' ? tk(it.kind) : null })),
+          ...onLeave.map((p) => ({ key: `l${p.id}`, name: p.name, time: null, href: null, color: null, tag: null, sub: leaveText(leaveOf.get(p.id)?.get(d)) })),
+          ...rows.map(({ p, it, i }) => ({ key: `${p.id}${i}`, name: p.name, time: `${it.startTime} - ${it.endTime}`, href: `/admin/schedule/${p.id}/${d}?i=${i}`, color: (p.jobId ? jobOf.get(p.jobId)?.color : undefined) ?? it.color, tag: it.kind !== 'none' ? tk(it.kind) : null, sub: groupPath(groups, p.groupId) ?? null })),
         ],
       });
     }
@@ -144,6 +167,24 @@ export default async function AdminSchedulePage({ searchParams }: { searchParams
     const red = isRed(d);
     return { date: d, label: f.dateTime(kstDateTime(d, '12:00'), { day: 'numeric', weekday: 'short' }), holiday: holidayName.get(d) ?? null, red, today: d === today, count: count.get(d) ?? 0 };
   });
+  // ── 폰 월 달력: 날짜마다 근무 · 휴가 인원, 고른 날의 목록 ──
+  const shiftYm = (ym: string, n: number) => new Date(Date.UTC(Number(ym.slice(0, 4)), Number(ym.slice(5, 7)) - 1 + n, 1)).toISOString().slice(0, 7);
+  const phoneHref = (ym: string, d: string | null) => {
+    const qs = new URLSearchParams();
+    for (const [k, val] of Object.entries({ q, g, pm: ym, pd: d ?? '' })) if (val) qs.set(k, val);
+    return `/admin/schedule?${qs}`;
+  };
+  const phoneCells: { d: string; inMonth: boolean; red: boolean; holiday: string | null; work: number; leave: number; onLeave: typeof gridPeople; rows: { p: (typeof gridPeople)[number]; it: ReturnType<typeof data.planFor>['items'][number]; i: number }[] }[] = [];
+  for (let d = pGridFrom; d <= pGridTo; d = addDays(d, 1)) {
+    const inMonth = d >= pmRange.from && d <= pmRange.to;
+    const onLeave = gridPeople.filter((p) => (leaveOf.get(p.id)?.get(d)?.length ?? 0) > 0);
+    const full = new Set(gridPeople.filter((p) => isFullDayLeave(leaveOf.get(p.id)?.get(d))).map((p) => p.id));
+    const rows = gridPeople
+      .filter((p) => !full.has(p.id))
+      .flatMap((p) => data.planFor(p.id, d).items.map((it, i) => ({ p, it, i })))
+      .sort((x, y) => x.it.startTime.localeCompare(y.it.startTime) || x.p.name.localeCompare(y.p.name));
+    phoneCells.push({ d, inMonth, red: isRed(d), holiday: holidayName.get(d) ?? null, work: new Set(rows.map((r) => r.p.id)).size, leave: onLeave.length, onLeave, rows });
+  }
   const rangeTitle = dayView
     ? f.dateTime(kstDateTime(from, '12:00'), { year: 'numeric', month: 'long', day: 'numeric', weekday: 'short' })
     : month
@@ -258,81 +299,119 @@ export default async function AdminSchedulePage({ searchParams }: { searchParams
         )}
         <p className="text-xs text-faint">{t('hint')}</p>
       </div>
-      <div className="grid items-start lg:hidden">
-        <div className="flex flex-col">
-          <ListBar
-            key={`${q}|${g}|${from}|${to}`}
-            q={q}
-            from={from}
-            to={to}
-            group={g}
-            groups={groupOptions}
-            side={{ href: '/punch/schedule', label: t('mine') }}
-            labels={{ menu: tc('menu'), search: t('search'), filter: t('filter'), period: t('period'), from: t('from'), to: t('to'), apply: t('apply'), groupAll: t('groupAll') }}
-          />
-          {!data.rule && <p className="mt-3 rounded-card bg-bg p-5 text-sm text-faint">{t('noRule')}</p>}
-          {data.rule && blocks.length === 0 && <p className="mt-3 rounded-card bg-bg p-5 text-sm text-faint">{t('emptyRange')}</p>}
-          <div className="flex flex-col">
-            {page.items.map(({ d, onLeave, rows, total }) => (
-              <section key={d}>
-                <h2 className="num -mx-4 flex items-center justify-between gap-2 border-b border-border bg-surface px-5 py-3 font-bold lg:mx-0">
-                  <span>
-                    {f.dateTime(kstDateTime(d, '12:00'), { year: 'numeric', month: 'long', day: 'numeric', weekday: 'short' })}
-                    {d === today && <span className="ml-2 text-sm font-medium text-primary">{t('today')}</span>}
-                  </span>
-                  <span className="shrink-0">{hm(total)}</span>
-                </h2>
-                <ul className="-mx-4 divide-y divide-border border-b border-border bg-bg lg:mx-0">
-                  {onLeave.map((p) => (
-                    <li key={`leave${p.id}`} className="flex min-h-14 items-center gap-3 px-5">
-                      <span className="flex w-14 shrink-0 justify-center">
-                        <Plane aria-hidden size={20} className="text-primary" />
-                      </span>
-                      <span aria-hidden className="w-1 shrink-0 self-stretch" />
-                      <span className="font-bold">{p.name}</span>
-                      <span className="text-sm text-muted">{t('onLeave')}</span>
-                    </li>
-                  ))}
-                  {rows.map(({ p, it }) => {
-                    const at = data.planFor(p.id, d).items.indexOf(it);
-                    const job = p.jobId ? jobOf.get(p.jobId) : undefined;
-                    const color = job?.color ?? it.color;
-                    return (
-                      <li key={`${p.id}${it.shiftId ?? it.source}${it.startTime}`} className="flex min-h-16 items-center gap-3 py-2 pr-2 pl-5">
-                        <span className="num flex w-14 shrink-0 flex-col text-sm leading-snug">
-                          <span className="font-semibold">{it.startTime}</span>
-                          <span className="text-muted">{it.endTime}</span>
-                        </span>
-                        <span aria-hidden className={`w-1 shrink-0 self-stretch rounded-chip ${color ? SHIFT_COLOR_CLASS[color] : 'bg-border'}`} />
-                        <span className="flex min-w-0 flex-1 flex-col">
-                          <Link href={`/admin/schedule/${p.id}/${d}?i=${Math.max(0, at)}`} className="font-bold">
-                            {p.name}
-                          </Link>
-                          <span className="truncate text-sm text-muted">{[groupPath(groups, p.groupId), job?.name, it.name ?? (it.source === 'rule' ? t('byRule') : null), it.note].filter(Boolean).join(' / ')}</span>
-                        </span>
-                        {it.kind !== 'none' && <Chip tone={it.kind === 'holiday' ? 'warn' : it.kind === 'deemed' ? 'neutral' : 'info'}>{tk(it.kind)}</Chip>}
-                        {it.shiftId ? <CancelShift id={it.shiftId} label={t('cancelOf', { name: p.name })} /> : <span aria-hidden className="w-2 shrink-0" />}
-                      </li>
-                    );
-                  })}
-                </ul>
-              </section>
+      <div className="flex flex-col lg:hidden" data-phone-schedule>
+        <MineBar menu={tc('menu')} title={t('title')} side={{ href: '/punch/records?v=week', label: t('mine') }}>
+          <form action="/admin/schedule" className="flex items-center gap-2 px-4 pb-2">
+            <input type="hidden" name="pm" value={pm} />
+            <input type="search" name="q" defaultValue={q} placeholder={t('search')} aria-label={t('search')} maxLength={40} className="h-10 min-w-0 flex-1 rounded-button border border-border bg-bg px-3 text-sm" />
+            <select name="g" defaultValue={g} aria-label={t('filter')} className="h-10 max-w-32 rounded-button border border-border bg-surface px-2 text-sm text-muted">
+              <option value="">{t('groupAll')}</option>
+              {groupOptions.map((o) => (
+                <option key={o.id} value={o.id}>
+                  {o.label}
+                </option>
+              ))}
+            </select>
+            <button type="submit" className="h-10 shrink-0 rounded-button border border-border bg-bg px-3 text-sm text-muted">
+              {t('find')}
+            </button>
+          </form>
+        </MineBar>
+        {!data.rule && <p className="mt-3 rounded-card bg-bg p-5 text-sm text-faint">{t('noRule')}</p>}
+        <nav aria-label={t('period')} className="flex items-center justify-center gap-1 py-2">
+          <Link href={phoneHref(shiftYm(pm, -1), null)} aria-label={t('prevMonth')} className="flex size-11 items-center justify-center text-text">
+            <ChevronLeft aria-hidden size={20} />
+          </Link>
+          <span className="num min-w-28 text-center text-lg font-bold">{f.dateTime(kstDateTime(pmRange.from, '12:00'), { year: 'numeric', month: 'long' })}</span>
+          <Link href={phoneHref(shiftYm(pm, 1), null)} aria-label={t('nextMonth')} className="flex size-11 items-center justify-center text-text">
+            <ChevronRight aria-hidden size={20} />
+          </Link>
+          <Link href={phoneHref(today.slice(0, 7), today)} className="ml-1 inline-flex min-h-9 items-center rounded-button border border-border bg-bg px-3 text-sm text-muted">
+            {t('today')}
+          </Link>
+        </nav>
+        <div className="-mx-4 border-y border-border bg-bg">
+          <div className="grid grid-cols-7 border-b border-border text-center text-xs">
+            {weekdayNames.map((w, i) => (
+              <span key={w} className={`py-1.5 ${i === 0 ? 'text-danger' : 'text-muted'}`}>
+                {w}
+              </span>
             ))}
           </div>
-          <Pager page={page.page} pages={page.pages} param="p" params={{ ...sp }} label={tc('pages')} />
-          <div className="flex flex-wrap items-center justify-between gap-x-3 px-1 pt-2 text-sm">
-            <Link href="/admin/schedule" className="inline-flex min-h-11 items-center font-medium text-muted">
-              {t('thisWeek')}
-            </Link>
-            {admin && (
-              <Link href="/admin/shifts" className="inline-flex min-h-11 items-center font-medium text-primary">
-                {t('toTemplates')} ›
+          <div className="grid grid-cols-7">
+            {phoneCells.map((c) => (
+              <Link
+                key={c.d}
+                href={phoneHref(pm, c.d)}
+                scroll={false}
+                aria-current={c.d === pd ? 'date' : undefined}
+                className={`flex min-h-16 flex-col items-center gap-0.5 border-b border-border py-1 ${c.d === pd ? 'bg-primary-tint' : ''} ${c.inMonth ? '' : 'opacity-40'}`}
+              >
+                <span className={`num flex size-6 items-center justify-center rounded-chip text-sm ${c.d === today ? 'bg-text font-bold text-on-primary' : c.red ? 'text-danger' : ''}`}>{Number(c.d.slice(8))}</span>
+                {c.work > 0 && <span className="num text-xs font-semibold text-primary">{t('cellWork', { n: c.work })}</span>}
+                {c.leave > 0 && <span className="num text-xs text-muted">{t('cellLeave', { n: c.leave })}</span>}
               </Link>
-            )}
+            ))}
           </div>
-          <p className="px-1 text-sm text-faint">{t('hint')}</p>
         </div>
-        </div>
+        {(() => {
+          const day = phoneCells.find((c) => c.d === pd)!;
+          return (
+            <section className="pt-3" data-phone-day>
+              <h2 className="num flex flex-wrap items-baseline justify-between gap-x-2 px-1 pb-2 font-bold">
+                <span>
+                  {f.dateTime(kstDateTime(pd, '12:00'), { month: 'long', day: 'numeric', weekday: 'short' })}
+                  {day.holiday && <span className="ml-1.5 text-sm font-medium text-danger">{day.holiday}</span>}
+                </span>
+                <span className="text-sm font-medium text-muted">{t('summary', { work: day.work, leave: day.leave })}</span>
+              </h2>
+              {day.rows.length === 0 && day.onLeave.length === 0 && <p className="rounded-card bg-bg p-5 text-sm text-faint">{t('emptyDay')}</p>}
+              <ul className="-mx-4 divide-y divide-border border-y border-border bg-bg empty:hidden">
+                {day.onLeave.map((p) => (
+                  <li key={`leave${p.id}`} className="flex min-h-14 items-center gap-3 px-5">
+                    <span className="flex w-14 shrink-0 justify-center">
+                      <Plane aria-hidden size={20} className="text-muted" />
+                    </span>
+                    <span className="flex min-w-0 flex-col">
+                      <span className="font-bold">{p.name}</span>
+                      <span className="truncate text-sm text-muted">{leaveText(leaveOf.get(p.id)?.get(pd))}</span>
+                    </span>
+                  </li>
+                ))}
+                {day.rows.map(({ p, it, i: at }) => {
+                  const job = p.jobId ? jobOf.get(p.jobId) : undefined;
+                  const color = job?.color ?? it.color;
+                  return (
+                    <li key={`${p.id}${it.shiftId ?? it.source}${it.startTime}`} className="flex min-h-16 items-center gap-3 py-2 pr-2 pl-5">
+                      <span className="num flex w-14 shrink-0 flex-col text-sm leading-snug">
+                        <span className="font-semibold">{it.startTime}</span>
+                        <span className="text-muted">{it.endTime}</span>
+                      </span>
+                      <span aria-hidden className={`w-1 shrink-0 self-stretch rounded-chip ${color ? SHIFT_COLOR_CLASS[color] : 'bg-border'}`} />
+                      <span className="flex min-w-0 flex-1 flex-col">
+                        <Link href={`/admin/schedule/${p.id}/${pd}?i=${at}`} className="font-bold">
+                          {p.name}
+                          {payOf.get(p.id) && <span className="ml-1.5 text-xs font-normal text-faint">{payOf.get(p.id)}</span>}
+                        </Link>
+                        <span className="truncate text-sm text-muted">{[groupPath(groups, p.groupId), job?.name, it.name ?? (it.source === 'rule' ? t('byRule') : null), it.note].filter(Boolean).join(' / ')}</span>
+                      </span>
+                      {it.kind !== 'none' && <Chip tone={it.kind === 'holiday' ? 'warn' : it.kind === 'deemed' ? 'neutral' : 'info'}>{tk(it.kind)}</Chip>}
+                      {it.shiftId ? <CancelShift id={it.shiftId} label={t('cancelOf', { name: p.name })} /> : <span aria-hidden className="w-2 shrink-0" />}
+                    </li>
+                  );
+                })}
+              </ul>
+            </section>
+          );
+        })()}
+        {admin && (
+          <div className="flex justify-end px-1 pt-2 text-sm">
+            <Link href="/admin/shifts" className="inline-flex min-h-11 items-center font-medium text-primary">
+              {t('toTemplates')} ›
+            </Link>
+          </div>
+        )}
+      </div>
       {admin && (
         <>
       <AddSheet id="schedule" title={t('add')} modal wide>

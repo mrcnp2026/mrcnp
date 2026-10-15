@@ -56,7 +56,7 @@ export async function WeekBar({
             ) : (
               <span className="size-11" />
             ))}
-          <Link href={nav && !nav.thisWeek ? '/punch' : '/punch/schedule'} scroll={false} className="num inline-flex min-h-11 items-center gap-1 text-sm text-muted">
+          <Link href={nav && !nav.thisWeek ? '/punch' : '/punch/records?v=week'} scroll={false} className="num inline-flex min-h-11 items-center gap-1 text-sm text-muted">
             <CalendarDays aria-hidden size={18} strokeWidth={1.75} />
             {range}
           </Link>

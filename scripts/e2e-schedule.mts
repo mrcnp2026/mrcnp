@@ -70,9 +70,11 @@ try {
   await p.goto(`${BASE}/admin/schedule`);
   await p.waitForLoadState('networkidle');
   await p.waitForLoadState('networkidle');
-  await p.getByRole('search').waitFor({ timeout: 20000 });
-  check((await p.getByRole('search').count()) === 1 && (await p.getByRole('button', { name: '기간 고르기' }).count()) === 1 && (await p.getByRole('link', { name: '내 일정', exact: true }).count()) === 1, '위 줄: 검색 · 기간 · [내 일정]');
-  check((await p.locator('h2.num').count()) >= 1 && (await p.locator('h2.num').first().getByText(/\d+시간 \d+분/).count()) === 1, '날짜 머리줄마다 그날 계획 시간 합 (기본: 이번 주)', String(await p.locator('h2.num').count()));
+  // 2026-10-15 폰(결정 사항 개발-38): 월 달력(날짜마다 근무 · 휴가 인원) + 고른 날의 직원 목록
+  const ph = p.locator('[data-phone-schedule]');
+  await ph.waitFor({ timeout: 20000 });
+  check((await ph.getByRole('searchbox').count()) === 1 && (await ph.getByRole('link', { name: '내 일정', exact: true }).count()) === 1, '폰 위 줄: 이름 검색 · 부서 · [내 일정]');
+  check((await ph.locator('a[aria-current="date"]').count()) === 1 && (await ph.locator('.grid-cols-7 > a').count()) >= 28 && (await ph.locator('[data-phone-day] h2').count()) === 1, '폰: 월 달력 + 오늘 고른 날의 목록', String(await ph.locator('.grid-cols-7 > a').count()));
   await shot('01-근무일정-이번주');
 
   // ── + 버튼 → 일정 넣는 창 ──
@@ -113,18 +115,24 @@ try {
   await p.goto(`${BASE}/admin/schedule?d=${FRI}`);
   await p.waitForLoadState('networkidle');
   check((await p.getByRole('link', { name: emp!.name }).count()) === 2 && (await p.getByText('17:30').count()) > 0 && (await p.getByText('잔업').count()) > 0, '금요일 화면에 평소 일정 + 잔업 두 줄');
-  // ── 기간 목록: 금~토 두 날짜 머리줄 · 이름 검색 ──
-  await p.goto(`${BASE}/admin/schedule?from=${FRI}&to=${SAT}`);
+  // ── 기간 목록(PC 목록형): 금~토 · 이름 검색 · 31일 줄임 (2026-10-15 폰은 달력이라 기간 목록은 PC에서) ──
+  await p.setViewportSize({ width: 1440, height: 900 });
+  await p.goto(`${BASE}/admin/schedule?from=${FRI}&to=${SAT}&v=list`);
   await p.waitForLoadState('networkidle');
-  check((await p.locator('h2.num').count()) === 2 && (await p.getByRole('link', { name: emp!.name }).count()) === 3, '금~토 기간: 날짜 머리줄 2개 · 검사 계정 세 줄', `${await p.locator('h2.num').count()} / ${await p.getByRole('link', { name: emp!.name }).count()}`);
-  check((await p.locator('h2.num').nth(1).getByText('9시간 0분').count()) === 1, '토요일 합계는 특근 9시간 (검사 계정만 일정이 있는 날)', (await p.locator('h2.num').nth(1).textContent()) ?? '');
+  const listRows = p.locator('main table tbody tr', { hasText: emp!.name });
+  check((await listRows.count()) === 3, '금~토 기간 목록형: 검사 계정 세 줄(금 평소 · 금 잔업 · 토 특근)', String(await listRows.count()));
+  check((await listRows.filter({ hasText: '08:00 - 17:00' }).filter({ hasText: '9시간 0분' }).count()) === 1, '토요일 특근 08:00 - 17:00 · 9시간');
   await shot('03b-근무일정-기간');
-  await p.goto(`${BASE}/admin/schedule?from=${FRI}&to=${SAT}&q=${encodeURIComponent('없는이름zz')}`);
+  await p.goto(`${BASE}/admin/schedule?from=${FRI}&to=${SAT}&v=list&q=${encodeURIComponent('없는이름zz')}`);
   await p.waitForLoadState('networkidle');
-  check((await p.getByText('이 기간에는 일정이 없습니다.').filter({ visible: true }).count()) === 1, '이름 검색에 맞는 사람이 없으면 빈 안내'); // PC 달력형에도 같은 안내가 있다(폰에서는 숨김)
+  check((await p.getByText('이 기간에는 일정이 없습니다.').filter({ visible: true }).count()) === 1, '이름 검색에 맞는 사람이 없으면 빈 안내');
   await p.goto(`${BASE}/admin/schedule?from=2026-01-01&to=2026-12-31`);
   await p.waitForLoadState('networkidle');
-  check((await p.getByRole('button', { name: '기간 고르기' }).textContent())?.includes('01.01 - 01.31') ?? false, '기간이 너무 길면 31일로 줄임', (await p.getByRole('button', { name: '기간 고르기' }).textContent()) ?? '');
+  check(((await p.locator('main p.num').first().textContent()) ?? '').includes('1월 31일'), '기간이 너무 길면 31일로 줄임', (await p.locator('main p.num').first().textContent()) ?? '');
+  await p.goto(`${BASE}/admin/schedule?v=month`);
+  await p.waitForLoadState('networkidle');
+  check((await p.locator('main .grid-cols-7 > div.min-h-32').count()) >= 28, 'PC 월 보기: 기간 없이 열어도 그달 전체 달력', String(await p.locator('main .grid-cols-7 > div.min-h-32').count()));
+  await p.setViewportSize({ width: 390, height: 844 });
 
   // ── 내 일정 ──
   // 2026-10-15: 내 일정은 「내 근태현황」 주간 달력 — 다음 주로 넘겨 금 · 토 칸을 본다
@@ -139,7 +147,7 @@ try {
   await p.goto(`${BASE}/admin/schedule?d=${SAT}`);
   await p.getByRole('button', { name: `${emp!.name} 일정 취소`, exact: true }).click();
   await p.getByRole('button', { name: '취소', exact: true }).click();
-  await p.getByText('이 기간에는 일정이 없습니다.').waitFor({ timeout: 20000 });
+  await p.locator('[data-phone-day]').getByText('이 날은 일정이 없습니다.').waitFor({ timeout: 20000 });
   const { data: left } = await db.from('shifts').select('active').eq('employee_id', emp!.id).eq('work_date', SAT);
   check((left?.length ?? 0) >= 1 && left!.every((x) => x.active === false), '취소하면 꺼짐 (지우지 않음) · 화면에서 사라짐');
 

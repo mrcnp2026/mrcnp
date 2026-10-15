@@ -5,7 +5,7 @@
 //   console = 통합설정 (기준 — 관리자만) = 회사설정 + App 관리
 // 화면 주소는 바꾸지 않았다 — 어느 주소가 어느 공간 · 앱 · 항목인지는 여기서 정한다(가장 길게 맞는 항목이 이긴다).
 // 이름은 번역 파일 frame.app / frame.group / frame.item 의 열쇠다.
-import { Building2, CalendarRange, ChartColumn, Clock, Database, FileBarChart, House, type LucideIcon, Megaphone, MessagesSquare, Network, Plane, Send, ShieldCheck, SlidersHorizontal, UserRound, Users, Wallet } from 'lucide-react';
+import { Building2, ChartColumn, Clock, Database, FileBarChart, House, type LucideIcon, Megaphone, MessagesSquare, Network, Plane, Send, ShieldCheck, SlidersHorizontal, UserRound, Users, Wallet } from 'lucide-react';
 import { managerCanOpen } from '@/lib/manager-rules';
 
 // how: 통합설정 화면 맨 위 「이 화면 쓰는 법」 띠의 종류 (2026-10-14 의뢰인: 이미 적용된 건지 · 저장해야 적용되는지 · 보기만인지 한눈에)
@@ -23,8 +23,8 @@ const pay = (x: string) => `/admin/settings?tab=pay&section=${x}`;
 
 export const MY_APPS: App[] = [
   { key: 'home', icon: House, groups: one([{ href: '/punch', key: 'myHome', exact: true, also: ['/punch/home-settings'] }]) },
-  { key: 'schedule', icon: CalendarRange, groups: one([{ href: '/punch/schedule', key: 'mySchedule' }]) },
-  { key: 'records', icon: Clock, groups: one([{ href: '/punch/records', key: 'myRecords', also: ['/punch/corrections'] }]) },
+  // 직원에게는 근무일정이 곧 출퇴근 일정 — 직원 모드의 근무일정 메뉴는 없앴다(2026-10-15 의뢰인, 결정 사항 개발-37). 일정 요청은 내 근태현황 안에서
+  { key: 'records', icon: Clock, groups: one([{ href: '/punch/records', key: 'myRecords', also: ['/punch/corrections', '/punch/schedule'] }]) },
   { key: 'leave', icon: Plane, groups: one([{ href: '/punch/leave', key: 'myLeave' }]) },
   { key: 'requests', icon: Send, groups: one([{ href: '/punch/requests', key: 'myRequests' }]) },
   { key: 'pay', icon: Wallet, groups: one([{ href: '/punch/payslips', key: 'payslips' }, { href: '/punch/retirement', key: 'myRetirement' }]) },
