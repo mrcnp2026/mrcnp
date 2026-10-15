@@ -3,6 +3,7 @@
 // ★ 공개가 은행 지급을 뜻하지 않는다. 공개했다고 문자 · 메일을 자동으로 보내지 않는다.
 // ★ 직원은 자기 것 가운데 「지금 공개 중」인 명세서만 본다 — 서버가 매번 본인인지, 확정된 대장인지, 마지막 기록이 공개인지 확인한다.
 // ★ 사업주 부담 항목은 직원에게 보이지 않는다.
+import { loadMyUploaded } from './slip-upload-data';
 import 'server-only';
 import { ApiError } from '@/lib/api';
 import type { Me } from '@/lib/auth';
@@ -94,8 +95,23 @@ export async function loadMySlips(employeeId: string, practice: boolean): Promis
   return (await mySlips(employeeId, practice)).filter((x) => x.current);
 }
 
-/** 지금 공개 중인 것(current)과, 정정본으로 바뀐 이전본. 회수된 것은 없다 */
+/** 회사 엑셀로 올린 명세서(DB 0047, 2026-10-16) → 같은 모양의 명세서. kind 'UPLOAD' */
+const monthEnd = (m: string) => new Date(Date.UTC(Number(m.slice(0, 4)), Number(m.slice(5, 7)), 0)).toISOString().slice(0, 10);
+async function myUploaded(employeeId: string, practice: boolean): Promise<(MySlip & { lines: MySlipLine[] })[]> {
+  return (await loadMyUploaded(employeeId, practice)).map((u) => ({
+    id: u.id, month: u.month, payDate: u.payDate, kind: 'UPLOAD', revision: u.revision, pay: u.pay, deduction: u.deduction, net: u.net, publishedAt: u.createdAt, isTest: practice,
+    correctionReason: null, current: u.state === 'PUBLISHED', periodFrom: `${u.month}-01`, periodTo: monthEnd(u.month), sequence: 1, no: `${u.month.replace('-', '')}-U${u.revision}-${u.id.slice(0, 8).toUpperCase()}`,
+    lines: u.lines.map((l, i) => ({ code: `U${i + 1}`, kind: l.kind, label: l.label, quantity: null, unitPrice: null, factor: null, amount: l.amount })),
+  }));
+}
+
+/** 지금 공개 중인 것(current)과, 정정본으로 바뀐 이전본. 회수된 것은 없다. 올린 명세서도 함께 */
 async function mySlips(employeeId: string, practice: boolean): Promise<MySlip[]> {
+  const uploaded: MySlip[] = (await myUploaded(employeeId, practice)).map((x) => ({ ...x, lines: undefined }) as MySlip);
+  return [...(await calculatedSlips(employeeId, practice)), ...uploaded].sort((a, b) => b.month.localeCompare(a.month) || b.revision - a.revision);
+}
+
+async function calculatedSlips(employeeId: string, practice: boolean): Promise<MySlip[]> {
   const events = await latestEvents({ employeeId });
   const ids = [...events].filter(([, e]) => e.kind === 'PUBLISHED' || e.kind === 'SUPERSEDED').map(([id]) => id);
   if (ids.length === 0) return [];
@@ -117,6 +133,7 @@ export async function loadMySlip(employeeId: string, statementId: string, practi
   const same = all.filter((x) => x.month === slip.month && x.kind === slip.kind && x.id !== slip.id);
   const previous = same.filter((x) => !x.current && x.revision < slip.revision).sort((a, b) => b.revision - a.revision)[0] ?? null;
   const replacedBy = slip.current ? null : (same.find((x) => x.current) ?? null);
+  if (slip.kind === 'UPLOAD') return { slip, previous, replacedBy, lines: (await myUploaded(employeeId, practice)).find((x) => x.id === slip.id)?.lines ?? [] };
   const { data, error } = await db().from('payroll_statement_items').select('item_code, kind, label_ko, quantity, unit_price, factor, amount, line_no, created_at').eq('statement_id', statementId).in('kind', ['PAYMENT', 'DEDUCTION']).order('created_at').order('line_no');
   if (error) boom('loadMySlip', error);
   const t = (v: unknown) => (v === null || v === undefined ? null : String(Number(v)));

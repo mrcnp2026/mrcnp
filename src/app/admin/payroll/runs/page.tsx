@@ -1,6 +1,7 @@
 // 급여대장 목록 — 달마다 정규 대장을 만들고 상태(초안 → 계산됨 → 검토됨 → 확정)를 본다 (PRD v1.3 18.3 W04). 급여 담당 관리자만.
 import { getFormatter, getTranslations } from 'next-intl/server';
 import { PayFlow } from '@/components/PayFlow';
+import { Upload } from 'lucide-react';
 import Link from 'next/link';
 import { ListHead, ListTable, StatusCards } from '@/components/listframe';
 import { Card, CardTitle, Chip, PageShell } from '@/components/ui';
@@ -32,7 +33,8 @@ export default async function PayRunsPage({ searchParams }: { searchParams: Prom
 
   return (
     <PageShell wide>
-      <ListHead title={t('title')} desc={t('intro')} settingsHref="/admin/settings?tab=pay&section=ledger" settingsLabel={tf('item.payLedger')} />
+      {/* 명세서를 회사 엑셀로 올리는 길 (2026-10-16 의뢰인: 다운로드 외 업로드 버튼) */}
+      <ListHead title={t('title')} desc={t('intro')} settingsHref="/admin/settings?tab=pay&section=ledger" settingsLabel={tf('item.payLedger')} actions={<Link href="/admin/payroll/slips" className="inline-flex min-h-11 items-center gap-2 rounded-button bg-primary px-4 text-sm font-bold text-on-primary" data-slip-entry><Upload aria-hidden size={18} strokeWidth={2} />{t('uploadSlips')}</Link>} />
       <PayFlow now="runs" />
       {practice && <p className="rounded-card border border-border bg-surface p-3 text-sm text-muted">{t('practice')}</p>}
       <Card>

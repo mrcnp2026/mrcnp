@@ -80,7 +80,8 @@ begin
   if not exists (select 1 from public.work_rules where active) then
     insert into public.work_rules (name, start_time, end_time, effective_from) values ('r1', '09:00', '18:00', '2026-10-01');
   end if;
-  begin insert into public.work_rules (name, start_time, end_time, effective_from) values ('r2', '10:00', '19:00', '2026-10-01'); out := out || E'FAIL|22|second active work rule\n';
+  -- 같은 날 시작하는 두 번째 규칙(2026-10-16: 실제 규칙 시작일이 8/1로 바뀌어 날짜를 고정하지 않는다)
+  begin insert into public.work_rules (name, start_time, end_time, effective_from) values ('r2', '10:00', '19:00', (select min(effective_from) from public.work_rules where active)); out := out || E'FAIL|22|second active work rule\n';
   exception when others then out := out || E'PASS|22|second active work rule denied\n'; end;
   begin delete from public.profiles where id = emp; out := out || E'FAIL|23|delete profile\n';
   exception when others then out := out || E'PASS|23|delete profile denied\n'; end;

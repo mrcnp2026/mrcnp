@@ -122,6 +122,9 @@ export default async function PayRunPage({ params, searchParams }: { params: Pro
           <a href={`/api/admin/payroll/runs/${run.id}/export`} className="inline-flex h-8 items-center gap-1 rounded-button border border-border bg-bg px-3.5 text-sm font-semibold text-text hover:bg-surface">
             {t('exportDo')}
           </a>
+          <a href={`/admin/payroll/slips?m=${run.periodFrom.slice(0, 7)}`} className="inline-flex h-8 items-center gap-1 rounded-button border border-border bg-bg px-3.5 text-sm font-semibold text-text hover:bg-surface">
+            {t('uploadSlips')}
+          </a>
           <a href={`/api/admin/payroll/runs/${run.id}/pdf-all`} className="inline-flex h-8 items-center gap-1 rounded-button border border-border bg-bg px-3.5 text-sm font-semibold text-text hover:bg-surface">
             {t(final ? 'pdfAll' : 'pdfAllDraft')}
           </a>

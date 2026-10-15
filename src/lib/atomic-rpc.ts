@@ -3,8 +3,8 @@ import 'server-only';
 import { ApiError } from '@/lib/api';
 import { createAdminClient } from '@/lib/supabase/admin';
 
-type AtomicFunction = 'append_payroll_version_atomic' | 'request_staff_role_atomic' | 'decide_staff_role_atomic' | 'replace_payroll_override_atomic' | 'decide_leave_atomic' | 'decide_leave_change_atomic';
-const forbidden = new Set(['forbidden','rank','owner_only','self_change','self_decision','payroll_only_grant','payroll_forbidden','out_of_scope']);
+type AtomicFunction = 'append_payroll_version_atomic' | 'request_staff_role_atomic' | 'decide_staff_role_atomic' | 'replace_payroll_override_atomic' | 'decide_leave_atomic' | 'decide_leave_change_atomic' | 'upload_payslips_atomic';
+const forbidden = new Set(['forbidden','payroll_only','rank','owner_only','self_change','self_decision','payroll_only_grant','payroll_forbidden','out_of_scope']);
 const invalid = new Set(['invalid_input','invalid_decision','reason_required','payroll_effective_from_past','payroll_reason_required','payroll_needs_admin']);
 const conflict = new Set(['already','employee_inactive','min_admins','min_payroll','request_pending','payroll_version_conflict','payroll_finalized','payroll_wrong_status','day_confirmed','period_locked','duplicate_request']);
 /**

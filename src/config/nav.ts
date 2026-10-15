@@ -51,7 +51,7 @@ export const ADMIN_APPS: App[] = [
     icon: Wallet,
     groups: [
       { key: 'gPayPrep', items: [{ href: '/admin/payroll/staff', key: 'payStaff' }, { href: '/admin/payroll', key: 'payHours' }] },
-      { key: 'gPayRun', items: [{ href: '/admin/payroll/runs', key: 'payRuns' }, { href: '/admin/payroll/daily', key: 'payDaily' }] },
+      { key: 'gPayRun', items: [{ href: '/admin/payroll/runs', key: 'payRuns' }, { href: '/admin/payroll/slips', key: 'paySlips' }, { href: '/admin/payroll/daily', key: 'payDaily' }] },
       { key: 'gPaySettle', items: [{ href: '/admin/payroll/insurance', key: 'payInsurance' }, { href: '/admin/payroll/retirement', key: 'payRetirement' }] },
       { key: 'gPayView', items: [{ href: '/admin/payroll/labor-cost', key: 'payLabor' }] },
     ],

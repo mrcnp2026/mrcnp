@@ -3499,7 +3499,8 @@
       "pdfAll": "Download all payslips (PDF)",
       "pdfAllDraft": "Download all payslips (PDF, for review)",
       "payroll_basis_unverified": "Verify the reference data, company settings, policies and items used in this calculation before finalizing.",
-      "payroll_duplicate_payment": "The same work is included in another finalized run. Check regular/daily runs and revisions."
+      "payroll_duplicate_payment": "The same work is included in another finalized run. Check regular/daily runs and revisions.",
+      "uploadSlips": "Upload payslips"
     },
     "reports": {
       "attTitle": "Attendance report",
@@ -4168,6 +4169,88 @@
         "sum": "Total"
       },
       "payroll_duplicate_payment": "The same work is included in another finalized run. Check regular/daily runs and revisions."
+    },
+    "paySlips": {
+      "title": "Upload payslips",
+      "intro": "Upload the payslip spreadsheet from your payroll software as it is. Each employee gets one payslip in My pay right away. Kept separately from the payroll runs the app calculates.",
+      "forbidden": "Only payroll admins can see this.",
+      "practice": "Practice period — payslips uploaded now stay as practice records and are hidden after going live.",
+      "month": "Month",
+      "prev": "Previous month",
+      "next": "Next month",
+      "monthOf": "{m} payslips",
+      "dbPending": "The database table for payslips is not there yet (usable after DB change batch 14 is approved and applied).",
+      "uploadTitle": "Upload {m} payslips",
+      "upload": "Upload spreadsheet",
+      "template": "Download template",
+      "pickFile": "Payslip spreadsheet file",
+      "uploadHint": "Excel (.xlsx) or CSV, first sheet. The row with an employee no. or name column is the header; column names decide payments, deductions and totals. Nothing is saved before you publish.",
+      "reading": "Reading the file…",
+      "done": "Published {n} payslips for {month}. Employees can see them in My pay now.",
+      "columnsTitle": "Column types (row {row} is the header)",
+      "columnsHint": "Change a wrong column and it recalculates. “Guessed” columns had unknown names and were taken as payments because they hold numbers.",
+      "noHeader": "Column {n} (no name)",
+      "guessed": "Guessed",
+      "kindOf": "Type of column {col}",
+      "kind": {
+        "ID": "Employee no.",
+        "NAME": "Name",
+        "PAYMENT": "Payment",
+        "DEDUCTION": "Deduction",
+        "TOTAL_PAY": "Payment total (check)",
+        "TOTAL_DED": "Deduction total (check)",
+        "NET": "Net pay (check)",
+        "SKIP": "Ignore"
+      },
+      "rowsTitle": "{n} employees",
+      "blocked": "{n} blocked",
+      "colRow": "Row",
+      "colNo": "No.",
+      "colName": "Name",
+      "colPay": "Payments",
+      "colDed": "Deductions",
+      "colNet": "Net",
+      "colState": "Check",
+      "colPayDate": "Pay date",
+      "colAt": "Uploaded",
+      "rowOk": "OK",
+      "rowError": {
+        "unknown_employee": "Employee not found",
+        "duplicate_employee": "Same employee twice",
+        "bad_amount": "Amount is not a number",
+        "total_mismatch": "Totals differ from the file",
+        "net_mismatch": "Net pay differs from the file",
+        "no_amount": "No amounts"
+      },
+      "payDate": "Pay date",
+      "publish": "Publish {n} payslips",
+      "confirm": "Publish {n} payslips for {month}. Employees who already have one this month get a new version; the old one is kept as a record.",
+      "confirmYes": "Publish",
+      "back": "Cancel",
+      "fixFirst": "Fix the blocked rows and upload again (edit the file or change column types).",
+      "listTitle": "{n} payslips published",
+      "listEmpty": "No payslips uploaded for this month.",
+      "withdraw": "Withdraw",
+      "withdrawAll": "Withdraw all this month",
+      "withdrawWarn": "They disappear from the employee screen. Amounts and the reason are kept.",
+      "withdrawReason": "Reason for withdrawing",
+      "withdrawYes": "Withdraw",
+      "total": "Total",
+      "revision": "v{n}",
+      "pastTitle": "Older versions · withdrawn {n}",
+      "state": {
+        "PUBLISHED": "Published",
+        "REPLACED": "Replaced",
+        "WITHDRAWN": "Withdrawn"
+      },
+      "import_no_file": "No file uploaded.",
+      "import_too_big": "File too large (5 MB max).",
+      "import_bad_file": "Only Excel (.xlsx) or CSV files can be read.",
+      "slip_no_header": "No header row with an employee no. or name column (within the first 20 rows).",
+      "slip_empty": "No employee rows to upload.",
+      "slip_has_errors": "Not published because some rows are blocked.",
+      "payroll_forbidden": "Only payroll admins can do this.",
+      "db_update_required": "Database change (batch 14) must be applied first."
     }
   },
   "side": {
@@ -4297,7 +4380,8 @@
     "payDaily": "Day labor",
     "modes": "Mode",
     "findMenu": "Find a menu",
-    "noMenu": "No matching menu."
+    "noMenu": "No matching menu.",
+    "paySlips": "Upload payslips"
   },
   "nav": {
     "home": "Home",
@@ -5255,7 +5339,8 @@
       "payIncomeTax": "Income tax table",
       "setStaff": "Employee rules",
       "workInfo": "Work terms",
-      "setEsign": "E-contracts"
+      "setEsign": "E-contracts",
+      "paySlips": "Upload payslips"
     },
     "search": {
       "placeholder": "Search",

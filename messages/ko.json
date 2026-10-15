@@ -3499,7 +3499,8 @@
       "pdfAll": "명세서 PDF 전체 받기",
       "pdfAllDraft": "명세서 PDF 전체 받기 (검토용)",
       "payroll_basis_unverified": "계산에 사용한 기준 자료·회사 설정·정책·항목을 검증한 뒤 확정할 수 있습니다.",
-      "payroll_duplicate_payment": "같은 근무가 다른 확정 대장에 포함되어 있습니다. 정규·일용 대장과 정정 판을 확인해 주세요."
+      "payroll_duplicate_payment": "같은 근무가 다른 확정 대장에 포함되어 있습니다. 정규·일용 대장과 정정 판을 확인해 주세요.",
+      "uploadSlips": "명세서 엑셀 올리기"
     },
     "reports": {
       "attTitle": "근태 리포트",
@@ -4168,6 +4169,88 @@
         "sum": "합계"
       },
       "payroll_duplicate_payment": "같은 근무가 다른 확정 대장에 포함되어 있습니다. 정규·일용 대장과 정정 판을 확인해 주세요."
+    },
+    "paySlips": {
+      "title": "급여명세서 올리기",
+      "intro": "회사 급여 프로그램에서 나온 명세서 엑셀을 그대로 올리면, 직원마다 한 장씩 「내 급여」에 바로 보입니다. 앱이 계산하는 급여대장과는 따로 남습니다.",
+      "forbidden": "급여 담당 관리자만 볼 수 있습니다.",
+      "practice": "연습 기간입니다 — 지금 올리는 명세서는 연습 기록으로 남고, 운영 전환 뒤에는 보이지 않습니다.",
+      "month": "달",
+      "prev": "지난달",
+      "next": "다음 달",
+      "monthOf": "{m} 명세서",
+      "dbPending": "명세서를 담을 DB 표가 아직 없습니다(DB 변경 묶음 14 승인 · 적용 뒤에 쓸 수 있습니다).",
+      "uploadTitle": "{m} 명세서 엑셀 올리기",
+      "upload": "엑셀 올리기",
+      "template": "양식 받기",
+      "pickFile": "명세서 엑셀 파일",
+      "uploadHint": "엑셀(.xlsx)이나 CSV. 첫 시트를 읽습니다. 「사번」이나 「성명」 칸이 있는 줄을 머리로 보고, 칸 이름(기본급 · 국민연금 · 차인지급액 등)으로 지급 · 공제 · 합계를 나눕니다. 저장 전에는 아무것도 남지 않습니다.",
+      "reading": "파일을 읽는 중…",
+      "done": "{month} 명세서 {n}장을 공개했습니다. 직원 「내 급여」에서 바로 보입니다.",
+      "columnsTitle": "칸 종류 ({row}번째 줄이 머리)",
+      "columnsHint": "틀린 칸은 바꾸면 바로 다시 계산합니다. 「짐작」은 칸 이름으로 알 수 없어 숫자를 보고 지급으로 짐작한 칸입니다.",
+      "noHeader": "{n}번째 칸(이름 없음)",
+      "guessed": "짐작",
+      "kindOf": "{col} 칸 종류",
+      "kind": {
+        "ID": "사번",
+        "NAME": "이름",
+        "PAYMENT": "지급",
+        "DEDUCTION": "공제",
+        "TOTAL_PAY": "지급 합계(대조용)",
+        "TOTAL_DED": "공제 합계(대조용)",
+        "NET": "실지급(대조용)",
+        "SKIP": "안 씀"
+      },
+      "rowsTitle": "직원 {n}명",
+      "blocked": "막힌 줄 {n}",
+      "colRow": "줄",
+      "colNo": "사번",
+      "colName": "이름",
+      "colPay": "지급",
+      "colDed": "공제",
+      "colNet": "실지급",
+      "colState": "확인",
+      "colPayDate": "지급일",
+      "colAt": "올린 때",
+      "rowOk": "정상",
+      "rowError": {
+        "unknown_employee": "직원을 찾지 못함(사번 · 이름 확인)",
+        "duplicate_employee": "같은 직원이 두 번",
+        "bad_amount": "숫자가 아닌 금액",
+        "total_mismatch": "지급 · 공제 합계가 파일과 다름",
+        "net_mismatch": "실지급액이 파일과 다름",
+        "no_amount": "금액 없음"
+      },
+      "payDate": "지급일",
+      "publish": "{n}명 명세서 공개",
+      "confirm": "{month} 명세서 {n}장을 공개합니다. 이 달에 이미 올린 직원은 새 판으로 바뀌고 앞 판은 기록으로 남습니다.",
+      "confirmYes": "공개",
+      "back": "취소",
+      "fixFirst": "막힌 줄을 고친 뒤 다시 올려 주세요(파일을 고치거나 칸 종류를 바꾸세요).",
+      "listTitle": "공개 중인 명세서 {n}장",
+      "listEmpty": "이 달에 올린 명세서가 없습니다.",
+      "withdraw": "회수",
+      "withdrawAll": "이 달 전체 회수",
+      "withdrawWarn": "직원 화면에서 사라집니다. 금액과 사유는 기록으로 남습니다.",
+      "withdrawReason": "회수 사유",
+      "withdrawYes": "회수",
+      "total": "합계",
+      "revision": "{n}판",
+      "pastTitle": "지난 판 · 회수 {n}장",
+      "state": {
+        "PUBLISHED": "공개 중",
+        "REPLACED": "새 판으로 바뀜",
+        "WITHDRAWN": "회수"
+      },
+      "import_no_file": "올린 파일이 없습니다.",
+      "import_too_big": "파일이 너무 큽니다(5MB까지).",
+      "import_bad_file": "엑셀(.xlsx)이나 CSV 파일만 읽을 수 있습니다.",
+      "slip_no_header": "「사번」이나 「성명」 칸이 있는 머리 줄을 찾지 못했습니다(위에서 20줄 안).",
+      "slip_empty": "올릴 직원 줄이 없습니다.",
+      "slip_has_errors": "막힌 줄이 있어 공개하지 않았습니다.",
+      "payroll_forbidden": "급여 담당 관리자만 할 수 있습니다.",
+      "db_update_required": "DB 변경(묶음 14) 적용이 필요합니다."
     }
   },
   "side": {
@@ -4297,7 +4380,8 @@
     "payDaily": "일용직",
     "modes": "모드",
     "findMenu": "메뉴 찾기",
-    "noMenu": "맞는 메뉴가 없습니다."
+    "noMenu": "맞는 메뉴가 없습니다.",
+    "paySlips": "명세서 올리기"
   },
   "nav": {
     "home": "홈",
@@ -5255,7 +5339,8 @@
       "payIncomeTax": "근로소득 간이세액표",
       "setStaff": "직원 기준",
       "workInfo": "근로정보",
-      "setEsign": "전자계약"
+      "setEsign": "전자계약",
+      "paySlips": "명세서 올리기"
     },
     "search": {
       "placeholder": "검색",
