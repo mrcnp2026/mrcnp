@@ -90,3 +90,7 @@ describe('작은 단위', () => {
     expect(leaveTypeName(types, 'gone', tr)).toBe('gone');
   });
 });
+
+it('4시간 휴가를 1시간 시간대에 넣지 못한다', () => {
+  expect(validateLeaveType({ ...base, startTime: '09:00', endTime: '10:00' })).toEqual({ ok: false, code: 'invalid_time' });
+});

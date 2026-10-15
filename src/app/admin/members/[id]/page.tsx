@@ -22,6 +22,7 @@ import { ManageAction } from './ManageAction';
 import { RoleRequestCard } from './RoleRequestCard';
 import { loadJobs } from '@/lib/job-data';
 import { loadShiftTemplates } from '@/lib/shift-data';
+import { GradeForm, type GradeKey } from './GradeForm';
 import { ProfileForm } from './ProfileForm';
 
 export default async function MemberDetailPage({ params }: { params: Promise<{ id: string }> }) {
@@ -34,7 +35,7 @@ export default async function MemberDetailPage({ params }: { params: Promise<{ i
   if (!/^[0-9a-f-]{36}$/i.test(id)) notFound();
   const db = createAdminClient();
   const [{ data: p }, { data: keys }, groups] = await Promise.all([
-    db.from('profiles').select('id, name, employee_no, role, active, joined_on, locale, can_view_payroll, group_id, phone, job_title, password_set_at, shift_template_id, job_id').eq('id', id).maybeSingle(),
+    db.from('profiles').select('id, name, employee_no, role, active, joined_on, locale, can_view_payroll, group_id, phone, job_title, password_set_at, shift_template_id, job_id, admin_level').eq('id', id).maybeSingle(),
     db.from('user_passkeys').select('id, device_label, created_at, last_used_at').eq('employee_id', id).is('revoked_at', null),
     loadOrgGroups(),
   ]);
@@ -59,6 +60,11 @@ export default async function MemberDetailPage({ params }: { params: Promise<{ i
     ? ([['overtime', todo.overtime], ['corrections', todo.corrections], ['leave', todo.leave], ['work', todo.work]] as const).filter(([, n]) => n > 0).map(([k, n]) => tm(`todo.${k}`, { n }))
     : [];
   const api = `/api/admin/employees/${p.id}`;
+  const grade: GradeKey = p.role === 'admin' ? ((p.admin_level as GradeKey | null) ?? 'general') : (p.role as GradeKey);
+  const targetTop = grade === 'super' || grade === 'ceo';
+  const { data: tops } = await db.from('profiles').select('name, admin_level').eq('role', 'admin').eq('active', true).in('admin_level', ['super', 'ceo']);
+  const superName = (tops ?? []).find((x) => x.admin_level === 'super')?.name as string | undefined;
+  const ceoName = (tops ?? []).find((x) => x.admin_level === 'ceo')?.name as string | undefined;
   // 오너는 다른 관리자가 있어도 자기 출퇴근 기기를 직접 해제한다 (staff-rules.checkDeviceRevoke)
   const soleAdmin = self && (me.top || ((await db.from('profiles').select('id', { count: 'exact', head: true }).eq('role', 'admin').eq('active', true).neq('id', me.id)).count ?? 0) === 0);
   // 대기 중인 권한 변경 (두 번째 관리자 확인, R-2의 8)
@@ -84,7 +90,7 @@ export default async function MemberDetailPage({ params }: { params: Promise<{ i
           <p className="truncate text-sm text-muted">{[p.job_title, path ?? t('unassigned')].filter(Boolean).join(' · ')}</p>
           <p className="mt-1 flex flex-wrap items-center gap-1.5">
             <span className="num text-xs text-faint">{p.employee_no}</span>
-            {p.role === 'admin' && <Chip tone="info">{t('adminChip')}</Chip>}
+            {p.role === 'admin' && <Chip tone="info">{t(p.admin_level === 'super' ? 'levelSuper' : p.admin_level === 'ceo' ? 'levelCeo' : 'levelGeneral')}</Chip>}
             {p.role === 'manager' && <Chip tone="info">{t('managerChip')}</Chip>}
             {p.can_view_payroll && <Chip tone="info">{t('payrollChip')}</Chip>}
             {!p.active && <Chip>{t('inactive')}</Chip>}
@@ -154,7 +160,7 @@ export default async function MemberDetailPage({ params }: { params: Promise<{ i
         />
       </Card>
 
-      <Card className="p-0 py-1 lg:col-start-3 lg:row-start-2">
+      <Card id="manage" className="scroll-mt-20 p-0 py-1 lg:col-start-3 lg:row-start-2">
         <div className="px-5 pt-3 pb-1">
           <CardTitle>{tm('title')}</CardTitle>
         </div>
@@ -169,19 +175,20 @@ export default async function MemberDetailPage({ params }: { params: Promise<{ i
         ) : (
           <>
             {pendingRole && <p className="px-5 py-3 text-sm text-muted">{tm('pendingHide')}</p>}
-            {!pendingRole && p.active && p.role !== 'admin' && (
-              <ManageAction title={tm('makeAdmin')} hint={tm('makeAdminHint')} confirmLabel={tm('makeAdmin')} endpoint={`${api}/role`} body={{ role: 'admin' }} presets={[tm('preset.newAdmin'), tm('preset.handover')]} />
+            {/* 권한 등급 — 다섯 등급을 한곳에서 고른다 (2026-10-15 의뢰인, 개발-39). 최고관리자 · 대표자 관련은 최고관리자 · 대표자만 */}
+            {!pendingRole && p.active && (!targetTop || me.top) && (
+              <div className="border-t border-border first:border-t-0">
+                <p className="px-5 pt-4 pb-2 font-medium">{tm('gradeTitle')}</p>
+                <GradeForm
+                  employeeId={p.id}
+                  current={grade}
+                  allowed={(['super', 'ceo', 'general', 'manager', 'employee'] as const).filter((g) => g !== grade && (me.top || (g !== 'super' && g !== 'ceo')) && !(g === 'super' && superName) && !(g === 'ceo' && ceoName))}
+                  taken={{ ...(superName && grade !== 'super' ? { super: superName } : {}), ...(ceoName && grade !== 'ceo' ? { ceo: ceoName } : {}) }}
+                />
+              </div>
             )}
-            {!pendingRole && p.active && p.role === 'employee' && (
-              <ManageAction title={tm('makeManager')} hint={tm('makeManagerHint')} confirmLabel={tm('makeManager')} endpoint={`${api}/role`} body={{ role: 'manager' }} presets={[tm('preset.newManager'), tm('preset.handover')]} />
-            )}
-            {!pendingRole && p.active && p.role === 'manager' && (
-              <ManageAction title={tm('removeManager')} hint={tm('removeManagerHint')} confirmLabel={tm('removeManager')} endpoint={`${api}/role`} body={{ role: 'employee' }} presets={[tm('preset.handover'), tm('preset.mistake')]} />
-            )}
+            {!pendingRole && p.active && targetTop && !me.top && <p className="px-5 py-3 text-sm text-muted">{tm('owner_only')}</p>}
             {p.active && p.role === 'manager' && <ManagerScope employeeId={p.id} groups={tree.flatMap((d) => [{ id: d.id, label: d.name }, ...d.teams.map((x) => ({ id: x.id, label: `${d.name} › ${x.name}` }))])} picked={managed} />}
-            {!pendingRole && p.active && p.role === 'admin' && (
-              <ManageAction title={tm('removeAdmin')} hint={tm('removeAdminHint')} confirmLabel={tm('removeAdmin')} endpoint={`${api}/role`} body={{ role: 'employee' }} presets={[tm('preset.handover'), tm('preset.mistake')]} />
-            )}
             {!pendingRole && p.active && p.role === 'admin' && me.canViewPayroll && !p.can_view_payroll && (
               <ManageAction title={tm('grantPayroll')} hint={tm('grantPayrollHint')} confirmLabel={tm('grantPayroll')} endpoint={`${api}/role`} body={{ canViewPayroll: true }} presets={[tm('preset.payrollOwner')]} />
             )}

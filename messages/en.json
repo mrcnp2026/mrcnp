@@ -244,7 +244,11 @@
     "leave_not_target": "You are not eligible for this leave type.",
     "leave_weekday": "This leave type cannot be requested on that weekday.",
     "rank": "Your role cannot decide this person's request. Ask a higher admin.",
-    "level_taken": "Only one super admin and one CEO are allowed. Change the current one to general admin first."
+    "level_taken": "Only one super admin and one CEO are allowed. Change the current one to general admin first.",
+    "db_update_required": "Required database changes have not been applied. Contact an administrator.",
+    "leave_duration_mismatch": "The leave duration does not match the scheduled work time excluding breaks. Check the start time and leave type.",
+    "payroll_duplicate_payment": "The same work is included in another finalized run. Check regular/daily runs and revisions.",
+    "pin_busy": "Another attempt overlapped. Please try again."
   },
   "admin": {
     "nav": {
@@ -607,7 +611,7 @@
         "no_office": "No work place registered",
         "no_consent": "No location consent"
       },
-      "punchFar": "{m} m from the nearest work place",
+      "punchFar": "{m} from the nearest clock-in place",
       "shiftTitle": "Schedule requests",
       "shiftOne": "Schedule request",
       "confirmShift": "Approve {name}'s schedule request ({summary})? A schedule will be created for that date.",
@@ -631,7 +635,9 @@
       "map": "Map of the requested location",
       "cardsKind": "Waiting by type",
       "unit": "",
-      "rankBlocked": "A higher admin (CEO or super admin) handles this."
+      "rankBlocked": "A higher admin (CEO or super admin) handles this.",
+      "mapBase": "Clock-in place: {name} (radius {r}m)",
+      "mapNoPoint": "The requester's actual position is not stored, so it is not shown on the map (pending decision 출퇴근-7)."
     },
     "records": {
       "title": "Monthly totals",
@@ -1043,7 +1049,17 @@
         "withholdingHint": "Default for new employees. A ratio an employee already chose is not overwritten.",
         "example": "Example: pay for {month} is due on {date} (before any holiday shift).",
         "missing": "No ledger settings yet. A payroll ledger cannot be created until this is saved.",
-        "seed": "Start with the defaults"
+        "seed": "Start with the defaults",
+        "deductUnpaidLeave": "Deduct unpaid leave",
+        "deductLateness": "Deduct lateness",
+        "deductionHint": "For monthly/annual pay: unpaid leave hours × contractual hourly rate (monthly contract amount ÷ contracted monthly hours). No additional deduction for hourly pay.",
+        "latenessHint": "Deduct confirmed late minutes at the contractual hourly rate for monthly/annual pay. Attendance rules handle grace periods and approved timed leave.",
+        "premiumTimeBasis": "Premium pay time basis",
+        "premiumTimeHint": "Applies to approved overtime, night and holiday work. Rounded time reclassifies rounded punches by week and caps each category at the actual approved minutes.",
+        "premiumTimeOf": {
+          "ACTUAL": "Actual approved time",
+          "ROUNDED": "Rounded approved time"
+        }
       },
       "s08": {
         "intro": "Resident numbers are always hidden on screen, in print and in downloads. Payroll staff can open one record for a short time after giving a reason. There is no switch that reveals everything.",
@@ -1366,7 +1382,8 @@
         "download": "Download the labor and tax confirmation form"
       },
       "payroll_refresh_running": "An update is already running. Check the result under History in a moment.",
-      "payroll_tax_no_family_rule": "There is no rule for more than 11 dependants, so nothing is calculated."
+      "payroll_tax_no_family_rule": "There is no rule for more than 11 dependants, so nothing is calculated.",
+      "payroll_auto_item": "Automatic calculation items cannot be assigned as fixed items. Use a statement adjustment."
     },
     "manage": {
       "title": "Manage",
@@ -1595,7 +1612,29 @@
       "setLevel": "Make {level}",
       "setLevelHint": "Super admin and CEO approve and edit everything (their own too); general admins do everything except for them. One each.",
       "rank": "Your role cannot change this person.",
-      "level_taken": "Only one super admin and one CEO are allowed. Change the current one to general admin first."
+      "level_taken": "Only one super admin and one CEO are allowed. Change the current one to general admin first.",
+      "gradeTitle": "Role",
+      "gradePick": "Role of this employee",
+      "gradeNow": "current",
+      "gradeTaken": "Currently {name} — only one allowed",
+      "gradeNote": "Changes that need another admin take effect after confirmation. The reason is logged.",
+      "gradePending": "Waiting for another admin to confirm.",
+      "gradeDone": "Changed.",
+      "gradeSave": "Change role",
+      "grade": {
+        "super": "Super admin",
+        "ceo": "CEO",
+        "general": "General admin",
+        "manager": "Branch manager",
+        "employee": "Employee"
+      },
+      "gradeHint": {
+        "super": "Approves and edits everything, incl. own requests",
+        "ceo": "Approves and edits everything, incl. own requests",
+        "general": "Approves and edits everything except CEO and super admin",
+        "manager": "Approves or rejects requests of employees in their branch only",
+        "employee": "Own work only"
+      }
     },
     "settings": {
       "title": "Settings",
@@ -2302,7 +2341,8 @@
       "colPaid": "Paid",
       "allDay": "All day",
       "hoursValue": "{h}h",
-      "daysValue": "{d} d"
+      "daysValue": "{d} d",
+      "leave_type_in_use": "A used leave type cannot change duration, pay or balance treatment. Create a new type."
     },
     "jobs": {
       "title": "Jobs",
@@ -3148,7 +3188,8 @@
       "fReliefTo": "End date (blank = ongoing)",
       "fReliefNote": "Basis (application, agency decision, etc.)",
       "reliefHint": "Only shown when turned on in Console › Payroll › Employee pay. If on and still Unknown, payroll for this person is blocked. Rates are temporary inputs until tax/labor review.",
-      "reliefOff": "The company does not use reliefs (Console › Payroll › Employee pay)."
+      "reliefOff": "The company does not use reliefs (Console › Payroll › Employee pay).",
+      "payroll_auto_item": "Automatic calculation items cannot be assigned as fixed items. Use a statement adjustment."
     },
     "payRuns": {
       "title": "Payroll ledgers",
@@ -3262,7 +3303,9 @@
         "STUDENT_LOAN": "Student loan repayment",
         "PENSION_SETTLE": "National pension settlement",
         "HEALTH_SETTLE": "Health insurance settlement",
-        "EMPLOYMENT_SETTLE": "Employment insurance settlement"
+        "EMPLOYMENT_SETTLE": "Employment insurance settlement",
+        "unpaidLeaveCut": "Unpaid leave deduction",
+        "latenessCut": "Lateness deduction"
       },
       "attTitle": "Attendance basis",
       "attRegular": "Regular hours",
@@ -3317,7 +3360,19 @@
         "sme_applied": "SME employee income tax cut applied ({detail} KRW).",
         "durunuri_pension": "Durunuri support reduced the pension contribution by {detail} (employer share too).",
         "durunuri_employment": "Durunuri support reduced the employment insurance contribution by {detail} (employer share too).",
-        "below_minimum_wage": "The contract hourly wage is below the minimum wage for the month ({detail} KRW). Check with included allowances (calculation was not blocked)."
+        "below_minimum_wage": "The contract hourly wage is below the minimum wage for the month ({detail} KRW). Check with included allowances (calculation was not blocked).",
+        "duplicate_auto_item": "An automatic pay item is also assigned individually ({detail}). End the assignment and use an adjustment.",
+        "duplicate_item": "Duplicate payment item ({detail}).",
+        "ordinary_wage_unknown": "A payment item has an unknown ordinary wage classification.",
+        "notice_invalid": "Invalid billing amount ({detail}).",
+        "notice_duplicate": "Multiple saved notices exist for the same month, person and insurer ({detail}).",
+        "notice_allocated_elsewhere": "This notice is allocated to another run ({detail}).",
+        "notice_settlement_duplicate": "Direct billing amounts and settlement adjustments overlap. Review the settlement adjustment.",
+        "employer_notice_missing": "Employer billing amount missing ({detail}); excluded from employer totals.",
+        "rounded_time_missing": "Rounded attendance categories are missing.",
+        "basis_unverified": "Payroll basis is not verified ({detail}).",
+        "policy_changed_in_period": "A payroll basis changed during this period ({detail}). Review the period calculation.",
+        "leave_duration_mismatch": "Leave duration does not match scheduled work time ({detail}). Review the leave and schedule."
       },
       "detail": {
         "pension": "national pension",
@@ -3425,7 +3480,9 @@
       "diffNone": "No one changed from the previous revision.",
       "diffNote": "Compares the previous revision with this one by employee (calculated only). Differences are not carried to next month automatically — use an adjustment in that month if needed.",
       "pdfAll": "Download all payslips (PDF)",
-      "pdfAllDraft": "Download all payslips (PDF, for review)"
+      "pdfAllDraft": "Download all payslips (PDF, for review)",
+      "payroll_basis_unverified": "Verify the reference data, company settings, policies and items used in this calculation before finalizing.",
+      "payroll_duplicate_payment": "The same work is included in another finalized run. Check regular/daily runs and revisions."
     },
     "reports": {
       "attTitle": "Attendance report",
@@ -4092,7 +4149,8 @@
         "by": "Downloaded by",
         "rule": "Tax rule",
         "sum": "Total"
-      }
+      },
+      "payroll_duplicate_payment": "The same work is included in another finalized run. Check regular/daily runs and revisions."
     }
   },
   "side": {
@@ -4479,7 +4537,7 @@
     "typeDeducts": "deducts {d} day of annual leave",
     "typeNoDeduct": "no annual leave deducted",
     "startTime": "Start time (optional)",
-    "startTimeHint": "If entered, {h} h from that time is recorded as leave.",
+    "startTimeHint": "Choose a start time. The end time excludes scheduled breaks and covers {h} hours of work.",
     "invalid_time": "Check the start time.",
     "deleteRequest": "Request deletion",
     "deletePending": "Deletion requested",
@@ -4672,7 +4730,7 @@
       "no_office": "No work place registered",
       "no_consent": "No location consent"
     },
-    "punchFar": "{m} m from the nearest work place",
+    "punchFar": "{m} from the nearest clock-in place",
     "tabMine": "My requests",
     "emptyMine": "You have made no requests in the last {days} days.",
     "search": "Search",
@@ -4701,7 +4759,9 @@
     "pcDone": "Completed",
     "pcShowPending": "Show pending",
     "pcShowDone": "Show completed",
-    "intro": "Requests you sent (leave, corrections, overtime, schedule, out-of-office) and their status. You can cancel ones still waiting."
+    "intro": "Requests you sent (leave, corrections, overtime, schedule, out-of-office) and their status. You can cancel ones still waiting.",
+    "mapBase": "Clock-in place: {name} (radius {r}m)",
+    "mapNoPoint": "The requester's actual position is not stored, so it is not shown on the map (pending decision 출퇴근-7)."
   },
   "scheduleRequest": {
     "title": "Schedule request",

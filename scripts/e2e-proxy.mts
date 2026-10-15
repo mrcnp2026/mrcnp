@@ -28,7 +28,7 @@ if (!target) {
 await db.from('profiles').update({ active: true, role: 'admin', locale: 'ko' }).eq('id', emp!.id);
 await db.from('profiles').update({ active: true }).eq('id', target!.id); // 꺼진 검사 계정은 검사 화면에서도 숨는다(hiddenTestIds) — 검사 동안만 켠다
 const token = randomBytes(32).toString('base64url');
-await db.from('invites').insert({ employee_id: emp!.id, token_hash: createHash('sha256').update(token).digest('hex'), issued_via: 'admin', expires_at: new Date(Date.now() + 3600e3).toISOString() });
+await db.from('invites').insert({ employee_id: emp!.id, token_hash: createHash('sha256').update(token).digest('hex'), issued_via: 'emergency', expires_at: new Date(Date.now() + 3600e3).toISOString() });
 
 // 시험 날짜: 근무규칙이 있는 날(가장 이른 적용 시작일)부터 어제까지 중, 이 계정에 아직 기록을 넣지 않은 하루.
 //   근무규칙이 없는 날짜는 화면이 계산하지 않아 줄이 나오지 않는다. 넣은 기록은 못 지우므로 쓴 날짜는 다시 못 쓴다.

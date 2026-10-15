@@ -3,6 +3,7 @@
 // 고친 사람은 updated_by → 변경 기록(audit_row)에 남는다.
 import { isLocale } from '@/i18n/locales';
 import { api, ApiError, readJson } from '@/lib/api';
+import { assertStaffTarget } from '@/lib/staff-data';
 import { requireAdmin } from '@/lib/auth';
 import { EMPLOYEE_NO_RE } from '@/lib/invite';
 import { cleanJobTitle, cleanPhone } from '@/lib/org';
@@ -16,6 +17,7 @@ export const POST = api<{ params: Promise<{ id: string }> }>('admin.employees.pr
   const me = await requireAdmin();
   if (!me) throw new ApiError(403, 'forbidden');
   const { id } = await ctx.params;
+  await assertStaffTarget(me.id, id);
   const b = await readJson(req);
   const db = createAdminClient();
   const { data: cur } = await db.from('profiles').select('id, employee_no').eq('id', id).maybeSingle();

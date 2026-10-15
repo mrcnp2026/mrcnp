@@ -83,3 +83,10 @@ describe('날짜별 휴가 (B-2: 유급휴가일은 결근이 아니다)', () =>
     expect(isFullDayLeave(undefined)).toBe(false);
   });
 });
+
+it('신청 당시 조건과 근무일이 있으면 종류와 회사 달력을 바꿔도 지난 승인을 재해석하지 않는다', () => {
+  const request = { id: 'historic', employeeId: 'e', typeCode: 'custom', startDate: '2026-10-12', endDate: '2026-10-12', days: 0.5, reason: null, status: 'approved' as const, typeSnapshot: { isPaid: true, deductsBalance: true, dayUnit: 0.5, hours: 4 }, workDates: ['2026-10-12'] };
+  const types = [{ code: 'custom', name: 'edited', isPaid: false, deductsBalance: false, dayUnit: 1, hours: 8 }];
+  const byDate = leaveByDate({ requests: [request], types, dayTypeOf: () => 'holiday' });
+  expect(byDate.get('2026-10-12')?.[0]).toMatchObject({ isPaid: true, unit: 0.5 });
+});

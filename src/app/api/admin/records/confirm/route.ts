@@ -9,7 +9,7 @@ import { loadConfirms, confirmKey } from '@/lib/confirm-data';
 import { daysFor, loadPeriod } from '@/lib/period-data';
 import { isPeriodLocked } from '@/lib/punch';
 import { loadStaff } from '@/lib/staff-data';
-import { selfDecisionBlocked } from '@/lib/staff-rules';
+import { approvalBlocked } from '@/lib/staff-rules';
 import { createAdminClient } from '@/lib/supabase/admin';
 import { toKstDate } from '@/lib/time';
 
@@ -36,9 +36,18 @@ export const POST = api('admin.records.confirm', async (req) => {
   const confirms = await loadConfirms(from, to, practice);
   const skipped: { employeeId: string; date: string; code: string }[] = [];
   let done = 0;
+  const staff = await loadStaff();
+  const actor = staff.find((s) => s.id === me.id);
+  if (!actor) throw new ApiError(403, 'forbidden');
+  const targetBlocked = (id: string) => {
+    const target = staff.find((s) => s.id === id);
+    return target ? approvalBlocked(actor, target, staff) : 'not_found';
+  };
 
   if (!b.confirm) {
     for (const it of items) {
+      const blocked = targetBlocked(it.employeeId);
+      if (blocked) { skipped.push({ ...it, code: blocked }); continue; }
       const c = confirms.get(confirmKey(it.employeeId, it.date));
       if (!c) continue;
       if (await isPeriodLocked(it.employeeId, it.date)) {
@@ -52,7 +61,7 @@ export const POST = api('admin.records.confirm', async (req) => {
     return { done, skipped };
   }
 
-  const [data, staff] = await Promise.all([loadPeriod(from, to, practice), loadStaff()]);
+  const data = await loadPeriod(from, to, practice);
   if (!data.rule) throw new ApiError(409, 'no_rule');
   for (const it of items) {
     if (confirms.has(confirmKey(it.employeeId, it.date))) continue; // 이미 확정됨
@@ -61,8 +70,9 @@ export const POST = api('admin.records.confirm', async (req) => {
       skip('not_found');
       continue;
     }
-    if (selfDecisionBlocked(me.id, it.employeeId, staff)) {
-      skip('self_decision');
+    const blocked = targetBlocked(it.employeeId);
+    if (blocked) {
+      skip(blocked);
       continue;
     }
     const day = daysFor(data, it.employeeId, it.date, it.date)[0];

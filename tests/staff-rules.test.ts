@@ -58,7 +58,7 @@ describe('관리자·급여 담당 지정', () => {
     expect(checkRoleChange({ actor: B, target: C, all: [A, B, C], role: 'employee' })).toEqual({ code: 'payroll_only_grant' });
     // 마지막 급여 담당이 관리자에서 내려오면 급여 담당이 0명 → 차단
     const last = s('p', 'admin', true);
-    expect(checkRoleChange({ actor: { ...B, canViewPayroll: true, active: false }, target: last, all: [B, s('d', 'admin'), last], role: 'employee' })).toEqual({ code: 'min_payroll' });
+    expect(checkRoleChange({ actor: { ...B, owner: true }, target: last, all: [B, s('d', 'admin'), last], role: 'employee' })).toEqual({ code: 'min_payroll' });
   });
   it('급여 담당자가 0명이 되는 해제는 차단', () => {
     const a = s('a', 'admin', true);
@@ -66,7 +66,7 @@ describe('관리자·급여 담당 지정', () => {
     expect(checkRoleChange({ actor: a, target: b, all: [a, b], canViewPayroll: false })).toEqual({ next: { ...b, canViewPayroll: false } });
     // 혼자 남은 급여 담당은 해제할 수 없다 (해제하는 사람이 급여 담당이어도, 그 사람이 비활성이면 세지 않는다)
     const lone = s('z', 'admin', true);
-    expect(checkRoleChange({ actor: s('q', 'admin', true, false), target: lone, all: [lone, B, s('q', 'admin', true, false)], canViewPayroll: false })).toEqual({ code: 'min_payroll' });
+    expect(checkRoleChange({ actor: { ...B, owner: true }, target: lone, all: [lone, B], canViewPayroll: false })).toEqual({ code: 'min_payroll' });
   });
   it('비활성 직원·이미 같은 상태는 거절', () => {
     expect(checkRoleChange({ actor: A, target: GONE, all: [A, B, GONE], role: 'admin' })).toEqual({ code: 'employee_inactive' });
@@ -178,5 +178,22 @@ describe('approvalBlocked — 등급별 승인', () => {
   });
   it('총괄관리자는 최고 · 대표의 권한을 못 바꾸고, 최고관리자는 대표자 것을 바꿀 수 있다', () => {
     expect('code' in checkRoleChange({ actor: g1, target: ceo, all, role: 'employee' }) && (checkRoleChange({ actor: g1, target: ceo, all, role: 'employee' }) as { code: string }).code).toBe('owner_only');
+  });
+});
+
+describe('검수 R18–R20 권한 회귀', () => {
+  const top: Staff = { ...A, id: 'top', owner: true, level: 'ceo' };
+  it('총괄관리자는 최상위 계정의 출퇴근 기기를 해제하지 못한다', () => {
+    expect(checkDeviceRevoke(B.id, top.id, [B, top])).toBe('owner_only');
+  });
+  it('퇴사하거나 강등된 요청자의 권한 변경은 거부한다', () => {
+    for (const actor of [{ ...A, active: false }, { ...A, role: 'employee' as const }]) {
+      expect(checkRoleChange({ actor, target: E, all: [actor, E], role: 'admin' })).toEqual({ code: 'rank' });
+      expect(approvalBlocked(actor, E, [actor, E])).toBe('rank');
+    }
+  });
+  it('비활성 최상위 계정도 승인과 등급 변경을 할 수 없다', () => {
+    expect(approvalBlocked({ ...top, active: false }, E, [top, E])).toBe('rank');
+    expect(checkLevelChange({ ...top, active: false }, B, 'ceo')).toBe('owner_only');
   });
 });

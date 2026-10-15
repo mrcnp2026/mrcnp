@@ -31,7 +31,7 @@ const check = (ok: boolean, what: string, extra = '') => {
 const consentRows = async (id: string) => (await db.from('consents').select('version, locale, agreed_at').eq('employee_id', id).eq('version', CONSENT.version)).data ?? [];
 const login = async (browser: Browser, id: string) => {
   const token = randomBytes(32).toString('base64url');
-  await db.from('invites').insert({ employee_id: id, token_hash: createHash('sha256').update(token).digest('hex'), issued_via: 'admin', expires_at: new Date(Date.now() + 3600e3).toISOString() });
+  await db.from('invites').insert({ employee_id: id, token_hash: createHash('sha256').update(token).digest('hex'), issued_via: 'emergency', expires_at: new Date(Date.now() + 3600e3).toISOString() });
   const ctx = await browser.newContext({ viewport: { width: 390, height: 844 }, deviceScaleFactor: 2 });
   const p = await ctx.newPage();
   await p.goto(`${BASE}/register?token=${token}`);

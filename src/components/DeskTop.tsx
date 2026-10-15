@@ -1,7 +1,7 @@
 'use client';
 // PC 위 띠의 조각들 — 공간 전환(내 화면 / 관리자 화면) · 통합설정 톱니 · 메뉴 검색 · 내 메뉴 · 본문 위 경로 (2026-10-14 결정 사항 개발-20 · 21 · 25).
 // 어디가 어느 공간인지는 config/nav.ts가 정한다.
-import { ChevronRight, Search, Settings, UserRound } from 'lucide-react';
+import { Check, ChevronDown, ChevronRight, LayoutGrid, Megaphone, Menu as MenuIcon, MessagesSquare, Plane, Search, Send, Settings, UserRound, Users, Wallet, type LucideIcon } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 import Link from 'next/link';
 import { usePathname, useRouter, useSearchParams } from 'next/navigation';
@@ -54,6 +54,9 @@ export function ConsoleLink({ role }: { role: NavRole }) {
   );
 }
 
+// 「찾을 곳」 고르기 — 아이콘이 있는 팝업 (2026-10-15 의뢰인: 기본 선택 상자 대신 다우오피스 검색처럼, `스샷/스샷2/검색.png`)
+const SCOPE_ICON: Record<'all' | SearchKind, LucideIcon> = { all: LayoutGrid, menu: MenuIcon, people: Users, requests: Send, leave: Plane, notices: Megaphone, messages: MessagesSquare, pay: Wallet };
+
 /** 메뉴 검색 — 열 수 있는 모든 화면을 이름으로 찾는다. 칸을 누르면 최근에 쓴 화면이 먼저 보인다 */
 export function MenuSearch({ role }: { role: NavRole }) {
   const t = useTranslations('frame');
@@ -64,6 +67,7 @@ export function MenuSearch({ role }: { role: NavRole }) {
   const [q, setQ] = useState('');
   const [scope, setScope] = useState<'all' | SearchKind>('all');
   const [open, setOpen] = useState(false);
+  const [scopeOpen, setScopeOpen] = useState(false);
   const [pick, setPick] = useState(-1); // -1 = 「전체 검색 결과 보기」 (Enter를 누르면 통합 검색 화면으로)
   const [recent, setRecent] = useState<string[]>([]);
   const all = useMemo(
@@ -75,8 +79,20 @@ export function MenuSearch({ role }: { role: NavRole }) {
   );
   useEffect(() => {
     setOpen(false);
+    setScopeOpen(false);
     setQ('');
   }, [path]);
+  useEffect(() => {
+    if (!scopeOpen) return;
+    const away = (e: MouseEvent) => !box.current?.contains(e.target as Node) && setScopeOpen(false);
+    const esc = (e: KeyboardEvent) => e.key === 'Escape' && setScopeOpen(false);
+    window.addEventListener('mousedown', away);
+    window.addEventListener('keydown', esc);
+    return () => {
+      window.removeEventListener('mousedown', away);
+      window.removeEventListener('keydown', esc);
+    };
+  }, [scopeOpen]);
   useEffect(() => {
     if (!open) return;
     try {
@@ -103,14 +119,22 @@ export function MenuSearch({ role }: { role: NavRole }) {
   return (
     <div ref={box} className="relative w-full max-w-lg">
       <label className="flex h-9 items-center gap-2 rounded-chip border border-border bg-bg pr-3.5 pl-1 text-faint focus-within:border-primary">
-        <select value={scope} onChange={(e) => setScope(e.target.value as 'all' | SearchKind)} aria-label={ts('header.scopeLabel')} className="h-7 shrink-0 rounded-chip bg-surface px-2 text-xs font-semibold text-text outline-none">
-          <option value="all">{ts('all')}</option>
-          {SEARCH_KINDS.map((k) => (
-            <option key={k} value={k}>
-              {ts(`kind.${k}`)}
-            </option>
-          ))}
-        </select>
+        <button
+          type="button"
+          aria-haspopup="menu"
+          aria-expanded={scopeOpen}
+          aria-label={`${ts('header.scopeLabel')}: ${scope === 'all' ? ts('all') : ts(`kind.${scope}`)}`}
+          onClick={(e) => {
+            e.preventDefault();
+            setOpen(false);
+            setScopeOpen((v) => !v);
+          }}
+          className="inline-flex h-7 shrink-0 items-center gap-1 rounded-chip bg-surface px-2.5 text-xs font-semibold text-text hover:bg-primary-tint"
+          data-scope-button
+        >
+          {scope === 'all' ? ts('all') : ts(`kind.${scope}`)}
+          <ChevronDown aria-hidden size={14} className={`transition-transform duration-[350ms] ${scopeOpen ? 'rotate-180' : ''}`} />
+        </button>
         <Search aria-hidden size={16} strokeWidth={1.75} />
         <input
           type="search"
@@ -138,7 +162,35 @@ export function MenuSearch({ role }: { role: NavRole }) {
           className="min-w-0 flex-1 bg-transparent text-sm text-text outline-none placeholder:text-faint"
         />
       </label>
-      {open && (word || list.length > 0) && (
+      {scopeOpen && (
+        <div role="menu" aria-label={ts('header.scopeLabel')} className="absolute top-11 left-0 z-40 w-96 rounded-card border border-border bg-bg p-3 shadow-pop" data-scope-menu>
+          <p className="px-2 pb-2 text-xs font-semibold text-faint">{ts('header.scopeLabel')}</p>
+          <div className="grid grid-cols-2 gap-1">
+            {(['all', ...SEARCH_KINDS] as const).map((k) => {
+              const Icon = SCOPE_ICON[k];
+              const on = scope === k;
+              return (
+                <button
+                  key={k}
+                  type="button"
+                  role="menuitemradio"
+                  aria-checked={on}
+                  onClick={() => {
+                    setScope(k);
+                    setScopeOpen(false);
+                  }}
+                  className={`flex min-h-10 items-center gap-2.5 rounded-button px-2.5 text-left text-sm ${on ? 'bg-surface font-bold text-text' : 'text-text hover:bg-surface'}`}
+                >
+                  <Icon aria-hidden size={18} strokeWidth={1.75} className={on ? 'text-primary' : 'text-muted'} />
+                  <span className="flex-1">{k === 'all' ? ts('all') : ts(`kind.${k}`)}</span>
+                  {on && <Check aria-hidden size={16} className="text-primary" />}
+                </button>
+              );
+            })}
+          </div>
+        </div>
+      )}
+      {open && !scopeOpen && (word || list.length > 0) && (
         <div id="menu-search-list" role="listbox" className="absolute inset-x-0 top-11 z-30 overflow-hidden rounded-card border border-border bg-bg py-1.5 shadow-pop">
           {!word && <p className="px-3.5 pt-1 pb-1.5 text-xs font-bold text-faint">{t('search.recent')}</p>}
           {word && (

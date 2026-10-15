@@ -4,6 +4,7 @@
 // 취소 뒤 그 날 집계는 화면을 열 때 다시 계산되고, 이미 결정한 연장 요청은 "재확인 필요"로 올라온다 (R-4).
 import { OFFICE } from '@/config/office';
 import { api, ApiError, readJson } from '@/lib/api';
+import { assertStaffTarget } from '@/lib/staff-data';
 import { requireAdmin } from '@/lib/auth';
 import { assertNotConfirmed } from '@/lib/confirm-data';
 import { isPeriodLocked } from '@/lib/punch';
@@ -19,7 +20,7 @@ export const POST = api<{ params: Promise<{ id: string }> }>('admin.corrections.
   const db = createAdminClient();
   const { data: c } = await db.from('punch_corrections').select('employee_id, work_date').eq('id', id).maybeSingle();
   if (!c) throw new ApiError(404, 'not_found');
-  if (c.employee_id === me.id && !me.top) throw new ApiError(403, 'self_change'); // 오너는 자기 것도 직접 처리한다
+  await assertStaffTarget(me.id, c.employee_id, 'approve'); // 오너는 자기 것도 직접 처리한다
   if (await isPeriodLocked(c.employee_id, c.work_date)) throw new ApiError(409, 'period_locked');
   await assertNotConfirmed(c.employee_id, c.work_date); // 확정된 날의 기록은 바뀌지 않는다 — 먼저 확정을 푼다
   const { data, error } = await db.rpc('cancel_correction', { p_id: id, p_decided_by: me.id, p_reason: reason, p_request_id: ctx.requestId });

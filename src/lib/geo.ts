@@ -53,6 +53,9 @@ export function verifyGeo(coords: Coords | null, locations: readonly OfficeLocat
   return { verified: !!hit, reason: hit ? 'ok' : 'outside', nearestM: Math.round(nearest), locationId: hit?.id ?? null };
 }
 
+/** 화면에 보일 거리 — 1km 이상은 km 한 자리 (2026-10-15 의뢰인: 「21848m」는 알아보기 어렵다 → 「21.8km」) */
+export const distanceText = (m: number) => (m >= 1000 ? `${(Math.round(m / 100) / 10).toLocaleString('ko-KR')}km` : `${Math.round(m)}m`);
+
 /** 저장할 좌표 — 소수 5자리(약 1m) */
 export const roundCoord = (n: number) => Math.round(n * 1e5) / 1e5;
 

@@ -28,7 +28,7 @@ try {
   await db.from('console_pins').delete().in('employee_id', [A.id, B.id]);
   const login = async (id: string): Promise<Page> => {
     const token = randomBytes(32).toString('base64url');
-    await db.from('invites').insert({ employee_id: id, token_hash: createHash('sha256').update(token).digest('hex'), issued_via: 'admin', expires_at: new Date(Date.now() + 3600e3).toISOString() });
+    await db.from('invites').insert({ employee_id: id, token_hash: createHash('sha256').update(token).digest('hex'), issued_via: 'emergency', expires_at: new Date(Date.now() + 3600e3).toISOString() });
     const pg = await (await browser.newContext({ viewport: { width: 1440, height: 900 } })).newPage();
     pg.on('pageerror', (e) => errors.push(e.message));
     await pg.goto(`${BASE}/register?token=${token}`);

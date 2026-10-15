@@ -32,7 +32,7 @@ await db.from('role_change_requests').update({ status: 'cancelled', decided_at: 
 await db.from('profiles').update({ active: true, role: 'admin', locale: 'ko' }).eq('id', emp!.id);
 const invite = async (id: string) => {
   const token = randomBytes(32).toString('base64url');
-  await db.from('invites').insert({ employee_id: id, token_hash: createHash('sha256').update(token).digest('hex'), issued_via: 'admin', expires_at: new Date(Date.now() + 3600e3).toISOString() });
+  await db.from('invites').insert({ employee_id: id, token_hash: createHash('sha256').update(token).digest('hex'), issued_via: 'emergency', expires_at: new Date(Date.now() + 3600e3).toISOString() });
   return token;
 };
 

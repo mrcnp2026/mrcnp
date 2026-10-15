@@ -6,6 +6,8 @@ import { createClient as createPlainClient } from '@supabase/supabase-js';
 import { LOGIN_MAX_FAILS, LOGIN_WINDOW_MIN, normalizeLoginId, resolveLoginId, type LoginCandidate } from '@/lib/login-rules';
 import { hashToken } from '@/lib/passkey';
 import { staffEmail } from '@/lib/session';
+import { ApiError } from '@/lib/api';
+import { assertStaffTarget } from '@/lib/staff-data';
 import { createAdminClient } from '@/lib/supabase/admin';
 
 export type InviteTarget = { inviteId: string; employeeId: string; employeeNo: string; name: string; locale: string };
@@ -14,20 +16,34 @@ export type InviteTarget = { inviteId: string; employeeId: string; employeeNo: s
 export async function findInvite(token: string): Promise<InviteTarget | 'invite_invalid' | 'employee_inactive'> {
   const { data, error } = await createAdminClient()
     .from('invites')
-    .select('id, employee_id, expires_at, used_at, revoked_at, profiles!invites_employee_id_fkey(name, employee_no, active, locale)')
+    .select('id, employee_id, issued_by, issued_via, expires_at, used_at, revoked_at, profiles!invites_employee_id_fkey(name, employee_no, active, locale)')
     .eq('token_hash', hashToken(token))
     .maybeSingle();
   if (error) throw new Error(`findInvite: ${error.code}`);
   if (!data || data.used_at || data.revoked_at || new Date(data.expires_at) <= new Date()) return 'invite_invalid';
   const p = data.profiles as unknown as { name: string; employee_no: string | null; active: boolean; locale: string };
   if (!p.active || !p.employee_no) return 'employee_inactive';
+  if (data.issued_via === 'admin') {
+    if (!data.issued_by) return 'invite_invalid';
+    try { await assertStaffTarget(data.issued_by, data.employee_id, 'recover'); }
+    catch (error) { if (error instanceof ApiError) return 'invite_invalid'; throw error; }
+  }
   return { inviteId: data.id, employeeId: data.employee_id, employeeNo: p.employee_no, name: p.name, locale: p.locale };
 }
 
 /** 초대를 사용 처리한다. 조건부 update 한 문장 — 두 요청이 동시에 와도 한쪽만 true (R-4) */
 export async function consumeInvite(inviteId: string): Promise<boolean> {
+  const db = createAdminClient();
+  const { data: invite, error: readError } = await db.from('invites').select('employee_id, issued_by, issued_via').eq('id', inviteId).maybeSingle();
+  if (readError) throw new Error(`consumeInvite.read: ${readError.code}`);
+  if (!invite) return false;
+  if (invite.issued_via === 'admin') {
+    if (!invite.issued_by) return false;
+    try { await assertStaffTarget(invite.issued_by, invite.employee_id, 'recover'); }
+    catch (error) { if (error instanceof ApiError) return false; throw error; }
+  }
   const now = new Date().toISOString();
-  const { data, error } = await createAdminClient()
+  const { data, error } = await db
     .from('invites')
     .update({ used_at: now })
     .eq('id', inviteId)

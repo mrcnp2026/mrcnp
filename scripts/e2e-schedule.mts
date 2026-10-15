@@ -15,12 +15,15 @@ const STARTED_AT = new Date().toISOString();
 const db = createClient(process.env.NEXT_PUBLIC_SUPABASE_URL!, process.env.SUPABASE_SERVICE_ROLE_KEY!, { auth: { persistSession: false } });
 const { data: emp } = await db.from('profiles').select('id, name').eq('employee_no', 'e2e-audit').single();
 await db.from('profiles').update({ active: true, role: 'admin', locale: 'ko', shift_template_id: null }).eq('id', emp!.id);
+// 일정을 넣을 대상은 다른 검사 직원(e2e-audit2) — 2026-10-15 등급 규칙: 총괄관리자는 자기 일정을 스스로 넣지 않는다(다른 관리자가)
+const { data: w } = await db.from('profiles').select('id, name').eq('employee_no', 'e2e-audit2').single();
+await db.from('profiles').update({ active: true, role: 'employee', shift_template_id: null }).eq('id', w!.id);
 {
   const { data: live } = await db.from('notices').select('id, version').eq('status', 'published');
   for (const n of live ?? []) await db.from('notice_reads').upsert({ notice_id: n.id, employee_id: emp!.id, version: n.version, shown_locale: 'ko' }, { onConflict: 'notice_id,employee_id,version', ignoreDuplicates: true });
 }
 const token = randomBytes(32).toString('base64url');
-await db.from('invites').insert({ employee_id: emp!.id, token_hash: createHash('sha256').update(token).digest('hex'), issued_via: 'admin', expires_at: new Date(Date.now() + 3600e3).toISOString() });
+await db.from('invites').insert({ employee_id: emp!.id, token_hash: createHash('sha256').update(token).digest('hex'), issued_via: 'emergency', expires_at: new Date(Date.now() + 3600e3).toISOString() });
 
 // 다음 주 금요일(근무일)·토요일(휴일) — 한국 시각 기준
 const kst = new Date(Date.now() + 9 * 3600e3);
@@ -87,13 +90,13 @@ try {
   await p.keyboard.press('Escape');
 
   // ── 특근(토) · 잔업(금) 넣기 ──
-  let r = await post('/api/admin/schedule', { date: SAT, startTime: '08:00', endTime: '17:00', kind: 'holiday', templateId: null, note: '검사용 특근', employeeIds: [emp!.id] });
+  let r = await post('/api/admin/schedule', { date: SAT, startTime: '08:00', endTime: '17:00', kind: 'holiday', templateId: null, note: '검사용 특근', employeeIds: [w!.id] });
   check(r.status === 200 && r.json.created === 1, '토요일 특근 일정 넣음', JSON.stringify(r.json));
-  r = await post('/api/admin/schedule', { date: SAT, startTime: '08:00', endTime: '17:00', kind: 'holiday', templateId: null, note: '', employeeIds: [emp!.id] });
+  r = await post('/api/admin/schedule', { date: SAT, startTime: '08:00', endTime: '17:00', kind: 'holiday', templateId: null, note: '', employeeIds: [w!.id] });
   check(r.status === 200 && r.json.created === 0 && r.json.skipped === 1, '같은 일정을 또 보내도 한 건만', JSON.stringify(r.json));
-  r = await post('/api/admin/schedule', { date: FRI, startTime: '17:30', endTime: '20:30', kind: 'extra', templateId: null, note: '', employeeIds: [emp!.id] });
+  r = await post('/api/admin/schedule', { date: FRI, startTime: '17:30', endTime: '20:30', kind: 'extra', templateId: null, note: '', employeeIds: [w!.id] });
   check(r.status === 200 && r.json.created === 1, '금요일 잔업 일정 넣음', JSON.stringify(r.json));
-  r = await post('/api/admin/schedule', { date: SAT, startTime: '18:00', endTime: '09:00', kind: 'none', employeeIds: [emp!.id] });
+  r = await post('/api/admin/schedule', { date: SAT, startTime: '18:00', endTime: '09:00', kind: 'none', employeeIds: [w!.id] });
   check(r.status === 400, '끝이 시작보다 이르면 거절', String(r.status));
   r = await post('/api/admin/schedule', { date: SAT, startTime: '08:00', endTime: '17:00', kind: 'none', employeeIds: [] });
   check(r.status === 400, '직원 없이 보내면 거절', String(r.status));
@@ -101,10 +104,10 @@ try {
   // ── 전체 보기 ──
   await p.goto(`${BASE}/admin/schedule?d=${SAT}`);
   await p.waitForLoadState('networkidle');
-  check((await p.getByRole('link', { name: emp!.name }).count()) === 1 && (await p.getByText('휴일 근무(특근)').count()) > 0 && (await p.getByText(/검사용 특근/).count()) > 0, '토요일 화면에 특근 일정 한 줄 (유형 배지·메모)');
+  check((await p.getByRole('link', { name: w!.name }).count()) === 1 && (await p.getByText('휴일 근무(특근)').count()) > 0 && (await p.getByText(/검사용 특근/).count()) > 0, '토요일 화면에 특근 일정 한 줄 (유형 배지·메모)');
   await shot('03-근무일정-특근');
   // ── 이름을 누르면 일정 상세 (2026-10-11) ──
-  await p.getByRole('link', { name: emp!.name }).click();
+  await p.getByRole('link', { name: w!.name }).click();
   await p.waitForURL(/\/admin\/schedule\/[^/]+\/\d{4}-\d{2}-\d{2}/);
   await p.getByRole('heading', { name: '근무일정', exact: true }).waitFor({ timeout: 20000 });
   const sl = await p.locator('main dt').allTextContents();
@@ -114,12 +117,12 @@ try {
   await shot('03c-근무일정-상세');
   await p.goto(`${BASE}/admin/schedule?d=${FRI}`);
   await p.waitForLoadState('networkidle');
-  check((await p.getByRole('link', { name: emp!.name }).count()) === 2 && (await p.getByText('17:30').count()) > 0 && (await p.getByText('잔업').count()) > 0, '금요일 화면에 평소 일정 + 잔업 두 줄');
+  check((await p.getByRole('link', { name: w!.name }).count()) === 2 && (await p.getByText('17:30').count()) > 0 && (await p.getByText('잔업').count()) > 0, '금요일 화면에 평소 일정 + 잔업 두 줄');
   // ── 기간 목록(PC 목록형): 금~토 · 이름 검색 · 31일 줄임 (2026-10-15 폰은 달력이라 기간 목록은 PC에서) ──
   await p.setViewportSize({ width: 1440, height: 900 });
   await p.goto(`${BASE}/admin/schedule?from=${FRI}&to=${SAT}&v=list`);
   await p.waitForLoadState('networkidle');
-  const listRows = p.locator('main table tbody tr', { hasText: emp!.name });
+  const listRows = p.locator('main table tbody tr', { hasText: w!.name });
   check((await listRows.count()) === 3, '금~토 기간 목록형: 검사 계정 세 줄(금 평소 · 금 잔업 · 토 특근)', String(await listRows.count()));
   check((await listRows.filter({ hasText: '08:00 - 17:00' }).filter({ hasText: '9시간 0분' }).count()) === 1, '토요일 특근 08:00 - 17:00 · 9시간');
   await shot('03b-근무일정-기간');
@@ -136,6 +139,11 @@ try {
 
   // ── 내 일정 ──
   // 2026-10-15: 내 일정은 「내 근태현황」 주간 달력 — 다음 주로 넘겨 금 · 토 칸을 본다
+  // 내 일정 확인용: 로그인한 관리자 본인 일정은 DB로 직접 넣는다(본인 일정은 다른 관리자가 넣는 규칙이라 화면 API는 막는다)
+  await db.from('shifts').insert([
+    { employee_id: emp!.id, work_date: SAT, start_time: '08:00', end_time: '17:00', kind: 'holiday', note: '검사용 특근' },
+    { employee_id: emp!.id, work_date: FRI, start_time: '17:30', end_time: '20:30', kind: 'extra', note: null },
+  ]);
   await p.goto(`${BASE}/punch/schedule?v=week&d=${FRI}`);
   await p.waitForLoadState('networkidle');
   const wk = await p.locator('[data-week-days]').innerText();
@@ -145,10 +153,15 @@ try {
 
   // ── 취소 ──
   await p.goto(`${BASE}/admin/schedule?d=${SAT}`);
-  await p.getByRole('button', { name: `${emp!.name} 일정 취소`, exact: true }).click();
+  await p.getByRole('button', { name: `${w!.name} 일정 취소`, exact: true }).click();
   await p.getByRole('button', { name: '취소', exact: true }).click();
-  await p.locator('[data-phone-day]').getByText('이 날은 일정이 없습니다.').waitFor({ timeout: 20000 });
-  const { data: left } = await db.from('shifts').select('active').eq('employee_id', emp!.id).eq('work_date', SAT);
+  await p.getByRole('button', { name: `${w!.name} 일정 취소`, exact: true }).waitFor({ state: 'detached', timeout: 20000 });
+  let left: { active: boolean }[] | null = null;
+  for (let i = 0; i < 20; i++) {
+    ({ data: left } = await db.from('shifts').select('active').eq('employee_id', w!.id).eq('work_date', SAT));
+    if (left?.length && left.every((x) => x.active === false)) break;
+    await p.waitForTimeout(500);
+  }
   check((left?.length ?? 0) >= 1 && left!.every((x) => x.active === false), '취소하면 꺼짐 (지우지 않음) · 화면에서 사라짐');
 
   // ── 가로 넘침 · PC ──
@@ -177,8 +190,9 @@ try {
   check(false, '검사 중단', (e as Error).message.split('\n')[0]);
 } finally {
   await browser.close();
-  await db.from('shifts').update({ active: false }).eq('employee_id', emp!.id).eq('active', true);
+  await db.from('shifts').update({ active: false }).in('employee_id', [emp!.id, w!.id]).eq('active', true);
   await db.from('profiles').update({ role: 'employee', locale: 'en', active: false }).eq('id', emp!.id);
+  await db.from('profiles').update({ active: false }).eq('id', w!.id);
   await db.from('user_passkeys').update({ revoked_at: new Date().toISOString(), device_label: 'E2E 가상 인증기 (자동 확인용)' }).eq('employee_id', emp!.id).is('revoked_at', null).gte('created_at', STARTED_AT);
   await db.from('invites').update({ revoked_at: new Date().toISOString() }).eq('employee_id', emp!.id).is('used_at', null).is('revoked_at', null);
   console.log(`실패 ${fails}건`);

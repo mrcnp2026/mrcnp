@@ -81,7 +81,7 @@ export default async function SettingsPage({ searchParams }: { searchParams: Pro
       ? await (async () => {
           const db0 = createAdminClient();
           const [{ data: ppl }, { data: scopes }, groups, { data: pins }] = await Promise.all([
-            db0.from('profiles').select('id, name, employee_no, role, can_view_payroll').eq('active', true).order('name'),
+            db0.from('profiles').select('id, name, employee_no, role, admin_level, can_view_payroll').eq('active', true).order('name'),
             db0.from('staff_manager_scopes').select('manager_id, group_id').eq('active', true),
             loadOrgGroups(),
             db0.from('console_pins').select('employee_id'),
@@ -94,7 +94,7 @@ export default async function SettingsPage({ searchParams }: { searchParams: Pro
             rows: real
               .filter((x) => x.role !== 'employee' || x.can_view_payroll)
               .sort((a, b) => (a.role === b.role ? 0 : a.role === 'admin' ? -1 : 1))
-              .map((x) => ({ id: x.id as string, name: x.name as string, no: x.employee_no as string | null, role: x.role as string, pay: !!x.can_view_payroll, scope: (scopes ?? []).filter((c) => c.manager_id === x.id).map((c) => gname.get(c.group_id as string) ?? '').filter(Boolean), pin: hasPin.has(x.id as string) })),
+              .map((x) => ({ id: x.id as string, name: x.name as string, no: x.employee_no as string | null, role: x.role as string, level: x.admin_level as string | null, pay: !!x.can_view_payroll, scope: (scopes ?? []).filter((c) => c.manager_id === x.id).map((c) => gname.get(c.group_id as string) ?? '').filter(Boolean), pin: hasPin.has(x.id as string) })),
             meId: (await getMe())?.id ?? '',
           };
         })()
@@ -103,6 +103,7 @@ export default async function SettingsPage({ searchParams }: { searchParams: Pro
   const ti = await getTranslations('admin.settings.info');
   const t = await getTranslations('admin.settings');
   const ts = await getTranslations('side');
+  const memberText = await getTranslations('admin.members');
   const tf = await getTranslations('frame'); // 화면 제목 = 메뉴 이름 (2026-10-14 의뢰인)
   const tp = await getTranslations('admin.settings.pc');
   const tm = await getTranslations('admin.more');
@@ -386,7 +387,7 @@ export default async function SettingsPage({ searchParams }: { searchParams: Pro
                       {r.no && <span className="num pl-2 text-xs font-normal text-faint">{r.no}</span>}
                     </td>
                     <td className="px-3 py-3">
-                      {r.role === 'employee' ? <span className="text-faint">{ts('roleEmployee')}</span> : <Chip tone={r.role === 'admin' ? 'info' : 'neutral'}>{ts(r.role === 'admin' ? 'roleAdmin' : 'roleManager')}</Chip>}
+                      {r.role === 'employee' ? <span className="text-faint">{ts('roleEmployee')}</span> : <Chip tone={r.role === 'admin' ? 'info' : 'neutral'}>{r.role === 'admin' ? memberText(r.level === 'super' ? 'levelSuper' : r.level === 'ceo' ? 'levelCeo' : 'levelGeneral') : ts('roleManager')}</Chip>}
                     </td>
                     <td className="px-3 py-3">{r.pay ? <UseMark on label={ta('payYes')} /> : <span className="text-faint">–</span>}</td>
                     <td className="px-3 py-3 text-muted">{r.role === 'manager' ? r.scope.join(' · ') || ta('scopeNone') : r.role === 'admin' ? ta('scopeAll') : '–'}</td>

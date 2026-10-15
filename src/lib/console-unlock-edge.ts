@@ -8,12 +8,12 @@ async function hmac(keyBytes: ArrayBuffer | Uint8Array<ArrayBuffer>, data: strin
   return crypto.subtle.sign('HMAC', k, enc.encode(data));
 }
 
-export async function unlockValidEdge(value: string | undefined, employeeId: string | undefined, now = Date.now()): Promise<boolean> {
-  if (!value || !employeeId) return false;
-  const [id, exp, sig] = value.split('.');
-  if (id !== employeeId || !exp || !sig || Number(exp) < now) return false;
+export async function unlockValidEdge(value: string | undefined, employeeId: string | undefined, pinHash: string | undefined, now = Date.now()): Promise<boolean> {
+  if (!value || !employeeId || !pinHash || !process.env.SUPABASE_SERVICE_ROLE_KEY) return false;
+  const [id, exp, sig, extra] = value.split('.');
+  if (id !== employeeId || !exp || !sig || extra !== undefined || !Number.isFinite(Number(exp)) || Number(exp) <= now) return false;
   const key = await hmac(enc.encode(process.env.SUPABASE_SERVICE_ROLE_KEY ?? ''), 'console-pin-unlock');
-  const want = b64url(await hmac(key, `${id}.${exp}`));
+  const want = b64url(await hmac(key, `${id}.${exp}.${pinHash}`));
   if (want.length !== sig.length) return false;
   let diff = 0;
   for (let i = 0; i < want.length; i++) diff |= want.charCodeAt(i) ^ sig.charCodeAt(i);

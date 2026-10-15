@@ -8,7 +8,7 @@ describe('실제 시간 기준', () => {
   it('인정된 연장 · 휴일만 지급 시간에 들어간다 (찍힌 300분 가운데 승인된 120분만)', () => {
     const r = timeFromAttendance(facts({ approved: { overtime: 120, night: 60, holidayWithin8: 480, holidayOver8: 30 }, paidLeaveDays: 1.5 }), 'ACTUAL', 'HOURLY');
     expect(r.blockers).toEqual([]);
-    expect(r.time).toEqual({ workedMinutes: 9600 + 120 + 510, overtimeMinutes: 120, nightMinutes: 60, holidayMinutes: 510, holidayOver8Minutes: 30, paidLeaveMinutes: 720 });
+    expect(r.time).toEqual({ workedMinutes: 9600 + 120 + 510, overtimeMinutes: 120, nightMinutes: 60, holidayMinutes: 510, holidayOver8Minutes: 30, paidLeaveMinutes: 720, unpaidLeaveMinutes: 0, lateMinutes: 0 });
   });
 });
 
@@ -33,4 +33,14 @@ describe('끊은 시간 · 일정 시간 기준', () => {
     expect(timeFromAttendance(facts(), 'SCHEDULE', 'MONTHLY').time).not.toBeNull();
     expect(timeFromAttendance(facts(), 'SCHEDULE', 'HOURLY').blockers).toEqual([{ code: 'time_basis_unsupported', detail: 'SCHEDULE' }]);
   });
+});
+
+it('가산수당의 실제/반올림 시간 선택이 기본급 지급시간과 따로 적용된다', () => {
+  const a = facts({ approved: { overtime: 45, night: 15, holidayWithin8: 0, holidayOver8: 0 }, rounded: { regularMinutes: 9000, approved: { overtime: 30, night: 0, holidayWithin8: 0, holidayOver8: 0 } }, unpaidLeaveDays: 0.5, lateMinutes: 10 });
+  const actual = timeFromAttendance(a, 'ACTUAL', 'MONTHLY', 480, 'ACTUAL');
+  const rounded = timeFromAttendance(a, 'ACTUAL', 'MONTHLY', 480, 'ROUNDED');
+  expect(actual.time?.workedMinutes).toBe(rounded.time?.workedMinutes);
+  expect(actual.time?.overtimeMinutes).toBe(45);
+  expect(rounded.time?.overtimeMinutes).toBe(30);
+  expect(rounded.time?.unpaidLeaveMinutes).toBe(240);
 });

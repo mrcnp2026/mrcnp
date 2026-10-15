@@ -1,6 +1,7 @@
 // 연차 부여 입력 (4-7). ★ 관리자가 직접 쓴 숫자만 저장한다 — 참고 계산기 값은 이 경로로 오지 않는다.
 // 같은 직원·같은 기간 이름이면 고친다 (오타 수정). 변경 기록(audit_row)에 남는다.
 import { api, ApiError, readJson } from '@/lib/api';
+import { assertStaffTarget } from '@/lib/staff-data';
 import { requireAdmin } from '@/lib/auth';
 import { createAdminClient } from '@/lib/supabase/admin';
 import { cleanText } from '@/lib/text';
@@ -16,6 +17,8 @@ export const POST = api('admin.leave.grant', async (req) => {
   const carried = b.carriedDays === undefined || b.carriedDays === '' ? 0 : num(b.carriedDays);
   const label = cleanText(b.periodLabel);
   if (typeof b.employeeId !== 'string' || !label || label.length > 40) throw new ApiError(400, 'invalid_input');
+  // 등급 보호(개발-39 · 문제 R19): 최고관리자 · 대표자의 것은 최고관리자 · 대표자만 바꾼다
+  await assertStaffTarget(me.id, b.employeeId, 'edit');
   if (!quarter(granted) || !quarter(carried)) throw new ApiError(400, 'invalid_days');
   if (b.basis !== 'hire_date' && b.basis !== 'fiscal_year') throw new ApiError(400, 'invalid_input');
   if (typeof b.effectiveFrom !== 'string' || !/^\d{4}-\d{2}-\d{2}$/.test(b.effectiveFrom)) throw new ApiError(400, 'invalid_input');

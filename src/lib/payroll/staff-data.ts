@@ -2,6 +2,8 @@
 // 계약 · 세무는 고치지 않고 판을 쌓는다: 새 판을 넣기 전에 앞 판의 끝나는 날을 새 판의 시작일로 닫는다.
 // ★ 금액은 공용 변경 기록(audit_logs)에 넣지 않는다. 급여 전용 기록(payroll_audit_events)에 "누가 · 무엇을 · 언제"만 남긴다.
 import 'server-only';
+import { atomicRpc } from '@/lib/atomic-rpc';
+import { AUTO_PAYMENT_CODES } from './engine/reserved-items';
 import { ApiError } from '@/lib/api';
 import type { Me } from '@/lib/auth';
 import { createAdminClient } from '@/lib/supabase/admin';
@@ -93,24 +95,7 @@ export async function loadStaffPay(employeeId: string): Promise<StaffPay> {
  * 앞 판이 새 시작일 뒤까지 이어지면 새 시작일로 닫는다. 새 판이 못 들어가면 닫았던 앞 판을 다시 연다.
  */
 async function appendVersion(table: 'payroll_contract_versions' | 'payroll_employee_tax_versions', employeeId: string, values: Row, args: { validFrom: string; reason: string | null; expectedVersion: number; me: Me }): Promise<Row> {
-  const c = db();
-  const { data: all, error: e0 } = await c.from(table).select('id, version, valid_from, valid_to, status').eq('employee_id', employeeId).order('version', { ascending: false });
-  if (e0) fail(`${table}.read`, e0);
-  const last = (all ?? []).find((r) => r.status === 'active');
-  if ((last?.version ?? 0) !== args.expectedVersion) throw new ApiError(409, 'payroll_version_conflict');
-  if (last && args.validFrom <= (last.valid_from as string)) throw new ApiError(422, 'payroll_effective_from_past');
-  if (last && !args.reason) throw new ApiError(422, 'payroll_reason_required');
-  const closed = last && (last.valid_to === null || (last.valid_to as string) > args.validFrom);
-  if (closed) {
-    const { error } = await c.from(table).update({ valid_to: args.validFrom }).eq('id', last!.id);
-    if (error) fail(`${table}.close`, error);
-  }
-  const { data, error } = await c.from(table).insert({ ...values, employee_id: employeeId, valid_from: args.validFrom, version: ((all?.[0]?.version as number | undefined) ?? 0) + 1, reason: args.reason, supersedes_id: last?.id ?? null, created_by: args.me.id }).select('*').single();
-  if (error || !data) {
-    if (closed) await c.from(table).update({ valid_to: last!.valid_to }).eq('id', last!.id);
-    fail(`${table}.insert`, error);
-  }
-  return data as Row;
+  return atomicRpc<Row>('append_payroll_version_atomic', { p_table: table, p_identity: employeeId, p_values: values, p_valid_from: args.validFrom, p_reason: args.reason, p_expected_version: args.expectedVersion, p_actor: args.me.id });
 }
 
 async function employmentAt(employeeId: string, d: string): Promise<string | null> {
@@ -137,6 +122,7 @@ export async function saveTax(args: { employeeId: string; input: TaxInput; valid
 /** 개인 항목 붙이기 — 같은 항목이 그 기간에 이미 붙어 있으면 409(먼저 끝내고 다시 넣는다) */
 export async function addStaffItem(args: { employeeId: string; input: ItemAssign; validFrom: string; me: Me; requestId?: string }): Promise<void> {
   const c = db();
+  if (AUTO_PAYMENT_CODES.has(args.input.itemCode)) throw new ApiError(422, 'payroll_auto_item');
   const { data: item } = await c.from('payroll_item_versions').select('code').eq('code', args.input.itemCode).eq('status', 'active').eq('in_use', true).limit(1);
   if (!item?.length) throw new ApiError(404, 'payroll_item_missing');
   const { data, error } = await c.from('payroll_employee_items').insert({ employee_id: args.employeeId, item_code: args.input.itemCode, amount: args.input.amount, note: args.input.note, valid_from: args.validFrom, created_by: args.me.id }).select('id').single();

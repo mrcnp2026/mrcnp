@@ -1,13 +1,10 @@
 'use client';
-// 직원 목록(PC 표)의 「권한」 칸 — 지금 권한을 보여 주고, 그 자리에서 관리자·급여 담당을 지정·해제한다
-// (2026-10-06 의뢰인: 직원 상세까지 들어가지 않고 목록에서 권한을 주고 싶다).
-// 규칙은 상세 화면과 같다 (staff-rules.ts — 서버가 다시 검사한다):
-//  · 본인 권한은 스스로 못 바꾼다 · 확인 대기 중인 변경이 있으면 끝날 때까지 못 바꾼다
-//  · 급여 담당은 급여 담당자만 지정·해제한다 · 다른 관리자가 있으면 그 관리자가 확인해야 반영된다
+// 직원 목록(PC 표)의 「권한」 칸 — 지금 등급을 보여 주고, 바꾸는 곳(직원 상세 「권한 등급」)으로 보낸다.
+// 2026-10-15: 등급을 바꾸는 길을 상세 한 곳으로 모았다(목록 · 상세에서 따로 바꾸던 것을 하나로 — 문제 R16, 결정 사항 개발-39).
+//   최고관리자 · 대표자의 등급은 최고관리자 · 대표자만 바꾼다 — 아니면 「바꾸기」를 보이지 않는다(서버도 막는다).
 import { useTranslations } from 'next-intl';
-import { useState } from 'react';
-import { Button, Chip } from '@/components/ui';
-import { ManageAction } from './[id]/ManageAction';
+import Link from 'next/link';
+import { Chip } from '@/components/ui';
 
 export function RoleCell({
   employeeId,
@@ -15,7 +12,6 @@ export function RoleCell({
   canViewPayroll,
   self,
   waiting,
-  actorCanPayroll,
   level = null,
   actorTop = false,
 }: {
@@ -24,57 +20,23 @@ export function RoleCell({
   canViewPayroll: boolean;
   self: boolean;
   waiting: boolean; // 권한 변경이 다른 관리자의 확인을 기다리는 중
-  actorCanPayroll: boolean; // 지금 보는 관리자가 급여 담당자인가
-  level?: 'super' | 'ceo' | 'general' | null; // 관리자 구분 (개발-39)
-  actorTop?: boolean; // 지금 보는 사람이 최고관리자 · 대표자 — 관리자 구분을 바꿀 수 있다
+  actorCanPayroll?: boolean;
+  level?: 'super' | 'ceo' | 'general' | null;
+  actorTop?: boolean;
 }) {
   const t = useTranslations('admin.members');
   const tm = useTranslations('admin.manage');
-  const [open, setOpen] = useState(false);
-  const api = `/api/admin/employees/${employeeId}/role`;
-  const admin = role === 'admin';
-  const manager = role === 'manager'; // 지점관리자 — 맡을 지점은 직원 상세에서 고른다
-
+  const grade = role === 'admin' ? (level ?? 'general') : role === 'manager' ? 'manager' : 'employee';
+  const top = grade === 'super' || grade === 'ceo';
   return (
-    <span className="flex flex-col gap-2">
-      <span className="flex flex-wrap items-center gap-1">
-        {admin ? <Chip tone="info">{t(level === 'super' ? 'levelSuper' : level === 'ceo' ? 'levelCeo' : 'levelGeneral')}</Chip> : manager ? <Chip tone="info">{t('managerChip')}</Chip> : <span className="text-muted">{t('roleEmployee')}</span>}
-        {canViewPayroll && <Chip tone="info">{t('payrollChip')}</Chip>}
-        {waiting && <Chip tone="warn">{t('roleWaiting')}</Chip>}
-        {!self && !waiting && (
-          <Button size="sm" variant="outline" aria-expanded={open} onClick={() => setOpen(!open)}>
-            {t(open ? 'roleClose' : 'roleChange')}
-          </Button>
-        )}
-      </span>
-      {open && (
-        <span className="block w-80 rounded-button border border-border bg-bg">
-          {admin && actorTop &&
-            (['super', 'ceo', 'general'] as const)
-              .filter((x) => x !== (level ?? 'general'))
-              .map((x) => (
-                <ManageAction key={x} title={tm('setLevel', { level: t(x === 'super' ? 'levelSuper' : x === 'ceo' ? 'levelCeo' : 'levelGeneral') })} hint={tm('setLevelHint')} confirmLabel={tm('setLevel', { level: t(x === 'super' ? 'levelSuper' : x === 'ceo' ? 'levelCeo' : 'levelGeneral') })} endpoint={`/api/admin/employees/${employeeId}/level`} body={{ level: x }} presets={[tm('preset.handover'), tm('preset.mistake')]} />
-              ))}
-          {admin ? (
-            <ManageAction title={tm('removeAdmin')} hint={tm('removeAdminHint')} confirmLabel={tm('removeAdmin')} endpoint={api} body={{ role: 'employee' }} presets={[tm('preset.handover'), tm('preset.mistake')]} />
-          ) : (
-            <ManageAction title={tm('makeAdmin')} hint={tm('makeAdminHint')} confirmLabel={tm('makeAdmin')} endpoint={api} body={{ role: 'admin' }} presets={[tm('preset.newAdmin'), tm('preset.handover')]} />
-          )}
-          {!admin && !manager && (
-            <ManageAction title={tm('makeManager')} hint={tm('makeManagerHint')} confirmLabel={tm('makeManager')} endpoint={api} body={{ role: 'manager' }} presets={[tm('preset.newManager'), tm('preset.handover')]} />
-          )}
-          {manager && (
-            <ManageAction title={tm('removeManager')} hint={tm('removeManagerHint')} confirmLabel={tm('removeManager')} endpoint={api} body={{ role: 'employee' }} presets={[tm('preset.handover'), tm('preset.mistake')]} />
-          )}
-          {admin && actorCanPayroll && !canViewPayroll && (
-            <ManageAction title={tm('grantPayroll')} hint={tm('grantPayrollHint')} confirmLabel={tm('grantPayroll')} endpoint={api} body={{ canViewPayroll: true }} presets={[tm('preset.payrollOwner')]} />
-          )}
-          {admin && actorCanPayroll && canViewPayroll && (
-            <ManageAction title={tm('revokePayroll')} hint={tm('revokePayrollHint')} confirmLabel={tm('revokePayroll')} endpoint={api} body={{ canViewPayroll: false }} presets={[tm('preset.handover'), tm('preset.mistake')]} />
-          )}
-          {/* 급여 담당이 아닌 관리자에게는 왜 급여 담당 메뉴가 없는지 알려 준다 */}
-          {!actorCanPayroll && <span className="block border-t border-border px-5 py-3 text-xs text-muted">{tm('payroll_only_grant')}</span>}
-        </span>
+    <span className="flex flex-wrap items-center gap-1">
+      {grade === 'employee' ? <span className="text-muted">{tm('grade.employee')}</span> : <Chip tone="info">{tm(`grade.${grade}`)}</Chip>}
+      {canViewPayroll && <Chip tone="info">{t('payrollChip')}</Chip>}
+      {waiting && <Chip tone="warn">{t('roleWaiting')}</Chip>}
+      {!self && !waiting && (!top || actorTop) && (
+        <Link href={`/admin/members/${employeeId}#manage`} className="inline-flex min-h-8 items-center rounded-button border border-border px-2.5 text-xs font-semibold text-text hover:bg-surface">
+          {t('roleChange')} ›
+        </Link>
       )}
     </span>
   );

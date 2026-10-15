@@ -23,7 +23,7 @@ export function computeEmployeeDays(args: {
   approvedCorrections: PunchCorrection[];
   rule: WorkRule; // 기본 규칙 (그날 규칙이 없을 때)
   ruleAt?: (date: string) => WorkRule | null; // ② 4-1: 날짜마다 그날 유효한 규칙
-  deemed?: (date: string, dayType: DayType) => PunchPair | null; // 간주 근무: 그날 근무로 볼 시간(일정). 없으면 null. 찍은 기록이 있어도 이 시간으로 계산한다 (확정-7)
+  deemed?: (date: string, dayType: DayType) => PunchPair | PunchPair[] | null; // 간주 근무: 그날 근무로 볼 시간(일정). 없으면 null. 찍은 기록이 있어도 이 시간으로 계산한다 (확정-7)
   holidays: HolidayRow[];
   from: string;
   to: string;
@@ -38,7 +38,7 @@ export function computeEmployeeDays(args: {
       // 간주 근무 (확정-7, 2026-10-11): 출퇴근 기록이 불명확하더라도 일반 정시 근로와 같은 내용으로 출근한 것으로 책정한다.
       //   찍은 기록이 있어도 일정 시간으로 한 번만 계산하고, 찍은 기록은 참고로만 남긴다. 누락·중복 표시도 붙이지 않는다.
       const v = args.deemed?.(d, dayType) ?? null;
-      if (v) return { workDate: d, pairs: [v], flags: [], dayType, deemed: true, punchedPairs: punched };
+      if (v && (!Array.isArray(v) || v.length)) return { workDate: d, pairs: Array.isArray(v) ? v : [v], flags: [], dayType, deemed: true, punchedPairs: punched };
       return { workDate: d, pairs: punched, flags: byDate.get(d)?.flags ?? [], dayType, deemed: false, punchedPairs: undefined as PunchPair[] | undefined };
     });
     const dayOf = new Map(days.map((d) => [d.workDate, d]));

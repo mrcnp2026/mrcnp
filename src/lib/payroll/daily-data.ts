@@ -5,6 +5,7 @@
 // ★ 세금은 일용근로소득 임시 규칙(daily.ts), 4대보험료는 계산하지 않는다. 적용 상태가 「모름」이면 그 사람은 계산하지 않는다(0원 아님).
 // ★ 신고용 파일(지급명세서 제출)과 이체는 없다.
 import 'server-only';
+import { readAll } from '@/lib/read-all';
 import { ApiError } from '@/lib/api';
 import type { Me } from '@/lib/auth';
 import { createAdminClient } from '@/lib/supabase/admin';
@@ -16,7 +17,8 @@ import { payrollAudit } from './staff-data';
 const db = () => createAdminClient();
 type Row = Record<string, unknown>;
 const isTestNo = (no: string | null | undefined) => !!no?.startsWith('e2e-');
-const boom = (where: string, e: { code?: string } | null): never => {
+const boom = (where: string, e: { code?: string; message?: string } | null): never => {
+  if (e?.code === 'P0001' && ['payroll_duplicate_payment','payroll_stale','payroll_has_blocked','payroll_not_calculated','daily_work_in_run'].includes(e.message ?? '')) throw new ApiError(409, e.message!);
   if (e?.code === 'PX001') throw new ApiError(409, 'daily_work_locked');
   if (e?.code === 'PX003') throw new ApiError(409, 'version_conflict');
   if (e?.code === 'PR001') throw new ApiError(409, 'payroll_finalized');
@@ -102,8 +104,7 @@ export async function loadWork(args: { month: string; practice: boolean; payeeId
   if (args.payeeIds.length === 0) return [];
   const [y, m] = args.month.split('-').map(Number);
   const to = new Date(Date.UTC(y, m, 1)).toISOString().slice(0, 10);
-  const { data, error } = await db().from('payroll_daily_work').select('*').eq('is_test', args.practice).in('payee_id', args.payeeIds).gte('work_date', `${args.month}-01`).lt('work_date', to).order('work_date').order('created_at').limit(5000);
-  if (error) boom('loadWork', error);
+  const { data } = await readAll((a,b) => db().from('payroll_daily_work').select('*').eq('is_test', args.practice).in('payee_id', args.payeeIds).gte('work_date', `${args.month}-01`).lt('work_date', to).order('work_date').order('created_at').order('id').range(a,b));
   return ((data ?? []) as Row[]).map(toWork);
 }
 
@@ -260,7 +261,7 @@ export async function calculateDaily(args: { id: string; expectedVersion: number
   const { data: gen, error: e1 } = await c.from('payroll_calculation_generations').insert({ run_id: run.id, seq: ((last?.[0]?.seq as number | undefined) ?? 0) + 1, input_hash: inputHash, engine_version: DAILY_RULE, created_by: args.me.id }).select('id').single();
   if (e1 || !gen) boom('calculateDaily.gen', e1);
   const rows = built.map(({ payee, works, terms, result: r }) => {
-    const snapshot = { workIds: works.map((w) => w.id), terms, days: r.state === 'OK' ? r.days : [], warnings: r.warnings, rule: DAILY_RULE };
+    const snapshot = { workIds: works.map((w) => w.id), workVersions: works.map((w) => ({ id: w.id, version: w.version })), terms, days: r.state === 'OK' ? r.days : [], warnings: r.warnings, rule: DAILY_RULE };
     return {
       generation_id: gen!.id, run_id: run.id, payee_id: payee.id, work_month: run.periodFrom, state: r.state, blockers: r.blockers.map((code) => ({ code })), snapshot,
       ...(r.state === 'OK' ? { work_days: r.workDays, gross_total: r.gross, taxable_total: r.taxable, nontax_total: r.nontax, income_tax: r.incomeTax, local_tax: r.localTax, other_deduction: r.otherDeduction, net_total: r.net } : {}),

@@ -1,6 +1,8 @@
 // 급여 설정 읽기 · 쓰기. 서버 전용 — 부르는 쪽이 먼저 급여 담당자인지 확인한다(requirePayroll).
-// 판(version)은 고치지 않고 쌓는다: 새 판을 넣기 전에 앞 판의 끝나는 날을 새 판의 시작일로 닫는다.
+// 판 닫기와 새 판 삽입은 DB 함수의 같은 트랜잭션에서 처리한다.
 import 'server-only';
+import { readAll } from '@/lib/read-all';
+import { atomicRpc } from '@/lib/atomic-rpc';
 import { createHash } from 'node:crypto';
 import { ApiError } from '@/lib/api';
 import { getMe, type Me } from '@/lib/auth';
@@ -18,12 +20,6 @@ export async function requirePayroll(): Promise<Me> {
 export const sha = (v: unknown) => createHash('sha256').update(canonical(v)).digest('hex');
 type Verify = 'TEMPORARY' | 'REVIEW_REQUIRED' | 'VERIFIED';
 const db = () => createAdminClient();
-/** 다음 판 번호 = 그 대상의 모든 판(거둔 판 포함) 가운데 가장 큰 번호 + 1 */
-async function nextVersion(table: string, col: string, value: string): Promise<number> {
-  const { data, error } = await db().from(table).select('version').eq(col, value).order('version', { ascending: false }).limit(1);
-  if (error) throw new Error(`nextVersion: ${error.code}`);
-  return ((data?.[0]?.version as number | undefined) ?? 0) + 1;
-}
 const fail = (where: string, e: { code?: string; message?: string } | null) => {
   // 23P01 = 적용기간이 겹침(exclusion), 23505 = 같은 판 번호 — 다른 담당자가 먼저 저장한 경우
   if (e?.code === '23P01' || e?.code === '23505') throw new ApiError(409, 'payroll_version_conflict');
@@ -53,27 +49,8 @@ export async function reliefSwitches(date: string): Promise<{ sme: boolean; duru
  * 앞 판이 새 시작일 뒤까지 이어지면 새 시작일로 닫는다. 새 시작일이 앞 판의 시작일보다 앞서거나 같으면 거부한다(지난 판을 덮지 않는다).
  */
 export async function saveSetting(args: { section: SettingSection; payload: SettingPayload; validFrom: string; reason: string | null; expectedVersion: number; me: Me }): Promise<SettingRow> {
-  const c = db();
-  const history = await loadSettingHistory(args.section);
-  const last = history[0];
-  if ((last?.version ?? 0) !== args.expectedVersion) throw new ApiError(409, 'payroll_version_conflict');
-  if (last && args.validFrom <= last.validFrom) throw new ApiError(422, 'payroll_effective_from_past');
-  if (last && !args.reason) throw new ApiError(422, 'payroll_reason_required');
-  if (last && (last.validTo === null || last.validTo > args.validFrom)) {
-    const { error } = await c.from('payroll_company_setting_versions').update({ valid_to: args.validFrom }).eq('id', last.id);
-    if (error) fail('saveSetting.close', error);
-  }
-  const { data, error } = await c
-    .from('payroll_company_setting_versions')
-    .insert({ section: args.section, payload: args.payload, valid_from: args.validFrom, version: await nextVersion('payroll_company_setting_versions', 'section', args.section), reason: args.reason, supersedes_id: last?.id ?? null, created_by: args.me.id })
-    .select('*')
-    .single();
-  if (error || !data) {
-    // 새 판이 들어가지 못했으면 닫았던 앞 판을 다시 연다 (한쪽만 바뀐 채로 남지 않게)
-    if (last) await c.from('payroll_company_setting_versions').update({ valid_to: last.validTo }).eq('id', last.id);
-    fail('saveSetting.insert', error);
-  }
-  return toSetting(data!);
+  const row = await atomicRpc<Record<string, unknown>>('append_payroll_version_atomic', { p_table: 'payroll_company_setting_versions', p_identity: args.section, p_values: { payload: args.payload }, p_valid_from: args.validFrom, p_reason: args.reason, p_expected_version: args.expectedVersion, p_actor: args.me.id });
+  return toSetting(row);
 }
 
 // ── 지급 · 공제 항목 ──
@@ -86,8 +63,9 @@ const toItem = (r: Record<string, unknown>): ItemRow => ({
 });
 
 /** 지금 쓰는 판(끝나는 날이 열려 있는 판) — 코드마다 하나 */
-export async function loadItems(kind?: 'PAYMENT' | 'DEDUCTION'): Promise<ItemRow[]> {
-  let q = db().from('payroll_item_versions').select('*').eq('status', 'active').is('valid_to', null);
+export async function loadItems(kind?: 'PAYMENT' | 'DEDUCTION', asOf?: string): Promise<ItemRow[]> {
+  let q = db().from('payroll_item_versions').select('*').eq('status', 'active');
+  q = asOf ? q.lte('valid_from', asOf).or(`valid_to.is.null,valid_to.gt.${asOf}`) : q.is('valid_to', null);
   if (kind) q = q.eq('kind', kind);
   const { data, error } = await q.order('sort').order('code');
   if (error) fail('loadItems', error);
@@ -96,29 +74,12 @@ export async function loadItems(kind?: 'PAYMENT' | 'DEDUCTION'): Promise<ItemRow
 
 /** 항목 등록 또는 고침(새 판). 종류(지급/공제)는 바꿀 수 없다 */
 export async function saveItem(args: { input: ItemInput; validFrom: string; reason: string | null; expectedVersion: number; me: Me }): Promise<ItemRow> {
-  const c = db();
-  const { data: rows, error: e0 } = await c.from('payroll_item_versions').select('*').eq('code', args.input.code).eq('status', 'active').order('version', { ascending: false }).limit(1);
-  if (e0) fail('saveItem.read', e0);
-  const last = rows?.[0] ? toItem(rows[0]) : null;
-  if ((last?.version ?? 0) !== args.expectedVersion) throw new ApiError(409, last && args.expectedVersion === 0 ? 'payroll_item_code_taken' : 'payroll_version_conflict');
-  if (last && last.kind !== args.input.kind) throw new ApiError(422, 'invalid_input');
-  if (last && args.validFrom <= last.validFrom) throw new ApiError(422, 'payroll_effective_from_past');
-  if (last && !args.reason) throw new ApiError(422, 'payroll_reason_required');
-  if (last) {
-    const { error } = await c.from('payroll_item_versions').update({ valid_to: args.validFrom }).eq('id', last.id);
-    if (error) fail('saveItem.close', error);
-  }
   const i = args.input;
-  const { data, error } = await c
-    .from('payroll_item_versions')
-    .insert({ code: i.code, kind: i.kind, ko_name: i.koName, en_name: i.enName, calc_kind: i.calcKind, default_amount: i.defaultAmount, fixed_allowance: i.fixedAllowance, tax_treatment: i.taxTreatment, tax_exempt_limit: i.taxExemptLimit, ordinary_wage: i.ordinaryWage, sort: i.sort, in_use: last?.inUse ?? true, valid_from: args.validFrom, version: await nextVersion('payroll_item_versions', 'code', i.code), reason: args.reason, supersedes_id: last?.id ?? null, created_by: args.me.id })
-    .select('*')
-    .single();
-  if (error || !data) {
-    if (last) await c.from('payroll_item_versions').update({ valid_to: null }).eq('id', last.id);
-    fail('saveItem.insert', error);
-  }
-  return toItem(data!);
+  const row = await atomicRpc<Record<string, unknown>>('append_payroll_version_atomic', {
+    p_table: 'payroll_item_versions', p_identity: i.code, p_valid_from: args.validFrom, p_reason: args.reason, p_expected_version: args.expectedVersion, p_actor: args.me.id,
+    p_values: { kind: i.kind, ko_name: i.koName, en_name: i.enName, calc_kind: i.calcKind, default_amount: i.defaultAmount, fixed_allowance: i.fixedAllowance, tax_treatment: i.taxTreatment, tax_exempt_limit: i.taxExemptLimit, ordinary_wage: i.ordinaryWage, sort: i.sort },
+  });
+  return toItem(row);
 }
 
 export async function setItemUse(id: string, inUse: boolean): Promise<void> {
@@ -131,34 +92,17 @@ export async function setItemUse(id: string, inUse: boolean): Promise<void> {
 export type PolicyRow<T = Record<string, unknown>> = { id: string; kind: string; payload: T; inUse: boolean; validFrom: string; version: number; verification: Verify; verificationNote: string | null };
 const toPolicy = (r: Record<string, unknown>): PolicyRow => ({ id: r.id as string, kind: r.policy_kind as string, payload: r.validated_payload as Record<string, unknown>, inUse: r.in_use as boolean, validFrom: r.valid_from as string, version: r.version as number, verification: r.verification_state as Verify, verificationNote: r.verification_note as string | null });
 
-export async function loadPolicies(prefix: string): Promise<PolicyRow[]> {
-  const { data, error } = await db().from('payroll_policy_versions').select('*').eq('status', 'active').is('valid_to', null).like('policy_kind', `${prefix}%`);
+export async function loadPolicies(prefix: string, asOf?: string): Promise<PolicyRow[]> {
+  let q = db().from('payroll_policy_versions').select('*').eq('status', 'active').like('policy_kind', `${prefix}%`);
+  q = asOf ? q.lte('valid_from', asOf).or(`valid_to.is.null,valid_to.gt.${asOf}`) : q.is('valid_to', null);
+  const { data, error } = await q;
   if (error) fail('loadPolicies', error);
   return (data ?? []).map(toPolicy);
 }
 
 export async function savePolicy(args: { kind: string; payload: AllowancePolicy | Record<string, unknown>; validFrom: string; reason: string | null; expectedVersion: number; me: Me }): Promise<PolicyRow> {
-  const c = db();
-  const { data: rows, error: e0 } = await c.from('payroll_policy_versions').select('*').eq('policy_kind', args.kind).eq('status', 'active').order('version', { ascending: false }).limit(1);
-  if (e0) fail('savePolicy.read', e0);
-  const last = rows?.[0] ? { ...toPolicy(rows[0]), validTo: rows[0].valid_to as string | null } : null;
-  if ((last?.version ?? 0) !== args.expectedVersion) throw new ApiError(409, 'payroll_version_conflict');
-  if (last && args.validFrom <= last.validFrom) throw new ApiError(422, 'payroll_effective_from_past');
-  if (last && !args.reason) throw new ApiError(422, 'payroll_reason_required');
-  if (last) {
-    const { error } = await c.from('payroll_policy_versions').update({ valid_to: args.validFrom }).eq('id', last.id);
-    if (error) fail('savePolicy.close', error);
-  }
-  const { data, error } = await c
-    .from('payroll_policy_versions')
-    .insert({ policy_kind: args.kind, validated_payload: args.payload, in_use: last?.inUse ?? true, valid_from: args.validFrom, version: await nextVersion('payroll_policy_versions', 'policy_kind', args.kind), reason: args.reason, supersedes_id: last?.id ?? null, created_by: args.me.id })
-    .select('*')
-    .single();
-  if (error || !data) {
-    if (last) await c.from('payroll_policy_versions').update({ valid_to: null }).eq('id', last.id);
-    fail('savePolicy.insert', error);
-  }
-  return toPolicy(data!);
+  const row = await atomicRpc<Record<string, unknown>>('append_payroll_version_atomic', { p_table: 'payroll_policy_versions', p_identity: args.kind, p_values: { validated_payload: args.payload }, p_valid_from: args.validFrom, p_reason: args.reason, p_expected_version: args.expectedVersion, p_actor: args.me.id });
+  return toPolicy(row);
 }
 
 export async function setPolicyUse(id: string, inUse: boolean): Promise<void> {
@@ -184,8 +128,7 @@ const toRef = (r: Record<string, unknown>): ReferenceRow => {
 };
 
 export async function loadReferences(kinds: readonly ReferenceKind[], states: string[]): Promise<ReferenceRow[]> {
-  const { data, error } = await db().from('payroll_reference_versions').select('*').in('reference_kind', kinds as string[]).in('state', states).order('created_at', { ascending: false }).limit(200);
-  if (error) fail('loadReferences', error);
+  const { data } = await readAll((a,b) => db().from('payroll_reference_versions').select('*').in('reference_kind', kinds as string[]).in('state', states).order('created_at', { ascending: false }).order('id').range(a,b));
   return (data ?? []).map(toRef);
 }
 

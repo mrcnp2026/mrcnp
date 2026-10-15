@@ -37,7 +37,7 @@ function inputHash(data: PeriodData, employeeId: string, from: string, last: str
     events: data.events.filter((e) => e.employeeId === employeeId && inMonth(e.workDate)).map((e) => [e.id, e.kind, e.punchedAt.toISOString()]).sort(),
     corrections: data.corrections.filter((c) => c.employeeId === employeeId && inMonth(c.workDate)).map((c) => [c.id, c.status, c.correctionType, c.newPunchedAt ? c.newPunchedAt.toISOString() : null]).sort(),
     overtime: data.overtime.filter((o) => o.employeeId === employeeId).map((o) => [o.id, o.status, o.approvedMinutes, o.approvedNightMinutes, o.approvedHolidayMinutes, o.needsReview]).sort(),
-    leave: data.leaveRequests.filter((l) => l.employeeId === employeeId && l.startDate <= last && l.endDate >= from).map((l) => [l.id, l.status, l.startDate, l.endDate, l.days, l.typeCode, l.startTime ?? null, l.endTime ?? null]).sort(),
+    leave: data.leaveRequests.filter((l) => l.employeeId === employeeId && l.startDate <= last && l.endDate >= from).map((l) => [l.id, l.status, l.startDate, l.endDate, l.days, l.typeCode, l.startTime ?? null, l.endTime ?? null, l.typeSnapshot ?? null, l.workDates ?? null]).sort(),
     work: data.workRequests.filter((w) => w.employeeId === employeeId && w.startDate <= last && w.endDate >= from).map((w) => [w.id, w.status, w.startDate, w.endDate, w.kind]).sort(),
     shifts: data.shifts.filter((s) => s.employeeId === employeeId && inMonth(s.workDate)).map((s) => [s.id, s.workDate, s.startTime, s.endTime, s.kind]).sort(),
     confirmed: [...confirmed].sort(),

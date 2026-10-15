@@ -1,8 +1,9 @@
 // 휴가 원장 읽기 · 쓰기 (PRD v1.3 36 · 38장). 서버 전용 — 부르는 쪽이 먼저 관리자인지 확인한다.
-// ★ 지금은 「대조 단계」다: 직원 화면과 휴가 화면의 잔여는 예전 계산(leave_grants) 그대로이고, 원장은 옆에서 같이 쌓아 숫자를 맞춰 본다.
+// ★ 승인된 지급 건이 있는 직원은 신청·직원·관리자 화면이 원장 잔여를 사용하고, 그 밖은 leave_grants를 사용한다.
 // ★ 원장은 지급 건이 승인된 직원만 쌓는다 — 지급 건이 하나도 없는 직원의 휴가를 전부 「선사용」으로 적지 않기 위해서다.
 // ★ 원장 줄은 고치거나 지울 수 없다(0035). 그래서 넣기 전에 계획(planRequest · planExpiry)을 세우고, 같은 열쇠는 한 번만 들어간다.
 import 'server-only';
+import { readAll } from '@/lib/read-all';
 import { ApiError } from '@/lib/api';
 import type { Me } from '@/lib/auth';
 import { addMonths, DAY_MINUTES, entriesFor, lotRemaining, NO_TYPE_RULE, planAccrual, planExpiry, planOffset, planRequest, settleLeave, splitCarry, STANDARD_LEAVE_POLICY, validateLeavePolicy, validateTypeRule, type Entry, type LeavePolicy, type LeaveTypeRule, type Lot, type NewEntry, type PlannedLot, type Settlement, ledgerBalance, minutesToDays } from '@/lib/leave-ledger';
@@ -33,15 +34,13 @@ export async function loadLots(opts: { employeeId?: string; states?: Lot['state'
   let q = db().from('leave_grant_lots').select('*');
   if (opts.employeeId) q = q.eq('employee_id', opts.employeeId);
   if (opts.states) q = q.in('state', opts.states);
-  const { data, error } = await q.order('granted_on', { ascending: false }).limit(5000);
-  if (error) boom('loadLots', error);
+  const { data } = await readAll((a,b) => q.order('granted_on', { ascending: false }).order('id').range(a,b));
   return (data ?? []).map(toLot);
 }
 export async function loadEntries(employeeId?: string): Promise<EntryRow[]> {
   let q = db().from('leave_ledger').select('*');
   if (employeeId) q = q.eq('employee_id', employeeId);
-  const { data, error } = await q.order('id', { ascending: true }).limit(20000);
-  if (error) boom('loadEntries', error);
+  const { data } = await readAll((a,b) => q.order('id', { ascending: true }).range(a,b));
   return (data ?? []).map(toEntry);
 }
 
@@ -259,7 +258,7 @@ export async function syncEmployeeLedger(employeeId: string, actorId: string | n
   if (lots.length === 0 && !entries.some((e) => e.requestId)) return { added: 0, locked: 0 };
   const since = lots.map((l) => l.usableFrom).sort()[0] ?? '9999-12-31';
   const [{ data: reqs, error }, { data: types }] = await Promise.all([
-    c.from('leave_requests').select('id, type_code, start_date, days, status, is_test').eq('employee_id', employeeId).order('start_date').order('created_at').limit(5000),
+    c.from('leave_requests').select('id, type_code, start_date, days, status, is_test, type_snapshot').eq('employee_id', employeeId).order('start_date').order('created_at').limit(5000),
     c.from('leave_types').select('code, deducts_balance'),
   ]);
   if (error) boom('syncEmployeeLedger', error);
@@ -268,7 +267,7 @@ export async function syncEmployeeLedger(employeeId: string, actorId: string | n
   let added = 0, locked = 0, fake = -1;
   for (const r of reqs ?? []) {
     if (r.start_date < since && !known.has(r.id)) continue;
-    const plan = planRequest({ req: { id: r.id as string, startDate: r.start_date as string, days: Number(r.days), approved: r.status === 'approved', deducts: deducts.has(r.type_code as string), isTest: r.is_test as boolean }, lots, entries });
+    const plan = planRequest({ req: { id: r.id as string, startDate: r.start_date as string, days: Number(r.days), approved: r.status === 'approved', deducts: (r.type_snapshot as { deductsBalance?: boolean } | null)?.deductsBalance ?? deducts.has(r.type_code as string), isTest: r.is_test as boolean }, lots, entries });
     if (plan.length === 0) continue;
     const res = await insertEntries(employeeId, plan, actorId);
     added += res.added;
@@ -520,10 +519,23 @@ export async function startGroupPolicy(args: { groupId: string; me: Me }): Promi
 export async function ledgerFor(employeeId: string, asOf: string, practice: boolean): Promise<{ grantedDays: number; usedDays: number; remainingDays: number; expiredDays: number; advanceDays: number; advanceMaxDays: number } | null> {
   const lots = await loadLots({ employeeId, states: ['APPROVED'] });
   if (lots.length === 0) return null;
-  const [entries, policies] = await Promise.all([loadEntries(employeeId), loadDefaultPolicies()]);
+  const [entries, policies] = await Promise.all([loadEntries(employeeId), policiesForEmployee(employeeId, asOf)]);
   const b = ledgerBalance(lots, entriesFor(entries, practice), asOf);
   const d = (m: number) => minutesToDays(m);
   return { grantedDays: d(b.granted), usedDays: d(b.used), remainingDays: d(b.remaining), expiredDays: d(b.expired), advanceDays: d(b.advance), advanceMaxDays: policyAt(policies, asOf)?.policy.advanceMaxDays ?? 0 };
 }
 
 export { lotRemaining };
+
+/** 신청 시점의 그룹과 그 그룹의 정책 판. 독립 기준이 없으면 기본 기준을 따른다. */
+async function policiesForEmployee(employeeId: string, asOf: string): Promise<PolicyRow[]> {
+  const { data: member, error } = await db().from('leave_policy_members').select('group_id').eq('employee_id', employeeId).eq('active', true).lte('valid_from', asOf).or(`valid_to.is.null,valid_to.gt.${asOf}`).maybeSingle();
+  if (error) boom('policyForEmployee.member', error);
+  if (member) {
+    const { data: group, error: groupError } = await db().from('leave_policy_groups').select('id, name, excluded').eq('id', member.group_id).eq('active', true).maybeSingle();
+    if (groupError) boom('policyForEmployee.group', groupError);
+    if (group?.excluded) return [];
+    if (group) { const policies = await loadGroupPolicies(group); if (policyAt(policies, asOf)) return policies; }
+  }
+  return loadDefaultPolicies();
+}

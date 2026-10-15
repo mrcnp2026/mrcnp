@@ -4,16 +4,23 @@
 // ★ 다시 계산하면 새 계산 세대가 생긴다. 실패한 계산은 앞의 성공한 결과를 덮지 않는다. 확정한 대장은 DB가 바꾸지 못하게 막는다(0037).
 // ★ 검토 · 확정할 때 입력을 다시 읽어, 계산한 뒤에 바뀐 것이 있으면(오래됨) 막는다.
 import 'server-only';
+import { readAll } from '@/lib/read-all';
+import { atomicRpc } from '@/lib/atomic-rpc';
+import { addDays, weekStartOf } from '@/lib/calendar';
+import { approvedMinutes } from '@/lib/overtime';
 import { OFFICE } from '@/config/office';
 import { ApiError } from '@/lib/api';
 import type { Me } from '@/lib/auth';
-import { loadConfirms } from '@/lib/confirm-data';
+import { confirmKey, loadConfirms } from '@/lib/confirm-data';
 import { summarizeMonth } from '@/lib/monthly';
 import { daysFor, leaveDaysFor, loadPeriod, workDaysFor } from '@/lib/period-data';
 import { createAdminClient } from '@/lib/supabase/admin';
 import { toKstDate } from '@/lib/time';
 import { reliefCovers, reliefsForMonth, versionAt } from './contract';
 import { loadItems, loadPolicies, loadReferences, loadSettingHistory, reliefSwitches, sha } from './data';
+import { canonicalItemCode } from './engine/reserved-items';
+import { leaveDurationMismatch, scheduledMinutes } from './engine/scheduled-attendance';
+import { roundedAttendance } from './engine/rounded-attendance';
 import { timeFromAttendance } from './engine/attendance';
 import { calculateStatement, ENGINE_VERSION, type Blocker, type EngineInput, type EngineItem, type EngineOverride, type EngineResult, type Withholding } from './engine/engine';
 import { makeWithholding, referenceFrom, TEMP_INSURANCE_ROUNDING } from './engine/inputs';
@@ -23,7 +30,8 @@ import { loadStaffPay, payrollAudit, type ContractRow, type TaxRow } from './sta
 
 const db = () => createAdminClient();
 type Row = Record<string, unknown>;
-const fail = (where: string, e: { code?: string } | null): never => {
+const fail = (where: string, e: { code?: string; message?: string } | null): never => {
+  if (e?.code === 'P0001' && ['payroll_duplicate_payment','payroll_stale','payroll_has_blocked','payroll_not_calculated'].includes(e.message ?? '')) throw new ApiError(409, e.message!);
   if (e?.code === 'PR001') throw new ApiError(409, 'payroll_finalized');
   if (e?.code === 'PR002' || e?.code === 'PR003' || e?.code === '23505') throw new ApiError(409, 'payroll_run_conflict'); // 다른 담당자가 먼저 바꿨다
   throw new Error(`${where}: ${e?.code ?? 'unknown'}`);
@@ -60,8 +68,8 @@ export async function loadRun(id: string): Promise<RunRow | null> {
   return data ? toRun(data) : null;
 }
 
-async function ledger(): Promise<Ledger> {
-  return ((await loadSettingHistory('ledger'))[0]?.payload as Ledger | undefined) ?? DEFAULT_LEDGER;
+async function ledger(asOf: string): Promise<Ledger> {
+  return ((await loadSettingHistory('ledger')).find((x) => x.validFrom <= asOf && (x.validTo === null || asOf < x.validTo))?.payload as Ledger | undefined) ?? DEFAULT_LEDGER;
 }
 
 /**
@@ -73,7 +81,7 @@ export async function createRun(args: { ym: string; kind?: 'REGULAR' | 'BONUS'; 
   const from = `${args.ym}-01`;
   const [y, m] = args.ym.split('-').map(Number);
   const to = new Date(Date.UTC(y, m, 1)).toISOString().slice(0, 10);
-  const l = await ledger();
+  const l = await ledger(prevDay(to));
   const [{ data: people }, { data: cons }] = await Promise.all([
     c.from('profiles').select('id, employee_no, active'),
     c.from('payroll_contract_versions').select('employee_id, valid_from, valid_to').eq('status', 'active').lt('valid_from', to),
@@ -99,28 +107,27 @@ export async function createRun(args: { ym: string; kind?: 'REGULAR' | 'BONUS'; 
 
 // ── 계산 입력 만들기 ──
 type MemberInput = { employeeId: string; input: Omit<EngineInput, 'withholding'>; pre: Blocker[]; notes: Blocker[]; closeId: string | null; contractId: string | null; taxId: string | null; snapshot: Row };
-type Built = { members: MemberInput[]; withholding: Withholding | null; bundle: Record<string, { id: string; hash: string }>; missing: ReferenceKind[]; inputHash: string };
+type Built = { unverified: string[]; members: MemberInput[]; withholding: Withholding | null; bundle: Record<string, { id: string; hash: string }>; missing: ReferenceKind[]; inputHash: string };
 const REF_KINDS: ReferenceKind[] = ['pension.rate', 'pension.limit', 'health.rate', 'ltc.rate', 'employment.rate', 'income-tax.table', 'income-tax.child-adjust'];
 
 async function loadBands(referenceId: string): Promise<TaxBand[]> {
+  const { data } = await readAll((a,b) => db().from('payroll_tax_rows').select('wage_from, wage_to, family_count, base_tax').eq('reference_version_id', referenceId).order('wage_from').order('family_count').range(a,b));
   const by = new Map<number, TaxBand>();
-  for (let page = 0; page < 40; page++) {
-    const { data, error } = await db().from('payroll_tax_rows').select('wage_from, wage_to, family_count, base_tax').eq('reference_version_id', referenceId).order('wage_from').order('family_count').range(page * 1000, page * 1000 + 999);
-    if (error) fail('loadBands', error);
-    for (const r of data ?? []) {
-      const from = Number(r.wage_from);
-      const b = by.get(from) ?? { wageFrom: from, wageTo: r.wage_to === null ? null : Number(r.wage_to), taxes: [] };
-      b.taxes[(r.family_count as number) - 1] = Number(r.base_tax);
-      by.set(from, b);
-    }
-    if ((data ?? []).length < 1000) break;
+  for (const row of data) {
+    const from = Number(row.wage_from);
+    const band = by.get(from) ?? { wageFrom: from, wageTo: row.wage_to === null ? null : Number(row.wage_to), taxes: [] };
+    band.taxes[(row.family_count as number)-1] = Number(row.base_tax);
+    by.set(from,band);
   }
-  return [...by.values()].filter((b) => b.taxes.length === 11 && b.taxes.every((t) => typeof t === 'number')).sort((a, b) => a.wageFrom - b.wageFrom);
+  const bands = [...by.values()].sort((a,b) => a.wageFrom-b.wageFrom);
+  if (bands.some((b) => b.taxes.length!==11 || Array.from({length:11},(_,i)=>b.taxes[i]).some((t)=>!Number.isFinite(t)))) throw new ApiError(409,'payroll_reference_incomplete');
+  return bands;
 }
 
 /** 그 날에 적용되는 회사 정책 · 승인된 기준 자료 · 지급/공제 항목 — 대장 계산과 예상 미리 보기가 같이 쓴다 */
 export async function loadCalcBasis(last: string) {
-  const [items, policies, refs, l, mins] = await Promise.all([loadItems(), loadPolicies('allowance.'), loadReferences(REF_KINDS, ['APPROVED']), ledger(), loadReferences(['minimum-wage'], ['APPROVED'])]);
+  const ledgerRow = (await loadSettingHistory('ledger')).find((x) => x.validFrom <= last && (x.validTo === null || last < x.validTo));
+  const [items, policies, refs, l, mins] = await Promise.all([loadItems(undefined, last), loadPolicies('allowance.', last), loadReferences(REF_KINDS, ['APPROVED']), ledger(last), loadReferences(['minimum-wage'], ['APPROVED'])]);
   const minRef = pickAt(mins, last);
   const minimumHourly = typeof (minRef?.payload as { hourly?: unknown } | undefined)?.hourly === 'number' ? ((minRef!.payload as { hourly: number }).hourly) : null;
   // 회사 정책 · 기준 자료 (귀속 기간의 마지막 날에 적용되는 것)
@@ -129,7 +136,7 @@ export async function loadCalcBasis(last: string) {
     const v = (p?.payload as AllowancePolicy | undefined)?.[key];
     return typeof v === 'string' ? v : null;
   };
-  const policy: EngineInput['policy'] = { overtimePremium: premium('overtime'), nightPremium: premium('night'), holidayPremium: premium('holiday'), holidayOver8Premium: premium('holiday', 'premiumOver8h'), rounding: { pay: { mode: 'HALF_UP', unit: 1 }, insurance: TEMP_INSURANCE_ROUNDING.contribution } };
+  const policy: EngineInput['policy'] = { deductUnpaidLeave: l.deductUnpaidLeave ?? false, deductLateness: l.deductLateness ?? false, overtimePremium: premium('overtime'), nightPremium: premium('night'), holidayPremium: premium('holiday'), holidayOver8Premium: premium('holiday', 'premiumOver8h'), rounding: { pay: { mode: 'HALF_UP', unit: 1 }, insurance: TEMP_INSURANCE_ROUNDING.contribution } };
   const refAt = (kind: ReferenceKind) => pickAt(refs.filter((r) => r.kind === kind), last);
   const bundle: Record<string, { id: string; hash: string }> = {};
   const payloads: Parameters<typeof referenceFrom>[0] = {};
@@ -147,27 +154,28 @@ export async function loadCalcBasis(last: string) {
   const rules = asTaxRules(table?.payload);
   const withholding = table && rules ? makeWithholding({ bands: await loadBands(table.id), rules, childRule: asChildRule(refAt('income-tax.child-adjust')?.payload) }) : null;
   const insuranceBasis = l.insuranceBasis === 'REPORTED_BASE' ? 'REPORTED' : l.insuranceBasis;
-  return { items, policy, reference, missing, bundle, withholding, insuranceBasis: insuranceBasis as EngineInput['insuranceBasis'], reliefOn, minimumHourly };
+  return { ledgerRow, policies, refs, premiumTimeBasis: l.premiumTimeBasis ?? 'ACTUAL', items, policy, reference, missing, bundle, withholding, insuranceBasis: insuranceBasis as EngineInput['insuranceBasis'], reliefOn, minimumHourly };
 }
 
 async function buildInputs(run: RunRow): Promise<Built> {
   const c = db();
   const from = run.periodFrom, last = prevDay(run.periodTo), ym = from.slice(0, 7);
   const [{ data: mem }, { data: cons }, { data: taxes }, { data: assigns }, { data: closes }, { data: ovs }, { data: people }, { data: emps }, basis, period, confirms] = await Promise.all([
-    c.from('payroll_run_members').select('employee_id, inclusion_state').eq('run_id', run.id),
-    c.from('payroll_contract_versions').select('*').eq('status', 'active'),
-    c.from('payroll_employee_tax_versions').select('*').eq('status', 'active'),
-    c.from('payroll_employee_items').select('*').eq('active', true),
-    c.from('attendance_closes').select('id, employee_id, input_hash').eq('state', 'CLOSED').eq('is_test', run.isTest).eq('period_from', from).eq('period_to', run.periodTo),
-    c.from('payroll_statement_overrides').select('id, employee_id, item_code, kind, proposed_amount').eq('run_id', run.id).eq('active', true),
-    c.from('profiles').select('id, name, employee_no, joined_on'),
-    c.from('staff_employment_periods').select('employee_id, starts_on, ends_on').eq('active', true),
+    readAll((a,b) => c.from('payroll_run_members').select('employee_id, inclusion_state').eq('run_id', run.id).order('id').range(a,b)),
+    readAll((a,b) => c.from('payroll_contract_versions').select('*').eq('status', 'active').order('id').range(a,b)),
+    readAll((a,b) => c.from('payroll_employee_tax_versions').select('*').eq('status', 'active').order('id').range(a,b)),
+    readAll((a,b) => c.from('payroll_employee_items').select('*').eq('active', true).order('id').range(a,b)),
+    readAll((a,b) => c.from('attendance_closes').select('id, employee_id, input_hash').eq('state', 'CLOSED').eq('is_test', run.isTest).eq('period_from', from).eq('period_to', run.periodTo).order('id').range(a,b)),
+    readAll((a,b) => c.from('payroll_statement_overrides').select('id, employee_id, item_code, kind, proposed_amount').eq('run_id', run.id).eq('active', true).order('id').range(a,b)),
+    readAll((a,b) => c.from('profiles').select('id, name, employee_no, joined_on').order('id').range(a,b)),
+    readAll((a,b) => c.from('staff_employment_periods').select('employee_id, starts_on, ends_on').eq('active', true).order('id').range(a,b)),
     loadCalcBasis(last),
     loadPeriod(from, last, run.isTest),
     loadConfirms(from, last, run.isTest),
   ]);
   const { items, policy, reference, missing, bundle, withholding, insuranceBasis, reliefOn, minimumHourly } = basis;
 
+  const noticeInputs = insuranceBasis === 'NOTICE' ? await loadNoticeInputs(run) : new Map<string, { notices: EngineInput['notices']; blockers: Blocker[] }>();
   const bonus = run.kind === 'BONUS';
   const priorOf = bonus ? await loadPrior(run) : null;
 
@@ -222,10 +230,33 @@ async function buildInputs(run: RunRow): Promise<Built> {
           // 인정하지 않은 시간이라 연장 수당에 넣지 않고, 명세에 「참고」로 남긴다 (결정 사항 개발-31, 임시)
           pendingMinutes: num('pending_overtime_minutes') + num('pending_night_minutes') + num('pending_holiday_minutes'),
           unreviewedMinutes: num('unreviewed_overtime_minutes'),
-          paidLeaveDays: s.paidLeaveDays, flags: String(s.row.flags ?? '').split(';').map((x) => x.trim()).filter(Boolean), unconfirmedDays: s.unconfirmedDates.length,
+          unpaidLeaveDays: num('unpaid_leave_days'), lateMinutes: num('late_minutes'), paidLeaveDays: s.paidLeaveDays, flags: String(s.row.flags ?? '').split(';').map((x) => x.trim()).filter(Boolean), unconfirmedDays: s.unconfirmedDates.length,
         };
-        facts = att;
-        const t = timeFromAttendance(att, (con!.time_basis as 'ACTUAL' | 'ROUNDED' | 'SCHEDULE') ?? 'ACTUAL', contract.payType);
+        const rounded = roundedAttendance(daysFor(period, id, weekStartOf(from), last), (d) => period.ruleFor(id, d) ?? period.rule!);
+        const roundedFacts = { regularMinutes: 0, approved: { overtime: 0, night: 0, holidayWithin8: 0, holidayOver8: 0 } };
+        for (const [date, day] of rounded) {
+          if (date < from || date > last || !confirms.has(confirmKey(id, date))) continue;
+          roundedFacts.regularMinutes += day.regularMinutes;
+          const request = period.overtime.find((o) => o.employeeId === id && o.workDate === date);
+          const allowed = request ? approvedMinutes(request) : { overtime: 0, night: 0, holidayWithin8: 0, holidayOver8: 0 };
+          roundedFacts.approved.overtime += Math.min(allowed.overtime, day.overtimeMinutes);
+          roundedFacts.approved.night += Math.min(allowed.night, day.nightMinutes);
+          roundedFacts.approved.holidayWithin8 += Math.min(allowed.holidayWithin8, day.holidayWithin8Minutes);
+          roundedFacts.approved.holidayOver8 += Math.min(allowed.holidayOver8, day.holidayOver8Minutes);
+        }
+        const leaveDays = leaveDaysFor(period, id);
+        let scheduleMinutes = 0;
+        const unconfirmedSchedule = new Set(s.unconfirmedDates);
+        for (let date = from; date <= last; date = addDays(date, 1)) {
+          const minutes = scheduledMinutes(period.planFor(id, date), date, leaveDays.get(date));
+          scheduleMinutes += minutes;
+          // 일정 기준 지급(SCHEDULE)에서만 휴가 시간이 지급 시간에 바로 쓰인다 — 그 밖의 계약은 막지 않는다 (2026-10-15)
+          if (con!.time_basis === 'SCHEDULE' && leaveDurationMismatch(period.planFor(id, date), date, leaveDays.get(date) ?? [])) pre.push({ code: 'leave_duration_mismatch', detail: date });
+          if (con!.time_basis === 'SCHEDULE' && minutes > 0 && !confirms.has(confirmKey(id, date))) unconfirmedSchedule.add(date);
+        }
+        const attendance = { ...att, rounded: roundedFacts, scheduleMinutes, unconfirmedDays: unconfirmedSchedule.size };
+        facts = attendance;
+        const t = timeFromAttendance(attendance, (con!.time_basis as 'ACTUAL' | 'ROUNDED' | 'SCHEDULE') ?? 'ACTUAL', contract.payType, 480, basis.premiumTimeBasis);
         time = t.time;
         pre.push(...t.blockers);
         if (att.unreviewedMinutes > 0) notes.push({ code: 'overtime_unreviewed', detail: String(att.unreviewedMinutes) });
@@ -240,16 +271,33 @@ async function buildInputs(run: RunRow): Promise<Built> {
       const amount = a.amount === null ? it.defaultAmount : Number(a.amount);
       if (amount === null) { pre.push({ code: 'item_amount_missing', detail: it.code }); continue; }
       const taxable = it.taxTreatment === 'EXEMPT' ? 'EXEMPT' : it.taxTreatment === 'PARTIAL' ? 'PARTIAL' : 'TAXABLE';
-      engineItems.push({ code: it.code, kind: it.kind, label: it.koName, amount, taxable, exemptLimit: it.taxExemptLimit, insurable: taxable !== 'EXEMPT', itemVersionId: it.id });
+      engineItems.push({ code: it.code, kind: it.kind, label: it.koName, amount, taxable, exemptLimit: it.taxExemptLimit, insurable: taxable !== 'EXEMPT', ordinaryWage: it.ordinaryWage, itemVersionId: it.id });
     }
     const overrides: EngineOverride[] = ((ovs ?? []) as Row[]).filter((o) => o.employee_id === id).map((o) => ({ id: o.id as string, itemCode: o.item_code as string, kind: o.kind as 'PAYMENT' | 'DEDUCTION', amount: Number(o.proposed_amount), label: itemAt(o.item_code as string)?.koName }));
     // 상여: 같은 달에 앞서 확정한 명세(정규 + 앞 차수 상여)의 과세 합계와 세액을 넘긴다 → 세금은 차액만. 4대보험은 상여 대장에서 계산하지 않는다(경고로 알린다)
     const prior = bonus ? (priorOf!.get(id) ?? (priorOf!.has('*') ? { taxable: 0, incomeTax: 0, localTax: 0 } : null)) : null;
-    const input: MemberInput['input'] = { runKind: bonus ? 'BONUS' : 'REGULAR', contract, tax, time, partialMonth, items: engineItems, policy, reference, insuranceBasis, overrides, prior, skipInsurance: bonus, minimumHourly: bonus ? null : minimumHourly };
-    members.push({ employeeId: id, input, pre, notes, closeId: (close?.id as string | undefined) ?? null, contractId: (con?.id as string | undefined) ?? null, taxId: (taxRow?.id as string | undefined) ?? null, snapshot: { contract, tax, time, attendance: facts, items: engineItems, overrides, partialMonth, prior, closeHash: close?.input_hash ?? null } });
+    const notice = noticeInputs.get(id);
+    if (!bonus && notice) pre.push(...notice.blockers);
+    if (!bonus && insuranceBasis === 'NOTICE' && overrides.some((o) => ['PENSION_SETTLE', 'HEALTH_SETTLE', 'EMPLOYMENT_SETTLE'].includes(o.itemCode))) pre.push({ code: 'notice_settlement_duplicate' });
+    const input: MemberInput['input'] = { runKind: bonus ? 'BONUS' : 'REGULAR', contract, tax, time, partialMonth, items: engineItems, policy, reference, insuranceBasis, notices: notice?.notices, overrides, prior, skipInsurance: bonus, minimumHourly: bonus ? null : minimumHourly };
+    members.push({ employeeId: id, input, pre, notes, closeId: (close?.id as string | undefined) ?? null, contractId: (con?.id as string | undefined) ?? null, taxId: (taxRow?.id as string | undefined) ?? null, snapshot: { contract, tax, time, attendance: facts, items: engineItems, notices: notice?.notices ?? null, overrides, partialMonth, prior, closeHash: close?.input_hash ?? null } });
   }
-  const inputHash = sha({ engine: ENGINE_VERSION, policy, insuranceBasis, bundle, members: members.map((x) => ({ id: x.employeeId, pre: x.pre, close: x.closeId, contract: x.contractId, tax: x.taxId, s: x.snapshot })) });
-  return { members, withholding, bundle, missing, inputHash };
+  const usedItems = items.filter((it) => members.some((m) => m.input.items.some((x) => x.itemVersionId === it.id)));
+  const usedRefs = Object.values(bundle).map((b) => basis.refs.find((r) => r.id === b.id)).filter((r) => !!r);
+  const unverified = [
+    ...(!basis.ledgerRow || basis.ledgerRow.verification !== 'VERIFIED' ? ['ledger'] : []),
+    ...basis.policies.filter((p) => p.inUse && p.verification !== 'VERIFIED').map((p) => p.kind),
+    ...usedItems.filter((i) => i.verification !== 'VERIFIED').map((i) => i.code),
+    ...usedRefs.filter((r) => r.verification !== 'VERIFIED').map((r) => r.kind),
+  ];
+  for (const member of members) {
+    if (unverified.length) member.notes.push({ code: 'basis_unverified', detail: unverified.join(', ') });
+    // 기간 중에 「앞 판을 바꾼」 판만 변경으로 본다 — 처음 만든 판(판 번호 1)이 기간 중 시작돼도 막지 않는다 (2026-10-15: 처음 저장한 급여대장 설정 때문에 그달 급여 전원이 막히던 회귀)
+    const changed = [...(basis.ledgerRow && basis.ledgerRow.version > 1 && basis.ledgerRow.validFrom > from ? ['ledger'] : []), ...basis.policies.filter((p) => p.inUse && p.version > 1 && p.validFrom > from).map((p) => p.kind), ...usedItems.filter((i) => i.version > 1 && i.validFrom > from && member.input.items.some((x) => x.itemVersionId === i.id)).map((i) => i.code)];
+    if (!bonus && changed.length) member.pre.push({ code: 'policy_changed_in_period', detail: changed.join(', ') });
+  }
+  const inputHash = sha({ unverified, premiumTimeBasis: basis.premiumTimeBasis, engine: ENGINE_VERSION, policy, insuranceBasis, bundle, members: members.map((x) => ({ id: x.employeeId, pre: x.pre, close: x.closeId, contract: x.contractId, tax: x.taxId, s: x.snapshot })) });
+  return { unverified, members, withholding, bundle, missing, inputHash };
 }
 
 /**
@@ -385,6 +433,8 @@ export async function finalizeRun(args: { id: string; expectedVersion: number; m
   const run = await must(args.id, args.expectedVersion);
   if (run.status !== 'REVIEWED') throw new ApiError(409, 'payroll_wrong_status');
   await ready(run);
+  // 운영 대장만 막는다 — 연습 대장은 미검증 기준으로도 확정해 흐름을 시험할 수 있다(명세에는 「미검증」 경고가 남는다) (2026-10-15)
+  if (!run.isTest && (await buildInputs(run)).unverified.length) throw new ApiError(409, 'payroll_basis_unverified');
   await setRun(run, { status: 'FINALIZED', finalized_by: args.me.id, finalized_at: new Date().toISOString() });
   await payrollAudit({ actorId: args.me.id, action: 'run.finalize', table: 'payroll_runs', subjectId: run.id, runId: run.id, requestId: args.requestId, detail: { generation: run.generationId } });
 }
@@ -402,26 +452,7 @@ export async function setMember(args: { id: string; employeeId: string; include:
 
 /** 금액 조정 — 자동 계산 금액을 직접 고치지 않고 따로 남긴다. 같은 항목의 앞 조정은 끈다. 다음 계산부터 반영된다 */
 export async function addOverride(args: { id: string; employeeId: string; itemCode: string; kind: 'PAYMENT' | 'DEDUCTION'; amount: number; reason: string; me: Me; requestId?: string }): Promise<void> {
-  const c = db();
-  const run = await loadRun(args.id);
-  if (!run) throw new ApiError(404, 'not_found');
-  if (run.status === 'FINALIZED') throw new ApiError(409, 'payroll_finalized');
-  const { data: mem } = await c.from('payroll_run_members').select('id').eq('run_id', run.id).eq('employee_id', args.employeeId).maybeSingle();
-  if (!mem) throw new ApiError(404, 'not_found');
-  let original: number | null = null;
-  if (run.generationId) {
-    const { data: st } = await c.from('payroll_statements').select('id').eq('generation_id', run.generationId).eq('employee_id', args.employeeId).maybeSingle();
-    if (st) {
-      const { data: line } = await c.from('payroll_statement_items').select('amount, source, calc_trace').eq('statement_id', st.id).eq('item_code', args.itemCode).eq('kind', args.kind).limit(1);
-      const l = line?.[0];
-      if (l) original = l.source === 'OVERRIDE' ? Number((l.calc_trace as { autoAmount?: number }).autoAmount ?? l.amount) : l.source === 'AUTO' ? Number(l.amount) : null;
-    }
-  }
-  const off = await c.from('payroll_statement_overrides').update({ active: false, updated_by: args.me.id }).eq('run_id', run.id).eq('employee_id', args.employeeId).eq('item_code', args.itemCode).eq('active', true);
-  if (off.error) fail('addOverride.off', off.error);
-  const { data, error } = await c.from('payroll_statement_overrides').insert({ run_id: run.id, employee_id: args.employeeId, item_code: args.itemCode, kind: args.kind, original_amount: original, proposed_amount: args.amount, reason: args.reason, created_by: args.me.id }).select('id').single();
-  if (error || !data) fail('addOverride', error);
-  await payrollAudit({ actorId: args.me.id, action: 'override.add', table: 'payroll_statement_overrides', subjectId: data!.id as string, runId: run.id, employeeId: args.employeeId, requestId: args.requestId, detail: { itemCode: args.itemCode, kind: args.kind } });
+  await atomicRpc('replace_payroll_override_atomic', { p_run: args.id, p_employee: args.employeeId, p_item: canonicalItemCode(args.itemCode), p_kind: args.kind, p_amount: args.amount, p_reason: args.reason, p_actor: args.me.id, p_request_id: args.requestId ?? null });
 }
 export async function withdrawOverride(args: { id: string; overrideId: string; me: Me; requestId?: string }): Promise<void> {
   const run = await loadRun(args.id);
@@ -456,7 +487,7 @@ export async function previewPay(employeeId: string, date: string): Promise<Engi
     const amount = a.amount ?? it?.defaultAmount ?? null;
     if (!it) pre.push({ code: 'item_missing', detail: a.itemCode });
     else if (amount === null) pre.push({ code: 'item_amount_missing', detail: it.code });
-    else items.push({ code: it.code, kind: it.kind, label: it.koName, amount, taxable: it.taxTreatment === 'EXEMPT' ? 'EXEMPT' : it.taxTreatment === 'PARTIAL' ? 'PARTIAL' : 'TAXABLE', exemptLimit: it.taxExemptLimit, insurable: it.taxTreatment !== 'EXEMPT', itemVersionId: it.id });
+    else items.push({ code: it.code, kind: it.kind, label: it.koName, amount, taxable: it.taxTreatment === 'EXEMPT' ? 'EXEMPT' : it.taxTreatment === 'PARTIAL' ? 'PARTIAL' : 'TAXABLE', exemptLimit: it.taxExemptLimit, insurable: it.taxTreatment !== 'EXEMPT', ordinaryWage: it.ordinaryWage, itemVersionId: it.id });
   }
   const one = (k: 'pension' | 'health' | 'employment' | 'accident') => ({ state: tax!.insurance[k].state, reportedWage: tax!.insurance[k].reportedWage });
   const rel = tax ? reliefsForMonth(tax.reliefs, basis.reliefOn, `${date.slice(0, 7)}-01`, date) : null;
@@ -556,3 +587,33 @@ export async function loadStatement(run: RunRow, employeeId: string): Promise<{ 
   };
 }
 export { nextDay };
+
+/** 같은 귀속월·연습 모드의 저장된 고지액. 중복·다른 대장 배정은 조용히 합산하지 않는다. */
+async function loadNoticeInputs(run: RunRow) {
+  const c = db();
+  const { data: files, error } = await c.from('payroll_insurance_notice_files').select('id, insurer').eq('notice_month', run.periodFrom).eq('is_test', run.isTest).eq('state', 'SAVED');
+  if (error) fail('noticeInputs.files', error);
+  const result = new Map<string, { notices: NonNullable<EngineInput['notices']>; blockers: Blocker[] }>();
+  if (!files?.length) return result;
+  const { data: rows, error: rowError } = await c.from('payroll_insurance_notices').select('id, file_id, employee_id, mapping_state, components').in('file_id', files.map((f) => f.id)).eq('mapping_state', 'MAPPED');
+  if (rowError) fail('noticeInputs.rows', rowError);
+  const ids = (rows ?? []).map((r) => r.id);
+  const allocations = ids.length ? await c.from('payroll_insurance_allocations').select('notice_id, run_id').in('notice_id', ids).eq('active', true) : { data: [], error: null };
+  if (allocations.error) fail('noticeInputs.allocations', allocations.error);
+  const keyOf: Record<string, 'pension' | 'health' | 'employment' | 'accident'> = { NP: 'pension', HI: 'health', EI: 'employment', IA: 'accident' };
+  for (const row of rows ?? []) {
+    if (!row.employee_id) continue;
+    const value = result.get(row.employee_id) ?? { notices: {}, blockers: [] };
+    result.set(row.employee_id, value);
+    const key = keyOf[files.find((f) => f.id === row.file_id)!.insurer];
+    if (!key) continue;
+    const components = row.components as Record<string, string>;
+    const employee = Number(components['employee.notice']);
+    const employer = components['employer.notice'] == null ? null : Number(components['employer.notice']);
+    if (!Number.isSafeInteger(employee) || employee < 0 || (employer !== null && (!Number.isSafeInteger(employer) || employer < 0))) { value.blockers.push({ code: 'notice_invalid', detail: key }); continue; }
+    if (value.notices[key]) { value.blockers.push({ code: 'notice_duplicate', detail: key }); continue; }
+    if (allocations.data?.some((a) => a.notice_id === row.id && a.run_id !== run.id)) { value.blockers.push({ code: 'notice_allocated_elsewhere', detail: key }); continue; }
+    value.notices[key] = { employee, employer, id: row.id };
+  }
+  return result;
+}

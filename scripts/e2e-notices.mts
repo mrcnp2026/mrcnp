@@ -58,7 +58,7 @@ await db.from('profiles').update({ active: true, role: 'admin', locale: 'ko' }).
 }
 
 const token = randomBytes(32).toString('base64url');
-await db.from('invites').insert({ employee_id: emp.id, token_hash: createHash('sha256').update(token).digest('hex'), issued_via: 'admin', expires_at: new Date(Date.now() + 3600e3).toISOString() });
+await db.from('invites').insert({ employee_id: emp.id, token_hash: createHash('sha256').update(token).digest('hex'), issued_via: 'emergency', expires_at: new Date(Date.now() + 3600e3).toISOString() });
 
 const browser = await chromium.launch({ channel: 'chrome', headless: true });
 let noticeId: string | null = null;

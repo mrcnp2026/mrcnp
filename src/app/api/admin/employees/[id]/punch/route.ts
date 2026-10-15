@@ -4,6 +4,7 @@
 // 시각·작성자·연습 여부는 서버가 정한다. 같은 날·같은 종류 기록이 이미 있으면 넣지 않는다.
 import { OFFICE } from '@/config/office';
 import { api, ApiError, readJson } from '@/lib/api';
+import { assertStaffTarget } from '@/lib/staff-data';
 import { requireAdmin } from '@/lib/auth';
 import { applyCorrections } from '@/lib/pairs';
 import { planProxyPunch } from '@/lib/proxy-punch';
@@ -17,7 +18,7 @@ export const POST = api<{ params: Promise<{ id: string }> }>('admin.proxy.punch'
   if (!me) throw new ApiError(403, 'forbidden');
   const { id } = await ctx.params;
   // 관리자가 자기 기록을 스스로 넣고 스스로 승인하지 못한다 — 본인 것은 정정 요청으로 보내고 다른 관리자가 처리한다
-  if (id === me.id) throw new ApiError(403, 'proxy_self');
+  await assertStaffTarget(me.id, id, 'approve');
   const b = await readJson(req);
   const reason = cleanText(b.reason);
   const practice = OFFICE.practiceMode;

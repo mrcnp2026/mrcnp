@@ -20,7 +20,7 @@ await db.from('profiles').update({ active: true, role: 'admin', locale: 'ko' }).
 // 이 검사는 예전 계산(받은 연차 입력) 경로를 본다 — 다른 검사가 남긴 승인된 지급 건이 있으면 원장 경로로 가므로 거둔다(검사 계정만)
 await db.from('leave_grant_lots').update({ state: 'WITHDRAWN' }).eq('employee_id', emp!.id).eq('state', 'APPROVED');
 const token = randomBytes(32).toString('base64url');
-await db.from('invites').insert({ employee_id: emp!.id, token_hash: createHash('sha256').update(token).digest('hex'), issued_via: 'admin', expires_at: new Date(Date.now() + 3600e3).toISOString() });
+await db.from('invites').insert({ employee_id: emp!.id, token_hash: createHash('sha256').update(token).digest('hex'), issued_via: 'emergency', expires_at: new Date(Date.now() + 3600e3).toISOString() });
 
 // 시험 날짜: 2년 뒤 첫 월요일 근처의 평일 (공휴일 표 밖일 수 있으니 월요일 고정)
 const d = new Date();
@@ -54,7 +54,7 @@ try {
   await db.auth.admin.updateUserById(other!.id, { ban_duration: 'none' });
   await db.from('profiles').update({ active: true, role: 'admin', locale: 'ko' }).eq('id', other!.id);
   const token2 = randomBytes(32).toString('base64url');
-  await db.from('invites').insert({ employee_id: other!.id, token_hash: createHash('sha256').update(token2).digest('hex'), issued_via: 'admin', expires_at: new Date(Date.now() + 3600e3).toISOString() });
+  await db.from('invites').insert({ employee_id: other!.id, token_hash: createHash('sha256').update(token2).digest('hex'), issued_via: 'emergency', expires_at: new Date(Date.now() + 3600e3).toISOString() });
   const p2 = await (await browser.newContext({ viewport: { width: 390, height: 844 } })).newPage();
   await p2.goto(`${BASE}/register?token=${token2}`);
   await createPassword(p2);

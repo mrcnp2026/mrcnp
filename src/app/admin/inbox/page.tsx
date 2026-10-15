@@ -2,6 +2,8 @@
 // 그날 근무노트를 연장 요청 옆에 보여 준다 (R-10-2의 8) — 사유로 자동 복사하지 않는다.
 // 누가·언제 처리했는지 항상 보인다 (R-2의 5).
 import { scopeFilter } from '@/lib/scope';
+import { distanceText } from '@/lib/geo';
+import { loadLocationsFor } from '@/lib/geo-data';
 import { X } from 'lucide-react';
 import { getFormatter, getTranslations } from 'next-intl/server';
 import { Pager, pageOf } from '@/components/Pager';
@@ -11,6 +13,7 @@ import { PlaceMap } from '@/components/PlaceMap';
 import { StatusCards } from '@/components/listframe';
 import { RequestTabs } from '@/components/RequestTabs';
 import { Card, Chip, PageShell } from '@/components/ui';
+import { leaveBalanceFor } from '@/lib/leave-balance-data';
 import { OFFICE } from '@/config/office';
 import { getMe } from '@/lib/auth';
 import { addDays } from '@/lib/calendar';
@@ -20,7 +23,7 @@ import { approvalBlocked } from '@/lib/staff-rules';
 import { createAdminClient } from '@/lib/supabase/admin';
 import { toKstDate } from '@/lib/time';
 import Link from 'next/link';
-import { leaveTypeName, calcLeaveBalance } from '@/lib/leave';
+import { leaveTypeName } from '@/lib/leave';
 import { loadAllLeaveTypes, loadLeaveGrants, loadLeaveRequests } from '@/lib/leave-data';
 import { loadRequests, REQUEST_WINDOW_DAYS } from '@/lib/request-data';
 import { fromOvertime, splitRequests } from '@/lib/requests';
@@ -93,6 +96,12 @@ export default async function InboxPage({ searchParams }: { searchParams: Promis
 
   const { data: punchRows } = await db.from('punch_requests').select(OFFICE.requestLocation ? 'id, employee_id, kind, requested_at, work_date, nearest_m, geo_reason, lat, lng' : 'id, employee_id, kind, requested_at, work_date, nearest_m, geo_reason').eq('is_test', practice).eq('status', 'pending').order('requested_at');
   const punchPending = ((punchRows ?? []) as unknown as { id: string; employee_id: string; kind: 'in' | 'out'; requested_at: string; work_date: string; nearest_m: number | null; geo_reason: string; lat?: number | null; lng?: number | null }[]).filter((r) => hit(r.employee_id) && only('punch', r.id));
+  // 요청한 사람에게 적용되는 출퇴근 장소(우측 패널 지도용) — 한 건 보기에서만 읽는다
+  const baseOf = new Map<string, Awaited<ReturnType<typeof loadLocationsFor>>[number]>();
+  if (focus) for (const id of new Set(punchPending.map((r) => r.employee_id))) {
+    const locs = (await loadLocationsFor(id)).filter((l) => l.active);
+    if (locs[0]) baseOf.set(id, locs[0]);
+  }
   const { data: shiftRows } = await db.from('shift_requests').select('id, employee_id, work_date, start_time, end_time, kind, reason').eq('is_test', practice).eq('status', 'pending').order('work_date');
   const shiftPending = ((shiftRows ?? []) as { id: string; employee_id: string; work_date: string; start_time: string; end_time: string; kind: string; reason: string | null }[]).filter((r) => hit(r.employee_id) && only('shift', r.id));
   const { data: delRows } = await db.from('leave_change_requests').select('id, employee_id, reason, leave_requests(type_code, start_date, end_date, days, start_time, end_time)').eq('is_test', practice).eq('status', 'pending').order('created_at');
@@ -121,15 +130,15 @@ export default async function InboxPage({ searchParams }: { searchParams: Promis
   const wkPage = pageOf(workPending, sp.wp, REQUEST_PAGE);
 
   // 상세(폰 화면 · PC 오른쪽 패널)의 카드가 쓰는 값
-  const lvRows = lvPage.items.map((r) => {
-    const bal = calcLeaveBalance({ grants: leaveGrants.filter((g) => g.employeeId === r.employeeId), requests: leaveAll.filter((x) => x.employeeId === r.employeeId), types: leaveTypes, asOf: r.startDate });
+  const lvRows = await Promise.all(lvPage.items.map(async (r) => {
+    const bal = await leaveBalanceFor({ employeeId: r.employeeId, practice, grants: leaveGrants.filter((g) => g.employeeId === r.employeeId), requests: leaveAll.filter((x) => x.employeeId === r.employeeId), types: leaveTypes, asOf: r.startDate });
     const deducts = leaveTypes.find((x) => x.code === r.typeCode)?.deductsBalance;
     const clash = [...new Set((leavePunches ?? []).filter((p) => p.employee_id === r.employeeId && p.work_date >= r.startDate && p.work_date <= r.endDate).map((p) => p.work_date))];
     const range = r.startDate === r.endDate ? `${dayLabel(r.startDate)}${r.startTime ? ` ${r.startTime}-${r.endTime}` : ''}` : `${dayLabel(r.startDate)} ~ ${dayLabel(r.endDate)}`;
     const summary = `${leaveName(r.typeCode)} ${tl('days', { n: nDays(r.days) })} (${range})`;
-    const balance = deducts ? (bal.grant ? t('leaveBalance', { remaining: nDays(bal.remaining), pending: nDays(bal.pending) }) : t('leaveNoGrant')) : null;
+    const balance = deducts ? (bal.grant || bal.ledger ? t('leaveBalance', { remaining: nDays(bal.remaining), pending: nDays(bal.pending) }) : t('leaveNoGrant')) : null;
     return { r, clash, range, summary, balance };
-  });
+  }));
   const wkRows = wkPage.items.map((w) => {
     const range = w.startDate === w.endDate ? dayLabel(w.startDate) : `${dayLabel(w.startDate)} ~ ${dayLabel(w.endDate)}`;
     return { w, when: `${range}${w.startTime ? ` ${w.startTime}~${w.endTime}` : ''}` };
@@ -369,7 +378,7 @@ export default async function InboxPage({ searchParams }: { searchParams: Promis
                     </span>
                     <span className="num text-sm">{dayLabel(r.work_date)} {hm(r.requested_at)}</span>
                   </div>
-                  <p className="num text-sm text-muted">{r.geo_reason === 'outside' && r.nearest_m !== null ? t('punchFar', { m: r.nearest_m }) : t(`punchWhy.${r.geo_reason}`)}</p>
+                  <p className="num text-sm text-muted">{r.geo_reason === 'outside' && r.nearest_m !== null ? t('punchFar', { m: distanceText(r.nearest_m) }) : t(`punchWhy.${r.geo_reason}`)}</p>
                   {/* 요청한 위치 지도 — 한 건 보기(상세)에서만, 위치를 남기는 설정이 켜져 있을 때만 */}
                   {focus && OFFICE.requestLocation &&
                     (typeof r.lat === 'number' && typeof r.lng === 'number' ? (
@@ -380,6 +389,17 @@ export default async function InboxPage({ searchParams }: { searchParams: Promis
                     ) : (
                       <p className="rounded-button bg-surface p-2 text-xs text-muted">{t('mapNone')}</p>
                     ))}
+                  {/* 기준 출퇴근 장소 지도 (2026-10-15 의뢰인: 우측 패널에 지도가 없다) — 요청한 사람의 위치는 위치 수집 결정(출퇴근-7) 전이라 저장하지 않으므로, 기준 장소와 거리만 보인다 */}
+                  {focus && !(OFFICE.requestLocation && typeof r.lat === 'number') && baseOf.get(r.employee_id) && (() => {
+                    const b = baseOf.get(r.employee_id)!;
+                    return (
+                      <div className="flex flex-col gap-1.5" data-base-map>
+                        <p className="text-xs font-semibold text-muted">{t('mapBase', { name: b.label ?? '', r: b.radiusM })}</p>
+                        <PlaceMap lat={b.lat} lng={b.lng} radiusM={b.radiusM} labels={{ zoomIn: t('zoomIn'), zoomOut: t('zoomOut'), credit: t('mapCredit'), map: t('map') }} />
+                        <p className="text-xs text-faint">{t('mapNoPoint')}</p>
+                      </div>
+                    );
+                  })()}
                   {cannot(r.employee_id) ? (r.employee_id === me.id ? ownNote : rankNote) : <LeaveDecision id={r.id} name={who} summary={what} url={`/api/admin/punch-requests/${r.id}/decide`} keys={['confirmPunch', 'confirmPunchReject']} />}
                 </li>
               );

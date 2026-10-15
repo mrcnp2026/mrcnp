@@ -22,20 +22,23 @@ describe('쉬운 숫자', () => {
 describe('열림 표', () => {
   const id = '11111111-1111-1111-1111-111111111111';
   it('서버가 만든 표를 서버와 미들웨어(Web Crypto)가 똑같이 확인한다', async () => {
-    const v = makeUnlock(id);
-    expect(unlockValid(v, id)).toBe(true);
-    expect(await unlockValidEdge(v, id)).toBe(true);
+    const v = makeUnlock(id, 'pin-version-1');
+    expect(unlockValid(v, id, 'pin-version-1')).toBe(true);
+    expect(unlockValid(v, id, 'pin-version-2')).toBe(false);
+    expect(await unlockValidEdge(v, id, 'pin-version-2')).toBe(false);
+    expect(await unlockValidEdge(v, id, undefined)).toBe(false);
+    expect(await unlockValidEdge(v, id, 'pin-version-1')).toBe(true);
   });
   it('다른 사람 · 시간이 지난 표 · 고친 표는 안 된다', async () => {
-    const v = makeUnlock(id, Date.now() - 31 * 60_000);
-    expect(unlockValid(v, id)).toBe(false);
-    expect(await unlockValidEdge(v, id)).toBe(false);
-    const ok = makeUnlock(id);
-    expect(unlockValid(ok, '22222222-2222-2222-2222-222222222222')).toBe(false);
+    const v = makeUnlock(id, 'pin-version-1', Date.now() - 31 * 60_000);
+    expect(unlockValid(v, id, 'pin-version-1')).toBe(false);
+    expect(await unlockValidEdge(v, id, 'pin-version-1')).toBe(false);
+    const ok = makeUnlock(id, 'pin-version-1');
+    expect(unlockValid(ok, '22222222-2222-2222-2222-222222222222', 'pin-version-1')).toBe(false);
     const [a, , s] = ok.split('.');
     const forged = `${a}.${Date.now() + 99 * 60_000}.${s}`;
-    expect(unlockValid(forged, id)).toBe(false);
-    expect(await unlockValidEdge(forged, id)).toBe(false);
+    expect(unlockValid(forged, id, 'pin-version-1')).toBe(false);
+    expect(await unlockValidEdge(forged, id, 'pin-version-1')).toBe(false);
   });
 });
 

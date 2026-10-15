@@ -63,7 +63,7 @@ await db.from('profiles').update({ active: true, role: 'admin', locale: 'ko', ca
   for (const n of live ?? []) await db.from('notice_reads').upsert({ notice_id: n.id, employee_id: emp!.id, version: n.version, shown_locale: 'ko' }, { onConflict: 'notice_id,employee_id,version', ignoreDuplicates: true });
 }
 const token = randomBytes(32).toString('base64url');
-await db.from('invites').insert({ employee_id: emp!.id, token_hash: createHash('sha256').update(token).digest('hex'), issued_via: 'admin', expires_at: new Date(Date.now() + 3600e3).toISOString() });
+await db.from('invites').insert({ employee_id: emp!.id, token_hash: createHash('sha256').update(token).digest('hex'), issued_via: 'emergency', expires_at: new Date(Date.now() + 3600e3).toISOString() });
 
 const browser = await chromium.launch({ channel: 'chrome', headless: true });
 try {
@@ -189,7 +189,7 @@ try {
   const slipId = fin!.id as string;
   await db.from('profiles').update({ active: true, role: 'employee', locale: 'ko' }).eq('id', other!.id);
   const token2 = randomBytes(32).toString('base64url');
-  await db.from('invites').insert({ employee_id: other!.id, token_hash: createHash('sha256').update(token2).digest('hex'), issued_via: 'admin', expires_at: new Date(Date.now() + 3600e3).toISOString() });
+  await db.from('invites').insert({ employee_id: other!.id, token_hash: createHash('sha256').update(token2).digest('hex'), issued_via: 'emergency', expires_at: new Date(Date.now() + 3600e3).toISOString() });
   const ctx2 = await browser.newContext({ viewport: { width: 1440, height: 900 } });
   const q = await ctx2.newPage();
   q.on('pageerror', (e) => errors.push(e.message));

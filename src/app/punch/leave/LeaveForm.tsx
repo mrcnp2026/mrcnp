@@ -91,7 +91,7 @@ export function LeaveForm({ today, types }: { today: string; types: { code: stri
         {oneDay && !cur?.startTime && (
           <label className="flex flex-col gap-1 text-sm text-muted">
             {t('startTime')}
-            <DateTimeInput name="startTime" type="time" className={`num ${field}`} />
+            <DateTimeInput name="startTime" type="time" required className={`num ${field}`} />
             <span className="text-xs text-faint">{t('startTimeHint', { h: cur?.hours ?? 0 })}</span>
           </label>
         )}

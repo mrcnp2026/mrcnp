@@ -3,6 +3,7 @@
 //   → 서버 화면·API는 매 요청마다 active를 보고(getMe), DB 직접 읽기도 정책이 막는다 (0015).
 // 사유는 필수이고 변경 기록에 남는다. 본인은 스스로 처리하지 못하고, 관리자가 2명 미만이 되면 차단한다 (R-2).
 import { api, ApiError, readJson } from '@/lib/api';
+import { assertStaffTarget } from '@/lib/staff-data';
 import { requireAdmin } from '@/lib/auth';
 import { auditStaffAction, loadStaff, revokePhones, setLoginBlocked } from '@/lib/staff-data';
 import { checkReinstate, checkResign, cleanReason } from '@/lib/staff-rules';
@@ -13,6 +14,7 @@ export const POST = api<{ params: Promise<{ id: string }> }>('admin.employees.st
   const me = await requireAdmin();
   if (!me) throw new ApiError(403, 'forbidden');
   const { id } = await ctx.params;
+  await assertStaffTarget(me.id, id);
   const b = await readJson(req);
   if (b.action !== 'resign' && b.action !== 'reinstate') throw new ApiError(400, 'invalid_input');
   const reason = cleanReason(b.reason);

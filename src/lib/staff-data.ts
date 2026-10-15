@@ -1,13 +1,13 @@
 // 직원 관리 — DB를 건드리는 쪽. 서버 전용. 판단은 staff-rules.ts가 한다.
 import 'server-only';
+import { readAll } from '@/lib/read-all';
 import { OFFICE } from '@/config/office';
 import { ApiError } from '@/lib/api';
-import { selfDecisionBlocked, type AdminLevel, type Staff } from '@/lib/staff-rules';
+import { approvalBlocked, checkPhoneRevoke, selfDecisionBlocked, type AdminLevel, type Staff } from '@/lib/staff-rules';
 import { createAdminClient } from '@/lib/supabase/admin';
 
 export async function loadStaff(): Promise<Staff[]> {
-  const { data, error } = await createAdminClient().from('profiles').select('id, role, active, can_view_payroll, employee_no, admin_level');
-  if (error) throw new Error(`loadStaff: ${error.code}`);
+  const { data } = await readAll((a,b) => createAdminClient().from('profiles').select('id, role, active, can_view_payroll, employee_no, admin_level').order('id').range(a,b));
   return (data ?? []).map((p) => {
     const level = p.role === 'admin' ? ((p.admin_level as AdminLevel | null) ?? (p.employee_no === OFFICE.ownerEmployeeNo ? 'ceo' : 'general')) : null;
     return { id: p.id, role: p.role, active: p.active, canViewPayroll: p.can_view_payroll, level, owner: level === 'super' || level === 'ceo' };
@@ -58,4 +58,17 @@ export async function resignChecklist(employeeId: string): Promise<{ overtime: n
     (await db.from(table).select('id', { count: 'exact', head: true }).eq('employee_id', employeeId).eq('status', 'pending').eq('is_test', practice)).count ?? 0;
   const [overtime, corrections, leave, work] = await Promise.all([count('overtime_requests'), count('punch_corrections'), count('leave_requests'), count('work_requests')]);
   return { overtime, corrections, leave, work };
+}
+
+/** 관리 작업의 대상과 현재 권한을 서버에서 확인한다. */
+export async function assertStaffTarget(actorId: string, employeeId: string, action: 'approve' | 'recover' | 'edit' = 'edit'): Promise<void> {
+  const all = await loadStaff();
+  const actor = all.find((s) => s.id === actorId);
+  const target = all.find((s) => s.id === employeeId);
+  if (!actor || !target) throw new ApiError(404, 'not_found');
+  if (!actor.active || actor.role !== 'admin') throw new ApiError(403, 'rank');
+  const code = action === 'approve' ? approvalBlocked(actor, target, all)
+    : action === 'recover' ? checkPhoneRevoke(actorId, employeeId, all)
+    : target.owner && !actor.owner ? 'owner_only' : null;
+  if (code) throw new ApiError(403, code);
 }

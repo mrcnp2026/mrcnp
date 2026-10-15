@@ -1,5 +1,6 @@
 // DB 행 → 계산 모듈 입력. 서버 전용. 계산은 순수함수(worktime·today·weekly-hours)가 하고 여기서는 읽기만 한다.
 import 'server-only';
+import { readAll } from '@/lib/read-all';
 import { cache } from 'react';
 import { resolveDayType } from '@/config/labor-rules';
 import { OFFICE } from '@/config/office';
@@ -22,11 +23,11 @@ import { calcWeek } from '@/lib/worktime';
  * 없으면 빈 배열 — ② 설정 화면 전에는 없을 수 있다. 0이나 기본값으로 지어내지 않는다 (7-14)
  */
 export const loadRuleVersions = cache(async (): Promise<RuleVersion[]> => {
-  const { data } = await createAdminClient()
+  const { data } = await readAll((a,b) => createAdminClient()
     .from('work_rules')
     .select('start_time, end_time, late_grace_min, break_start, break_end, extra_breaks, round_step_min, workdays, weekly_rest_day, effective_from')
     .eq('active', true)
-    .order('effective_from', { ascending: false });
+    .order('effective_from', { ascending: false }).order('id').range(a,b));
   return (data ?? []).map((d) => ({
     effectiveFrom: d.effective_from,
     rule: {
@@ -49,13 +50,13 @@ export async function loadActiveRule(): Promise<WorkRule | null> {
 }
 
 export async function loadHolidays(from: string, to: string): Promise<HolidayRow[]> {
-  const { data } = await createAdminClient().from('holidays').select('the_date, kind').gte('the_date', from).lte('the_date', to);
+  const { data } = await readAll((a,b) => createAdminClient().from('holidays').select('the_date, kind').gte('the_date', from).lte('the_date', to).order('the_date').range(a,b));
   return (data ?? []).map((h) => ({ date: h.the_date, kind: h.kind }));
 }
 
 /** 사무실 대역 = DB(office_networks, ②에서 화면으로 관리) + 열쇠 파일 OFFICE_CIDRS. 둘 다 쓴다 (교체가 아니라 추가, 9-5) */
 export async function officeCidrs(): Promise<{ cidr: string; label: string | null; from: 'db' | 'env' }[]> {
-  const { data } = await createAdminClient().from('office_networks').select('cidr, label').eq('active', true);
+  const { data } = await readAll((a,b) => createAdminClient().from('office_networks').select('cidr, label').eq('active', true).order('id').range(a,b));
   return [
     ...(data ?? []).map((r) => ({ cidr: String(r.cidr), label: r.label as string | null, from: 'db' as const })),
     ...OFFICE.allowedCidrs.map((c) => ({ cidr: c, label: null, from: 'env' as const })),
@@ -131,9 +132,10 @@ export async function loadEmployeeToday(employeeId: string, now: Date): Promise<
   const byDate = pairsByWorkDate(events, corrections);
   let pairs = byDate.get(workDate)?.pairs ?? [];
   // 간주 근무 (확정-7): 찍은 기록과 상관없이 일정 시간만큼 근무로 본다
+  // 떨어진 간주 일정(09~12시 · 15~18시)은 구간별로 — 사이 빈 시간을 근무로 세지 않는다 (문제 R24, 급여 · 집계와 같은 방식)
   if (plan.deemed) {
-    const v = deemedPair(plan.deemed, workDate, now);
-    if (v) pairs = [v];
+    const parts = (plan.deemedIntervals?.length ? plan.deemedIntervals : [plan.deemed]).map((iv) => deemedPair(iv, workDate, now)).filter((x): x is NonNullable<typeof x> => !!x);
+    if (parts.length) pairs = parts;
   }
   const c = classifyDay({ pairs, rule, dayType, workDate, now });
   const firstInRow = rows.find((r) => r.work_date === workDate && r.kind === 'in');

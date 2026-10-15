@@ -14,7 +14,8 @@ import { Pager, pageOf } from '@/components/Pager';
 import { Card, Chip, PageShell } from '@/components/ui';
 import { OFFICE } from '@/config/office';
 import { addDays } from '@/lib/calendar';
-import { leaveTypeName, calcLeaveBalance, suggestGrant } from '@/lib/leave';
+import { leaveTypeName, suggestGrant } from '@/lib/leave';
+import { leaveBalanceFor } from '@/lib/leave-balance-data';
 import { loadAllLeaveTypes, loadLeaveGrants, loadLeaveRequests } from '@/lib/leave-data';
 import { buildOrgTree, groupScope } from '@/lib/org';
 import { loadOrgGroups } from '@/lib/org-data';
@@ -48,7 +49,9 @@ export default async function AdminLeavePage({ searchParams }: { searchParams: P
   const q = (sp.q ?? '').trim().slice(0, 40);
   const shown = (ppl ?? []).filter((p) => inScope(p.id as string) && (!scope || (p.group_id && scope.has(p.group_id as string))) && (!q || (p.name as string).toLowerCase().includes(q.toLowerCase())));
   const byRole = (['admin', 'employee'] as const).map((role) => ({ role, list: shown.filter((p) => (p.role === 'admin') === (role === 'admin')) })).filter((x) => x.list.length > 0);
-  const balOf = (id: string) => calcLeaveBalance({ grants: grants.filter((x) => x.employeeId === id), requests: requests.filter((r) => r.employeeId === id), types, asOf });
+  const balances = new Map(await Promise.all((ppl ?? []).filter((p) => inScope(p.id)).map(async (p) => [p.id, await leaveBalanceFor({ employeeId: p.id, practice, grants: grants.filter((x) => x.employeeId === p.id), requests: requests.filter((r) => r.employeeId === p.id), types, asOf })] as const)));
+  const balOf = (id: string) => balances.get(id)!;
+  const todayBalances = asOf === today ? balances : new Map(await Promise.all((ppl ?? []).filter((p) => inScope(p.id)).map(async (p) => [p.id, await leaveBalanceFor({ employeeId: p.id, practice, grants: grants.filter((x) => x.employeeId === p.id), requests: requests.filter((r) => r.employeeId === p.id), types, asOf: today })] as const)));
   // 직원을 눌러도 검색 · 거르기 · 기준일은 그대로 둔다
   const pick = (id: string) => {
     const u = new URLSearchParams({ e: id });
@@ -233,7 +236,7 @@ export default async function AdminLeavePage({ searchParams }: { searchParams: P
                   </td>
                   <td className="px-4 py-3 num text-muted">{(p.joined_on as string | null) ?? '–'}</td>
                   <td className="px-4 py-3 num text-muted">{bal.grant?.periodLabel ?? '–'}</td>
-                  {bal.grant ? (
+                  {bal.grant || bal.ledger ? (
                     ([bal.granted, bal.used, bal.pending, bal.remaining] as const).map((v, i) => (
                       <td key={i} className={`px-4 py-3 num text-right ${i === 3 ? 'font-bold text-primary' : ''}`}>{n(v)}</td>
                     ))
@@ -277,7 +280,7 @@ export default async function AdminLeavePage({ searchParams }: { searchParams: P
                   <li key={p.id}>
                     <Link href={pick(p.id)} scroll={false} aria-current={on ? 'true' : undefined} className={`num flex min-h-14 items-center gap-2 px-5 py-2 ${on ? 'bg-primary-tint' : ''}`}>
                       <span className="min-w-0 flex-1 truncate text-base font-bold">{p.name}</span>
-                      {bal.grant ? (
+                      {bal.grant || bal.ledger ? (
                         ([bal.granted, bal.used, bal.remaining] as const).map((v, i) => (
                           <span key={i} className={`w-12 text-right ${i === 2 ? (v < 0 ? 'text-danger' : 'text-primary') : ''}`}>{n(v)}</span>
                         ))
@@ -296,9 +299,8 @@ export default async function AdminLeavePage({ searchParams }: { searchParams: P
 
       {practice && <p className="mt-3 rounded-card bg-primary-tint lg:mt-0 p-3 text-sm text-primary">{t('practiceBanner')}</p>}
       <section id="edit" className="mt-3 flex scroll-mt-32 flex-col gap-3 lg:mt-0">
-        {(ppl ?? []).map((p) => {
-          const mine = grants.filter((g) => g.employeeId === p.id);
-          const bal = calcLeaveBalance({ grants: mine, requests: requests.filter((r) => r.employeeId === p.id), types, asOf: today });
+        {(ppl ?? []).filter((p) => inScope(p.id)).map((p) => {
+          const bal = todayBalances.get(p.id)!;
           const hiredOn = p.joined_on as string | null;
           const ref = hiredOn ? suggestGrant(hiredOn, today) : null;
           return (
@@ -312,7 +314,7 @@ export default async function AdminLeavePage({ searchParams }: { searchParams: P
               <Link href={`/admin/leave/emp/${p.id}${asOf === today ? '' : `?to=${asOf}`}`} className="inline-flex min-h-11 items-center self-start text-sm font-bold text-primary">
                 {t('toAccrual')} ›
               </Link>
-              {bal.grant ? (
+              {bal.grant || bal.ledger ? (
                 <dl className="num grid grid-cols-4 gap-2 text-center">
                   {(
                     [

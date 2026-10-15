@@ -16,7 +16,7 @@ export default async function HomeSettingsPage() {
   if (!me) redirect('/login');
   const t = await getTranslations('home.settings');
   const on = homeCardsOn((await cookies()).get(HOME_COOKIE)?.value);
-  const cards = HOME_CARDS.filter((k) => me.role === 'admin' || !ADMIN_ONLY.includes(k));
+  const cards = HOME_CARDS.filter((k) => !ADMIN_ONLY.includes(k)); // 관리자용 카드는 직원 홈에서 뺐다(2026-10-15) — 관리자 모드 「오늘 현황」에 있다
   return (
     <PageShell>
       <DetailBar back="/punch" backLabel={t('back')} title={t('title')} />

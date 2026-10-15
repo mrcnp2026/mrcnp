@@ -1,6 +1,8 @@
 // 초대 QR 발급·직원 추가. 서버 전용 (관리자 API와 비상 스크립트가 함께 쓴다).
 import 'server-only';
 import QRCode from 'qrcode';
+import { ApiError } from '@/lib/api';
+import { assertStaffTarget } from '@/lib/staff-data';
 import { OFFICE } from '@/config/office';
 import { COLORS } from '@/config/theme';
 import { formatInviteCode, newInviteCode } from '@/lib/invite-code';
@@ -22,6 +24,10 @@ export async function issueInvite(args: {
   issuedBy: string | null;
   via: 'admin' | 'emergency';
 }): Promise<IssuedInvite> {
+  if (args.via === 'admin') {
+    if (!args.issuedBy) throw new ApiError(403, 'forbidden');
+    await assertStaffTarget(args.issuedBy, args.employeeId, 'recover');
+  }
   const db = createAdminClient();
   const now = new Date();
   const { error: e1 } = await db

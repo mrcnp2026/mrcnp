@@ -17,7 +17,7 @@ const db = createClient(process.env.NEXT_PUBLIC_SUPABASE_URL!, process.env.SUPAB
 const { data: e } = await db.from('profiles').select('id, can_view_payroll').eq('employee_no', 'e2e-audit').single();
 await db.from('profiles').update({ active: true, role: 'admin', locale: 'ko', can_view_payroll: true }).eq('id', e!.id);
 const token = randomBytes(32).toString('base64url');
-await db.from('invites').insert({ employee_id: e!.id, token_hash: createHash('sha256').update(token).digest('hex'), issued_via: 'admin', expires_at: new Date(Date.now() + 3600e3).toISOString() });
+await db.from('invites').insert({ employee_id: e!.id, token_hash: createHash('sha256').update(token).digest('hex'), issued_via: 'emergency', expires_at: new Date(Date.now() + 3600e3).toISOString() });
 
 // 묶음 제목(예: 근무일정 › 달력형)이 있는 항목은 화면 제목이 묶음 제목이어도 맞는 것으로 본다. 관리자 홈은 현황판이라 뺀다
 type K = { frame: { item: Record<string, string>; app: Record<string, string>; group: Record<string, string> } };

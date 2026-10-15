@@ -1,6 +1,7 @@
 // 요청 한 줄 (의뢰인 2026-10-10: 시프티의 요청 목록처럼) — 종류 아이콘 · 「종류 · 구분」 · 내용 · 상태 배지 · 처리한 사람·시각 · 「2일 전」.
 // 직원의 「내 요청」과 관리자의 「완료」가 같이 쓴다 (관리자 쪽은 누구의 요청인지 이름이 붙는다).
 import { CalendarDays, CalendarRange, CalendarX, Clock, MapPin, MapPinOff, PencilLine, type LucideIcon } from 'lucide-react';
+import { distanceText } from '@/lib/geo';
 import { getFormatter, getTranslations } from 'next-intl/server';
 import Link from 'next/link';
 import { ClickRow } from '@/components/ClickRow';
@@ -32,7 +33,7 @@ export async function RequestRows({ items, leaveTypes, names, showName = false, 
     r.kind === 'punch' ? null : r.kind === 'shift' ? (r.sub && SHIFT_KIND.has(r.sub) ? t(`shiftKind.${r.sub}`) : null) : r.kind === 'correction' ? (r.sub ? tco(`type.${r.sub}`) : null) : r.kind === 'leave' || r.kind === 'leaveDelete' ? (r.sub ? leaveTypeName(leaveTypes, r.sub, tl) : null) : r.kind === 'work' ? (r.sub ? tw(`kind.${r.sub}`) : null) : null;
   const detail = (r: ReqItem) =>
     r.kind === 'punch'
-      ? `${day(r.date)}${r.newAt ? ` ${clock(r.newAt)}` : ''} · ${r.meters !== null && r.sub === 'outside' ? t('punchFar', { m: r.meters }) : t(`punchWhy.${r.sub ?? 'no_fix'}`)}`
+      ? `${day(r.date)}${r.newAt ? ` ${clock(r.newAt)}` : ''} · ${r.meters !== null && r.sub === 'outside' ? t('punchFar', { m: distanceText(r.meters) }) : t(`punchWhy.${r.sub ?? 'no_fix'}`)}`
       : r.kind === 'correction'
       ? `${day(r.date)}${r.punchKind ? ` · ${t(`punch.${r.punchKind}`)}` : ''}${r.newAt ? ` ${clock(r.newAt)}` : ''}`
       : r.kind === 'overtime'

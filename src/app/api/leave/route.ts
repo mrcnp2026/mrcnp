@@ -4,12 +4,13 @@ import { checkTypeRule, isTypeTarget, offWeekday } from '@/lib/leave-ledger';
 import { groupScope } from '@/lib/org';
 import { loadOrgGroups } from '@/lib/org-data';
 import { loadTypeRules } from '@/lib/leave-ledger-data';
+import { leaveDurationMismatch, leaveWindowForPlan } from '@/lib/payroll/engine/scheduled-attendance';
 import { OFFICE } from '@/config/office';
 import { api, ApiError, readJson } from '@/lib/api';
 import { getMe } from '@/lib/auth';
 import { addDays } from '@/lib/calendar';
-import { calcLeaveBalance, countLeaveDays, leaveWindow, roundDays } from '@/lib/leave';
-import { dayTypeResolver, loadAllLeaveTypes, loadLeaveGrants, loadLeaveRequests, loadLeaveTypes } from '@/lib/leave-data';
+import { calcLeaveBalance, countLeaveDays, leaveTimesOverlap, leaveWindow, roundDays } from '@/lib/leave';
+import { loadLeaveCalendar, loadAllLeaveTypes, loadLeaveGrants, loadLeaveRequests, loadLeaveTypes } from '@/lib/leave-data';
 import { ledgerFor } from '@/lib/leave-ledger-data';
 import { createAdminClient } from '@/lib/supabase/admin';
 import { cleanText } from '@/lib/text';
@@ -32,13 +33,23 @@ export const POST = api('leave.create', async (req) => {
   const today = toKstDate(new Date());
   if (start < addDays(today, -PAST_LIMIT_DAYS)) throw new ApiError(400, 'too_old');
   // 시각: 종류에 정해져 있으면 그것, 아니면 하루보다 짧은 종류에 한해 직원이 적은 시작 시각 (안 적어도 된다)
-  const win = leaveWindow(type, b.startTime);
+  let win = leaveWindow(type, b.startTime);
   if (!win.ok) throw new ApiError(400, 'invalid_time');
   const reason = cleanText(b.reason);
   if (reason.length > 200) throw new ApiError(400, 'invalid_input');
 
-  const dayTypeOf = await dayTypeResolver(start, end);
-  if (!dayTypeOf) throw new ApiError(409, 'no_rule');
+  const calendar = await loadLeaveCalendar(start, end, me.id);
+  if (!calendar) throw new ApiError(409, 'no_rule');
+  const { dayTypeOf, planOf } = calendar;
+  if (type.dayUnit < 1 && !type.startTime) {
+    if (typeof b.startTime !== 'string') throw new ApiError(400, 'invalid_time');
+    const window = leaveWindowForPlan(planOf(start), start, type.hours ?? type.dayUnit * 8, b.startTime);
+    if (!window) throw new ApiError(400, 'invalid_time');
+    win = { ok: true, ...window };
+  }
+  const workDates: string[] = [];
+  for (let d = start; d <= end; d = addDays(d, 1)) if (dayTypeOf(d) === 'workday') workDates.push(d);
+  if (workDates.some((date) => leaveDurationMismatch(planOf(date), date, [{ typeCode: type.code, isPaid: type.isPaid, unit: type.dayUnit, requestId: '', startTime: win.startTime, endTime: win.endTime }]))) throw new ApiError(400, 'leave_duration_mismatch');
   const days = countLeaveDays({ type, startDate: start, endDate: end, dayTypeOf });
   if (days <= 0) throw new ApiError(400, 'no_workdays');
 
@@ -62,7 +73,9 @@ export const POST = api('leave.create', async (req) => {
   const unitOf = (code: string) => types.find((t) => t.code === code)?.dayUnit ?? 1;
   for (let d = start; d <= end; d = addDays(d, 1)) {
     if (dayTypeOf(d) !== 'workday') continue;
-    const taken = mine.filter((r) => (r.status === 'pending' || r.status === 'approved') && r.startDate <= d && r.endDate >= d).reduce((a, r) => a + unitOf(r.typeCode), 0);
+    const onDay = mine.filter((r) => (r.status === 'pending' || r.status === 'approved') && r.startDate <= d && r.endDate >= d && (!r.workDates || r.workDates.includes(d)));
+    if (onDay.some((r) => leaveTimesOverlap(win, r))) throw new ApiError(409, 'duplicate_request');
+    const taken = onDay.reduce((a, r) => a + (r.typeSnapshot?.dayUnit ?? unitOf(r.typeCode)), 0);
     if (roundDays(taken + type.dayUnit) > 1) throw new ApiError(409, 'duplicate_request');
   }
 
@@ -71,7 +84,7 @@ export const POST = api('leave.create', async (req) => {
     // 원장을 시작한 직원은 원장 잔여로 본다(2026-10-15). 아직이면 예전 계산(받은 연차 입력)
     const led = await ledgerFor(me.id, start, OFFICE.practiceMode);
     if (led) {
-      const pending = all.filter((r) => r.status === 'pending' && types.find((x) => x.code === r.typeCode)?.deductsBalance).reduce((a, r) => a + r.days, 0);
+      const pending = all.filter((r) => r.status === 'pending' && (r.typeSnapshot?.deductsBalance ?? types.find((x) => x.code === r.typeCode)?.deductsBalance)).reduce((a, r) => a + r.days, 0);
       if (roundDays(led.remainingDays - pending - days) < -led.advanceMaxDays) throw new ApiError(409, 'insufficient_balance');
     } else {
       const bal = calcLeaveBalance({ grants: await loadLeaveGrants(me.id), requests: all, types, asOf: start });
@@ -83,11 +96,13 @@ export const POST = api('leave.create', async (req) => {
   const { data, error } = await createAdminClient()
     .from('leave_requests')
     .insert({
-      employee_id: me.id, type_code: type.code, start_date: start, end_date: end, days, reason: reason || null, start_time: win.startTime, end_time: win.endTime,
+      employee_id: me.id, type_code: type.code, work_dates: workDates, start_date: start, end_date: end, days, reason: reason || null, start_time: win.startTime, end_time: win.endTime,
       status: 'pending', requested_by: me.id, is_test: OFFICE.practiceMode,
     })
     .select('id')
     .single();
+  if (error?.code === 'PGRST204' || error?.code === '42703') throw new ApiError(503, 'db_update_required');
+  if (error?.code === 'P0001' && ['duplicate_request','day_confirmed','period_locked'].includes(error.message)) throw new ApiError(409, error.message);
   if (error) throw new Error(`leave.insert: ${error.code}`);
   return { id: data.id, days };
 });

@@ -39,7 +39,7 @@ async function freshInvite(employeeId: string) {
   await db.from('user_passkeys').update({ revoked_at: new Date().toISOString() }).eq('employee_id', employeeId).is('revoked_at', null).gte('created_at', STARTED_AT);
   await db.from('invites').update({ revoked_at: new Date().toISOString() }).eq('employee_id', employeeId).is('used_at', null).is('revoked_at', null);
   const token = randomBytes(32).toString('base64url');
-  await db.from('invites').insert({ employee_id: employeeId, token_hash: createHash('sha256').update(token).digest('hex'), issued_via: 'admin', expires_at: new Date(Date.now() + 3_600_000).toISOString() });
+  await db.from('invites').insert({ employee_id: employeeId, token_hash: createHash('sha256').update(token).digest('hex'), issued_via: 'emergency', expires_at: new Date(Date.now() + 3_600_000).toISOString() });
   return token;
 }
 

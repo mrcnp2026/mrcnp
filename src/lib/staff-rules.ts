@@ -13,6 +13,11 @@ export const REASON_MAX = 200;
 // 권한 5단계 (2026-10-15 의뢰인, 결정 사항 개발-39 · DB 묶음 11): 관리자 안의 구분 level — super 최고관리자 · ceo 대표자 · general 총괄관리자.
 //   owner = 최고관리자 또는 대표자(「최상위」) — 모든 승인 · 수정, 본인 것도. 각 1명.
 export type AdminLevel = 'super' | 'ceo' | 'general';
+/** 다섯 등급 (개발-39) — 화면 · API가 같은 이름을 쓴다 */
+export type Grade = 'super' | 'ceo' | 'general' | 'manager' | 'employee';
+export function gradeOf(s: Pick<Staff, 'role' | 'level'>): Grade {
+  return s.role === 'admin' ? (s.level ?? 'general') : s.role;
+}
 export type Staff = { id: string; role: 'admin' | 'manager' | 'employee'; active: boolean; canViewPayroll: boolean; owner?: boolean; level?: AdminLevel | null };
 export type StaffRuleCode =
   | 'self_change' // 본인 것은 스스로 못 바꾼다
@@ -57,6 +62,7 @@ export function checkReinstate(actorId: string, target: Staff): StaffRuleCode | 
 /** 관리자 지정·해제, 급여 담당 지정·해제. 바꾸지 않는 값은 undefined */
 export function checkRoleChange(args: { actor: Staff; target: Staff; all: Staff[]; role?: 'admin' | 'manager' | 'employee'; canViewPayroll?: boolean }): { code: StaffRuleCode } | { next: Staff } {
   const { actor, target, all } = args;
+  if (!actor.active || actor.role !== 'admin') return { code: 'rank' };
   if (target.id === actor.id) return { code: 'self_change' };
   if (target.owner && !actor.owner) return { code: 'owner_only' };
   if (!target.active) return { code: 'employee_inactive' };
@@ -82,6 +88,9 @@ export function checkPhoneRevoke(actorId: string, targetId: string, all: Staff[]
  * 관리자가 혼자면 해 줄 사람이 없어 폰을 바꿀 길이 막히므로 허용한다 (변경 기록에는 본인이 했다고 남는다).
  */
 export function checkDeviceRevoke(actorId: string, targetId: string, all: Staff[]): StaffRuleCode | null {
+  const actor = all.find((s) => s.id === actorId);
+  if (!actor?.active || actor.role !== 'admin') return 'rank';
+  if (isOwner(all, targetId) && !actor.owner) return 'owner_only';
   if (actorId !== targetId) return null;
   if (isOwner(all, actorId)) return null;
   return all.some((s) => s.id !== actorId && s.active && s.role === 'admin') ? 'self_change' : null;
@@ -108,6 +117,7 @@ export function selfDecisionBlocked(actorId: string, employeeId: string, all: St
  *   지점관리자: 일반직원 것만 (맡은 지점인지는 scope.ts가 본다). 본인 것은 못 함
  */
 export function approvalBlocked(actor: Staff, target: Staff, all: Staff[]): 'self_decision' | 'rank' | null {
+  if (!actor.active) return 'rank';
   if (actor.role === 'admin' && actor.owner) return null;
   if (actor.role === 'admin') {
     if (target.id !== actor.id && target.owner) return 'rank';
@@ -122,7 +132,7 @@ export function approvalBlocked(actor: Staff, target: Staff, all: Staff[]): 'sel
 
 /** 관리자 구분(최고관리자 · 대표자 · 총괄관리자) 바꾸기 — 최고관리자 · 대표자만, 자기 것은 못 바꾼다(스스로 잠김 방지) */
 export function checkLevelChange(actor: Staff, target: Staff, level: AdminLevel): StaffRuleCode | null {
-  if (!actor.owner || actor.role !== 'admin') return 'owner_only';
+  if (!actor.active || !actor.owner || actor.role !== 'admin') return 'owner_only';
   if (target.id === actor.id) return 'self_change';
   if (!target.active) return 'employee_inactive';
   if (target.role !== 'admin') return 'rank';

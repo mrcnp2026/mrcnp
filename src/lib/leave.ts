@@ -9,7 +9,8 @@ import type { DayType, WorkRule } from '@/lib/types';
 export type LeaveType = { code: string; name: string; nameEn?: string | null; isPaid: boolean; deductsBalance: boolean; dayUnit: number; hours?: number; startTime?: string | null; endTime?: string | null; groupName?: string | null; builtin?: boolean; active?: boolean };
 export type LeaveGrant = { id: string; employeeId: string; periodLabel: string; grantedDays: number; carriedDays: number; basis: 'hire_date' | 'fiscal_year'; effectiveFrom: string; note: string | null };
 export type LeaveStatus = 'pending' | 'approved' | 'rejected' | 'cancelled';
-export type LeaveRequest = { id: string; employeeId: string; typeCode: string; startDate: string; endDate: string; days: number; reason: string | null; status: LeaveStatus; startTime?: string | null; endTime?: string | null; createdAt?: string; decidedAt?: string | null; approvedBy?: string | null };
+export type LeaveTypeSnapshot = Pick<LeaveType, 'isPaid' | 'deductsBalance' | 'dayUnit' | 'hours'>;
+export type LeaveRequest = { typeSnapshot?: LeaveTypeSnapshot | null; workDates?: string[] | null; id: string; employeeId: string; typeCode: string; startDate: string; endDate: string; days: number; reason: string | null; status: LeaveStatus; startTime?: string | null; endTime?: string | null; createdAt?: string; decidedAt?: string | null; approvedBy?: string | null };
 
 /** 소수 일수의 부동소수점 찌꺼기 제거. 30분 = 0.0625일이라 넷째 자리까지 둔다 */
 export const roundDays = (n: number) => Math.round(n * 10000) / 10000;
@@ -27,7 +28,7 @@ export function calcLeaveBalance(args: { grants: LeaveGrant[]; requests: LeaveRe
   const grant = sorted[idx];
   const until = sorted[idx + 1]?.effectiveFrom ?? '9999-12-31';
   const deducts = new Set(args.types.filter((t) => t.deductsBalance).map((t) => t.code));
-  const inPeriod = args.requests.filter((r) => deducts.has(r.typeCode) && r.startDate >= grant.effectiveFrom && r.startDate < until);
+  const inPeriod = args.requests.filter((r) => (r.typeSnapshot?.deductsBalance ?? deducts.has(r.typeCode)) && r.startDate >= grant.effectiveFrom && r.startDate < until);
   const sum = (s: LeaveStatus) => roundDays(inPeriod.filter((r) => r.status === s).reduce((a, r) => a + r.days, 0));
   const granted = roundDays(grant.grantedDays + grant.carriedDays);
   const used = sum('approved');
@@ -87,11 +88,11 @@ export function leaveByDate(args: { requests: LeaveRequest[]; types: LeaveType[]
   const out = new Map<string, LeaveOnDay[]>();
   for (const r of args.requests) {
     if (r.status !== 'approved') continue;
-    const t = typeOf.get(r.typeCode);
+    const t = r.typeSnapshot ? { code: r.typeCode, ...r.typeSnapshot } : typeOf.get(r.typeCode);
     if (!t) continue;
     for (let d = r.startDate; d <= r.endDate; d = addDays(d, 1)) {
       if ((args.from && d < args.from) || (args.to && d > args.to)) continue;
-      if (args.dayTypeOf(d) !== 'workday') continue;
+      if (r.workDates ? !r.workDates.includes(d) : args.dayTypeOf(d) !== 'workday') continue;
       out.set(d, [...(out.get(d) ?? []), { typeCode: t.code, isPaid: t.isPaid, unit: t.dayUnit, requestId: r.id, startTime: r.startTime ?? null, endTime: r.endTime ?? null }]);
     }
   }
@@ -125,6 +126,7 @@ export function validateLeaveType(b: Record<string, unknown>): { ok: true; value
   const et = b.endTime === undefined || b.endTime === null || b.endTime === '' ? null : b.endTime;
   if ((st === null) !== (et === null)) return { ok: false, code: 'invalid_time' };
   if (st !== null && (typeof st !== 'string' || typeof et !== 'string' || !HM.test(st) || !HM.test(et) || st >= et)) return { ok: false, code: 'invalid_time' };
+  if (typeof st === 'string' && typeof et === 'string' && toMin(et) - toMin(st) < hours * 60) return { ok: false, code: 'invalid_time' };
   const g = b.groupName === undefined || b.groupName === null ? '' : typeof b.groupName === 'string' ? b.groupName.trim() : null;
   if (g === null || g.length > 40) return { ok: false, code: 'invalid_input' };
   if (typeof b.isPaid !== 'boolean' || typeof b.deductsBalance !== 'boolean') return { ok: false, code: 'invalid_input' };
@@ -194,9 +196,14 @@ export function monthlyLeaveUse(requests: readonly LeaveRequest[], types: readon
     const m = out[Number(r.startDate.slice(5, 7)) - 1];
     if (r.status === 'pending') m.pending = roundDays(m.pending + r.days);
     else if (r.status === 'approved') {
-      if (deducts.get(r.typeCode) ?? true) m.deducted = roundDays(m.deducted + r.days);
+      if (r.typeSnapshot?.deductsBalance ?? deducts.get(r.typeCode) ?? true) m.deducted = roundDays(m.deducted + r.days);
       else m.other = roundDays(m.other + r.days);
     }
   }
   return out;
+}
+
+/** 시각이 있는 신청끼리의 겹침. 경계가 맞닿는 두 휴가는 허용한다. */
+export function leaveTimesOverlap(a: { startTime?: string | null; endTime?: string | null }, b: { startTime?: string | null; endTime?: string | null }): boolean {
+  return !!(a.startTime && a.endTime && b.startTime && b.endTime && a.startTime < b.endTime && b.startTime < a.endTime);
 }

@@ -20,7 +20,7 @@ await db.from('profiles').update({ active: true, role: 'admin', locale: 'ko', sh
   for (const n of live ?? []) await db.from('notice_reads').upsert({ notice_id: n.id, employee_id: emp!.id, version: n.version, shown_locale: 'ko' }, { onConflict: 'notice_id,employee_id,version', ignoreDuplicates: true });
 }
 const token = randomBytes(32).toString('base64url');
-await db.from('invites').insert({ employee_id: emp!.id, token_hash: createHash('sha256').update(token).digest('hex'), issued_via: 'admin', expires_at: new Date(Date.now() + 3600e3).toISOString() });
+await db.from('invites').insert({ employee_id: emp!.id, token_hash: createHash('sha256').update(token).digest('hex'), issued_via: 'emergency', expires_at: new Date(Date.now() + 3600e3).toISOString() });
 
 let fails = 0;
 const check = (ok: boolean, what: string, extra = '') => {
@@ -46,13 +46,8 @@ try {
   await p.goto(`${BASE}/punch`);
   await p.waitForLoadState('networkidle');
 
-  // ── 현재 근무 상황 ──
-  const card = p.getByRole('heading', { name: '현재 근무 상황' }).locator('xpath=ancestor::*[.//dl][1]');
-  check((await p.getByRole('heading', { name: '현재 근무 상황' }).count()) === 1, '관리자 홈에 「현재 근무 상황」 카드');
-  const names = await card.locator('dt').allTextContents();
-  check(['근무중', '무일정', '간주근로', '지각', '휴가'].every((x) => names.includes(x)), '근무중 · 무일정 · 간주근로 · 지각 · 휴가 인원수', names.join(','));
-  check((await card.locator('dd').allTextContents()).every((x) => /^\d+$/.test(x.trim())), '칸마다 숫자');
-  check((await card.getByRole('link', { name: /자세히 보기/ }).getAttribute('href')) === '/admin' && (await card.getByText(/\d{2}:\d{2} 기준/).count()) === 1, '불러온 시각 · [자세히 보기] → 현황');
+  // ── 직원 홈은 본인 업무만 (2026-10-15 의뢰인: 리포트 · 누락 기록 바로가기와 회사 「현재 근무 상황」은 관리자 모드 「오늘 현황」에 있다) ──
+  check((await p.getByRole('heading', { name: '현재 근무 상황' }).count()) === 0 && (await p.locator('main a[href="/admin/missing"]').count()) === 0 && (await p.locator('main a[href="/admin"]').count()) === 0, '관리자 계정이어도 직원 홈에 관리자 카드 · 바로가기가 없다');
   await shot('40-홈');
 
   // ── 주 고르기 ──
@@ -79,24 +74,22 @@ try {
   await p.waitForLoadState('networkidle');
   await p.waitForTimeout(500);
   const sw = p.getByRole('switch');
-  check((await sw.count()) === 5 && (await p.locator('header').locator('visible=true').count()) === 0, '홈 설정: 카드 5개 스위치 (← 제목 줄)', String(await sw.count()));
+  check((await sw.count()) === 2 && (await p.locator('header').locator('visible=true').count()) === 0, '홈 설정: 본인 카드 2개 스위치(이번주 근무 · 근무노트) (← 제목 줄)', String(await sw.count()));
   await shot('42-홈-설정');
-  await p.getByRole('switch', { name: '현재 근무 상황 카드' }).click();
   await p.getByRole('switch', { name: '이번주 근무 카드' }).click();
   await p.waitForTimeout(500);
   await p.goto(`${BASE}/punch`);
   await p.waitForLoadState('networkidle');
-  check((await p.getByRole('heading', { name: '현재 근무 상황' }).count()) === 0 && (await p.getByRole('heading', { name: '이번주 근무' }).count()) === 0 && (await p.getByRole('heading', { name: '오늘 근무' }).count()) === 1, '끈 카드는 홈에서 사라지고 「오늘 근무」는 남음');
+  check((await p.getByRole('heading', { name: '이번주 근무' }).count()) === 0 && (await p.getByRole('heading', { name: '오늘 근무' }).count()) === 1, '끈 카드는 홈에서 사라지고 「오늘 근무」는 남음');
   await p.goto(`${BASE}/punch/home-settings`);
   await p.waitForLoadState('networkidle');
   await p.waitForTimeout(500);
-  check(!(await p.getByRole('switch', { name: '현재 근무 상황 카드' }).isChecked()), '설정 화면에 꺼진 상태가 남아 있음');
-  await p.getByRole('switch', { name: '현재 근무 상황 카드' }).click();
+  check(!(await p.getByRole('switch', { name: '이번주 근무 카드' }).isChecked()), '설정 화면에 꺼진 상태가 남아 있음');
   await p.getByRole('switch', { name: '이번주 근무 카드' }).click();
   await p.waitForTimeout(500);
   await p.goto(`${BASE}/punch`);
   await p.waitForLoadState('networkidle');
-  check((await p.getByRole('heading', { name: '현재 근무 상황' }).count()) === 1 && (await p.getByRole('heading', { name: '이번주 근무' }).count()) === 1, '다시 켜면 돌아옴');
+  check((await p.getByRole('heading', { name: '이번주 근무' }).count()) === 1, '다시 켜면 돌아옴');
 
   for (const w of [320, 390]) {
     await p.setViewportSize({ width: w, height: 800 });

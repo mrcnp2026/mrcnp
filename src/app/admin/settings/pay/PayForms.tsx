@@ -108,6 +108,7 @@ export function SettingForm({ section, current, version, today }: { section: Set
         const fd = new FormData(ev.currentTarget);
         const b: Record<string, unknown> = Object.fromEntries(fd);
         if (section === 'employee-defaults') Object.assign(b, { durunuri: fd.get('durunuri') === 'on', smeTaxCut: fd.get('smeTaxCut') === 'on' });
+        if (section === 'ledger') Object.assign(b, { deductUnpaidLeave: fd.get('deductUnpaidLeave') === 'on', deductLateness: fd.get('deductLateness') === 'on' });
         if (await post(`/api/admin/payroll/settings/${section}`, { ...b, expectedVersion: version })) rule.settle();
       }}
     >
@@ -155,9 +156,18 @@ export function SettingForm({ section, current, version, today }: { section: Set
             </select>
           </Row>
           <Row label={t('s02.insuranceBasis')} hint={t('s02.insuranceBasisHint')}>
-            <select name="insuranceBasis" defaultValue={l?.insuranceBasis ?? 'NOTICE'} className={`${field} lg:max-w-md`}>
+            <select name="insuranceBasis" defaultValue={l?.insuranceBasis ?? 'PAYROLL_BASE'} className={`${field} lg:max-w-md`}>
               {opts(['NOTICE', 'PAYROLL_BASE', 'REPORTED_BASE'], (k) => t(`s02.insuranceBasisOf.${k}`))}
             </select>
+          </Row>
+          <Row label={t('s02.deductUnpaidLeave')} hint={t('s02.deductionHint')}>
+            <span className="flex min-h-9 items-center gap-2"><input type="checkbox" name="deductUnpaidLeave" defaultChecked={l?.deductUnpaidLeave ?? false} className="size-5 accent-primary" />{t('use')}</span>
+          </Row>
+          <Row label={t('s02.deductLateness')} hint={t('s02.latenessHint')}>
+            <span className="flex min-h-9 items-center gap-2"><input type="checkbox" name="deductLateness" defaultChecked={l?.deductLateness ?? false} className="size-5 accent-primary" />{t('use')}</span>
+          </Row>
+          <Row label={t('s02.premiumTimeBasis')} hint={t('s02.premiumTimeHint')}>
+            <select name="premiumTimeBasis" defaultValue={l?.premiumTimeBasis ?? 'ACTUAL'} className={field}>{opts(['ACTUAL', 'ROUNDED'], (k) => t(`s02.premiumTimeOf.${k}`))}</select>
           </Row>
           <Row label={t('s02.withholding')} hint={t('s02.withholdingHint')}>
             <select name="withholdingRatio" defaultValue={l?.withholdingRatio ?? 100} className={`num ${field} lg:max-w-32`}>

@@ -1,6 +1,9 @@
 // 기록 확정 읽기·막기 (의뢰인 2026-10-11 확정: 확정한 기록만 급여 계산에 쓰고, 확정 뒤에는 정정 요청을 막는다). 서버 전용.
 // 확정 단위는 「한 직원의 하루」다. 켜진 줄(active)이 있으면 확정된 날이다 — 풀면 active=false로 남는다 (지우지 않는다).
 import 'server-only';
+import { readAll } from '@/lib/read-all';
+import { addDays } from '@/lib/calendar';
+import { isPeriodLocked } from '@/lib/punch';
 import { OFFICE } from '@/config/office';
 import { ApiError } from '@/lib/api';
 import { createAdminClient } from '@/lib/supabase/admin';
@@ -10,14 +13,13 @@ export const confirmKey = (employeeId: string, workDate: string) => `${employeeI
 
 /** 기간 안의 확정된 날 — 열쇠는 confirmKey(직원, 날짜) */
 export async function loadConfirms(from: string, to: string, practice = OFFICE.practiceMode): Promise<Map<string, DayConfirm>> {
-  const { data, error } = await createAdminClient()
+  const { data } = await readAll((a,b) => createAdminClient()
     .from('day_confirms')
     .select('id, employee_id, work_date, confirmed_by, confirmed_at')
     .eq('active', true)
     .eq('is_test', practice)
     .gte('work_date', from)
-    .lte('work_date', to);
-  if (error) throw new Error(`loadConfirms: ${error.code}`);
+    .lte('work_date', to).order('work_date').order('id').range(a,b));
   return new Map((data ?? []).map((r) => [confirmKey(r.employee_id, r.work_date), { id: r.id, employeeId: r.employee_id, workDate: r.work_date, confirmedBy: r.confirmed_by, confirmedAt: r.confirmed_at }]));
 }
 
@@ -26,4 +28,17 @@ export async function assertNotConfirmed(employeeId: string, workDate: string, p
   const { data, error } = await createAdminClient().from('day_confirms').select('id').eq('employee_id', employeeId).eq('work_date', workDate).eq('is_test', practice).eq('active', true).limit(1);
   if (error) throw new Error(`assertNotConfirmed: ${error.code}`);
   if (data?.length) throw new ApiError(409, 'day_confirmed');
+}
+
+/** 휴가·일정 변경은 영향받는 모든 날짜의 확정/마감을 확인한다. */
+/** practice='both': 운영 · 연습 확정을 모두 본다 — 근무일정은 두 모드가 같이 쓰므로(DB 트리거 guard_shift_integrity와 같은 기준) */
+export async function assertAttendanceEditable(employeeId: string, from: string, to = from, practice: boolean | 'both' = OFFICE.practiceMode): Promise<void> {
+  let q = createAdminClient().from('day_confirms').select('id').eq('employee_id', employeeId).gte('work_date', from).lte('work_date', to).eq('active', true);
+  if (practice !== 'both') q = q.eq('is_test', practice);
+  const { data, error } = await q.limit(1);
+  if (error) throw new Error(`assertAttendanceEditable: ${error.code}`);
+  if (data?.length) throw new ApiError(409, 'day_confirmed');
+  for (let date = from; date <= to; date = addDays(date, 1)) {
+    if (await isPeriodLocked(employeeId, date)) throw new ApiError(409, 'period_locked');
+  }
 }

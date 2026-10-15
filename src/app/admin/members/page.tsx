@@ -70,7 +70,7 @@ export default async function MembersPage({ searchParams }: { searchParams: Prom
             <span className="flex items-center gap-1.5">
               <span className="truncate font-medium">{p.name}</span>
               {p.jobTitle && <span className="shrink-0 text-xs text-muted">{p.jobTitle}</span>}
-              {p.role === 'admin' && <Chip tone="info">{t('adminChip')}</Chip>}
+              {p.role === 'admin' && <Chip tone="info">{t(p.level === 'super' ? 'levelSuper' : p.level === 'ceo' ? 'levelCeo' : 'levelGeneral')}</Chip>}
               {p.role === 'manager' && <Chip tone="info">{t('managerChip')}</Chip>}
               {p.canViewPayroll && <Chip tone="info">{t('payrollChip')}</Chip>}
               {roleWaiting.has(p.id) && <Chip tone="warn">{t('roleWaiting')}</Chip>}

@@ -63,6 +63,7 @@ export type PlanItem = { startTime: string; endTime: string; kind: ShiftKind; na
 export type DayPlan = {
   rule: WorkRule | null; // 그날 판정에 쓰는 규칙 (시작·끝 시각이 그날 일정으로 바뀐 것)
   deemed: { startTime: string; endTime: string } | null; // 간주 근무로 볼 시간 (찍은 기록과 상관없이 쓴다, 확정-7)
+  deemedIntervals?: { startTime: string; endTime: string }[]; // 겹치는 간주 일정은 합치고 사이 빈 시간은 제외한다
   items: PlanItem[]; // 화면에 보일 그날 일정 줄 (시작 시각 순)
 };
 
@@ -104,7 +105,14 @@ export function planDay(args: { rule: WorkRule | null; tpl: ShiftTemplate | null
   }
   for (const e of extra) span = span ? { startTime: span.startTime, endTime: maxT(span.endTime, e.endTime) } : { startTime: e.startTime, endTime: e.endTime };
   items.sort((a, b) => a.startTime.localeCompare(b.startTime));
-  return { rule: rule && span ? { ...rule, startTime: span.startTime, endTime: span.endTime } : applyTemplate(rule, tpl), deemed, items };
+  const intervals = main.length ? main.filter((s) => s.kind === 'deemed') : deemed ? [deemed] : [];
+  const deemedIntervals: { startTime: string; endTime: string }[] = [];
+  for (const s of intervals) {
+    const last = deemedIntervals[deemedIntervals.length - 1];
+    if (last && s.startTime <= last.endTime) last.endTime = maxT(last.endTime, s.endTime);
+    else deemedIntervals.push({ startTime: s.startTime, endTime: s.endTime });
+  }
+  return { deemedIntervals, rule: rule && span ? { ...rule, startTime: span.startTime, endTime: span.endTime } : applyTemplate(rule, tpl), deemed, items };
 }
 
 export type ShiftInput = { date: string; startTime: string; endTime: string; kind: ShiftKind; templateId: string | null; note: string | null; employeeIds: string[] };

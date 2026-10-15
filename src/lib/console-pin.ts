@@ -7,6 +7,7 @@ import { createHmac, randomBytes, scryptSync, timingSafeEqual } from 'node:crypt
 import { cookies } from 'next/headers';
 import { CONSOLE_COOKIE, CONSOLE_MINUTES } from '@/config/console-paths';
 import { ApiError } from '@/lib/api';
+import { assertStaffTarget } from '@/lib/staff-data';
 import { getMe, type Me } from '@/lib/auth';
 import { createAdminClient } from '@/lib/supabase/admin';
 
@@ -32,22 +33,28 @@ function pinMatches(pin: string, stored: string): boolean {
 }
 
 // 열림 표: 「직원 id . 끝나는 때 . 서명」 — 서명 열쇠는 서버 비밀(서비스 키)에서 만든다
-const key = () => createHmac('sha256', process.env.SUPABASE_SERVICE_ROLE_KEY ?? '').update('console-pin-unlock').digest();
+const key = () => {
+  const secret = process.env.SUPABASE_SERVICE_ROLE_KEY;
+  if (!secret) throw new Error('console signing key missing');
+  return createHmac('sha256', secret).update('console-pin-unlock').digest();
+};
 const sign = (body: string) => createHmac('sha256', key()).update(body).digest('base64url');
-export function makeUnlock(employeeId: string, now = Date.now()): string {
+export function makeUnlock(employeeId: string, pinHash: string, now = Date.now()): string {
   const body = `${employeeId}.${now + CONSOLE_MINUTES * 60_000}`;
-  return `${body}.${sign(body)}`;
+  return `${body}.${sign(`${body}.${pinHash}`)}`;
 }
-export function unlockValid(value: string | undefined, employeeId: string, now = Date.now()): boolean {
-  if (!value) return false;
-  const [id, exp, sig] = value.split('.');
-  if (id !== employeeId || !exp || !sig || Number(exp) < now) return false;
-  const want = sign(`${id}.${exp}`);
+export function unlockValid(value: string | undefined, employeeId: string, pinHash: string, now = Date.now()): boolean {
+  if (!value || !pinHash || !process.env.SUPABASE_SERVICE_ROLE_KEY) return false;
+  const [id, exp, sig, extra] = value.split('.');
+  if (id !== employeeId || !exp || !sig || extra !== undefined || !Number.isFinite(Number(exp)) || Number(exp) <= now) return false;
+  const want = sign(`${id}.${exp}.${pinHash}`);
   return want.length === sig.length && timingSafeEqual(Buffer.from(want), Buffer.from(sig));
 }
 
 export async function isUnlocked(me: Me): Promise<boolean> {
-  return unlockValid((await cookies()).get(CONSOLE_COOKIE)?.value, me.id);
+  const { data, error } = await createAdminClient().from('console_pins').select('pin_hash').eq('employee_id', me.id).maybeSingle();
+  if (error) throw new Error(`console_pins.read: ${error.code}`);
+  return !!data && unlockValid((await cookies()).get(CONSOLE_COOKIE)?.value, me.id, data.pin_hash as string);
 }
 
 /** 통합설정의 저장 기능 앞에 — 관리자 + 열림 표가 있어야 한다 (주소를 직접 치거나 서버에 바로 요청해도 막힌다) */
@@ -81,30 +88,40 @@ export async function setPin(me: Me, pin: string, again: string): Promise<void> 
 /** 열기 — 맞으면 열림 표를 쿠키로 준다 */
 export async function openConsole(me: Me, pin: string): Promise<{ ok: true } | { ok: false; left: number }> {
   const c = createAdminClient();
-  const { data: row } = await c.from('console_pins').select('pin_hash, failed_count, locked_until').eq('employee_id', me.id).maybeSingle();
-  if (!row) throw new ApiError(409, 'pin_not_set');
-  if (row.locked_until && new Date(row.locked_until as string) > new Date()) throw new ApiError(423, 'pin_locked');
-  const ok = /^\d{4}$/.test(pin) && pinMatches(pin, row.pin_hash as string);
-  await note(me.id, ok, 'open', me.id);
-  if (!ok) {
+  // 비교 후 갱신: 동시에 틀린 PIN을 보내도 실패 횟수를 덮어쓰지 않는다.
+  for (let attempt = 0; attempt < 10; attempt++) {
+    const { data: row, error } = await c.from('console_pins').select('pin_hash, failed_count, locked_until, updated_at').eq('employee_id', me.id).maybeSingle();
+    if (error) throw new Error(`console_pins.read: ${error.code}`);
+    if (!row) throw new ApiError(409, 'pin_not_set');
+    if (row.locked_until && new Date(row.locked_until as string) > new Date()) throw new ApiError(423, 'pin_locked');
+    const ok = /^\d{4}$/.test(pin) && pinMatches(pin, row.pin_hash as string);
     const fails = (row.failed_count as number) + 1;
-    const lock = fails >= MAX_FAILS;
-    await c.from('console_pins').update({ failed_count: lock ? 0 : fails, locked_until: lock ? new Date(Date.now() + LOCK_MINUTES * 60_000).toISOString() : null, updated_at: new Date().toISOString() }).eq('employee_id', me.id);
+    const lock = !ok && fails >= MAX_FAILS;
+    const { data: changed, error: updateError } = await c.from('console_pins').update({
+      failed_count: ok || lock ? 0 : fails,
+      locked_until: lock ? new Date(Date.now() + LOCK_MINUTES * 60_000).toISOString() : null,
+      updated_at: new Date().toISOString(),
+    }).eq('employee_id', me.id).eq('pin_hash', row.pin_hash).eq('failed_count', row.failed_count).eq('updated_at', row.updated_at).select('employee_id');
+    if (updateError) throw new Error(`console_pins.update: ${updateError.code}`);
+    if (!changed?.length) continue;
+    await note(me.id, ok, 'open', me.id);
     if (lock) throw new ApiError(423, 'pin_locked');
-    return { ok: false, left: MAX_FAILS - fails };
+    if (!ok) return { ok: false, left: MAX_FAILS - fails };
+    (await cookies()).set(CONSOLE_COOKIE, makeUnlock(me.id, row.pin_hash as string), { httpOnly: true, sameSite: 'strict', secure: process.env.NODE_ENV === 'production', path: '/', maxAge: CONSOLE_MINUTES * 60 });
+    return { ok: true };
   }
-  await c.from('console_pins').update({ failed_count: 0, locked_until: null, updated_at: new Date().toISOString() }).eq('employee_id', me.id);
-  (await cookies()).set(CONSOLE_COOKIE, makeUnlock(me.id), { httpOnly: true, sameSite: 'strict', secure: process.env.NODE_ENV === 'production', path: '/', maxAge: CONSOLE_MINUTES * 60 });
-  return { ok: true };
+  throw new ApiError(409, 'pin_busy'); // 동시에 여러 번 눌러 갱신이 계속 엇갈린 경우 — 잠긴 것이 아니므로 다시 시도하게
 }
 
 /** 다른 관리자의 숫자를 지운다(잊었을 때). 본인 것은 지울 수 없다 */
 export async function resetPin(me: Me, targetId: string): Promise<void> {
   if (targetId === me.id) throw new ApiError(400, 'pin_reset_self');
+  await assertStaffTarget(me.id, targetId);
   const c = createAdminClient();
   const { data: t } = await c.from('profiles').select('role').eq('id', targetId).maybeSingle();
   if (t?.role !== 'admin') throw new ApiError(404, 'not_found');
-  await c.from('console_pins').delete().eq('employee_id', targetId);
+  const { error } = await c.from('console_pins').delete().eq('employee_id', targetId);
+  if (error) throw new Error(`console_pins.reset: ${error.code}`);
   await note(targetId, true, 'reset', me.id);
 }
 

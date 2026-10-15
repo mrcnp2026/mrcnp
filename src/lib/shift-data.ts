@@ -1,5 +1,6 @@
 // 근무일정 틀 읽기. 서버 전용.
 import 'server-only';
+import { readAll } from '@/lib/read-all';
 import type { DayShift, ShiftTemplate } from '@/lib/shifts';
 import { createAdminClient } from '@/lib/supabase/admin';
 
@@ -23,7 +24,6 @@ export async function loadTemplateOf(employeeId: string): Promise<ShiftTemplate 
 export async function loadShifts(from: string, to: string, employeeId?: string): Promise<DayShift[]> {
   let q = createAdminClient().from('shifts').select('id, employee_id, work_date, start_time, end_time, kind, template_id, note').eq('active', true).gte('work_date', from).lte('work_date', to).order('start_time');
   if (employeeId) q = q.eq('employee_id', employeeId);
-  const { data, error } = await q;
-  if (error) throw new Error(`loadShifts: ${error.code}`);
+  const { data } = await readAll((a, b) => q.order('id').range(a, b));
   return (data ?? []).map((s) => ({ id: s.id, employeeId: s.employee_id, workDate: s.work_date, startTime: s.start_time.slice(0, 5), endTime: s.end_time.slice(0, 5), kind: s.kind, templateId: s.template_id, note: s.note }));
 }

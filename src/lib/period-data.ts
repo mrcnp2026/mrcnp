@@ -1,6 +1,7 @@
 // 기간 데이터 읽기 + 연장 확인 대상 만들기. 서버 전용.
 // 예약 작업(cron)을 만들지 않는다 (3장) — 처리함·현황판·월간 집계를 **열 때** 계산하고 필요한 요청 행을 만든다.
 import 'server-only';
+import { readAll } from '@/lib/read-all';
 import { resolveDayType } from '@/config/labor-rules';
 import { OFFICE } from '@/config/office';
 import { getMe } from '@/lib/auth';
@@ -88,7 +89,10 @@ export function leaveDaysFor(data: PeriodData, employeeId: string): Map<string, 
   return leaveByDate({
     requests: data.leaveRequests.filter((r) => r.employeeId === employeeId),
     types: data.leaveTypes,
-    dayTypeOf: (d) => resolveDayType(d, data.ruleAt(d) ?? fallback, data.holidays),
+    dayTypeOf: (d) => {
+      const assigned = data.planFor(employeeId, d).items.filter((s) => s.source === 'shift' && s.kind !== 'extra');
+      return assigned.length ? assigned.every((s) => s.kind === 'holiday') ? 'holiday' : 'workday' : resolveDayType(d, data.ruleAt(d) ?? fallback, data.holidays);
+    },
     from: data.from,
     to: data.to,
   });
@@ -102,14 +106,14 @@ export async function loadPeriod(from: string, to: string, practice = OFFICE.pra
   const [versions, holidays, { data: pplAll }, { data: evAll }, { data: coAll }, { data: otAll }, leaveRequests, leaveTypes, workRequests, templates, shiftsAll] = await Promise.all([
     loadRuleVersions(),
     loadHolidays(readFrom, to),
-    db.from('profiles').select('id, name, employee_no, role, active, joined_on, created_at, group_id, shift_template_id, job_id').order('name'),
-    db.from('punch_events')
+    readAll((a, b) => db.from('profiles').select('id, name, employee_no, role, active, joined_on, created_at, group_id, shift_template_id, job_id').order('name').order('id').range(a, b)),
+    readAll((a, b) => db.from('punch_events')
       .select('id, employee_id, kind, punched_at, work_date, ip_verified, verified_by, source, note, client_ip, location_id')
-      .eq('is_test', practice).gte('work_date', readFrom).lte('work_date', to).order('punched_at'),
-    db.from('punch_corrections')
+      .eq('is_test', practice).gte('work_date', readFrom).lte('work_date', to).order('punched_at').order('id').range(a, b)),
+    readAll((a, b) => db.from('punch_corrections')
       .select('id, correction_type, target_id, employee_id, work_date, kind, new_punched_at, status, reason, requested_by, approved_by, created_at, decided_at')
-      .eq('is_test', practice).gte('work_date', readFrom).lte('work_date', to).order('created_at'),
-    db.from('overtime_requests').select('*').eq('is_test', practice).gte('work_date', from).lte('work_date', to),
+      .eq('is_test', practice).gte('work_date', readFrom).lte('work_date', to).order('created_at').order('id').range(a, b)),
+    readAll((a, b) => db.from('overtime_requests').select('*').eq('is_test', practice).gte('work_date', from).lte('work_date', to).order('id').range(a, b)),
     loadLeaveRequests({ from: readFrom, to, practice }),
     loadAllLeaveTypes(), // 꺼 둔 종류로 승인된 지난 휴가도 결근이 아니다
     loadWorkRequests({ from: readFrom, to, practice }),
@@ -209,7 +213,7 @@ export function daysFor(data: PeriodData, employeeId: string, from = data.from, 
       ? (d) => {
           if (fullLeave!.has(d) || (startsOn !== null && d < startsOn)) return null;
           const plan = data.planFor(employeeId, d); // 근무일인지·그날 일정이 있는지는 planDay가 이미 봤다
-          return plan.deemed ? deemedPair(plan.deemed, d, now) : null;
+          return (plan.deemedIntervals ?? (plan.deemed ? [plan.deemed] : [])).map((span) => deemedPair(span, d, now)).filter((p): p is NonNullable<typeof p> => p !== null);
         }
       : undefined,
     holidays: data.holidays,

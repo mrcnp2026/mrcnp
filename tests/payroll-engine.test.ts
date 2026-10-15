@@ -333,3 +333,38 @@ describe('세액표 → 원천징수 계산', () => {
     expect(w({ taxable: 500_000, family: 1, children: 0, ratio: 100 })).toMatchObject({ ok: true, incomeTax: 0, localTax: 0 });
   });
 });
+
+describe('검수: 선택항목과 중복 지급 방지', () => {
+  it('무급휴가와 지각은 각각 켜야 차감되고 과세 기준에도 반영된다', () => {
+    const base = input({ contract: { ...input().contract!, amount: 2_090_000 }, time: { ...NO_TIME, unpaidLeaveMinutes: 480, lateMinutes: 30 } });
+    expect(ok(calculateStatement(base)).totals.pay).toBe(2_090_000);
+    expect(ok(calculateStatement({ ...base, policy: { ...base.policy, deductUnpaidLeave: true } })).totals.pay).toBe(2_010_000);
+    const both = ok(calculateStatement({ ...base, policy: { ...base.policy, deductUnpaidLeave: true, deductLateness: true } }));
+    expect(both.totals.pay).toBe(2_005_000);
+    expect(both.totals.taxable).toBe(2_005_000);
+  });
+  it('시급제의 실제 근무분에는 지각과 무급휴가를 다시 차감하지 않는다', () => {
+    const base = input({ contract: { ...input().contract!, payType: 'HOURLY', amount: 10000 }, time: { ...NO_TIME, workedMinutes: 60, unpaidLeaveMinutes: 480, lateMinutes: 30 } });
+    expect(ok(calculateStatement({ ...base, policy: { ...base.policy, deductUnpaidLeave: true, deductLateness: true } })).totals.pay).toBe(10000);
+  });
+  it('통상임금에 포함한 고정 수당은 가산수당 단가에 더한다', () => {
+    const base = input({ contract: { ...input().contract!, amount: 2_090_000 }, time: { ...NO_TIME, overtimeMinutes: 60 }, items: [{ ...item('ALLOW', 'PAYMENT', 209000), ordinaryWage: 'INCLUDED' }] });
+    expect(amount(ok(calculateStatement(base)), 'OVERTIME')).toBe(16500);
+  });
+  it('자동 기본급과 BASE_PAY 개인항목이 겹치면 금액을 확정하지 않는다', () => {
+    expect(calculateStatement(input({ items: [item('BASE_PAY', 'PAYMENT', 2090000)] })).blockers).toContainEqual({ code: 'duplicate_auto_item', detail: 'BASE_PAY' });
+  });
+  it('고지액 기준은 첫 계산부터 고지액을 쓰고 건강·요양을 중복 계산하지 않는다', () => {
+    const base = input({ insuranceBasis: 'NOTICE', tax: { ...NOT_INSURED, insurance: { pension: ins('YES'), health: ins('YES'), employment: ins('YES'), accident: ins('NO') } }, notices: { pension: { employee: 90000, employer: 90000, id: 'np' }, health: { employee: 80000, employer: 80000, id: 'hi' }, employment: { employee: 20000, employer: 30000, id: 'ei' } } });
+    const result = ok(calculateStatement(base));
+    expect(result.totals.deduction).toBe(190000);
+    expect(result.lines.some((l) => l.code === 'LTC')).toBe(false);
+    expect(calculateStatement({ ...base, notices: {} }).blockers).toContainEqual({ code: 'notice_required', detail: 'health' });
+  });
+});
+
+it('기본급 별칭으로 금액을 조정해도 기본급을 두 번 지급하지 않는다', () => {
+  const result = ok(calculateStatement(input({ overrides: [{ itemCode: 'BASE_PAY', kind: 'PAYMENT', amount: 1000000 }] })));
+  expect(result.totals.pay).toBe(1000000);
+  expect(result.lines.filter((l) => l.kind === 'PAYMENT')).toHaveLength(1);
+});

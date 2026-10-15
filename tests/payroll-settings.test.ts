@@ -16,7 +16,7 @@ describe('급여대장 설정', () => {
   });
 
   it('형식 검사: 빈 칸과 0을 구분하고, 정해지지 않은 값을 임의로 채우지 않는다', () => {
-    expect(validateSetting('ledger', { payMonth: 'NEXT', payDayMode: 'FIXED_DAY', payDay: '10', holidayShift: '', insuranceBasis: 'NOTICE', withholdingRatio: '100' })).toEqual({ ok: true, value: { payMonth: 'NEXT', payDayMode: 'FIXED_DAY', payDay: 10, holidayShift: null, insuranceBasis: 'NOTICE', withholdingRatio: 100 } });
+    expect(validateSetting('ledger', { payMonth: 'NEXT', payDayMode: 'FIXED_DAY', payDay: '10', holidayShift: '', insuranceBasis: 'NOTICE', withholdingRatio: '100' })).toEqual({ ok: true, value: { payMonth: 'NEXT', payDayMode: 'FIXED_DAY', payDay: 10, holidayShift: null, insuranceBasis: 'NOTICE', withholdingRatio: 100, deductUnpaidLeave: false, deductLateness: false, premiumTimeBasis: 'ACTUAL' } });
     expect(validateSetting('ledger', { payMonth: 'NEXT', payDayMode: 'FIXED_DAY', payDay: '', insuranceBasis: 'NOTICE', withholdingRatio: 100 }).ok).toBe(false); // 고정일인데 날짜 없음
     expect(validateSetting('ledger', { payMonth: 'NEXT', payDayMode: 'MONTH_END', insuranceBasis: 'NOTICE', withholdingRatio: 90 }).ok).toBe(false); // 80·100·120만
     expect(validateSetting('working-time', { weeklyHours: 40, weeklyOvertimeLimit: 12, monthlyHours: '' })).toEqual({ ok: true, value: { weeklyHours: 40, weeklyOvertimeLimit: 12, monthlyHours: null } });

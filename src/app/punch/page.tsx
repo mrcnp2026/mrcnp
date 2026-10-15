@@ -89,19 +89,7 @@ export default async function PunchPage({ searchParams }: { searchParams: Promis
       <PageShell wide>
         {!phone && <StaffDesk meId={me.id} today={today.workDate} month={(await searchParams).m} />}
         <div className="flex flex-col gap-3 lg:hidden">
-        {/* 관리자: 시프티 홈 맨 위의 바로가기 카드 (리포트 · 출근/퇴근 누락 기록) */}
-        {me.role === 'admin' && (cards.has('report') || cards.has('missing')) && (
-          <nav aria-label={t('shortcuts')} className="flex flex-col gap-2 lg:grid lg:grid-cols-2 lg:gap-4">
-            {([['/admin', 'report', ChartNoAxesColumn], ['/admin/missing', 'missingLink', ClipboardX]] as const).filter(([, k]) => cards.has(k === 'report' ? 'report' : 'missing')).map(([href, k, Icon]) => (
-              <Link key={k} href={href} className="flex min-h-14 items-center gap-4 rounded-card border border-border bg-bg px-5 font-bold">
-                <Icon aria-hidden size={22} strokeWidth={2} className="shrink-0 text-muted" />
-                <span className="flex-1">{t(k)}</span>
-                <ChevronRight aria-hidden size={22} className="shrink-0 text-muted" />
-              </Link>
-            ))}
-          </nav>
-        )}
-
+        {/* 2026-10-15 의뢰인: 직원 홈은 본인 업무만 — 리포트 · 누락 기록 바로가기와 회사 「현재 근무 상황」은 관리자 모드 「오늘 현황」에 있다(중복 제거) */}
         {/* PC: 왼쪽 = 오늘 근무, 오른쪽 = 이번 주·근무노트 (2026-10-06 의뢰인) · 폰: 한 칸 */}
         <div className="flex flex-col gap-3 lg:grid lg:grid-cols-2 lg:items-start lg:gap-4">
         <div className="flex flex-col gap-3 lg:gap-4">
@@ -134,7 +122,6 @@ export default async function PunchPage({ searchParams }: { searchParams: Promis
         {cards.has('week') && (
           <WeekBar week={week} regularHours={LABOR.weeklyRegularLimitMin / 60} limitHours={OFFICE.weeklyLimitHours} cells={cells} planMinutes={planTotal} range={`${md(weekStart)} - ${md(addDays(weekStart, 6))}`} nav={{ prev: weekHref(-1), next: weekHref(1), thisWeek: isThisWeek }} />
         )}
-        {me.role === 'admin' && cards.has('situation') && <SituationCard today={today.workDate} now={now} />}
         {cards.has('note') && <NoteBox initial={today.note?.body ?? null} />}
         </div>
         </div>

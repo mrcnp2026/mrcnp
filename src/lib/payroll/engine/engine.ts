@@ -3,9 +3,10 @@
 // ★ 요율 · 세액 · 가산율 숫자는 이 파일에 없다. 전부 입력(기준 자료 · 회사 정책)으로 받는다.
 // ★ 추정하지 않는다. 필요한 값이 없으면 0으로 채우지 않고 「차단」으로 돌려준다 — 차단된 직원은 금액이 없다(0원과 다르다).
 // ★ 끝수는 항목마다 한 번, 정한 방식으로 끊는다(먼저 단가를 잘라 놓고 곱하지 않는다).
+import { AUTO_PAYMENT_CODES, canonicalItemCode } from './reserved-items';
 import { add, dec, div, hoursOf, isNeg, max, min, mul, sub, text, toWon, type Dec, type Rounding } from './decimal';
 
-export const ENGINE_VERSION = 'engine-1.0';
+export const ENGINE_VERSION = 'engine-1.1';
 
 export type EngineContract = { payType: 'MONTHLY' | 'HOURLY' | 'ANNUAL'; amount: number; monthlyHours: number | null; annualDivisor: number | null; included: { overtimeHours: number | null; holidayHours: number | null } };
 export type Tri = 'YES' | 'NO' | 'UNKNOWN';
@@ -19,9 +20,11 @@ export type EngineTax = {
   reliefs?: { smeRate: number | null; durunuri: { pension: number; employment: number } | null };
 };
 /** 한 가지 시간 축에서 나눈 분(分). 실제 시간에서 구한 연장과 끊은 총시간을 섞지 않는다 — 넘겨주는 쪽이 한 축으로 맞춰서 준다 */
-export type EngineTime = { workedMinutes: number; overtimeMinutes: number; nightMinutes: number; holidayMinutes: number; holidayOver8Minutes: number; paidLeaveMinutes: number };
-export type EngineItem = { code: string; kind: 'PAYMENT' | 'DEDUCTION'; label: string; amount: number; taxable: 'TAXABLE' | 'EXEMPT' | 'PARTIAL'; exemptLimit: number | null; insurable: boolean; itemVersionId?: string | null };
+export type EngineTime = { workedMinutes: number; overtimeMinutes: number; nightMinutes: number; holidayMinutes: number; holidayOver8Minutes: number; paidLeaveMinutes: number; unpaidLeaveMinutes?: number; lateMinutes?: number };
+export type EngineItem = { code: string; kind: 'PAYMENT' | 'DEDUCTION'; label: string; amount: number; taxable: 'TAXABLE' | 'EXEMPT' | 'PARTIAL'; exemptLimit: number | null; insurable: boolean; itemVersionId?: string | null; ordinaryWage?: 'INCLUDED' | 'EXCLUDED' | 'UNKNOWN' };
 export type EnginePolicy = {
+  deductUnpaidLeave?: boolean;
+  deductLateness?: boolean;
   overtimePremium: string | null; // 연장의 추가 가산 (예: "0.5")
   nightPremium: string | null;
   holidayPremium: string | null;
@@ -44,6 +47,7 @@ export type EngineInput = {
   insuranceBasis: 'PAYROLL_BASE' | 'REPORTED' | 'NOTICE'; // 그 달 급여 기준 / 신고 보수 / 고지 보험료
   withholding: Withholding | null;
   overrides: EngineOverride[];
+  notices?: Partial<Record<'pension' | 'health' | 'employment' | 'accident', { employee: number; employer: number | null; id: string }>>;
   prior?: { taxable: number; incomeTax: number; localTax: number } | null; // 상여: 같은 징수 묶음에서 앞서 낸 명세의 과세 합계와 세액
   skipInsurance?: boolean; // 상여 대장: 4대보험을 여기서 계산하지 않는다(정기 급여에서 이미 냈거나 정산으로 맞춘다) — 경고로 알린다
   minimumHourly?: number | null; // 그 달에 적용되는 최저시급(승인된 기준 자료). 계약의 시간당 임금이 이보다 낮으면 「참고」로 알린다(막지 않는다)
@@ -64,10 +68,12 @@ const won = (v: bigint): number => {
 const sum = (lines: Line[], kind: LineKind) => lines.filter((l) => l.kind === kind).reduce((a, l) => a + l.amount, 0);
 
 export function calculateStatement(input: EngineInput): EngineResult {
+  input = { ...input, overrides: input.overrides.map((o) => ({ ...o, itemCode: canonicalItemCode(o.itemCode) })) };
   const blockers: Blocker[] = [];
   const block = (code: string, detail?: string) => {
     if (!blockers.some((b) => b.code === code && b.detail === detail)) blockers.push({ code, detail });
   };
+  for (const o of input.overrides) if (input.overrides.filter((x) => x.kind === o.kind && x.itemCode === o.itemCode).length > 1) block('duplicate_item', o.itemCode);
   const warnings: Blocker[] = []; // 계산은 되지만 담당자가 알아야 하는 것 (직원 실지급에는 영향이 없는 빠진 자료 등)
   const lines: Line[] = [];
   const { contract: c, tax, time, policy, reference: ref } = input;
@@ -95,6 +101,16 @@ export function calculateStatement(input: EngineInput): EngineResult {
       hourly = div(monthly, dec(String(c.monthlyHours)));
     }
   }
+  const contractHourly = hourly;
+  // 통상임금 포함 여부는 저장된 항목 설정을 따른다. 지급할 때와 같은 조정 금액을 쓴다.
+  const ordinaryItems = input.items.filter((i) => i.kind === 'PAYMENT' && !AUTO_PAYMENT_CODES.has(i.code));
+  const ordinaryExtra = ordinaryItems.filter((i) => i.ordinaryWage === 'INCLUDED').reduce((a, i) => add(a, dec(overridden(i.code, 'PAYMENT')?.amount ?? i.amount)), dec(0));
+  const needsPremium = !!time && time.overtimeMinutes + time.nightMinutes + time.holidayMinutes > 0;
+  if (regular && needsPremium && ordinaryItems.some((i) => i.ordinaryWage === 'UNKNOWN')) block('ordinary_wage_unknown');
+  if (Number(text(ordinaryExtra)) !== 0) {
+    if (!c?.monthlyHours) { if (needsPremium) block('no_monthly_hours', 'ordinary'); }
+    else if (hourly !== null) hourly = add(hourly, div(ordinaryExtra, dec(c.monthlyHours)));
+  }
   // 최저임금 참고 (2026-10-14): 계약의 시간당 임금(시급 · 월급 ÷ 월 환산 시간)이 최저시급보다 낮으면 알린다.
   // 실제 최저임금 판단은 산입 범위(고정 수당 · 상여 등)를 따져야 해서 여기서 막지 않는다 — 담당자가 확인할 신호다
   if (hourly !== null && input.minimumHourly && Number(text(hourly)) < input.minimumHourly) warnings.push({ code: 'below_minimum_wage', detail: `${Math.floor(Number(text(hourly))).toLocaleString('en-US')} < ${input.minimumHourly.toLocaleString('en-US')}` });
@@ -108,9 +124,9 @@ export function calculateStatement(input: EngineInput): EngineResult {
     if (c.payType === 'HOURLY') {
       if (!time) block('no_attendance');
       else {
-        push({ code: 'BASE', kind: 'PAYMENT', label: 'base', raw: mul(hoursOf(time.workedMinutes), hourly!), rounding: payRound, quantity: hoursOf(time.workedMinutes), unitPrice: hourly!, trace: { minutes: time.workedMinutes, payType: c.payType } });
+        push({ code: 'BASE', kind: 'PAYMENT', label: 'base', raw: mul(hoursOf(time.workedMinutes), contractHourly!), rounding: payRound, quantity: hoursOf(time.workedMinutes), unitPrice: contractHourly!, trace: { minutes: time.workedMinutes, payType: c.payType } });
         // 시급제의 유급휴가: 일한 시간에 더해 지급한다(월급제는 기본급에 이미 들어 있어 더하지 않는다)
-        if (time.paidLeaveMinutes > 0) push({ code: 'PAID_LEAVE', kind: 'PAYMENT', label: 'paidLeave', raw: mul(hoursOf(time.paidLeaveMinutes), hourly!), rounding: payRound, quantity: hoursOf(time.paidLeaveMinutes), unitPrice: hourly!, trace: { minutes: time.paidLeaveMinutes } });
+        if (time.paidLeaveMinutes > 0) push({ code: 'PAID_LEAVE', kind: 'PAYMENT', label: 'paidLeave', raw: mul(hoursOf(time.paidLeaveMinutes), contractHourly!), rounding: payRound, quantity: hoursOf(time.paidLeaveMinutes), unitPrice: contractHourly!, trace: { minutes: time.paidLeaveMinutes } });
       }
     } else {
       if (input.partialMonth && !overridden('BASE', 'PAYMENT')) block('proration_policy'); // 중간 입사 · 퇴사의 일할 계산은 자동으로 추정하지 않는다
@@ -150,7 +166,19 @@ export function calculateStatement(input: EngineInput): EngineResult {
       }
     } else if (c.payType !== 'HOURLY') block('no_attendance'); // 월급제도 연장 · 휴일이 있었는지 알아야 한다
   }
+  if (regular && c && c.payType !== 'HOURLY' && time) {
+    for (const [code, label, minutes, enabled] of [
+      ['UNPAID_LEAVE_CUT', 'unpaidLeaveCut', time.unpaidLeaveMinutes ?? 0, policy.deductUnpaidLeave],
+      ['LATENESS_CUT', 'latenessCut', time.lateMinutes ?? 0, policy.deductLateness],
+    ] as const) {
+      if (!enabled || minutes <= 0) continue;
+      if (contractHourly === null) { block('no_monthly_hours', code); continue; }
+      push({ code, kind: 'PAYMENT', label, raw: sub(dec(0), mul(hoursOf(minutes), contractHourly)), rounding: payRound, quantity: hoursOf(minutes), unitPrice: contractHourly, trace: { minutes, basis: 'CONTRACT_HOURLY', enabled: true } });
+    }
+  }
   for (const it of input.items.filter((x) => x.kind === 'PAYMENT')) {
+    if (regular && AUTO_PAYMENT_CODES.has(it.code)) { block('duplicate_auto_item', it.code); continue; }
+    if (lines.some((l) => l.kind === 'PAYMENT' && l.code === it.code)) { block('duplicate_item', it.code); continue; }
     if (it.amount < 0) block('negative_item', it.code);
     push({ code: it.code, kind: 'PAYMENT', label: it.label, raw: dec(it.amount), rounding: { mode: 'HALF_UP', unit: 1 }, trace: { fixed: true, taxable: it.taxable, insurable: it.insurable }, itemVersionId: it.itemVersionId });
   }
@@ -181,7 +209,15 @@ export function calculateStatement(input: EngineInput): EngineResult {
       const st = tax.insurance[key];
       if (st.state === 'UNKNOWN') return block('insurance_unknown', key), null;
       if (st.state === 'NO') return null;
-      if (input.insuranceBasis === 'NOTICE') return block('notice_required', key), null; // 고지 자료 없이 요율 계산으로 조용히 대신하지 않는다
+      if (input.insuranceBasis === 'NOTICE') {
+        const notice = input.notices?.[key];
+        if (!notice) return block('notice_required', key), null;
+        const code = key.toUpperCase();
+        push({ code, kind: 'DEDUCTION', label: key, raw: dec(notice.employee), rounding: { mode: 'HALF_UP', unit: 1 }, trace: { basis: 'NOTICE', noticeId: notice.id, includesLtc: key === 'health' } });
+        if (notice.employer !== null) push({ code: code + '_EMPLOYER', kind: 'EMPLOYER', label: key + 'Employer', raw: dec(notice.employer), rounding: { mode: 'HALF_UP', unit: 1 }, trace: { basis: 'NOTICE', noticeId: notice.id } });
+        else warnings.push({ code: 'employer_notice_missing', detail: key });
+        return { employee: BigInt(notice.employee), employer: BigInt(notice.employer ?? 0) };
+      } // 고지 자료 없이 요율 계산으로 조용히 대신하지 않는다
       if (!r) return block('reference_missing', key), null;
       let baseAmt: Dec;
       if (input.insuranceBasis === 'REPORTED') {
@@ -206,7 +242,7 @@ export function calculateStatement(input: EngineInput): EngineResult {
     const on = !input.skipInsurance;
     if (on) insure('pension', ref.pension);
     const health = on ? insure('health', ref.health) : null;
-    if (health) {
+    if (health && input.insuranceBasis !== 'NOTICE') {
       // 장기요양 = 건강보험료 × 비율 (보수에 비율을 곱하지 않는다)
       if (ref.ltcOfHealth === null) block('reference_missing', 'ltc');
       else {
@@ -222,7 +258,11 @@ export function calculateStatement(input: EngineInput): EngineResult {
     } else if (acc.state === 'UNKNOWN') block('insurance_unknown', 'accident');
     else if (acc.state === 'YES') {
       // 산재 요율(업종별)이 없어도 직원 명세는 계산된다 — 사업주 부담 합계에서 빠진다는 것만 알린다
-      if (ref.accidentEmployerRate === null) warnings.push({ code: 'employer_rate_missing', detail: 'accident' });
+      if (input.insuranceBasis === 'NOTICE') {
+        const notice = input.notices?.accident;
+        if (notice?.employer != null) push({ code: 'ACCIDENT_EMPLOYER', kind: 'EMPLOYER', label: 'accidentEmployer', raw: dec(notice.employer), rounding: { mode: 'HALF_UP', unit: 1 }, trace: { basis: 'NOTICE', noticeId: notice.id } });
+        else warnings.push({ code: 'employer_notice_missing', detail: 'accident' });
+      } else if (ref.accidentEmployerRate === null) warnings.push({ code: 'employer_rate_missing', detail: 'accident' });
       else push({ code: 'ACCIDENT_EMPLOYER', kind: 'EMPLOYER', label: 'accidentEmployer', raw: mul(dec(insurable), dec(ref.accidentEmployerRate)), rounding: policy.rounding.insurance, quantity: dec(insurable), factor: dec(ref.accidentEmployerRate), trace: {} });
     }
 
@@ -253,6 +293,7 @@ export function calculateStatement(input: EngineInput): EngineResult {
     }
   }
   for (const it of input.items.filter((x) => x.kind === 'DEDUCTION')) {
+    if (lines.some((l) => l.kind === 'DEDUCTION' && l.code === canonicalItemCode(it.code))) { block('duplicate_item', it.code); continue; }
     push({ code: it.code, kind: 'DEDUCTION', label: it.label, raw: dec(it.amount), rounding: { mode: 'HALF_UP', unit: 1 }, trace: { fixed: true }, itemVersionId: it.itemVersionId });
   }
   for (const o of input.overrides.filter((x) => x.kind === 'DEDUCTION' && !lines.some((l) => l.code === x.itemCode && l.kind === 'DEDUCTION'))) {

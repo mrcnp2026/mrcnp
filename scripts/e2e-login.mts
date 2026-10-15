@@ -36,7 +36,7 @@ async function freshInvite(employeeId: string) {
   const alphabet = 'ABCDEFGHJKMNPQRSTUVWXYZ23456789';
   let code = '';
   for (let i = 0; i < 8; i++) code += alphabet[randomInt(alphabet.length)];
-  await db.from('invites').insert({ employee_id: employeeId, token_hash: sha(code), issued_via: 'admin', expires_at: new Date(Date.now() + 3_600_000).toISOString() });
+  await db.from('invites').insert({ employee_id: employeeId, token_hash: sha(code), issued_via: 'emergency', expires_at: new Date(Date.now() + 3_600_000).toISOString() });
   return code;
 }
 

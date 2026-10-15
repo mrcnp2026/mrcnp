@@ -121,3 +121,11 @@ describe('하루 일정 정하기 (날짜별 일정 → 평소 틀 → 회사 �
     expect(validateShift({ ...ok, employeeIds: ['x'] })).toEqual({ ok: false, code: 'invalid_input' });
   });
 });
+
+it('간주근무 09–12시, 14–17시는 사이 2시간을 근무로 세지 않는다', () => {
+  const shift = (startTime: string, endTime: string): DayShift => ({ id: startTime, employeeId: 'e', workDate: '2026-10-12', startTime, endTime, kind: 'deemed', templateId: null, note: null });
+  const plan = planDay({ rule: { ...RULE, breakStart: null, breakEnd: null }, tpl: null, shifts: [shift('09:00', '12:00'), shift('14:00', '17:00')], isWorkday: true });
+  const pairs = plan.deemedIntervals!.map((s) => deemedPair(s, '2026-10-12', kstDateTime('2026-10-13', '12:00'))!);
+  const result = computeEmployeeDays({ events: [], approvedCorrections: [], rule: { ...RULE, breakStart: null, breakEnd: null }, holidays: [], from: '2026-10-12', to: '2026-10-12', deemed: () => pairs });
+  expect(result[0].netMinutes).toBe(360);
+});

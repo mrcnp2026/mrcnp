@@ -15,6 +15,9 @@ export type Ledger = {
   holidayShift: 'KEEP' | 'PREV_BUSINESS_DAY' | 'NEXT_BUSINESS_DAY' | null; // 회사 확인 전에는 비워 둔다
   insuranceBasis: 'NOTICE' | 'PAYROLL_BASE' | 'REPORTED_BASE';
   withholdingRatio: 80 | 100 | 120;
+  deductUnpaidLeave?: boolean;
+  deductLateness?: boolean;
+  premiumTimeBasis?: 'ACTUAL' | 'ROUNDED';
 };
 export type Masking = { unmaskMinutes: number };
 export type WorkingTime = { weeklyHours: number; weeklyOvertimeLimit: number; monthlyHours: number | null };
@@ -43,7 +46,11 @@ export function validateSetting(section: SettingSection, b: Record<string, unkno
     if (!payMonth || !payDayMode || !insuranceBasis || !withholdingRatio || holidayShift === undefined) return bad;
     const payDay = payDayMode === 'FIXED_DAY' ? int(b.payDay, 1, 31) : null;
     if (payDay === undefined) return bad;
-    return { ok: true, value: { payMonth, payDayMode, payDay, holidayShift, insuranceBasis, withholdingRatio } };
+    const deductUnpaidLeave = b.deductUnpaidLeave ?? false;
+    const deductLateness = b.deductLateness ?? false;
+    const premiumTimeBasis = b.premiumTimeBasis ?? 'ACTUAL';
+    if (typeof deductUnpaidLeave !== 'boolean' || typeof deductLateness !== 'boolean' || !one(premiumTimeBasis, ['ACTUAL', 'ROUNDED'])) return bad;
+    return { ok: true, value: { payMonth, payDayMode, payDay, holidayShift, insuranceBasis, withholdingRatio, deductUnpaidLeave, deductLateness, premiumTimeBasis: premiumTimeBasis as 'ACTUAL' | 'ROUNDED' } };
   }
   if (section === 'masking') {
     const unmaskMinutes = int(b.unmaskMinutes, 1, 60);
@@ -60,7 +67,7 @@ export function validateSetting(section: SettingSection, b: Record<string, unkno
  * 급여대장의 처음 값 (2026-10-13 의뢰인: 일단 지정해 두고 화면에서 바꾼다) — 「임시」로 들어간다.
  * 당월 · 말일 지급, 휴일 처리는 정하지 않음, 공제는 요율로 계산(월 과세합계 기준 — 공단 고지 자료 없이도 계산이 된다), 원천징수 100%.
  */
-export const DEFAULT_LEDGER: Ledger = { payMonth: 'CURRENT', payDayMode: 'MONTH_END', payDay: null, holidayShift: null, insuranceBasis: 'PAYROLL_BASE', withholdingRatio: 100 };
+export const DEFAULT_LEDGER: Ledger = { payMonth: 'CURRENT', payDayMode: 'MONTH_END', payDay: null, holidayShift: null, insuranceBasis: 'PAYROLL_BASE', withholdingRatio: 100, deductUnpaidLeave: false, deductLateness: false, premiumTimeBasis: 'ACTUAL' };
 
 export const isDate = (v: unknown): v is string => typeof v === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(v) && !Number.isNaN(Date.parse(`${v}T00:00:00Z`)) && new Date(`${v}T00:00:00Z`).toISOString().slice(0, 10) === v;
 export const cleanText = (v: unknown, max: number): string | null | undefined => {

@@ -1,6 +1,7 @@
 // 직원의 「근무일정 생성 요청」 (의뢰인 2026-10-11: 시프티의 근무일정 요청 — 특근·잔업·하루만 다른 시각).
 // 오늘부터의 날짜만. 작성자·상태는 서버가 정한다. 같은 날·같은 시각의 대기 중 요청이 있으면 막는다. 승인되면 날짜별 일정이 만들어진다.
 import { OFFICE } from '@/config/office';
+import { rethrowDbRule } from '@/lib/atomic-rpc';
 import { api, ApiError, readJson } from '@/lib/api';
 import { getMe } from '@/lib/auth';
 import { validateShift } from '@/lib/shifts';
@@ -32,6 +33,7 @@ export const POST = api('scheduleRequests.create', async (req) => {
     if (had?.length) shiftId = had[0].id as string;
     else {
       const { data: made, error: e0 } = await db.from('shifts').insert({ employee_id: me.id, work_date: v.value.date, start_time: v.value.startTime, end_time: v.value.endTime, kind: v.value.kind, template_id: null, note: reason, created_by: me.id, updated_by: me.id }).select('id').single();
+      rethrowDbRule(e0);
       if (e0) throw new Error(`scheduleRequests.direct: ${e0.code}`);
       shiftId = made.id as string;
     }

@@ -56,7 +56,7 @@ export async function runSearch(me: Me, rawQ: string): Promise<SearchResult> {
     const id = p.id as string;
     if (!p.active || !visible(id)) continue;
     const where = [groupPath(groups, p.group_id as string | null), p.job_title as string | null].filter(Boolean).join(' · ');
-    add('people', [p.name as string, staff ? (p.employee_no as string | null) : null, p.job_title as string | null, where], { title: p.name as string, where: where || t('noGroup'), href: staff ? `/admin/members/${id}` : `/punch/org?q=${encodeURIComponent(p.name as string)}` });
+    add('people', [p.name as string, staff ? (p.employee_no as string | null) : null, p.job_title as string | null, where], { title: p.name as string, where: where || t('noGroup'), href: role === 'manager' ? `/admin/records/${id}` : staff ? `/admin/members/${id}` : `/punch/org?q=${encodeURIComponent(p.name as string)}` });
   }
 
   // ── 요청 (대기 + 최근 두 달). 직원은 내 것만 ──

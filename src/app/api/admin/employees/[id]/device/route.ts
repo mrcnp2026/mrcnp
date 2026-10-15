@@ -15,7 +15,8 @@ export const POST = api<{ params: Promise<{ id: string }> }>('admin.employees.de
   const b = await readJson(req);
   const reason = cleanReason(b.reason);
   if (!reason) throw new ApiError(400, 'reason_required');
-  if (checkDeviceRevoke(me.id, id, await loadStaff())) throw new ApiError(403, 'self_change');
+  const blocked = checkDeviceRevoke(me.id, id, await loadStaff());
+  if (blocked) throw new ApiError(403, blocked);
   const { data: p } = await createAdminClient().from('profiles').select('id').eq('id', id).maybeSingle();
   if (!p) throw new ApiError(404, 'not_found');
   const n = await revokePhones(id, me.id, { keepInvites: true });

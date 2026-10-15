@@ -1,5 +1,6 @@
 // 요청 통합 읽기 — 네 표(정정 · 연장근로 · 휴가 · 외근)를 한 목록으로. 서버 전용.
 import 'server-only';
+import { readAll } from '@/lib/read-all';
 import { OFFICE } from '@/config/office';
 import { fromCorrection, fromLeave, fromLeaveChange, fromOvertime, fromPunchRequest, fromShiftRequest, fromWork, type ReqItem } from '@/lib/requests';
 import { viewerScope, within } from '@/lib/scope';
@@ -13,10 +14,9 @@ export async function loadRequests(opts: { employeeId?: string; practice?: boole
   const practice = opts.practice ?? OFFICE.practiceMode;
   const since = new Date(Date.now() - REQUEST_WINDOW_DAYS * 86_400_000).toISOString();
   const read = async (table: string, cols: string) => {
-    let q = db.from(table).select(cols).eq('is_test', practice).or(`status.eq.pending,created_at.gte.${since}`).order('created_at', { ascending: false }).limit(1000);
+    let q = db.from(table).select(cols).eq('is_test', practice).or(`status.eq.pending,created_at.gte.${since}`).order('created_at', { ascending: false });
     if (opts.employeeId) q = q.eq('employee_id', opts.employeeId);
-    const { data, error } = await q;
-    if (error) throw new Error(`loadRequests.${table}: ${error.code}`);
+    const { data } = await readAll((a,b) => q.order('id').range(a,b));
     return (data ?? []) as unknown as Record<string, unknown>[];
   };
   const [co, ot, lv, wk, pr, sh, lc] = await Promise.all([
@@ -31,7 +31,7 @@ export async function loadRequests(opts: { employeeId?: string; practice?: boole
   // 시각 수정·무효 요청이 가리키는 원래 기록의 시각 (목록에서 「11:05 → 07:03」처럼 보이게)
   const targets = [...new Set(co.map((c) => c.target_id).filter((x): x is string => typeof x === 'string'))];
   if (targets.length) {
-    const { data: evs } = await db.from('punch_events').select('id, punched_at').in('id', targets);
+    const { data: evs } = await readAll((a,b) => db.from('punch_events').select('id, punched_at').in('id', targets).order('id').range(a,b));
     const at = new Map((evs ?? []).map((e) => [e.id as string, e.punched_at as string]));
     for (const c of co) if (typeof c.target_id === 'string') c.old_punched_at = at.get(c.target_id) ?? null;
   }

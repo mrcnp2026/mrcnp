@@ -4,11 +4,11 @@ import { AlertTriangle, Check, type LucideIcon } from 'lucide-react';
 import type { ButtonHTMLAttributes, ReactNode } from 'react';
 import { Help } from './Help';
 
-export function Card({ children, className = '' }: { children: ReactNode; className?: string }) {
+export function Card({ children, className = '', id }: { children: ReactNode; className?: string; id?: string }) {
   // 시프티풍 (2026-10-10 의뢰인): 모서리가 거의 각진 흰 카드 + 얇은 테두리
   // 부르는 쪽이 여백(p-…)을 주면 기본 여백을 빼서 겹치지 않게
   const pad = /(^|\s)p-/.test(className) ? '' : 'p-5';
-  return <section className={`rounded-card border border-border bg-bg ${pad} ${className}`}>{children}</section>;
+  return <section id={id} className={`rounded-card border border-border bg-bg ${pad} ${className}`}>{children}</section>;
 }
 
 type Variant = 'primary' | 'ok' | 'outline' | 'danger';

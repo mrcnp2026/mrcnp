@@ -35,7 +35,7 @@ try {
   const login = async (id: string): Promise<Page> => {
     for (const n of live ?? []) await db.from('notice_reads').upsert({ notice_id: n.id, employee_id: id, version: n.version, shown_locale: 'ko' }, { onConflict: 'notice_id,employee_id,version', ignoreDuplicates: true });
     const token = randomBytes(32).toString('base64url');
-    await db.from('invites').insert({ employee_id: id, token_hash: createHash('sha256').update(token).digest('hex'), issued_via: 'admin', expires_at: new Date(Date.now() + 3600e3).toISOString() });
+    await db.from('invites').insert({ employee_id: id, token_hash: createHash('sha256').update(token).digest('hex'), issued_via: 'emergency', expires_at: new Date(Date.now() + 3600e3).toISOString() });
     const pg = await (await browser.newContext({ viewport: { width: 1440, height: 900 } })).newPage();
     pg.on('pageerror', (e) => errors.push(e.message));
     await pg.goto(`${BASE}/register?token=${token}`);

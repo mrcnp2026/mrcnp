@@ -14,7 +14,7 @@ export const POST = api<{ params: Promise<{ code: string }> }>('admin.leaveTypes
   if (!/^[a-z0-9_]{1,40}$/.test(code)) throw new ApiError(404, 'not_found');
   const b = await readJson(req);
   const db = createAdminClient();
-  const { data: cur } = await db.from('leave_types').select('code, name, hours, builtin, active').eq('code', code).maybeSingle();
+  const { data: cur } = await db.from('leave_types').select('code, name, hours, day_unit, is_paid, deducts_balance, builtin, active').eq('code', code).maybeSingle();
   if (!cur) throw new ApiError(404, 'not_found');
 
   if (b.active !== undefined) {
@@ -31,6 +31,12 @@ export const POST = api<{ params: Promise<{ code: string }> }>('admin.leaveTypes
   const v = validateLeaveType(cur.builtin ? { ...b, name: cur.name, hours: Number(cur.hours) } : b);
   if (!v.ok) throw new ApiError(400, v.code);
   const t = v.value;
+  // 이미 사용한 종류의 계산 의미를 바꾸면 과거 승인·잔여·급여까지 바뀐다. 새 종류로 구분한다.
+  if (Number(cur.hours) !== t.hours || Number(cur.day_unit) !== t.dayUnit || cur.is_paid !== t.isPaid || cur.deducts_balance !== t.deductsBalance) {
+    const { count, error } = await db.from('leave_requests').select('id', { count: 'exact', head: true }).eq('type_code', code);
+    if (error) throw new Error(`leaveTypes.used: ${error.code}`);
+    if ((count ?? 0) > 0) throw new ApiError(409, 'leave_type_in_use');
+  }
   if (!cur.builtin && cur.active) {
     const { data: same } = await db.from('leave_types').select('code').eq('active', true).neq('code', code).ilike('name', t.name.replace(/[%_\\]/g, '\\$&'));
     if (same?.length) throw new ApiError(409, 'duplicate_type');

@@ -1,4 +1,5 @@
 // 로그인 세션 갱신 (Supabase 표준 방식). 권한 판단은 각 화면·API가 서버에서 다시 한다 — 여기서는 지점관리자가 허용 목록 밖의 관리 화면을 여는 것만 돌려보낸다.
+import { createClient } from '@supabase/supabase-js';
 import { createServerClient } from '@supabase/ssr';
 import { NextResponse, type NextRequest } from 'next/server';
 import { CONSOLE_COOKIE, isConsolePath } from '@/config/console-paths';
@@ -48,7 +49,10 @@ export async function middleware(request: NextRequest) {
   }
   // 통합설정(특별관리자 모드) — 숫자 4자리로 연 표가 없으면 잠금 화면을 보여 준다(주소는 그대로). 화면을 옮길 때마다 여기서 본다 (2026-10-14 결정 사항 개발-29)
   if (uid && isConsolePath(pathname)) {
-    if (!(await unlockValidEdge(request.cookies.get(CONSOLE_COOKIE)?.value, uid))) {
+    const secret = process.env.SUPABASE_SERVICE_ROLE_KEY;
+    const pin = secret ? await createClient(process.env.NEXT_PUBLIC_SUPABASE_URL!, secret, { auth: { persistSession: false, autoRefreshToken: false } })
+      .from('console_pins').select('pin_hash').eq('employee_id', uid).maybeSingle() : null;
+    if (pin?.error || !(await unlockValidEdge(request.cookies.get(CONSOLE_COOKIE)?.value, uid, pin?.data?.pin_hash))) {
       const to = request.nextUrl.clone();
       to.pathname = '/admin/console-lock';
       const headers = new Headers(request.headers);

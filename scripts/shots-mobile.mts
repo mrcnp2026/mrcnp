@@ -15,7 +15,7 @@ await db.from('profiles').update({ active: true, role: 'admin', locale: 'ko', ca
 const { data: live } = await db.from('notices').select('id, version').eq('status', 'published');
 for (const n of live ?? []) await db.from('notice_reads').upsert({ notice_id: n.id, employee_id: adm!.id, version: n.version, shown_locale: 'ko' }, { onConflict: 'notice_id,employee_id,version', ignoreDuplicates: true });
 const token = randomBytes(32).toString('base64url');
-await db.from('invites').insert({ employee_id: adm!.id, token_hash: createHash('sha256').update(token).digest('hex'), issued_via: 'admin', expires_at: new Date(Date.now() + 3600e3).toISOString() });
+await db.from('invites').insert({ employee_id: adm!.id, token_hash: createHash('sha256').update(token).digest('hex'), issued_via: 'emergency', expires_at: new Date(Date.now() + 3600e3).toISOString() });
 const br = await chromium.launch({ channel: 'chrome', headless: true });
 try {
   const p = await (await br.newContext({ viewport: { width: 390, height: 844 }, deviceScaleFactor: 2, isMobile: true, hasTouch: true })).newPage();

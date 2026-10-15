@@ -25,7 +25,7 @@ for (const id of [emp!.id, other!.id]) {
 }
 const invite = async (id: string) => {
   const token = randomBytes(32).toString('base64url');
-  await db.from('invites').insert({ employee_id: id, token_hash: createHash('sha256').update(token).digest('hex'), issued_via: 'admin', expires_at: new Date(Date.now() + 3600e3).toISOString() });
+  await db.from('invites').insert({ employee_id: id, token_hash: createHash('sha256').update(token).digest('hex'), issued_via: 'emergency', expires_at: new Date(Date.now() + 3600e3).toISOString() });
   return token;
 };
 const LABEL = 'e2e-시험 위치';
