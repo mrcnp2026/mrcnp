@@ -47,12 +47,13 @@ export function BottomTabs({ role }: { role: NavRole; inboxCount?: number }) {
   const at = locate(path, query, role);
   // 표에 없는 화면(검색 등)은 주소 앞부분으로 모드를 정한다
   const adminMode = role !== 'employee' && (at.leaf ? at.space !== 'my' : path === '/admin' || path.startsWith('/admin/'));
-  const tabs = adminMode ? ADMIN_TABS : MY_TABS;
+  const allApps = adminMode ? appsFor('admin', role) : [];
+  // 지점관리자는 열 수 있는 앱의 탭만 (현황 · 관리 화면은 관리자 전용 — manager-rules.ts)
+  const tabs = adminMode ? ADMIN_TABS.filter((x) => allApps.some((a) => x.apps.includes(a.key))) : MY_TABS;
   const appKey = at.leaf ? at.app?.key : undefined;
   const under = (h: string) => path === h || path.startsWith(`${h}/`);
   const activeKey = (tabs.find((x) => x.also?.some(under)) ?? tabs.find((x) => !!appKey && x.apps.includes(appKey)))?.key;
   const inTabs = !!activeKey;
-  const allApps = adminMode ? appsFor('admin', role) : [];
   const allOn = adminMode && (grid || (!pressed && !inTabs && !!at.leaf));
 
   return (
