@@ -1,0 +1,52 @@
+# 주간 백업 — 매주 일요일 새벽 3시(한국 시간)에 scripts/backup.mts를 돌린다.
+# Actions 화면의 「Run workflow」로 바로 돌릴 수도 있다.
+# 저장소 Settings → Secrets and variables → Actions에 넣어야 하는 값:
+#   SUPABASE_DB_URL, BACKUP_PASSWORD, BACKUP_REPO, BACKUP_GITHUB_TOKEN, BACKUP_ALERT_EMAIL, SMTP_USER, SMTP_PASS
+name: 주간 백업
+
+on:
+  schedule:
+    - cron: '0 18 * * 6' # 토요일 18:00 UTC = 일요일 03:00 한국 시간
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: backup
+  cancel-in-progress: false
+
+jobs:
+  backup:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      # Supabase DB가 PostgreSQL 17이라 pg_dump도 17을 쓴다
+      - name: pg_dump 17 설치
+        run: |
+          sudo install -d /usr/share/postgresql-common/pgdg
+          sudo curl -fsSL -o /usr/share/postgresql-common/pgdg/apt.postgresql.org.asc https://www.postgresql.org/media/keys/ACCC4CF8.asc
+          echo "deb [signed-by=/usr/share/postgresql-common/pgdg/apt.postgresql.org.asc] https://apt.postgresql.org/pub/repos/apt noble-pgdg main" | sudo tee /etc/apt/sources.list.d/pgdg.list
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq postgresql-client-17
+          echo "PG_DUMP=/usr/lib/postgresql/17/bin/pg_dump" >> "$GITHUB_ENV"
+
+      - run: npm ci --ignore-scripts
+
+      - name: 백업
+        run: npx tsx scripts/backup.mts
+        env:
+          SUPABASE_DB_URL: ${{ secrets.SUPABASE_DB_URL }}
+          BACKUP_PASSWORD: ${{ secrets.BACKUP_PASSWORD }}
+          BACKUP_REPO: ${{ secrets.BACKUP_REPO }}
+          BACKUP_GITHUB_TOKEN: ${{ secrets.BACKUP_GITHUB_TOKEN }}
+          BACKUP_ALERT_EMAIL: ${{ secrets.BACKUP_ALERT_EMAIL }}
+          SMTP_USER: ${{ secrets.SMTP_USER }}
+          SMTP_PASS: ${{ secrets.SMTP_PASS }}

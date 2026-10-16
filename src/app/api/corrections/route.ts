@@ -2,12 +2,14 @@
 // - add_missing: 찍지 않은 출근·퇴근 (예: 14일 퇴근을 21:40에 찍지 못함)
 // - modify: 찍은 기록의 시각 수정 / void: 잘못 찍은 기록 무효
 // 작성자·상태는 서버가 정한다 (요청 본문의 status·requested_by 무시). 같은 날·같은 대상의 대기 중 요청이 있으면 막는다.
+import { after } from 'next/server';
 import { OFFICE } from '@/config/office';
 import { api, ApiError, readJson } from '@/lib/api';
 import { getMe } from '@/lib/auth';
 import { addDays } from '@/lib/calendar';
 import { assertNotConfirmed } from '@/lib/confirm-data';
 import { isPeriodLocked } from '@/lib/punch';
+import { notifyCorrectionRequest } from '@/lib/push-events';
 import { createAdminClient } from '@/lib/supabase/admin';
 import { cleanText } from '@/lib/text';
 import { kstDateTime, toKstDate } from '@/lib/time';
@@ -80,5 +82,6 @@ export const POST = api('corrections.create', async (req) => {
     .select('id')
     .single();
   if (error) throw new Error(`corrections.insert: ${error.code}`);
+  after(() => notifyCorrectionRequest(data.id)); // 승인할 관리자 폰 알림 — 응답을 돌려준 뒤에 보낸다
   return { id: data.id };
 });

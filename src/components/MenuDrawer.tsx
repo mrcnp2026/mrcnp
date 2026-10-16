@@ -5,6 +5,7 @@
 //   ② 앱마다 한 줄, 누르면 펼친다 — 지금 있는 앱만 펼쳐 둔다. 항목이 하나뿐인 앱은 바로 그 화면으로
 //   ③ 맨 위 「메뉴 찾기」 — 쳐 넣으면 그 모드의 항목을 한 목록으로
 //   ④ 언어 · 로그아웃은 맨 아래 한 줄로 작게, 홈 화면에 추가는 아직 안 했을 때만 작은 단추로
+//   ⑤ 관리자 · 지점관리자는 그 위에 「폰 알림」 켜기 · 끄기 한 줄 (2026-10-16, components/PushToggle)
 // 이름 · 묶음은 PC 틀과 같은 표(config/nav.ts)에서 읽는다. 통합설정은 관리자 모드 맨 아래 한 줄(전체 메뉴 한 장으로 들어간다).
 // 움직임 없이 나타났다 사라진다 (R-10-8). Esc · 바깥 누르기 · 화면 이동으로 닫힌다. body에 직접 붙인다(하단 탭이 가리지 않게).
 import { ChevronDown, Menu, Search, Settings, X } from 'lucide-react';
@@ -17,6 +18,7 @@ import { appLeaves, appsFor, CONSOLE_HOME, locate, type App, type NavRole } from
 import { AddToHomeButton } from './AddToHome';
 import { LanguageSwitcher } from './LanguageSwitcher';
 import { OPEN_MENU_EVENT } from './MenuButton';
+import { PushToggle } from './PushToggle';
 import { SignOutButton } from './SignOutButton';
 
 type View = 'my' | 'admin';
@@ -200,6 +202,7 @@ export function MenuDrawer({ name, role, languages }: { name: string; role: NavR
               </div>
               <div className="flex flex-col gap-2 border-t border-border px-3 pt-2 pb-[calc(0.5rem+env(safe-area-inset-bottom))]">
                 <AddToHomeButton compact />
+                {staff && <PushToggle />}
                 <div className="flex items-center justify-between gap-2">
                   <LanguageSwitcher options={languages} />
                   <SignOutButton compact />

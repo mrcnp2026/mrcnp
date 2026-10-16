@@ -458,7 +458,9 @@ describe('미기록 배너', () => {
     expect(r.some((x) => x.kind === 'out')).toBe(false);
   });
 
-  it('코드베이스에 푸시·문자 발송·예약 작업(cron) 코드가 없다 ← 3장', () => {
+  // 3장(알림은 화면 배너뿐)은 2026-10-16 의뢰인 결정으로 바뀌었다: 관리자 폰 알림은 무료 웹 푸시로 만든다.
+  // 웹 푸시는 아래 파일에서만 쓰고, 돈이 드는 문자 · 카카오 발송 코드는 여전히 없어야 한다(결정 사항 알림-6).
+  it('문자 · 카카오 발송 코드가 없고, 웹 푸시는 정해진 파일에서만 쓴다 ← 3장 · 2026-10-16', () => {
     const root = path.join(import.meta.dirname, '..');
     const files: string[] = [];
     const walk = (dir: string) => {
@@ -470,9 +472,12 @@ describe('미기록 배너', () => {
     };
     walk(path.join(root, 'src'));
     files.push(path.join(root, 'package.json'));
-    const banned = /web-push|pushManager|PushSubscription|node-cron|"crons"|twilio|aligo|kakao.*alimtalk|sendSms/i;
-    const hits = files.filter((f) => banned.test(readFileSync(f, 'utf8')));
-    expect(hits).toEqual([]);
+    const paid = /node-cron|twilio|aligo|solapi|kakao.*alimtalk|sendSms/i;
+    expect(files.filter((f) => paid.test(readFileSync(f, 'utf8')))).toEqual([]);
+    const push = /web-push|pushManager|PushSubscription/i;
+    const allowed = ['src/lib/push.ts', 'src/components/PushToggle.tsx', 'package.json'];
+    const rel = (f: string) => path.relative(root, f).split(path.sep).join('/');
+    expect(files.filter((f) => push.test(readFileSync(f, 'utf8'))).map(rel).filter((f) => !allowed.includes(f))).toEqual([]);
   });
 });
 

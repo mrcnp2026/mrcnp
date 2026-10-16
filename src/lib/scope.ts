@@ -43,6 +43,24 @@ export async function scopeFilter(): Promise<(employeeId: string) => boolean> {
 }
 export const within = <T>(rows: T[], scope: Set<string> | null, idOf: (r: T) => string): T[] => (scope ? rows.filter((r) => scope.has(idOf(r))) : rows);
 
+/**
+ * 그 직원의 요청을 승인할 수 있는 사람 전원 — requireApprover와 같은 규칙 (폰 알림 받는 사람, 2026-10-16).
+ * 본인은 빠진다(자기 요청 알림은 받지 않는다).
+ */
+export async function approverIdsFor(employeeId: string): Promise<string[]> {
+  const all = await loadStaff();
+  const target = all.find((s) => s.id === employeeId);
+  if (!target) return [];
+  const out: string[] = [];
+  for (const actor of all) {
+    if (actor.id === employeeId || !actor.active || (actor.role !== 'admin' && actor.role !== 'manager')) continue;
+    if (approvalBlocked(actor, target, all)) continue;
+    if (actor.role === 'manager' && !(await managerScope(actor.id)).has(employeeId)) continue;
+    out.push(actor.id);
+  }
+  return out;
+}
+
 /** 관리 화면에 들어올 수 있는 사람 (관리자 · 지점관리자). 화면에서 고치는 버튼을 숨길지는 readOnly로 */
 export async function requireStaffViewer(): Promise<{ me: Me; readOnly: boolean } | null> {
   const me = await getMe();
