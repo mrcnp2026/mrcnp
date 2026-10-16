@@ -8,6 +8,7 @@ import { SheetOpener } from '@/components/SheetOpener';
 import { CircleCheck, Download } from 'lucide-react';
 import { getFormatter, getTranslations } from 'next-intl/server';
 import Link from 'next/link';
+import { DeemedNote } from '@/components/DeemedNote';
 import { AddSheet } from '@/components/AddSheet';
 import { ConfirmAll } from '@/components/ConfirmRecords';
 import { Fab } from '@/components/Fab';
@@ -34,7 +35,7 @@ const DATES_PER_PAGE = 1;
 const ROWS_PER_PAGE = 60;
 type Line = { key: string; idx: number; id: string; name: string; sub: string; color: string; date: string; start: string; end: string | null; deemed: boolean; confirmed: boolean; open: boolean; outside: boolean; sort: number };
 
-export default async function RecordListPage({ searchParams }: { searchParams: Promise<{ q?: string; g?: string; from?: string; to?: string; live?: string; p?: string; pp?: string }> }) {
+export default async function RecordListPage({ searchParams }: { searchParams: Promise<{ q?: string; g?: string; from?: string; to?: string; live?: string; p?: string; pp?: string; dm?: string }> }) {
   const tGear = await getTranslations('frame');
   const [t, tc, f, sp] = await Promise.all([getTranslations('admin.recordList'), getTranslations('common'), getFormatter(), searchParams]);
   const practice = OFFICE.practiceMode && sp.live !== '1';
@@ -47,6 +48,16 @@ export default async function RecordListPage({ searchParams }: { searchParams: P
   const g = groupOptions.some((o) => o.id === sp.g) ? sp.g! : '';
   const scope = g ? groupScope(groups, g) : null;
   const q = (sp.q ?? '').trim().slice(0, 40);
+  // 간주 근무자(근무일정 틀이 간주 근무 — 임원 등)는 기본으로 뺀다. 이름으로 찾거나 dm=1이면 보인다 (2026-10-17 의뢰인)
+  const deemedPeople = data.people.filter((p) => p.active && data.templateOf(p.id)?.kind === 'deemed');
+  const showDeemed = sp.dm === '1' || !!q;
+  const hideDeemed = new Set(showDeemed ? [] : deemedPeople.map((p) => p.id));
+  const dmHref = (() => {
+    const qs = new URLSearchParams(Object.entries(sp).filter(([k, v]) => k !== 'dm' && typeof v === 'string' && v) as [string, string][]);
+    if (sp.dm !== '1') qs.set('dm', '1');
+    return `?${qs}`;
+  })();
+  const deemedNote = <DeemedNote names={deemedPeople.map((p) => p.name)} shown={showDeemed} href={dmHref} labels={{ hidden: tc('deemedHidden', { n: deemedPeople.length, names: deemedPeople.map((p) => p.name).join(' · ') }), show: tc('deemedShow'), hide: tc('deemedHide') }} />;
   const clock = (d: Date) => f.dateTime(d, { hour: '2-digit', minute: '2-digit', hourCycle: 'h23' });
 
   const lines: Line[] = [];
@@ -63,6 +74,7 @@ export default async function RecordListPage({ searchParams }: { searchParams: P
   const totalOf = new Map<string, number>();
   for (const p of data.people) {
     if (p.employeeNo?.startsWith('e2e-')) continue;
+    if (hideDeemed.has(p.id)) continue;
     if (scope && !(p.groupId && scope.has(p.groupId))) continue;
     if (q && !p.name.toLowerCase().includes(q.toLowerCase())) continue;
     const job = p.jobId ? jobOf.get(p.jobId) : undefined;
@@ -304,6 +316,7 @@ export default async function RecordListPage({ searchParams }: { searchParams: P
           <Fab label={t('add')} items={[{ id: 'record', label: t('add') }]} />
         </>
       )}
+      {deemedNote}
     </PageShell>
   );
 }

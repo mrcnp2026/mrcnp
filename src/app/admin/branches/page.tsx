@@ -7,7 +7,6 @@ import { AddSheet } from '@/components/AddSheet';
 import { OffToggle } from '@/components/OffToggle';
 import { PcTable } from '@/components/PcTable';
 import { DetailBar } from '@/components/detail';
-import { Fab } from '@/components/Fab';
 import { Help } from '@/components/Help';
 import { RowList } from '@/components/list';
 import { Card, PageShell } from '@/components/ui';
@@ -37,12 +36,11 @@ export default async function BranchesPage({ searchParams }: { searchParams: Pro
     .flatMap((d) => [{ g: d, parent: null as string | null }, ...d.teams.map((x) => ({ g: x, parent: d.name }))])
     .filter(({ g }) => g.active !== off && (g.active || !g.name.startsWith('e2e-')))
     .filter(({ g, parent }) => !q || `${parent ?? ''} ${g.name}`.toLowerCase().includes(q));
-  const tab = (on: boolean) => `flex min-h-11 flex-1 lg:flex-none lg:px-4 items-center justify-center border-b-2 text-sm font-bold ${on ? 'border-text text-text lg:border-primary lg:text-primary' : 'border-transparent text-muted hover:text-text'}`;
 
   return (
     <PageShell wide>
-      <DetailBar sheet={{ id: 'branch', label: t('add') }} back="/punch" backLabel={tc('back')} title={t('title')} extra={<Help>{t('intro')}</Help>} desc={t('intro')} action={{ href: '/admin/members/groups', label: t('diagram') }} />
-      <div className="grid items-start gap-3">
+      <DetailBar sheet={{ id: 'branch', label: t('add'), mobile: tc('addShort') }} back="/punch" backLabel={tc('back')} title={t('title')} extra={<Help>{t('intro')}</Help>} desc={t('intro')} action={{ href: '/admin/members/groups', label: t('diagram') }} />
+      <div className="grid grid-cols-1 items-start gap-3">
         {/* PC: 시프티의 목록 — 「비활성화된 … 보기」 토글 + 열마다 검색 · 정렬이 되는 표 (2026-10-11 의뢰인 스샷). 폰은 아래의 탭 + 줄 목록 */}
         <div className="hidden flex-col gap-3 lg:flex">
           <OffToggle href={off ? '/admin/branches' : '/admin/branches?tab=off'} on={off} label={t('showOff')} />
@@ -61,14 +59,8 @@ export default async function BranchesPage({ searchParams }: { searchParams: Pro
           />
         </div>
         <div className="flex flex-col gap-3 lg:hidden">
-          <nav aria-label={t('title')} className="-mx-4 -mt-3 flex border-b border-border bg-bg px-2 lg:mx-0 lg:mt-0 lg:rounded-card lg:border-0">
-            <Link href="/admin/branches" aria-current={!off ? 'page' : undefined} className={tab(!off)}>
-              {t('tabOn')}
-            </Link>
-            <Link href="/admin/branches?tab=off" aria-current={off ? 'page' : undefined} className={tab(off)}>
-              {t('tabOff')}
-            </Link>
-          </nav>
+          {/* 폰도 PC와 같은 「꺼 둔 것 보기」 토글 (2026-10-17 의뢰인: PC · 폰 작동 방식을 같게) */}
+          <OffToggle href={off ? '/admin/branches' : '/admin/branches?tab=off'} on={off} label={t('showOff')} />
           <form method="get" className="flex items-center gap-2 rounded-card bg-bg px-4">
             {off && <input type="hidden" name="tab" value="off" />}
             <Search aria-hidden size={20} className="shrink-0 text-muted" />
@@ -100,7 +92,6 @@ export default async function BranchesPage({ searchParams }: { searchParams: Pro
           </Card>
         </AddSheet>
       </div>
-      <Fab label={t('add')} items={[{ id: 'branch', label: t('add') }]} />
     </PageShell>
   );
 }

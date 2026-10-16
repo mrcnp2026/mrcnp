@@ -98,8 +98,8 @@ export function BottomTabs({ role }: { role: NavRole; inboxCount?: number }) {
       {grid &&
         createPortal(
           <div className="fixed inset-0 z-10 flex flex-col justify-end lg:hidden">
-            <button type="button" tabIndex={-1} aria-label={t('tab.close')} onClick={() => setGrid(false)} className="flex-1 bg-text opacity-40" />
-            <div role="dialog" aria-modal="true" aria-label={t('tab.allTitle')} className="rounded-t-card bg-surface px-4 pt-4 pb-[calc(5rem+env(safe-area-inset-bottom))]" data-all-apps>
+            <button type="button" tabIndex={-1} aria-label={t('tab.close')} onClick={() => setGrid(false)} className="fade-from flex-1 bg-text opacity-40" />
+            <div role="dialog" aria-modal="true" aria-label={t('tab.allTitle')} className="sheet-up rounded-t-card bg-surface px-4 pt-4 pb-[calc(5rem+env(safe-area-inset-bottom))]" data-all-apps>
               <div className="mb-3 flex items-center justify-between">
                 <p className="text-base font-bold">{t('tab.allTitle')}</p>
                 <button type="button" aria-label={t('tab.close')} onClick={() => setGrid(false)} className="-mr-2 flex size-11 items-center justify-center rounded-button text-muted">

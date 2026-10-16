@@ -169,6 +169,26 @@ button:not(:disabled):active, a:active, summary:active, [role='button']:active {
   animation: panel-in 200ms ease-out;
 }
 
+/* 폰 판 · 메뉴 움직임 (2026-10-17 의뢰인: 공지 · 게시판 · 메뉴가 「갑자기」 나타난다 → 아래에서 천천히 밀려 올라오게).
+   from만 적어 두면 끝 모양은 원래 값(예: 바탕 opacity 0.4)으로 간다. 움직임 줄이기 설정이면 맨 위의 규칙이 끈다 */
+@keyframes from-below { from { transform: translateY(100%); } }
+@keyframes from-left { from { transform: translateX(-100%); } }
+@keyframes to-left { to { transform: translateX(-100%); } }
+@keyframes from-clear { from { opacity: 0; } }
+@keyframes to-clear { to { opacity: 0; } }
+@keyframes from-above { from { opacity: 0; transform: translateY(-1.25rem); } }
+.fade-from { animation: from-clear 300ms ease-out; }
+.fade-to { animation: to-clear 220ms ease-in forwards; }
+.drawer-in { animation: from-left 260ms cubic-bezier(.2,.8,.2,1); }
+.drawer-out { animation: to-left 220ms ease-in forwards; }
+/* 아래 판: 폰은 아래에서 올라오고(0.42초), PC에서는 위에서 살짝 내려온다 */
+.sheet-up { animation: from-below 420ms cubic-bezier(.2,.8,.2,1); }
+@media (min-width: 1024px) {
+  .sheet-up { animation: from-above 260ms ease-out; }
+}
+/* 「불러오는 중」 자리는 0.25초 뒤에야 보인다 — 금방 열리는 화면에서 깜빡이지 않게 */
+.late-in { animation: from-clear 200ms ease-out 250ms both; }
+
 /* 인쇄(명세서를 PDF로 저장할 때): 메뉴 · 상단 줄 · 하단 탭 · 버튼은 빼고 본문만 */
 @media print {
   header,

@@ -22,7 +22,11 @@
     "downloadReport": "{ym} monthly attendance report (Excel)",
     "prevPage": "Previous page",
     "nextPage": "Next page",
-    "unsaved": "You have unsaved changes. Leave this screen?"
+    "unsaved": "You have unsaved changes. Leave this screen?",
+    "addShort": "Add",
+    "deemedHidden": "{n} deemed-hours staff ({names}) are hidden here — they always count as scheduled.",
+    "deemedShow": "Show them",
+    "deemedHide": "Hide deemed staff"
   },
   "login": {
     "title": "Sign in",

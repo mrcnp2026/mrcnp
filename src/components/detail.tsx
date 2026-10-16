@@ -5,9 +5,10 @@ import Link from 'next/link';
 import type { ReactNode } from 'react';
 import { SheetOpener } from './SheetOpener';
 
-export function DetailBar({ back, backLabel, title, action, extra, plain = false, sheet, desc }: { back: string; backLabel: string; title: string; action?: { href: string; label: string }; extra?: ReactNode; plain?: boolean; sheet?: { id: string; label: string }; desc?: string }) {
+export function DetailBar({ back, backLabel, title, action, extra, plain = false, sheet, desc }: { back: string; backLabel: string; title: string; action?: { href: string; label: string }; extra?: ReactNode; plain?: boolean; sheet?: { id: string; label: string; mobile?: string }; desc?: string }) {
   // desc: PC에서 제목 아래에 보이는 회색 설명 한 줄
-  // sheet: PC에서 제목 오른쪽에 놓는 [추가] 버튼 — 누르면 그 창(AddSheet modal)이 가운데 팝업으로 뜬다. 폰은 오른쪽 아래 + 버튼이 한다
+  // sheet: 제목 오른쪽의 [추가] 버튼 — 누르면 그 창(AddSheet modal)이 뜬다. 폰은 같은 자리에 「+ 짧은 이름」 글자 버튼(sheet.mobile이 있을 때)
+  //   (2026-10-17 의뢰인: PC와 폰의 작동 방식이 달랐다 — 폰만 오른쪽 아래 + 버튼이었다)
   // 맨 위 목록 화면(뒤로 = 홈)은 PC에서 뒤로 화살표를 숨긴다 — 왼쪽 메뉴가 있다
   // plain: 화면의 머리글(h1)이 아래에 따로 있을 때 — 이 줄의 제목은 그냥 글자로 둔다 (머리글이 둘이 되지 않게)
   const Title = plain ? 'p' : 'h1';
@@ -23,6 +24,7 @@ export function DetailBar({ back, backLabel, title, action, extra, plain = false
       </div>
       {extra}
       {sheet && <SheetOpener id={sheet.id} label={sheet.label} className="hidden lg:inline-flex" />}
+      {sheet?.mobile && <SheetOpener id={sheet.id} label={sheet.mobile} text className="inline-flex lg:hidden" />}
       {action && (
         <Link href={action.href} className="inline-flex min-h-11 shrink-0 items-center px-2 text-base font-bold text-primary lg:min-h-8 lg:rounded-button lg:bg-primary lg:px-4 lg:text-sm lg:text-on-primary">
           {action.label}

@@ -27,8 +27,8 @@ export function InstallSheet({ platform, onDone, onClose }: { platform: 'ios' | 
   const t = useTranslations('install');
   const steps = platform === 'ios' ? ['ios1', 'ios2', 'ios3'] : platform === 'android' ? ['android1', 'android2', 'android3'] : ['other1'];
   return (
-    <div className="fixed inset-0 z-30 flex items-end bg-text/40" role="dialog" aria-modal="true" aria-label={t('title')}>
-      <div className="mx-auto max-h-dvh w-full max-w-md overflow-y-auto rounded-t-card bg-bg p-4 pb-[calc(1rem+env(safe-area-inset-bottom))] shadow-card">
+    <div className="fade-from fixed inset-0 z-30 flex items-end bg-text/40" role="dialog" aria-modal="true" aria-label={t('title')}>
+      <div className="sheet-up mx-auto max-h-dvh w-full max-w-md overflow-y-auto rounded-t-card bg-bg p-4 pb-[calc(1rem+env(safe-area-inset-bottom))] shadow-card">
         <h2 className="text-xl font-semibold text-primary-deep">{t('title')}</h2>
 
         {platform === 'ios' && (

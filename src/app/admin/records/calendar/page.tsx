@@ -12,6 +12,7 @@ import { SHIFT_COLOR_CLASS } from '@/lib/shifts';
 import { ChevronLeft, ChevronRight, Download } from 'lucide-react';
 import { getFormatter, getTranslations } from 'next-intl/server';
 import Link from 'next/link';
+import { DeemedNote } from '@/components/DeemedNote';
 import { SettingsLink } from '@/components/listframe';
 import { PageShell } from '@/components/ui';
 import { resolveDayType } from '@/config/labor-rules';
@@ -25,7 +26,7 @@ import { kstDateTime, toKstDate } from '@/lib/time';
 
 const YM = /^\d{4}-(0[1-9]|1[0-2])$/;
 
-export default async function RecordCalendarPage({ searchParams }: { searchParams: Promise<{ ym?: string; q?: string; g?: string; live?: string; pd?: string }> }) {
+export default async function RecordCalendarPage({ searchParams }: { searchParams: Promise<{ ym?: string; q?: string; g?: string; live?: string; pd?: string; dm?: string }> }) {
   const tGear = await getTranslations('frame');
   const admin = (await getMe())?.role === 'admin'; // ⚙ 기준 바로가기는 관리자에게만 (지점관리자는 통합설정에 못 들어간다)
   const [t, tc, f, sp] = await Promise.all([getTranslations('admin.recordCalendar'), getTranslations('common'), getFormatter(), searchParams]);
@@ -42,6 +43,16 @@ export default async function RecordCalendarPage({ searchParams }: { searchParam
   const g = groupOptions.some((o) => o.id === sp.g) ? sp.g! : '';
   const scope = g ? groupScope(groups, g) : null;
   const q = (sp.q ?? '').trim().slice(0, 40);
+  // 간주 근무자(근무일정 틀이 간주 근무 — 임원 등)는 기본으로 뺀다. 이름으로 찾거나 dm=1이면 보인다 (2026-10-17 의뢰인)
+  const deemedPeople = data.people.filter((p) => p.active && data.templateOf(p.id)?.kind === 'deemed');
+  const showDeemed = sp.dm === '1' || !!q;
+  const hideDeemed = new Set(showDeemed ? [] : deemedPeople.map((p) => p.id));
+  const dmHref = (() => {
+    const qs = new URLSearchParams(Object.entries(sp).filter(([k, v]) => k !== 'dm' && typeof v === 'string' && v) as [string, string][]);
+    if (sp.dm !== '1') qs.set('dm', '1');
+    return `?${qs}`;
+  })();
+  const deemedNote = <DeemedNote names={deemedPeople.map((p) => p.name)} shown={showDeemed} href={dmHref} labels={{ hidden: tc('deemedHidden', { n: deemedPeople.length, names: deemedPeople.map((p) => p.name).join(' · ') }), show: tc('deemedShow'), hide: tc('deemedHide') }} />;
   const clock = (d: Date) => f.dateTime(d, { hour: 'numeric', minute: '2-digit', hourCycle: 'h23' });
   const hm = (min: number) => t('hm', { h: Math.floor(min / 60), m: min % 60 });
   const link = (over: Record<string, string>) => {
@@ -58,7 +69,7 @@ export default async function RecordCalendarPage({ searchParams }: { searchParam
   for (let d = from; d <= to; d = addDays(d, 1)) days.push(d);
 
   const rows = data.people
-    .filter((p) => p.active && !p.employeeNo?.startsWith('e2e-') && (!scope || (p.groupId && scope.has(p.groupId))) && (!q || p.name.toLowerCase().includes(q.toLowerCase())))
+    .filter((p) => p.active && !hideDeemed.has(p.id) && !p.employeeNo?.startsWith('e2e-') && (!scope || (p.groupId && scope.has(p.groupId))) && (!q || p.name.toLowerCase().includes(q.toLowerCase())))
     .map((p) => {
       const byDate = new Map(daysFor(data, p.id).map((d) => [d.workDate, d]));
       const leave = leaveDaysFor(data, p.id);
@@ -332,6 +343,7 @@ export default async function RecordCalendarPage({ searchParams }: { searchParam
         </table>
       </div>
       </div>
+      {deemedNote}
     </PageShell>
   );
 }

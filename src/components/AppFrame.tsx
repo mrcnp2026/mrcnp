@@ -1,6 +1,7 @@
 // 로그인한 뒤의 화면 틀 — 직원 화면(/punch)과 관리 화면(/admin)이 같은 틀을 쓴다 (2026-10-10 의뢰인: 시프티처럼).
 // 폰: 상단 바(메뉴 버튼 · 로고 · 공지 종) + 본문 + 하단 탭
 // PC(1024px~): 위 띠 + 앱 띠 + 메뉴 판 + 본문 — 직원 · 관리자가 같은 틀, 공간은 셋(내 화면 / 관리자 화면 / 통합설정). 2026-10-14 결정 사항 개발-20 · 21 · 25, 메뉴는 config/nav.ts
+import { PageEnter } from './PageEnter';
 import { getLocale, getTranslations } from 'next-intl/server';
 import type { ReactNode } from 'react';
 import { CONSENT } from '@/config/consent';
@@ -63,7 +64,7 @@ export async function AppFrame({ me, children, overlay }: { me: Me; children: Re
       <div className="lg:flex">
         <DeskNav role={role} inboxCount={inboxCount} />
         {/* 폰에서는 하단 탭 바 높이 + 아이폰 하단 여백만큼 비운다 */}
-        <div className="min-w-0 flex-1 pb-[calc(4rem+env(safe-area-inset-bottom))] lg:min-h-[calc(100dvh-3.5rem)] lg:bg-bg lg:pb-0">
+        <div data-page-root className="min-w-0 flex-1 pb-[calc(4rem+env(safe-area-inset-bottom))] lg:min-h-[calc(100dvh-3.5rem)] lg:bg-bg lg:pb-0">
           <FrameHeader>
             <TopBar
               className="lg:hidden"
@@ -78,6 +79,7 @@ export async function AppFrame({ me, children, overlay }: { me: Me; children: Re
           </FrameHeader>
           <ConsoleGuide role={role} />
           <Crumb role={role} />
+          <PageEnter />
           {children}
         </div>
       </div>

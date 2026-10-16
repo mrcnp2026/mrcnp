@@ -42,8 +42,8 @@ export function NewInviteButton({ employeeId, name, compact = false, again = fal
   return (
     <>
       {button}
-      <div className="fixed inset-0 z-30 flex items-end bg-text/40" role="dialog" aria-modal="true" aria-label={t('inviteFor', { name })}>
-        <div className="mx-auto flex w-full max-w-md flex-col gap-4 rounded-t-card bg-bg p-6 pb-[calc(1.5rem+env(safe-area-inset-bottom))]">
+      <div className="fade-from fixed inset-0 z-30 flex items-end bg-text/40" role="dialog" aria-modal="true" aria-label={t('inviteFor', { name })}>
+        <div className="sheet-up mx-auto flex w-full max-w-md flex-col gap-4 rounded-t-card bg-bg p-6 pb-[calc(1.5rem+env(safe-area-inset-bottom))]">
           <p className="text-lg font-bold">{t('inviteFor', { name })}</p>
           <p className="text-muted">{t('newInviteConfirm', { name })}</p>
           {err && <ErrorNote code={err.code} requestId={err.requestId} />}

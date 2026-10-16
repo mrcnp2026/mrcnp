@@ -4,7 +4,6 @@ import { ChevronRight } from 'lucide-react';
 import { getFormatter, getTranslations } from 'next-intl/server';
 import Link from 'next/link';
 import { AddSheet } from '@/components/AddSheet';
-import { Fab } from '@/components/Fab';
 import { Help } from '@/components/Help';
 import { RowList } from '@/components/list';
 import { OffToggle } from '@/components/OffToggle';
@@ -23,13 +22,12 @@ export default async function LeaveTypesPage({ searchParams }: { searchParams: P
   const shown = all.filter((x) => x.active !== off && (x.active || !x.name.startsWith('e2e-')));
   const groupNames = [...new Set(all.map((x) => x.groupName).filter((g): g is string => !!g))].sort((a, b) => a.localeCompare(b));
   const sections = [...groupNames.map((g) => ({ g, rows: shown.filter((x) => x.groupName === g) })), { g: null, rows: shown.filter((x) => !x.groupName) }].filter((s) => s.rows.length);
-  const tab = (on: boolean) => `flex min-h-11 flex-1 lg:flex-none lg:px-4 items-center justify-center border-b-2 text-sm font-bold ${on ? 'border-text text-text lg:border-primary lg:text-primary' : 'border-transparent text-muted hover:text-text'}`;
   const num = (v: number) => f.number(v, { maximumFractionDigits: 4 });
 
   return (
     <PageShell wide>
-      <DetailBar sheet={{ id: 'leave-type', label: t('add') }} back="/admin/leave" backLabel={t('back')} title={t('title')} extra={<Help>{t('intro')}</Help>} desc={t('intro')} />
-      <div className="grid items-start gap-3">
+      <DetailBar sheet={{ id: 'leave-type', label: t('add'), mobile: tc('addShort') }} back="/admin/leave" backLabel={t('back')} title={t('title')} extra={<Help>{t('intro')}</Help>} desc={t('intro')} />
+      <div className="grid grid-cols-1 items-start gap-3">
         {/* PC: 시프티의 목록 — 「비활성화된 … 보기」 토글 + 열마다 검색 · 정렬이 되는 표 (2026-10-11 의뢰인 스샷). 폰은 아래의 탭 + 줄 목록 */}
         <div className="hidden flex-col gap-3 lg:flex">
           <OffToggle href={off ? '/admin/leave/types' : '/admin/leave/types?tab=off'} on={off} label={t('showOff')} />
@@ -50,14 +48,8 @@ export default async function LeaveTypesPage({ searchParams }: { searchParams: P
           />
         </div>
         <div className="flex flex-col gap-3 lg:hidden">
-          <nav aria-label={t('title')} className="-mx-4 -mt-3 flex border-b border-border bg-bg px-2 lg:mx-0 lg:mt-0 lg:rounded-card lg:border-0">
-            <Link href="/admin/leave/types" aria-current={!off ? 'page' : undefined} className={tab(!off)}>
-              {t('tabOn')}
-            </Link>
-            <Link href="/admin/leave/types?tab=off" aria-current={off ? 'page' : undefined} className={tab(off)}>
-              {t('tabOff')}
-            </Link>
-          </nav>
+          {/* 폰도 PC와 같은 「꺼 둔 것 보기」 토글 (2026-10-17 의뢰인: PC · 폰 작동 방식을 같게) */}
+          <OffToggle href={off ? '/admin/leave/types' : '/admin/leave/types?tab=off'} on={off} label={t('showOff')} />
           {shown.length === 0 && <p className="rounded-card bg-bg p-5 text-sm text-faint">{t(off ? 'emptyOff' : 'empty')}</p>}
           {sections.map((s) => (
             <section key={s.g ?? ''} className="flex flex-col gap-2">
@@ -90,7 +82,6 @@ export default async function LeaveTypesPage({ searchParams }: { searchParams: P
           </Card>
         </AddSheet>
       </div>
-      <Fab label={t('add')} items={[{ id: 'leave-type', label: t('add') }]} />
     </PageShell>
   );
 }

@@ -7,7 +7,7 @@
 //   ④ 언어 · 로그아웃은 맨 아래 한 줄로 작게, 홈 화면에 추가는 아직 안 했을 때만 작은 단추로
 //   ⑤ 관리자 · 지점관리자는 그 위에 「폰 알림」 켜기 · 끄기 한 줄 (2026-10-16, components/PushToggle)
 // 이름 · 묶음은 PC 틀과 같은 표(config/nav.ts)에서 읽는다. 통합설정은 관리자 모드 맨 아래 한 줄(전체 메뉴 한 장으로 들어간다).
-// 움직임 없이 나타났다 사라진다 (R-10-8). Esc · 바깥 누르기 · 화면 이동으로 닫힌다. body에 직접 붙인다(하단 탭이 가리지 않게).
+// 왼쪽에서 밀려 나오고 닫을 때 밀려 들어간다(2026-10-17 의뢰인, R-10-8을 바꿈). Esc · 바깥 누르기 · 화면 이동으로 닫힌다. body에 직접 붙인다(하단 탭이 가리지 않게).
 import { ChevronDown, Menu, Search, Settings, X } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 import Link from 'next/link';
@@ -33,13 +33,24 @@ export function MenuDrawer({ name, role, languages }: { name: string; role: NavR
   const staff = role !== 'employee';
   const nowView: View = staff && at.space !== 'my' ? 'admin' : 'my';
   const [open, setOpen] = useState(false);
+  const [closing, setClosing] = useState(false);
+  // 닫기: 왼쪽으로 밀려 들어간 뒤에 없앤다 (2026-10-17 의뢰인: 오른쪽 빈 곳을 눌러 닫을 때 갑자기 사라졌다)
+  const close = () => {
+    if (closing) return;
+    if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return setOpen(false);
+    setClosing(true);
+    setTimeout(() => {
+      setOpen(false);
+      setClosing(false);
+    }, 210);
+  };
   const [view, setView] = useState<View>(nowView);
   const [q, setQ] = useState('');
   const [unfold, setUnfold] = useState<Set<string>>(new Set());
   useEffect(() => setOpen(false), [path]);
   useEffect(() => {
     if (!open) return;
-    const onKey = (e: KeyboardEvent) => e.key === 'Escape' && setOpen(false);
+    const onKey = (e: KeyboardEvent) => e.key === 'Escape' && closeRef.current();
     window.addEventListener('keydown', onKey);
     document.body.style.overflow = 'hidden'; // 메뉴 뒤의 화면이 같이 밀리지 않게
     return () => {
@@ -54,9 +65,11 @@ export function MenuDrawer({ name, role, languages }: { name: string; role: NavR
     setUnfold(new Set(at.app ? [at.app.key] : []));
     setOpen(true);
   };
+  const closeRef = useRef(close);
   const opener = useRef(openDrawer);
   useEffect(() => {
     opener.current = openDrawer;
+    closeRef.current = close;
   });
   // 목록 위 줄의 ☰(MenuButton)가 보내는 신호
   useEffect(() => {
@@ -88,14 +101,14 @@ export function MenuDrawer({ name, role, languages }: { name: string; role: NavR
       {open &&
         createPortal(
           <div className="fixed inset-0 z-40 flex lg:hidden">
-            <nav role="dialog" aria-modal="true" aria-label={t('menu')} className="flex h-dvh w-5/6 max-w-xs flex-col bg-bg pt-[env(safe-area-inset-top)]">
+            <nav role="dialog" aria-modal="true" aria-label={t('menu')} className={`${closing ? 'drawer-out' : 'drawer-in'} flex h-dvh w-5/6 max-w-xs flex-col bg-bg pt-[env(safe-area-inset-top)] shadow-card`}>
               <div className="flex flex-col gap-3 bg-surface px-4 pt-3 pb-3">
                 <div className="flex items-start justify-between gap-2">
                   <p className="min-w-0 pl-1">
                     <span className="block truncate text-lg font-extrabold tracking-tight">{name}</span>
                     <span className="text-xs text-muted">{t(role === 'manager' ? 'roleManager' : role === 'admin' ? 'roleAdmin' : 'roleEmployee')}</span>
                   </p>
-                  <button type="button" aria-label={t('close')} onClick={() => setOpen(false)} className="-mt-1 -mr-2 flex size-11 shrink-0 items-center justify-center rounded-button text-primary">
+                  <button type="button" aria-label={t('close')} onClick={close} className="-mt-1 -mr-2 flex size-11 shrink-0 items-center justify-center rounded-button text-primary">
                     <X aria-hidden size={24} strokeWidth={1.75} />
                   </button>
                 </div>
@@ -159,28 +172,30 @@ export function MenuDrawer({ name, role, languages }: { name: string; role: NavR
                           </button>
                           {isOpen && (
                             <div className="flex flex-col pb-1 pl-8">
-                              {/* 묶음 이름이 있는 앱(근무일정 · 출퇴근 등)은 이름을 붙인다 — 빼면 「달력형 · 목록형」이 두 번씩 보였다 (2026-10-15 의뢰인) */}
-                              {a.groups.map((g) => {
+                              {/* 묶음 이름(준비 · 대장 · 보험 · 퇴직 …)은 폰에서 쓰지 않는다 — 작은 회색 글자가 메뉴인지 구분인지 헷갈렸다 (2026-10-17 의뢰인).
+                                  묶음 사이는 가는 줄로만 나눈다. 다른 묶음과 이름이 겹치는 항목(달력형 · 목록형)만 묶음 이름을 앞에 붙인다 */}
+                              {a.groups.map((g, gi) => {
                                 const items = g.items.filter((l) => !l.pcOnly);
                                 if (items.length === 0) return null;
+                                const dupe = (l: { key: string }) => a.groups.some((o) => o !== g && o.items.some((x) => tf(`item.${x.key}`) === tf(`item.${l.key}`)));
+                                const label = (l: { key: string }) => (g.key && dupe(l) ? `${tf(`group.${g.key}`)} ${tf(`item.${l.key}`)}` : tf(`item.${l.key}`));
                                 if (!g.key) return items.map((l) => (
-                                  <Link key={l.href} href={l.href} onClick={() => setOpen(false)} aria-current={here === l.href ? 'page' : undefined} className={`${row(here === l.href)} text-sm`}>
+                                  <Link key={l.href} href={l.href} onClick={() => setOpen(false)} aria-current={here === l.href ? 'page' : undefined} className={`${row(here === l.href)} text-base`}>
                                     {tf(`item.${l.key}`)}
                                   </Link>
                                 ));
                                 // 묶음에 항목이 하나만 남으면 묶음 이름 한 줄로
                                 if (items.length === 1)
                                   return (
-                                    <Link key={g.key} href={items[0].href} onClick={() => setOpen(false)} aria-current={here === items[0].href ? 'page' : undefined} className={`${row(here === items[0].href)} text-sm`}>
+                                    <Link key={g.key} href={items[0].href} onClick={() => setOpen(false)} aria-current={here === items[0].href ? 'page' : undefined} className={`${row(here === items[0].href)} text-base ${gi > 0 ? 'mt-1 rounded-t-none border-t border-border' : ''}`}>
                                       {tf(`group.${g.key}`)}
                                     </Link>
                                   );
                                 return (
-                                  <div key={g.key} className="flex flex-col">
-                                    <p className="px-3 pt-2 pb-0.5 text-xs font-semibold text-faint">{tf(`group.${g.key}`)}</p>
+                                  <div key={g.key} className={`flex flex-col ${gi > 0 ? 'mt-1 border-t border-border pt-1' : ''}`}>
                                     {items.map((l) => (
-                                      <Link key={l.href} href={l.href} onClick={() => setOpen(false)} aria-current={here === l.href ? 'page' : undefined} className={`${row(here === l.href)} text-sm`}>
-                                        {tf(`item.${l.key}`)}
+                                      <Link key={l.href} href={l.href} onClick={() => setOpen(false)} aria-current={here === l.href ? 'page' : undefined} className={`${row(here === l.href)} text-base`}>
+                                        {label(l)}
                                       </Link>
                                     ))}
                                   </div>
@@ -209,7 +224,7 @@ export function MenuDrawer({ name, role, languages }: { name: string; role: NavR
                 </div>
               </div>
             </nav>
-            <button type="button" tabIndex={-1} aria-label={t('close')} onClick={() => setOpen(false)} className="flex-1 bg-text opacity-40" />
+            <button type="button" tabIndex={-1} aria-label={t('close')} onClick={close} className={`${closing ? 'fade-to' : 'fade-from'} flex-1 bg-text opacity-40`} />
           </div>,
           document.body,
         )}

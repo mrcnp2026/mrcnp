@@ -38,11 +38,11 @@ export function AddSheet({ id, title, children, defaultOpen = false, className =
 
   return (
     <div data-add-sheet={id} className={`${open ? 'fixed inset-0 z-40 flex flex-col justify-end' : 'hidden'} ${modal ? 'lg:items-center lg:justify-center' : `lg:static lg:z-auto lg:block ${className}`}`}>
-      <button type="button" tabIndex={-1} aria-label={t('close')} onClick={() => setOpen(false)} className={`flex-1 bg-text opacity-40 ${modal ? 'lg:absolute lg:inset-0 lg:opacity-70' : 'lg:hidden'}`} />
+      <button type="button" tabIndex={-1} aria-label={t('close')} onClick={() => setOpen(false)} className={`${open ? 'fade-from' : ''} flex-1 bg-text opacity-40 ${modal ? 'lg:absolute lg:inset-0 lg:opacity-70' : 'lg:hidden'}`} />
       <div
         role={open ? 'dialog' : undefined}
         aria-label={title}
-        className={`flex max-h-[calc(100dvh-3rem)] flex-col rounded-t-card bg-surface pb-[env(safe-area-inset-bottom)] ${modal ? `lg:relative ${wide ? 'lg:w-240' : 'lg:w-160'} lg:max-w-[calc(100vw-2rem)] lg:rounded-card lg:border lg:border-border lg:bg-bg lg:pb-0 lg:shadow-card` : 'lg:block lg:max-h-none lg:rounded-none lg:bg-transparent lg:pb-0'}`}
+        className={`${open ? 'sheet-up' : ''} flex max-h-[calc(100dvh-3rem)] flex-col rounded-t-card bg-surface pb-[env(safe-area-inset-bottom)] ${modal ? `lg:relative ${wide ? 'lg:w-240' : 'lg:w-160'} lg:max-w-[calc(100vw-2rem)] lg:rounded-card lg:border lg:border-border lg:bg-bg lg:pb-0 lg:shadow-card` : 'lg:block lg:max-h-none lg:rounded-none lg:bg-transparent lg:pb-0'}`}
       >
         <div className={`flex items-center justify-between gap-2 py-1 pr-2 pl-5 ${modal ? 'lg:border-b lg:border-border lg:py-2 lg:text-lg' : 'lg:hidden'}`}>
           <p className="font-bold">{title}</p>

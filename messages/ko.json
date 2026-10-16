@@ -22,7 +22,11 @@
     "downloadReport": "{ym} 월별 근태확인서 (엑셀)",
     "prevPage": "이전 쪽",
     "nextPage": "다음 쪽",
-    "unsaved": "저장하지 않은 변경이 있습니다. 이 화면을 떠날까요?"
+    "unsaved": "저장하지 않은 변경이 있습니다. 이 화면을 떠날까요?",
+    "addShort": "추가",
+    "deemedHidden": "간주 근무 {n}명({names})은 늘 일정대로 근무로 잡혀 이 화면에서 뺐습니다.",
+    "deemedShow": "함께 보기",
+    "deemedHide": "간주 근무자 빼기"
   },
   "login": {
     "title": "로그인",

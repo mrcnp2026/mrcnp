@@ -111,8 +111,9 @@ export function NoticeSheet({ items }: { items: SheetNotice[] }) {
     ? { title: n.original.title, body: n.original.body, html: n.original.html, lang: 'ko' }
     : { title: n.display.title, body: n.display.body, html: n.display.translated ? undefined : n.original.html, lang: n.display.locale };
   return (
-    <div className="fixed inset-0 z-30 flex items-end bg-text/40 pt-12" role="dialog" aria-modal="true" aria-labelledby="notice-title">
-      <div className="mx-auto flex max-h-full w-full max-w-md flex-col rounded-t-card bg-bg shadow-card">
+    // 폰: 아래에서 천천히 밀려 올라오는 판 · PC: 화면 위쪽 가운데 (2026-10-17 의뢰인)
+    <div className="fade-from fixed inset-0 z-30 flex items-end bg-text/40 pt-12 lg:items-start lg:pt-20 lg:pb-8" role="dialog" aria-modal="true" aria-labelledby="notice-title">
+      <div key={`${n.id}:${n.version}`} className="sheet-up mx-auto flex max-h-full w-full max-w-md flex-col rounded-t-card bg-bg shadow-card lg:max-w-lg lg:rounded-card">
         <div className="flex flex-col gap-3 overflow-y-auto p-4">
           <div className="flex flex-wrap items-center gap-2">
             <span className="flex size-9 items-center justify-center rounded-button bg-primary-tint text-primary">

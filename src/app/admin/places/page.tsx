@@ -7,7 +7,6 @@ import { AddSheet } from '@/components/AddSheet';
 import { OffToggle } from '@/components/OffToggle';
 import { PcTable } from '@/components/PcTable';
 import { DetailBar } from '@/components/detail';
-import { Fab } from '@/components/Fab';
 import { Help } from '@/components/Help';
 import { RowList } from '@/components/list';
 import { Card, PageShell } from '@/components/ui';
@@ -26,12 +25,11 @@ export default async function PlacesPage({ searchParams }: { searchParams: Promi
     .filter((l) => l.active !== off && (l.active || !l.label?.startsWith('e2e-')))
     .filter((l) => !q || `${l.label ?? ''} ${l.address ?? ''}`.toLowerCase().includes(q));
   const used = (id: string) => links.filter((k) => k.locationId === id).length;
-  const tab = (on: boolean) => `flex min-h-11 flex-1 lg:flex-none lg:px-4 items-center justify-center border-b-2 text-sm font-bold ${on ? 'border-text text-text lg:border-primary lg:text-primary' : 'border-transparent text-muted hover:text-text'}`;
 
   return (
     <PageShell wide>
-      <DetailBar sheet={{ id: 'place', label: t('add') }} back="/punch" backLabel={tc('back')} title={t('title')} extra={<Help>{t('intro')}</Help>} desc={t('intro')} />
-      <div className="grid items-start gap-3">
+      <DetailBar sheet={{ id: 'place', label: t('add'), mobile: tc('addShort') }} back="/punch" backLabel={tc('back')} title={t('title')} extra={<Help>{t('intro')}</Help>} desc={t('intro')} />
+      <div className="grid grid-cols-1 items-start gap-3">
         {/* PC: 시프티의 목록 — 「비활성화된 … 보기」 토글 + 열마다 검색 · 정렬이 되는 표 (2026-10-11 의뢰인 스샷). 폰은 아래의 탭 + 줄 목록 */}
         <div className="hidden flex-col gap-3 lg:flex">
           <OffToggle href={off ? '/admin/places' : '/admin/places?tab=off'} on={off} label={t('showOff')} />
@@ -42,7 +40,8 @@ export default async function PlacesPage({ searchParams }: { searchParams: Promi
               id: l.id,
               cells: {
                 name: { text: l.label ?? t('unnamed'), node: <Link href={`/admin/places/${l.id}`} className="font-bold hover:text-primary">{l.label ?? t('unnamed')}</Link> },
-                address: { text: l.address ?? '' },
+                // 주소는 한 줄로 줄여 「…」 — 전체 주소는 마우스를 올리면 보인다 (2026-10-17 의뢰인)
+                address: { text: l.address ?? '', node: <span title={l.address ?? ''} className="block max-w-88 truncate">{l.address ?? ''}</span> },
                 radius: { text: t('radiusM', { n: l.radiusM }) },
                 used: { text: String(used(l.id)) },
               },
@@ -50,14 +49,8 @@ export default async function PlacesPage({ searchParams }: { searchParams: Promi
           />
         </div>
         <div className="flex flex-col gap-3 lg:hidden">
-          <nav aria-label={t('title')} className="-mx-4 -mt-3 flex border-b border-border bg-bg px-2 lg:mx-0 lg:mt-0 lg:rounded-card lg:border-0">
-            <Link href="/admin/places" aria-current={!off ? 'page' : undefined} className={tab(!off)}>
-              {t('tabOn')}
-            </Link>
-            <Link href="/admin/places?tab=off" aria-current={off ? 'page' : undefined} className={tab(off)}>
-              {t('tabOff')}
-            </Link>
-          </nav>
+          {/* 폰도 PC와 같은 「꺼 둔 것 보기」 토글 (2026-10-17 의뢰인: PC · 폰 작동 방식을 같게) */}
+          <OffToggle href={off ? '/admin/places' : '/admin/places?tab=off'} on={off} label={t('showOff')} />
           <form method="get" className="flex items-center gap-2 rounded-card bg-bg px-4">
             {off && <input type="hidden" name="tab" value="off" />}
             <Search aria-hidden size={20} className="shrink-0 text-muted" />
@@ -73,8 +66,11 @@ export default async function PlacesPage({ searchParams }: { searchParams: Promi
                     <span className="font-bold">{l.label ?? t('unnamed')}</span>
                     <span className="truncate text-sm text-muted">{l.address ?? t('noAddress')}</span>
                   </span>
-                  <span className="num shrink-0 text-sm text-muted">{t('radiusM', { n: l.radiusM })}</span>
-                  {used(l.id) > 0 && <span className="num shrink-0 text-sm text-faint">{t('usedBy', { n: used(l.id) })}</span>}
+                  {/* 반경 · 쓰는 지점은 오른쪽에 두 줄로 좁게 — 주소 칸이 넓어진다 */}
+                  <span className="num flex shrink-0 flex-col items-end text-xs text-muted">
+                    <span>{t('radiusM', { n: l.radiusM })}</span>
+                    {used(l.id) > 0 && <span className="text-faint">{t('usedBy', { n: used(l.id) })}</span>}
+                  </span>
                   <ChevronRight aria-hidden size={20} className="shrink-0 text-faint" />
                 </Link>
               </li>
@@ -87,7 +83,6 @@ export default async function PlacesPage({ searchParams }: { searchParams: Promi
           </Card>
         </AddSheet>
       </div>
-      <Fab label={t('add')} items={[{ id: 'place', label: t('add') }]} />
     </PageShell>
   );
 }
