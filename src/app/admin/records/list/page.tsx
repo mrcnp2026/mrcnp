@@ -193,13 +193,13 @@ export default async function RecordListPage({ searchParams }: { searchParams: P
                       <Link href={`/admin/records/${r.id}/${r.date}${sp.live === '1' ? '?live=1' : ''}`} className="font-bold hover:text-primary">
                         {r.name}
                       </Link>
-                      {r.sub && <span className="block text-xs text-faint">{r.sub}</span>}
+                      {r.sub && <span className="block max-w-40 truncate text-xs text-faint" title={r.sub}>{r.sub}</span>}
                     </td>
                     <td className="num px-2.5 py-2.5 whitespace-nowrap">{f.dateTime(kstDateTime(r.date, '12:00'), { month: '2-digit', day: '2-digit', weekday: 'short' })}</td>
                     <td className="num px-2.5 py-2.5 whitespace-nowrap">{r.time}</td>
                     <td className="num px-2.5 py-2.5 whitespace-nowrap text-muted">{r.plan}</td>
                     {/* 출근 · 퇴근 장소를 한 칸에 — 같으면 하나만, 다르면 「출근 → 퇴근」 */}
-                    <td className="px-2.5 py-2.5 whitespace-nowrap text-muted">{r.placeIn === r.placeOut || !r.placeOut ? r.placeIn : `${r.placeIn || '–'} → ${r.placeOut}`}</td>
+                    <td className="max-w-44 truncate px-2.5 py-2.5 whitespace-nowrap text-muted" title={r.placeIn === r.placeOut || !r.placeOut ? r.placeIn : `${r.placeIn || '–'} → ${r.placeOut}`}>{r.placeIn === r.placeOut || !r.placeOut ? r.placeIn : `${r.placeIn || '–'} → ${r.placeOut}`}</td>
                     <td className="num px-2.5 py-2.5 text-right whitespace-nowrap text-muted">{t('min', { n: r.breakMin })}</td>
                     <td className="num px-2.5 py-2.5 text-right whitespace-nowrap">{hm(r.net)}</td>
                     <td className="num px-2.5 py-2.5 text-right font-bold whitespace-nowrap">{hm(r.payable)}</td>

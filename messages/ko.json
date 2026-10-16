@@ -2470,7 +2470,7 @@
       "colDate": "날짜",
       "colTime": "근무시간",
       "colPlan": "근무일정",
-      "colBreak": "휴게시간",
+      "colBreak": "휴게",
       "colTotal": "총 시간",
       "colPayable": "급여용 시간",
       "colState": "상태",

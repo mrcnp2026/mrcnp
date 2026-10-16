@@ -42,19 +42,20 @@ export function StatusCards({ groups }: { groups: { title: string; cards: Status
     // 묶음 폭은 카드 수에 비례(최대 5칸) — 카드가 적은 묶음이 눌려 이름이 잘리지 않게
     <div className="grid gap-3 lg:grid-cols-(--cols)" style={{ '--cols': groups.map((g) => `minmax(0,${Math.min(Math.max(g.cards.length, 1), 5)}fr)`).join(' ') } as CSSProperties}>
       {groups.map((g) => (
-        <section key={g.title} className="rounded-card bg-surface p-3">
-          <h2 className="px-1 pb-2 text-sm font-bold text-muted">{g.title}</h2>
-          <div className="grid grid-cols-[repeat(auto-fill,minmax(7rem,1fr))] gap-2">
+        <section key={g.title} className="rounded-card bg-surface p-2 lg:p-3">
+          <h2 className="px-1 pb-1.5 text-xs font-bold text-muted lg:pb-2 lg:text-sm">{g.title}</h2>
+          {/* 폰: 한 줄에 셋, 작게 (2026-10-16 디자인: 카드만으로 첫 화면이 찼다) · PC: 칸 폭에 맞춰 */}
+          <div className="grid grid-cols-3 gap-1.5 lg:grid-cols-[repeat(auto-fill,minmax(7rem,1fr))] lg:gap-2">
             {g.cards.map((c) => (
               <Link
                 key={c.key}
                 href={c.href}
                 scroll={false}
                 aria-pressed={c.on}
-                className={`flex flex-col gap-1.5 rounded-button border bg-bg px-3.5 py-3 ${c.on ? 'border-primary ring-2 ring-primary-tint' : 'border-transparent hover:border-border'}`}
+                className={`flex min-w-0 flex-col gap-1 rounded-button border bg-bg px-2.5 py-2 lg:gap-1.5 lg:px-3.5 lg:py-3 ${c.on ? 'border-primary ring-2 ring-primary-tint' : 'border-transparent hover:border-border'}`}
               >
-                <span className="truncate text-sm text-muted">{c.label}</span>
-                <span className={`num text-2xl leading-none font-bold ${c.n > 0 && c.tone ? TONE[c.tone] : c.n === 0 ? 'text-faint' : 'text-text'}`}>
+                <span className="truncate text-xs text-muted lg:text-sm">{c.label}</span>
+                <span className={`num text-xl leading-none font-bold lg:text-2xl ${c.n > 0 && c.tone ? TONE[c.tone] : c.n === 0 ? 'text-faint' : 'text-text'}`}>
                   {c.n}
                   {c.unit && <small className="pl-0.5 text-sm font-medium text-muted">{c.unit}</small>}
                 </span>
