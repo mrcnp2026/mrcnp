@@ -70,14 +70,17 @@ export default async function RecordsPage({ searchParams }: { searchParams: Prom
           </Link>
         </nav>
       </header>
-      <Link href="/admin/records/list" className="inline-flex min-h-11 items-center self-start text-sm font-medium text-primary">
-        ‹ {t('toList')}
-      </Link>
-      {OFFICE.practiceMode && (
-        <Link href={practice ? `?m=${ym}&live=1` : `?m=${ym}`} className="inline-flex min-h-11 items-center self-start text-sm text-primary">
-          {practice ? t('showLive') : t('showPractice')}
+      {/* 바로가기 한 줄 — 기록 목록 · 연습/실제 기록 바꾸기 (2026-10-16 디자인: 링크가 한 줄씩 떨어져 세로가 길었다) */}
+      <div className="flex flex-wrap items-center gap-x-4 text-sm">
+        <Link href="/admin/records/list" className="inline-flex min-h-11 items-center font-medium text-primary">
+          ‹ {t('toList')}
         </Link>
-      )}
+        {OFFICE.practiceMode && (
+          <Link href={practice ? `?m=${ym}&live=1` : `?m=${ym}`} className="ml-auto inline-flex min-h-11 items-center text-primary">
+            {practice ? t('showLive') : t('showPractice')}
+          </Link>
+        )}
+      </div>
       <GroupFilter value={g} options={groupOptions} allLabel={t('groupAll')} label={t('groupFilter')} params={{ m: ym, live: OFFICE.practiceMode && !practice ? '1' : undefined }} />
       {practice && <p className="rounded-card bg-primary-tint p-3 text-sm text-primary">{t('practiceBanner')}</p>}
       {!data.rule && <p className="rounded-card bg-warn-tint p-3 text-sm text-warn">{t('noRule')}</p>}

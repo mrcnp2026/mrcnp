@@ -92,8 +92,9 @@ export function CloseBoard({ month, live, lines, canClose }: { month: string; li
       )}
       {err && <ErrorNote code={err.code} requestId={err.requestId} namespace="admin.closing" />}
       {notice && <p role="status" className="rounded-card border border-border bg-bg p-3 text-sm text-ok">{notice}</p>}
-      <div className="overflow-x-auto rounded-card border border-border bg-bg">
-        <table className="w-full text-sm">
+      <div className="overflow-x-auto rounded-card border border-border bg-bg max-lg:px-3">
+        {/* 폰: 한 사람 = 한 카드(칸 이름을 앞에 붙여 세로로) — 옆으로 밀어 보던 표를 없앴다 (2026-10-16 디자인) */}
+        <table className="w-full text-sm max-lg:[&_thead]:hidden">
           <thead>
             <tr className="border-b border-border bg-surface text-left">
               <th scope="col" className="w-10 px-3 py-2" />
@@ -104,24 +105,24 @@ export function CloseBoard({ month, live, lines, canClose }: { month: string; li
               ))}
             </tr>
           </thead>
-          <tbody>
+          <tbody className="max-lg:[&_td]:flex max-lg:[&_td]:items-center max-lg:[&_td]:justify-between max-lg:[&_td]:gap-3 max-lg:[&_td]:px-1 max-lg:[&_td]:py-1 max-lg:[&_td]:text-right max-lg:[&_td]:before:shrink-0 max-lg:[&_td]:before:text-xs max-lg:[&_td]:before:text-faint max-lg:[&_td]:before:content-[attr(data-label)] max-lg:[&_td:empty]:hidden max-lg:[&_tr]:flex max-lg:[&_tr]:flex-col max-lg:[&_tr]:py-2">
             {lines.map((l) => {
               const res = resultOf(l.employeeId);
               return (
                 <tr key={l.employeeId} className="border-b border-border align-top">
                   <td className="px-3 py-3">{canClose && l.ready && !l.close && <input type="checkbox" checked={picked.has(l.employeeId)} onChange={() => toggle(l.employeeId)} aria-label={t('pick', { name: l.name })} className="size-5 accent-primary" />}</td>
-                  <td className="px-3 py-3">
+                  <td data-label={t('colName')} className="px-3 py-3">
                     <Link href={`/admin/members/${l.employeeId}`} className="font-bold hover:text-primary">
                       {l.name}
                     </Link>
                     {!l.active && <span className="ml-2 text-xs text-faint">{t('inactive')}</span>}
                   </td>
-                  <td className="px-3 py-3 text-muted">{l.group}</td>
-                  <td className="num px-3 py-3">
+                  <td data-label={t('colGroup')} className="px-3 py-3 text-muted">{l.group}</td>
+                  <td data-label={t('colDays')} className="num px-3 py-3">
                     {l.recordDays}
                     {l.deemedDays > 0 && <span className="block text-xs text-faint">{t('deemed', { n: l.deemedDays })}</span>}
                   </td>
-                  <td className="num px-3 py-3">
+                  <td data-label={t('colUnconfirmed')} className="num px-3 py-3">
                     {l.unconfirmed > 0 ? (
                       <Link href={`/admin/records/list?from=${month}-01&q=${encodeURIComponent(l.name)}${q}`} className="font-bold text-warn underline">
                         {l.unconfirmed}
@@ -130,7 +131,7 @@ export function CloseBoard({ month, live, lines, canClose }: { month: string; li
                       0
                     )}
                   </td>
-                  <td className="px-3 py-3">
+                  <td data-label={t('colPending')} className="px-3 py-3">
                     {l.pending.length === 0 ? (
                       <span className="num">0</span>
                     ) : (
@@ -143,7 +144,7 @@ export function CloseBoard({ month, live, lines, canClose }: { month: string; li
                       </Link>
                     )}
                   </td>
-                  <td className="num px-3 py-3">
+                  <td data-label={t('colAnomaly')} className="num px-3 py-3">
                     {l.anomalyBlocks + l.anomalyChecks === 0 ? (
                       0
                     ) : (
@@ -153,8 +154,8 @@ export function CloseBoard({ month, live, lines, canClose }: { month: string; li
                       </Link>
                     )}
                   </td>
-                  <td className="num px-3 py-3 whitespace-nowrap">{l.hours}</td>
-                  <td className="px-3 py-3">
+                  <td data-label={t('colHours')} className="num px-3 py-3 whitespace-nowrap">{l.hours}</td>
+                  <td data-label={t('colState')} className="px-3 py-3">
                     {l.close ? <Chip tone="ok">{t('stateClosed', { n: l.close.revision })}</Chip> : l.ready ? <Chip tone="info">{t(l.recordDays === 0 ? 'stateEmpty' : 'stateReady')}</Chip> : <Chip tone="warn">{t('stateBlocked')}</Chip>}
                     {l.close && <span className="num block pt-1 text-xs text-faint">{t('closedBy', { name: l.close.by, date: l.close.at })}</span>}
                     {res && <span className={`block pt-1 text-xs ${res === 'closed' ? 'text-ok' : 'text-warn'}`}>{t(`result.${res}`)}</span>}
@@ -164,7 +165,7 @@ export function CloseBoard({ month, live, lines, canClose }: { month: string; li
                       </span>
                     ))}
                   </td>
-                  <td className="px-3 py-3">
+                  <td data-label={t('colManage')} className="px-3 py-3">
                     {l.close && l.reopenRequest && (
                       <span className="flex min-w-56 flex-col gap-2 text-sm">
                         <span className="text-warn">{t('reopenWaiting', { name: l.reopenRequest.by })}</span>
