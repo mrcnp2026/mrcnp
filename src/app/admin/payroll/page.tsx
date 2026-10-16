@@ -100,14 +100,14 @@ export default async function PayrollPage({ searchParams }: { searchParams: Prom
 
       <dl className="grid grid-cols-2 gap-2 lg:grid-cols-4 lg:gap-4">
         {tiles.map((x) => (
-          <div key={x.k} className="flex flex-col gap-2 rounded-card bg-bg p-4 lg:p-5">
+          <div key={x.k} className="flex flex-col gap-2 rounded-card border border-border bg-bg p-4 lg:p-5 lg:shadow-card">
             <dt className="text-sm text-muted">{t(x.k)}</dt>
             <dd className="num text-2xl leading-none font-extrabold lg:text-3xl">{x.v}</dd>
           </div>
         ))}
       </dl>
 
-      {rows.length === 0 && <p className="rounded-card bg-bg px-5 py-4 text-sm text-faint">{t('empty')}</p>}
+      {rows.length === 0 && <p className="rounded-card border border-border bg-bg px-5 py-4 text-sm text-faint">{t('empty')}</p>}
       {/* PC: 직원 한 명 = 표 한 줄 */}
       {rows.length > 0 && (
         <Card className="hidden overflow-x-auto p-0 lg:block">

@@ -27,14 +27,14 @@ type V = ReactNode | null | undefined;
 /** 이름표 + 옅은 파란 칸. num이면 오른쪽 맞춤, 값이 없으면 빈 칸 */
 function Field({ label, value, num = false, unit, range, fill = false }: { label: string; value?: V; num?: boolean; unit?: string; range?: [V, V]; fill?: boolean }) {
   const box = (v: V, k?: string) => (
-    // 칸: 아주 옅은 파랑 회색 · 높이 28px · PC는 다우오피스처럼 정해진 폭 (2026-10-15 의뢰인: 파란 칸이 색 · 크기 모두 과하다)
-    <span key={k} className={`flex h-7 min-w-0 flex-1 items-center rounded-sm bg-rail px-2 text-sm ${fill ? '' : `lg:flex-none ${range ? 'lg:w-24' : 'lg:w-44'}`} ${num ? 'num justify-end' : ''}`}>
+    // 칸: 채운 상자 대신 글자 + 가는 밑줄 (2026-10-16 디자인: 견본 「나 · 파랑」 — 빈 회색 상자가 화면을 무겁게 했다). PC는 정해진 폭
+    <span key={k} className={`flex h-8 min-w-0 flex-1 items-center border-b border-border px-1 text-sm font-medium ${fill ? '' : `lg:flex-none ${range ? 'lg:w-24' : 'lg:w-44'}`} ${num ? 'num justify-end' : ''}`}>
       {v ?? ''}
     </span>
   );
   return (
     <div className="flex items-center gap-3">
-      <dt className="w-28 shrink-0 text-right text-sm lg:w-36">{label}</dt>
+      <dt className="w-28 shrink-0 text-right text-sm text-muted lg:w-36">{label}</dt>
       <dd className="flex min-w-0 flex-1 items-center gap-1.5">
         {range ? (
           <>
@@ -98,13 +98,13 @@ export default async function MyPayPage({ searchParams }: { searchParams: Promis
       </div>
 
       {/* 내 정보 */}
-      <details open className="group rounded-card border border-border bg-bg">
+      <details open className="group rounded-card border border-border bg-bg lg:shadow-card">
         <summary className="flex cursor-pointer list-none items-center justify-between px-4 pt-3 text-sm font-bold lg:hidden [&::-webkit-details-marker]:hidden">
           {tm('profile')}
           <ChevronDown aria-hidden size={16} className="transition-transform duration-[350ms] group-open:rotate-180" />
         </summary>
         <div className="flex gap-6 p-4 lg:p-6">
-          <span className="hidden size-24 shrink-0 items-center justify-center bg-surface text-faint lg:flex">
+          <span className="hidden size-24 shrink-0 items-center justify-center rounded-card bg-surface text-faint lg:flex">
             <UserRound aria-hidden size={48} strokeWidth={1.25} />
           </span>
           <dl className={`${grid} flex-1`} data-pay-profile>
@@ -120,7 +120,7 @@ export default async function MyPayPage({ searchParams }: { searchParams: Promis
       </details>
 
       {/* 급여상세 */}
-      <section className="rounded-card border border-border bg-bg" data-pay-detail>
+      <section className="rounded-card border border-border bg-bg lg:shadow-card" data-pay-detail>
         <h2 className="border-b border-border px-4 py-3 font-bold lg:px-6">{tm('detail')}</h2>
         <dl className={`${grid} px-4 py-4 lg:px-6`}>
           <Field label={tm('payType')} value={c ? ts(`payType.${c.payType}`) : null} />
@@ -236,7 +236,7 @@ export default async function MyPayPage({ searchParams }: { searchParams: Promis
             </table>
           </div>
 
-          <div className="hidden border border-border bg-bg lg:block" data-slip-panel>
+          <div className="hidden overflow-hidden rounded-card border border-border bg-bg shadow-card lg:block" data-slip-panel>
             <dl className="grid grid-cols-2 gap-x-6 gap-y-2.5 border-b border-border px-5 py-4">
               <Field fill label={tm('empName')} value={picked ? me.name : null} />
               <Field fill label={tm('dept')} value={picked ? group : null} />

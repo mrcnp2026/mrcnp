@@ -26,8 +26,8 @@ export function PcTable({ cols, rows, labels, total }: { cols: PcCol[]; rows: Pc
           {labels.total} <b className="text-lg text-text">{shown.length}</b>
         </p>
       )}
-      {/* 2026-10-16 디자인 2차: 카드 안의 표(견본 「나 · 파랑」) */}
-      <div className="overflow-x-auto rounded-card border border-border bg-bg shadow-card">
+      {/* 화면의 주 목록 표 — 견본 「나 · 파랑」처럼 위에 진한 선 한 줄(공통 목록 틀 ListTable과 같은 모양, 2026-10-16) */}
+      <div className="overflow-x-auto border-t border-text bg-bg">
         <table className="w-full text-sm">
           <thead>
             <tr>
