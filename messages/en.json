@@ -2932,7 +2932,8 @@
         "leave_member_overlap": "Another membership already covers that date.",
         "leave_policy_missing": "Start the default accrual policy first."
       },
-      "groupsTitle": "Leave policy groups"
+      "groupsTitle": "Leave policy groups",
+      "balLine": "Granted {g} · used {u}"
     },
     "anomalies": {
       "title": "Attendance exceptions",

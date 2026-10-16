@@ -1,6 +1,7 @@
 'use client';
 // 휴가 원장 화면의 조작부 — 정책 시작/고치기 · 후보 만들기 · 승인/반려 · 소멸 처리 · 직접 지급. 처리하면 화면을 새로 읽는다.
 import { useTranslations } from 'next-intl';
+import { ChevronRight } from 'lucide-react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { Children, cloneElement, isValidElement, useState, type ReactElement, type ReactNode } from 'react';
@@ -176,6 +177,29 @@ export function LedgerBoard(props: { group?: { id: string; name: string } | null
       <Card>
         <CardTitle>{t('balTitle')}</CardTitle>
         <p className="pt-1 pb-3 text-sm text-faint">{t('balIntro')}</p>
+        {/* 폰: 한 사람 = 한 줄(이름 · 발생/사용 · 남은 연차 크게) — 누르면 그 사람 원장 (2026-10-16 디자인: 25명 카드로 7천 px였다) */}
+        <ul className="-mx-1 flex flex-col divide-y divide-border lg:hidden">
+          {props.balances.map((b) => (
+            <li key={b.employeeId}>
+              <Link href={`/admin/leave/ledger?emp=${b.employeeId}${q}#detail`} className="flex min-h-14 items-center gap-3 px-1 py-2">
+                <span className="flex min-w-0 flex-1 flex-col">
+                  <span className="truncate font-bold">
+                    {b.name}
+                    {!b.active && <span className="ml-2 text-xs font-normal text-faint">{t('inactive')}</span>}
+                  </span>
+                  <span className="num truncate text-xs text-muted">{b.started ? t('balLine', { g: day(b.granted), u: day(b.used) }) : t('cmpNotStarted')}</span>
+                </span>
+                {b.started && b.old !== null && b.old !== b.remaining && <Chip tone="warn">{t('cmpDiff')}</Chip>}
+                <span className="num shrink-0 text-right">
+                  <span className={`block text-lg leading-tight font-bold ${b.remaining < 0 ? 'text-warn' : ''}`}>{b.started ? day(b.remaining) : '–'}</span>
+                  {b.advance > 0 && <span className="block text-xs text-warn">{t(b.advanceOver ? 'advanceOver' : 'advance', { n: b.advance })}</span>}
+                </span>
+                <ChevronRight aria-hidden size={18} className="shrink-0 text-faint" />
+              </Link>
+            </li>
+          ))}
+        </ul>
+        <div className="hidden lg:block">
         <Table heads={[t('colName'), t('colJoined'), t('colGrantedSum'), t('colUsed'), t('colExpired'), t('colRemaining'), t('colOld'), t('colCompare'), '']}>
           {props.balances.map((b) => (
             <tr key={b.employeeId} className="border-b border-border last:border-b-0">
@@ -202,6 +226,7 @@ export function LedgerBoard(props: { group?: { id: string; name: string } | null
             </tr>
           ))}
         </Table>
+        </div>
       </Card>
 
       {emp && (

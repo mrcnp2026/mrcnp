@@ -2932,7 +2932,8 @@
         "leave_member_overlap": "그 날짜에 이미 다른 그룹 소속이 있습니다.",
         "leave_policy_missing": "먼저 기본 그룹의 연차 생성 기준을 시작해 주세요."
       },
-      "groupsTitle": "휴가 정책 그룹"
+      "groupsTitle": "휴가 정책 그룹",
+      "balLine": "발생 {g} · 사용 {u}"
     },
     "anomalies": {
       "title": "이상자 관리",
