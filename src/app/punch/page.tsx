@@ -52,14 +52,15 @@ export default async function PunchPage({ searchParams }: { searchParams: Promis
   const weekStart = pickWeek((await searchParams).w, thisWeek, weekStartOf, addDays);
   const isThisWeek = weekStart === thisWeek;
   const period = await loadPeriod(weekStart, addDays(weekStart, 6));
-  // 이번 주가 아니면 그 주의 실제 시간을 같은 방식으로 다시 센다 (출근~퇴근 합, 연장은 급여 집계와 같은 계산)
-  const week = isThisWeek || !period.rule
+  // 주 근무 시간 = 실제 근로시간(휴게를 빼고, 일정 전 일찍 온 시간은 빼고) — 「내 근태현황」 · 관리자 「주 52시간 관리」와 같은 숫자.
+  // 2026-10-17: 예전에는 출근~퇴근을 그대로 더해(점심 포함) 52시간이 안 된 사람에게 「한도 초과」가 떴다(내 근태현황은 48시간 40분)
+  const week = !period.rule
     ? today.week
     : weeklyHours({
         weekStart,
         dailyWork: daysFor(period, me.id).map((d) => ({
           workDate: d.workDate,
-          netMinutes: d.pairs.reduce((a, x) => a + (x.in && x.out && x.out > x.in ? Math.floor((x.out.getTime() - x.in.getTime()) / 60000) : 0), 0),
+          netMinutes: d.netMinutes,
           overtimeMinutes: d.overtimeMinutes + d.holidayMinutes,
         })),
         is5OrMore: today.week?.colored ?? true,
