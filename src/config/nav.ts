@@ -58,7 +58,7 @@ export const ADMIN_APPS: App[] = [
     ],
   },
   { key: 'mTalk', icon: Megaphone, groups: one([{ href: '/admin/notices', key: 'adminNotices' }, { href: '/admin/messages', key: 'adminMessages' }]) },
-  { key: 'mReports', icon: ChartColumn, groups: one([{ href: '/admin/reports/attendance', key: 'reportAttendance' }, { href: '/admin/reports/leave', key: 'reportLeave' }, { href: '/admin/manage/report-snapshots', key: 'reportSnapshots' }]) },
+  { key: 'mReports', icon: ChartColumn, groups: one([{ href: '/admin/reports/attendance', key: 'reportAttendance' }, { href: '/admin/reports/leave', key: 'reportLeave' }, { href: '/admin/reports/annual', key: 'reportAnnual' }, { href: '/admin/manage/report-snapshots', key: 'reportSnapshots' }]) },
 ];
 
 // 통합설정 — 문서 07의 6장 분류 표. section: company = 회사설정, apps = App 관리

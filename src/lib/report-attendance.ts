@@ -17,7 +17,7 @@ import { createAdminClient } from '@/lib/supabase/admin';
 import { toKstDate } from '@/lib/time';
 
 export type AttSum = { people: number; closed: number; netMinutes: number; payableMinutes: number; regularMinutes: number; overtimeMinutes: number; nightMinutes: number; holidayMinutes: number; lateCount: number; absentDays: number; paidLeaveDays: number; unpaidLeaveDays: number; anomalyBlock: number; anomalyCheck: number; pending: number; unconfirmedDays: number };
-export type AttEmp = AttSum & { employeeId: string; name: string; employeeNo: string | null; groupId: string | null; isClosed: boolean };
+export type AttEmp = AttSum & { employeeId: string; name: string; employeeNo: string | null; groupId: string | null; isClosed: boolean; dayTotals?: { date: string; minutes: number }[] };
 export type AttGroup = AttSum & { groupId: string | null; name: string };
 export type AttReport = { month: string; practice: boolean; basis: 'at_month_end' | 'current'; groupId: string | null; employees: AttEmp[]; groups: AttGroup[]; total: AttSum; generatedAt: string };
 
@@ -25,7 +25,9 @@ const zero = (): AttSum => ({ people: 0, closed: 0, netMinutes: 0, payableMinute
 const KEYS = Object.keys(zero()) as (keyof AttSum)[];
 const addTo = (a: AttSum, b: AttSum) => { for (const k of KEYS) a[k] += b[k]; };
 
-export async function buildAttendanceDeptReport(args: { ym: string; practice: boolean; groupId: string | null; basis: 'at_month_end' | 'current' }): Promise<AttReport> {
+// withDays: 직원마다 날짜별 합계(정규 + 연장 + 휴일, 현황판의 주 합계와 같은 셈)를 같이 낸다 — 연간 리포트가 주 52시간 넘은 주를 센다(lib/report-annual.ts)
+// employeeId: 그 직원만 센다(연간 리포트의 직원 한 명 화면)
+export async function buildAttendanceDeptReport(args: { ym: string; practice: boolean; groupId: string | null; basis: 'at_month_end' | 'current'; withDays?: boolean; employeeId?: string }): Promise<AttReport> {
   const [{ lines, data, from, last }, groups, policy, { data: hist }] = await Promise.all([
     loadCloseBoard(args.ym, args.practice),
     loadOrgGroups(),
@@ -47,11 +49,14 @@ export async function buildAttendanceDeptReport(args: { ym: string; practice: bo
   for (const l of lines) {
     const gid = groupAt(l.employeeId, l.groupId);
     if (scope && !(gid && scope.has(gid))) continue;
+    if (args.employeeId && l.employeeId !== args.employeeId) continue;
     const p = data.people.find((x) => x.id === l.employeeId);
     const row: AttEmp = { ...zero(), employeeId: l.employeeId, name: l.name, employeeNo: l.employeeNo, groupId: gid, isClosed: !!l.close, people: 1, closed: l.close ? 1 : 0 };
     if (data.rule && upTo >= from) {
+      const days = daysFor(data, l.employeeId, from, upTo);
+      if (args.withDays) row.dayTotals = days.map((d) => ({ date: d.workDate, minutes: d.regularMinutes + d.overtimeMinutes + d.holidayMinutes }));
       const s = summarizeMonth({
-        employeeNo: l.employeeNo, name: l.name, yearMonth: args.ym, days: daysFor(data, l.employeeId, from, upTo),
+        employeeNo: l.employeeNo, name: l.name, yearMonth: args.ym, days,
         requests: data.overtime.filter((o) => o.employeeId === l.employeeId).map((o) => ({ ...o })),
         pendingCorrections: l.review.pending.correction, rule: data.ruleFor(l.employeeId, last) ?? data.rule, ruleAt: (d) => data.ruleFor(l.employeeId, d), joinedOn: p?.startsOn ?? null, now, today,
         thresholdMinutes: OFFICE.overtimeReviewThresholdMin, leave: leaveDaysFor(data, l.employeeId), work: workDaysFor(data, l.employeeId),
