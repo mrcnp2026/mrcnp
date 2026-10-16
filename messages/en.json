@@ -716,7 +716,7 @@
       "notConfirmed": "Not read yet",
       "titleLabel": "Title (Korean)",
       "bodyLabel": "Body (Korean)",
-      "bodyHint": "Line breaks OK · no formatting · https links become clickable",
+      "bodyHint": "Bold, headings, lists and photos are allowed. Translations carry the text only",
       "importantHint": "No \"skip today\" — must be read",
       "legal": "Legal or pay",
       "legalHint": "Publish only after translation review",

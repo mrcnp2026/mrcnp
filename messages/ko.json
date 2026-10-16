@@ -716,7 +716,7 @@
       "notConfirmed": "아직 확인 안 한 사람",
       "titleLabel": "제목 (한국어)",
       "bodyLabel": "본문 (한국어)",
-      "bodyHint": "줄바꿈 가능 · 서식 없음 · https 주소는 링크가 됩니다",
+      "bodyHint": "굵게 · 제목 · 목록 · 사진을 넣을 수 있습니다. 번역본(영어)에는 글자만 들어갑니다",
       "importantHint": "「오늘 하루 보지 않기」 없이 꼭 확인",
       "legal": "법적·급여 관련",
       "legalHint": "번역 확인 후에만 게시",
