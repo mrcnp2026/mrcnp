@@ -9,8 +9,9 @@ import { createAdminClient } from '@/lib/supabase/admin';
 export async function loadStaff(): Promise<Staff[]> {
   const { data } = await readAll((a,b) => createAdminClient().from('profiles').select('id, role, active, can_view_payroll, employee_no, admin_level').order('id').range(a,b));
   return (data ?? []).map((p) => {
-    const level = p.role === 'admin' ? ((p.admin_level as AdminLevel | null) ?? (p.employee_no === OFFICE.ownerEmployeeNo ? 'ceo' : 'general')) : null;
-    return { id: p.id, role: p.role, active: p.active, canViewPayroll: p.can_view_payroll, level, owner: level === 'super' || level === 'ceo' };
+    // 관리자는 모두 최고관리자(권한-10) — 대표자(ceo)는 표시만 다르다
+    const level: AdminLevel | null = p.role === 'admin' ? (p.admin_level === 'ceo' ? 'ceo' : 'super') : null;
+    return { id: p.id, role: p.role, active: p.active, canViewPayroll: p.role === 'admin', level, owner: p.role === 'admin' };
   });
 }
 

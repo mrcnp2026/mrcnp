@@ -24,7 +24,7 @@ import { loadPendingSignups } from '@/lib/signup';
 
 // 탭 (2026-10-11 의뢰인: 시프티의 직원 관리처럼) — 현재직원(가입을 마친 사람) · 미합류(초대했지만 아직 가입 전) · 비활성(퇴사 등으로 꺼 둔 사람)
 type Filter = 'current' | 'pending' | 'inactive';
-type Row = { id: string; name: string; employeeNo: string | null; role: string; active: boolean; groupId: string | null; jobTitle: string | null; canViewPayroll: boolean; joinedOn: string | null; jobId: string | null; level: 'super' | 'ceo' | 'general' | null };
+type Row = { id: string; name: string; employeeNo: string | null; role: string; active: boolean; groupId: string | null; jobTitle: string | null; canViewPayroll: boolean; joinedOn: string | null; jobId: string | null; level: 'super' | 'ceo' | null };
 
 export default async function MembersPage({ searchParams }: { searchParams: Promise<{ f?: string }> }) {
   const t = await getTranslations('admin.members');
@@ -49,7 +49,7 @@ export default async function MembersPage({ searchParams }: { searchParams: Prom
   // 검사 전용 계정(e2e-audit, e2e-audit2)은 검사 중에만 켜진다 — 꺼져 있으면 목록에 안 보이게
   const all: Row[] = (people ?? [])
     .filter((p) => p.active || !p.employee_no?.startsWith('e2e-audit'))
-    .map((p) => ({ id: p.id, name: p.name, employeeNo: p.employee_no, role: p.role, active: p.active, groupId: p.group_id, jobTitle: p.job_title, canViewPayroll: p.can_view_payroll, joinedOn: p.joined_on, jobId: p.job_id, level: (p.role === 'admin' ? (p.admin_level ?? 'general') : null) as 'super' | 'ceo' | 'general' | null }));
+    .map((p) => ({ id: p.id, name: p.name, employeeNo: p.employee_no, role: p.role, active: p.active, groupId: p.group_id, jobTitle: p.job_title, canViewPayroll: p.can_view_payroll, joinedOn: p.joined_on, jobId: p.job_id, level: (p.role === 'admin' ? (p.admin_level === 'ceo' ? 'ceo' : 'super') : null) as 'super' | 'ceo' | null }));
   const active = all.filter((p) => p.active);
   const inactive = all.filter((p) => !p.active);
   const joined = active.filter((p) => withPhone.has(p.id));
@@ -74,9 +74,8 @@ export default async function MembersPage({ searchParams }: { searchParams: Prom
             <span className="flex items-center gap-1.5">
               <span className="truncate font-medium">{p.name}</span>
               {p.jobTitle && <span className="shrink-0 text-xs text-muted">{p.jobTitle}</span>}
-              {p.role === 'admin' && <Chip tone="info">{t(p.level === 'super' ? 'levelSuper' : p.level === 'ceo' ? 'levelCeo' : 'levelGeneral')}</Chip>}
+              {p.role === 'admin' && <Chip tone="info">{t(p.level === 'ceo' ? 'levelCeo' : 'levelSuper')}</Chip>}
               {p.role === 'manager' && <Chip tone="info">{t('managerChip')}</Chip>}
-              {p.canViewPayroll && <Chip tone="info">{t('payrollChip')}</Chip>}
               {roleWaiting.has(p.id) && <Chip tone="warn">{t('roleWaiting')}</Chip>}
             </span>
             <span className="num flex items-center gap-1 truncate text-xs">
@@ -185,13 +184,13 @@ export default async function MembersPage({ searchParams }: { searchParams: Prom
           ]}
           rows={list.map((p) => {
             const ok = withPhone.has(p.id);
-            const roleText = [p.role === 'admin' ? t(p.level === 'super' ? 'levelSuper' : p.level === 'ceo' ? 'levelCeo' : 'levelGeneral') : p.role === 'manager' ? t('managerChip') : t('employeeRole'), p.canViewPayroll ? t('payrollChip') : ''].filter(Boolean).join(' ');
+            const roleText = [p.role === 'admin' ? t(p.level === 'ceo' ? 'levelCeo' : 'levelSuper') : p.role === 'manager' ? t('managerChip') : t('employeeRole')].join(' ');
             return {
               id: p.id,
               dim: !p.active,
               cells: {
                 name: { text: p.name, node: <Link href={`/admin/members/${p.id}`} className="font-bold hover:text-primary">{p.name}</Link> },
-                role: { text: roleText, node: <RoleCell employeeId={p.id} role={p.role} canViewPayroll={p.canViewPayroll} self={p.id === me.id} waiting={roleWaiting.has(p.id)} actorCanPayroll={me.canViewPayroll} level={p.level} actorTop={me.top} /> },
+                role: { text: roleText, node: <RoleCell employeeId={p.id} role={p.role} self={p.id === me.id} waiting={roleWaiting.has(p.id)} level={p.level} actorTop={me.top} /> },
                 no: { text: p.employeeNo ?? '' },
                 group: { text: groupPath(groups, p.groupId) ?? t('unassigned') },
                 title: { text: p.jobTitle ?? '' },

@@ -6,7 +6,6 @@ import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import { DetailBar } from '@/components/detail';
 import { Card, CardTitle, Chip, PageShell } from '@/components/ui';
-import { OFFICE } from '@/config/office';
 import { LOCALE_NAMES, LOCALES } from '@/i18n/locales';
 import { getMe } from '@/lib/auth';
 import { consentAt } from '@/lib/consent';
@@ -65,12 +64,12 @@ export default async function MemberDetailPage({ params }: { params: Promise<{ i
     ? ([['overtime', todo.overtime], ['corrections', todo.corrections], ['leave', todo.leave], ['work', todo.work]] as const).filter(([, n]) => n > 0).map(([k, n]) => tm(`todo.${k}`, { n }))
     : [];
   const api = `/api/admin/employees/${p.id}`;
-  // 대표자(ceo)는 최고관리자로 본다 (2026-10-15 의뢰인: 등급 두 가지)
-  const level = p.role === 'admin' ? ((p.admin_level as GradeKey | null) ?? 'general') : (p.role as GradeKey);
-  const grade: GradeKey = level === 'ceo' ? 'super' : level;
-  const targetTop = grade === 'super';
-  const { data: tops } = await db.from('profiles').select('name, admin_level').eq('role', 'admin').eq('active', true).in('admin_level', ['super', 'ceo']);
+  // 등급 (2026-10-16 의뢰인 권한-10): 관리자 = 최고관리자(대표자 포함 최대 3명, 대표자 1명) · 지점관리자 · 일반직원
+  const grade: GradeKey = p.role === 'admin' ? (p.admin_level === 'ceo' ? 'ceo' : 'super') : (p.role as GradeKey);
+  const targetTop = p.role === 'admin';
+  const { data: tops } = await db.from('profiles').select('id, name, admin_level').eq('role', 'admin').eq('active', true);
   const topNames = (tops ?? []).map((x) => x.name as string);
+  const ceoName = (tops ?? []).find((x) => x.admin_level === 'ceo' && x.id !== p.id)?.name as string | undefined;
   // 오너는 다른 관리자가 있어도 자기 출퇴근 기기를 직접 해제한다 (staff-rules.checkDeviceRevoke)
   const soleAdmin = self && (me.top || ((await db.from('profiles').select('id', { count: 'exact', head: true }).eq('role', 'admin').eq('active', true).neq('id', me.id)).count ?? 0) === 0);
   // 대기 중인 권한 변경 (두 번째 관리자 확인, R-2의 8)
@@ -79,7 +78,6 @@ export default async function MemberDetailPage({ params }: { params: Promise<{ i
   const changeLabel = pendingRole
     ? [
         pendingRole.new_role !== p.role ? tm(pendingRole.new_role === 'admin' ? 'makeAdmin' : pendingRole.new_role === 'manager' ? 'makeManager' : p.role === 'manager' ? 'removeManager' : 'removeAdmin') : null,
-        pendingRole.new_role === 'admin' && pendingRole.new_can_view_payroll !== p.can_view_payroll ? tm(pendingRole.new_can_view_payroll ? 'grantPayroll' : 'revokePayroll') : null,
       ].filter(Boolean).join(' · ')
     : '';
 
@@ -96,9 +94,8 @@ export default async function MemberDetailPage({ params }: { params: Promise<{ i
           <p className="truncate text-sm text-muted">{[p.job_title, path ?? t('unassigned')].filter(Boolean).join(' · ')}</p>
           <p className="mt-1 flex flex-wrap items-center gap-1.5">
             <span className="num text-xs text-faint">{p.employee_no}</span>
-            {p.role === 'admin' && <Chip tone="info">{t(p.admin_level === 'super' ? 'levelSuper' : p.admin_level === 'ceo' ? 'levelCeo' : 'levelGeneral')}</Chip>}
+            {p.role === 'admin' && <Chip tone="info">{t(p.admin_level === 'ceo' ? 'levelCeo' : 'levelSuper')}</Chip>}
             {p.role === 'manager' && <Chip tone="info">{t('managerChip')}</Chip>}
-            {p.can_view_payroll && <Chip tone="info">{t('payrollChip')}</Chip>}
             {!p.active && <Chip>{t('inactive')}</Chip>}
             {p.active && (agreedAt ? <Chip tone="ok">{t('consentYes', { date: day(agreedAt) })}</Chip> : <Chip tone="warn">{t('consentNo')}</Chip>)}
           </p>
@@ -187,26 +184,21 @@ export default async function MemberDetailPage({ params }: { params: Promise<{ i
         ) : (
           <>
             {pendingRole && <p className="px-5 py-3 text-sm text-muted">{tm('pendingHide')}</p>}
-            {/* 권한 등급 — 최고관리자(최대 3명) · 일반직원 두 가지 (2026-10-15 의뢰인). 최고관리자 관련은 최고관리자만 */}
+            {/* 권한 등급 — 최고관리자 · 대표자 · 지점관리자 · 일반직원 (2026-10-16 의뢰인 권한-10) */}
             {!pendingRole && p.active && (!targetTop || me.top) && (
               <div className="border-t border-border first:border-t-0">
                 <p className="px-5 pt-4 pb-2 font-medium">{tm('gradeTitle')}</p>
                 <GradeForm
                   employeeId={p.id}
                   current={grade}
-                  allowed={SHOWN_GRADES.filter((g) => g !== grade && (g !== 'super' || (me.top && topNames.length < MAX_TOP)))}
+                  allowed={SHOWN_GRADES.filter((g) => g !== grade && (!(g === 'super' || g === 'ceo') || targetTop || topNames.length < MAX_TOP) && (g !== 'ceo' || !ceoName))}
                   topNames={topNames}
+                  ceoName={ceoName}
                 />
               </div>
             )}
             {!pendingRole && p.active && targetTop && !me.top && <p className="px-5 py-3 text-sm text-muted">{tm('owner_only')}</p>}
             {p.active && p.role === 'manager' && <ManagerScope employeeId={p.id} groups={tree.flatMap((d) => [{ id: d.id, label: d.name }, ...d.teams.map((x) => ({ id: x.id, label: `${d.name} › ${x.name}` }))])} picked={managed} />}
-            {!pendingRole && p.active && p.role === 'admin' && me.canViewPayroll && !p.can_view_payroll && (
-              <ManageAction title={tm('grantPayroll')} hint={tm('grantPayrollHint')} confirmLabel={tm('grantPayroll')} endpoint={`${api}/role`} body={{ canViewPayroll: true }} presets={[tm('preset.payrollOwner')]} />
-            )}
-            {!pendingRole && p.active && p.role === 'admin' && me.canViewPayroll && p.can_view_payroll && (
-              <ManageAction title={tm('revokePayroll')} hint={tm('revokePayrollHint')} confirmLabel={tm('revokePayroll')} endpoint={`${api}/role`} body={{ canViewPayroll: false }} presets={[tm('preset.handover'), tm('preset.mistake')]} />
-            )}
             {key && (
               <ManageAction title={tm('revokeDevice')} hint={tm('revokeDeviceHint')} confirmLabel={tm('revokeDevice')} endpoint={`${api}/device`} body={{}} presets={[tm('preset.lost'), tm('preset.newPhone')]} notes={[tm('revokeDeviceNote')]} danger />
             )}

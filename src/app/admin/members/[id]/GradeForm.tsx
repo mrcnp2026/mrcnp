@@ -1,8 +1,7 @@
 'use client';
 // 권한 등급 고르기 — 다섯 등급을 한곳에서 (2026-10-15 의뢰인: `스샷/스샷2/권한3.png` — 「관리자 해제 · 급여 담당 지정」만 있고 등급을 직접 줄 수 없었다).
 // 고를 수 없는 등급은 흐리게 두고 이유를 한 줄로 알려 준다. 서버가 같은 규칙을 다시 검사한다(api/admin/employees/[id]/grade).
-// 2026-10-15 의뢰인: 등급은 「최고관리자(최대 3명, 대표자 포함) · 일반직원」 두 가지만 보인다. 총괄 · 지점관리자는 화면에서만 숨기고 기능은 남긴다
-//   (지금 그 등급인 사람은 「지금 등급」으로만 보인다). 대표자(ceo)는 최고관리자로 보인다.
+// 2026-10-16 의뢰인 권한-10: 최고관리자(대표자 포함 최대 3명) · 대표자(1명) · 지점관리자 · 일반직원. 최고관리자 · 대표자는 권한이 같다.
 import { useTranslations } from 'next-intl';
 import { useRouter } from 'next/navigation';
 import { useState } from 'react';
@@ -11,9 +10,9 @@ import { ErrorNote } from '@/components/ErrorNote';
 import { Button } from '@/components/ui';
 import { SHOWN_GRADES } from '@/lib/staff-rules';
 
-export type GradeKey = 'super' | 'ceo' | 'general' | 'manager' | 'employee';
+export type GradeKey = 'super' | 'ceo' | 'manager' | 'employee';
 
-export function GradeForm({ employeeId, current, allowed, topNames }: { employeeId: string; current: GradeKey; allowed: GradeKey[]; topNames: string[] }) {
+export function GradeForm({ employeeId, current, allowed, topNames, ceoName }: { employeeId: string; current: GradeKey; allowed: GradeKey[]; topNames: string[]; ceoName?: string }) {
   const t = useTranslations('admin.manage');
   const router = useRouter();
   const [pick, setPick] = useState<GradeKey>(current);
@@ -41,7 +40,7 @@ export function GradeForm({ employeeId, current, allowed, topNames }: { employee
     >
       <fieldset className="flex flex-col gap-1.5">
         <legend className="pb-1 text-sm text-muted">{t('gradePick')}</legend>
-        {[...(SHOWN_GRADES as readonly GradeKey[]).includes(current) ? [] : [current], ...SHOWN_GRADES].map((g) => {
+        {SHOWN_GRADES.map((g) => {
           const can = allowed.includes(g) || g === current;
           return (
             <label key={g} className={`flex min-h-11 items-center gap-3 rounded-button border px-3 ${pick === g ? 'border-primary bg-primary-tint' : 'border-border'} ${can ? 'cursor-pointer' : 'opacity-50'}`}>
@@ -53,6 +52,7 @@ export function GradeForm({ employeeId, current, allowed, topNames }: { employee
                 </span>
                 <span className="text-xs text-muted">{t(`gradeHint.${g}`)}</span>
                 {g === 'super' && <span className="text-xs text-faint">{t('gradeTopNow', { n: topNames.length, names: topNames.join(', ') || '-' })}</span>}
+                {g === 'ceo' && ceoName && <span className="text-xs text-faint">{t('gradeTaken', { name: ceoName })}</span>}
               </span>
             </label>
           );

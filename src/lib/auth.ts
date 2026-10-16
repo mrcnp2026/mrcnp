@@ -1,6 +1,5 @@
 // 지금 요청한 사람이 누구인가. 서버 전용.
 import 'server-only';
-import { OFFICE } from '@/config/office';
 import { cache } from 'react';
 import { authTimeOf, sessionRevoked } from '@/lib/login-rules';
 import { createAdminClient } from '@/lib/supabase/admin';
@@ -13,9 +12,11 @@ export type Me = {
   role: 'admin' | 'manager' | 'employee'; // manager = 지점관리자 (맡은 지점만 보고 요청을 승인한다 — scope.ts)
   locale: 'ko' | 'en' | 'vi' | 'th';
   active: boolean;
-  canViewPayroll: boolean; // 부록 R-2의 7: 급여 담당자만 급여용 CSV를 받는다
-  adminLevel: 'super' | 'ceo' | 'general' | null; // 관리자 구분 (개발-39) — 관리자가 아니면 null
-  top: boolean; // 최고관리자 · 대표자 — 모든 승인 · 수정, 본인 것도
+  // 권한 (2026-10-16 의뢰인 권한-10): 관리자 = 최고관리자(대표자 포함 최대 3명) — 전부 보고 · 고치고 · 모든 요청을 받는다(급여 포함).
+  //   급여 담당 · 총괄관리자 구분은 없앴다. 그 밖은 지점관리자(만들어만 둠) · 일반직원
+  canViewPayroll: boolean; // = 관리자
+  adminLevel: 'super' | 'ceo' | null; // 대표자인지 표시만 — 권한은 같다. 관리자가 아니면 null
+  top: boolean; // = 관리자
 };
 
 /**
@@ -41,9 +42,9 @@ export const getMe = cache(async (): Promise<Me | null> => {
   if (sessionRevoked(authTimeOf(data.claims), p.sessions_revoked_at)) return null;
   return {
     id: p.id, name: p.name, employeeNo: p.employee_no, role: p.role, locale: p.locale, active: p.active,
-    canViewPayroll: p.can_view_payroll,
-    adminLevel: p.role === 'admin' ? ((p.admin_level as Me['adminLevel']) ?? (p.employee_no === OFFICE.ownerEmployeeNo ? 'ceo' : 'general')) : null,
-    top: p.role === 'admin' && ((p.admin_level ?? (p.employee_no === OFFICE.ownerEmployeeNo ? 'ceo' : null)) === 'super' || (p.admin_level ?? (p.employee_no === OFFICE.ownerEmployeeNo ? 'ceo' : null)) === 'ceo'),
+    canViewPayroll: p.role === 'admin',
+    adminLevel: p.role === 'admin' ? (p.admin_level === 'ceo' ? 'ceo' : 'super') : null,
+    top: p.role === 'admin',
   };
 });
 

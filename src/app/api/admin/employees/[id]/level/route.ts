@@ -1,9 +1,9 @@
-// 관리자 구분 바꾸기 — 최고관리자 · 대표자 · 총괄관리자 (2026-10-15 의뢰인, 결정 사항 개발-39 · DB 묶음 11).
-// 최고관리자 · 대표자만 바꾼다. 자기 것은 못 바꾼다. 최고관리자는 대표자를 포함해 3명까지(묶음 13, 0046 — DB 트리거가 넷째를 막는다). 사유 필수, 변경 기록에 남는다.
+// 관리자 구분 바꾸기 — 최고관리자 · 대표자 (2026-10-16 의뢰인 권한-10: 권한은 같고 대표자 표시만 다르다, 대표자 1명).
+// 자기 것은 못 바꾼다. 사유 필수, 변경 기록에 남는다.
 import { api, ApiError, readJson } from '@/lib/api';
 import { requireAdmin } from '@/lib/auth';
 import { auditStaffAction, loadStaff } from '@/lib/staff-data';
-import { checkLevelChange, cleanReason, type AdminLevel } from '@/lib/staff-rules';
+import { checkLevelChange, cleanReason, MAX_CEO, type AdminLevel } from '@/lib/staff-rules';
 import { createAdminClient } from '@/lib/supabase/admin';
 
 export const POST = api<{ params: Promise<{ id: string }> }>('admin.employees.level', async (req, ctx) => {
@@ -11,7 +11,7 @@ export const POST = api<{ params: Promise<{ id: string }> }>('admin.employees.le
   if (!me) throw new ApiError(403, 'forbidden');
   const { id } = await ctx.params;
   const b = await readJson(req);
-  const level: AdminLevel | null = b.level === 'super' || b.level === 'ceo' || b.level === 'general' ? b.level : null;
+  const level: AdminLevel | null = b.level === 'super' || b.level === 'ceo' ? b.level : null;
   if (!level) throw new ApiError(400, 'invalid_input');
   const reason = cleanReason(b.reason);
   if (!reason) throw new ApiError(400, 'reason_required');
@@ -21,9 +21,10 @@ export const POST = api<{ params: Promise<{ id: string }> }>('admin.employees.le
   if (!actor || !target) throw new ApiError(404, 'not_found');
   const code = checkLevelChange(actor, target, level);
   if (code) throw new ApiError(code === 'already' || code === 'employee_inactive' ? 409 : 403, code);
+  if (level === 'ceo' && all.filter((s) => s.active && s.id !== id && s.level === 'ceo').length >= MAX_CEO) throw new ApiError(409, 'ceo_taken');
   const { error } = await createAdminClient().from('profiles').update({ admin_level: level, updated_by: me.id }).eq('id', id);
   if (error?.code === '23505') throw new ApiError(409, 'level_taken');
   if (error) throw new Error(`level.update: ${error.code}`);
-  await auditStaffAction({ actorId: me.id, targetId: id, event: 'role_changed', reason, detail: { from: { level: target.level ?? 'general' }, to: { level }, requestId: ctx.requestId } });
+  await auditStaffAction({ actorId: me.id, targetId: id, event: 'role_changed', reason, detail: { from: { level: target.level ?? 'super' }, to: { level }, requestId: ctx.requestId } });
   return { ok: true, level };
 });

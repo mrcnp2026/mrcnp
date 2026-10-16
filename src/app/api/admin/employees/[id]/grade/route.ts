@@ -1,16 +1,14 @@
-// 권한 등급 한 번에 바꾸기 — 최고관리자 · 대표자 · 총괄관리자 · 지점관리자 · 일반직원 (2026-10-15 의뢰인: `스샷/스샷2/권한3.png` — 상세에서 등급을 직접 부여할 수 없었다).
-// 규칙(결정 사항 개발-39): 최고관리자 · 대표자로 지정하거나 그 사람을 바꾸는 것은 최고관리자 · 대표자만. 본인 것은 못 바꾼다.
-//   등급(role)이 바뀌면 기존 권한 변경 절차(request_staff_role_atomic — 다른 관리자 확인, 최소 관리자 수)를 그대로 탄다.
-//   관리자끼리의 구분(최고 · 대표 · 총괄)만 바뀌면 바로 반영한다.
-// 2026-10-15 의뢰인: 화면에는 최고관리자 · 일반직원 두 가지만. 최고관리자는 대표자를 포함해 최대 3명(MAX_TOP — DB도 막는다, 묶음 13).
+// 권한 등급 한 번에 바꾸기 — 최고관리자 · 대표자 · 지점관리자 · 일반직원 (2026-10-16 의뢰인 권한-10).
+// 규칙: 관리자는 모두 최고관리자(대표자 포함 최대 3명, 대표자는 1명). 급여도 함께 본다(급여 담당 구분 없음). 본인 것은 못 바꾼다.
+//   등급(role)이 바뀌면 권한 변경 함수(request_staff_role_atomic — 최소 관리자 수)를 탄다. 최고관리자 ↔ 대표자는 바로 반영한다.
 import { api, ApiError, readJson } from '@/lib/api';
 import { atomicRpc } from '@/lib/atomic-rpc';
 import { requireAdmin } from '@/lib/auth';
 import { auditStaffAction, loadStaff } from '@/lib/staff-data';
-import { cleanReason, gradeOf, MAX_TOP, type Grade } from '@/lib/staff-rules';
+import { cleanReason, gradeOf, MAX_CEO, MAX_TOP, SHOWN_GRADES, type Grade } from '@/lib/staff-rules';
 import { createAdminClient } from '@/lib/supabase/admin';
 
-const GRADES: Grade[] = ['super', 'ceo', 'general', 'manager', 'employee'];
+const GRADES: readonly Grade[] = SHOWN_GRADES;
 
 export const POST = api<{ params: Promise<{ id: string }> }>('admin.employees.grade', async (req, ctx) => {
   const me = await requireAdmin();
@@ -30,13 +28,14 @@ export const POST = api<{ params: Promise<{ id: string }> }>('admin.employees.gr
   const top = (g: Grade) => g === 'super' || g === 'ceo';
   if ((target.owner || top(grade)) && !actor.owner) throw new ApiError(403, 'owner_only');
   const now = gradeOf(target);
-  if (now === grade || (top(now) && top(grade))) throw new ApiError(409, 'already');
-  if (top(grade) && all.filter((s) => s.active && top(gradeOf(s))).length >= MAX_TOP) throw new ApiError(409, 'super_full');
+  if (now === grade) throw new ApiError(409, 'already');
+  if (top(grade) && !top(now) && all.filter((s) => s.active && top(gradeOf(s))).length >= MAX_TOP) throw new ApiError(409, 'super_full');
+  if (grade === 'ceo' && all.filter((s) => s.active && s.id !== id && gradeOf(s) === 'ceo').length >= MAX_CEO) throw new ApiError(409, 'ceo_taken');
 
-  const role = top(grade) || grade === 'general' ? 'admin' : grade;
+  const role = top(grade) ? 'admin' : grade;
   const db = createAdminClient();
   if (role !== target.role) {
-    const r = await atomicRpc<{ ok: boolean; pending?: boolean }>('request_staff_role_atomic', { p_actor: me.id, p_target: id, p_role: role, p_pay: null, p_reason: reason, p_request_id: ctx.requestId });
+    const r = await atomicRpc<{ ok: boolean; pending?: boolean }>('request_staff_role_atomic', { p_actor: me.id, p_target: id, p_role: role, p_pay: role === 'admin', p_reason: reason, p_request_id: ctx.requestId });
     if (r.pending) return { ok: true, pending: true };
     if (!top(grade)) return { ok: true, grade };
   }

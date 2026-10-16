@@ -1,5 +1,5 @@
 // 급여용 CSV (①-4 7-10 exportForPayroll). 한 행 = 직원 × 월, 금액 0칸 (4-4).
-// ★ 급여 담당자(can_view_payroll)만 (부록 R-2의 7, R-11 #4). 메뉴 숨김이 아니라 서버가 막는다.
+// ★ 최고관리자(관리자 전원)만 (권한-10). 메뉴 숨김이 아니라 서버가 막는다.
 // 연습 모드의 연습 기록으로는 만들지 않는다 — 급여로 넘어가는 통로이기 때문 (4-6)
 import type { NextRequest } from 'next/server';
 import { OFFICE } from '@/config/office';

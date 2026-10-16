@@ -92,9 +92,9 @@ export default async function SettingsPage({ searchParams }: { searchParams: Pro
           return {
             staff: real.length,
             rows: real
-              .filter((x) => x.role !== 'employee' || x.can_view_payroll)
+              .filter((x) => x.role !== 'employee')
               .sort((a, b) => (a.role === b.role ? 0 : a.role === 'admin' ? -1 : 1))
-              .map((x) => ({ id: x.id as string, name: x.name as string, no: x.employee_no as string | null, role: x.role as string, level: x.admin_level as string | null, pay: !!x.can_view_payroll, scope: (scopes ?? []).filter((c) => c.manager_id === x.id).map((c) => gname.get(c.group_id as string) ?? '').filter(Boolean), pin: hasPin.has(x.id as string) })),
+              .map((x) => ({ id: x.id as string, name: x.name as string, no: x.employee_no as string | null, role: x.role as string, level: x.admin_level as string | null, pay: x.role === 'admin', scope: (scopes ?? []).filter((c) => c.manager_id === x.id).map((c) => gname.get(c.group_id as string) ?? '').filter(Boolean), pin: hasPin.has(x.id as string) })),
             meId: (await getMe())?.id ?? '',
           };
         })()
@@ -387,7 +387,7 @@ export default async function SettingsPage({ searchParams }: { searchParams: Pro
                       {r.no && <span className="num pl-2 text-xs font-normal text-faint">{r.no}</span>}
                     </td>
                     <td className="px-3 py-3">
-                      {r.role === 'employee' ? <span className="text-faint">{ts('roleEmployee')}</span> : <Chip tone={r.role === 'admin' ? 'info' : 'neutral'}>{r.role === 'admin' ? memberText(r.level === 'super' ? 'levelSuper' : r.level === 'ceo' ? 'levelCeo' : 'levelGeneral') : ts('roleManager')}</Chip>}
+                      {r.role === 'employee' ? <span className="text-faint">{ts('roleEmployee')}</span> : <Chip tone={r.role === 'admin' ? 'info' : 'neutral'}>{r.role === 'admin' ? memberText(r.level === 'ceo' ? 'levelCeo' : 'levelSuper') : ts('roleManager')}</Chip>}
                     </td>
                     <td className="px-3 py-3">{r.pay ? <UseMark on label={ta('payYes')} /> : <span className="text-faint">–</span>}</td>
                     <td className="px-3 py-3 text-muted">{r.role === 'manager' ? r.scope.join(' · ') || ta('scopeNone') : r.role === 'admin' ? ta('scopeAll') : '–'}</td>

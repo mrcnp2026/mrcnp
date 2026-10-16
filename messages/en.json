@@ -219,7 +219,7 @@
     "note_length": "Please write 1 to 200 characters.",
     "already": "Someone already handled this.",
     "not_found": "Not found. Please refresh.",
-    "payroll_only": "Only payroll staff can download this file.",
+    "payroll_only": "Only top admins can download this file.",
     "register_failed": "This device could not create the registration. Check the items below and try again.",
     "notice_title": "Title must be 1–120 characters.",
     "notice_body": "Body must be 1–4000 characters.",
@@ -258,7 +258,8 @@
     "invalid_email": "Check the email address.",
     "invalid_phone": "Use digits and - only for the phone number.",
     "email_taken": "This email is already registered or pending. Ask an admin.",
-    "signup_pending": "Your sign-up is waiting for admin approval."
+    "signup_pending": "Your sign-up is waiting for admin approval.",
+    "ceo_taken": "There can be only one CEO. Change the current CEO to top admin first."
   },
   "admin": {
     "nav": {
@@ -776,7 +777,7 @@
     "payroll": {
       "title": "Hours summary",
       "subtitle": "Monthly hours summary · payroll file",
-      "noAccess": "Only payroll managers can see this screen. Current payroll managers: {names}. A payroll manager can give this permission to another admin in the Role column of the staff list.",
+      "noAccess": "Only top admins can see this page.",
       "building": "Payslips (base pay, allowances, insurance, tax) are being built. For now: hours summary and the payroll file.",
       "worked": "Worked",
       "overtime": "Overtime",
@@ -982,7 +983,7 @@
     "paySettings": {
       "title": "Payroll settings",
       "menu": "Payroll settings menu",
-      "forbidden": "Only payroll staff can see this. Another admin grants payroll access on the employee screen.",
+      "forbidden": "Only top admins can see this.",
       "section": {
         "employee-defaults": "Employee pay",
         "ledger": "Payroll ledger",
@@ -1088,7 +1089,7 @@
         }
       },
       "s08": {
-        "intro": "Resident numbers are always hidden on screen, in print and in downloads. Payroll staff can open one record for a short time after giving a reason. There is no switch that reveals everything.",
+        "intro": "Resident registration numbers are always masked on screen, in print and in downloads. A top admin can reveal one at a time for a moment after entering a reason. There is no switch to reveal all.",
         "minutes": "Minutes a record stays visible",
         "minutesHint": "Hidden again after this time. 1 to 60 minutes."
       },
@@ -1161,7 +1162,7 @@
         "UNKNOWN": "Unknown"
       },
       "ref": {
-        "principle": "New data arrives as pending review. It is used only after payroll staff press Confirm and apply. Nothing is applied automatically.",
+        "principle": "New data arrives as \"pending review\" and is used only after a top admin presses \"Confirm and apply\". Nothing is applied automatically.",
         "tabs": "Reference data views",
         "tab": {
           "current": "In use",
@@ -1359,7 +1360,7 @@
         "annualRule": "Under 1 year: {monthly} day per full month (up to {max1}) · 1 year or more: {base} days (attendance {att}% or more) · from year {from}, 1 more day every {every} years (up to {max})",
         "annualNote": "The usual method, entered as temporary. It is not yet used to grant leave; it is connected when the leave ledger is built."
       },
-      "payroll_forbidden": "Only payroll staff can use this.",
+      "payroll_forbidden": "Only top admins can use this.",
       "payroll_version_conflict": "Someone else saved first. Refresh to see the latest. What you typed is still here.",
       "payroll_effective_from_past": "The effective date must be later than the previous version.",
       "payroll_reason_required": "Please give a reason.",
@@ -1420,7 +1421,7 @@
       "makeAdmin": "Make admin",
       "makeAdminHint": "They can use staff management, approvals and records.",
       "removeAdmin": "Remove admin",
-      "removeAdminHint": "They go back to a regular employee. Payroll access is removed too.",
+      "removeAdminHint": "Returns to a regular employee. They will no longer see payroll.",
       "grantPayroll": "Give payroll access",
       "grantPayrollHint": "They can see the payroll screen and payroll files.",
       "revokePayroll": "Remove payroll access",
@@ -1475,7 +1476,7 @@
       "revokeDeviceHint": "When they changed or lost their phone. The password stays the same.",
       "revokeDeviceNote": "After this, that device can no longer punch. The employee signs in on the new phone and registers it. Until then, add punches with \"Add record\".",
       "no_device": "No punch device is registered.",
-      "owner_only": "Only the owner can change the owner account's role, status or sign-in.",
+      "owner_only": "Only top admins can change a top admin account.",
       "readOnly": "This screen shows what is currently fixed in the app. Tell us if anything should be changed.",
       "shiftKinds": {
         "title": "Shift types",
@@ -1636,14 +1637,14 @@
       "scopeSaved": "Saved.",
       "not_manager": "Pick branches after the person is made a branch manager.",
       "setLevel": "Make {level}",
-      "setLevelHint": "Super admin and CEO approve and edit everything (their own too); general admins do everything except for them. One each.",
+      "setLevelHint": "Top admins (up to 3, including the CEO) see every page, edit every record and handle every request, including their own. There is one CEO.",
       "rank": "Your role cannot change this person.",
       "level_taken": "Up to 3 super admins (including the CEO). Change one of them to employee first.",
       "gradeTitle": "Role",
       "gradePick": "Role of this employee",
       "gradeNow": "current",
       "gradeTaken": "Currently {name} — only one allowed",
-      "gradeNote": "Changes that need another admin take effect after confirmation. The reason is logged.",
+      "gradeNote": "The reason is kept in the change log.",
       "gradePending": "Waiting for another admin to confirm.",
       "gradeDone": "Changed.",
       "gradeSave": "Change role",
@@ -1655,14 +1656,15 @@
         "employee": "Employee"
       },
       "gradeHint": {
-        "super": "Approves and edits everything, can add, edit or delete leave and punch records directly, incl. own requests",
-        "ceo": "Approves and edits everything, incl. own requests",
+        "super": "See everything · edit everything · handle every request (payroll, leave and attendance records included, own too)",
+        "ceo": "Same rights as top admin — marked as CEO (one person)",
         "general": "Approves and edits everything except CEO and super admin",
         "manager": "Approves or rejects requests of employees in their branch only",
         "employee": "Own work only"
       },
       "gradeTopNow": "Now {n} of max 3 — {names}",
-      "super_full": "Up to 3 super admins (including the CEO). Change one of them to employee first."
+      "super_full": "Up to 3 super admins (including the CEO). Change one of them to employee first.",
+      "ceo_taken": "There can be only one CEO. Change the current CEO to top admin first."
     },
     "settings": {
       "title": "Settings",
@@ -1836,9 +1838,9 @@
             "note": "Sees and handles every employee's schedule, attendance, leave and requests. A manager's own requests are handled by another manager."
           },
           "payroll": {
-            "label": "Payroll officer",
+            "label": "Payroll",
             "value": "On",
-            "note": "Only managers marked as payroll officers can open the payroll screen."
+            "note": "Every top admin can see payroll."
           },
           "employee": {
             "label": "Employee",
@@ -1998,8 +2000,8 @@
           },
           "viewer": {
             "label": "Payroll screen",
-            "value": "Payroll officers only",
-            "note": "Only managers marked as payroll officers can open it."
+            "value": "All top admins",
+            "note": "Every top admin can see the payroll pages."
           },
           "tax": {
             "label": "Tax · insurance calculation",
@@ -2056,7 +2058,7 @@
       },
       "access": {
         "title": "Who has which access",
-        "desc": "Of {n} active employees, only admins, branch managers and payroll staff are listed. Everyone else has employee access.",
+        "desc": "Of {n} active staff, only top admins and branch managers are shown. Everyone else is a regular employee.",
         "colName": "Name",
         "colRole": "Access",
         "colPayroll": "Payroll",
@@ -3028,7 +3030,7 @@
     "staffPay": {
       "title": "Pay by employee",
       "intro": "Each employee's current contract and tax settings. Open an employee to enter the contract, tax and personal items. Anything still needed for payroll shows as incomplete.",
-      "forbidden": "Only payroll admins can view this.",
+      "forbidden": "Only top admins can see this.",
       "won": "₩{n}",
       "pct": "{n}%",
       "inactive": "Inactive",
@@ -3158,7 +3160,7 @@
       "payroll_version_conflict": "Someone saved first or the periods overlap. Refresh and try again.",
       "payroll_effective_from_past": "The effective date must be after the current version's start.",
       "payroll_reason_required": "Enter a reason for the change.",
-      "payroll_forbidden": "Only payroll admins can do this.",
+      "payroll_forbidden": "Only top admins can do this.",
       "previewTitle": "Estimated pay and deductions",
       "previewChip": "Estimate",
       "previewIntro": "One month calculated from the current contract, tax settings, personal items and approved rates. It assumes no overtime, night or holiday work and no absence, and nothing is saved.",
@@ -3222,7 +3224,7 @@
     "payRuns": {
       "title": "Payroll ledgers",
       "intro": "Create a ledger each month, calculate, review, then finalize. A finalized ledger never changes. Only employees whose attendance is closed are calculated.",
-      "forbidden": "Only payroll admins can view this.",
+      "forbidden": "Only top admins can see this.",
       "won": "₩{n}",
       "hm": "{h}h {m}m",
       "daysValue": "{n} d",
@@ -3444,7 +3446,7 @@
       "payroll_wrong_status": "Not possible in the current status. Refresh the page.",
       "payroll_reason_required": "Enter a reason of 2 or more characters.",
       "payroll_negative_pay": "Pay items cannot be negative.",
-      "payroll_forbidden": "Only payroll admins can do this.",
+      "payroll_forbidden": "Only top admins can do this.",
       "colPublish": "Published to employee",
       "pubSummary": "Published {on} · not published {off}",
       "publishAll": "Publish to the remaining {n}",
@@ -3668,7 +3670,7 @@
     "laborCost": {
       "title": "Labor cost",
       "intro": "Pay, deductions, net pay and employer cost from finalized payroll ledgers, summed by month, department and employee.",
-      "forbidden": "Only payroll admins can view this.",
+      "forbidden": "Only top admins can see this.",
       "practice": "Practice data",
       "draftChip": "Includes drafts",
       "fYear": "Year",
@@ -3726,7 +3728,7 @@
     "retirement": {
       "title": "Retirement pay",
       "intro": "Records retirement pay estimates, final settlements and interim settlements with the inputs and the calculation. For manual verification.",
-      "forbidden": "Only payroll admins can view this.",
+      "forbidden": "Only top admins can see this.",
       "practice": "Practice data",
       "legal": "This screen only applies the common formula (average daily wage × 30 days × service days ÷ 365) to the values you enter. Whether the wage items, excluded periods and ordinary-wage comparison are right needs a labor attorney. Retirement income tax is not calculated — enter the value confirmed by your tax accountant. Pension plan (DB/DC) contributions are not calculated.",
       "newTitle": "New case",
@@ -3832,7 +3834,7 @@
     "insurance": {
       "title": "Social insurance",
       "intro": "Record whether acquisition and loss filings were confirmed, and put the difference between insurer notices and payroll deductions into a ledger.",
-      "forbidden": "Only payroll admins can view this.",
+      "forbidden": "Only top admins can see this.",
       "practice": "Practice data",
       "tabEnroll": "Acquisition / loss",
       "tabNotice": "Notice amounts",
@@ -3973,7 +3975,7 @@
     "daily": {
       "title": "Day labor",
       "intro": "Register day workers without login accounts as payees, enter work by day, and produce a day-labor ledger and pay statements.",
-      "forbidden": "Only payroll admins can view this.",
+      "forbidden": "Only top admins can see this.",
       "practice": "Practice data",
       "tab": {
         "payees": "Payees",
@@ -4187,7 +4189,7 @@
     "paySlips": {
       "title": "Upload payslips",
       "intro": "Upload the payslip spreadsheet from your payroll software as it is. Each employee gets one payslip in My pay right away. Kept separately from the payroll runs the app calculates.",
-      "forbidden": "Only payroll admins can see this.",
+      "forbidden": "Only top admins can see this.",
       "practice": "Practice period — payslips uploaded now stay as practice records and are hidden after going live.",
       "month": "Month",
       "prev": "Previous month",
@@ -4263,7 +4265,7 @@
       "slip_no_header": "No header row with an employee no. or name column (within the first 20 rows).",
       "slip_empty": "No employee rows to upload.",
       "slip_has_errors": "Not published because some rows are blocked.",
-      "payroll_forbidden": "Only payroll admins can do this.",
+      "payroll_forbidden": "Only top admins can do this.",
       "db_update_required": "Database change (batch 14) must be applied first."
     },
     "annual": {
@@ -5045,7 +5047,7 @@
     "howHoursPlain": "{h} h × ₩{rate}",
     "howRate": "₩{base} × {rate}",
     "note": "Seeing a payslip does not mean the transfer has been made. Check the pay date and deposit with your company.",
-    "detailNote": "If an amount looks wrong, tell the payroll admin. A corrected payslip will be published.",
+    "detailNote": "If an amount looks wrong, tell your company admin. A corrected payslip will be published once it is fixed.",
     "line": {
       "BASE": "Base pay",
       "OVERTIME": "Overtime pay",
@@ -5089,7 +5091,7 @@
     "pdfPage": "{n} / {all}",
     "pdfFile": "payslip",
     "hRevision": "Revision",
-    "pdfNote": "This payslip shows the values stored in the program. If an amount looks wrong, tell the payroll admin. A payslip does not mean the payment has been made.",
+    "pdfNote": "This payslip shows the values stored in the program. If an amount looks wrong, tell your company admin. A payslip does not mean payment has been made.",
     "toRetirement": "See estimated retirement pay",
     "mine": {
       "title": "My pay",
@@ -5102,10 +5104,10 @@
       "joined": "Joined",
       "detail": "Pay details",
       "since": "Effective {date}",
-      "noContract": "Your pay details are not registered yet. Please ask the payroll staff.",
+      "noContract": "Your pay information has not been registered yet. Please ask your company admin.",
       "payType": "Pay type",
       "fixed": "Fixed allowances",
-      "detailNote": "These are the values in effect now. Tell the payroll staff if anything needs changing.",
+      "detailNote": "These are the values currently applied. Tell your company admin if anything needs to change.",
       "slips": "Payslips",
       "year": "Year",
       "prevYear": "Previous year",

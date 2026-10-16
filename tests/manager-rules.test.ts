@@ -46,19 +46,16 @@ describe('맡은 지점의 범위', () => {
 });
 
 describe('등급 변경', () => {
-  const st = (id: string, role: Staff['role'], canViewPayroll = false): Staff => ({ id, role, active: true, canViewPayroll });
-  const all = [st('a1', 'admin', true), st('a2', 'admin'), st('e', 'employee'), st('m', 'manager')];
+  const st = (id: string, role: Staff['role']): Staff => ({ id, role, active: true, canViewPayroll: role === 'admin', owner: role === 'admin' });
+  const all = [st('a1', 'admin'), st('a2', 'admin'), st('e', 'employee'), st('m', 'manager')];
   it('직원 → 지점관리자, 지점관리자 → 직원 · 관리자', () => {
     expect(checkRoleChange({ actor: all[0], target: all[2], all, role: 'manager' })).toMatchObject({ next: { role: 'manager', canViewPayroll: false } });
     expect(checkRoleChange({ actor: all[0], target: all[3], all, role: 'employee' })).toMatchObject({ next: { role: 'employee' } });
-    expect(checkRoleChange({ actor: all[0], target: all[3], all, role: 'admin' })).toMatchObject({ next: { role: 'admin' } });
+    expect(checkRoleChange({ actor: all[0], target: all[3], all, role: 'admin' })).toMatchObject({ next: { role: 'admin', canViewPayroll: true } });
   });
-  it('관리자를 지점관리자로 내리면 급여 담당도 내려오고, 관리자 2명 하한을 지킨다', () => {
+  it('관리자를 지점관리자로 내리면 급여도 못 보고, 관리자 2명 하한을 지킨다', () => {
     expect(checkRoleChange({ actor: all[0], target: all[1], all, role: 'manager' })).toEqual({ code: 'min_admins' });
-    const three = [...all, st('a3', 'admin', true)];
+    const three = [...all, st('a3', 'admin')];
     expect(checkRoleChange({ actor: three[0], target: three[4], all: three, role: 'manager' })).toMatchObject({ next: { role: 'manager', canViewPayroll: false } });
-  });
-  it('지점관리자에게 급여 담당을 줄 수 없다', () => {
-    expect(checkRoleChange({ actor: all[0], target: all[3], all, canViewPayroll: true })).toEqual({ code: 'payroll_needs_admin' });
   });
 });

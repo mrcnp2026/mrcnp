@@ -1,4 +1,4 @@
-// ⑤ 급여 탭 (2026-10-02 의뢰인: 관리자 하단 메뉴에 급여). 급여 담당자(can_view_payroll)만 (부록 R-2의 7).
+// ⑤ 급여 탭 (2026-10-02 의뢰인: 관리자 하단 메뉴에 급여). 최고관리자(관리자 전원)만 — 2026-10-16 권한-10, 급여 담당 구분 없앰.
 // 지금: 이 달 직원별 근무·연장·야간·휴일 요약 + 급여 계산용 파일. 명세서 계산(③ 급여 문서)은 이 화면에 이어 붙인다.
 import { ChevronLeft, ChevronRight, Download } from 'lucide-react';
 import { getTranslations } from 'next-intl/server';

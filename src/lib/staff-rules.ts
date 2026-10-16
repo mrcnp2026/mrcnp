@@ -1,27 +1,29 @@
 // 직원 관리 규칙 (부록 R-2, ②-2 7-2, ②-3 7-12) — 해도 되는지 판단. 순수함수.
 // ★ 자기 자신의 재직 상태·권한은 스스로 바꾸지 못하고, 로그인 초기화도 스스로 못 한다 (자기 잠금·자기 승격을 막는다).
 // ★ 활성 관리자가 MIN_ADMINS명 미만이 되는 변경은 차단한다 (퇴사·관리자 해제).
-// ★ 급여 담당자는 급여 담당자만 지정·해제하고, 0명이 되는 변경은 차단한다 (R-2의 7).
-// ★ 권한 변경은 두 번째 관리자가 확인해야 반영된다 (R-2의 8) — 확인해 줄 다른 관리자가 있을 때만. 혼자면 바로 반영한다.
-// ★ 오너(owner, 2026-10-06 의뢰인): 다른 관리자의 확인 없이 권한을 바꾸고, 자기 요청을 직접 처리하고, 자기 출퇴근 기기를 직접 해제한다.
-//   다른 관리자는 오너의 권한·재직 상태·로그인을 바꾸지 못한다 (owner_only). 오너라도 자기 권한 내리기·자기 퇴사·자기 로그인 초기화는 못 한다 — 스스로 잠기는 것을 막는다.
+// ★ 권한 (2026-10-16 의뢰인 권한-10 — 그 전의 급여 담당 · 총괄관리자 · 두 번째 관리자 확인 규칙은 없앴다):
+//   최고관리자 최대 3명(그중 대표자 1명) — 전부 보고 · 전부 고치고 · 모든 요청을 받는다(급여 · 연차 · 출퇴근 기록 직권 수정 포함, 본인 것도).
+//   지점관리자 — 만들어만 둔다(맡은 지점 일반직원의 요청 승인). 나머지는 일반직원.
+//   관리자(role admin)는 곧 최고관리자다: owner · canViewPayroll은 관리자이면 참.
+//   그래도 자기 권한 내리기 · 자기 퇴사 · 자기 로그인 초기화는 못 한다 — 스스로 잠기는 것을 막는다.
 
 export const MIN_ADMINS = 2;
 export const REASON_MIN = 2;
 export const REASON_MAX = 200;
 
-// 권한 5단계 (2026-10-15 의뢰인, 결정 사항 개발-39 · DB 묶음 11): 관리자 안의 구분 level — super 최고관리자 · ceo 대표자 · general 총괄관리자.
-//   owner = 최고관리자 또는 대표자(「최상위」) — 모든 승인 · 수정, 본인 것도. 각 1명.
-export type AdminLevel = 'super' | 'ceo' | 'general';
-/** 다섯 등급 (개발-39) — 화면 · API가 같은 이름을 쓴다 */
-/** 최고관리자(대표자 포함) 최대 인원 — 2026-10-15 의뢰인. DB도 같은 수로 막는다(묶음 13) */
+// 관리자 안의 구분 level — super 최고관리자 · ceo 대표자. 권한은 같고 대표자 표시만 다르다(권한-10).
+//   DB에 예전 값 general(총괄관리자)이 남아 있어도 최고관리자로 본다.
+export type AdminLevel = 'super' | 'ceo';
+/** 최고관리자(대표자 포함) 최대 인원 — DB도 같은 수로 막는다(묶음 13) */
 export const MAX_TOP = 3;
-/** 화면에서 고를 수 있는 등급 — 최고관리자 · 일반직원 두 가지(총괄 · 지점관리자는 숨기고 기능은 남긴다, 2026-10-15 의뢰인) */
-export const SHOWN_GRADES = ['super', 'employee'] as const;
+/** 대표자는 1명 */
+export const MAX_CEO = 1;
+/** 화면에서 고를 수 있는 등급 (권한-10) */
+export const SHOWN_GRADES = ['super', 'ceo', 'manager', 'employee'] as const;
 
-export type Grade = 'super' | 'ceo' | 'general' | 'manager' | 'employee';
+export type Grade = 'super' | 'ceo' | 'manager' | 'employee';
 export function gradeOf(s: Pick<Staff, 'role' | 'level'>): Grade {
-  return s.role === 'admin' ? (s.level ?? 'general') : s.role;
+  return s.role === 'admin' ? (s.level === 'ceo' ? 'ceo' : 'super') : s.role;
 }
 export type Staff = { id: string; role: 'admin' | 'manager' | 'employee'; active: boolean; canViewPayroll: boolean; owner?: boolean; level?: AdminLevel | null };
 export type StaffRuleCode =
@@ -29,26 +31,18 @@ export type StaffRuleCode =
   | 'already' // 이미 그 상태
   | 'employee_inactive' // 비활성 직원에게는 권한을 줄 수 없다
   | 'min_admins' // 관리자가 2명 미만이 된다
-  | 'min_payroll' // 급여 담당자가 0명이 된다
-  | 'payroll_only_grant' // 급여 담당자만 급여 담당을 지정·해제한다
-  | 'payroll_needs_admin' // 급여 담당은 관리자여야 한다
   | 'owner_only' // 최고관리자 · 대표자 계정은 최고관리자 · 대표자만 바꾼다
   | 'rank'; // 내 등급으로 처리할 수 없는 사람의 요청
 
 const isOwner = (all: Staff[], id: string) => all.some((s) => s.id === id && s.owner && s.active);
 
 const admins = (all: Staff[]) => all.filter((s) => s.active && s.role === 'admin');
-const viewers = (all: Staff[]) => admins(all).filter((s) => s.canViewPayroll);
-
-/** target을 next 상태로 바꾼 뒤에도 관리자·급여 담당자 하한이 지켜지는가 */
+/** target을 next 상태로 바꾼 뒤에도 관리자 하한이 지켜지는가 */
 function floors(all: Staff[], target: Staff, next: Staff): StaffRuleCode | null {
   const after = all.map((s) => (s.id === target.id ? next : s));
   const wasAdmin = target.active && target.role === 'admin';
   const isAdmin = next.active && next.role === 'admin';
   if (wasAdmin && !isAdmin && admins(after).length < MIN_ADMINS) return 'min_admins';
-  const wasViewer = wasAdmin && target.canViewPayroll;
-  const isViewer = isAdmin && next.canViewPayroll;
-  if (wasViewer && !isViewer && viewers(after).length < 1) return 'min_payroll';
   return null;
 }
 
@@ -64,20 +58,16 @@ export function checkReinstate(actorId: string, target: Staff): StaffRuleCode | 
   return target.active ? 'already' : null;
 }
 
-/** 관리자 지정·해제, 급여 담당 지정·해제. 바꾸지 않는 값은 undefined */
-export function checkRoleChange(args: { actor: Staff; target: Staff; all: Staff[]; role?: 'admin' | 'manager' | 'employee'; canViewPayroll?: boolean }): { code: StaffRuleCode } | { next: Staff } {
+/** 관리자 지정·해제. 급여는 관리자이면 함께 본다(권한-10) */
+export function checkRoleChange(args: { actor: Staff; target: Staff; all: Staff[]; role?: 'admin' | 'manager' | 'employee' }): { code: StaffRuleCode } | { next: Staff } {
   const { actor, target, all } = args;
   if (!actor.active || actor.role !== 'admin') return { code: 'rank' };
   if (target.id === actor.id) return { code: 'self_change' };
   if (target.owner && !actor.owner) return { code: 'owner_only' };
   if (!target.active) return { code: 'employee_inactive' };
   const role = args.role ?? target.role;
-  // 관리자에서 내려오면 급여 담당도 함께 내려온다
-  const canViewPayroll = role === 'admin' ? (args.canViewPayroll ?? target.canViewPayroll) : false;
-  if (args.canViewPayroll === true && role !== 'admin') return { code: 'payroll_needs_admin' };
-  if (role === target.role && canViewPayroll === target.canViewPayroll) return { code: 'already' };
-  if (canViewPayroll !== target.canViewPayroll && !actor.canViewPayroll && !actor.owner) return { code: 'payroll_only_grant' };
-  const next = { ...target, role, canViewPayroll };
+  if (role === target.role) return { code: 'already' };
+  const next = { ...target, role, canViewPayroll: role === 'admin', owner: role === 'admin' };
   const floor = floors(all, target, next);
   return floor ? { code: floor } : { next };
 }
@@ -116,9 +106,8 @@ export function selfDecisionBlocked(actorId: string, employeeId: string, all: St
  * 관리자가 혼자면 확인해 줄 사람이 없으므로 바로 반영한다 (그래야 첫 두 번째 관리자를 지정할 수 있다).
  */
 /**
- * 요청 승인 · 거절 · 취소를 이 사람이 할 수 있는가 (개발-39)
- *   최고관리자 · 대표자: 누구 것이든 (본인 것도)
- *   총괄관리자: 최고관리자 · 대표자 것은 못 함. 본인 것은 다른 관리자가 있으면 못 함
+ * 요청 승인 · 거절 · 취소를 이 사람이 할 수 있는가 (권한-10)
+ *   최고관리자(관리자 전원) · 대표자: 누구 것이든 (본인 것도)
  *   지점관리자: 일반직원 것만 (맡은 지점인지는 scope.ts가 본다). 본인 것은 못 함
  */
 export function approvalBlocked(actor: Staff, target: Staff, all: Staff[]): 'self_decision' | 'rank' | null {
@@ -135,13 +124,13 @@ export function approvalBlocked(actor: Staff, target: Staff, all: Staff[]): 'sel
   return 'rank';
 }
 
-/** 관리자 구분(최고관리자 · 대표자 · 총괄관리자) 바꾸기 — 최고관리자 · 대표자만, 자기 것은 못 바꾼다(스스로 잠김 방지) */
+/** 관리자 구분(최고관리자 · 대표자) 바꾸기 — 자기 것은 못 바꾼다(스스로 잠김 방지) */
 export function checkLevelChange(actor: Staff, target: Staff, level: AdminLevel): StaffRuleCode | null {
   if (!actor.active || !actor.owner || actor.role !== 'admin') return 'owner_only';
   if (target.id === actor.id) return 'self_change';
   if (!target.active) return 'employee_inactive';
   if (target.role !== 'admin') return 'rank';
-  if ((target.level ?? 'general') === level) return 'already';
+  if ((target.level === 'ceo' ? 'ceo' : 'super') === level) return 'already';
   return null;
 }
 
