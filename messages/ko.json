@@ -26,7 +26,9 @@
     "addShort": "추가",
     "deemedHidden": "간주 근무 {n}명({names})은 늘 일정대로 근무로 잡혀 이 화면에서 뺐습니다.",
     "deemedShow": "함께 보기",
-    "deemedHide": "간주 근무자 빼기"
+    "deemedHide": "간주 근무자 빼기",
+    "findName": "이름으로 찾기",
+    "clear": "지우기"
   },
   "login": {
     "title": "로그인",
@@ -2100,7 +2102,8 @@
         "save": "저장",
         "saved": "저장했습니다. 오늘부터 적용됩니다.",
         "setting_same_day": "오늘 이미 바꿨습니다. 내일 다시 바꿔 주세요."
-      }
+      },
+      "holidayMore": "나머지 {n}개 더 보기"
     },
     "places": {
       "title": "출퇴근 장소",
@@ -3253,7 +3256,8 @@
       "historyBonus": "상여",
       "historyRevision": "정정 {n}판",
       "historyPayDate": "지급일 {date}",
-      "historySums": "지급 {pay} · 공제 {deduction}"
+      "historySums": "지급 {pay} · 공제 {deduction}",
+      "empty": "찾는 직원이 없습니다."
     },
     "payRuns": {
       "title": "급여대장",

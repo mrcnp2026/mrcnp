@@ -4,6 +4,7 @@ import { ChevronLeft, ChevronRight, Download } from 'lucide-react';
 import { getTranslations } from 'next-intl/server';
 import Link from 'next/link';
 import { Help } from '@/components/Help';
+import { QuickFind } from '@/components/QuickFind';
 import { Card, PageShell } from '@/components/ui';
 import { OFFICE } from '@/config/office';
 import { getMe } from '@/lib/auth';
@@ -20,6 +21,7 @@ export default async function PayrollPage({ searchParams }: { searchParams: Prom
   const t = await getTranslations('admin.payroll');
   const tr = await getTranslations('admin.records');
   const tn = await getTranslations('side');
+  const tc = await getTranslations('common');
   const me = (await getMe())!;
   const sp = await searchParams;
   const ym = isYearMonth(sp.m) ? sp.m : toKstDate(new Date()).slice(0, 7);
@@ -80,9 +82,10 @@ export default async function PayrollPage({ searchParams }: { searchParams: Prom
               <ChevronRight aria-hidden size={22} strokeWidth={2} />
             </Link>
           </nav>
-          <a href={`/api/admin/export/payroll${q(ym)}`} className="hidden min-h-11 items-center gap-2 rounded-button bg-primary px-4 text-sm font-bold text-on-primary lg:inline-flex">
+          {/* 내려받기: 폰은 달 옆의 아이콘 버튼(목록 맨 아래까지 내리지 않게, 2026-10-17 디자인) · PC는 글자 버튼 */}
+          <a href={`/api/admin/export/payroll${q(ym)}`} aria-label={t('download')} title={t('download')} className="inline-flex min-h-11 min-w-11 items-center justify-center gap-2 rounded-button bg-primary text-sm font-bold text-on-primary lg:px-4">
             <Download aria-hidden size={18} strokeWidth={2} />
-            {t('download')}
+            <span className="hidden lg:inline">{t('download')}</span>
           </a>
         </div>
       </header>
@@ -143,34 +146,37 @@ export default async function PayrollPage({ searchParams }: { searchParams: Prom
       )}
       {/* 폰: 직원별 줄 */}
       {rows.length > 0 && (
-        <Card className="p-0 py-1 lg:hidden">
-          <ul className="divide-y divide-border">
-            {rows.map(({ person, summary: s }) => {
-              const r = s.row;
-              return (
-                <li key={person.id} className="flex min-h-14 items-center gap-3 px-5 py-2">
-                  <span className="min-w-0 flex-1">
-                    <span className="block truncate font-medium">{person.name}</span>
-                    <span className="num block text-xs text-faint">
-                      {t('overtime')} {hm(Number(r.approved_overtime_minutes))} · {t('night')} {hm(Number(r.approved_night_minutes))} · {t('holiday')}{' '}
-                      {hm(Number(r.approved_holiday_within8_minutes) + Number(r.approved_holiday_over8_minutes))}
+        <div className="flex flex-col gap-2 lg:hidden">
+          {rows.length > 6 && <QuickFind target="pay-hours" placeholder={tc('findName')} clearLabel={tc('clear')} emptyText={t('empty')} />}
+          {/* 폰: 한 사람 한 줄 — 「근무」는 머리에 한 번, 연장 · 야간 · 휴일은 0이 아닌 것만 (2026-10-17 디자인: 0:00이 줄마다 세 번씩 반복됐다) */}
+          <Card className="p-0 py-1">
+            <p className="flex justify-between px-5 pt-2 pb-1 text-xs text-faint">
+              <span>{t('staff')}</span>
+              <span>{t('worked')}</span>
+            </p>
+            <ul id="pay-hours" className="divide-y divide-border">
+              {rows.map(({ person, summary: s }) => {
+                const r = s.row;
+                const extra = [
+                  [t('overtime'), Number(r.approved_overtime_minutes)],
+                  [t('night'), Number(r.approved_night_minutes)],
+                  [t('holiday'), Number(r.approved_holiday_within8_minutes) + Number(r.approved_holiday_over8_minutes)],
+                ].filter(([, v]) => Number(v) > 0).map(([k, v]) => `${k} ${hm(Number(v))}`).join(' · ');
+                return (
+                  <li key={person.id} data-find={person.name} className="flex min-h-12 items-center gap-3 px-5 py-1.5">
+                    <span className="min-w-0 flex-1">
+                      <span className="block truncate font-medium">{person.name}</span>
+                      {extra && <span className="num block truncate text-xs text-faint">{extra}</span>}
                     </span>
-                  </span>
-                  <span className="num shrink-0 text-right">
-                    <span className="block text-xs text-muted">{t('worked')}</span>
-                    <span className="font-bold">{hm(s.netMinutes)}</span>
-                  </span>
-                </li>
-              );
-            })}
-          </ul>
-        </Card>
+                    <span className="num shrink-0 font-bold">{hm(s.netMinutes)}</span>
+                  </li>
+                );
+              })}
+            </ul>
+          </Card>
+        </div>
       )}
 
-      <a href={`/api/admin/export/payroll${q(ym)}`} className="flex min-h-12 items-center justify-center gap-2 rounded-button bg-primary font-bold text-on-primary lg:hidden">
-        <Download aria-hidden size={18} strokeWidth={2} />
-        {t('download')}
-      </a>
     </PageShell>
   );
 }

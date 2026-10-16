@@ -28,7 +28,7 @@ export default async function OrgPage({ searchParams }: { searchParams: Promise<
   ]);
   const q = (sp.q ?? '').trim().slice(0, 40).toLowerCase();
   const list = (people ?? [])
-    .filter((p) => !(p.employee_no as string | null)?.startsWith('e2e-'))
+    .filter((p) => !(p.employee_no as string | null)?.startsWith('e2e-') && p.employee_no !== OFFICE.ownerEmployeeNo) // 시스템관리자는 직원이 아니다 (2026-10-17)
     .filter((p) => !q || (p.name as string).toLowerCase().includes(q) || ((p.job_title as string | null) ?? '').toLowerCase().includes(q))
     .map((p) => ({ id: p.id as string, name: p.name as string, title: (p.job_title as string | null) ?? '', groupId: p.group_id as string | null }));
   const away = new Map<string, 'leave' | 'partLeave' | 'out'>();
@@ -36,7 +36,7 @@ export default async function OrgPage({ searchParams }: { searchParams: Promise<
   for (const l of leaves ?? []) away.set(l.employee_id as string, Number(l.days) >= 1 ? 'leave' : 'partLeave');
   const sections = groupPeople(groups, list).filter((s) => s.count > 0);
   const person = (p: (typeof list)[number]) => (
-    <li key={p.id} className="flex min-w-0 items-center justify-between gap-2 py-2">
+    <li key={p.id} className="flex min-h-11 min-w-0 items-center justify-between gap-2 border-b border-border py-1.5">
       <span className="min-w-0">
         <span className="block truncate font-bold">{p.name}</span>
         {p.title && <span className="block truncate text-xs text-muted">{p.title}</span>}
@@ -63,11 +63,12 @@ export default async function OrgPage({ searchParams }: { searchParams: Promise<
             <span className="truncate">{s.dept?.name ?? t('unassigned')}</span>
             <span className="num text-sm font-normal text-muted">{t('count', { n: s.count })}</span>
           </h2>
-          {s.direct.length > 0 && <ul className="divide-y divide-border pt-1">{s.direct.map(person)}</ul>}
+          {/* 두 줄로 나란히 — 한 사람 한 줄이면 1공장(12명)만으로 화면이 다 찼다 (2026-10-17 디자인) */}
+          {s.direct.length > 0 && <ul className="grid grid-cols-2 gap-x-4 pt-1 lg:grid-cols-3">{s.direct.map(person)}</ul>}
           {s.teams.filter((x) => x.people.length > 0).map((x) => (
             <div key={x.team.id} className="pt-3">
               <h3 className="truncate text-sm font-bold text-muted">{x.team.name}</h3>
-              <ul className="divide-y divide-border">{x.people.map(person)}</ul>
+              <ul className="grid grid-cols-2 gap-x-4 lg:grid-cols-3">{x.people.map(person)}</ul>
             </div>
           ))}
         </section>

@@ -1,6 +1,7 @@
 // 직원별 계약 · 세무 · 개인 항목 읽기 · 쓰기 (PRD v1.3 5 · 18.1 · 21장). 서버 전용 — 부르는 쪽이 먼저 급여 담당자인지 확인한다(requirePayroll).
 // 계약 · 세무는 고치지 않고 판을 쌓는다: 새 판을 넣기 전에 앞 판의 끝나는 날을 새 판의 시작일로 닫는다.
 // ★ 금액은 공용 변경 기록(audit_logs)에 넣지 않는다. 급여 전용 기록(payroll_audit_events)에 "누가 · 무엇을 · 언제"만 남긴다.
+import { OFFICE } from '@/config/office';
 import 'server-only';
 import { atomicRpc } from '@/lib/atomic-rpc';
 import { AUTO_PAYMENT_CODES } from './engine/reserved-items';
@@ -63,7 +64,8 @@ export async function loadStaffPayBoard(today: string): Promise<StaffPayLine[]> 
   if (error) fail('loadStaffPayBoard', error);
   const contracts = (cons ?? []).map(toContract), taxRows = (taxes ?? []).map(toTax);
   return (people ?? [])
-    .filter((p) => !(p.employee_no as string | null)?.startsWith('e2e-') && (p.active || contracts.some((x) => x.employeeId === p.id)))
+    // 시스템관리자(admin)는 직원이 아니다 — 계약이 없으면 뺀다 (2026-10-17 디자인: 직원 수가 25명으로 보였다)
+    .filter((p) => !(p.employee_no as string | null)?.startsWith('e2e-') && (p.active || contracts.some((x) => x.employeeId === p.id)) && (p.employee_no !== OFFICE.ownerEmployeeNo || contracts.some((x) => x.employeeId === p.id)))
     .map((p) => {
       const mine = contracts.filter((x) => x.employeeId === p.id);
       const contract = at(mine, today);

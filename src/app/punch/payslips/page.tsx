@@ -97,8 +97,8 @@ export default async function MyPayPage({ searchParams }: { searchParams: Promis
         <p className="text-sm text-muted">{tm('intro')}</p>
       </div>
 
-      {/* 내 정보 */}
-      <details open className="group rounded-card border border-border bg-bg lg:shadow-card">
+      {/* 내 정보 — 폰에서는 명세서 아래로(가장 자주 보는 것이 명세서, 2026-10-17 디자인) */}
+      <details open className="group rounded-card border border-border bg-bg max-lg:order-2 lg:shadow-card">
         <summary className="flex cursor-pointer list-none items-center justify-between px-4 pt-3 text-sm font-bold lg:hidden [&::-webkit-details-marker]:hidden">
           {tm('profile')}
           <ChevronDown aria-hidden size={16} className="transition-transform duration-[350ms] group-open:rotate-180" />
@@ -120,7 +120,7 @@ export default async function MyPayPage({ searchParams }: { searchParams: Promis
       </details>
 
       {/* 급여상세 */}
-      <section className="rounded-card border border-border bg-bg lg:shadow-card" data-pay-detail>
+      <section className="rounded-card border border-border bg-bg max-lg:order-2 lg:shadow-card" data-pay-detail>
         <h2 className="border-b border-border px-4 py-3 font-bold lg:px-6">{tm('detail')}</h2>
         <dl className={`${grid} px-4 py-4 lg:px-6`}>
           <Field label={tm('payType')} value={c ? ts(`payType.${c.payType}`) : null} />
@@ -162,7 +162,7 @@ export default async function MyPayPage({ searchParams }: { searchParams: Promis
       </section>
 
       {/* 급(상)여 명세서 */}
-      <section className="flex flex-col gap-3" data-pay-slips>
+      <section className="flex flex-col gap-3 max-lg:order-1" data-pay-slips>
         <div className="flex flex-wrap items-center gap-2">
           <h2 className="pr-2 text-lg font-bold">{tm('slips')}</h2>
           <form action="/punch/payslips" className="flex items-center gap-1.5">

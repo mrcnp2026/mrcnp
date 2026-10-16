@@ -71,7 +71,7 @@ export async function notifyPunchAlerts(now = new Date()): Promise<{ checked: nu
   ]);
   const joined = new Set([...(pw ?? []).map((x) => x.id), ...(keys ?? []).map((x) => x.employee_id)]);
   const people: PersonMisses[] = [];
-  for (const p of data.people.filter((x) => x.active && joined.has(x.id) && !x.employeeNo?.startsWith('e2e-'))) {
+  for (const p of data.people.filter((x) => x.active && joined.has(x.id) && !x.employeeNo?.startsWith('e2e-') && x.employeeNo !== OFFICE.ownerEmployeeNo)) {
     if (data.templateOf(p.id)?.kind === 'deemed') continue;
     const rule = data.ruleFor(p.id, today) ?? data.rule;
     const misses = findMissingPunches({

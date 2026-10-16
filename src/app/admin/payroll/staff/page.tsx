@@ -14,9 +14,11 @@ import { loadStaffPayBoard } from '@/lib/payroll/staff-data';
 import { addDays } from '@/lib/calendar';
 import { toKstDate } from '@/lib/time';
 import { ImportPanel } from './ImportPanel';
+import { QuickFind } from '@/components/QuickFind';
 
 export default async function StaffPayPage() {
   const tGear = await getTranslations('frame');
+  const tc = await getTranslations('common');
   const [t, f, me] = await Promise.all([getTranslations('admin.staffPay'), getFormatter(), getMe()]);
   if (!me || me.role !== 'admin' || !me.canViewPayroll) return <PageShell><p className="rounded-card bg-warn-tint p-4 text-sm text-warn">{t('forbidden')}</p></PageShell>;
   const today = toKstDate(new Date());
@@ -42,11 +44,16 @@ export default async function StaffPayPage() {
         <Chip tone={lines.length - ready > 0 ? 'warn' : 'neutral'}>{t('sumGap', { n: lines.length - ready })}</Chip>
       </div>
       {/* 폰: 직원마다 한 줄 — 이름 · 급여 형태 · 금액 · 상태, 누르면 그 직원 화면 (2026-10-15: 표 오른쪽이 잘리던 것) */}
-      <ul className="flex flex-col divide-y divide-border rounded-card border border-border bg-bg lg:hidden" data-phone-staff>
+      {lines.length > 6 && (
+        <div className="lg:hidden">
+          <QuickFind target="pay-staff" placeholder={tc('findName')} clearLabel={tc('clear')} emptyText={t('empty')} />
+        </div>
+      )}
+      <ul id="pay-staff" className="flex flex-col divide-y divide-border rounded-card border border-border bg-bg lg:hidden" data-phone-staff>
         {lines.map((l) => {
           const c = l.contract;
           return (
-            <li key={l.employeeId}>
+            <li key={l.employeeId} data-find={`${l.name} ${groupPath(groups, l.groupId) ?? ''}`}>
               <Link href={`/admin/payroll/staff/${l.employeeId}`} className="flex items-center gap-3 px-3 py-2.5 active:bg-surface">
                 <span className="flex min-w-0 flex-1 flex-col">
                   <span className="flex items-center gap-2">

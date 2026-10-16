@@ -37,6 +37,7 @@ export async function buildMonth(ym: string, practice: boolean, opts: { confirme
       data.events.some((e) => e.employeeId === p.id && e.workDate >= from && e.workDate <= to) ||
       data.corrections.some((c) => c.employeeId === p.id && c.status === 'approved' && c.correctionType === 'add_missing' && c.workDate >= from && c.workDate <= to);
     if (!p.active && !hasRecords) continue; // 퇴사자는 그 달 기록이 있을 때만
+    if (p.employeeNo === OFFICE.ownerEmployeeNo && !hasRecords) continue; // 시스템관리자(admin)는 직원이 아니다 — 기록이 없으면 집계 · 급여 파일에서 뺀다 (2026-10-17 디자인: 인원이 25명으로 보였다)
     if (!p.active && p.employeeNo?.startsWith('e2e-audit')) continue; // 검사 전용 계정은 꺼져 있으면 보이지 않게 (직원 탭과 같은 규칙)
     const upTo = today < to ? today : to;
     if (upTo < from) continue;

@@ -4,6 +4,7 @@
 // ★ 차액 = 근로자 고지액 − 그 대장에서 이미 뗀 금액. 추가 공제는 양수, 환급은 음수. 확정 전 대장에만 「정산」 공제 항목으로 넣는다(확정본은 정정 판에서).
 // ★ 같은 고지 금액은 한 대장에만 들어간다(DB가 막는다). 대장에서 빼면 다른 대장에 넣을 수 있다.
 // ★ 지금은 손으로 넣는다. 공단 파일을 읽는 것은 양식을 받은 뒤(급여-38).
+import { OFFICE } from '@/config/office';
 import 'server-only';
 import { ApiError } from '@/lib/api';
 import type { Me } from '@/lib/auth';
@@ -40,7 +41,8 @@ export async function loadEnrollments(testViewer: boolean): Promise<{ rows: Enro
     c.from('staff_employment_periods').select('employee_id, starts_on, ends_on').eq('active', true),
   ]);
   if (error) boom('loadEnrollments', error);
-  const people = (staff ?? []).filter((p) => isTestNo(p.employee_no as string | null) === testViewer).map((p) => ({ id: p.id as string, name: p.name as string, employeeNo: p.employee_no as string | null }));
+  // 시스템관리자(admin)는 직원이 아니라 보험 확인 대상에서 뺀다 (2026-10-17 디자인)
+  const people = (staff ?? []).filter((p) => isTestNo(p.employee_no as string | null) === testViewer && p.employee_no !== OFFICE.ownerEmployeeNo).map((p) => ({ id: p.id as string, name: p.name as string, employeeNo: p.employee_no as string | null }));
   const who = new Map(people.map((p) => [p.id, p]));
   const rows = ((data ?? []) as Row[]).filter((r) => who.has(r.employee_id as string)).map((r): Enrollment => ({
     id: r.id as string, employeeId: r.employee_id as string, name: who.get(r.employee_id as string)!.name, employeeNo: who.get(r.employee_id as string)!.employeeNo, insurer: r.insurer as Insurer, event: r.event as Enrollment['event'], qualifyOn: r.qualify_on as string,

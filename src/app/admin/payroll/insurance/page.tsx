@@ -55,8 +55,8 @@ export default async function InsurancePage({ searchParams }: { searchParams: Pr
               <CardTitle help={t('gapNote')}>{t('gapTitle', { n: gaps.length })}</CardTitle>
               <ul className="flex flex-col divide-y divide-border text-sm" data-gaps>
                 {gaps.slice(0, 50).map((g) => (
-                  <li key={`${g.employeeId}${g.event}${g.qualifyOn}`} className="flex flex-wrap items-center justify-between gap-3 py-2">
-                    <span className="num">
+                  <li key={`${g.employeeId}${g.event}${g.qualifyOn}`} className="flex items-center justify-between gap-3 py-2">
+                    <span className="num min-w-0">
                       <b>{g.name}</b> <span className="text-xs text-muted">{g.employeeNo}</span> · {t(`event.${g.event}`)} · {g.qualifyOn}
                     </span>
                     <EnrollAdd people={[]} today={today} preset={{ employeeId: g.employeeId, event: g.event, qualifyOn: g.qualifyOn, label: t('gapAddOf', { name: g.name }) }} />
@@ -65,7 +65,24 @@ export default async function InsurancePage({ searchParams }: { searchParams: Pr
               </ul>
             </Card>
           )}
-          <div className="overflow-x-auto rounded-card border border-border bg-bg">
+          {rows.length === 0 && <p className="rounded-card border border-border bg-bg p-4 text-sm text-faint">{t('enrollEmpty')}</p>}
+          {/* 폰: 한 줄 = 카드 (표가 옆으로 넘치던 것, 2026-10-17 디자인) */}
+          {rows.length > 0 && (
+            <ul className="flex flex-col divide-y divide-border rounded-card border border-border bg-bg lg:hidden">
+              {rows.map((r) => (
+                <li key={r.id} className="flex flex-col gap-1.5 px-4 py-3 text-sm">
+                  <span className="flex items-center justify-between gap-2">
+                    <span className="min-w-0 truncate"><b>{r.name}</b> <span className="num text-xs text-muted">{r.employeeNo}</span></span>
+                    <Chip tone={TONE[r.state]}>{t(`state.${r.state}`)}</Chip>
+                  </span>
+                  <span className="num text-muted">{t(`insurer.${r.insurer}`)} · {t(`event.${r.event}`)} · {r.qualifyOn}{r.confirmedOn ? ` · ${r.confirmedOn}` : ''}</span>
+                  <EnrollControls id={r.id} version={r.version} state={r.state} name={r.name} today={today} />
+                </li>
+              ))}
+            </ul>
+          )}
+          {rows.length > 0 && (
+          <div className="hidden overflow-x-auto rounded-card border border-border bg-bg lg:block">
             <table className="w-full text-sm">
               <thead>
                 <tr className="border-b border-border bg-surface text-left">
@@ -88,8 +105,8 @@ export default async function InsurancePage({ searchParams }: { searchParams: Pr
                 ))}
               </tbody>
             </table>
-            {rows.length === 0 && <p className="p-4 text-sm text-faint">{t('enrollEmpty')}</p>}
           </div>
+          )}
         </>
       ) : (
         <>
@@ -97,7 +114,24 @@ export default async function InsurancePage({ searchParams }: { searchParams: Pr
             <CardTitle>{t('manualTitle')}</CardTitle>
             <NoticeManual people={people} month={today.slice(0, 7)} live={sp.live === '1'} />
           </Card>
-          <div className="overflow-x-auto rounded-card border border-border bg-bg">
+          {files.length === 0 && <p className="rounded-card border border-border bg-bg p-4 text-sm text-faint">{t('noticeEmpty')}</p>}
+          {files.length > 0 && (
+            <ul className="flex flex-col divide-y divide-border rounded-card border border-border bg-bg lg:hidden">
+              {files.map((f) => (
+                <li key={f.id}>
+                  <Link href={`/admin/payroll/insurance/notice/${f.id}${live ? '?live=1' : ''}`} className="flex items-center justify-between gap-2 px-4 py-3 text-sm">
+                    <span className="min-w-0">
+                      <b className="num text-primary">{f.month}</b> · {t(`insurer.${f.insurer}`)}
+                      <span className="num block text-xs text-muted">{t('rowsValue', { n: f.rows })} · {t(`source.${f.source}`)} · {toKstDate(new Date(f.createdAt))}</span>
+                    </span>
+                    <Chip tone={f.state === 'SAVED' ? 'ok' : 'neutral'}>{t(`fileState.${f.state}`)}</Chip>
+                  </Link>
+                </li>
+              ))}
+            </ul>
+          )}
+          {files.length > 0 && (
+          <div className="hidden overflow-x-auto rounded-card border border-border bg-bg lg:block">
             <table className="w-full text-sm">
               <thead>
                 <tr className="border-b border-border bg-surface text-left">
@@ -121,8 +155,8 @@ export default async function InsurancePage({ searchParams }: { searchParams: Pr
                 ))}
               </tbody>
             </table>
-            {files.length === 0 && <p className="p-4 text-sm text-faint">{t('noticeEmpty')}</p>}
           </div>
+          )}
         </>
       )}
     </PageShell>

@@ -446,8 +446,9 @@ export default async function SettingsPage({ searchParams }: { searchParams: Pro
       <Card className="flex flex-col gap-2">
         <CardTitle help={t('holidayNote')} aside={<span className="num text-sm text-faint">{holidays?.length ?? 0}</span>}>{t('holidayTitle')}</CardTitle>
         {(holidays ?? []).length === 0 && <p className="text-sm text-faint">{t('holidayNone')}</p>}
-        <ul className="divide-y divide-border lg:max-h-96 lg:overflow-y-auto lg:pr-2">
-          {(holidays ?? []).map((h) => (
+        {/* 다가오는 5개만 펼쳐 두고 나머지는 접는다 — 1년 치 25개가 화면을 길게 늘였다 (2026-10-17 디자인) */}
+        {(() => {
+          const li = (h: { the_date: string; label: string; kind: string }) => (
             <li key={h.the_date} className="flex min-h-12 items-center gap-2">
               <span className="min-w-0 flex-1">
                 <span className="num block text-sm">{day(h.the_date)}</span>
@@ -456,8 +457,20 @@ export default async function SettingsPage({ searchParams }: { searchParams: Pro
               {h.kind === 'company' && <Chip tone="info">{t('kind.company')}</Chip>}
               <ConfirmButton body={{ action: 'holiday.remove', date: h.the_date }} label={t('remove')} confirmLabel={t('removeConfirm')} ariaLabel={t('removeOf', { what: `${h.the_date} ${h.label}` })} />
             </li>
-          ))}
-        </ul>
+          );
+          const all = holidays ?? [];
+          return (
+            <>
+              <ul className="divide-y divide-border">{all.slice(0, 5).map(li)}</ul>
+              {all.length > 5 && (
+                <details className="group border-t border-border">
+                  <summary className="flex min-h-11 cursor-pointer items-center text-sm font-bold text-primary group-open:hidden">{t('holidayMore', { n: all.length - 5 })}</summary>
+                  <ul className="divide-y divide-border">{all.slice(5).map(li)}</ul>
+                </details>
+              )}
+            </>
+          );
+        })()}
         <HolidayForm monthStart={monthStart} />
       </Card>
 

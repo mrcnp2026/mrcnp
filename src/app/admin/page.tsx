@@ -48,7 +48,8 @@ export default async function AdminHome({ searchParams }: { searchParams: Promis
   const notePage = pageOf(notes, sp.np);
   const tc = await getTranslations('common');
 
-  const active = data.people.filter((p) => p.active);
+  // 시스템관리자(admin)는 직원이 아니다 — 출퇴근 판정에서 뺀다 (2026-10-17: 연습 모드를 끈 뒤 admin 홈에 「출근 기록 없음」이 떴다)
+  const active = data.people.filter((p) => p.active && p.employeeNo !== OFFICE.ownerEmployeeNo);
   const dayType = data.rule ? resolveDayType(today, data.rule, data.holidays) : 'workday';
   const weekStart = weekStartOf(today);
   const dayTypes = Object.fromEntries(

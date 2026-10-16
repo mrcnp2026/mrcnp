@@ -26,7 +26,8 @@ export async function loadEmployeeRecent(employeeId: string, now: Date, lookback
   const corrections = data.corrections.filter((c) => c.employeeId === employeeId);
   const me = data.people.find((p) => p.id === employeeId);
   let missing: MissingPunch[] = [];
-  if (data.rule && data.templateOf(employeeId)?.kind !== 'deemed') {
+  // 시스템관리자(admin)는 직원이 아니다 — 출퇴근 판정에서 뺀다 (2026-10-17: 연습 모드를 끈 뒤 admin 홈에 「출근 기록 없음」이 떴다)
+  if (data.rule && data.templateOf(employeeId)?.kind !== 'deemed' && me?.employeeNo !== OFFICE.ownerEmployeeNo) {
     const dayTypes = Object.fromEntries(
       [...Array(lookback)].map((_, i) => addDays(from, i)).map((d) => [d, resolveDayType(d, data.rule!, data.holidays)]),
     );

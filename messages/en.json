@@ -26,7 +26,9 @@
     "addShort": "Add",
     "deemedHidden": "{n} deemed-hours staff ({names}) are hidden here — they always count as scheduled.",
     "deemedShow": "Show them",
-    "deemedHide": "Hide deemed staff"
+    "deemedHide": "Hide deemed staff",
+    "findName": "Find by name",
+    "clear": "Clear"
   },
   "login": {
     "title": "Sign in",
@@ -2100,7 +2102,8 @@
         "save": "Save",
         "saved": "Saved. Applies from today.",
         "setting_same_day": "Already changed today. Change it again tomorrow."
-      }
+      },
+      "holidayMore": "Show {n} more"
     },
     "places": {
       "title": "Work locations",
@@ -3253,7 +3256,8 @@
       "historyBonus": "Bonus",
       "historyRevision": "Correction {n}",
       "historyPayDate": "Paid {date}",
-      "historySums": "Pay {pay} · Deductions {deduction}"
+      "historySums": "Pay {pay} · Deductions {deduction}",
+      "empty": "No matching staff."
     },
     "payRuns": {
       "title": "Payroll ledgers",
