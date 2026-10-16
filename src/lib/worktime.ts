@@ -130,7 +130,8 @@ export function calcWorkMinutes(pairs: PunchPair[], rule: WorkRule, ctx: WorkCtx
   let regularMinutes = 0;
   let overtimeMinutes = 0;
   let holidayMinutes = 0;
-  if (ctx.dayType === 'holiday') {
+  // 쉬는 날(토요일 등) 근무도 회사 규칙이면 휴일 축으로 (결정 사항 급여-43, 2026-10-16) — 주 40시간 소정에 넣지 않는다
+  if (ctx.dayType === 'holiday' || (ctx.dayType === 'rest_off' && rule.restOffAsHoliday)) {
     holidayMinutes = netMinutes;
   } else {
     const weekLeft = Math.max(0, LABOR.weeklyRegularLimitMin - ctx.weekRegularMinutesSoFar);

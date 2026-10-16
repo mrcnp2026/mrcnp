@@ -32,6 +32,8 @@ export const OFFICE = {
   // 2026-10-16 의뢰인 · 26.08 대장: 일정 시작 전에 일찍 찍은 시간은 근무로 치지 않는다. 일찍 시작하는 사람은 조기 템플릿(예: 07:30 시작)으로 일정을 잡는다.
   // false면 근로시간을 그날 일정(템플릿 · 날짜별 일정 · 회사 규칙)의 시작 시각부터 센다 — 근무 규칙을 DB에서 읽을 때 clipBeforeStart로 실린다
   earlyArrivalCounts: false,
+  // 2026-10-16 의뢰인(결정 사항 급여-43): 토요일 등 쉬는 날(휴무일) 근무는 주 40시간과 상관없이 휴일근무로 센다 — 8시간까지 1.5배, 넘으면 2배(26.08 대장)
+  restOffWorkAsHoliday: true,
   missingOutGraceHours: 2, // 7-8. 기준 퇴근 + 이 시간이 지나야 '퇴근 미기록'
   missingInGraceMin: 30, // 7-8. 기준 출근 + 이 분이 지나야 '출근 미기록'
   weeklyCautionHours: 48, // 7-13

@@ -39,6 +39,7 @@ export const loadRuleVersions = cache(async (): Promise<RuleVersion[]> => {
       extraBreaks: (d.extra_breaks as { start: string; end: string }[] | null) ?? [],
       roundStepMin: d.round_step_min ?? 0,
       clipBeforeStart: !OFFICE.earlyArrivalCounts, // 일정 전 출근은 근무로 치지 않는다 (2026-10-16)
+      restOffAsHoliday: OFFICE.restOffWorkAsHoliday, // 토요일 근무 = 휴일근무 1.5배 (급여-43)
       workdays: d.workdays,
       weeklyRestDay: d.weekly_rest_day,
     },

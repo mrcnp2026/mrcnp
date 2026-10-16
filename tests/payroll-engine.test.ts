@@ -85,7 +85,7 @@ describe('주휴 · 유급휴일 (시급제, 2026-10-16 — 회사 대장의 주
   const hourly = { payType: 'HOURLY' as const, amount: 14_300, monthlyHours: null, annualDivisor: null, included: { overtimeHours: null, holidayHours: null } };
   it('26.08 김규형: 기본 160 + 연장 18 × 1.5 + 주휴 40 + 유휴 8 = 대장 3,360,500 (유급휴가 32시간은 기본 160 안)', () => {
     const r = ok(calculateStatement(input({ contract: hourly, time: { ...NO_TIME, workedMinutes: (128 + 18) * 60, overtimeMinutes: 18 * 60, paidLeaveMinutes: 32 * 60, weeklyRestMinutes: 40 * 60, paidHolidayMinutes: 8 * 60 } })));
-    expect([amount(r, 'BASE') + amount(r, 'PAID_LEAVE'), amount(r, 'OVERTIME'), amount(r, 'WEEKLY_REST'), amount(r, 'PAID_HOLIDAY')]).toEqual([2_288_000, 386_100, 572_000, 114_400]);
+    expect([amount(r, 'BASE')! + amount(r, 'PAID_LEAVE')!, amount(r, 'OVERTIME'), amount(r, 'WEEKLY_REST'), amount(r, 'PAID_HOLIDAY')]).toEqual([2_288_000, 386_100, 572_000, 114_400]);
     expect(r.totals.pay).toBe(3_360_500);
   });
   it('월급제에는 주휴 · 유급휴일 줄을 만들지 않는다(기본급에 들어 있다)', () => {

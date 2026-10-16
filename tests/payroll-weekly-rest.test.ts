@@ -44,3 +44,18 @@ describe('일정 전 출근은 근무로 치지 않는다 (clipBeforeStart)', ()
     expect(r.payableMinutes).toBe(465); // 08:15 ~ 17:00 − 점심 60분
   });
 });
+
+describe('토요일(쉬는 날) 근무 = 휴일근무 (결정 사항 급여-43, 2026-10-16)', () => {
+  const sat = { workDate: '2026-08-22', dayType: 'rest_off' as const, weekRegularMinutesSoFar: 32 * 60, weekTotalMinutesSoFar: 32 * 60 };
+  const at = (hm: string) => kstDateTime('2026-08-22', hm);
+  it('주 40시간을 못 채운 주라도 토요일 8시간은 휴일근로(1.5배 줄)로 간다 — 김종철96 8/22', () => {
+    const before = calcWorkMinutes([{ in: at('08:00'), out: at('17:00') }], RULE, sat);
+    const after = calcWorkMinutes([{ in: at('08:00'), out: at('17:00') }], { ...RULE, restOffAsHoliday: true }, sat);
+    expect([before.regularMinutes, before.holidayMinutes]).toEqual([480, 0]);
+    expect([after.regularMinutes, after.overtimeMinutes, after.holidayMinutes, after.holidayOver8Minutes]).toEqual([0, 0, 480, 0]);
+  });
+  it('토요일 8시간 넘는 시간은 휴일 8시간 초과(2배 줄)', () => {
+    const r = calcWorkMinutes([{ in: at('08:00'), out: at('20:30') }], { ...RULE, restOffAsHoliday: true }, sat);
+    expect([r.holidayWithin8Minutes, r.holidayOver8Minutes]).toEqual([480, 180]); // 12.5시간 − 점심 1 − 저녁 휴게 0.5 = 11시간
+  });
+});
