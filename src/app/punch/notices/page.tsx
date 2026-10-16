@@ -7,6 +7,7 @@ import { getFormatter, getLocale, getTranslations } from 'next-intl/server';
 import Link from 'next/link';
 import { redirect } from 'next/navigation';
 import { NoticeBody } from '@/components/NoticeBody';
+import { RichHtml } from '@/components/RichHtml';
 import { PcTable } from '@/components/PcTable';
 import { Card, Chip, PageShell } from '@/components/ui';
 import { getMe } from '@/lib/auth';
@@ -37,7 +38,7 @@ export default async function EmployeeNoticesPage({ searchParams }: { searchPara
       <h2 lang={n.display.locale} className="text-lg font-semibold break-words">
         {n.display.title}
       </h2>
-      <NoticeBody text={n.display.body} lang={n.display.locale} />
+      <RichHtml html={n.display.translated ? null : n.original.html} text={n.display.body} lang={n.display.locale} />
       {n.display.translated && (
         <>
           <p className="text-xs text-faint">
@@ -49,7 +50,7 @@ export default async function EmployeeNoticesPage({ searchParams }: { searchPara
             <summary className="min-h-11 cursor-pointer content-center font-semibold text-primary">{t('showOriginal')}</summary>
             <div lang="ko" className="flex flex-col gap-1 rounded-button bg-surface p-3">
               <p className="font-semibold">{n.original.title}</p>
-              <NoticeBody text={n.original.body} lang="ko" />
+              <RichHtml html={n.original.html} text={n.original.body} lang="ko" />
             </div>
           </details>
         </>

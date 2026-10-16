@@ -5365,7 +5365,8 @@
       "setStaff": "직원 기준",
       "workInfo": "근로정보",
       "setEsign": "전자계약",
-      "paySlips": "명세서 올리기"
+      "paySlips": "명세서 올리기",
+      "board": "게시판"
     },
     "search": {
       "placeholder": "검색",
@@ -5635,5 +5636,67 @@
     "unsupported": "이 브라우저는 폰 알림을 지원하지 않습니다",
     "notReady": "폰 알림 설정이 아직 끝나지 않았습니다(서버 열쇠 없음)",
     "failed": "켜지 못했습니다. 잠시 뒤 다시 해 주세요"
+  },
+  "board": {
+    "title": "게시판",
+    "write": "글쓰기",
+    "edit": "고치기",
+    "search": "제목 · 내용 찾기",
+    "empty": "아직 글이 없습니다. 첫 글을 써 보세요.",
+    "noResult": "찾는 글이 없습니다.",
+    "hasImage": "사진 있음",
+    "edited": "고침",
+    "editedAt": "{at} 고침",
+    "pages": "게시판 페이지",
+    "count": "글 {n}개",
+    "toList": "목록",
+    "titleLabel": "제목",
+    "titlePlaceholder": "제목을 넣어 주세요",
+    "bodyLabel": "내용",
+    "post": "올리기",
+    "save": "저장",
+    "cancel": "취소",
+    "delete": "지우기",
+    "deleteAsk": "이 글을 지울까요?",
+    "deleteYes": "지우기",
+    "dbNeeded": "게시판을 쓰려면 DB 변경(묶음 16) 승인 · 적용이 필요합니다.",
+    "err": {
+      "title_required": "제목을 넣어 주세요(200자까지).",
+      "body_required": "내용을 넣어 주세요.",
+      "db_update_required": "DB 변경(묶음 16)이 아직 적용되지 않았습니다.",
+      "forbidden": "쓴 사람만 고칠 수 있습니다.",
+      "not_found": "지워졌거나 없는 글입니다.",
+      "generic": "저장하지 못했습니다. 잠시 뒤 다시 해 주세요.",
+      "network": "인터넷 연결을 확인해 주세요."
+    }
+  },
+  "rich": {
+    "label": "내용",
+    "toolbar": "글 꾸미기",
+    "hint": "사진은 끌어다 놓거나 붙여 넣어도 됩니다. 큰 사진은 자동으로 줄입니다.",
+    "uploading": "사진 {n}장 올리는 중…",
+    "linkPrompt": "링크 주소(https://로 시작)",
+    "tool": {
+      "bold": "굵게",
+      "italic": "기울임",
+      "underline": "밑줄",
+      "strike": "취소선",
+      "h2": "큰 제목",
+      "h3": "작은 제목",
+      "bullet": "목록",
+      "ordered": "번호 목록",
+      "quote": "인용",
+      "hr": "구분선",
+      "link": "링크",
+      "undo": "되돌리기",
+      "redo": "다시 하기",
+      "image": "사진"
+    },
+    "err": {
+      "upload": "사진을 올리지 못했습니다.",
+      "image_too_large": "사진이 너무 큽니다(10MB까지).",
+      "image_type": "사진(jpg · png · webp · gif)만 넣을 수 있습니다.",
+      "db_update_required": "사진 저장소가 아직 준비되지 않았습니다(DB 변경 묶음 16)."
+    }
   }
 }

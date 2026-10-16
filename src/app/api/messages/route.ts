@@ -18,9 +18,9 @@ export const POST = api('messages', async (req) => {
     else if (b.to === 'groups') { const g = ids(b.groupIds); if (g) audience = { groupIds: g }; }
     else if (b.to === 'people') { const e = ids(b.employeeIds); if (e) audience = { employeeIds: e }; }
     if (!audience) throw new ApiError(400, 'message_no_recipients');
-    return sendNotice({ me, title: b.title, body: b.body, needsReply: b.needsReply === true, audience });
+    return sendNotice({ me, title: b.title, body: b.body, bodyHtml: b.bodyHtml, needsReply: b.needsReply === true, audience });
   }
-  if (b.action === 'inquiry') return sendInquiry({ me, title: b.title, body: b.body });
+  if (b.action === 'inquiry') return sendInquiry({ me, title: b.title, body: b.body, bodyHtml: b.bodyHtml });
   if (b.action === 'reply') {
     if (typeof b.id !== 'string' || !UUID.test(b.id)) throw new ApiError(400, 'invalid_input');
     await replyTo(b.id, me, b.body);

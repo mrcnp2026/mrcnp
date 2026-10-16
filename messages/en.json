@@ -5365,7 +5365,8 @@
       "setStaff": "Employee rules",
       "workInfo": "Work terms",
       "setEsign": "E-contracts",
-      "paySlips": "Upload payslips"
+      "paySlips": "Upload payslips",
+      "board": "Board"
     },
     "search": {
       "placeholder": "Search",
@@ -5635,5 +5636,67 @@
     "unsupported": "This browser does not support phone alerts",
     "notReady": "Phone alerts are not set up on the server yet",
     "failed": "Could not turn on. Please try again shortly"
+  },
+  "board": {
+    "title": "Board",
+    "write": "Write",
+    "edit": "Edit",
+    "search": "Search title or text",
+    "empty": "No posts yet. Write the first one.",
+    "noResult": "No matching posts.",
+    "hasImage": "Has photo",
+    "edited": "edited",
+    "editedAt": "edited {at}",
+    "pages": "Board pages",
+    "count": "{n} posts",
+    "toList": "List",
+    "titleLabel": "Title",
+    "titlePlaceholder": "Title",
+    "bodyLabel": "Content",
+    "post": "Post",
+    "save": "Save",
+    "cancel": "Cancel",
+    "delete": "Delete",
+    "deleteAsk": "Delete this post?",
+    "deleteYes": "Delete",
+    "dbNeeded": "The board needs DB change bundle 16 to be applied.",
+    "err": {
+      "title_required": "Enter a title (up to 200 characters).",
+      "body_required": "Enter some content.",
+      "db_update_required": "DB change bundle 16 is not applied yet.",
+      "forbidden": "Only the author can edit.",
+      "not_found": "This post was deleted or does not exist.",
+      "generic": "Could not save. Please try again.",
+      "network": "Check your internet connection."
+    }
+  },
+  "rich": {
+    "label": "Content",
+    "toolbar": "Formatting",
+    "hint": "You can drag & drop or paste photos. Large photos are resized.",
+    "uploading": "Uploading {n} photo(s)…",
+    "linkPrompt": "Link address (starting with https://)",
+    "tool": {
+      "bold": "Bold",
+      "italic": "Italic",
+      "underline": "Underline",
+      "strike": "Strikethrough",
+      "h2": "Heading",
+      "h3": "Subheading",
+      "bullet": "Bulleted list",
+      "ordered": "Numbered list",
+      "quote": "Quote",
+      "hr": "Divider",
+      "link": "Link",
+      "undo": "Undo",
+      "redo": "Redo",
+      "image": "Photo"
+    },
+    "err": {
+      "upload": "Could not upload the photo.",
+      "image_too_large": "Photo is too large (10MB max).",
+      "image_type": "Only photos (jpg, png, webp, gif).",
+      "db_update_required": "Photo storage is not ready yet (DB bundle 16)."
+    }
   }
 }

@@ -3,6 +3,7 @@
 import { getFormatter, getTranslations } from 'next-intl/server';
 import Link from 'next/link';
 import { NoticeBody as MessageBody } from '@/components/NoticeBody';
+import { RichHtml } from '@/components/RichHtml';
 import { ReplyForm } from '@/components/MessageForms';
 import { Card, Chip } from '@/components/ui';
 import type { MessageLine, Thread } from '@/lib/work-messages';
@@ -57,7 +58,7 @@ export async function MessageThread({ thread, meId, names, back, admin = false }
         </div>
         <h1 className="text-xl font-bold break-words">{thread.title}</h1>
         <p className="num text-xs text-muted">{who(thread.senderId)} · {stamp(thread.createdAt)}</p>
-        <MessageBody text={thread.body} />
+        <RichHtml html={thread.bodyHtml} text={thread.body} />
         {thread.related.href && thread.related.href.startsWith('/') && (
           <Link href={thread.related.href} className="inline-flex min-h-9 items-center self-start rounded-button border border-primary px-3 text-sm font-bold text-primary">
             {t('toRelated')}

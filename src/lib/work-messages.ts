@@ -4,6 +4,7 @@
 // ★ 외부 메신저 · 문자 · 메일로 보내지 않는다. 앱 안에서만 보인다.
 // ★ 읽었다는 표시는 「열어 봤다」는 뜻일 뿐이다 — 동의나 법적 통지 완료를 뜻하지 않는다.
 import 'server-only';
+import { cleanRichHtml, safeRichHtml } from '@/lib/rich-text';
 import { ApiError } from '@/lib/api';
 import type { Me } from '@/lib/auth';
 import { expandGroups } from '@/lib/manager-rules';
@@ -40,32 +41,47 @@ async function resolveAudience(a: Audience, senderId: string | null, test: boole
 async function insertMessage(row: Row, recipients: string[]): Promise<string> {
   const c = db();
   const { data, error } = await c.from('work_messages').insert(row).select('id').single();
+  if (error?.code === '42703' || error?.code === 'PGRST204') throw new ApiError(503, 'db_update_required');
   if (error || !data) boom('work_messages.insert', error);
   const r = await c.from('work_message_recipients').insert(recipients.map((id) => ({ message_id: data!.id, employee_id: id })));
   if (r.error) boom('work_message_recipients.insert', r.error);
   return data!.id as string;
 }
 
+/** 서식 있는 본문(bodyHtml, 2026-10-16)이 오면 걸러 쓰고 글자 본문은 거기서 뽑는다. 없으면 예전처럼 글자만 */
+function richOrText(body: unknown, bodyHtml: unknown): { body: string; body_html: string | null } {
+  if (typeof bodyHtml === 'string') {
+    const r = cleanRichHtml(bodyHtml);
+    if (r.empty || r.text.length > 4000) throw new ApiError(400, 'message_invalid');
+    return { body: r.text || ' ', body_html: r.html };
+  }
+  const text = clean(body, 4000);
+  if (text.length < 1 || text.length > 4000) throw new ApiError(400, 'message_invalid');
+  return { body: text, body_html: null };
+}
+
 /** 관리자가 보내는 통지. 받는 사람이 한 명도 없으면 보내지 않는다 */
-export async function sendNotice(args: { me: Me; title: unknown; body: unknown; needsReply: boolean; audience: Audience; related?: Related }): Promise<{ id: string; recipients: number }> {
-  const title = clean(args.title, 120), body = clean(args.body, 4000);
+export async function sendNotice(args: { me: Me; title: unknown; body: unknown; bodyHtml?: unknown; needsReply: boolean; audience: Audience; related?: Related }): Promise<{ id: string; recipients: number }> {
+  const title = clean(args.title, 120);
+  const { body, body_html } = richOrText(args.body, args.bodyHtml);
   if (title.length < 1 || title.length > 120 || body.length < 1 || body.length > 4000) throw new ApiError(400, 'message_invalid');
   const test = isTestNo(args.me.employeeNo);
   const to = await resolveAudience(args.audience, args.me.id, test);
   if (to.length === 0) throw new ApiError(409, 'message_no_recipients');
-  const id = await insertMessage({ kind: 'notice', needs_reply: args.needsReply, title, body, related: args.related ?? {}, audience: args.audience, sender_id: args.me.id, is_test: test }, to);
+  const id = await insertMessage({ kind: 'notice', needs_reply: args.needsReply, title, body, ...(body_html ? { body_html } : {}), related: args.related ?? {}, audience: args.audience, sender_id: args.me.id, is_test: test }, to);
   return { id, recipients: to.length };
 }
 
 /** 직원이 관리자에게 보내는 문의 — 켜져 있는 관리자 전원이 받는다(누가 답해도 된다) */
-export async function sendInquiry(args: { me: Me; title: unknown; body: unknown; related?: Related }): Promise<{ id: string }> {
-  const title = clean(args.title, 120), body = clean(args.body, 4000);
+export async function sendInquiry(args: { me: Me; title: unknown; body: unknown; bodyHtml?: unknown; related?: Related }): Promise<{ id: string }> {
+  const title = clean(args.title, 120);
+  const { body, body_html } = richOrText(args.body, args.bodyHtml);
   if (title.length < 1 || title.length > 120 || body.length < 1 || body.length > 4000) throw new ApiError(400, 'message_invalid');
   const { data: admins } = await db().from('profiles').select('id, employee_no').eq('role', 'admin').eq('active', true);
   const test = isTestNo(args.me.employeeNo);
   const to = (admins ?? []).filter((p) => p.id !== args.me.id && isTestNo(p.employee_no as string | null) === test).map((p) => p.id as string);
   if (to.length === 0) throw new ApiError(409, 'message_no_recipients');
-  return { id: await insertMessage({ kind: 'inquiry', needs_reply: true, title, body, related: args.related ?? {}, audience: { admins: true }, sender_id: args.me.id, is_test: test }, to) };
+  return { id: await insertMessage({ kind: 'inquiry', needs_reply: true, title, body, ...(body_html ? { body_html } : {}), related: args.related ?? {}, audience: { admins: true }, sender_id: args.me.id, is_test: test }, to) };
 }
 
 /** 프로그램이 만드는 알림 — 같은 열쇠로는 한 번만 들어간다(다시 시도해도 중복되지 않는다). 이미 있으면 그 메시지 번호를 돌려준다 */
@@ -124,7 +140,7 @@ export async function unreadCount(employeeId: string): Promise<number> {
   return count ?? 0;
 }
 
-export type Thread = { id: string; kind: MessageLine['kind']; needsReply: boolean; title: string; body: string; related: Related; senderId: string | null; createdAt: string; iAmRecipient: boolean; recipients: { employeeId: string; readAt: string | null }[]; replies: { id: string; authorId: string; body: string; createdAt: string }[] };
+export type Thread = { id: string; kind: MessageLine['kind']; needsReply: boolean; title: string; body: string; bodyHtml: string; related: Related; senderId: string | null; createdAt: string; iAmRecipient: boolean; recipients: { employeeId: string; readAt: string | null }[]; replies: { id: string; authorId: string; body: string; createdAt: string }[] };
 /** 메시지 한 건과 회신. 볼 수 없는 사람에게는 null. 받는 사람이 열면 읽음으로 표시한다 */
 export async function loadThread(id: string, me: Me): Promise<Thread | null> {
   const c = db();
@@ -141,7 +157,7 @@ export async function loadThread(id: string, me: Me): Promise<Thread | null> {
   const { data: rep } = await c.from('work_message_replies').select('id, author_id, body, created_at').eq('message_id', id).order('created_at');
   const canSeeAll = m.sender_id === me.id || me.role === 'admin'; // 누가 읽었는지는 보낸 사람과 관리자만 본다
   return {
-    id: m.id as string, kind: m.kind as Thread['kind'], needsReply: m.needs_reply as boolean, title: m.title as string, body: m.body as string, related: (m.related ?? {}) as Related, senderId: m.sender_id as string | null, createdAt: m.created_at as string, iAmRecipient: !!mine,
+    id: m.id as string, kind: m.kind as Thread['kind'], needsReply: m.needs_reply as boolean, title: m.title as string, body: m.body as string, bodyHtml: safeRichHtml(m.body_html as string | null), related: (m.related ?? {}) as Related, senderId: m.sender_id as string | null, createdAt: m.created_at as string, iAmRecipient: !!mine,
     recipients: canSeeAll ? (rec ?? []).map((r) => ({ employeeId: r.employee_id as string, readAt: r.read_at as string | null })) : [],
     // 여러 명에게 보낸 통지에서는 다른 직원의 회신이 서로 보이지 않는다: 받는 사람은 자기 회신만 본다. (관리자가 그 직원에게 답할 때는 그 사람에게만 가는 새 메시지를 보낸다 — answerTo)
     replies: (rep ?? []).filter((r) => canSeeAll || (rec ?? []).length <= 1 || r.author_id === me.id).map((r) => ({ id: r.id as string, authorId: r.author_id as string, body: r.body as string, createdAt: r.created_at as string })),

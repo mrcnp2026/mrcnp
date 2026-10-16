@@ -9,6 +9,8 @@ import { useRouter } from 'next/navigation';
 import { useEffect, useState } from 'react';
 import { callApi } from '@/components/client-api';
 import { ErrorNote } from '@/components/ErrorNote';
+import { RichEditor } from '@/components/RichEditor';
+import { textToHtml } from '@/lib/rich-text-plain';
 import { Button, Card, CardTitle, Chip } from '@/components/ui';
 
 type Tr = { locale: string; title: string; body: string; source: 'machine' | 'human' | null; reviewed: boolean; numbersOk: boolean; stale: boolean };
@@ -16,6 +18,7 @@ type Initial = {
   id: string;
   title: string;
   body: string;
+  bodyHtml?: string | null; // 서식 있는 본문(2026-10-16). 없으면 글자 본문을 문단으로 바꿔 편집기에 넣는다
   important: boolean;
   legal: boolean;
   audience: 'all' | 'selected';
@@ -40,6 +43,7 @@ export function NoticeEditor({ people, initial }: { people: { id: string; name: 
   const [f, setF] = useState({
     title: initial?.title ?? '',
     body: initial?.body ?? '',
+    bodyHtml: initial?.bodyHtml || (initial?.body ? textToHtml(initial.body) : ''),
     important: initial?.important ?? false,
     legal: initial?.legal ?? false,
     audience: initial?.audience ?? ('all' as 'all' | 'selected'),
@@ -134,11 +138,12 @@ export function NoticeEditor({ people, initial }: { people: { id: string; name: 
           {t('titleLabel')}
           <input value={f.title} maxLength={120} onChange={(e) => upd({ title: e.target.value })} className={field} />
         </label>
-        <label className="flex flex-col gap-1 text-sm text-muted">
+        <div className="flex flex-col gap-1 text-sm text-muted">
           {t('bodyLabel')}
-          <textarea value={f.body} maxLength={4000} rows={7} onChange={(e) => upd({ body: e.target.value })} className="w-full rounded-button border border-border bg-bg p-3 text-base text-text lg:min-h-96" />
+          {/* 2026-10-16: 사진 · 간단한 서식. 글자 본문(번역 · 알림용)은 서버가 여기서 뽑는다 */}
+          <RichEditor kind="notice" defaultHtml={f.bodyHtml} onChange={(h) => upd({ bodyHtml: h })} placeholder={t('bodyLabel')} minHeight="min-h-56 lg:min-h-96" />
           <span className="text-xs text-faint">{t('bodyHint')}</span>
-        </label>
+        </div>
         <label className="flex min-h-11 items-center gap-2">
           <input type="checkbox" className="size-5" checked={f.important} onChange={(e) => upd({ important: e.target.checked })} />
           <span>{t('important')}</span>
@@ -194,7 +199,7 @@ export function NoticeEditor({ people, initial }: { people: { id: string; name: 
             ))}
           </fieldset>
         )}
-        <Button variant="outline" disabled={busy || !f.title.trim() || !f.body.trim()} onClick={save} className="w-full">
+        <Button variant="outline" disabled={busy || !f.title.trim() || !f.bodyHtml} onClick={save} className="w-full">
           <Save aria-hidden size={18} strokeWidth={1.75} />
           {initial ? t('save') : t('saveDraft')}
         </Button>

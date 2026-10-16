@@ -9,7 +9,7 @@ import { useLocale, useTranslations } from 'next-intl';
 import { usePathname, useRouter } from 'next/navigation';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { callApi } from './client-api';
-import { NoticeBody } from './NoticeBody';
+import { RichHtml } from './RichHtml';
 import { Button, Chip } from './ui';
 
 export type SheetNotice = {
@@ -17,7 +17,7 @@ export type SheetNotice = {
   version: number;
   important: boolean;
   display: { locale: string; title: string; body: string; machine: boolean; stale: boolean; translated: boolean };
-  original: { title: string; body: string };
+  original: { title: string; body: string; html?: string }; // html: 서버가 거른 서식 본문(2026-10-16)
 };
 
 export const PUNCHED_EVENT = 'attendance:punched';
@@ -108,8 +108,8 @@ export function NoticeSheet({ items }: { items: SheetNotice[] }) {
   }
 
   const shown = showOriginal
-    ? { title: n.original.title, body: n.original.body, lang: 'ko' }
-    : { title: n.display.title, body: n.display.body, lang: n.display.locale };
+    ? { title: n.original.title, body: n.original.body, html: n.original.html, lang: 'ko' }
+    : { title: n.display.title, body: n.display.body, html: n.display.translated ? undefined : n.original.html, lang: n.display.locale };
   return (
     <div className="fixed inset-0 z-30 flex items-end bg-text/40 pt-12" role="dialog" aria-modal="true" aria-labelledby="notice-title">
       <div className="mx-auto flex max-h-full w-full max-w-md flex-col rounded-t-card bg-bg shadow-card">
@@ -125,7 +125,7 @@ export function NoticeSheet({ items }: { items: SheetNotice[] }) {
           <h2 id="notice-title" lang={shown.lang} className="text-xl font-semibold break-words text-primary-deep">
             {shown.title}
           </h2>
-          <NoticeBody text={shown.body} lang={shown.lang} />
+          <RichHtml html={shown.html} text={shown.body} lang={shown.lang} />
           {n.display.translated && !showOriginal && (
             <div className="flex flex-col gap-1 border-t border-border pt-2 text-xs text-faint">
               {n.display.machine && <span>{t('machine')}</span>}

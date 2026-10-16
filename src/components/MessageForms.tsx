@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import { useState } from 'react';
 import { callApi } from '@/components/client-api';
 import { ErrorNote } from '@/components/ErrorNote';
+import { RichEditor } from '@/components/RichEditor';
 import { Button } from '@/components/ui';
 
 const field = 'min-h-9 rounded-button border border-border bg-bg px-3 text-sm';
@@ -36,6 +37,7 @@ export function NoticeCompose({ groups, people }: { groups: { id: string; label:
   const { busy, err, send } = useSend();
   const [to, setTo] = useState<'all' | 'groups' | 'people'>('all');
   const [done, setDone] = useState<string | null>(null);
+  const [formKey, setFormKey] = useState(0); // 보낸 뒤 편집기를 비운다(폼 reset은 편집기를 비우지 못한다)
   return (
     <form
       className="flex flex-col gap-3 text-sm"
@@ -44,10 +46,11 @@ export function NoticeCompose({ groups, people }: { groups: { id: string; label:
         const el = e.currentTarget;
         const f = new FormData(el);
         setDone(null);
-        const r = await send<{ recipients: number }>({ action: 'send', to, groupIds: f.getAll('groupIds'), employeeIds: f.getAll('employeeIds'), title: f.get('title'), body: f.get('body'), needsReply: f.get('needsReply') === 'on' });
+        const r = await send<{ recipients: number }>({ action: 'send', to, groupIds: f.getAll('groupIds'), employeeIds: f.getAll('employeeIds'), title: f.get('title'), bodyHtml: f.get('bodyHtml'), needsReply: f.get('needsReply') === 'on' });
         if (r) {
           setDone(t('sentTo', { n: r.recipients }));
           el.reset();
+          setFormKey((k) => k + 1);
         }
       }}
     >
@@ -78,7 +81,8 @@ export function NoticeCompose({ groups, people }: { groups: { id: string; label:
         </select>
       )}
       <input name="title" required maxLength={120} placeholder={t('fTitle')} aria-label={t('fTitle')} className={field} autoComplete="off" />
-      <textarea name="body" required maxLength={4000} placeholder={t('fBody')} aria-label={t('fBody')} className={area} />
+      {/* 2026-10-16: 사진 · 간단한 서식 — 숨은 칸 bodyHtml로 보낸다(서버가 거른다) */}
+      <RichEditor key={formKey} name="bodyHtml" kind="message" placeholder={t('fBody')} minHeight="min-h-40" />
       <label className="flex min-h-9 items-center gap-2">
         <input type="checkbox" name="needsReply" className="size-5 accent-primary" />
         {t('fNeedsReply')}
@@ -114,13 +118,13 @@ export function InquiryCompose() {
       onSubmit={async (e) => {
         e.preventDefault();
         const f = new FormData(e.currentTarget);
-        const r = await send<{ id: string }>({ action: 'inquiry', title: f.get('title'), body: f.get('body') });
+        const r = await send<{ id: string }>({ action: 'inquiry', title: f.get('title'), bodyHtml: f.get('bodyHtml') });
         if (r) router.push(`/punch/messages/${r.id}`);
       }}
     >
       <p className="font-bold">{t('askTitle')}</p>
       <input name="title" required maxLength={120} placeholder={t('fTitle')} aria-label={t('fTitle')} className={field} autoComplete="off" />
-      <textarea name="body" required maxLength={4000} placeholder={t('fBody')} aria-label={t('fBody')} className={area} />
+      <RichEditor name="bodyHtml" kind="message" placeholder={t('fBody')} minHeight="min-h-40" />
       <p className="text-xs text-faint">{t('askHint')}</p>
       {err && <ErrorNote code={err.code} requestId={err.requestId} namespace="messages" />}
       <span className="flex gap-2">

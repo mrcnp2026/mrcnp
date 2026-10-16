@@ -28,7 +28,8 @@ export const MY_APPS: App[] = [
   { key: 'leave', icon: Plane, groups: one([{ href: '/punch/leave', key: 'myLeave' }]) },
   { key: 'requests', icon: Send, groups: one([{ href: '/punch/requests', key: 'myRequests' }]) },
   { key: 'pay', icon: Wallet, groups: one([{ href: '/punch/payslips', key: 'payslips' }, { href: '/punch/retirement', key: 'myRetirement' }]) },
-  { key: 'talk', icon: MessagesSquare, groups: one([{ href: '/punch/notices', key: 'notices' }, { href: '/punch/messages', key: 'messages' }]) },
+  // 게시판(2026-10-16 의뢰인): 사내 자유 게시판 — 직원 누구나. 관리자도 직원 모드에서 같이 쓴다
+  { key: 'talk', icon: MessagesSquare, groups: one([{ href: '/punch/notices', key: 'notices' }, { href: '/punch/messages', key: 'messages' }, { href: '/punch/board', key: 'board' }]) },
   { key: 'people', icon: UserRound, groups: one([{ href: '/punch/org', key: 'orgChart' }, { href: '/punch/account', key: 'account' }]) },
 ];
 

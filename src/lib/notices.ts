@@ -3,12 +3,14 @@ import 'server-only';
 import { cache } from 'react';
 import { selectableLocales, type Locale } from '@/i18n/locales';
 import { noticeState, numbersMatch, pickDisplay, popupOrder, type NoticeRow, type TranslationRow } from '@/lib/notice-logic';
+import { ApiError } from '@/lib/api';
+import { safeRichHtml } from '@/lib/rich-text';
 import { createAdminClient } from '@/lib/supabase/admin';
 import { translateNotice } from '@/lib/translate';
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any -- supabase 행 모양 그대로
 const toNotice = (r: any): NoticeRow => ({
-  id: r.id, title: r.title, body: r.body, important: r.important, legal: r.legal, audience: r.audience,
+  id: r.id, title: r.title, body: r.body, bodyHtml: r.body_html ?? null, important: r.important, legal: r.legal, audience: r.audience,
   startsAt: new Date(r.starts_at), endsAt: r.ends_at ? new Date(r.ends_at) : null, status: r.status, version: r.version,
   createdAt: new Date(r.created_at),
 });
@@ -64,6 +66,7 @@ export async function listNoticesForAdmin(now: Date) {
 export type NoticeInput = {
   title: string;
   body: string;
+  bodyHtml: string | null; // 서식 있는 본문(거른 HTML). 없으면 글자 본문만
   important: boolean;
   legal: boolean;
   audience: 'all' | 'selected';
@@ -76,19 +79,21 @@ export type NoticeInput = {
 export async function saveNotice(id: string | null, input: NoticeInput, actorId: string, mode: 'typo' | 'reshow' = 'reshow'): Promise<string> {
   const db = createAdminClient();
   const row = {
-    title: input.title, body: input.body, important: input.important, legal: input.legal, audience: input.audience,
+    title: input.title, body: input.body, body_html: input.bodyHtml, important: input.important, legal: input.legal, audience: input.audience,
     starts_at: input.startsAt.toISOString(), ends_at: input.endsAt?.toISOString() ?? null, updated_by: actorId, updated_at: new Date().toISOString(),
   };
   let noticeId = id;
   if (!noticeId) {
     const { data, error } = await db.from('notices').insert({ ...row, created_by: actorId }).select('id').single();
+    if (error?.code === '42703' || error?.code === 'PGRST204') throw new ApiError(503, 'db_update_required');
     if (error) throw new Error(`notice.insert: ${error.code}`);
     noticeId = data.id as string;
   } else {
-    const { data: cur } = await db.from('notices').select('status, version, title, body').eq('id', noticeId).single();
-    const contentChanged = cur && (cur.title !== input.title || cur.body !== input.body);
+    const { data: cur } = await db.from('notices').select('*').eq('id', noticeId).single();
+    const contentChanged = cur && (cur.title !== input.title || cur.body !== input.body || (cur.body_html ?? null) !== input.bodyHtml);
     const bump = cur?.status === 'published' && mode === 'reshow' && contentChanged;
     const { error } = await db.from('notices').update({ ...row, version: bump ? cur!.version + 1 : cur!.version }).eq('id', noticeId);
+    if (error?.code === '42703' || error?.code === 'PGRST204') throw new ApiError(503, 'db_update_required');
     if (error) throw new Error(`notice.update: ${error.code}`);
   }
   // 대상 직원: 지우지 못하는 표가 아니라 설정이므로 바꿔 넣는다
@@ -173,7 +178,8 @@ export async function visibleNoticesFor(employeeId: string, locale: string, now:
       return {
         id: n.id, version: n.version, important: n.important, startsAt: n.startsAt,
         confirmed: (reads ?? []).some((r) => r.notice_id === n.id && r.version === n.version),
-        display: d, original: { title: n.title, body: n.body },
+        // 서식 본문(거른 HTML)은 원문(한국어)에만 있다 — 번역본은 글자로 보인다
+        display: d, original: { title: n.title, body: n.body, html: safeRichHtml(n.bodyHtml) },
       };
     })
     .sort((a, b) => b.startsAt.getTime() - a.startsAt.getTime());

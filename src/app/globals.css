@@ -180,3 +180,18 @@ button:not(:disabled):active, a:active, summary:active, [role='button']:active {
     background: white !important;
   }
 }
+
+/* 서식 있는 본문 (게시판 · 공지 · 업무 메시지, 2026-10-16) — 편집기 안과 보기 화면이 같은 모양 */
+.rich-body { font-size: 1rem; line-height: 1.7; color: var(--color-text); }
+.rich-body > * + * { margin-top: 0.6em; }
+.rich-body h2 { font-size: 1.25rem; font-weight: 700; line-height: 1.4; margin-top: 1em; }
+.rich-body h3 { font-size: 1.075rem; font-weight: 700; line-height: 1.4; margin-top: 0.9em; }
+.rich-body ul { list-style: disc; padding-left: 1.4em; }
+.rich-body ol { list-style: decimal; padding-left: 1.4em; }
+.rich-body li > p { margin: 0; }
+.rich-body blockquote { border-left: 3px solid var(--color-primary); background: var(--color-surface); padding: 0.4em 0.9em; color: var(--color-muted); border-radius: 0 6px 6px 0; }
+.rich-body hr { border: 0; border-top: 1px solid var(--color-border); margin: 1.2em 0; }
+.rich-body a { color: var(--color-primary); text-decoration: underline; }
+.rich-body img { display: block; max-width: 100%; height: auto; border-radius: 8px; border: 1px solid var(--color-border); margin: 0.6em 0; }
+.rich-body img.ProseMirror-selectednode { outline: 3px solid var(--color-primary); }
+.rich-body p.is-editor-empty:first-child::before { content: attr(data-placeholder); color: var(--color-faint); float: left; height: 0; pointer-events: none; }

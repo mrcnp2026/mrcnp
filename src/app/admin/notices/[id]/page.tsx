@@ -28,6 +28,7 @@ export default async function EditNoticePage({ params }: { params: Promise<{ id:
           id: n.id,
           title: n.title,
           body: n.body,
+          bodyHtml: n.bodyHtml ?? null,
           important: n.important,
           legal: n.legal,
           audience: n.audience,

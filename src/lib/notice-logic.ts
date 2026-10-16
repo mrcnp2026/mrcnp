@@ -4,6 +4,7 @@ export type NoticeRow = {
   id: string;
   title: string;
   body: string;
+  bodyHtml?: string | null; // 서식 있는 본문 (2026-10-16)
   important: boolean;
   legal: boolean;
   audience: 'all' | 'selected';
