@@ -8,7 +8,7 @@ import { ErrorNote } from '@/components/ErrorNote';
 import { Button } from '@/components/ui';
 import { EmployeeFields, type EmployeeValues, type OrgOption } from '../EmployeeFields';
 
-export function ProfileForm({ employeeId, initial, groups, locales, today }: { employeeId: string; initial: EmployeeValues; groups: OrgOption[]; locales: { code: string; name: string }[]; today: string }) {
+export function ProfileForm({ employeeId, initial, groups, today, onDone }: { employeeId: string; initial: EmployeeValues; groups: OrgOption[]; today: string; onDone?: () => void }) {
   const t = useTranslations('admin.members');
   const tc = useTranslations('common');
   const router = useRouter();
@@ -29,14 +29,22 @@ export function ProfileForm({ employeeId, initial, groups, locales, today }: { e
         if (!r.ok) return setErr(r);
         setSaved(true);
         router.refresh();
+        onDone?.();
       }}
     >
-      <EmployeeFields initial={initial} groups={groups} locales={locales} today={today} />
+      <EmployeeFields initial={initial} groups={groups} today={today} />
       {err && <ErrorNote code={err.code} requestId={err.requestId} namespace="admin.members" />}
       {saved && <p role="status" className="text-sm font-semibold text-ok">{t('profileSaved')}</p>}
-      <Button type="submit" disabled={busy} className="w-full">
-        {busy ? tc('working') : t('profileSave')}
-      </Button>
+      <div className="flex gap-2">
+        {onDone && (
+          <button type="button" onClick={onDone} className="min-h-12 flex-1 rounded-button border border-border bg-bg px-4 text-sm font-semibold lg:flex-none">
+            {t('profileCancel')}
+          </button>
+        )}
+        <Button type="submit" disabled={busy} className="flex-1 lg:flex-none lg:px-8">
+          {busy ? tc('working') : t('profileSave')}
+        </Button>
+      </div>
     </form>
   );
 }

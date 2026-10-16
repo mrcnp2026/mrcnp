@@ -1,12 +1,12 @@
 // 직원 상세 (2026-10-05 의뢰인: 샤플 대조) — 한 사람에 관한 일을 한 화면에서: 소속·연락처, 로그인(가입 여부), 기록 바로가기, 정보 수정.
 // 지우는 버튼은 없다 (4-6). 퇴사·권한·로그인 초기화는 아래 「관리」 묶음에서 사유와 함께 한다.
-import { CalendarDays, KeyRound, Smartphone } from 'lucide-react';
+import { CalendarDays, ChevronDown, KeyRound, Smartphone } from 'lucide-react';
 import { getFormatter, getTranslations } from 'next-intl/server';
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import { DetailBar } from '@/components/detail';
 import { Card, CardTitle, Chip, PageShell } from '@/components/ui';
-import { LOCALE_NAMES, LOCALES } from '@/i18n/locales';
+import { Fold } from '@/components/Fold';
 import { getMe } from '@/lib/auth';
 import { consentAt } from '@/lib/consent';
 import { buildOrgTree, groupPath } from '@/lib/org';
@@ -23,7 +23,9 @@ import { loadJobs } from '@/lib/job-data';
 import { loadShiftTemplates } from '@/lib/shift-data';
 import { MAX_TOP, SHOWN_GRADES } from '@/lib/staff-rules';
 import { GradeForm, type GradeKey } from './GradeForm';
-import { ProfileForm } from './ProfileForm';
+import { ProfileSection } from './ProfileSection';
+import { StaffNotes } from './StaffNotes';
+import { loadStaffNotes } from '@/lib/staff-notes';
 import { StaffDetailsForm } from '@/components/StaffDetailsForm';
 import { loadStaffDetails } from '@/lib/staff-details';
 
@@ -32,6 +34,7 @@ export default async function MemberDetailPage({ params }: { params: Promise<{ i
   const td = await getTranslations('details');
   const tc = await getTranslations('common');
   const tm = await getTranslations('admin.manage');
+  const tn = await getTranslations('admin.notes');
   const f = await getFormatter();
   const me = (await getMe())!;
   const { id } = await params;
@@ -60,6 +63,28 @@ export default async function MemberDetailPage({ params }: { params: Promise<{ i
   const shiftName = p.shift_template_id ? ((await loadShiftTemplates(true)).find((x) => x.id === p.shift_template_id)?.name ?? null) : null;
   const day = (s: string) => f.dateTime(new Date(s), { dateStyle: 'medium' });
   const agreedAt = await consentAt(p.id);
+  const notes = await loadStaffNotes(p.id); // 비고 (묶음 19) — 표가 없으면 null
+  const joinedText = p.joined_on ? day(`${p.joined_on}T12:00:00+09:00`) : '–';
+  const basicRows = [
+    { k: t('colNo'), v: p.employee_no ?? '–' },
+    { k: t('infoPhone'), v: p.phone ?? '–' },
+    { k: t('emailShort'), v: p.email ?? '–' },
+    { k: t('colGroup'), v: path ?? t('unassigned') },
+    { k: t('jobTitleShort'), v: p.job_title ?? '–' },
+    { k: t('colJob'), v: jobName ?? t('jobNone') },
+    { k: t('shiftShort'), v: shiftName ?? t('shiftNone') },
+    { k: t('infoJoined'), v: joinedText },
+  ];
+  const basicSummary = [path ?? t('unassigned'), p.job_title, t('joinedShort', { date: joinedText })].filter(Boolean).join(' · ');
+  const personalBits = [
+    details.birthDate ? td('sumBirth', { date: details.birthDate }) : null,
+    details.emergencyContacts.length ? td('sumContacts', { n: details.emergencyContacts.length }) : null,
+    details.certificates.length ? td('sumCerts', { n: details.certificates.length }) : null,
+    details.carModel || details.carNumber ? td('sumCar') : null,
+    taxNow ? td('sumFamily', { n: taxNow.family_count as number }) : null,
+  ].filter(Boolean);
+  const personalSummary = personalBits.length ? personalBits.join(' · ') : td('sumEmpty');
+  const notesSummary = notes === null ? tn('notReadyShort') : notes.length ? tn('sumLatest', { body: notes[0].body.replace(/\s+/g, ' ').slice(0, 40) }) : tn('none');
   // 관리 동작: 본인 것은 스스로 못 바꾼다 (R-2). 퇴사 처리 전에 남은 일을 보여 준다 (②-2 7-2 요점 3)
   const self = me.id === p.id;
   const todo = p.active && !self ? await resignChecklist(p.id) : null;
@@ -96,7 +121,7 @@ export default async function MemberDetailPage({ params }: { params: Promise<{ i
           <h1 className="truncate text-2xl font-extrabold tracking-tight">{p.name}</h1>
           <p className="truncate text-sm text-muted">{[p.job_title, path ?? t('unassigned')].filter(Boolean).join(' · ')}</p>
           <p className="mt-1 flex flex-wrap items-center gap-1.5">
-            <span className="num text-xs text-faint">{p.employee_no}</span>
+            <span className="num text-xs text-faint">{[...new Set([p.employee_no, p.phone, p.email].filter(Boolean))].join(' · ')}</span>
             {p.role === 'admin' && <Chip tone="info">{t(p.admin_level === 'ceo' ? 'levelCeo' : 'levelSuper')}</Chip>}
             {p.role === 'manager' && <Chip tone="info">{t('managerChip')}</Chip>}
             {!p.active && <Chip>{t('inactive')}</Chip>}
@@ -109,27 +134,43 @@ export default async function MemberDetailPage({ params }: { params: Promise<{ i
         </Link>
       </header>
 
-      <dl className="grid grid-cols-2 gap-2 lg:grid-cols-4 lg:gap-4">
-        {[
-          { k: 'colNo', v: p.employee_no ?? '–' },
-          { k: 'colGroup', v: path ?? t('unassigned') },
-          { k: 'colJob', v: jobName ?? t('jobNone') },
-          { k: 'colShift', v: shiftName ?? t('shiftNone') },
-          { k: 'infoJoined', v: p.joined_on ? day(`${p.joined_on}T12:00:00+09:00`) : '–' },
-          { k: 'infoPhone', v: p.phone ?? '–' },
-        ].map((x) => (
-          <div key={x.k} className="flex min-w-0 flex-col gap-1 rounded-card bg-bg p-4">
-            <dt className="text-xs text-muted">{t(x.k)}</dt>
-            <dd className="num truncate font-bold">{x.v}</dd>
-          </div>
-        ))}
-      </dl>
-
       {pendingRole && <RoleRequestCard id={pendingRole.id} change={changeLabel} requester={requesterName} reason={pendingRole.reason} mine={pendingRole.requested_by === me.id} />}
 
-      {/* PC: 왼쪽(넓게) = 정보 수정, 오른쪽 = 로그인·출퇴근 기기 / 관리 · 폰: 로그인 → 정보 수정 → 관리 */}
+      {/* 2026-10-16 의뢰인 디자인: 한 사람의 정보를 접고 펴는 칸으로 — 접혀 있어도 한 줄 요약이 보인다.
+          PC: 왼쪽(넓게) = 기본 정보 · 개인 정보 · 비고, 오른쪽 = 로그인 · 관리 / 폰: 기본 → 개인 → 비고 → 로그인 → 관리 */}
       <div className="flex flex-col gap-3 lg:grid lg:grid-cols-3 lg:items-start lg:gap-4">
-      <Card className="flex flex-col gap-3 lg:col-start-3 lg:row-start-1">
+        <div className="flex min-w-0 flex-col gap-3 lg:col-span-2 lg:gap-4">
+          <Fold title={t('basicTitle')} summary={basicSummary} open>
+            <ProfileSection
+              employeeId={p.id}
+              rows={basicRows}
+              initial={{ name: p.name, employeeNo: p.employee_no ?? '', phone: p.phone ?? '', email: p.email ?? '', groupId: p.group_id ?? '', jobTitle: p.job_title ?? '', joinedOn: p.joined_on ?? '', locale: p.locale }}
+              groups={options}
+              today={today}
+            />
+          </Fold>
+
+          {/* 개인 정보 (묶음 17): 생년월일 · 비상연락처 · 자격증 · 차량 + 부양가족(급여 세무 칸 값) */}
+          <Fold id="details" title={td('title')} summary={personalSummary}>
+            <p className="pb-3 text-xs text-faint">{td('adminNote')}</p>
+            <StaffDetailsForm endpoint={`${api}/details`} initial={details} today={today} startEditing={false} />
+            <div className="mt-3 flex flex-wrap items-center gap-x-3 gap-y-1 border-t border-border pt-3">
+              <span className="w-20 shrink-0 text-sm text-muted">{td('family')}</span>
+              <span className="num min-w-0 flex-1 text-sm font-semibold">{taxNow ? td('familyValue', { n: taxNow.family_count as number, c: taxNow.child_count as number }) : td('familyNone')}</span>
+              <Link href={`/admin/payroll/staff/${p.id}`} className="inline-flex min-h-11 items-center text-sm font-semibold text-primary lg:min-h-9">
+                {td('familyEdit')} ›
+              </Link>
+            </div>
+          </Fold>
+
+          {/* 비고 (묶음 19): 관리자만 보는 그 사람에 대한 메모 — 4건씩 넘겨 본다 */}
+          <Fold id="notes" title={tn('title')} summary={notesSummary} aside={notes && notes.length > 0 ? <Chip tone="info">{tn('countChip', { n: notes.length })}</Chip> : undefined}>
+            <StaffNotes employeeId={p.id} notes={notes} />
+          </Fold>
+        </div>
+
+        <div className="flex min-w-0 flex-col gap-3 lg:gap-4">
+      <Card className="flex flex-col gap-3">
         <CardTitle>{t('loginCard')}</CardTitle>
         <div className="flex items-center gap-3">
           <KeyRound aria-hidden size={22} strokeWidth={1.75} className={`shrink-0 ${joined ? 'text-ok' : 'text-warn'}`} />
@@ -155,31 +196,7 @@ export default async function MemberDetailPage({ params }: { params: Promise<{ i
         </div>
       </Card>
 
-      <Card className="flex flex-col gap-4 lg:col-span-2 lg:col-start-1 lg:row-span-2 lg:row-start-1">
-        <CardTitle>{t('profileTitle')}</CardTitle>
-        <ProfileForm
-          employeeId={p.id}
-          initial={{ name: p.name, employeeNo: p.employee_no ?? '', phone: p.phone ?? '', email: p.email ?? '', groupId: p.group_id ?? '', jobTitle: p.job_title ?? '', joinedOn: p.joined_on ?? '', locale: p.locale }}
-          groups={options}
-          locales={LOCALES.map((code) => ({ code, name: LOCALE_NAMES[code] }))}
-          today={toKstDate(new Date())}
-        />
-      </Card>
-
-      {/* 개인 정보 (묶음 17, 2026-10-16 의뢰인): 생년월일 · 비상연락처 · 자격증 · 차량 — 평소에는 짧은 요약, [고치기]로 입력 */}
-      <Card className="flex flex-col gap-3 lg:col-span-2 lg:col-start-1 lg:row-start-3">
-        <CardTitle help={td('adminNote')}>{td('title')}</CardTitle>
-        <StaffDetailsForm endpoint={`${api}/details`} initial={details} today={today} />
-        <div className="flex flex-wrap items-center gap-x-3 gap-y-1 border-t border-border pt-3">
-          <span className="text-sm text-muted">{td('family')}</span>
-          <span className="num min-w-0 flex-1 font-bold">{taxNow ? td('familyValue', { n: taxNow.family_count as number, c: taxNow.child_count as number }) : td('familyNone')}</span>
-          <Link href={`/admin/payroll/staff/${p.id}`} className="inline-flex min-h-11 items-center text-sm font-semibold text-primary lg:min-h-9">
-            {td('familyEdit')} ›
-          </Link>
-        </div>
-      </Card>
-
-      <Card id="manage" className="scroll-mt-20 p-0 py-1 lg:col-start-3 lg:row-start-2">
+      <Card id="manage" className="scroll-mt-20 p-0 py-1">
         <div className="px-5 pt-3 pb-1">
           <CardTitle>{tm('title')}</CardTitle>
         </div>
@@ -196,8 +213,14 @@ export default async function MemberDetailPage({ params }: { params: Promise<{ i
             {pendingRole && <p className="px-5 py-3 text-sm text-muted">{tm('pendingHide')}</p>}
             {/* 권한 등급 — 최고관리자 · 대표자 · 지점관리자 · 일반직원 (2026-10-16 의뢰인 권한-10) */}
             {!pendingRole && p.active && (!targetTop || me.top) && (
-              <div className="border-t border-border first:border-t-0">
-                <p className="px-5 pt-4 pb-2 font-medium">{tm('gradeTitle')}</p>
+              <details className="group/grade border-t border-border first:border-t-0">
+                <summary className="flex min-h-14 cursor-pointer list-none items-center gap-2 px-5 py-3 hover:bg-surface [&::-webkit-details-marker]:hidden">
+                  <span className="flex min-w-0 flex-1 flex-col">
+                    <span className="font-medium">{tm('gradeTitle')}</span>
+                    <span className="text-xs text-muted">{tm('gradeNowLine', { grade: tm(`grade.${grade}`) })}</span>
+                  </span>
+                  <ChevronDown aria-hidden size={18} className="shrink-0 text-muted transition-transform group-open/grade:rotate-180" />
+                </summary>
                 <GradeForm
                   employeeId={p.id}
                   current={grade}
@@ -205,7 +228,7 @@ export default async function MemberDetailPage({ params }: { params: Promise<{ i
                   topNames={topNames}
                   ceoName={ceoName}
                 />
-              </div>
+              </details>
             )}
             {!pendingRole && p.active && targetTop && !me.top && <p className="px-5 py-3 text-sm text-muted">{tm('owner_only')}</p>}
             {p.active && p.role === 'manager' && <ManagerScope employeeId={p.id} groups={tree.flatMap((d) => [{ id: d.id, label: d.name }, ...d.teams.map((x) => ({ id: x.id, label: `${d.name} › ${x.name}` }))])} picked={managed} />}
@@ -223,6 +246,7 @@ export default async function MemberDetailPage({ params }: { params: Promise<{ i
           </>
         )}
       </Card>
+        </div>
       </div>
     </PageShell>
   );

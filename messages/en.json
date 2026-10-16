@@ -278,7 +278,7 @@
       "addTitle": "Add staff",
       "name": "Name",
       "employeeNo": "Employee number",
-      "employeeNoHelp": "Letters, numbers and - only (up to 20). Used to sign in.",
+      "employeeNoHelp": "Login ID · letters, digits, - (up to 20)",
       "locale": "Staff screen language",
       "joinedOn": "Start date (optional)",
       "submit": "Add and create invitation link",
@@ -334,7 +334,7 @@
       "secOrg": "Organisation",
       "secApp": "App settings",
       "phone": "Mobile number (optional)",
-      "phoneHelp": "Digits and - only. For contact; can also be used as the sign-in ID instead of the employee number.",
+      "phoneHelp": "Can also be used as the login ID",
       "group": "Group",
       "groupNone": "Create departments and teams in \"Org chart\" first to choose one here.",
       "jobTitle": "Job title (optional)",
@@ -392,8 +392,16 @@
       "levelGeneral": "General admin",
       "email_taken": "Another employee already uses this email.",
       "email": "Email (optional)",
-      "emailHelp": "If set, they can also log in with this email. No mail is sent.",
-      "invalid_email": "Check the email address."
+      "emailHelp": "Can also be used as the login ID · no mail is sent",
+      "invalid_email": "Check the email address.",
+      "emailShort": "Email",
+      "jobTitleShort": "Title",
+      "joinedShort": "Joined {date}",
+      "profileEdit": "Edit",
+      "profileCancel": "Cancel",
+      "emailPh": "name@example.com",
+      "basicTitle": "Basic info",
+      "shiftShort": "Schedule"
     },
     "more": {
       "title": "All menus",
@@ -1664,7 +1672,8 @@
       },
       "gradeTopNow": "Now {n} of max 3 — {names}",
       "super_full": "Up to 3 super admins (including the CEO). Change one of them to employee first.",
-      "ceo_taken": "There can be only one CEO. Change the current CEO to top admin first."
+      "ceo_taken": "There can be only one CEO. Change the current CEO to top admin first.",
+      "gradeNowLine": "Now: {grade}"
     },
     "settings": {
       "title": "Settings",
@@ -4351,6 +4360,26 @@
       "rejectNote": "They can apply again with the same email.",
       "rejectDo": "Reject",
       "cancel": "Cancel"
+    },
+    "notes": {
+      "title": "Notes",
+      "add": "Add a note",
+      "placeholder": "Anything to remember about this person (about 4 lines, up to 500 characters)",
+      "count": "{n} / {max}",
+      "save": "Save",
+      "none": "No notes yet",
+      "remove": "Delete this note",
+      "removeDo": "Delete",
+      "keep": "Keep",
+      "pager": "Note pages",
+      "newer": "Newer",
+      "older": "Older",
+      "pageOf": "{n} / {total}",
+      "countChip": "{n}",
+      "sumLatest": "Latest: {body}",
+      "notReady": "Notes become available after DB change bundle 19 is applied.",
+      "notReadyShort": "Not available yet",
+      "invalid_note": "Notes must be 1–500 characters."
     }
   },
   "side": {
@@ -5809,7 +5838,13 @@
     "family": "Dependents",
     "familyValue": "{n} incl. self · {c} children aged 8–20",
     "familyNone": "Not entered yet",
-    "familyEdit": "Edit in payroll"
+    "familyEdit": "Edit in payroll",
+    "sumBirth": "Born {date}",
+    "sumContacts": "{n} emergency contacts",
+    "sumCerts": "{n} certificates",
+    "sumCar": "Has a car",
+    "sumFamily": "{n} dependents",
+    "sumEmpty": "Not entered yet — tap to add"
   },
   "signup": {
     "title": "Sign up with email",

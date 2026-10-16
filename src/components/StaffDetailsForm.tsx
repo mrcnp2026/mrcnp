@@ -13,12 +13,12 @@ import { ageOn, MAX_CERTS, MAX_CONTACTS, type Certificate, type EmergencyContact
 
 const input = 'min-h-11 w-full min-w-0 rounded-button border border-border bg-bg px-3 text-base lg:min-h-10 lg:text-sm';
 
-export function StaffDetailsForm({ endpoint, initial, today }: { endpoint: string; initial: StaffDetails; today: string }) {
+export function StaffDetailsForm({ endpoint, initial, today, startEditing }: { endpoint: string; initial: StaffDetails; today: string; startEditing?: boolean }) {
   const t = useTranslations('details');
   const tc = useTranslations('common');
   const router = useRouter();
   const empty = !initial.birthDate && initial.emergencyContacts.length === 0 && initial.certificates.length === 0 && !initial.carModel && !initial.carNumber;
-  const [editing, setEditing] = useState(empty);
+  const [editing, setEditing] = useState(startEditing ?? empty); // 관리자 화면은 비어 있어도 요약부터(접힌 칸 안이라 짧게)
   const [birthDate, setBirthDate] = useState(initial.birthDate ?? '');
   const [contacts, setContacts] = useState<EmergencyContact[]>(initial.emergencyContacts.length ? initial.emergencyContacts : [{ name: '', relation: '', phone: '' }]);
   const [certs, setCerts] = useState<Certificate[]>(initial.certificates);
@@ -135,7 +135,7 @@ export function StaffDetailsForm({ endpoint, initial, today }: { endpoint: strin
 
       {err && <ErrorNote code={err.code} requestId={err.requestId} namespace="details" />}
       <div className="flex gap-2">
-        {!empty && (
+        {(!empty || startEditing === false) && (
           <button type="button" onClick={() => setEditing(false)} className="min-h-11 flex-1 rounded-button border border-border bg-bg px-4 text-sm font-semibold lg:flex-none">
             {t('cancel')}
           </button>
