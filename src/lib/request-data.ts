@@ -20,9 +20,9 @@ export async function loadRequests(opts: { employeeId?: string; practice?: boole
     return (data ?? []) as unknown as Record<string, unknown>[];
   };
   const [co, ot, lv, wk, pr, sh, lc] = await Promise.all([
-    read('punch_corrections', 'id, employee_id, work_date, correction_type, target_id, kind, new_punched_at, status, reason, approved_by, created_at, decided_at'),
+    read('punch_corrections', 'id, employee_id, work_date, correction_type, target_id, kind, new_punched_at, status, reason, requested_by, approved_by, created_at, decided_at'),
     read('overtime_requests', 'id, employee_id, work_date, overtime_minutes, holiday_minutes, status, reason, approved_by, created_at, decided_at'),
-    read('leave_requests', 'id, employee_id, type_code, start_date, end_date, days, start_time, end_time, status, reason, approved_by, created_at, decided_at'),
+    read('leave_requests', 'id, employee_id, type_code, start_date, end_date, days, start_time, end_time, status, reason, approved_by, created_at, decided_at, source'),
     read('work_requests', 'id, employee_id, kind, start_date, end_date, start_time, end_time, place, status, reason, approved_by, created_at, decided_at'),
     read('punch_requests', 'id, employee_id, kind, requested_at, work_date, nearest_m, geo_reason, status, approved_by, created_at, decided_at'),
     read('shift_requests', 'id, employee_id, work_date, start_time, end_time, kind, reason, status, approved_by, created_at, decided_at'),
@@ -35,6 +35,23 @@ export async function loadRequests(opts: { employeeId?: string; practice?: boole
     const at = new Map((evs ?? []).map((e) => [e.id as string, e.punched_at as string]));
     for (const c of co) if (typeof c.target_id === 'string') c.old_punched_at = at.get(c.target_id) ?? null;
   }
-  const all = [...pr.map(fromPunchRequest), ...sh.map(fromShiftRequest), ...lc.map(fromLeaveChange), ...co.map(fromCorrection), ...ot.map(fromOvertime), ...lv.map(fromLeave), ...wk.map(fromWork)];
+  // 시프티에서 옮긴 기록은 요청 목록에 넣지 않는다 (2026-10-17 의뢰인: 「옮긴 기록은 빼고 보여줘」).
+  // 옮긴 휴가(source 'import'), 옮긴 출퇴근으로 생긴 연장, 옮긴 날의 빠진 퇴근을 관리자가 채운 정정 — 직원이 앱에서 낸 요청이 아니다.
+  // 대기 중인 것은 처리해야 하므로 그대로 보인다.
+  const settled = (r: Record<string, unknown>) => r.status !== 'pending';
+  const checkDays = [...ot.filter(settled), ...co.filter((c) => settled(c) && c.requested_by !== c.employee_id)];
+  const importedDays = new Set<string>();
+  if (checkDays.length) {
+    const dates = checkDays.map((r) => r.work_date as string).sort();
+    let q = db.from('punch_events').select('employee_id, work_date').eq('source', 'import').gte('work_date', dates[0]).lte('work_date', dates[dates.length - 1]);
+    if (opts.employeeId) q = q.eq('employee_id', opts.employeeId);
+    const { data: imp } = await readAll((a, b) => q.order('id').range(a, b));
+    for (const e of imp) importedDays.add(`${e.employee_id}|${e.work_date}`);
+  }
+  const fromImport = (r: Record<string, unknown>) => importedDays.has(`${r.employee_id}|${r.work_date}`);
+  const otShown = ot.filter((o) => !(settled(o) && fromImport(o)));
+  const coShown = co.filter((c) => !(settled(c) && c.requested_by !== c.employee_id && fromImport(c)));
+  const lvShown = lv.filter((l) => l.source !== 'import');
+  const all = [...pr.map(fromPunchRequest), ...sh.map(fromShiftRequest), ...lc.map(fromLeaveChange), ...coShown.map(fromCorrection), ...otShown.map(fromOvertime), ...lvShown.map(fromLeave), ...wk.map(fromWork)];
   return within(all, await viewerScope(), (r) => r.employeeId); // 지점관리자면 맡은 지점 직원 것만
 }
