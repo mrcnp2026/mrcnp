@@ -1,4 +1,4 @@
-// 직원 「출퇴근기록」 — 내 근태현황 화면을 월간 보기로 연다 (2026-10-15 의뢰인: 목록형이 아니라 달력 모양으로, `스샷/스샷2/근태1.png` · `근태2.png`).
+// 직원 「출퇴근기록」 — 내 근태현황 화면을 **주간 보기로 연다** (2026-10-16 의뢰인: 메뉴를 누르면 주간이 기본. 월간 달력은 위의 [주간 | 월간]으로 — 2026-10-15에는 월간이 기본이었다).
 // 화면 내용은 MyAttendance.tsx. 직원 모드의 근무일정 메뉴는 없앴고(개발-37) 일정 요청 단추가 여기 있다. /punch/schedule은 주간 보기로 보낸다.
 import { CalendarPlus } from 'lucide-react';
 import { getTranslations } from 'next-intl/server';
@@ -21,7 +21,7 @@ export default async function MyRecordsPage({ searchParams }: { searchParams: Pr
         me={me}
         sp={sp}
         base="/punch/records"
-        defaultView="month"
+        defaultView="week"
         extra={
           <Link href="/punch/schedule/request" className="inline-flex min-h-9 items-center gap-1 font-semibold text-primary">
             <CalendarPlus aria-hidden size={16} />
