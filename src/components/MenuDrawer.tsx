@@ -202,7 +202,7 @@ export function MenuDrawer({ name, role, languages }: { name: string; role: NavR
               </div>
               <div className="flex flex-col gap-2 border-t border-border px-3 pt-2 pb-[calc(0.5rem+env(safe-area-inset-bottom))]">
                 <AddToHomeButton compact />
-                {staff && <PushToggle />}
+                <PushToggle audience={staff ? 'staff' : 'employee'} />
                 <div className="flex items-center justify-between gap-2">
                   <LanguageSwitcher options={languages} />
                   <SignOutButton compact />

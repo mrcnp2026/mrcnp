@@ -5700,7 +5700,11 @@
     "denied": "Notifications for this site are blocked in browser settings. Please allow them",
     "unsupported": "This browser does not support phone alerts",
     "notReady": "Phone alerts are not set up on the server yet",
-    "failed": "Could not turn on. Please try again shortly"
+    "failed": "Could not turn on. Please try again shortly",
+    "helpEmployee": "We'll remind you on this phone if you forget to clock in or out",
+    "promptEmployee": "Turn on alerts to get a reminder when you forget to clock in or out",
+    "promptOn": "Turn on",
+    "promptClose": "Dismiss"
   },
   "rich": {
     "label": "Content",

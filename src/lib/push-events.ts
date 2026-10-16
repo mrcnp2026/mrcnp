@@ -1,5 +1,5 @@
 // 폰 알림을 보내는 일 3가지 (2026-10-16 의뢰인: 휴가 신청 · 미출근자 · 정정 요청). 서버 전용.
-// 요청 두 가지는 저장 API가 응답을 돌려준 뒤(after) 부르고, 미출근은 정기 작업 /api/cron/absent-watch가 부른다.
+// 요청 두 가지는 저장 API가 응답을 돌려준 뒤(after) 부르고, 출퇴근 알림(직원 본인 · 관리자)은 정기 작업 /api/cron/absent-watch가 부른다.
 import 'server-only';
 import { resolveDayType } from '@/config/labor-rules';
 import { OFFICE } from '@/config/office';
@@ -7,7 +7,9 @@ import { addDays } from '@/lib/calendar';
 import { fullLeaveSet } from '@/lib/leave';
 import { findMissingPunches } from '@/lib/missing-punch';
 import { leaveDaysFor, loadPeriod, workDaysFor } from '@/lib/period-data';
-import { firstTime, notifyApprovers, pushConfigured } from '@/lib/push';
+import { planPunchAlerts, type PersonMisses } from '@/lib/punch-alerts';
+import { firstTime, notifyApprovers, pushConfigured, sendPush } from '@/lib/push';
+import { approverIdsFor } from '@/lib/scope';
 import { createAdminClient } from '@/lib/supabase/admin';
 import { toKstDate } from '@/lib/time';
 
@@ -47,41 +49,44 @@ export async function notifyCorrectionRequest(id: string): Promise<void> {
 }
 
 /**
- * 오늘 미출근 — 관리자 홈의 「출근 미기록」과 같은 판정(findMissingPunches: 근무 시작 + 30분이 지나도 출근 기록 없음,
- * 하루 휴가 · 승인된 외근 · 간주 근무 · 입사 전은 빼고). 한 사람에 하루 한 번만. 연습 모드에서는 보내지 않는다(연습 기간엔 모두 미출근으로 보여 알림이 쏟아진다).
+ * 출퇴근 폰 알림 (2026-10-16 의뢰인: 직원 본인 미출근 · 미퇴근 + 관리자 전일 미기록 묶음) — 정기 작업 /api/cron/absent-watch가 부른다.
+ * 판정은 관리자 홈 · 「출근/퇴근 누락」 화면과 같은 findMissingPunches(근무 시작 + 30분 출근 없음 / 퇴근 + 2시간 퇴근 없음,
+ * 하루 휴가 · 승인된 외근 · 간주 근무 · 입사 전은 빼고). 무엇을 누구에게 보낼지는 lib/punch-alerts.ts planPunchAlerts.
+ * 같은 알림은 한 번만(push_sent). 연습 모드에서는 보내지 않는다(연습 기간엔 모두 미출근으로 보여 알림이 쏟아진다).
  */
-export async function notifyAbsentToday(now = new Date()): Promise<{ checked: number; sent: number }> {
-  if (!pushConfigured() || OFFICE.practiceMode) return { checked: 0, sent: 0 };
+export async function notifyPunchAlerts(now = new Date()): Promise<{ checked: number; planned: number; sent: number }> {
+  if (!pushConfigured() || OFFICE.practiceMode) return { checked: 0, planned: 0, sent: 0 };
   const today = toKstDate(now);
-  const data = await loadPeriod(addDays(today, -1), today, false);
-  if (!data.rule) return { checked: 0, sent: 0 };
-  const dayTypes = { [today]: data.ruleAt(today) ? resolveDayType(today, data.ruleAt(today)!, data.holidays) : 'workday' } as const;
-  let checked = 0;
-  let sent = 0;
+  const yesterday = addDays(today, -1);
+  const data = await loadPeriod(addDays(today, -2), today, false);
+  if (!data.rule) return { checked: 0, planned: 0, sent: 0 };
+  const dayType = (d: string) => (data.ruleAt(d) ? resolveDayType(d, data.ruleAt(d)!, data.holidays) : 'workday');
+  const dayTypes = { [yesterday]: dayType(yesterday), [today]: dayType(today) };
+  const people: PersonMisses[] = [];
   for (const p of data.people.filter((x) => x.active && !x.employeeNo?.startsWith('e2e-'))) {
     if (data.templateOf(p.id)?.kind === 'deemed') continue;
-    checked++;
-    const miss = findMissingPunches({
+    const rule = data.ruleFor(p.id, today) ?? data.rule;
+    const misses = findMissingPunches({
       employeeId: p.id, events: data.events.filter((e) => e.employeeId === p.id),
       approvedCorrections: data.corrections.filter((c) => c.status === 'approved'),
       pendingCorrections: data.corrections.filter((c) => c.status === 'pending'),
-      rule: data.ruleFor(p.id, today) ?? data.rule, dayTypes, now,
+      rule, dayTypes, now,
       outGraceHours: OFFICE.missingOutGraceHours, inGraceMin: OFFICE.missingInGraceMin, joinedOn: p.startsOn,
       fullLeaveDates: new Set([...fullLeaveSet(leaveDaysFor(data, p.id)), ...workDaysFor(data, p.id).keys()]),
-      lookbackDays: 1,
-    }).filter((m) => m.workDate === today && m.kind === 'in');
-    if (miss.length === 0) continue;
-    if (!(await firstTime(`absent:${p.id}:${today}`))) continue;
-    const start = (data.ruleFor(p.id, today) ?? data.rule).startTime.slice(0, 5);
-    await notifyApprovers(p.id, {
-      title: `${p.name} 님이 아직 출근하지 않았습니다`,
-      body: `오늘 ${md(today)} 근무 시작 ${start} · 출근 기록 없음${miss[0].hasPendingRequest ? ' (정정 요청 있음)' : ''}`,
-      url: '/admin',
-      tag: `absent-${p.id}-${today}`,
+      lookbackDays: 2, includeToday: true,
     });
-    sent++;
+    people.push({ id: p.id, name: p.name, startTime: rule.startTime.slice(0, 5), endTime: rule.endTime.slice(0, 5), misses });
+  }
+  const approvers = new Map<string, string[]>();
+  for (const p of people.filter((x) => x.misses.length > 0)) approvers.set(p.id, await approverIdsFor(p.id));
+  const hour = Number(new Intl.DateTimeFormat('en-GB', { timeZone: 'Asia/Seoul', hour: '2-digit', hourCycle: 'h23' }).format(now));
+  const plan = planPunchAlerts({ people, today, yesterday, hour, approversOf: (id) => approvers.get(id) ?? [] });
+  let sent = 0;
+  for (const a of plan) {
+    if (!(await firstTime(a.key))) continue;
+    sent += await sendPush(a.to, a.payload);
   }
   // 30일 지난 「보냄」 표시는 지운다
   await createAdminClient().from('push_sent').delete().lt('sent_at', new Date(now.getTime() - 30 * 86_400_000).toISOString());
-  return { checked, sent };
+  return { checked: people.length, planned: plan.length, sent };
 }

@@ -24,6 +24,7 @@ import { loadWorkRequests } from '@/lib/work-data';
 import { workStatusOn } from '@/lib/work-requests';
 import { MissingBanner } from './MissingBanner';
 import { NoteBox } from './NoteBox';
+import { PushToggle } from '@/components/PushToggle';
 import { SituationCard } from './SituationCard';
 import { StaffDesk } from './StaffDesk';
 import { TodayCard } from './TodayCard';
@@ -117,6 +118,8 @@ export default async function PunchPage({ searchParams }: { searchParams: Promis
         )}
 
         <MissingBanner items={recent.missing} />
+        {/* 폰 알림이 꺼져 있으면 켜기 안내 한 줄 (2026-10-16: 출근 · 퇴근을 잊으면 본인에게 알림) */}
+        <PushToggle mode="prompt" audience="employee" />
         </div>
         <div className="flex flex-col gap-3 lg:gap-4">
         {cards.has('week') && (

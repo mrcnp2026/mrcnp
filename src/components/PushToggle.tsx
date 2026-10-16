@@ -1,8 +1,8 @@
 'use client';
-// 폰 알림 받기 켜기 · 끄기 (웹 푸시, 2026-10-16 의뢰인: 휴가 신청 · 미출근자 · 정정 요청을 관리자 폰으로). 관리자 · 지점관리자 메뉴 아래에 한 줄.
+// 폰 알림 받기 켜기 · 끄기 (웹 푸시, 2026-10-16 의뢰인: 휴가 신청 · 미출근자 · 정정 요청을 관리자 폰으로, 직원은 자기 출근 · 퇴근을 잊었을 때). 메뉴 아래에 한 줄.
 // 켜기: 알림 허용 창 → 이 기기의 받는 주소를 서버(/api/me/push)에 저장. 끄기: 주소를 지운다.
 // 아이폰은 홈 화면에 추가한 앱으로 열었을 때만 알림을 받을 수 있다(애플 정책) — 그 전에는 안내만 보인다.
-import { Bell, BellOff } from 'lucide-react';
+import { Bell, BellOff, X } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 import { useEffect, useState } from 'react';
 import { useInstall } from './useInstall';
@@ -29,8 +29,20 @@ async function send(method: 'POST' | 'DELETE' | 'PUT', body?: unknown): Promise<
   }
 }
 
-export function PushToggle() {
+const DISMISS = 'push-prompt-dismissed'; // 홈 안내를 닫은 때(ms) — 14일 동안 다시 띄우지 않는다
+
+// mode='prompt': 직원 폰 홈의 한 줄 안내(2026-10-16) — 알림이 꺼져 있을 때만 보이고, 닫으면 14일 동안 안 보인다
+// audience: 직원은 「출근 · 퇴근을 잊으면」, 관리자는 「휴가 · 정정 · 미출근」 안내
+export function PushToggle({ mode = 'menu', audience = 'staff' }: { mode?: 'menu' | 'prompt'; audience?: 'staff' | 'employee' } = {}) {
   const t = useTranslations('push');
+  const [hidden, setHidden] = useState(() => {
+    if (mode !== 'prompt' || typeof window === 'undefined') return false;
+    try {
+      return Date.now() - Number(localStorage.getItem(DISMISS) ?? 0) < 14 * 86_400_000;
+    } catch {
+      return false;
+    }
+  });
   const { state: install } = useInstall();
   const [state, setState] = useState<State>('loading');
   const [note, setNote] = useState<string | null>(null);
@@ -95,6 +107,33 @@ export function PushToggle() {
   }
 
   if (state === 'loading') return null;
+  if (mode === 'prompt') {
+    if (hidden || (state !== 'off' && state !== 'ios-home')) return null;
+    return (
+      <div className="flex items-center gap-2 rounded-card border border-primary bg-primary-tint py-2 pr-1 pl-3" data-push-prompt={state}>
+        <Bell aria-hidden size={18} className="shrink-0 text-primary" />
+        <p className="min-w-0 flex-1 text-sm text-text">{note ?? (state === 'ios-home' ? t('iosHome') : t('promptEmployee'))}</p>
+        {state === 'off' && (
+          <button type="button" disabled={busy} onClick={turnOn} className="min-h-9 shrink-0 rounded-button bg-primary px-3 text-sm font-bold text-on-primary disabled:opacity-50">
+            {t('promptOn')}
+          </button>
+        )}
+        <button
+          type="button"
+          aria-label={t('promptClose')}
+          onClick={() => {
+            setHidden(true);
+            try {
+              localStorage.setItem(DISMISS, String(Date.now()));
+            } catch {}
+          }}
+          className="flex size-9 shrink-0 items-center justify-center rounded-button text-muted"
+        >
+          <X aria-hidden size={16} />
+        </button>
+      </div>
+    );
+  }
   const small = 'min-h-9 rounded-button px-3 text-sm font-bold disabled:opacity-50';
   return (
     <div className="flex flex-col gap-1 rounded-button bg-surface px-3 py-2" data-push-toggle={state}>
@@ -120,7 +159,7 @@ export function PushToggle() {
         )}
       </div>
       <p className="text-xs text-muted">
-        {note ?? (state === 'ios-home' ? t('iosHome') : state === 'denied' ? t('denied') : state === 'unsupported' ? t('unsupported') : t('help'))}
+        {note ?? (state === 'ios-home' ? t('iosHome') : state === 'denied' ? t('denied') : state === 'unsupported' ? t('unsupported') : t(audience === 'employee' ? 'helpEmployee' : 'help'))}
       </p>
     </div>
   );

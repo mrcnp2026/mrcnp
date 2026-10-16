@@ -1,9 +1,24 @@
 {
   "$schema": "https://openapi.vercel.sh/vercel.json",
-  "regions": ["icn1"],
+  "regions": [
+    "icn1"
+  ],
   "crons": [
-    { "path": "/api/cron/payroll-refresh", "schedule": "0 0 1,16 * *" },
-    { "path": "/api/cron/backup-watch", "schedule": "0 0 * * *" },
-    { "path": "/api/cron/absent-watch", "schedule": "0 0 * * *" }
+    {
+      "path": "/api/cron/payroll-refresh",
+      "schedule": "0 0 1,16 * *"
+    },
+    {
+      "path": "/api/cron/backup-watch",
+      "schedule": "0 0 * * *"
+    },
+    {
+      "path": "/api/cron/absent-watch",
+      "schedule": "0 0 * * *"
+    },
+    {
+      "path": "/api/cron/punch-evening",
+      "schedule": "0 12 * * *"
+    }
   ]
 }
