@@ -47,6 +47,11 @@ export default async function LoginPage() {
           <Link href="/register" className="inline-flex min-h-11 items-center px-2 font-semibold text-primary">
             {t('setupLink')}
           </Link>
+          <span aria-hidden className="text-faint">·</span>
+          {/* 2026-10-16 의뢰인 권한-6: 초대 없이 이메일로 가입 신청 → 관리자 승인 */}
+          <Link href="/signup" className="inline-flex min-h-11 items-center px-2 font-semibold text-primary">
+            {t('emailSignup')}
+          </Link>
         </p>
         {/* 예전에 폰을 등록해 둔 기기에서만 되는 보조 로그인 — 맨 아래 작게 */}
         <LoginButton />

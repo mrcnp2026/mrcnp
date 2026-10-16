@@ -90,20 +90,25 @@ export async function resetLogin(employeeId: string, actorId: string): Promise<v
 
 /** 지금 비밀번호가 맞는지만 본다. 요청 쿠키의 세션은 건드리지 않는다 (따로 만든 연결) */
 export async function passwordMatches(employeeNo: string, password: string): Promise<boolean> {
+  return passwordMatchesAuthEmail(staffEmail(employeeNo), password);
+}
+
+/** 로그인 계정 안쪽 주소로 비밀번호만 확인 (승인 전 가입 신청자 안내용 — lib/signup.ts) */
+export async function passwordMatchesAuthEmail(authEmail: string, password: string): Promise<boolean> {
   const c = createPlainClient(process.env.NEXT_PUBLIC_SUPABASE_URL!, process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY!, {
     auth: { persistSession: false, autoRefreshToken: false },
   });
-  const { error } = await c.auth.signInWithPassword({ email: staffEmail(employeeNo), password });
+  const { error } = await c.auth.signInWithPassword({ email: authEmail, password });
   if (!error) return true;
   if (error.status === 400 || error.status === 422) return false;
   throw new Error(`passwordMatches: ${error.status} ${error.code}`);
 }
 
-/** 입력한 아이디(사번 또는 휴대폰 번호) → 재직 중인 직원 */
+/** 입력한 아이디(사번 · 휴대폰 번호 · 이메일) → 재직 중인 직원 */
 export async function findLoginTarget(rawId: unknown): Promise<LoginCandidate | null> {
-  const { data, error } = await createAdminClient().from('profiles').select('id, employee_no, phone, active').eq('active', true);
+  const { data, error } = await createAdminClient().from('profiles').select('id, employee_no, phone, active, email').eq('active', true);
   if (error) throw new Error(`findLoginTarget: ${error.code}`);
-  return resolveLoginId(rawId, (data ?? []).map((p) => ({ id: p.id, employeeNo: p.employee_no, phone: p.phone, active: p.active })));
+  return resolveLoginId(rawId, (data ?? []).map((p) => ({ id: p.id, employeeNo: p.employee_no, phone: p.phone, active: p.active, email: p.email })));
 }
 
 // ── 로그인 실패 횟수 (비밀번호 맞히기 방지) ──

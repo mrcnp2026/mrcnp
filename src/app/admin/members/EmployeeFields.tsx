@@ -5,7 +5,7 @@ import { useTranslations } from 'next-intl';
 import { DateTimeInput } from '@/components/DateTimeInput';
 
 export type OrgOption = { id: string; label: string };
-export type EmployeeValues = { name: string; employeeNo: string; phone: string; groupId: string; jobTitle: string; joinedOn: string; locale: string };
+export type EmployeeValues = { name: string; employeeNo: string; phone: string; email?: string; groupId: string; jobTitle: string; joinedOn: string; locale: string };
 
 const field = 'min-h-11 w-full rounded-button border border-border bg-bg px-3 text-base text-text';
 
@@ -44,6 +44,12 @@ export function EmployeeFields({
           {t('phone')}
           <input name="phone" type="tel" inputMode="tel" maxLength={20} pattern="[0-9+][0-9\- ]{6,19}" defaultValue={initial?.phone ?? ''} className={`num ${field}`} autoComplete="off" />
           <span className="text-xs text-faint">{t('phoneHelp')}</span>
+        </label>
+        {/* 2026-10-16 권한-6: 이메일도 로그인 아이디로 (선택) */}
+        <label className="flex flex-col gap-1 text-sm text-muted">
+          {t('email')}
+          <input name="email" type="email" inputMode="email" maxLength={254} defaultValue={initial?.email ?? ''} className={field} autoComplete="off" autoCapitalize="none" spellCheck={false} />
+          <span className="text-xs text-faint">{t('emailHelp')}</span>
         </label>
       </fieldset>
 

@@ -5,6 +5,7 @@ import { requireAdmin } from '@/lib/auth';
 import { createEmployee, DuplicateEmployeeNo, EMPLOYEE_NO_RE, issueInvite } from '@/lib/invite';
 import { isLocale } from '@/i18n/locales';
 import { cleanJobTitle, cleanPhone } from '@/lib/org';
+import { cleanEmail } from '@/lib/email-rules';
 import { assignableGroup } from '@/lib/org-data';
 import { createAdminClient } from '@/lib/supabase/admin';
 import { syncStaffHistorySafe } from '@/lib/staff-history';
@@ -25,6 +26,16 @@ export const POST = api('admin.employees.create', async (req) => {
   if (jobTitle === undefined) throw new ApiError(400, 'invalid_input');
   const groupId = await assignableGroup(b.groupId);
   if (groupId === undefined) throw new ApiError(400, 'invalid_group');
+  // 이메일(선택, 로그인 아이디 — 2026-10-16 권한-6)
+  const email = typeof b.email === 'string' && b.email.trim() ? cleanEmail(b.email) : null;
+  if (email === null && typeof b.email === 'string' && b.email.trim()) throw new ApiError(400, 'invalid_email');
+  if (email) {
+    const [{ data: other }, { data: pend }] = await Promise.all([
+      createAdminClient().from('profiles').select('id').eq('email', email).maybeSingle(),
+      createAdminClient().from('signup_requests').select('id').eq('email', email).eq('status', 'pending').maybeSingle(),
+    ]);
+    if (other || pend) throw new ApiError(409, 'email_taken');
+  }
   // 직무(선택): 켜져 있는 직무만 지정할 수 있다
   const jobId = typeof b.jobId === 'string' && b.jobId ? b.jobId : null;
   if (jobId) {
@@ -39,8 +50,8 @@ export const POST = api('admin.employees.create', async (req) => {
     if (e instanceof DuplicateEmployeeNo) throw new ApiError(409, 'duplicate_no');
     throw e;
   }
-  if (jobId) {
-    const { error } = await createAdminClient().from('profiles').update({ job_id: jobId, updated_by: me.id }).eq('id', employeeId);
+  if (jobId || email) {
+    const { error } = await createAdminClient().from('profiles').update({ ...(jobId ? { job_id: jobId } : {}), ...(email ? { email } : {}), updated_by: me.id }).eq('id', employeeId);
     if (error) throw new Error(`employees.create.job: ${error.code}`);
   }
   await syncStaffHistorySafe(employeeId, me.id);

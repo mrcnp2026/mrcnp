@@ -18,6 +18,9 @@ import { toKstDate } from '@/lib/time';
 import { RegisterWizard } from './new/RegisterWizard';
 import { NewInviteButton } from './NewInviteButton';
 import { RoleCell } from './RoleCell';
+import { SignupRequests } from './SignupRequests';
+import { suggestEmployeeNo } from '@/lib/email-rules';
+import { loadPendingSignups } from '@/lib/signup';
 
 // 탭 (2026-10-11 의뢰인: 시프티의 직원 관리처럼) — 현재직원(가입을 마친 사람) · 미합류(초대했지만 아직 가입 전) · 비활성(퇴사 등으로 꺼 둔 사람)
 type Filter = 'current' | 'pending' | 'inactive';
@@ -30,13 +33,14 @@ export default async function MembersPage({ searchParams }: { searchParams: Prom
   const filter: Filter = sp.f === 'pending' || sp.f === 'inactive' ? sp.f : 'current';
   const db = createAdminClient();
   const me = (await getMe())!;
-  const [{ data: people }, { data: keys }, groups, { data: roleReqs }, jobs] = await Promise.all([
+  const [{ data: people }, { data: keys }, groups, { data: roleReqs }, jobs, signups] = await Promise.all([
     // (맨 끝) 직무: 표의 직무 열과 추가 팝업의 고르기 칸
     db.from('profiles').select('id, name, employee_no, role, active, group_id, job_title, password_set_at, can_view_payroll, joined_on, job_id, admin_level').order('name'),
     db.from('user_passkeys').select('employee_id').is('revoked_at', null),
     loadOrgGroups(),
     db.from('role_change_requests').select('target_id').eq('status', 'pending'),
     loadJobs(),
+    loadPendingSignups(), // 이메일 가입 신청 (묶음 18)
   ]);
   const jobName = new Map(jobs.map((j) => [j.id, j.name]));
   const roleWaiting = new Set((roleReqs ?? []).map((x) => x.target_id)); // 권한 변경 확인 대기 (R-2의 8)
@@ -124,6 +128,13 @@ export default async function MembersPage({ searchParams }: { searchParams: Prom
           <RegisterWizard popup groups={buildOrgTree(groups).flatMap((d) => [{ id: d.id, label: d.name }, ...d.teams.map((x) => ({ id: x.id, label: `${d.name} › ${x.name}` }))])} jobs={jobs.filter((j) => j.active).map((j) => ({ id: j.id, label: j.name }))} locales={LOCALES.map((code) => ({ code, name: LOCALE_NAMES[code] }))} today={toKstDate(new Date())} />
         </div>
       </AddSheet>
+      {/* 이메일 가입 신청 — 있을 때만 맨 위에 (2026-10-16 의뢰인 권한-6) */}
+      <SignupRequests
+        items={signups}
+        groups={buildOrgTree(groups).flatMap((d) => [{ id: d.id, label: d.name }, ...d.teams.map((x) => ({ id: x.id, label: `${d.name} › ${x.name}` }))])}
+        suggestNo={suggestEmployeeNo((people ?? []).map((p) => p.employee_no))}
+        today={toKstDate(new Date())}
+      />
       {/* 걸러보기 — 숫자가 곧 현황 (가입 9 · 미가입 2). 시프티의 「현재직원 / 미합류 / 비활성」 탭 줄 모양 */}
       <nav className="-mx-4 -mt-3 flex border-b border-border bg-bg px-2 lg:mx-0 lg:mt-0 lg:rounded-card lg:border-0" aria-label={t('filter')}>
         {tabs.map((x) => (

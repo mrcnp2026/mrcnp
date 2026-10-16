@@ -1,5 +1,6 @@
 // 로그인 규칙 (2026-10-05 의뢰인: 폰 1대 고정 대신 아이디 + 비밀번호로 PC·폰 어디서나) — 판단만 하는 순수함수.
 // ★ 아이디는 사번이다. 휴대폰 번호를 넣어도 되지만, 그 번호를 가진 재직자가 정확히 한 명일 때만 통한다.
+// ★ 2026-10-16: 이메일도 아이디로 쓴다(@가 있으면 이메일로 찾는다, 권한-6).
 // ★ 비밀번호 규칙은 길이만 본다 (8자 이상). 특수문자 강제는 외국인 직원에게 문턱만 높이고 "Abc12345!" 같은 것을 만든다.
 // ★ 세션 무효화: 비밀번호를 바꾸거나 관리자가 로그인을 초기화하면, 그보다 먼저 로그인한 기기는 모두 끊긴다.
 
@@ -24,7 +25,7 @@ export function normalizeLoginId(raw: unknown): string {
 
 const digits = (s: string) => s.replace(/\D/g, '');
 
-export type LoginCandidate = { id: string; employeeNo: string | null; phone: string | null; active: boolean };
+export type LoginCandidate = { id: string; employeeNo: string | null; phone: string | null; active: boolean; email?: string | null };
 
 /**
  * 입력한 아이디 → 직원. 사번이 먼저다. 사번에 없으면 휴대폰 번호(숫자만 비교)로 찾되,
@@ -34,6 +35,7 @@ export function resolveLoginId(raw: unknown, people: LoginCandidate[]): LoginCan
   const id = normalizeLoginId(raw);
   if (!id) return null;
   const active = people.filter((p) => p.active);
+  if (id.includes('@')) return active.find((p) => p.email === id) ?? null;
   const byNo = active.find((p) => p.employeeNo?.toLowerCase() === id);
   if (byNo) return byNo;
   const d = digits(id);

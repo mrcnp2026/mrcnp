@@ -39,7 +39,7 @@ export default async function MemberDetailPage({ params }: { params: Promise<{ i
   if (!/^[0-9a-f-]{36}$/i.test(id)) notFound();
   const db = createAdminClient();
   const [{ data: p }, { data: keys }, groups] = await Promise.all([
-    db.from('profiles').select('id, name, employee_no, role, active, joined_on, locale, can_view_payroll, group_id, phone, job_title, password_set_at, shift_template_id, job_id, admin_level').eq('id', id).maybeSingle(),
+    db.from('profiles').select('id, name, employee_no, role, active, joined_on, locale, can_view_payroll, group_id, phone, email, job_title, password_set_at, shift_template_id, job_id, admin_level').eq('id', id).maybeSingle(),
     db.from('user_passkeys').select('id, device_label, created_at, last_used_at').eq('employee_id', id).is('revoked_at', null),
     loadOrgGroups(),
   ]);
@@ -159,7 +159,7 @@ export default async function MemberDetailPage({ params }: { params: Promise<{ i
         <CardTitle>{t('profileTitle')}</CardTitle>
         <ProfileForm
           employeeId={p.id}
-          initial={{ name: p.name, employeeNo: p.employee_no ?? '', phone: p.phone ?? '', groupId: p.group_id ?? '', jobTitle: p.job_title ?? '', joinedOn: p.joined_on ?? '', locale: p.locale }}
+          initial={{ name: p.name, employeeNo: p.employee_no ?? '', phone: p.phone ?? '', email: p.email ?? '', groupId: p.group_id ?? '', jobTitle: p.job_title ?? '', joinedOn: p.joined_on ?? '', locale: p.locale }}
           groups={options}
           locales={LOCALES.map((code) => ({ code, name: LOCALE_NAMES[code] }))}
           today={toKstDate(new Date())}

@@ -7,6 +7,7 @@ import { assertStaffTarget } from '@/lib/staff-data';
 import { requireAdmin } from '@/lib/auth';
 import { EMPLOYEE_NO_RE } from '@/lib/invite';
 import { cleanJobTitle, cleanPhone } from '@/lib/org';
+import { cleanEmail } from '@/lib/email-rules';
 import { assignableGroup } from '@/lib/org-data';
 import { staffEmail } from '@/lib/session';
 import { createAdminClient } from '@/lib/supabase/admin';
@@ -32,6 +33,16 @@ export const POST = api<{ params: Promise<{ id: string }> }>('admin.employees.pr
   if (phone === undefined) throw new ApiError(400, 'invalid_phone');
   const jobTitle = cleanJobTitle(b.jobTitle);
   if (jobTitle === undefined) throw new ApiError(400, 'invalid_input');
+  // 이메일(선택, 로그인 아이디) — 비우면 이메일로는 로그인하지 않는다
+  const email = typeof b.email === 'string' && b.email.trim() ? cleanEmail(b.email) : null;
+  if (email === null && typeof b.email === 'string' && b.email.trim()) throw new ApiError(400, 'invalid_email');
+  if (email) {
+    const [{ data: other }, { data: pend }] = await Promise.all([
+      db.from('profiles').select('id').eq('email', email).neq('id', id).maybeSingle(),
+      db.from('signup_requests').select('id').eq('email', email).eq('status', 'pending').maybeSingle(),
+    ]);
+    if (other || pend) throw new ApiError(409, 'email_taken');
+  }
   const groupId = await assignableGroup(b.groupId);
   if (groupId === undefined) throw new ApiError(400, 'invalid_group');
   const joinedOn =
@@ -55,7 +66,7 @@ export const POST = api<{ params: Promise<{ id: string }> }>('admin.employees.pr
   }
   const { error } = await db
     .from('profiles')
-    .update({ name, employee_no: employeeNo, phone, job_title: jobTitle, group_id: groupId, locale: b.locale, joined_on: joinedOn, updated_by: me.id })
+    .update({ name, employee_no: employeeNo, phone, email, job_title: jobTitle, group_id: groupId, locale: b.locale, joined_on: joinedOn, updated_by: me.id })
     .eq('id', id);
   if (error?.code === '23505') throw new ApiError(409, 'duplicate_no');
   if (error) throw new Error(`profile.update: ${error.code}`);

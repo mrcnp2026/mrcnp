@@ -30,13 +30,14 @@
     "firstTime": "First time here?",
     "heroTitle": "From clock-in to clock-out,\nin a single tap",
     "heroSub": "For MRCNP staff only.",
-    "idLabel": "Employee number or mobile number",
+    "idLabel": "Employee no., mobile or email",
     "passwordLabel": "Password",
     "submit": "Sign in",
     "showPassword": "Show password",
     "hidePassword": "Hide password",
     "forgot": "Forgot your password? Contact your manager.",
-    "setupLink": "Create my password"
+    "setupLink": "Create my password",
+    "emailSignup": "Sign up with email"
   },
   "register": {
     "title": "Create your password",
@@ -252,7 +253,12 @@
     "super_full": "Up to 3 super admins (including the CEO). Change one of them to employee first.",
     "top_only": "Only a super admin can do this.",
     "pending_exists": "A request is waiting. Handle it in the inbox first.",
-    "board_admin_only": "Only admins can post on the company board. Replies are not available."
+    "board_admin_only": "Only admins can post on the company board. Replies are not available.",
+    "invalid_name": "Check the name (up to 50 characters).",
+    "invalid_email": "Check the email address.",
+    "invalid_phone": "Use digits and - only for the phone number.",
+    "email_taken": "This email is already registered or pending. Ask an admin.",
+    "signup_pending": "Your sign-up is waiting for admin approval."
   },
   "admin": {
     "nav": {
@@ -382,7 +388,11 @@
       "managerChip": "Branch manager",
       "levelSuper": "Super admin",
       "levelCeo": "CEO",
-      "levelGeneral": "General admin"
+      "levelGeneral": "General admin",
+      "email_taken": "Another employee already uses this email.",
+      "email": "Email (optional)",
+      "emailHelp": "If set, they can also log in with this email. No mail is sent.",
+      "invalid_email": "Check the email address."
     },
     "more": {
       "title": "All menus",
@@ -4315,6 +4325,23 @@
       "monthCol": "Month",
       "closed": "Final",
       "open": "Provisional"
+    },
+    "signups": {
+      "title": "{n} sign-up requests",
+      "requested": "Requested {at}",
+      "approve": "Approve",
+      "reject": "Reject",
+      "approveNote": "Confirm it's really them. Once approved they become an employee and log in with their email and password.",
+      "employeeNo": "Employee no.",
+      "joinedOn": "Start date (optional)",
+      "group": "Department (optional)",
+      "noGroup": "Decide later",
+      "approveDo": "Approve",
+      "reason": "Reason (optional)",
+      "reasonPh": "e.g. not our employee",
+      "rejectNote": "They can apply again with the same email.",
+      "rejectDo": "Reject",
+      "cancel": "Cancel"
     }
   },
   "side": {
@@ -5770,5 +5797,23 @@
     "invalid_cert": "Enter the certificate name; date must be in the past",
     "invalid_car": "Car model up to 50, plate up to 20 characters",
     "too_many": "Too many rows"
+  },
+  "signup": {
+    "title": "Sign up with email",
+    "name": "Name",
+    "email": "Email (your login ID)",
+    "emailLocal": "Email name",
+    "emailDomain": "Email domain",
+    "emailPick": "Choose domain",
+    "direct": "Type it in",
+    "emailHint": "You'll use this email to log in. The company does not send mail to it.",
+    "phone": "Mobile (optional)",
+    "approveNote": "You can log in after an admin approves.",
+    "submit": "Request sign-up",
+    "done": "Sign-up request sent",
+    "doneNote": "After approval, log in with {email} and the password you just set.",
+    "haveInvite": "Got an invite link or code?",
+    "inviteLink": "Join with invite",
+    "haveAccount": "I have an account · Log in"
   }
 }

@@ -30,13 +30,14 @@
     "firstTime": "처음 이용하시나요?",
     "heroTitle": "출근부터 퇴근까지,\n한 번의 터치로",
     "heroSub": "MRCNP 임직원 전용 서비스입니다.",
-    "idLabel": "사번 또는 휴대폰 번호",
+    "idLabel": "사번 · 휴대폰 번호 · 이메일",
     "passwordLabel": "비밀번호",
     "submit": "로그인",
     "showPassword": "비밀번호 보기",
     "hidePassword": "비밀번호 가리기",
     "forgot": "비밀번호 분실 시 관리자에게 문의하세요.",
-    "setupLink": "비밀번호 설정"
+    "setupLink": "비밀번호 설정",
+    "emailSignup": "이메일로 가입"
   },
   "register": {
     "title": "비밀번호 설정",
@@ -227,11 +228,11 @@
     "notice_legal_review": "법적·급여 관련 공지는 영어 번역을 「확인했음」으로 저장해야 게시할 수 있습니다.",
     "notice_numbers_review": "번역의 숫자가 원문과 다릅니다. 숫자를 고치고 「확인했음」으로 저장해 주세요.",
     "self_decision": "본인 요청은 스스로 처리할 수 없습니다. 다른 관리자에게 요청하세요.",
-    "login_failed": "사번 또는 비밀번호가 맞지 않습니다. 다시 확인해 주세요.",
+    "login_failed": "아이디 또는 비밀번호가 맞지 않습니다. 다시 확인해 주세요.",
     "login_throttled": "여러 번 틀려서 잠시 막혔습니다. 15분 뒤에 다시 시도해 주세요.",
     "password_short": "비밀번호는 8자 이상이어야 합니다.",
     "password_long": "비밀번호가 너무 깁니다. 더 짧게 정해 주세요.",
-    "password_same_as_id": "사번과 같은 비밀번호는 쓸 수 없습니다.",
+    "password_same_as_id": "아이디(사번 · 이메일 앞부분)와 같은 비밀번호는 쓸 수 없습니다.",
     "password_mismatch": "두 비밀번호가 서로 다릅니다.",
     "password_wrong": "지금 비밀번호가 맞지 않습니다.",
     "device_required": "출퇴근 기기를 먼저 등록해 주세요.",
@@ -252,7 +253,12 @@
     "super_full": "최고관리자는 대표자를 포함해 3명까지입니다. 먼저 한 사람을 일반직원으로 바꿔 주세요.",
     "top_only": "최고관리자만 할 수 있습니다.",
     "pending_exists": "대기 중인 요청이 있습니다. 요청함에서 먼저 처리해 주세요.",
-    "board_admin_only": "사내게시판은 관리자만 글을 올립니다. 답글은 달 수 없습니다."
+    "board_admin_only": "사내게시판은 관리자만 글을 올립니다. 답글은 달 수 없습니다.",
+    "invalid_name": "이름을 확인해 주세요(50자까지).",
+    "invalid_email": "이메일 주소를 확인해 주세요.",
+    "invalid_phone": "휴대폰 번호는 숫자와 - 만 넣어 주세요.",
+    "email_taken": "이미 가입했거나 가입 신청 중인 이메일입니다. 관리자에게 문의하세요.",
+    "signup_pending": "가입 신청이 아직 승인되지 않았습니다. 관리자가 승인하면 로그인할 수 있습니다."
   },
   "admin": {
     "nav": {
@@ -382,7 +388,11 @@
       "managerChip": "지점관리자",
       "levelSuper": "최고관리자",
       "levelCeo": "대표자",
-      "levelGeneral": "총괄관리자"
+      "levelGeneral": "총괄관리자",
+      "email_taken": "이미 다른 직원이 쓰는 이메일입니다.",
+      "email": "이메일 (선택)",
+      "emailHelp": "넣으면 사번 대신 이 이메일로도 로그인합니다. 메일은 보내지 않습니다.",
+      "invalid_email": "이메일 주소를 확인해 주세요."
     },
     "more": {
       "title": "전체 메뉴",
@@ -4315,6 +4325,23 @@
       "monthCol": "달",
       "closed": "확정",
       "open": "잠정"
+    },
+    "signups": {
+      "title": "이메일 가입 신청 {n}건",
+      "requested": "{at} 신청",
+      "approve": "승인",
+      "reject": "거절",
+      "approveNote": "본인이 맞는지 확인한 뒤 승인하세요. 승인하면 바로 직원이 되고, 신청할 때 정한 이메일 · 비밀번호로 로그인합니다.",
+      "employeeNo": "사번",
+      "joinedOn": "입사일 (선택)",
+      "group": "소속 (선택)",
+      "noGroup": "나중에 정하기",
+      "approveDo": "승인하기",
+      "reason": "거절 사유 (선택)",
+      "reasonPh": "예: 우리 회사 직원이 아님",
+      "rejectNote": "거절하면 그 이메일로 다시 신청할 수 있습니다.",
+      "rejectDo": "거절하기",
+      "cancel": "취소"
     }
   },
   "side": {
@@ -5770,5 +5797,23 @@
     "invalid_cert": "자격증 이름을 넣어 주세요. 취득일은 오늘 이전이어야 합니다",
     "invalid_car": "차종은 50자, 차량번호는 20자까지입니다",
     "too_many": "넣을 수 있는 개수를 넘었습니다"
+  },
+  "signup": {
+    "title": "이메일로 가입하기",
+    "name": "이름",
+    "email": "이메일 (로그인 아이디)",
+    "emailLocal": "이메일 앞부분",
+    "emailDomain": "이메일 도메인",
+    "emailPick": "도메인 고르기",
+    "direct": "직접 입력",
+    "emailHint": "로그인할 때 이 이메일을 아이디로 씁니다. 회사가 이 주소로 메일을 보내지는 않습니다.",
+    "phone": "휴대폰 번호 (선택)",
+    "approveNote": "관리자가 확인하고 승인하면 로그인할 수 있습니다.",
+    "submit": "가입 신청",
+    "done": "가입 신청을 보냈습니다",
+    "doneNote": "관리자가 승인하면 {email} 과 방금 정한 비밀번호로 로그인할 수 있습니다.",
+    "haveInvite": "관리자에게 초대 링크나 코드를 받았나요?",
+    "inviteLink": "초대로 가입",
+    "haveAccount": "이미 계정이 있어요 · 로그인"
   }
 }
