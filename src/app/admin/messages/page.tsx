@@ -17,7 +17,7 @@ export default async function AdminMessagesPage({ searchParams }: { searchParams
   const inbox = sp.box === 'in';
   const [items, groups, { data: staff }] = await Promise.all([inbox ? loadInbox(me) : loadSent(me), loadOrgGroups(), createAdminClient().from('profiles').select('id, name, employee_no, active').order('name')]);
   const names = new Map((staff ?? []).map((p) => [p.id as string, p.name as string]));
-  const tab = (on: boolean) => `flex min-h-11 flex-1 items-center justify-center border-b-2 text-sm font-bold ${on ? 'border-text text-text' : 'border-transparent text-muted'}`;
+  const tab = (on: boolean) => `flex min-h-11 flex-1 lg:flex-none lg:px-4 items-center justify-center border-b-2 text-sm font-bold ${on ? 'border-text text-text lg:border-primary lg:text-primary' : 'border-transparent text-muted hover:text-text'}`;
   return (
     <PageShell wide>
       <div>

@@ -18,7 +18,7 @@ export default async function MyMessagesPage({ searchParams }: { searchParams: P
   // 직원의 「보낸 것」은 자기가 보낸 문의뿐이다(관리자가 보낸 통지 전체가 아니다)
   const [items, { data: staff }] = await Promise.all([sent ? loadSent({ ...me, role: 'employee' }) : loadInbox(me), createAdminClient().from('profiles').select('id, name')]);
   const names = new Map((staff ?? []).map((p) => [p.id as string, p.name as string]));
-  const tab = (on: boolean) => `flex min-h-11 flex-1 items-center justify-center border-b-2 text-sm font-bold ${on ? 'border-text text-text' : 'border-transparent text-muted'}`;
+  const tab = (on: boolean) => `flex min-h-11 flex-1 lg:flex-none lg:px-4 items-center justify-center border-b-2 text-sm font-bold ${on ? 'border-text text-text lg:border-primary lg:text-primary' : 'border-transparent text-muted hover:text-text'}`;
   return (
     <PageShell>
       <div>

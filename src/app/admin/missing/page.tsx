@@ -61,7 +61,7 @@ export default async function MissingPage({ searchParams }: { searchParams: Prom
   const shown = found.filter((x) => x.kind === tabKind).sort((a, b) => b.workDate.localeCompare(a.workDate) || a.start.localeCompare(b.start) || a.name.localeCompare(b.name));
   const dates = [...new Set(shown.map((x) => x.workDate))];
   const q = (tab: MissingKind) => ({ pathname: '/admin/missing', query: { from, to, tab, ...(sp.live === '1' ? { live: '1' } : {}) } });
-  const tab = (on: boolean) => `flex min-h-11 flex-1 items-center justify-center gap-1 border-b-2 text-sm font-bold ${on ? 'border-text text-text' : 'border-transparent text-muted'}`;
+  const tab = (on: boolean) => `flex min-h-11 flex-1 lg:flex-none lg:px-4 items-center justify-center gap-1 border-b-2 text-sm font-bold ${on ? 'border-text text-text lg:border-primary lg:text-primary' : 'border-transparent text-muted hover:text-text'}`;
 
   return (
     <PageShell wide>

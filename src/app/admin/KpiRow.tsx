@@ -18,7 +18,8 @@ export function KpiRow({ kpis }: { kpis: Kpi[] }) {
             <span className="num min-h-4 text-xs text-faint">{k.sub}</span>
           </>
         );
-        const cls = 'flex flex-col gap-2 rounded-card bg-bg p-5 text-left';
+        // 2026-10-16 디자인 2차: 다른 카드와 같은 테두리 · 옅은 그림자, 누를 수 있는 칸은 올리면 파란 테두리
+        const cls = `flex flex-col gap-2 rounded-card border border-border bg-bg p-5 text-left shadow-card ${k.href || k.filter ? 'transition-colors hover:border-primary' : ''}`;
         if (k.href)
           return (
             <Link key={k.label} href={k.href} className={cls}>

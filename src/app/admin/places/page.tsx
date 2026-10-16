@@ -26,7 +26,7 @@ export default async function PlacesPage({ searchParams }: { searchParams: Promi
     .filter((l) => l.active !== off && (l.active || !l.label?.startsWith('e2e-')))
     .filter((l) => !q || `${l.label ?? ''} ${l.address ?? ''}`.toLowerCase().includes(q));
   const used = (id: string) => links.filter((k) => k.locationId === id).length;
-  const tab = (on: boolean) => `flex min-h-11 flex-1 items-center justify-center border-b-2 text-sm font-bold ${on ? 'border-text text-text' : 'border-transparent text-muted'}`;
+  const tab = (on: boolean) => `flex min-h-11 flex-1 lg:flex-none lg:px-4 items-center justify-center border-b-2 text-sm font-bold ${on ? 'border-text text-text lg:border-primary lg:text-primary' : 'border-transparent text-muted hover:text-text'}`;
 
   return (
     <PageShell wide>

@@ -34,7 +34,7 @@ export default async function ShiftsPage({ searchParams }: { searchParams: Promi
     else none++;
   }
   const shown = all.filter((x) => x.active !== off && (x.active || !x.name.startsWith('e2e-')));
-  const tab = (on: boolean) => `flex min-h-11 flex-1 items-center justify-center border-b-2 text-sm font-bold ${on ? 'border-text text-text' : 'border-transparent text-muted'}`;
+  const tab = (on: boolean) => `flex min-h-11 flex-1 lg:flex-none lg:px-4 items-center justify-center border-b-2 text-sm font-bold ${on ? 'border-text text-text lg:border-primary lg:text-primary' : 'border-transparent text-muted hover:text-text'}`;
 
   return (
     <PageShell wide>

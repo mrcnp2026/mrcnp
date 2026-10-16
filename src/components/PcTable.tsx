@@ -26,12 +26,13 @@ export function PcTable({ cols, rows, labels, total }: { cols: PcCol[]; rows: Pc
           {labels.total} <b className="text-lg text-text">{shown.length}</b>
         </p>
       )}
-      <div className="overflow-x-auto border-t border-border bg-bg">
+      {/* 2026-10-16 디자인 2차: 카드 안의 표(견본 「나 · 파랑」) */}
+      <div className="overflow-x-auto rounded-card border border-border bg-bg shadow-card">
         <table className="w-full text-sm">
           <thead>
             <tr>
               {cols.map((c) => (
-                <td key={c.key} className="px-3 pt-2 pb-0">
+                <td key={c.key} className="px-3 pt-3 pb-1">
                   {c.search !== false && (
                     <input
                       type="search"
@@ -39,7 +40,7 @@ export function PcTable({ cols, rows, labels, total }: { cols: PcCol[]; rows: Pc
                       onChange={(e) => setFind({ ...find, [c.key]: e.target.value })}
                       placeholder={labels.search}
                       aria-label={`${c.label} ${labels.search}`}
-                      className="h-7 w-full max-w-28 min-w-16 border border-border bg-bg px-2 text-xs!"
+                      className="h-8 w-full max-w-32 min-w-16 rounded-button border border-border bg-surface px-2 text-xs! outline-none placeholder:text-faint focus:border-primary focus:bg-bg"
                     />
                   )}
                 </td>

@@ -30,7 +30,7 @@ export default async function DailyPage({ searchParams }: { searchParams: Promis
   const live = sp.live === '1';
   const { payees, engagements } = await loadPayees(testViewer);
   const [works, runs] = await Promise.all([view === 'work' ? loadWork({ month, practice, payeeIds: payees.map((p) => p.id) }) : Promise.resolve([]), view === 'runs' ? loadDailyRuns({ practice, testViewer }) : Promise.resolve([])]);
-  const tab = (on: boolean) => `flex min-h-11 items-center border-b-2 px-4 text-sm font-bold ${on ? 'border-text text-text' : 'border-transparent text-muted'}`;
+  const tab = (on: boolean) => `flex min-h-11 items-center border-b-2 px-4 text-sm font-bold ${on ? 'border-text text-text lg:border-primary lg:text-primary' : 'border-transparent text-muted hover:text-text'}`;
   const href = (v: string) => `/admin/payroll/daily?v=${v}${v === 'work' ? `&m=${month}` : ''}${live ? '&live=1' : ''}`;
   const won = (v: number) => t('won', { n: f.number(v) });
   const nameOf = new Map(payees.map((p) => [p.id, p]));

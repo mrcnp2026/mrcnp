@@ -79,7 +79,7 @@ export function ListBar({
       {tabs && (
         <nav className="-mx-4 -mt-1 flex border-b border-border">
           {tabs.map((x) => (
-            <Link key={x.href} href={x.href} aria-current={x.on ? 'page' : undefined} className={`flex min-h-12 flex-1 items-center justify-center border-b-2 text-base font-bold ${x.on ? 'border-text text-text' : 'border-transparent text-muted'}`}>
+            <Link key={x.href} href={x.href} aria-current={x.on ? 'page' : undefined} className={`flex min-h-12 flex-1 lg:flex-none lg:px-4 items-center justify-center border-b-2 text-base font-bold ${x.on ? 'border-text text-text lg:border-primary lg:text-primary' : 'border-transparent text-muted hover:text-text'}`}>
               {x.label}
             </Link>
           ))}

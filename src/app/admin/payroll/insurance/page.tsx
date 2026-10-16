@@ -24,7 +24,7 @@ export default async function InsurancePage({ searchParams }: { searchParams: Pr
   const notice = sp.v === 'notice';
   const today = toKstDate(new Date());
   const [{ rows, gaps, people }, files] = await Promise.all([loadEnrollments(testViewer), notice ? loadNoticeFiles({ practice, testViewer }) : Promise.resolve([])]);
-  const tab = (on: boolean) => `flex min-h-11 items-center border-b-2 px-4 text-sm font-bold ${on ? 'border-text text-text' : 'border-transparent text-muted'}`;
+  const tab = (on: boolean) => `flex min-h-11 items-center border-b-2 px-4 text-sm font-bold ${on ? 'border-text text-text lg:border-primary lg:text-primary' : 'border-transparent text-muted hover:text-text'}`;
   const live = sp.live === '1' ? '&live=1' : '';
 
   return (

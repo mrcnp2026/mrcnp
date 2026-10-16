@@ -86,7 +86,7 @@ export default async function LeavePage({ searchParams }: { searchParams: Promis
         {me.role === 'admin' && (
           <nav className="flex border-t border-border">
             {(['mine', 'all'] as const).map((k) => (
-              <Link key={k} href={k === 'mine' ? '/punch/leave' : '/admin/leave'} aria-current={k === 'mine' ? 'page' : undefined} className={`flex min-h-12 flex-1 items-center justify-center border-b-2 text-base font-bold ${k === 'mine' ? 'border-text text-text' : 'border-transparent text-muted'}`}>
+              <Link key={k} href={k === 'mine' ? '/punch/leave' : '/admin/leave'} aria-current={k === 'mine' ? 'page' : undefined} className={`flex min-h-12 flex-1 lg:flex-none lg:px-4 items-center justify-center border-b-2 text-base font-bold ${k === 'mine' ? 'border-text text-text lg:border-primary lg:text-primary' : 'border-transparent text-muted hover:text-text'}`}>
                 {ta(k)}
               </Link>
             ))}
@@ -119,7 +119,7 @@ export default async function LeavePage({ searchParams }: { searchParams: Promis
         </Card>
       )}
 
-      <section className="flex flex-col gap-2 rounded-card border border-border bg-bg p-4 lg:p-6">
+      <section className="flex flex-col gap-2 rounded-card border border-border bg-bg p-4 lg:p-6 lg:shadow-card">
         <div className="flex items-center gap-2">
           <h2 className="flex-1 font-bold">{t('monthlyTitle')}</h2>
           <Link href={`/punch/leave?y=${Number(year) - 1}`} aria-label={t('prevYear')} className="flex size-9 items-center justify-center rounded-button border border-border text-muted">
@@ -133,7 +133,7 @@ export default async function LeavePage({ searchParams }: { searchParams: Promis
         <div className="overflow-x-auto">
           <table className="num w-full text-sm">
             <thead>
-              <tr className="border-b border-border bg-surface">
+              <tr className="border-b border-border">
                 <th scope="col" className="px-2 py-2 text-left text-xs font-semibold whitespace-nowrap text-muted">{t('monthlyKind')}</th>
                 {monthly.map((m) => (
                   <th key={m.month} scope="col" className="px-2 py-2 text-right text-xs font-semibold whitespace-nowrap text-muted">{t('monthN', { n: m.month })}</th>
@@ -194,7 +194,7 @@ export default async function LeavePage({ searchParams }: { searchParams: Promis
       </AddSheet>
 
       <section id="mine" className="order-3 flex scroll-mt-16 flex-col gap-2 lg:order-5">
-        <h2 className="font-semibold">{t('mine')}</h2>
+        <h2 className="font-semibold lg:pt-2 lg:text-base lg:font-bold">{t('mine')}</h2>
         {requests.length === 0 && <p className="text-sm text-faint">{t('none')}</p>}
         <RowList>
         {reqPage.items.map((r) => (
@@ -217,7 +217,7 @@ export default async function LeavePage({ searchParams }: { searchParams: Promis
 
       {/* 외근·출장·재택 (②-3 7-11) — 연차와 같은 화면. 요약 칸은 왼쪽 「남은 연차」와 같은 줄·같은 높이 */}
       <div id="work" className="order-4 grid scroll-mt-16 lg:order-2">
-        <div className="flex flex-col gap-3 px-1 pt-2 lg:rounded-card lg:bg-bg lg:p-6">
+        <div className="flex flex-col gap-3 px-1 pt-2 lg:rounded-card lg:border lg:border-border lg:bg-bg lg:p-6 lg:shadow-card">
           <CardTitle help={tw('intro')}>{tw('title')}</CardTitle>
           <dl className="num hidden flex-1 grid-cols-2 content-center gap-2 text-center lg:grid">
             {(['pending', 'approved'] as const).map((k) => {
@@ -237,7 +237,7 @@ export default async function LeavePage({ searchParams }: { searchParams: Promis
         <WorkForm today={today} initialDate={sp.workDate && /^\d{4}-\d{2}-\d{2}$/.test(sp.workDate) ? sp.workDate : null} />
       </AddSheet>
       <section id="work-mine" className="order-6 flex scroll-mt-16 flex-col gap-2">
-        <h3 className="font-semibold">{tw('mine')}</h3>
+        <h3 className="font-semibold lg:pt-2 lg:text-base lg:font-bold">{tw('mine')}</h3>
         {works.length === 0 && <p className="text-sm text-faint">{tw('none')}</p>}
         <RowList>
         {workPage.items.map((w) => (

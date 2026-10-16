@@ -132,7 +132,7 @@ export default async function MembersPage({ searchParams }: { searchParams: Prom
             href={x.key === 'current' ? '/admin/members' : `/admin/members?f=${x.key}`}
             scroll={false}
             aria-current={filter === x.key ? 'page' : undefined}
-            className={`flex min-h-12 flex-1 items-center justify-center gap-2 border-b-2 text-base font-bold whitespace-nowrap ${filter === x.key ? 'border-text text-text' : 'border-transparent text-muted'}`}
+            className={`flex min-h-12 flex-1 lg:flex-none lg:px-4 items-center justify-center gap-2 border-b-2 text-base font-bold whitespace-nowrap ${filter === x.key ? 'border-text text-text lg:border-primary lg:text-primary' : 'border-transparent text-muted hover:text-text'}`}
           >
             {t(`f_${x.key}`)}
             <span className={`num min-w-6 rounded-button px-1.5 text-center text-xs leading-5 font-bold ${x.key === 'pending' && x.n > 0 ? 'bg-warn text-on-primary' : 'bg-surface text-muted'}`}>{x.n}</span>

@@ -8,7 +8,8 @@ export function Card({ children, className = '', id }: { children: ReactNode; cl
   // 시프티풍 (2026-10-10 의뢰인): 모서리가 거의 각진 흰 카드 + 얇은 테두리
   // 부르는 쪽이 여백(p-…)을 주면 기본 여백을 빼서 겹치지 않게
   const pad = /(^|\s)p-/.test(className) ? '' : 'p-5';
-  return <section id={id} className={`rounded-card border border-border bg-bg ${pad} ${className}`}>{children}</section>;
+  // PC(2026-10-16 디자인 2차): 견본 「나 · 파랑」처럼 아주 옅은 그림자
+  return <section id={id} className={`rounded-card border border-border bg-bg lg:shadow-card ${pad} ${className}`}>{children}</section>;
 }
 
 type Variant = 'primary' | 'ok' | 'outline' | 'danger';
@@ -65,7 +66,8 @@ export function CardTitle({ children, aside, help }: { icon?: LucideIcon; childr
   // help: 한 번 읽으면 되는 설명은 ? 아이콘 뒤로 접는다 (2026-10-06 의뢰인)
   return (
     <div className="flex flex-wrap items-center gap-x-1">
-      <h2 className="text-sm font-medium text-muted">{children}</h2>
+      {/* 폰: 작은 회색 한 줄(토스풍) · PC(2026-10-16 디자인 2차): 견본처럼 진하고 굵은 제목 */}
+      <h2 className="text-sm font-medium text-muted lg:text-base lg:font-bold lg:text-text">{children}</h2>
       {help && <Help>{help}</Help>}
       {aside && <span className="ml-auto flex items-center">{aside}</span>}
     </div>
