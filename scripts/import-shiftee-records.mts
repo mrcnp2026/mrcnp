@@ -52,7 +52,7 @@ const report: string[] = [];
 const note = (s: string) => report.push(s);
 
 // ── 출퇴근 ──────────────────────────────────────────────
-const punchRows = ONLY === 'leave' ? [] : await sheet('26년직원별출퇴근기록.xlsx');
+const punchRows = ONLY === 'leave' || ONLY === 'grant' ? [] : await sheet('26년직원별출퇴근기록.xlsx');
 type Punch = { employee_id: string; kind: 'in' | 'out'; punched_at: string; work_date: string; source: 'import'; is_test: false; ip_verified: false; location_id: string | null; note: string; import_key: string };
 const punches: Punch[] = [];
 const pIssues = { noPerson: 0, noPlaceIn: 0, noPlaceOut: 0, beforeJoin: 0, badOrder: 0, overnight: 0 };
@@ -60,10 +60,12 @@ for (const r of punchRows) {
   const name = S(r['직원']);
   const id = idOf.get(name);
   if (!id) { pIssues.noPerson++; note(`출퇴근: 직원 없음 ${name}`); continue; }
-  const inAt = S(r['출근시간']), outAt = S(r['퇴근시간']);
+  const inAt = S(r['출근시간']);
+  let outAt = S(r['퇴근시간']);
+  if (outAt && !/^\d{4}-\d{2}-\d{2}T/.test(outAt)) { note(`출퇴근: 퇴근 칸이 시각이 아님 — 출근만 넣음 ${name} ${inAt.slice(0, 10)} 「${outAt}」`); outAt = ''; }
   if (!/^\d{4}-\d{2}-\d{2}T/.test(inAt)) { note(`출퇴근: 시각이 아닌 줄은 건너뜀 — ${name} ${S(r['날짜'])} 「${inAt}」(시프티 결근 표시)`); continue; }
   const workDate = inAt.slice(0, 10);
-  if ((joinedOf.get(name) ?? '0000') > workDate) { pIssues.beforeJoin++; note(`출퇴근: 입사일(${joinedOf.get(name)}) 전 기록 ${name} ${workDate}`); }
+  if ((joinedOf.get(name) ?? '0000') > workDate) { pIssues.beforeJoin++; note(`출퇴근: 입사일(${joinedOf.get(name)}) 전 기록은 넣지 않음 ${name} ${workDate} (2026-10-16 의뢰인: 입사일 기준)`); continue; }
   if (outAt && outAt <= inAt) { pIssues.badOrder++; note(`출퇴근: 퇴근이 출근보다 빠름 ${name} ${inAt} ~ ${outAt}`); continue; }
   if (outAt && outAt.slice(0, 10) !== workDate) pIssues.overnight++;
   const inLoc = S(r['출근 장소']), outLoc = S(r['퇴근 장소']);
@@ -76,7 +78,7 @@ for (const r of punchRows) {
 }
 
 // ── 휴가 ────────────────────────────────────────────────
-const leaveRows = ONLY === 'punch' ? [] : await sheet('26년 직원별휴가기록.xlsx');
+const leaveRows = ONLY === 'punch' || ONLY === 'grant' ? [] : await sheet('26년 직원별휴가기록.xlsx');
 const byName = (n: string) => types?.find((t) => t.name === n);
 function mapType(r: Record<string, unknown>) {
   const raw = S(r['휴가 유형']);
@@ -100,13 +102,8 @@ for (const r of leaveRows) {
   const name = S(r['직원']);
   const id = idOf.get(name);
   if (!id) { note(`휴가: 직원 없음 ${name}`); continue; }
-  let t = mapType(r);
-  // 시프티에서 연차를 뺐는데 앱 종류가 안 빼는 경우(예: 옛 「병가 [유급]」) — 연차를 빼는 같은 시간 종류로 맞춘다(잔여가 시프티와 같게)
-  if (t && Number(r['차감 일수']) > 0 && !t.deducts_balance) {
-    const h = hoursOf(r['유급 시간']);
-    const alt = byName(({ 8: '연차8H', 4: '반차4H' } as Record<number, string>)[h] ?? '');
-    if (alt) { note(`휴가: 시프티에서 연차를 뺀 ${S(r['휴가 유형'])} → ${alt.name}로 넣음 (${name} ${S(r['시작 시간']).slice(0, 10)}, 사유 앞에 원래 종류를 적음)`); r['사유'] = `[${S(r['휴가 유형'])}] ${S(r['사유'])}`.trim(); t = alt; }
-  }
+  const t = mapType(r);
+  // 시프티 「병가 [유급]」의 차감은 연차가 아니라 병가 쪽이었다(10-11 휴가 보고서와 대조, 2026-10-16) — 그대로 병가로 넣는다
   if (!t && Number(r['차감 일수']) > 0 && /T\d{2}:\d{2}/.test(S(r['시작 시간']))) {
     // 맞는 종류가 없는 시간(예: 1.5시간) — 있는 시간 종류로 이어 붙여 나눈다(차감 합계는 같다)
     let left = hoursOf(r['유급 시간']);
@@ -149,7 +146,7 @@ for (const [, ls] of dayUse) {
   const timeClash = ls.some((a, i) => ls.some((b, j) => j > i && a.start_time && b.start_time && a.start_time < b.end_time! && b.start_time < a.end_time!));
   if (sum > 1 || timeClash) { overlaps++; note(`휴가: 같은 날 겹침 ${S(ls[0].row['직원'])} ${ls[0].start_date} — ${ls.map((l) => `${l.typeName}${l.start_time ? ` ${l.start_time}-${l.end_time}` : ''}`).join(' + ')}`); }
 }
-const deductDiff = leaves.filter((l) => l.deductMin !== l.sfDeduct);
+const deductDiff = leaves.filter((l) => l.deductMin !== l.sfDeduct && !/병가/.test(S(l.row['휴가 유형'])));
 
 // ── 점검표 ──────────────────────────────────────────────
 const lines = [
@@ -173,8 +170,47 @@ writeFileSync(process.env.TEMP + '/shiftee-check.md', lines.join('\n'), 'utf8');
 console.log(lines.slice(0, 60).join('\n'));
 if (!APPLY) { console.log('\n점검표만 만들었습니다. 넣으려면 --apply'); process.exit(0); }
 
+// ── 2026 연차 발생 (시프티 발생 내역 그대로, 2026-10-16 의뢰인) ──
+const accrualRows = ONLY === 'grant' || (!ONLY && APPLY) ? await (async () => {
+  const wb = new ExcelJS.Workbook();
+  await wb.xlsx.readFile('../../레퍼런스/SHIFTEE-LEAVE-ACCRUALS-20260101-20261231.xlsx');
+  const ws = wb.worksheets[0];
+  const head = (ws.getRow(1).values as ExcelJS.CellValue[]).slice(1).map((h) => String(val(h) ?? ''));
+  const out: Record<string, string | number | null>[] = [];
+  for (let i = 2; i <= ws.rowCount; i++) { const r = (ws.getRow(i).values as ExcelJS.CellValue[]).slice(1); const o = Object.fromEntries(head.map((h, j) => [h, val(r[j])])); if (o['이름']) out.push(o); }
+  return out;
+})() : [];
+if (accrualRows.length) {
+  console.log(`
+연차 발생 ${accrualRows.length}줄`);
+  if (APPLY) {
+    const { request } = await import('playwright-core');
+    const BASE = 'https://mrcnp-saas.vercel.app';
+    const api = await request.newContext({ baseURL: BASE, extraHTTPHeaders: { origin: BASE } });
+    if (!(await api.post('/api/auth/login', { data: { id: 'admin', password: 'admin1234' } })).ok()) throw new Error('관리자 로그인 실패');
+    const { data: lots } = await db.from('leave_grant_lots').select('note').like('note', '시프티 2026 발생%');
+    const have = new Set((lots ?? []).map((l) => l.note as string));
+    let added = 0;
+    for (const r of accrualRows) {
+      const name = S(r['이름']);
+      const id = idOf.get(name);
+      if (!id) { console.log(`  직원 없음 ${name}`); continue; }
+      const from = S(r['발생 시점']).slice(0, 10), until = S(r['만료 시점']).slice(0, 10);
+      const days = Number(r['발생 일수']);
+      const memo = `시프티 2026 발생 ${name} ${from} ${days}일 (${S(r['상태'])})`;
+      if (have.has(memo) || !(days > 0)) continue;
+      const to = new Date(Date.parse(`${until}T00:00:00Z`) + 86400000).toISOString().slice(0, 10); // 시프티 만료일까지 쓴다 → 다음 날부터 못 쓴다
+      const res = await api.post('/api/admin/leave/ledger', { data: { action: 'manual', kind: 'migrated', employeeId: id, days, usableFrom: from, usableTo: to, note: memo } });
+      if (!res.ok()) console.log(`  못 넣음 ${memo}: ${res.status()} ${await res.text()}`);
+      else added++;
+    }
+    console.log(`  연차 발생 ${added}건 넣음`);
+    await api.dispose();
+  }
+}
+
 // ── 넣기 ────────────────────────────────────────────────
-if (ONLY !== 'leave') {
+if (ONLY !== 'leave' && ONLY !== 'grant') {
   const { data: done } = await db.from('punch_events').select('import_key').not('import_key', 'is', null).limit(20000);
   const have = new Set((done ?? []).map((x) => x.import_key as string));
   const todo = punches.filter((p) => !have.has(p.import_key));
@@ -184,7 +220,7 @@ if (ONLY !== 'leave') {
     console.log(`  출퇴근 ${Math.min(i + 500, todo.length)} / ${todo.length}`);
   }
 }
-if (ONLY !== 'punch') {
+if (ONLY !== 'punch' && ONLY !== 'grant') {
   const { data: done } = await db.from('leave_requests').select('import_key').not('import_key', 'is', null);
   const have = new Set((done ?? []).map((x) => x.import_key as string));
   let ok = 0;
