@@ -176,14 +176,14 @@ export function LeaveDecision({
 }
 
 /** 승인된 휴가 취소 (관리자) — 출근 기록과 충돌할 때 관리자가 판단해 쓴다 */
-export function LeaveCancel({ id, name }: { id: string; name: string }) {
+export function LeaveCancel({ id, name, compact = false }: { id: string; name: string; compact?: boolean }) {
   const t = useTranslations('admin.inbox');
   const { busy, err, done, send } = useDecide(`/api/admin/leave/${id}/decide`);
   const [ask, setAsk] = useState(false);
   if (done) return <p className="text-sm font-semibold text-muted">{t(done === 'already' ? 'already' : 'doneMsg')}</p>;
   if (!ask)
     return (
-      <Button variant="outline" className="self-start whitespace-nowrap lg:min-h-9 lg:px-3 lg:text-sm" onClick={() => setAsk(true)}>
+      <Button variant="outline" size={compact ? 'sm' : 'md'} className="self-start whitespace-nowrap lg:min-h-9 lg:px-3 lg:text-sm" onClick={() => setAsk(true)}>
         {t('leaveCancel')}
       </Button>
     );

@@ -66,6 +66,94 @@ export function CloseBoard({ month, live, lines, canClose }: { month: string; li
   const resultOf = (id: string) => results.find((r) => r.employeeId === id)?.result;
   const q = live ? '&live=1' : '';
 
+  // 다시 열기 · 다시 열기 요청 처리 — PC 표와 폰 목록이 같이 쓴다
+  const manage = (l: Line) => (
+    <>
+      {l.close && l.reopenRequest && (
+        <span className="flex min-w-56 flex-col gap-2 text-sm">
+          <span className="text-warn">{t('reopenWaiting', { name: l.reopenRequest.by })}</span>
+          <span className="text-xs text-muted">{l.reopenRequest.reason}</span>
+          <span className="flex gap-2">
+            {l.reopenRequest.mine ? (
+              <Button type="button" size="sm" variant="outline" disabled={busy} onClick={() => run({ action: 'reopenDecide', requestId: l.reopenRequest!.id, decision: 'cancelled' })}>
+                {t('reopenCancel')}
+              </Button>
+            ) : (
+              <>
+                <Button type="button" size="sm" disabled={busy} onClick={() => run({ action: 'reopenDecide', requestId: l.reopenRequest!.id, decision: 'approved' })}>
+                  {t('reopenApprove')}
+                </Button>
+                <Button type="button" size="sm" variant="outline" disabled={busy} onClick={() => run({ action: 'reopenDecide', requestId: l.reopenRequest!.id, decision: 'rejected' })}>
+                  {t('reopenReject')}
+                </Button>
+              </>
+            )}
+          </span>
+        </span>
+      )}
+      {l.close && !l.reopenRequest &&
+        (reopen === l.close.id ? (
+          <form
+            className="flex min-w-64 flex-col gap-2"
+            onSubmit={async (e) => {
+              e.preventDefault();
+              await run({ action: 'reopen', id: l.close!.id, reason: new FormData(e.currentTarget).get('reason') });
+            }}
+          >
+            <input name="reason" required minLength={2} maxLength={500} placeholder={t('reopenReason')} aria-label={t('reopenReason')} className="min-h-9 w-full rounded-button border border-border bg-bg px-3 text-sm" autoComplete="off" />
+            <span className="text-xs text-faint">{t('reopenHint')}</span>
+            <span className="flex gap-2">
+              <Button type="submit" size="sm" variant="outline" disabled={busy}>
+                {t('reopenDo')}
+              </Button>
+              <button type="button" onClick={() => setReopen(null)} className="min-h-9 px-2 text-sm text-muted">
+                {t('no')}
+              </button>
+            </span>
+          </form>
+        ) : (
+          <button type="button" onClick={() => setReopen(l.close!.id)} className="inline-flex h-8 items-center rounded-button border border-border bg-bg px-3 text-sm font-bold text-muted">
+            {t('reopen')}
+          </button>
+        ))}
+    </>
+  );
+  const stateOf = (l: Line, res: string | undefined) => (
+    <>
+      {l.close ? <Chip tone="ok">{t('stateClosed', { n: l.close.revision })}</Chip> : l.ready ? <Chip tone="info">{t(l.recordDays === 0 ? 'stateEmpty' : 'stateReady')}</Chip> : <Chip tone="warn">{t('stateBlocked')}</Chip>}
+      {l.close && <span className="num block pt-1 text-xs text-faint">{t('closedBy', { name: l.close.by, date: l.close.at })}</span>}
+      {res && <span className={`block pt-1 text-xs ${res === 'closed' ? 'text-ok' : 'text-warn'}`}>{t(`result.${res}`)}</span>}
+      {l.reopened.map((h) => (
+        <span key={h.revision} className="block pt-1 text-xs text-faint">
+          {t('historyLine', { n: h.revision, date: h.at, reason: h.reason })}
+        </span>
+      ))}
+    </>
+  );
+  // 폰: 한 사람 = 두 줄(이름 · 시간 · 상태 / 걸리는 것만) — 8줄 카드로 25명이 7천 px였다 (2026-10-17 디자인)
+  const issues = (l: Line) => [
+    l.unconfirmed > 0 && (
+      <Link key="u" href={`/admin/records/list?from=${month}-01&q=${encodeURIComponent(l.name)}${q}`} className="font-bold text-warn underline">
+        {t('colUnconfirmed')} {l.unconfirmed}
+      </Link>
+    ),
+    ...l.pending.map((p) => (
+      <Link key={p.key} href={`/admin/inbox${live ? '?live=1' : ''}`} className="font-bold text-warn underline">
+        {t(`pendingOf.${p.key}`, { n: p.n })}
+      </Link>
+    )),
+    l.anomalyBlocks > 0 && (
+      <Link key="ab" href={`/admin/anomalies?m=${month}${q}`} className="font-bold text-warn underline">
+        {t('anomalyBlock', { n: l.anomalyBlocks })}
+      </Link>
+    ),
+    l.anomalyChecks > 0 && (
+      <Link key="ac" href={`/admin/anomalies?m=${month}${q}`} className="text-muted underline">
+        {t('anomalyCheck', { n: l.anomalyChecks })}
+      </Link>
+    ),
+  ].filter(Boolean);
+
   return (
     <div className="flex flex-col gap-3">
       {canClose && (
@@ -92,9 +180,34 @@ export function CloseBoard({ month, live, lines, canClose }: { month: string; li
       )}
       {err && <ErrorNote code={err.code} requestId={err.requestId} namespace="admin.closing" />}
       {notice && <p role="status" className="rounded-card border border-border bg-bg p-3 text-sm text-ok">{notice}</p>}
-      <div className="overflow-x-auto rounded-card border border-border bg-bg max-lg:px-3">
-        {/* 폰: 한 사람 = 한 카드(칸 이름을 앞에 붙여 세로로) — 옆으로 밀어 보던 표를 없앴다 (2026-10-16 디자인) */}
-        <table className="w-full text-sm max-lg:[&_thead]:hidden">
+      <ul className="divide-y divide-border rounded-card border border-border bg-bg lg:hidden">
+        {lines.map((l) => {
+          const res = resultOf(l.employeeId);
+          const extra = issues(l);
+          return (
+            <li key={l.employeeId} className="flex gap-3 px-3 py-2.5">
+              <span className="flex w-5 shrink-0 pt-0.5">{canClose && l.ready && !l.close && <input type="checkbox" checked={picked.has(l.employeeId)} onChange={() => toggle(l.employeeId)} aria-label={t('pick', { name: l.name })} className="size-5 accent-primary" />}</span>
+              <div className="flex min-w-0 flex-1 flex-col gap-1">
+                <div className="flex items-center gap-2">
+                  <Link href={`/admin/members/${l.employeeId}`} className="shrink-0 font-bold">
+                    {l.name}
+                  </Link>
+                  <span className="min-w-0 flex-1 truncate text-xs text-faint">{l.group}</span>
+                  <span className="num shrink-0 text-sm">{l.hours}</span>
+                </div>
+                <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-xs">
+                  <span className="num text-faint">{t('mobileDays', { n: l.recordDays })}</span>
+                  {extra}
+                  <span className="ml-auto">{stateOf(l, res)}</span>
+                </div>
+                {manage(l)}
+              </div>
+            </li>
+          );
+        })}
+      </ul>
+      <div className="overflow-x-auto rounded-card border border-border bg-bg max-lg:hidden">
+        <table className="w-full text-sm">
           <thead>
             <tr className="border-b border-border bg-surface text-left">
               <th scope="col" className="w-10 px-3 py-2" />
@@ -105,7 +218,7 @@ export function CloseBoard({ month, live, lines, canClose }: { month: string; li
               ))}
             </tr>
           </thead>
-          <tbody className="max-lg:[&_td]:flex max-lg:[&_td]:items-center max-lg:[&_td]:justify-between max-lg:[&_td]:gap-3 max-lg:[&_td]:px-1 max-lg:[&_td]:py-1 max-lg:[&_td]:text-right max-lg:[&_td]:before:shrink-0 max-lg:[&_td]:before:text-xs max-lg:[&_td]:before:text-faint max-lg:[&_td]:before:content-[attr(data-label)] max-lg:[&_td:empty]:hidden max-lg:[&_tr]:flex max-lg:[&_tr]:flex-col max-lg:[&_tr]:py-2">
+          <tbody>
             {lines.map((l) => {
               const res = resultOf(l.employeeId);
               return (
@@ -156,63 +269,10 @@ export function CloseBoard({ month, live, lines, canClose }: { month: string; li
                   </td>
                   <td data-label={t('colHours')} className="num px-3 py-3 whitespace-nowrap">{l.hours}</td>
                   <td data-label={t('colState')} className="px-3 py-3">
-                    {l.close ? <Chip tone="ok">{t('stateClosed', { n: l.close.revision })}</Chip> : l.ready ? <Chip tone="info">{t(l.recordDays === 0 ? 'stateEmpty' : 'stateReady')}</Chip> : <Chip tone="warn">{t('stateBlocked')}</Chip>}
-                    {l.close && <span className="num block pt-1 text-xs text-faint">{t('closedBy', { name: l.close.by, date: l.close.at })}</span>}
-                    {res && <span className={`block pt-1 text-xs ${res === 'closed' ? 'text-ok' : 'text-warn'}`}>{t(`result.${res}`)}</span>}
-                    {l.reopened.map((h) => (
-                      <span key={h.revision} className="block pt-1 text-xs text-faint">
-                        {t('historyLine', { n: h.revision, date: h.at, reason: h.reason })}
-                      </span>
-                    ))}
+                    {stateOf(l, res)}
                   </td>
                   <td data-label={t('colManage')} className="px-3 py-3">
-                    {l.close && l.reopenRequest && (
-                      <span className="flex min-w-56 flex-col gap-2 text-sm">
-                        <span className="text-warn">{t('reopenWaiting', { name: l.reopenRequest.by })}</span>
-                        <span className="text-xs text-muted">{l.reopenRequest.reason}</span>
-                        <span className="flex gap-2">
-                          {l.reopenRequest.mine ? (
-                            <Button type="button" size="sm" variant="outline" disabled={busy} onClick={() => run({ action: 'reopenDecide', requestId: l.reopenRequest!.id, decision: 'cancelled' })}>
-                              {t('reopenCancel')}
-                            </Button>
-                          ) : (
-                            <>
-                              <Button type="button" size="sm" disabled={busy} onClick={() => run({ action: 'reopenDecide', requestId: l.reopenRequest!.id, decision: 'approved' })}>
-                                {t('reopenApprove')}
-                              </Button>
-                              <Button type="button" size="sm" variant="outline" disabled={busy} onClick={() => run({ action: 'reopenDecide', requestId: l.reopenRequest!.id, decision: 'rejected' })}>
-                                {t('reopenReject')}
-                              </Button>
-                            </>
-                          )}
-                        </span>
-                      </span>
-                    )}
-                    {l.close && !l.reopenRequest &&
-                      (reopen === l.close.id ? (
-                        <form
-                          className="flex min-w-64 flex-col gap-2"
-                          onSubmit={async (e) => {
-                            e.preventDefault();
-                            await run({ action: 'reopen', id: l.close!.id, reason: new FormData(e.currentTarget).get('reason') });
-                          }}
-                        >
-                          <input name="reason" required minLength={2} maxLength={500} placeholder={t('reopenReason')} aria-label={t('reopenReason')} className="min-h-9 w-full rounded-button border border-border bg-bg px-3 text-sm" autoComplete="off" />
-                          <span className="text-xs text-faint">{t('reopenHint')}</span>
-                          <span className="flex gap-2">
-                            <Button type="submit" size="sm" variant="outline" disabled={busy}>
-                              {t('reopenDo')}
-                            </Button>
-                            <button type="button" onClick={() => setReopen(null)} className="min-h-9 px-2 text-sm text-muted">
-                              {t('no')}
-                            </button>
-                          </span>
-                        </form>
-                      ) : (
-                        <button type="button" onClick={() => setReopen(l.close!.id)} className="inline-flex h-8 items-center rounded-button border border-border bg-bg px-3 text-sm font-bold text-muted">
-                          {t('reopen')}
-                        </button>
-                      ))}
+                    {manage(l)}
                   </td>
                 </tr>
               );

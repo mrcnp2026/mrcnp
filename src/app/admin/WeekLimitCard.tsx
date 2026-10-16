@@ -6,11 +6,30 @@ import { getTranslations } from 'next-intl/server';
 import { Card, CardTitle } from '@/components/ui';
 import type { WeekLimitRow } from '@/lib/week-limit';
 
+const SHOWN = 5;
+
 export async function WeekLimitCard({ rows, limitMin, colored }: { rows: WeekLimitRow[]; limitMin: number; colored: boolean }) {
   const t = await getTranslations('admin.weekLimit');
   const hm = (min: number) => t('hm', { h: Math.floor(Math.abs(min) / 60), m: Math.abs(min) % 60 });
   const tone = (r: WeekLimitRow) => (!colored ? '' : r.level === 'over' ? 'text-danger' : r.level === 'caution' ? 'text-warn' : '');
   const bar = (r: WeekLimitRow) => (!colored ? 'bg-primary' : r.level === 'over' ? 'bg-danger' : r.level === 'caution' ? 'bg-warn' : 'bg-primary');
+  const line = (r: WeekLimitRow) => (
+    <li key={r.id} className="flex flex-col gap-1.5 py-3">
+      <div className="flex items-baseline justify-between gap-2">
+        <span className="min-w-0 truncate font-semibold">
+          {r.name} <span className="num text-xs font-normal text-faint">{r.employeeNo}</span>
+        </span>
+        <span className={`num flex shrink-0 items-center gap-1 font-bold ${tone(r)}`}>
+          {colored && r.level !== 'normal' && <AlertTriangle aria-hidden size={16} strokeWidth={2} />}
+          {hm(r.minutes)}
+        </span>
+      </div>
+      <div className="h-1.5 overflow-hidden rounded-chip bg-border" role="img" aria-label={hm(r.minutes)}>
+        <div className={`h-full ${bar(r)}`} style={{ width: `${Math.min(r.minutes / limitMin, 1) * 100}%` }} />
+      </div>
+      <p className={`num text-xs ${tone(r) || 'text-muted'}`}>{r.leftMinutes >= 0 ? t('left', { hm: hm(r.leftMinutes) }) : t('over', { hm: hm(r.leftMinutes) })}</p>
+    </li>
+  );
   const flagged = rows.filter((r) => r.level !== 'normal').length;
   return (
     <Card className="flex flex-col gap-2">
@@ -20,24 +39,15 @@ export async function WeekLimitCard({ rows, limitMin, colored }: { rows: WeekLim
       <p className="text-sm text-muted">{rows.length === 0 ? t('empty') : flagged > 0 ? t('flagged', { n: flagged }) : t('hint')}</p>
       {rows.length > 0 && (
         <ul className="divide-y divide-border">
-          {rows.map((r) => (
-            <li key={r.id} className="flex flex-col gap-1.5 py-3">
-              <div className="flex items-baseline justify-between gap-2">
-                <span className="min-w-0 truncate font-semibold">
-                  {r.name} <span className="num text-xs font-normal text-faint">{r.employeeNo}</span>
-                </span>
-                <span className={`num flex shrink-0 items-center gap-1 font-bold ${tone(r)}`}>
-                  {colored && r.level !== 'normal' && <AlertTriangle aria-hidden size={16} strokeWidth={2} />}
-                  {hm(r.minutes)}
-                </span>
-              </div>
-              <div className="h-1.5 overflow-hidden rounded-chip bg-border" role="img" aria-label={hm(r.minutes)}>
-                <div className={`h-full ${bar(r)}`} style={{ width: `${Math.min(r.minutes / limitMin, 1) * 100}%` }} />
-              </div>
-              <p className={`num text-xs ${tone(r) || 'text-muted'}`}>{r.leftMinutes >= 0 ? t('left', { hm: hm(r.leftMinutes) }) : t('over', { hm: hm(r.leftMinutes) })}</p>
-            </li>
-          ))}
+          {rows.slice(0, SHOWN).map(line)}
         </ul>
+      )}
+      {/* 6명부터는 접어 둔다 — 많은 순이라 위 5명이 먼저 볼 사람이다 (2026-10-17 디자인: 19명이 다 펼쳐져 홈이 길었다) */}
+      {rows.length > SHOWN && (
+        <details className="group">
+          <summary className="flex min-h-9 cursor-pointer list-none items-center justify-center rounded-button border border-border text-sm font-bold text-muted group-open:hidden">{t('more', { n: rows.length - SHOWN })}</summary>
+          <ul className="divide-y divide-border border-t border-border">{rows.slice(SHOWN).map(line)}</ul>
+        </details>
       )}
     </Card>
   );

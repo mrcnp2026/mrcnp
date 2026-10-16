@@ -822,7 +822,8 @@
       "hint": "Staff over 40 hours this week (Mon–Sun). Marked from 48 hours.",
       "flagged": "{n} need attention — adjust their remaining days.",
       "left": "{hm} left until 52h",
-      "over": "{hm} over 52h"
+      "over": "{hm} over 52h",
+      "more": "Show {n} more"
     },
     "leave": {
       "title": "Leave",
@@ -2733,7 +2734,8 @@
         "title": "{month} attendance closing",
         "body": "{month} attendance closes on {due}. After that, punch records, corrections and leave for the month cannot change. Send a [Correction request] before {due} for anything missing or wrong.",
         "last": "Sent {date} · {n} people"
-      }
+      },
+      "mobileDays": "{n} days"
     },
     "leaveLedger": {
       "title": "Leave ledger",

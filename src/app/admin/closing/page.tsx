@@ -42,7 +42,8 @@ export default async function ClosingPage({ searchParams }: { searchParams: Prom
   const nameOf = new Map((who ?? []).map((p) => [p.id as string, p.name as string]));
   const hm = (min: number) => `${Math.floor(min / 60)}:${String(min % 60).padStart(2, '0')}`;
   const canClose = monthSpan(month).last < today;
-  const rows: Line[] = lines.map((l) => ({
+  // 시스템관리자(admin)는 직원이 아니다 — 기록도 마감도 없으면 뺀다 (2026-10-17 디자인)
+  const rows: Line[] = lines.filter((l) => !(l.employeeNo === OFFICE.ownerEmployeeNo && l.review.recordDays.length === 0 && !l.close)).map((l) => ({
     employeeId: l.employeeId,
     name: l.name,
     group: groupPath(groups, l.groupId) ?? '',

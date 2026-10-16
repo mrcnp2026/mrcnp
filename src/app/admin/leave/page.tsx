@@ -47,7 +47,7 @@ export default async function AdminLeavePage({ searchParams }: { searchParams: P
   const g = groupOptions.some((o) => o.id === sp.g) ? sp.g! : '';
   const scope = g ? groupScope(groups, g) : null;
   const q = (sp.q ?? '').trim().slice(0, 40);
-  const shown = (ppl ?? []).filter((p) => inScope(p.id as string) && (!scope || (p.group_id && scope.has(p.group_id as string))) && (!q || (p.name as string).toLowerCase().includes(q.toLowerCase())));
+  const shown = (ppl ?? []).filter((p) => p.employee_no !== OFFICE.ownerEmployeeNo && inScope(p.id as string) && (!scope || (p.group_id && scope.has(p.group_id as string))) && (!q || (p.name as string).toLowerCase().includes(q.toLowerCase())));
   const byRole = (['admin', 'employee'] as const).map((role) => ({ role, list: shown.filter((p) => (p.role === 'admin') === (role === 'admin')) })).filter((x) => x.list.length > 0);
   // 직원마다 원장을 따로 읽지 않고 한 번에 (검수 R21)
   const argsFor = (d: string) => (ppl ?? []).filter((p) => inScope(p.id)).map((p) => ({ employeeId: p.id as string, practice, grants: grants.filter((x) => x.employeeId === p.id), requests: requests.filter((r) => r.employeeId === p.id), types, asOf: d }));
@@ -60,7 +60,8 @@ export default async function AdminLeavePage({ searchParams }: { searchParams: P
     for (const [k, v] of Object.entries({ q, g, to: asOf === today ? '' : asOf, live: sp.live === '1' ? '1' : '' })) if (v) u.set(k, v);
     return `?${u}#edit`;
   };
-  const n = (v: number) => f.number(v, { maximumFractionDigits: 4 });
+  // 30분 단위(1/16일)로 떨어지는 값은 0.0625까지, 비례 발생처럼 떨어지지 않는 값은 소수 둘째 자리까지 — 10.9896이 폰 칸을 넘었다 (2026-10-17 디자인)
+  const n = (v: number) => f.number(v, { maximumFractionDigits: Math.abs(v * 16 - Math.round(v * 16)) < 1e-6 ? 4 : 2 });
   const day = (d: string) => f.dateTime(new Date(`${d}T12:00:00+09:00`), { year: d.slice(0, 4) === today.slice(0, 4) ? undefined : 'numeric', month: 'short', day: 'numeric', weekday: 'short' });
   const name = new Map((ppl ?? []).map((p) => [p.id, p.name]));
   const leaveName = (code: string) => leaveTypeName(types, code, tl);
@@ -77,7 +78,7 @@ export default async function AdminLeavePage({ searchParams }: { searchParams: P
     return `/admin/leave${qs ? `?${qs}` : ''}`;
   };
   const viewBtn = (on: boolean) => `inline-flex h-8 items-center border px-3 text-sm first:rounded-l-button last:rounded-r-button ${on ? 'z-10 border-primary bg-primary-tint font-bold text-primary' : 'border-border bg-bg text-muted'}`;
-  const approved = requests.filter((r) => r.status === 'approved' && r.endDate >= addDays(today, -31)).sort((a, b) => (a.startDate < b.startDate ? -1 : 1));
+  const approved = requests.filter((r) => r.status === 'approved' && r.endDate >= addDays(today, -31)).sort((a, b) => (a.startDate > b.startDate ? -1 : 1)); // 다가오는 · 최근 휴가가 위로 (2026-10-17 디자인)
   const approvedPage = pageOf(approved, sp.ap, 10); // 폰 목록은 10건씩 (2026-10-15)
 
   return (
@@ -363,18 +364,22 @@ export default async function AdminLeavePage({ searchParams }: { searchParams: P
           <Help>{t('approvedHint')}</Help>
         </div>
         {approved.length === 0 && <p className="text-sm text-faint">{t('approvedNone')}</p>}
-        {approvedPage.items.map((r) => (
-          <Card key={r.id} className="flex flex-col gap-2 lg:hidden">
-            <div className="flex items-baseline justify-between gap-2">
-              <Link href={`/admin/leave/req/${r.id}`} className="font-semibold text-primary">{name.get(r.employeeId)} ›</Link>
-              <span className="num text-sm text-muted">
-                {leaveName(r.typeCode)} · {tl('days', { n: n(r.days) })}{r.startTime && ` · ${r.startTime}-${r.endTime}`}
-              </span>
-            </div>
-            <p className="num text-sm">{r.startDate === r.endDate ? day(r.startDate) : `${day(r.startDate)} ~ ${day(r.endDate)}`}</p>
-            {admin && <LeaveCancel id={r.id} name={name.get(r.employeeId) ?? ''} />}
+        {/* 한 건 = 두 줄(이름 · 취소 / 날짜 · 종류) — 건마다 카드와 큰 버튼이라 10건이 화면 두 장이었다 (2026-10-17 디자인) */}
+        {approvedPage.items.length > 0 && (
+          <Card className="divide-y divide-border px-4 py-0">
+            {approvedPage.items.map((r) => (
+              <div key={r.id} className="flex flex-col gap-1 py-2.5">
+                <div className="flex items-center justify-between gap-2">
+                  <Link href={`/admin/leave/req/${r.id}`} className="font-semibold">{name.get(r.employeeId)} ›</Link>
+                  {admin && <LeaveCancel id={r.id} name={name.get(r.employeeId) ?? ''} compact />}
+                </div>
+                <p className="num text-sm text-muted">
+                  {r.startDate === r.endDate ? day(r.startDate) : `${day(r.startDate)} ~ ${day(r.endDate)}`} · {leaveName(r.typeCode)} · {tl('days', { n: n(r.days) })}{r.startTime && ` · ${r.startTime}-${r.endTime}`}
+                </p>
+              </div>
+            ))}
           </Card>
-        ))}
+        )}
         <Pager page={approvedPage.page} pages={approvedPage.pages} param="ap" params={sp} anchor="approved" label={tc('pages')} />
       </section>
     </PageShell>

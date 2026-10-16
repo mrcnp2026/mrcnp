@@ -111,14 +111,35 @@ export default async function AnomaliesPage({ searchParams }: { searchParams: Pr
           const p = nameOf.get(r.employeeId);
           return (
             <tr key={`${r.employeeId}${r.workDate}`}>
-              {/* 폰: 첫 줄에 날짜 · 이름을 함께(카드가 짧아지게), 지점은 PC에서만 */}
-              <td className="num whitespace-nowrap">
-                {r.workDate}
-                <span className="pl-2 font-bold lg:hidden">{p?.name}</span>
+              {/* 폰: 한 건 = 두 줄(날짜 · 이름 · 유형 / 처리 버튼) — 칸마다 한 줄씩이던 카드를 줄였다 (2026-10-17 디자인) */}
+              <td className="num whitespace-nowrap max-lg:whitespace-normal">
+                <span className="max-lg:hidden">{r.workDate}</span>
+                <span className="flex w-full flex-col gap-1.5 lg:hidden">
+                  <span className="flex flex-wrap items-center gap-x-2 gap-y-1">
+                    <span className="text-sm">{r.workDate.slice(5)}</span>
+                    <b>{p?.name}</b>
+                    {r.types.map((k) => (
+                      <Chip key={k} tone={saved.policy[k] === 'block' ? 'warn' : 'neutral'}>
+                        {t(`type.${k}`)}
+                      </Chip>
+                    ))}
+                  </span>
+                  <span className="flex flex-wrap items-center gap-x-3 gap-y-1 text-sm">
+                    {r.block ? <Chip tone="warn">{t('effectBlock')}</Chip> : <ReviewButton employeeId={r.employeeId} workDate={r.workDate} types={r.types} reviewed={r.reviewed} live={sp.live === '1'} />}
+                    {sentAt.has(r.employeeId) ? (
+                  <span className="text-xs text-muted">{t('notify.sentOn', { date: toKstDate(new Date(sentAt.get(r.employeeId)!)) })}</span>
+                ) : (
+                  (r.block || !r.reviewed) && <NotifyButton month={month} employeeIds={[r.employeeId]} live={sp.live === '1'} label={t('notify.one')} confirm={t('notify.confirmOne', { name: p?.name ?? '' })} />
+                )}
+                    <Link href={`/admin/records/${r.employeeId}?m=${month}${live}`} className="ml-auto font-bold text-primary">
+                      {t('toRecords')} ›
+                    </Link>
+                  </span>
+                </span>
               </td>
               <td className="font-bold whitespace-nowrap max-lg:hidden!">{p?.name}</td>
               <td className="text-muted max-lg:hidden!">{groupPath(groups, p?.groupId) ?? ''}</td>
-              <td>
+              <td className="max-lg:hidden!">
                 <span className="flex flex-wrap gap-1 py-2">
                   {r.types.map((k) => (
                     <Chip key={k} tone={saved.policy[k] === 'block' ? 'warn' : 'neutral'}>
@@ -127,17 +148,17 @@ export default async function AnomaliesPage({ searchParams }: { searchParams: Pr
                   ))}
                 </span>
               </td>
-              <td className="whitespace-nowrap">
+              <td className="whitespace-nowrap max-lg:hidden!">
                 {r.block ? <Chip tone="warn">{t('effectBlock')}</Chip> : <ReviewButton employeeId={r.employeeId} workDate={r.workDate} types={r.types} reviewed={r.reviewed} live={sp.live === '1'} />}
               </td>
-              <td className="whitespace-nowrap">
+              <td className="whitespace-nowrap max-lg:hidden!">
                 {sentAt.has(r.employeeId) ? (
                   <span className="text-xs text-muted">{t('notify.sentOn', { date: toKstDate(new Date(sentAt.get(r.employeeId)!)) })}</span>
                 ) : (
                   (r.block || !r.reviewed) && <NotifyButton month={month} employeeIds={[r.employeeId]} live={sp.live === '1'} label={t('notify.one')} confirm={t('notify.confirmOne', { name: p?.name ?? '' })} />
                 )}
               </td>
-              <td className="text-right whitespace-nowrap">
+              <td className="text-right whitespace-nowrap max-lg:hidden!">
                 <Link href={`/admin/records/${r.employeeId}?m=${month}${live}`} className="font-bold text-primary hover:underline">
                   {t('toRecords')} ›
                 </Link>
