@@ -4918,7 +4918,13 @@
     "confirmLabel": "새 비밀번호 한 번 더",
     "hint": "8자 이상. 바꾸면 다른 기기는 모두 로그아웃됩니다.",
     "save": "저장",
-    "saved": "비밀번호를 저장했습니다."
+    "saved": "비밀번호를 저장했습니다.",
+    "idsTitle": "로그인할 때 쓸 수 있는 아이디",
+    "idNo": "사번",
+    "idPhone": "휴대폰",
+    "idEmail": "이메일",
+    "passwordSince": "마지막으로 정한 날 {date}",
+    "passwordNone": "아직 없음 — 정해 두면 PC에서도 로그인"
   },
   "schedule": {
     "title": "근무일정",

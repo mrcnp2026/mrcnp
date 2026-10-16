@@ -4918,7 +4918,13 @@
     "confirmLabel": "New password again",
     "hint": "At least 8 characters. Changing it signs you out on all other devices.",
     "save": "Save",
-    "saved": "Your password was saved."
+    "saved": "Your password was saved.",
+    "idsTitle": "IDs you can sign in with",
+    "idNo": "Employee no.",
+    "idPhone": "Phone",
+    "idEmail": "Email",
+    "passwordSince": "Last set {date}",
+    "passwordNone": "Not set — set one to sign in on a PC"
   },
   "schedule": {
     "title": "Schedule",
