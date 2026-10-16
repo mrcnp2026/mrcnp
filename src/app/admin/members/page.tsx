@@ -37,7 +37,7 @@ export default async function MembersPage({ searchParams }: { searchParams: Prom
   const filter: Filter = sp.f === 'pending' || sp.f === 'inactive' ? sp.f : 'current';
   const db = createAdminClient();
   const me = (await getMe())!;
-  const [{ data: people }, { data: keys }, groups, { data: roleReqs }, jobs, signups] = await Promise.all([
+  const [{ data: people }, { data: keys }, groups, { data: roleReqs }, jobs, signups, { data: invs }] = await Promise.all([
     // (맨 끝) 직무: 표의 직무 열과 추가 팝업의 고르기 칸
     db.from('profiles').select('id, name, employee_no, phone, email, role, active, group_id, job_title, password_set_at, can_view_payroll, joined_on, job_id, admin_level').order('name'),
     db.from('user_passkeys').select('employee_id').is('revoked_at', null),
@@ -45,8 +45,22 @@ export default async function MembersPage({ searchParams }: { searchParams: Prom
     db.from('role_change_requests').select('target_id').eq('status', 'pending'),
     loadJobs(),
     loadPendingSignups(), // 이메일 가입 신청 (묶음 18)
+    // 가입 링크를 보냈는지 · 만료됐는지 (2026-10-17 운영 전환 준비: 23명에게 링크를 돌릴 때 누가 남았는지 보이게)
+    db.from('invites').select('employee_id, expires_at, created_at').is('used_at', null).is('revoked_at', null),
   ]);
   const jobName = new Map(jobs.map((j) => [j.id, j.name]));
+  const nowIso = new Date().toISOString();
+  const lastInvite = new Map<string, { sentOn: string; live: boolean }>();
+  for (const v of invs ?? []) {
+    const had = lastInvite.get(v.employee_id);
+    if (!had || had.sentOn < v.created_at) lastInvite.set(v.employee_id, { sentOn: v.created_at, live: v.expires_at > nowIso });
+  }
+  // 미가입 사람의 링크 상태 한 마디 — 만든 날 · 만료 · (없으면 빈칸). 실제로 보냈는지는 앱이 알 수 없어 「만든 날」로 적는다
+  const inviteNote = (id: string) => {
+    const v = lastInvite.get(id);
+    if (!v) return '';
+    return v.live ? t('inviteSentOn', { date: toKstDate(new Date(v.sentOn)).slice(5).replace('-', '/') }) : t('inviteExpired');
+  };
   const roleWaiting = new Set((roleReqs ?? []).map((x) => x.target_id)); // 권한 변경 확인 대기 (R-2의 8)
   // 가입 = 비밀번호를 만들었거나, 예전 방식으로 폰(지문 로그인)을 등록해 둔 사람
   const withPhone = new Set([...(keys ?? []).map((k) => k.employee_id), ...(people ?? []).filter((p) => p.password_set_at).map((p) => p.id)]);
@@ -81,18 +95,22 @@ export default async function MembersPage({ searchParams }: { searchParams: Prom
               {p.role === 'manager' && <Chip tone="info">{t('managerChip')}</Chip>}
               {roleWaiting.has(p.id) && <Chip tone="warn">{t('roleWaiting')}</Chip>}
             </span>
-            <span className="num flex items-center gap-1 truncate text-xs">
-              <span className="text-faint">{[p.employeeNo, p.jobId ? jobName.get(p.jobId) : null].filter(Boolean).join(' · ')}</span>
+            <span className="num flex items-center gap-1 text-xs whitespace-nowrap">
+              {/* 사번 · 직무만 잘리고 가입 상태는 끝까지 보이게 */}
+              <span className="min-w-0 truncate text-faint">{[p.employeeNo, p.jobId ? jobName.get(p.jobId) : null].filter(Boolean).join(' · ')}</span>
               <span className="text-faint">·</span>
               {!p.active ? (
-                <span className="text-faint">{t('inactive')}</span>
+                <span className="shrink-0 text-faint">{t('inactive')}</span>
               ) : ok ? (
-                <span className="inline-flex items-center gap-0.5 font-bold text-ok">
+                <span className="inline-flex shrink-0 items-center gap-0.5 font-bold text-ok">
                   <Check aria-hidden size={12} strokeWidth={3} />
                   {t('joined')}
                 </span>
               ) : (
-                <span className="font-bold text-warn">{t('notJoined')}</span>
+                <>
+                  <span className="shrink-0 font-bold text-warn">{t('notJoined')}</span>
+                  {inviteNote(p.id) && <span className="shrink-0 text-faint">· {inviteNote(p.id)}</span>}
+                </>
               )}
             </span>
           </span>
@@ -201,7 +219,7 @@ export default async function MembersPage({ searchParams }: { searchParams: Prom
                 title: { text: p.jobTitle ?? '' },
                 job: { text: (p.jobId && jobName.get(p.jobId)) || '', node: <span className="whitespace-nowrap">{(p.jobId && jobName.get(p.jobId)) || ''}</span> },
                 joined: { text: p.joinedOn ?? '', node: <span className="num whitespace-nowrap">{p.joinedOn ?? ''}</span> },
-                status: { text: !p.active ? t('inactive') : ok ? t('joined') : t('notJoined'), node: !p.active ? <Chip>{t('inactive')}</Chip> : ok ? <Chip tone="ok">{t('joined')}</Chip> : <Chip tone="warn">{t('notJoined')}</Chip> },
+                status: { text: !p.active ? t('inactive') : ok ? t('joined') : `${t('notJoined')} ${inviteNote(p.id)}`, node: !p.active ? <Chip>{t('inactive')}</Chip> : ok ? <Chip tone="ok">{t('joined')}</Chip> : <span className="inline-flex items-center gap-1.5 whitespace-nowrap"><Chip tone="warn">{t('notJoined')}</Chip>{inviteNote(p.id) && <span className="text-xs text-muted">{inviteNote(p.id)}</span>}</span> },
                 act: { text: '', node: p.active && !ok ? <NewInviteButton employeeId={p.id} name={p.name} compact /> : null },
               },
             };

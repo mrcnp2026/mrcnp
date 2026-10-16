@@ -403,7 +403,9 @@
       "basicTitle": "기본 정보",
       "shiftShort": "근무일정",
       "findPh": "이름 · 사번 · 휴대폰으로 찾기",
-      "findClear": "지우기"
+      "findClear": "지우기",
+      "inviteSentOn": "링크 {date}",
+      "inviteExpired": "링크 만료"
     },
     "more": {
       "title": "전체 메뉴",

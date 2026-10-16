@@ -62,8 +62,16 @@ export async function notifyPunchAlerts(now = new Date()): Promise<{ checked: nu
   if (!data.rule) return { checked: 0, planned: 0, sent: 0 };
   const dayType = (d: string) => (data.ruleAt(d) ? resolveDayType(d, data.ruleAt(d)!, data.holidays) : 'workday');
   const dayTypes = { [yesterday]: dayType(yesterday), [today]: dayType(today) };
+  // 아직 가입하지 않은 직원(비밀번호도 폰 등록도 없음)은 이 앱으로 찍을 수 없으니 뺀다 —
+  // 운영 전환 직후 링크를 돌리는 며칠 동안 미가입자 미출근 알림이 쏟아지지 않게 (2026-10-17 운영 전환 준비)
+  const db = createAdminClient();
+  const [{ data: pw }, { data: keys }] = await Promise.all([
+    db.from('profiles').select('id').not('password_set_at', 'is', null),
+    db.from('user_passkeys').select('employee_id').is('revoked_at', null),
+  ]);
+  const joined = new Set([...(pw ?? []).map((x) => x.id), ...(keys ?? []).map((x) => x.employee_id)]);
   const people: PersonMisses[] = [];
-  for (const p of data.people.filter((x) => x.active && !x.employeeNo?.startsWith('e2e-'))) {
+  for (const p of data.people.filter((x) => x.active && joined.has(x.id) && !x.employeeNo?.startsWith('e2e-'))) {
     if (data.templateOf(p.id)?.kind === 'deemed') continue;
     const rule = data.ruleFor(p.id, today) ?? data.rule;
     const misses = findMissingPunches({
@@ -87,6 +95,6 @@ export async function notifyPunchAlerts(now = new Date()): Promise<{ checked: nu
     sent += await sendPush(a.to, a.payload);
   }
   // 30일 지난 「보냄」 표시는 지운다
-  await createAdminClient().from('push_sent').delete().lt('sent_at', new Date(now.getTime() - 30 * 86_400_000).toISOString());
+  await db.from('push_sent').delete().lt('sent_at', new Date(now.getTime() - 30 * 86_400_000).toISOString());
   return { checked: people.length, planned: plan.length, sent };
 }

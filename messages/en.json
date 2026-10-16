@@ -403,7 +403,9 @@
       "basicTitle": "Basic info",
       "shiftShort": "Schedule",
       "findPh": "Find by name, number or phone",
-      "findClear": "Clear"
+      "findClear": "Clear",
+      "inviteSentOn": "Link {date}",
+      "inviteExpired": "Link expired"
     },
     "more": {
       "title": "All menus",
