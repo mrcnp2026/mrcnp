@@ -18,13 +18,15 @@ import { toKstDate } from '@/lib/time';
 import { RegisterWizard } from './new/RegisterWizard';
 import { NewInviteButton } from './NewInviteButton';
 import { RoleCell } from './RoleCell';
+import { QuickFind } from '@/components/QuickFind';
 import { SignupRequests } from './SignupRequests';
 import { suggestEmployeeNo } from '@/lib/email-rules';
 import { loadPendingSignups } from '@/lib/signup';
 
-// 탭 (2026-10-11 의뢰인: 시프티의 직원 관리처럼) — 현재직원(가입을 마친 사람) · 미합류(초대했지만 아직 가입 전) · 비활성(퇴사 등으로 꺼 둔 사람)
+// 탭 (2026-10-11 의뢰인: 시프티의 직원 관리처럼) — 현재직원 · 미합류(초대했지만 아직 가입 전) · 비활성(퇴사 등으로 꺼 둔 사람)
+// 2026-10-16 디자인: 「현재직원」은 재직 중인 사람 전부(가입 여부는 줄마다 표시) — 실제 직원 24명을 넣고 보니 가입 전 23명이 첫 화면에서 빠져 있었다
 type Filter = 'current' | 'pending' | 'inactive';
-type Row = { id: string; name: string; employeeNo: string | null; role: string; active: boolean; groupId: string | null; jobTitle: string | null; canViewPayroll: boolean; joinedOn: string | null; jobId: string | null; level: 'super' | 'ceo' | null };
+type Row = { id: string; name: string; employeeNo: string | null; phone: string | null; email: string | null; role: string; active: boolean; groupId: string | null; jobTitle: string | null; canViewPayroll: boolean; joinedOn: string | null; jobId: string | null; level: 'super' | 'ceo' | null };
 
 export default async function MembersPage({ searchParams }: { searchParams: Promise<{ f?: string }> }) {
   const t = await getTranslations('admin.members');
@@ -35,7 +37,7 @@ export default async function MembersPage({ searchParams }: { searchParams: Prom
   const me = (await getMe())!;
   const [{ data: people }, { data: keys }, groups, { data: roleReqs }, jobs, signups] = await Promise.all([
     // (맨 끝) 직무: 표의 직무 열과 추가 팝업의 고르기 칸
-    db.from('profiles').select('id, name, employee_no, role, active, group_id, job_title, password_set_at, can_view_payroll, joined_on, job_id, admin_level').order('name'),
+    db.from('profiles').select('id, name, employee_no, phone, email, role, active, group_id, job_title, password_set_at, can_view_payroll, joined_on, job_id, admin_level').order('name'),
     db.from('user_passkeys').select('employee_id').is('revoked_at', null),
     loadOrgGroups(),
     db.from('role_change_requests').select('target_id').eq('status', 'pending'),
@@ -49,15 +51,14 @@ export default async function MembersPage({ searchParams }: { searchParams: Prom
   // 검사 전용 계정(e2e-audit, e2e-audit2)은 검사 중에만 켜진다 — 꺼져 있으면 목록에 안 보이게
   const all: Row[] = (people ?? [])
     .filter((p) => p.active || !p.employee_no?.startsWith('e2e-audit'))
-    .map((p) => ({ id: p.id, name: p.name, employeeNo: p.employee_no, role: p.role, active: p.active, groupId: p.group_id, jobTitle: p.job_title, canViewPayroll: p.can_view_payroll, joinedOn: p.joined_on, jobId: p.job_id, level: (p.role === 'admin' ? (p.admin_level === 'ceo' ? 'ceo' : 'super') : null) as 'super' | 'ceo' | null }));
+    .map((p) => ({ id: p.id, name: p.name, employeeNo: p.employee_no, phone: p.phone, email: p.email, role: p.role, active: p.active, groupId: p.group_id, jobTitle: p.job_title, canViewPayroll: p.can_view_payroll, joinedOn: p.joined_on, jobId: p.job_id, level: (p.role === 'admin' ? (p.admin_level === 'ceo' ? 'ceo' : 'super') : null) as 'super' | 'ceo' | null }));
   const active = all.filter((p) => p.active);
   const inactive = all.filter((p) => !p.active);
-  const joined = active.filter((p) => withPhone.has(p.id));
   const pending = active.filter((p) => !withPhone.has(p.id));
-  const list = filter === 'pending' ? pending : filter === 'inactive' ? inactive : joined;
+  const list = filter === 'pending' ? pending : filter === 'inactive' ? inactive : active;
   const sections = groupPeople(groups, list).filter((s) => s.count > 0 || (filter === 'current' && s.dept));
   const tabs: { key: Filter; n: number }[] = [
-    { key: 'current', n: joined.length },
+    { key: 'current', n: active.length },
     { key: 'pending', n: pending.length },
     { key: 'inactive', n: inactive.length },
   ];
@@ -65,7 +66,7 @@ export default async function MembersPage({ searchParams }: { searchParams: Prom
   const row = (p: Row) => {
     const ok = withPhone.has(p.id);
     return (
-      <li key={p.id} className={`flex min-h-16 items-center gap-2 py-2 pr-3 pl-5 ${p.active ? '' : 'opacity-60'}`}>
+      <li key={p.id} data-find={[p.name, p.employeeNo, p.phone, p.email, p.jobTitle, p.jobId ? jobName.get(p.jobId) : ''].filter(Boolean).join(' ')} className={`flex min-h-16 items-center gap-2 py-2 pr-3 pl-5 ${p.active ? '' : 'opacity-60'}`}>
         <Link href={`/admin/members/${p.id}`} className="flex min-h-12 min-w-0 flex-1 items-center gap-3">
           <span aria-hidden className={`flex size-10 shrink-0 items-center justify-center rounded-chip font-bold ${ok ? 'bg-primary-tint text-primary' : 'bg-warn-tint text-warn'}`}>
             {p.name.slice(0, 1)}
@@ -79,7 +80,7 @@ export default async function MembersPage({ searchParams }: { searchParams: Prom
               {roleWaiting.has(p.id) && <Chip tone="warn">{t('roleWaiting')}</Chip>}
             </span>
             <span className="num flex items-center gap-1 truncate text-xs">
-              <span className="text-faint">{p.employeeNo}</span>
+              <span className="text-faint">{[p.employeeNo, p.jobId ? jobName.get(p.jobId) : null].filter(Boolean).join(' · ')}</span>
               <span className="text-faint">·</span>
               {!p.active ? (
                 <span className="text-faint">{t('inactive')}</span>
@@ -175,6 +176,7 @@ export default async function MembersPage({ searchParams }: { searchParams: Prom
             { key: 'name', label: t('colName') },
             { key: 'role', label: t('colRole') },
             { key: 'no', label: t('colNo') },
+            { key: 'phone', label: t('infoPhone') },
             { key: 'group', label: t('colGroup') },
             { key: 'title', label: t('colTitle') },
             { key: 'job', label: t('colJob') },
@@ -192,6 +194,7 @@ export default async function MembersPage({ searchParams }: { searchParams: Prom
                 name: { text: p.name, node: <Link href={`/admin/members/${p.id}`} className="font-bold hover:text-primary">{p.name}</Link> },
                 role: { text: roleText, node: <RoleCell employeeId={p.id} role={p.role} self={p.id === me.id} waiting={roleWaiting.has(p.id)} level={p.level} actorTop={me.top} /> },
                 no: { text: p.employeeNo ?? '' },
+                phone: { text: p.phone ?? '', node: <span className="num whitespace-nowrap">{p.phone ?? ''}</span> },
                 group: { text: groupPath(groups, p.groupId) ?? t('unassigned') },
                 title: { text: p.jobTitle ?? '' },
                 job: { text: (p.jobId && jobName.get(p.jobId)) || '' },
@@ -204,9 +207,15 @@ export default async function MembersPage({ searchParams }: { searchParams: Prom
         />
       </div>
 
-      <div className="flex flex-col gap-3 lg:hidden">
+      {list.length > 6 && (
+        <div className="lg:hidden">
+          <QuickFind target="member-list" placeholder={t('findPh')} clearLabel={t('findClear')} emptyText={t('emptyFilter')} />
+        </div>
+      )}
+      <div id="member-list" className="flex flex-col gap-3 lg:hidden">
       {sections.map((s) => (
-        <Card key={s.dept?.id ?? 'none'} className="p-0 py-1">
+        <div key={s.dept?.id ?? 'none'} data-find-group>
+        <Card className="p-0 py-1">
           <h2 className="flex min-h-11 items-center justify-between px-5 pt-1">
             <span className="font-bold">{s.dept ? s.dept.name : t('unassigned')}</span>
             <span className="num text-sm text-faint">{t('count', { n: s.count })}</span>
@@ -225,6 +234,7 @@ export default async function MembersPage({ searchParams }: { searchParams: Prom
               </section>
             ))}
         </Card>
+        </div>
       ))}
       </div>
 

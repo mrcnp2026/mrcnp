@@ -401,7 +401,9 @@
       "profileCancel": "Cancel",
       "emailPh": "name@example.com",
       "basicTitle": "Basic info",
-      "shiftShort": "Schedule"
+      "shiftShort": "Schedule",
+      "findPh": "Find by name, number or phone",
+      "findClear": "Clear"
     },
     "more": {
       "title": "All menus",
