@@ -97,6 +97,15 @@ export function calcWorkMinutes(pairs: PunchPair[], rule: WorkRule, ctx: WorkCtx
     // 초는 버리고 분 단위로 맞춘 뒤 계산한다 (확정-9: 시프티 정산과 같게 — 07:29:28은 07:29)
     else if (p.in && p.out && p.out > p.in) work.push([floorTo(p.in.getTime(), 1), floorTo(p.out.getTime(), 1)]);
   }
+  // 일정 시작 전에 일찍 찍은 시간은 근무로 치지 않는다 (2026-10-16 의뢰인 · 26.08 대장: 조기 템플릿이 아니면 07:0x 출근도 08:00부터).
+  // 시작 시각은 그날 일정으로 바뀐 rule.startTime — 조기 07:30 템플릿이면 07:30부터 센다
+  if (rule.clipBeforeStart && work.length) {
+    const start = kstDateTime(ctx.workDate, rule.startTime.slice(0, 5)).getTime();
+    for (let i = work.length - 1; i >= 0; i--) {
+      if (work[i][1] <= start) work.splice(i, 1);
+      else if (work[i][0] < start) work[i] = [start, work[i][1]];
+    }
+  }
 
   // 요점 1: 휴게시간대와 실제 근무가 **겹친 분만** 뺀다. 휴게시간대가 없으면 공제 0. 시간대가 여럿이면 각각 뺀다(겹치는 시간대끼리도 한 번만 빠진다).
   const breaks = breakWindows(rule, ctx.workDate, work);

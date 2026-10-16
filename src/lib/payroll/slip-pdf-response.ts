@@ -10,6 +10,14 @@ export type SlipPdfInput = {
   locale: string; no: string; name: string; employeeNo: string | null; groupId: string | null; month: string; periodFrom: string; periodTo: string; payDate: string; revision: number;
   pay: number; deduction: number; net: number; draft: boolean; practice: boolean; correctionReason: string | null; requestId: string;
   lines: { code: string; kind: 'PAYMENT' | 'DEDUCTION' | 'EMPLOYER'; label: string; quantity: string | null; unitPrice: string | null; factor: string | null; amount: number }[];
+  time?: SlipTime | null; // 저장된 명세의 시간 입력(snapshot.time). 올린 명세서 · 상여에는 없다
+};
+
+/** 명세서의 근로 내역에 쓰는 시간 (급여 엔진의 EngineTime 가운데 보여 줄 것만) */
+export type SlipTime = { workDays?: number; workedMinutes: number; overtimeMinutes: number; nightMinutes: number; holidayMinutes: number; paidLeaveMinutes?: number; weeklyRestMinutes?: number; paidHolidayMinutes?: number };
+export const asSlipTime = (v: unknown): SlipTime | null => {
+  const t = v as Partial<SlipTime> | null | undefined;
+  return t && typeof t.workedMinutes === 'number' ? (t as SlipTime) : null;
 };
 
 /** 명세서 한 장의 PDF와 파일 이름 — 응답 한 장(slipPdfResponse)과 대장 전체 묶음이 같이 쓴다 */
@@ -22,7 +30,26 @@ export async function slipPdfBytes(a: SlipPdfInput): Promise<{ bytes: Uint8Array
     if (l.unitPrice !== null) return l.factor !== null ? t('howHours', { h: num(l.quantity), rate: num(l.unitPrice), factor: l.factor }) : t('howHoursPlain', { h: num(l.quantity), rate: num(l.unitPrice) });
     return l.factor !== null ? t('howRate', { base: num(l.quantity), rate: l.factor }) : null;
   };
+  const h = (m: number) => t('hours', { h: nf.format(Math.round((m / 60) * 100) / 100) });
+  const tm = a.time;
+  const work = tm
+    ? {
+        title: t('workTitle'),
+        rows: [
+          [t('workDays'), tm.workDays === undefined ? '—' : t('days', { n: tm.workDays })],
+          [t('workTotal'), h(tm.workedMinutes)],
+          [t('workRegular'), h(Math.max(0, tm.workedMinutes - tm.overtimeMinutes - tm.holidayMinutes))],
+          [t('workOvertime'), h(tm.overtimeMinutes)],
+          [t('workNight'), h(tm.nightMinutes)],
+          [t('workHoliday'), h(tm.holidayMinutes)],
+          ...(tm.paidLeaveMinutes ? [[t('workPaidLeave'), h(tm.paidLeaveMinutes)] as [string, string]] : []),
+          ...(tm.weeklyRestMinutes ? [[t('workWeeklyRest'), h(tm.weeklyRestMinutes)] as [string, string]] : []),
+          ...(tm.paidHolidayMinutes ? [[t('workPaidHoliday'), h(tm.paidHolidayMinutes)] as [string, string]] : []),
+        ] as [string, string][],
+      }
+    : null;
   const bytes = await buildSlipPdf({
+    work,
     company: BRAND.name, no: a.no, name: a.name, employeeNo: a.employeeNo ?? '', group: groupPath(groups, a.groupId) ?? '', periodFrom: a.periodFrom, periodTo: a.periodTo, payDate: a.payDate, revision: a.revision, pay: a.pay, deduction: a.deduction, net: a.net,
     // 사업주 부담은 직원용 면에 넣지 않는다
     lines: a.lines.flatMap((l) => (l.kind === 'EMPLOYER' ? [] : [{ kind: l.kind, label: t.has(`line.${l.code}`) ? t(`line.${l.code}`) : l.label, how: how(l), amount: l.amount }])),

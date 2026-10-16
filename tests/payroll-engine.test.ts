@@ -70,9 +70,31 @@ describe('C01 월급', () => {
 });
 
 describe('C02 시급 · 연장 · 야간', () => {
-  it('9시간 × 10,000 + 연장 1시간 추가 0.5 + 야간 2시간 추가 0.5 = 105,000 (연장 1시간의 기본을 두 번 주지 않는다)', () => {
+  it('9시간(연장 1시간 포함) × 10,000 + 연장 가산 0.5 + 야간 2시간 가산 0.5 = 105,000 — 기본급은 소정 8시간, 연장 줄은 1.5배(회사 대장 모양, 2026-10-16). 연장 1시간의 기본을 두 번 주지 않는다', () => {
     const r = ok(calculateStatement(input({ contract: { payType: 'HOURLY', amount: 10_000, monthlyHours: null, annualDivisor: null, included: { overtimeHours: null, holidayHours: null } }, time: { ...NO_TIME, workedMinutes: 540, overtimeMinutes: 60, nightMinutes: 120 } })));
-    expect([amount(r, 'BASE'), amount(r, 'OVERTIME'), amount(r, 'NIGHT'), r.totals.pay]).toEqual([90_000, 5_000, 10_000, 105_000]);
+    expect([amount(r, 'BASE'), amount(r, 'OVERTIME'), amount(r, 'NIGHT'), r.totals.pay]).toEqual([80_000, 15_000, 10_000, 105_000]);
+    expect(r.lines.find((l) => l.code === 'OVERTIME')).toMatchObject({ quantity: '1', factor: '1.5' });
+  });
+  it('시급제 휴일: 기본급에 넣지 않고 휴일 줄에서 1.5배, 8시간 넘는 시간은 2배', () => {
+    const r = ok(calculateStatement(input({ contract: { payType: 'HOURLY', amount: 10_000, monthlyHours: null, annualDivisor: null, included: { overtimeHours: null, holidayHours: null } }, time: { ...NO_TIME, workedMinutes: 600, holidayMinutes: 600, holidayOver8Minutes: 120 } })));
+    expect([amount(r, 'BASE'), amount(r, 'HOLIDAY'), amount(r, 'HOLIDAY_OVER8'), r.totals.pay]).toEqual([0, 120_000, 40_000, 160_000]);
+  });
+});
+
+describe('주휴 · 유급휴일 (시급제, 2026-10-16 — 회사 대장의 주차 · 유휴)', () => {
+  const hourly = { payType: 'HOURLY' as const, amount: 14_300, monthlyHours: null, annualDivisor: null, included: { overtimeHours: null, holidayHours: null } };
+  it('26.08 김규형: 기본 160 + 연장 18 × 1.5 + 주휴 40 + 유휴 8 = 대장 3,360,500 (유급휴가 32시간은 기본 160 안)', () => {
+    const r = ok(calculateStatement(input({ contract: hourly, time: { ...NO_TIME, workedMinutes: (128 + 18) * 60, overtimeMinutes: 18 * 60, paidLeaveMinutes: 32 * 60, weeklyRestMinutes: 40 * 60, paidHolidayMinutes: 8 * 60 } })));
+    expect([amount(r, 'BASE') + amount(r, 'PAID_LEAVE'), amount(r, 'OVERTIME'), amount(r, 'WEEKLY_REST'), amount(r, 'PAID_HOLIDAY')]).toEqual([2_288_000, 386_100, 572_000, 114_400]);
+    expect(r.totals.pay).toBe(3_360_500);
+  });
+  it('월급제에는 주휴 · 유급휴일 줄을 만들지 않는다(기본급에 들어 있다)', () => {
+    const r = ok(calculateStatement(input({ time: { ...NO_TIME, weeklyRestMinutes: 2400, paidHolidayMinutes: 480 } })));
+    expect(r.lines.some((l) => l.code === 'WEEKLY_REST' || l.code === 'PAID_HOLIDAY')).toBe(false);
+  });
+  it('주휴를 개인 고정 항목으로 또 넣으면 막는다(중복 지급 방지)', () => {
+    const r = calculateStatement(input({ contract: hourly, time: { ...NO_TIME, workedMinutes: 480, weeklyRestMinutes: 480 }, items: [{ code: 'WEEKLY_REST', kind: 'PAYMENT', label: '주휴', amount: 100, taxable: 'TAXABLE', exemptLimit: null, insurable: true }] }));
+    expect(r.state).toBe('BLOCKED');
   });
   it('월급제의 연장은 기본 1 + 가산', () => {
     const r = ok(calculateStatement(input({ contract: { payType: 'MONTHLY', amount: 2_090_000, monthlyHours: 209, annualDivisor: null, included: { overtimeHours: null, holidayHours: null } }, time: { ...NO_TIME, overtimeMinutes: 120 } })));

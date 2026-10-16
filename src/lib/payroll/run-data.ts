@@ -22,6 +22,7 @@ import { canonicalItemCode } from './engine/reserved-items';
 import { leaveDurationMismatch, scheduledMinutes } from './engine/scheduled-attendance';
 import { roundedAttendance } from './engine/rounded-attendance';
 import { timeFromAttendance } from './engine/attendance';
+import { restAndHolidayMinutes } from './engine/weekly-rest';
 import { calculateStatement, ENGINE_VERSION, type Blocker, type EngineInput, type EngineItem, type EngineOverride, type EngineResult, type Withholding } from './engine/engine';
 import { makeWithholding, referenceFrom, TEMP_INSURANCE_ROUNDING } from './engine/inputs';
 import { asChildRule, asTaxRules, pickAt, type ReferenceKind, type TaxBand } from './reference';
@@ -258,6 +259,17 @@ async function buildInputs(run: RunRow): Promise<Built> {
         facts = attendance;
         const t = timeFromAttendance(attendance, (con!.time_basis as 'ACTUAL' | 'ROUNDED' | 'SCHEDULE') ?? 'ACTUAL', contract.payType, 480, basis.premiumTimeBasis);
         time = t.time;
+        // 명세서의 근로일수: 확정한 날 가운데 일한 시간이 있는 날
+        const workDays = daysFor(period, id, from, last).filter((d) => d.netMinutes > 0 && confirms.has(confirmKey(id, d.workDate))).length;
+        if (time) time = { ...time, workDays };
+        // 시급제의 주휴 · 유급휴일 (2026-10-16 의뢰인 — 회사 대장의 「주차」 · 「유휴」). 재직 기간만 센다
+        if (time && contract.payType === 'HOURLY') {
+          const leftOn = left.map((e) => e.ends_on as string).sort()[0] ?? null;
+          const r = restAndHolidayMinutes({ from, last, startsOn: p?.startsOn ?? joined, endsOn: leftOn, ruleAt: (d) => period.ruleFor(id, d) ?? period.rule, holidays: period.holidays });
+          time = { ...time, weeklyRestMinutes: r.weeklyRestMinutes, paidHolidayMinutes: r.paidHolidayMinutes };
+          // 결근한 주의 주휴를 뺄지는 아직 정하지 않았다(결정 사항 급여-41) — 빼지 않고 담당자가 보게 남긴다
+          if (s.absentDates.length) notes.push({ code: 'weekly_rest_with_absence', detail: s.absentDates.join(', ') });
+        }
         pre.push(...t.blockers);
         if (att.unreviewedMinutes > 0) notes.push({ code: 'overtime_unreviewed', detail: String(att.unreviewedMinutes) });
       }

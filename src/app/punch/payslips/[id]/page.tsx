@@ -10,6 +10,7 @@ import { BRAND } from '@/config/brand';
 import { groupPath } from '@/lib/org';
 import { loadOrgGroups } from '@/lib/org-data';
 import { loadMySlip } from '@/lib/payroll/publish-data';
+import { asSlipTime } from '@/lib/payroll/slip-pdf-response';
 import { createAdminClient } from '@/lib/supabase/admin';
 import { PrintButton } from '@/app/admin/payroll/runs/RunForms';
 
@@ -21,6 +22,7 @@ export default async function MyPayslipPage({ params }: { params: Promise<{ id: 
   const found = await loadMySlip(me.id, id, OFFICE.practiceMode);
   if (!found) notFound();
   const { slip, lines, previous, replacedBy } = found;
+  const tm = asSlipTime(found.time); // 근로 내역 — 계산 명세서(정기)만, 올린 명세서 · 상여에는 없다
   const [{ data: mine }, groups] = await Promise.all([createAdminClient().from('profiles').select('group_id').eq('id', me.id).maybeSingle(), loadOrgGroups()]);
   const won = (v: number) => t('won', { n: f.number(v) });
   const num = (v: string | null) => (v === null ? null : f.number(Number(v), { maximumFractionDigits: 4 }));
@@ -32,6 +34,7 @@ export default async function MyPayslipPage({ params }: { params: Promise<{ id: 
     return l.factor !== null ? t('howRate', { base: num(l.quantity) ?? '', rate: l.factor }) : null;
   };
   const part = (kind: 'PAYMENT' | 'DEDUCTION') => lines.filter((l) => l.kind === kind);
+  const hrs = (m: number) => t('hours', { h: f.number(Math.round((m / 60) * 100) / 100) });
 
   return (
     <PageShell>
@@ -82,6 +85,29 @@ export default async function MyPayslipPage({ params }: { params: Promise<{ id: 
         <span className="font-bold">{t('net')}</span>
         <span className="num text-2xl font-extrabold">{won(slip.net)}</span>
       </Card>
+      {tm && (
+        <Card>
+          <CardTitle>{t('workTitle')}</CardTitle>
+          <dl className="num grid grid-cols-2 gap-x-6 gap-y-1 pt-2 text-sm md:grid-cols-3">
+            {([
+              ['workDays', tm.workDays === undefined ? '—' : t('days', { n: tm.workDays })],
+              ['workTotal', hrs(tm.workedMinutes)],
+              ['workRegular', hrs(Math.max(0, tm.workedMinutes - tm.overtimeMinutes - tm.holidayMinutes))],
+              ['workOvertime', hrs(tm.overtimeMinutes)],
+              ['workNight', hrs(tm.nightMinutes)],
+              ['workHoliday', hrs(tm.holidayMinutes)],
+              ...(tm.paidLeaveMinutes ? [['workPaidLeave', hrs(tm.paidLeaveMinutes)] as const] : []),
+              ...(tm.weeklyRestMinutes ? [['workWeeklyRest', hrs(tm.weeklyRestMinutes)] as const] : []),
+              ...(tm.paidHolidayMinutes ? [['workPaidHoliday', hrs(tm.paidHolidayMinutes)] as const] : []),
+            ] as const).map(([k, v]) => (
+              <div key={k} className="flex justify-between gap-3">
+                <dt className="text-muted">{t(k)}</dt>
+                <dd>{v}</dd>
+              </div>
+            ))}
+          </dl>
+        </Card>
+      )}
       {(['PAYMENT', 'DEDUCTION'] as const).map((kind) => (
         <Card key={kind}>
           <CardTitle aside={<span className="num font-bold">{won(kind === 'PAYMENT' ? slip.pay : slip.deduction)}</span>}>{t(kind === 'PAYMENT' ? 'pay' : 'deduction')}</CardTitle>

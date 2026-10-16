@@ -3322,7 +3322,9 @@
         "HEALTH_SETTLE": "Health insurance settlement",
         "EMPLOYMENT_SETTLE": "Employment insurance settlement",
         "unpaidLeaveCut": "Unpaid leave deduction",
-        "latenessCut": "Lateness deduction"
+        "latenessCut": "Lateness deduction",
+        "WEEKLY_REST": "Weekly paid rest",
+        "PAID_HOLIDAY": "Paid holiday"
       },
       "attTitle": "Attendance basis",
       "attRegular": "Regular hours",
@@ -3389,7 +3391,8 @@
         "rounded_time_missing": "Rounded attendance categories are missing.",
         "basis_unverified": "Payroll basis is not verified ({detail}).",
         "policy_changed_in_period": "A payroll basis changed during this period ({detail}). Review the period calculation.",
-        "leave_duration_mismatch": "Leave duration does not match scheduled work time ({detail}). Review the leave and schedule."
+        "leave_duration_mismatch": "Leave duration does not match scheduled work time ({detail}). Review the leave and schedule.",
+        "weekly_rest_with_absence": "There were absent days this month ({detail}). Weekly paid rest was not reduced — whether to drop it for a week with an absence is a company decision. Use an adjustment if needed."
       },
       "detail": {
         "pension": "national pension",
@@ -4966,7 +4969,9 @@
       "STUDENT_LOAN": "Student loan repayment",
       "PENSION_SETTLE": "National pension settlement",
       "HEALTH_SETTLE": "Health insurance settlement",
-      "EMPLOYMENT_SETTLE": "Employment insurance settlement"
+      "EMPLOYMENT_SETTLE": "Employment insurance settlement",
+      "WEEKLY_REST": "Weekly paid rest",
+      "PAID_HOLIDAY": "Paid holiday"
     },
     "correctedNote": "This payslip was corrected. Reason: {reason}",
     "toPrevious": "View the previous payslip",
@@ -5064,7 +5069,19 @@
       "dept": "Department",
       "payTotal": "Pay items total",
       "dedTotal": "Deductions total"
-    }
+    },
+    "workTitle": "Hours worked",
+    "workDays": "Days worked",
+    "workTotal": "Total hours",
+    "workRegular": "Regular",
+    "workOvertime": "Overtime",
+    "workNight": "Night",
+    "workHoliday": "Holiday",
+    "workPaidLeave": "Paid leave",
+    "workWeeklyRest": "Weekly rest",
+    "workPaidHoliday": "Paid holiday",
+    "hours": "{h} h",
+    "days": "{n} d"
   },
   "org": {
     "title": "Org chart",

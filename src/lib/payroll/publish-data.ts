@@ -125,7 +125,7 @@ async function calculatedSlips(employeeId: string, practice: boolean): Promise<M
 }
 
 /** 내 명세서 한 장. 내 것이 아니거나 공개 중이 아니면 null (있는지 없는지도 알려 주지 않는다) */
-export async function loadMySlip(employeeId: string, statementId: string, practice: boolean): Promise<{ slip: MySlip; lines: MySlipLine[]; previous: MySlip | null; replacedBy: MySlip | null } | null> {
+export async function loadMySlip(employeeId: string, statementId: string, practice: boolean): Promise<{ slip: MySlip; lines: MySlipLine[]; previous: MySlip | null; replacedBy: MySlip | null; time?: unknown } | null> {
   const all = await mySlips(employeeId, practice);
   const slip = all.find((x) => x.id === statementId);
   if (!slip) return null;
@@ -134,8 +134,12 @@ export async function loadMySlip(employeeId: string, statementId: string, practi
   const previous = same.filter((x) => !x.current && x.revision < slip.revision).sort((a, b) => b.revision - a.revision)[0] ?? null;
   const replacedBy = slip.current ? null : (same.find((x) => x.current) ?? null);
   if (slip.kind === 'UPLOAD') return { slip, previous, replacedBy, lines: (await myUploaded(employeeId, practice)).find((x) => x.id === slip.id)?.lines ?? [] };
-  const { data, error } = await db().from('payroll_statement_items').select('item_code, kind, label_ko, quantity, unit_price, factor, amount, line_no, created_at').eq('statement_id', statementId).in('kind', ['PAYMENT', 'DEDUCTION']).order('created_at').order('line_no');
+  const [{ data, error }, { data: st }] = await Promise.all([
+    db().from('payroll_statement_items').select('item_code, kind, label_ko, quantity, unit_price, factor, amount, line_no, created_at').eq('statement_id', statementId).in('kind', ['PAYMENT', 'DEDUCTION']).order('created_at').order('line_no'),
+    // 근로 내역(근로일수 · 시간)은 계산 때 저장한 시간 입력에서 읽는다 — 상여에는 없다
+    db().from('payroll_statements').select('time:snapshot->time').eq('id', statementId).maybeSingle(),
+  ]);
   if (error) boom('loadMySlip', error);
   const t = (v: unknown) => (v === null || v === undefined ? null : String(Number(v)));
-  return { slip, previous, replacedBy, lines: (data ?? []).map((i) => ({ code: i.item_code as string, kind: i.kind as 'PAYMENT' | 'DEDUCTION', label: i.label_ko as string, quantity: t(i.quantity), unitPrice: t(i.unit_price), factor: t(i.factor), amount: Number(i.amount) })) };
+  return { slip, previous, replacedBy, time: slip.kind === 'REGULAR' ? ((st as { time?: unknown } | null)?.time ?? null) : null, lines: (data ?? []).map((i) => ({ code: i.item_code as string, kind: i.kind as 'PAYMENT' | 'DEDUCTION', label: i.label_ko as string, quantity: t(i.quantity), unitPrice: t(i.unit_price), factor: t(i.factor), amount: Number(i.amount) })) };
 }

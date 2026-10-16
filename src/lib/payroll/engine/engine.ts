@@ -6,7 +6,7 @@
 import { AUTO_PAYMENT_CODES, canonicalItemCode } from './reserved-items';
 import { add, dec, div, hoursOf, isNeg, max, min, mul, sub, text, toWon, type Dec, type Rounding } from './decimal';
 
-export const ENGINE_VERSION = 'engine-1.1';
+export const ENGINE_VERSION = 'engine-1.2'; // 1.2 (2026-10-16): 시급제 주휴 · 유급휴일, 시급제 기본급은 소정 시간만 + 연장 · 휴일 줄에 1배 포함
 
 export type EngineContract = { payType: 'MONTHLY' | 'HOURLY' | 'ANNUAL'; amount: number; monthlyHours: number | null; annualDivisor: number | null; included: { overtimeHours: number | null; holidayHours: number | null } };
 export type Tri = 'YES' | 'NO' | 'UNKNOWN';
@@ -20,7 +20,11 @@ export type EngineTax = {
   reliefs?: { smeRate: number | null; durunuri: { pension: number; employment: number } | null };
 };
 /** 한 가지 시간 축에서 나눈 분(分). 실제 시간에서 구한 연장과 끊은 총시간을 섞지 않는다 — 넘겨주는 쪽이 한 축으로 맞춰서 준다 */
-export type EngineTime = { workedMinutes: number; overtimeMinutes: number; nightMinutes: number; holidayMinutes: number; holidayOver8Minutes: number; paidLeaveMinutes: number; unpaidLeaveMinutes?: number; lateMinutes?: number };
+export type EngineTime = {
+  workedMinutes: number; overtimeMinutes: number; nightMinutes: number; holidayMinutes: number; holidayOver8Minutes: number; paidLeaveMinutes: number; unpaidLeaveMinutes?: number; lateMinutes?: number;
+  weeklyRestMinutes?: number; paidHolidayMinutes?: number; // 시급제의 주휴 · 유급휴일 시간 (weekly-rest.ts) — 월급 · 연봉제는 쓰지 않는다
+  workDays?: number; // 일한 날 수 — 명세서의 근로일수 (계산에는 쓰지 않는다)
+};
 export type EngineItem = { code: string; kind: 'PAYMENT' | 'DEDUCTION'; label: string; amount: number; taxable: 'TAXABLE' | 'EXEMPT' | 'PARTIAL'; exemptLimit: number | null; insurable: boolean; itemVersionId?: string | null; ordinaryWage?: 'INCLUDED' | 'EXCLUDED' | 'UNKNOWN' };
 export type EnginePolicy = {
   deductUnpaidLeave?: boolean;
@@ -124,17 +128,27 @@ export function calculateStatement(input: EngineInput): EngineResult {
     if (c.payType === 'HOURLY') {
       if (!time) block('no_attendance');
       else {
-        push({ code: 'BASE', kind: 'PAYMENT', label: 'base', raw: mul(hoursOf(time.workedMinutes), contractHourly!), rounding: payRound, quantity: hoursOf(time.workedMinutes), unitPrice: contractHourly!, trace: { minutes: time.workedMinutes, payType: c.payType } });
+        // 기본급은 소정 근로(정규) 시간만 — 연장 · 휴일 시간은 그 줄에서 1배를 포함해 1.5배로 준다(회사 대장 모양, 2026-10-16). 금액은 예전(기본에 1배 + 가산 0.5)과 같다
+        const regularMinutes = Math.max(0, time.workedMinutes - time.overtimeMinutes - time.holidayMinutes);
+        push({ code: 'BASE', kind: 'PAYMENT', label: 'base', raw: mul(hoursOf(regularMinutes), contractHourly!), rounding: payRound, quantity: hoursOf(regularMinutes), unitPrice: contractHourly!, trace: { minutes: regularMinutes, workedMinutes: time.workedMinutes, payType: c.payType } });
         // 시급제의 유급휴가: 일한 시간에 더해 지급한다(월급제는 기본급에 이미 들어 있어 더하지 않는다)
         if (time.paidLeaveMinutes > 0) push({ code: 'PAID_LEAVE', kind: 'PAYMENT', label: 'paidLeave', raw: mul(hoursOf(time.paidLeaveMinutes), contractHourly!), rounding: payRound, quantity: hoursOf(time.paidLeaveMinutes), unitPrice: contractHourly!, trace: { minutes: time.paidLeaveMinutes } });
+        // 주휴 · 유급휴일 (대장의 「주차」 · 「유휴」): 시간 × 시급. 통상임금에 넣는 수당이 있으면 그 시급(통상시급)으로
+        for (const [code, label, minutes] of [['WEEKLY_REST', 'weeklyRest', time.weeklyRestMinutes ?? 0], ['PAID_HOLIDAY', 'paidHoliday', time.paidHolidayMinutes ?? 0]] as const) {
+          if (minutes <= 0) continue;
+          const rate = overridden(code, 'PAYMENT') ? contractHourly! : needHourly(code);
+          if (rate === null) continue;
+          push({ code, kind: 'PAYMENT', label, raw: mul(hoursOf(minutes), rate), rounding: payRound, quantity: hoursOf(minutes), unitPrice: rate, trace: { minutes } });
+        }
       }
     } else {
       if (input.partialMonth && !overridden('BASE', 'PAYMENT')) block('proration_policy'); // 중간 입사 · 퇴사의 일할 계산은 자동으로 추정하지 않는다
       if (c.payType === 'ANNUAL' && c.annualDivisor === null) block('no_annual_divisor');
       else push({ code: 'BASE', kind: 'PAYMENT', label: 'base', raw: c.payType === 'MONTHLY' ? dec(c.amount) : div(dec(c.amount), dec(String(c.annualDivisor))), rounding: payRound, trace: { payType: c.payType, contractAmount: c.amount, annualDivisor: c.annualDivisor } });
     }
-    // 연장 · 야간 · 휴일. 시급제는 기본 임금이 「일한 시간」에 이미 들어 있어 추가 가산분만, 월급 · 연봉제는 기본 1 + 가산분
-    const baseFactor = c.payType === 'HOURLY' ? dec(0) : dec(1);
+    // 연장 · 야간 · 휴일: 기본 1 + 가산분 (시급제도 기본급에 연장 · 휴일 시간을 넣지 않으므로 1배를 여기서 준다 — 2026-10-16). 야간은 겹치는 가산분만
+    // ⚠️ 시급제 연장 · 휴일 줄을 「조정」으로 바꿀 때는 1배까지 포함한 금액을 넣는다
+    const baseFactor = dec(1);
     const premiumLine = (code: string, label: string, minutes: number, premium: string | null, includedHours: number | null, withBase: boolean) => {
       if (minutes <= 0) return;
       if (overridden(code, 'PAYMENT')) {
@@ -153,7 +167,7 @@ export function calculateStatement(input: EngineInput): EngineResult {
       }
       if (payMinutes === 0) return;
       const factor = add(withBase ? baseFactor : dec(0), dec(premium));
-      push({ code, kind: 'PAYMENT', label, raw: mul(mul(hoursOf(payMinutes), rate), factor), rounding: payRound, quantity: hoursOf(payMinutes), unitPrice: rate, factor, trace: { minutes: payMinutes, premium, includesBase: withBase && c.payType !== 'HOURLY' } });
+      push({ code, kind: 'PAYMENT', label, raw: mul(mul(hoursOf(payMinutes), rate), factor), rounding: payRound, quantity: hoursOf(payMinutes), unitPrice: rate, factor, trace: { minutes: payMinutes, premium, includesBase: withBase } });
     };
     if (time) {
       premiumLine('OVERTIME', 'overtime', time.overtimeMinutes, policy.overtimePremium, c.included.overtimeHours, true);

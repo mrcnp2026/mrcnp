@@ -15,7 +15,9 @@ export type SlipPdfLabels = {
   pay: string; deduction: string; item: string; how: string; amount: string; payTotal: string; deductionTotal: string; net: string; none: string;
   draft: string | null; practice: string | null; correction: string | null; note: string; page: (n: number, all: number) => string; money: (n: number) => string;
 };
-export type SlipPdfData = { company: string; no: string; name: string; employeeNo: string; group: string; periodFrom: string; periodTo: string; payDate: string; revision: number; pay: number; deduction: number; net: number; lines: SlipPdfLine[]; labels: SlipPdfLabels };
+// 근로 내역 (임금명세서의 근로일수 · 총 근로시간 · 연장 · 야간 · 휴일 시간, 2026-10-16) — 칸 이름과 값을 이미 글자로 만들어 넘긴다. 없으면 이 칸을 그리지 않는다
+export type SlipPdfWork = { title: string; rows: [string, string][] };
+export type SlipPdfData = { company: string; no: string; name: string; employeeNo: string; group: string; periodFrom: string; periodTo: string; payDate: string; revision: number; pay: number; deduction: number; net: number; lines: SlipPdfLine[]; labels: SlipPdfLabels; work?: SlipPdfWork | null };
 
 const W = 595.28, H = 841.89, M = 42;
 const INK = ink(0.1, 0.12, 0.16), MUTED = ink(0.4, 0.44, 0.5), LINE = ink(0.78, 0.8, 0.84), FILL = ink(0.94, 0.95, 0.97), WARN = ink(0.72, 0.3, 0.05);
@@ -56,7 +58,7 @@ export async function buildSlipPdf(d: SlipPdfData): Promise<Uint8Array> {
   pdf.registerFontkit(fontkit);
   const [regular, boldFile] = await loadFonts();
   // 쓴 글자만 추려서 심는다(파일이 작아진다). pdf-lib에 추리기를 맡기면 글자가 빠져 보이는 일이 있어 미리 추린 글꼴을 통째로 넣는다
-  const used = [...new Set([d.company, d.no, d.name, d.employeeNo, d.group, d.periodFrom, d.periodTo, d.payDate, ...d.lines.flatMap((l) => [l.label, l.how ?? '']), ...Object.values(L).filter((v): v is string => typeof v === 'string'), L.page(1234567890, 1234567890), L.money(1234567890), ' ~()·-/.,0123456789'].join(''))].join('');
+  const used = [...new Set([d.company, d.no, d.name, d.employeeNo, d.group, d.periodFrom, d.periodTo, d.payDate, ...d.lines.flatMap((l) => [l.label, l.how ?? '']), ...(d.work ? [d.work.title, ...d.work.rows.flat()] : []), ...Object.values(L).filter((v): v is string => typeof v === 'string'), L.page(1234567890, 1234567890), L.money(1234567890), ' ~()·-/.,0123456789'].join(''))].join('');
   const font = await pdf.embedFont(await slim(regular, used), { subset: false });
   const bold = await pdf.embedFont(await slim(boldFile, used), { subset: false });
   pdf.setTitle(`${L.title} ${d.no}`);
@@ -108,6 +110,20 @@ export async function buildSlipPdf(d: SlipPdfData): Promise<Uint8Array> {
   text(L.net, M + 10, y - 20, { size: 11, f: bold });
   text(L.money(d.net), 0, y - 21, { size: 14, f: bold, right: W - M - 10 });
   y -= 52;
+  // 근로 내역 — 세 칸씩
+  if (d.work && d.work.rows.length) {
+    text(d.work.title, M, y, { size: 11, f: bold });
+    y -= 16;
+    const third = (W - 2 * M) / 3;
+    d.work.rows.forEach(([k, v], i) => {
+      const x = M + (i % 3) * third, yy = y - Math.floor(i / 3) * 15;
+      text(k, x, yy, { color: MUTED });
+      text(v, 0, yy, { right: x + third - 12 });
+    });
+    y -= Math.ceil(d.work.rows.length / 3) * 15 + 2;
+    rule(y);
+    y -= 20;
+  }
 
   const colHow = M + 150, howW = W - M - 100 - colHow;
   const head = (title: string, total: number) => {

@@ -658,7 +658,7 @@
       "approved": "인정",
       "pending": "보류",
       "unreviewed": "미검토",
-      "overtimeRow": "연장: 실제 · 인정 · 보류 · 미검토(30분 미만)",
+      "overtimeRow": "연장: 실제 · 인정 · 보류 · 미검토(15분 미만)",
       "night": "야간 {t}",
       "holiday": "휴일 {t}",
       "late": "지각 {n}회 ({m}분)",
@@ -3322,7 +3322,9 @@
         "HEALTH_SETTLE": "건강보험 정산",
         "EMPLOYMENT_SETTLE": "고용보험 정산",
         "unpaidLeaveCut": "무급휴가 차감",
-        "latenessCut": "지각 차감"
+        "latenessCut": "지각 차감",
+        "WEEKLY_REST": "주휴수당",
+        "PAID_HOLIDAY": "유급휴일수당"
       },
       "attTitle": "근태 근거",
       "attRegular": "소정 근로",
@@ -3372,7 +3374,7 @@
         "employer_rate_missing": "사업주 부담 요율이 없어 사업주 부담 합계에서 빠졌습니다 ({detail}). 직원 실지급에는 영향이 없습니다.",
         "no_bonus_amount": "상여 금액을 넣지 않았습니다. 「금액 조정」에서 넣거나 대상에서 빼 주세요.",
         "insurance_not_calculated": "상여 대장에서는 4대보험을 계산하지 않습니다. 필요하면 정산 · 조정으로 맞춰 주세요.",
-        "overtime_unreviewed": "확인 기준(30분) 미만이라 승인 대기에 오르지 않은 연장 {detail}분이 있습니다. 인정하지 않은 시간이라 연장 수당에 넣지 않았습니다. 지급해야 하면 「금액 조정」으로 넣어 주세요.",
+        "overtime_unreviewed": "확인 기준(15분) 미만이라 승인 대기에 오르지 않은 연장 {detail}분이 있습니다. 인정하지 않은 시간이라 연장 수당에 넣지 않았습니다. 지급해야 하면 「금액 조정」으로 넣어 주세요.",
         "relief_unknown": "감면 · 지원 대상 여부가 「모름」입니다({detail}). 사원별 급여 › 세무에서 정해 주세요.",
         "sme_applied": "중소기업 취업자 소득세 감면을 적용했습니다({detail}원).",
         "durunuri_pension": "두루누리 지원으로 국민연금을 {detail} 줄여 뗐습니다(사업주 몫도 같이).",
@@ -3389,7 +3391,8 @@
         "rounded_time_missing": "반올림 기준으로 분류한 근태 자료가 없습니다.",
         "basis_unverified": "검증되지 않은 급여 기준이 있습니다 ({detail}).",
         "policy_changed_in_period": "귀속 기간 중 기준이 바뀌었습니다 ({detail}). 기간별 계산 기준을 검토해 주세요.",
-        "leave_duration_mismatch": "휴가 시간과 일정의 순근무시간이 맞지 않습니다 ({detail}). 휴가·일정을 검토해 주세요."
+        "leave_duration_mismatch": "휴가 시간과 일정의 순근무시간이 맞지 않습니다 ({detail}). 휴가·일정을 검토해 주세요.",
+        "weekly_rest_with_absence": "이 달에 결근한 날이 있습니다({detail}). 주휴수당은 빼지 않고 그대로 넣었습니다 — 결근한 주의 주휴를 뺄지는 회사가 정해야 합니다(결정 사항 급여-41). 빼야 하면 「금액 조정」으로 고쳐 주세요."
       },
       "detail": {
         "pension": "국민연금",
@@ -4966,7 +4969,9 @@
       "STUDENT_LOAN": "학자금 상환",
       "PENSION_SETTLE": "국민연금 정산",
       "HEALTH_SETTLE": "건강보험 정산",
-      "EMPLOYMENT_SETTLE": "고용보험 정산"
+      "EMPLOYMENT_SETTLE": "고용보험 정산",
+      "WEEKLY_REST": "주휴수당",
+      "PAID_HOLIDAY": "유급휴일수당"
     },
     "correctedNote": "정정된 명세서입니다. 정정 사유: {reason}",
     "toPrevious": "이전 명세서 보기",
@@ -5064,7 +5069,19 @@
       "dept": "부서",
       "payTotal": "지급항목 합계",
       "dedTotal": "공제항목 합계"
-    }
+    },
+    "workTitle": "근로 내역",
+    "workDays": "근로일수",
+    "workTotal": "총 근로시간",
+    "workRegular": "소정 근로",
+    "workOvertime": "연장근로",
+    "workNight": "야간근로",
+    "workHoliday": "휴일근로",
+    "workPaidLeave": "유급휴가",
+    "workWeeklyRest": "주휴",
+    "workPaidHoliday": "유급휴일",
+    "hours": "{h}시간",
+    "days": "{n}일"
   },
   "org": {
     "title": "조직도",

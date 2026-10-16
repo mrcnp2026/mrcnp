@@ -27,7 +27,11 @@ export const OFFICE = {
 
   // ★ 의뢰인 확정(2026-09-28): 상시 5인 이상. ② 설정 화면이 생기면 그 값이 대체한다 (7-14)
   workplaceSize: '5_or_more' as '5_or_more' | 'under_5',
-  overtimeReviewThresholdMin: 30, // 7-7 요점 2. 이 분 이상이어야 승인 대기에 올린다
+  // 7-7 요점 2. 이 분 이상이어야 승인 대기에 올린다. 2026-10-16 의뢰인: 회사는 15분 연장도 준다(26.08 대장) — 30 → 15. 이보다 짧은 연장은 「미검토」로 지급하지 않는다
+  overtimeReviewThresholdMin: 15,
+  // 2026-10-16 의뢰인 · 26.08 대장: 일정 시작 전에 일찍 찍은 시간은 근무로 치지 않는다. 일찍 시작하는 사람은 조기 템플릿(예: 07:30 시작)으로 일정을 잡는다.
+  // false면 근로시간을 그날 일정(템플릿 · 날짜별 일정 · 회사 규칙)의 시작 시각부터 센다 — 근무 규칙을 DB에서 읽을 때 clipBeforeStart로 실린다
+  earlyArrivalCounts: false,
   missingOutGraceHours: 2, // 7-8. 기준 퇴근 + 이 시간이 지나야 '퇴근 미기록'
   missingInGraceMin: 30, // 7-8. 기준 출근 + 이 분이 지나야 '출근 미기록'
   weeklyCautionHours: 48, // 7-13

@@ -273,14 +273,15 @@ describe('연장·야간·휴일', () => {
     expect(week[6].holidayMinutes).toBe(H(5)); // 숫자는 그대로 (막지 않음)
   });
 
-  it('연장 30분 미만은 승인 대기에 안 올라가고, 그 분은 unreviewed로 그대로 남는다 ← B-28', () => {
-    const work = { overtimeMinutes: 29, nightMinutes: 0, holidayMinutes: 0 };
+  it('연장 확인 기준(15분, 2026-10-16 의뢰인 — 예전 30분) 미만은 승인 대기에 안 올라가고, 그 분은 unreviewed로 그대로 남는다 ← B-28', () => {
     const t = OFFICE.overtimeReviewThresholdMin;
+    expect(t).toBe(15); // 회사는 15분 연장도 준다(26.08 대장)
+    const work = { overtimeMinutes: t - 1, nightMinutes: 0, holidayMinutes: 0 };
     expect(buildOvertimeRequest({ employeeId: 'e', workDate: MON, work, thresholdMinutes: t })).toBeNull();
-    expect(unreviewedMinutes({ work, thresholdMinutes: t })).toEqual({ overtime: 29, night: 0 });
-    const work30 = { ...work, overtimeMinutes: 30 };
-    expect(buildOvertimeRequest({ employeeId: 'e', workDate: MON, work: work30, thresholdMinutes: t })).not.toBeNull();
-    expect(unreviewedMinutes({ work: work30, thresholdMinutes: t })).toEqual({ overtime: 0, night: 0 });
+    expect(unreviewedMinutes({ work, thresholdMinutes: t })).toEqual({ overtime: t - 1, night: 0 });
+    const atThreshold = { ...work, overtimeMinutes: t };
+    expect(buildOvertimeRequest({ employeeId: 'e', workDate: MON, work: atThreshold, thresholdMinutes: t })).not.toBeNull();
+    expect(unreviewedMinutes({ work: atThreshold, thresholdMinutes: t })).toEqual({ overtime: 0, night: 0 });
   });
 
   it('연장이 0이어도 휴일 근로가 있으면 승인 대기에 올라간다', () => {
