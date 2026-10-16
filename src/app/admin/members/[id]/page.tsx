@@ -44,6 +44,9 @@ export default async function MemberDetailPage({ params }: { params: Promise<{ i
   ]);
   if (!p) notFound();
   const details = await loadStaffDetails(p.id); // 개인 정보 (묶음 17) — 직원이 넣고 관리자도 고친다
+  // 부양가족 · 자녀 수 (미팅 2026-10-15): 급여 세무 판(사원별 급여 › 세금)에 있는 값을 여기서도 보여 준다 — 고치는 곳은 급여 한 곳
+  const today = toKstDate(new Date());
+  const { data: taxNow } = await db.from('payroll_employee_tax_versions').select('family_count, child_count').eq('employee_id', id).eq('status', 'active').lte('valid_from', today).order('valid_from', { ascending: false }).limit(1).maybeSingle();
   // 가입 = 비밀번호를 만들었거나, 출퇴근 기기를 등록해 둔 사람. 출퇴근 기기(key)는 직원당 1대
   const key = keys?.[0] ?? null;
   const hasPasskey = !!key;
@@ -166,7 +169,14 @@ export default async function MemberDetailPage({ params }: { params: Promise<{ i
       {/* 개인 정보 (묶음 17, 2026-10-16 의뢰인): 생년월일 · 비상연락처 · 자격증 · 차량 — 평소에는 짧은 요약, [고치기]로 입력 */}
       <Card className="flex flex-col gap-3 lg:col-span-2 lg:col-start-1 lg:row-start-3">
         <CardTitle help={td('adminNote')}>{td('title')}</CardTitle>
-        <StaffDetailsForm endpoint={`${api}/details`} initial={details} today={toKstDate(new Date())} />
+        <StaffDetailsForm endpoint={`${api}/details`} initial={details} today={today} />
+        <div className="flex flex-wrap items-center gap-x-3 gap-y-1 border-t border-border pt-3">
+          <span className="text-sm text-muted">{td('family')}</span>
+          <span className="num min-w-0 flex-1 font-bold">{taxNow ? td('familyValue', { n: taxNow.family_count as number, c: taxNow.child_count as number }) : td('familyNone')}</span>
+          <Link href={`/admin/payroll/staff/${p.id}`} className="inline-flex min-h-11 items-center text-sm font-semibold text-primary lg:min-h-9">
+            {td('familyEdit')} ›
+          </Link>
+        </div>
       </Card>
 
       <Card id="manage" className="scroll-mt-20 p-0 py-1 lg:col-start-3 lg:row-start-2">

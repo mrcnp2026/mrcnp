@@ -3219,7 +3219,14 @@
       "fReliefNote": "Basis (application, agency decision, etc.)",
       "reliefHint": "Only shown when turned on in Console › Payroll › Employee pay. If on and still Unknown, payroll for this person is blocked. Rates are temporary inputs until tax/labor review.",
       "reliefOff": "The company does not use reliefs (Console › Payroll › Employee pay).",
-      "payroll_auto_item": "Automatic calculation items cannot be assigned as fixed items. Use a statement adjustment."
+      "payroll_auto_item": "Automatic calculation items cannot be assigned as fixed items. Use a statement adjustment.",
+      "historyTitle": "Pay history",
+      "historyNone": "No finalized payroll yet.",
+      "historyMonth": "{ym}",
+      "historyBonus": "Bonus",
+      "historyRevision": "Correction {n}",
+      "historyPayDate": "Paid {date}",
+      "historySums": "Pay {pay} · Deductions {deduction}"
     },
     "payRuns": {
       "title": "Payroll ledgers",
@@ -5798,7 +5805,11 @@
     "invalid_contact": "Enter both name and phone for each contact",
     "invalid_cert": "Enter the certificate name; date must be in the past",
     "invalid_car": "Car model up to 50, plate up to 20 characters",
-    "too_many": "Too many rows"
+    "too_many": "Too many rows",
+    "family": "Dependents",
+    "familyValue": "{n} incl. self · {c} children aged 8–20",
+    "familyNone": "Not entered yet",
+    "familyEdit": "Edit in payroll"
   },
   "signup": {
     "title": "Sign up with email",

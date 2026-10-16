@@ -1,4 +1,4 @@
-// 사원별 급여 상세 — 계약 · 세무/보험 · 개인 지급/공제 항목과 그 이력 (PRD v1.3 18.1). 급여 담당 관리자만.
+// 사원별 급여 상세 — 계약 · 세무/보험 · 개인 지급/공제 항목과 그 이력 (PRD v1.3 18.1), 달별 지급 이력. 최고관리자(관리자 전원)만.
 // 계약 · 세무는 고치면 새 판이 쌓인다. 주민번호 · 계좌번호는 이 화면에 없다(암호화 저장 영역이 생긴 뒤).
 import { getFormatter, getTranslations } from 'next-intl/server';
 import Link from 'next/link';
@@ -9,7 +9,8 @@ import { groupPath } from '@/lib/org';
 import { loadOrgGroups } from '@/lib/org-data';
 import { INSURERS, referenceHourly, setupGaps, versionAt } from '@/lib/payroll/contract';
 import { loadItems, reliefSwitches } from '@/lib/payroll/data';
-import { previewPay } from '@/lib/payroll/run-data';
+import { loadPayHistory, previewPay } from '@/lib/payroll/run-data';
+import { OFFICE } from '@/config/office';
 import { loadStaffPay } from '@/lib/payroll/staff-data';
 import { createAdminClient } from '@/lib/supabase/admin';
 import { toKstDate } from '@/lib/time';
@@ -40,7 +41,7 @@ export default async function StaffPayDetailPage({ params }: { params: Promise<{
   const itemName = (code: string) => items.find((x) => x.code === code)?.koName ?? code;
   const hourly = contract ? referenceHourly(contract) : null;
   // 예상 지급 · 공제 — 계약만으로 한 달 치를 계산해 본 값. 대장을 만들지 않는다
-  const [preview, tr] = await Promise.all([previewPay(id, today), getTranslations('admin.payRuns')]);
+  const [preview, tr, history] = await Promise.all([previewPay(id, today), getTranslations('admin.payRuns'), loadPayHistory(id, OFFICE.practiceMode)]);
   const dk = (d: string) => d.replace(/[.-]/g, '_');
   const whyNot = (b: { code: string; detail?: string }) => (tr.has(`blocker.${b.code}`) ? tr(`blocker.${b.code}`, { detail: b.detail ? (tr.has(`detail.${dk(b.detail)}`) ? tr(`detail.${dk(b.detail)}`) : b.detail) : '' }) : b.code);
   const lineName = (code: string, fallback: string) => (tr.has(`line.${code}`) ? tr(`line.${code}`) : (items.find((x) => x.code === code)?.koName ?? fallback));
@@ -174,6 +175,29 @@ export default async function StaffPayDetailPage({ params }: { params: Promise<{
             <li className="font-bold">{t('previewBlocked')}</li>
             {preview.blockers.map((b, i) => (
               <li key={i}>{whyNot(b)}</li>
+            ))}
+          </ul>
+        )}
+      </Card>
+
+      {/* 지급 이력 — 확정된 대장의 달별 지급 · 공제 · 실수령. 누르면 그 달 명세 */}
+      <Card>
+        <CardTitle>{t('historyTitle')}</CardTitle>
+        {history.length === 0 ? (
+          <p className="pt-2 text-sm text-faint">{t('historyNone')}</p>
+        ) : (
+          <ul className="mt-2 flex flex-col divide-y divide-border">
+            {history.map((h) => (
+              <li key={h.runId}>
+                <Link href={`/admin/payroll/runs/${h.runId}/${id}`} className="flex min-h-11 flex-wrap items-center gap-x-3 gap-y-0.5 py-2 hover:bg-surface">
+                  <span className="num font-bold">{t('historyMonth', { ym: h.periodFrom.slice(0, 7) })}</span>
+                  <span className="text-xs text-muted">{[h.kind === 'BONUS' ? t('historyBonus') : null, h.title, h.revision > 0 ? t('historyRevision', { n: h.revision }) : null, t('historyPayDate', { date: h.payDate })].filter(Boolean).join(' · ')}</span>
+                  <span className="num ml-auto text-right">
+                    <span className="font-bold">{won(h.net)}</span>
+                    <span className="block text-xs text-faint">{t('historySums', { pay: won(h.pay), deduction: won(h.deduction) })}</span>
+                  </span>
+                </Link>
+              </li>
             ))}
           </ul>
         )}

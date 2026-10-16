@@ -3219,7 +3219,14 @@
       "fReliefNote": "근거(감면신청서 · 공단 결정 등)",
       "reliefHint": "통합설정 › 급여 › 사원급여에서 켠 것만 보입니다. 켜져 있는데 「모름」이면 그 직원의 급여 계산이 막힙니다. 감면율 · 지원율은 임시 입력입니다(세무 · 노무 확인 전).",
       "reliefOff": "회사 설정에서 감면 · 지원을 쓰지 않습니다(통합설정 › 급여 › 사원급여).",
-      "payroll_auto_item": "자동 계산 항목은 개인 고정항목으로 추가할 수 없습니다. 명세 금액 조정을 사용해 주세요."
+      "payroll_auto_item": "자동 계산 항목은 개인 고정항목으로 추가할 수 없습니다. 명세 금액 조정을 사용해 주세요.",
+      "historyTitle": "지급 이력",
+      "historyNone": "아직 확정된 급여 대장이 없습니다.",
+      "historyMonth": "{ym}",
+      "historyBonus": "상여",
+      "historyRevision": "정정 {n}판",
+      "historyPayDate": "지급일 {date}",
+      "historySums": "지급 {pay} · 공제 {deduction}"
     },
     "payRuns": {
       "title": "급여대장",
@@ -5798,7 +5805,11 @@
     "invalid_contact": "비상연락처는 이름과 전화번호를 같이 넣어 주세요(전화는 숫자와 - 만)",
     "invalid_cert": "자격증 이름을 넣어 주세요. 취득일은 오늘 이전이어야 합니다",
     "invalid_car": "차종은 50자, 차량번호는 20자까지입니다",
-    "too_many": "넣을 수 있는 개수를 넘었습니다"
+    "too_many": "넣을 수 있는 개수를 넘었습니다",
+    "family": "부양가족",
+    "familyValue": "본인 포함 {n}명 · 그중 8~20세 자녀 {c}명",
+    "familyNone": "아직 넣지 않음",
+    "familyEdit": "급여에서 고치기"
   },
   "signup": {
     "title": "이메일로 가입하기",

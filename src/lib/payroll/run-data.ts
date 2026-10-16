@@ -55,6 +55,25 @@ export async function loadRuns(practice: boolean): Promise<RunRow[]> {
   // 검사가 만든 대장(제목이 e2e-로 시작)은 목록에 보이지 않는다 — 검사 전용 계정을 숨기는 것과 같은 규칙
   return (data ?? []).map(toRun).filter((r) => !r.title?.startsWith('e2e-'));
 }
+/** 한 직원의 지급 이력 — 확정된 대장(정정되어 대체된 판은 빼고)마다 지급 · 공제 · 실수령. 새 달부터 (미팅 2026-10-15 「급여 히스토리」) */
+export type PayHistoryRow = { runId: string; kind: RunRow['kind']; title: string | null; periodFrom: string; payDate: string; revision: number; pay: number; deduction: number; net: number };
+export async function loadPayHistory(employeeId: string, practice: boolean, limit = 24): Promise<PayHistoryRow[]> {
+  const c = db();
+  const { data: runs, error } = await c.from('payroll_runs').select('*').eq('is_test', practice).eq('status', 'FINALIZED').or('title.is.null,title.not.like.e2e-%').order('period_from', { ascending: false }).limit(200);
+  if (error) fail('loadPayHistory.runs', error);
+  const all = (runs ?? []).map(toRun);
+  const replaced = new Set(all.map((r) => r.supersedesId).filter(Boolean));
+  const live = all.filter((r) => !replaced.has(r.id) && r.generationId);
+  if (live.length === 0) return [];
+  const { data: sts, error: e2 } = await c.from('payroll_statements').select('generation_id, pay_total, deduction_total, net_total').eq('employee_id', employeeId).in('generation_id', live.map((r) => r.generationId!));
+  if (e2) fail('loadPayHistory.statements', e2);
+  const byGen = new Map((sts ?? []).map((x) => [x.generation_id as string, x]));
+  return live.flatMap((r) => {
+    const x = byGen.get(r.generationId!);
+    if (!x) return [];
+    return [{ runId: r.id, kind: r.kind, title: r.title, periodFrom: r.periodFrom, payDate: r.payDate, revision: r.revision, pay: Number(x.pay_total ?? 0), deduction: Number(x.deduction_total ?? 0), net: Number(x.net_total ?? 0) }];
+  }).slice(0, limit);
+}
 /** 그 달 · 그 종류 대장의 가장 새 판 id — 「이미 있는 대장 열기」. 실제 관리자에게는 검사 대장(제목 e2e-)을 열어 주지 않는다 */
 export async function findRun(args: { practice: boolean; kind: 'REGULAR' | 'BONUS'; from: string; test: boolean }): Promise<string | null> {
   let q = db().from('payroll_runs').select('id, title').eq('is_test', args.practice).eq('run_kind', args.kind).eq('period_from', args.from);
