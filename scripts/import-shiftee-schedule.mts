@@ -11,6 +11,21 @@ import ExcelJS from 'exceljs';
 import { readFileSync } from 'node:fs';
 
 const APPLY = process.argv.includes('--apply');
+// 갱신 (2026-10-17): --from=YYYY-MM-DD 이 날짜부터의 일정만 · --punch-file=<출퇴근 엑셀> (일정은 출퇴근 파일에 들어 있다)
+const arg = (k: string) => process.argv.find((a) => a.startsWith(`--${k}=`))?.slice(k.length + 3);
+const FROM = arg('from') ?? '0000-01-01';
+const PUNCH_FILE = arg('punch-file') ?? '../../레퍼런스/참고/26년직원별출퇴근기록.xlsx';
+// 이미 들어간 표시를 전부 읽는다 — Supabase는 한 번에 1,000줄까지만 돌려준다(.limit(20000)이어도). 2026-10-17 고침
+async function allOf<T>(page: (a: number, b: number) => PromiseLike<{ data: T[] | null; error: { message: string } | null }>): Promise<T[]> {
+  const out: T[] = [];
+  for (let a = 0; ; a += 1000) {
+    const { data, error } = await page(a, a + 999);
+    if (error) throw new Error(error.message);
+    out.push(...(data ?? []));
+    if (!data || data.length < 1000) return out;
+  }
+}
+
 const ADMIN_ID = '635e204b-e5a5-4fee-bacc-95d4d2f4357e';
 const MARK = '시프티 일정';
 const env = Object.fromEntries(readFileSync('.env.local', 'utf8').split(/\r?\n/).filter((l) => l.includes('=') && !l.startsWith('#')).map((l) => { const i = l.indexOf('='); return [l.slice(0, i).trim(), l.slice(i + 1).trim().replace(/^"|"$/g, '')]; }));
@@ -55,7 +70,7 @@ if (APPLY) {
 // ③ 날마다 근무일정
 const val = (c: ExcelJS.CellValue) => (c instanceof Date ? c.toISOString().slice(0, 19) : c && typeof c === 'object' && 'result' in c ? (c as { result: unknown }).result : c);
 const wb = new ExcelJS.Workbook();
-await wb.xlsx.readFile('../../레퍼런스/참고/26년직원별출퇴근기록.xlsx');
+await wb.xlsx.readFile(PUNCH_FILE);
 const ws = wb.worksheets[0];
 const head = (ws.getRow(1).values as ExcelJS.CellValue[]).slice(1).map((h) => String(val(h) ?? ''));
 const { data: people } = await db.from('profiles').select('id, name, joined_on').eq('active', true);
@@ -78,9 +93,9 @@ for (let i = 2; i <= ws.rowCount; i++) {
 }
 console.log(`날마다 근무일정 ${want.size}일 · 만들지 않음: 무일정근무 ${skip.none} · 간주 근무 ${skip.deemed} · 입사 전 ${skip.beforeJoin} · 알 수 없는 형식 ${skip.odd}`);
 if (APPLY) {
-  const { data: have } = await db.from('shifts').select('employee_id, work_date').eq('active', true).limit(20000);
-  const exists = new Set((have ?? []).map((s) => `${s.employee_id}|${s.work_date}`));
-  const todo = [...want.values()].filter((s) => !exists.has(`${s.employee_id}|${s.work_date}`)).map((s) => ({ ...s, kind: 'normal', note: MARK, created_by: ADMIN_ID, updated_by: ADMIN_ID }));
+  const have = await allOf<{ employee_id: string; work_date: string }>((a, b) => db.from('shifts').select('employee_id, work_date').eq('active', true).order('id').range(a, b));
+  const exists = new Set(have.map((s) => `${s.employee_id}|${s.work_date}`));
+  const todo = [...want.values()].filter((s) => s.work_date >= FROM && !exists.has(`${s.employee_id}|${s.work_date}`)).map((s) => ({ ...s, kind: 'normal', note: MARK, created_by: ADMIN_ID, updated_by: ADMIN_ID }));
   for (let i = 0; i < todo.length; i += 500) {
     const { error } = await db.from('shifts').insert(todo.slice(i, i + 500));
     if (error) throw new Error(`shifts ${i}: ${error.message}`);

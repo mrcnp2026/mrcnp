@@ -5,6 +5,12 @@
 //
 //   npx tsx scripts/import-shiftee-records.mts            ← 점검표만 (아무것도 바꾸지 않음)
 //   npx tsx scripts/import-shiftee-records.mts --apply    ← 실제로 넣는다 (묶음 20 적용 뒤)
+//
+// 2026-10-17 의뢰인: 1월에 모든 직원이 앱을 쓰기 전까지는 시프티 엑셀을 받아 DB를 갱신한다 — 다음처럼 돌린다
+//   npx tsx scripts/import-shiftee-records.mts --from=2026-10-17 --punch-file=<출퇴근 엑셀> --leave-file=<휴가 엑셀> --only=punch|leave
+//   --from: 이 날짜부터의 줄만 넣는다(그 전 날짜는 이미 넣고 고친 기록 — 시프티에서 나중에 고친 시각이 다시 들어와 겹치지 않게)
+//   연차 발생(--only=grant)은 처음 한 번만 — 갱신 때는 돌리지 않는다
+//   넣은 뒤에는 scripts/import-followup.mts (연장 승인 · 확정 · 빠진 퇴근 목록)
 import { createClient } from '@supabase/supabase-js';
 import ExcelJS from 'exceljs';
 import { readFileSync, writeFileSync } from 'node:fs';
@@ -12,6 +18,22 @@ import { readFileSync, writeFileSync } from 'node:fs';
 const APPLY = process.argv.includes('--apply');
 const ONLY = process.argv.find((a) => a.startsWith('--only='))?.slice(7); // punch | leave
 const DIR = '../../레퍼런스/참고/';
+const arg = (k: string) => process.argv.find((a) => a.startsWith(`--${k}=`))?.slice(k.length + 3);
+const FROM = arg('from') ?? '0000-01-01';
+const PUNCH_FILE = arg('punch-file');
+const LEAVE_FILE = arg('leave-file');
+if (!/^\d{4}-\d{2}-\d{2}$/.test(FROM)) throw new Error('--from=YYYY-MM-DD');
+// 이미 들어간 표시를 전부 읽는다 — Supabase는 한 번에 1,000줄까지만 돌려준다(.limit(20000)이어도). 2026-10-17 고침
+async function allOf<T>(page: (a: number, b: number) => PromiseLike<{ data: T[] | null; error: { message: string } | null }>): Promise<T[]> {
+  const out: T[] = [];
+  for (let a = 0; ; a += 1000) {
+    const { data, error } = await page(a, a + 999);
+    if (error) throw new Error(error.message);
+    out.push(...(data ?? []));
+    if (!data || data.length < 1000) return out;
+  }
+}
+
 const ADMIN_ID = '635e204b-e5a5-4fee-bacc-95d4d2f4357e';
 const env = Object.fromEntries(readFileSync('.env.local', 'utf8').split(/\r?\n/).filter((l) => l.includes('=') && !l.startsWith('#')).map((l) => { const i = l.indexOf('='); return [l.slice(0, i).trim(), l.slice(i + 1).trim().replace(/^"|"$/g, '')]; }));
 const db = createClient(env.NEXT_PUBLIC_SUPABASE_URL, env.SUPABASE_SERVICE_ROLE_KEY);
@@ -26,7 +48,7 @@ const val = (c: ExcelJS.CellValue): string | number | null => {
 };
 async function sheet(file: string) {
   const wb = new ExcelJS.Workbook();
-  await wb.xlsx.readFile(DIR + file);
+  await wb.xlsx.readFile(/[\/]/.test(file) ? file : DIR + file); // 경로를 주면 그 파일, 이름만 주면 레퍼런스/참고 폴더
   const ws = wb.worksheets[0];
   const head = (ws.getRow(1).values as ExcelJS.CellValue[]).slice(1).map((h) => String(val(h) ?? ''));
   const out: Record<string, string | number | null>[] = [];
@@ -52,7 +74,7 @@ const report: string[] = [];
 const note = (s: string) => report.push(s);
 
 // ── 출퇴근 ──────────────────────────────────────────────
-const punchRows = ONLY === 'leave' || ONLY === 'grant' ? [] : await sheet('26년직원별출퇴근기록.xlsx');
+const punchRows = ONLY === 'leave' || ONLY === 'grant' ? [] : await sheet(PUNCH_FILE ?? '26년직원별출퇴근기록.xlsx');
 type Punch = { employee_id: string; kind: 'in' | 'out'; punched_at: string; work_date: string; source: 'import'; is_test: false; ip_verified: false; location_id: string | null; note: string; import_key: string };
 const punches: Punch[] = [];
 const pIssues = { noPerson: 0, noPlaceIn: 0, noPlaceOut: 0, beforeJoin: 0, badOrder: 0, overnight: 0 };
@@ -78,7 +100,7 @@ for (const r of punchRows) {
 }
 
 // ── 휴가 ────────────────────────────────────────────────
-const leaveRows = ONLY === 'punch' || ONLY === 'grant' ? [] : await sheet('26년 직원별휴가기록.xlsx');
+const leaveRows = ONLY === 'punch' || ONLY === 'grant' ? [] : await sheet(LEAVE_FILE ?? '26년 직원별휴가기록.xlsx');
 const byName = (n: string) => types?.find((t) => t.name === n);
 function mapType(r: Record<string, unknown>) {
   const raw = S(r['휴가 유형']);
@@ -211,9 +233,14 @@ if (accrualRows.length) {
 
 // ── 넣기 ────────────────────────────────────────────────
 if (ONLY !== 'leave' && ONLY !== 'grant') {
-  const { data: done } = await db.from('punch_events').select('import_key').not('import_key', 'is', null).limit(20000);
-  const have = new Set((done ?? []).map((x) => x.import_key as string));
-  const todo = punches.filter((p) => !have.has(p.import_key));
+  const done = await allOf<{ import_key: string }>((a, b) => db.from('punch_events').select('import_key').not('import_key', 'is', null).order('id').range(a, b));
+  const have = new Set(done.map((x) => x.import_key));
+  // 앱에서 직접 찍은 기록이 이미 있는 날(사람 × 날)은 엑셀 줄을 넣지 않는다 — 두 벌이 되지 않게. 목록으로 알려 준다 (2026-10-17)
+  const appDays = new Set((await allOf<{ employee_id: string; work_date: string }>((a, b) => db.from('punch_events').select('employee_id, work_date').eq('is_test', false).neq('source', 'import').gte('work_date', FROM).order('id').range(a, b))).map((x) => `${x.employee_id}|${x.work_date}`));
+  const clash = punches.filter((p) => p.work_date >= FROM && !have.has(p.import_key) && appDays.has(`${p.employee_id}|${p.work_date}`));
+  if (clash.length) console.log(`앱에서 찍은 기록이 있어 넣지 않은 날: ${[...new Set(clash.map((p) => `${p.employee_id.slice(0, 8)} ${p.work_date}`))].join(', ')}`);
+  const todo = punches.filter((p) => p.work_date >= FROM && !have.has(p.import_key) && !appDays.has(`${p.employee_id}|${p.work_date}`));
+  console.log(`출퇴근: 파일 ${punches.length}개 중 ${FROM} 이후 · 아직 없는 것 ${todo.length}개`);
   for (let i = 0; i < todo.length; i += 500) {
     const { error } = await db.from('punch_events').insert(todo.slice(i, i + 500));
     if (error) throw new Error(`punch ${i}: ${error.message}`);
@@ -221,11 +248,11 @@ if (ONLY !== 'leave' && ONLY !== 'grant') {
   }
 }
 if (ONLY !== 'punch' && ONLY !== 'grant') {
-  const { data: done } = await db.from('leave_requests').select('import_key').not('import_key', 'is', null);
-  const have = new Set((done ?? []).map((x) => x.import_key as string));
+  const done = await allOf<{ import_key: string }>((a, b) => db.from('leave_requests').select('import_key').not('import_key', 'is', null).order('id').range(a, b));
+  const have = new Set(done.map((x) => x.import_key));
   let ok = 0;
   const fail: string[] = [];
-  for (const l of leaves.filter((x) => !have.has(x.import_key))) {
+  for (const l of leaves.filter((x) => x.end_date >= FROM && !have.has(x.import_key))) {
     const { error } = await db.from('leave_requests').insert({
       employee_id: l.employee_id, type_code: l.type_code, work_dates: l.work_dates, start_date: l.start_date, end_date: l.end_date, days: l.days, start_time: l.start_time, end_time: l.end_time,
       reason: l.reason, status: 'approved', approved_by: ADMIN_ID, requested_by: l.employee_id, is_test: false, source: 'import', import_key: l.import_key,
