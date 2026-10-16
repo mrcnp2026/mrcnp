@@ -10,6 +10,7 @@ import { buildListWorkbook, type ListSheet } from '@/lib/export-list';
 import { loadAllLeaveTypes, loadLeaveRequests } from '@/lib/leave-data';
 import { groupPath } from '@/lib/org';
 import { loadOrgGroups } from '@/lib/org-data';
+import { loadAllStaffDetails } from '@/lib/staff-details';
 import { createAdminClient } from '@/lib/supabase/admin';
 import { toKstDate } from '@/lib/time';
 
@@ -33,13 +34,24 @@ export async function GET(req: NextRequest) {
   let scope: string;
   let fileName: string;
   if (kind === 'members') {
-    const groups = await loadOrgGroups();
+    const [groups, det] = await Promise.all([loadOrgGroups(), loadAllStaffDetails()]);
     scope = 'all';
     fileName = `직원목록_${stamp}.xlsx`;
     sheet = {
       title: '직원',
-      cols: [{ h: '이름', w: 14 }, { h: '사번', w: 12 }, { h: '권한', w: 10 }, { h: '부서', w: 24 }, { h: '직책', w: 14 }, { h: '입사일', w: 12 }, { h: '상태', w: 10 }, { h: '가입', w: 10 }],
-      rows: staff.map((p) => [p.name, p.employee_no, p.role === 'admin' ? '관리자' : p.role === 'manager' ? '지점관리자' : '직원', groupPath(groups, p.group_id), p.job_title, p.joined_on, p.active ? '활성' : '비활성', p.password_set_at ? '가입' : '미가입']),
+      cols: [{ h: '이름', w: 14 }, { h: '사번', w: 12 }, { h: '권한', w: 10 }, { h: '부서', w: 24 }, { h: '직책', w: 14 }, { h: '입사일', w: 12 }, { h: '상태', w: 10 }, { h: '가입', w: 10 },
+        // 개인 정보 (묶음 17) — 직원이 직접 넣은 값
+        { h: '생년월일', w: 12 }, { h: '비상연락처', w: 36 }, { h: '보유 자격증', w: 40 }, { h: '차종', w: 14 }, { h: '차량번호', w: 14 }],
+      rows: staff.map((p) => {
+        const d = det.get(p.id);
+        return [
+          p.name, p.employee_no, p.role === 'admin' ? '관리자' : p.role === 'manager' ? '지점관리자' : '직원', groupPath(groups, p.group_id), p.job_title, p.joined_on, p.active ? '활성' : '비활성', p.password_set_at ? '가입' : '미가입',
+          d?.birthDate ?? null,
+          d?.emergencyContacts.map((c) => `${c.name}${c.relation ? `(${c.relation})` : ''} ${c.phone}`).join(', ') || null,
+          d?.certificates.map((c) => [c.name, c.acquiredOn, c.number].filter(Boolean).join(' ')).join(', ') || null,
+          d?.carModel ?? null, d?.carNumber ?? null,
+        ];
+      }),
     };
   } else {
     const practice = OFFICE.practiceMode && sp.get('live') !== '1';

@@ -4809,6 +4809,10 @@
         "name": "Employee details",
         "detail": "Name, employee number, department and job title, mobile number (if the company entered it)"
       },
+      "details": {
+        "name": "Optional details (only if you enter them)",
+        "detail": "Birth date, emergency contacts (their name, relation and phone), certificates, car model and plate. Entered by you under My account or by an admin; the app works without them. Used only for emergencies and HR, visible only to admins."
+      },
       "punch": {
         "name": "Attendance records",
         "detail": "Clock-in and clock-out times, work notes, and your correction, leave and off-site requests"
@@ -4827,7 +4831,7 @@
       }
     },
     "purposeTitle": "Purpose",
-    "purpose": "Recording and managing working hours, the basis for pay calculation, and keeping records required by law",
+    "purpose": "Recording and managing working hours, the basis for pay calculation, and keeping records required by law; (optional details) emergency contact and HR management",
     "keepTitle": "How long we keep it",
     "keep": "Kept for 3 years after your employment ends, then deleted.",
     "refuseTitle": "Your right to refuse",
@@ -5726,5 +5730,40 @@
       "image_type": "Only photos (jpg, png, webp, gif).",
       "db_update_required": "Photo storage is not ready yet (DB bundle 16)."
     }
+  },
+  "details": {
+    "title": "Personal details",
+    "myTitle": "My details",
+    "myNote": "Used for emergencies and HR records. You can edit them; admins can too.",
+    "adminNote": "Employees fill these in under My account. Admins can edit too; changes are logged.",
+    "birth": "Birth date",
+    "age": "{n} yrs",
+    "contacts": "Emergency contacts",
+    "upTo": "up to {n}",
+    "cName": "Name",
+    "cRelation": "Relation",
+    "cPhone": "Phone",
+    "addContact": "Add contact",
+    "certs": "Certificates",
+    "kName": "Certificate",
+    "kDate": "Acquired on",
+    "kNumber": "Number (optional)",
+    "addCert": "Add certificate",
+    "noCerts": "No certificates",
+    "car": "Car",
+    "carModel": "Car model",
+    "carModelPh": "Model",
+    "carNumber": "Plate number",
+    "carNumberPh": "Plate number",
+    "remove": "Remove row",
+    "edit": "Edit",
+    "cancel": "Cancel",
+    "save": "Save",
+    "saved": "Saved",
+    "invalid_birth": "Check the birth date",
+    "invalid_contact": "Enter both name and phone for each contact",
+    "invalid_cert": "Enter the certificate name; date must be in the past",
+    "invalid_car": "Car model up to 50, plate up to 20 characters",
+    "too_many": "Too many rows"
   }
 }

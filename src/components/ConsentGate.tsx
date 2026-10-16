@@ -11,7 +11,7 @@ import { ErrorNote } from './ErrorNote';
 import { LanguageSwitcher } from './LanguageSwitcher';
 import { Button } from './ui';
 
-const ITEMS = ['basic', 'punch', 'network', 'device', 'location'] as const;
+const ITEMS = ['basic', 'details', 'punch', 'network', 'device', 'location'] as const;
 
 export function ConsentGate({ version, languages }: { version: string; languages: { code: string; name: string }[] }) {
   const t = useTranslations('consent');

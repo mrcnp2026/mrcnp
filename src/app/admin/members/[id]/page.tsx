@@ -25,9 +25,12 @@ import { loadShiftTemplates } from '@/lib/shift-data';
 import { MAX_TOP, SHOWN_GRADES } from '@/lib/staff-rules';
 import { GradeForm, type GradeKey } from './GradeForm';
 import { ProfileForm } from './ProfileForm';
+import { StaffDetailsForm } from '@/components/StaffDetailsForm';
+import { loadStaffDetails } from '@/lib/staff-details';
 
 export default async function MemberDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const t = await getTranslations('admin.members');
+  const td = await getTranslations('details');
   const tc = await getTranslations('common');
   const tm = await getTranslations('admin.manage');
   const f = await getFormatter();
@@ -41,6 +44,7 @@ export default async function MemberDetailPage({ params }: { params: Promise<{ i
     loadOrgGroups(),
   ]);
   if (!p) notFound();
+  const details = await loadStaffDetails(p.id); // 개인 정보 (묶음 17) — 직원이 넣고 관리자도 고친다
   // 가입 = 비밀번호를 만들었거나, 출퇴근 기기를 등록해 둔 사람. 출퇴근 기기(key)는 직원당 1대
   const key = keys?.[0] ?? null;
   const hasPasskey = !!key;
@@ -160,6 +164,12 @@ export default async function MemberDetailPage({ params }: { params: Promise<{ i
           locales={LOCALES.map((code) => ({ code, name: LOCALE_NAMES[code] }))}
           today={toKstDate(new Date())}
         />
+      </Card>
+
+      {/* 개인 정보 (묶음 17, 2026-10-16 의뢰인): 생년월일 · 비상연락처 · 자격증 · 차량 — 평소에는 짧은 요약, [고치기]로 입력 */}
+      <Card className="flex flex-col gap-3 lg:col-span-2 lg:col-start-1 lg:row-start-3">
+        <CardTitle help={td('adminNote')}>{td('title')}</CardTitle>
+        <StaffDetailsForm endpoint={`${api}/details`} initial={details} today={toKstDate(new Date())} />
       </Card>
 
       <Card id="manage" className="scroll-mt-20 p-0 py-1 lg:col-start-3 lg:row-start-2">

@@ -7,11 +7,16 @@ import { Card, CardTitle, PageShell } from '@/components/ui';
 import { getMe } from '@/lib/auth';
 import { createAdminClient } from '@/lib/supabase/admin';
 import { PasswordForm } from './PasswordForm';
+import { StaffDetailsForm } from '@/components/StaffDetailsForm';
+import { loadStaffDetails } from '@/lib/staff-details';
+import { toKstDate } from '@/lib/time';
 
 export default async function AccountPage() {
   const me = await getMe();
   if (!me) redirect('/login');
   const t = await getTranslations('account');
+  const td = await getTranslations('details');
+  const details = await loadStaffDetails(me.id);
   const { data: p } = await createAdminClient().from('profiles').select('password_set_at').eq('id', me.id).maybeSingle();
   const hasPassword = !!p?.password_set_at;
   return (
@@ -32,6 +37,12 @@ export default async function AccountPage() {
           <CardTitle>{t(hasPassword ? 'changeTitle' : 'createTitle')}</CardTitle>
           {!hasPassword && <p className="text-sm text-muted">{t('createNote')}</p>}
           <PasswordForm hasPassword={hasPassword} />
+        </Card>
+        {/* 내 정보 (묶음 17, 2026-10-16 의뢰인: 직원이 직접 넣는다 · 관리자도 고친다) */}
+        <Card id="details" className="flex scroll-mt-20 flex-col gap-3">
+          <CardTitle>{td('myTitle')}</CardTitle>
+          <p className="text-sm text-muted">{td('myNote')}</p>
+          <StaffDetailsForm endpoint="/api/me/details" initial={details} today={toKstDate(new Date())} />
         </Card>
         </div>
       </PageShell>
