@@ -1,6 +1,7 @@
-// 업무 메시지함 (PRD v1.3 37.4, L19) — 관리자와 직원이 근태 · 휴가에 관해 주고받는 통지 · 문의 · 회신. 서버 전용.
+// 사내게시판(옛 업무 메시지함, PRD v1.3 37.4, L19) — 관리자가 직원에게 보내는 통지와 프로그램 알림. 서버 전용.
+// ★ 2026-10-16 의뢰인(알림-8): 관리자만 게시한다. 직원 문의 · 회신(답글)은 없앴다 — 예전에 달린 회신은 읽기만 된다.
 // ★ 볼 수 있는 사람: 받는 사람 본인, 보낸 사람, 관리자. 그 밖의 사람에게는 「없는 메시지」다.
-// ★ 메시지와 회신은 고칠 수 없다(0038). 잘못 보냈으면 회신으로 바로잡는다. 받는 사람은 보낼 때 고정된다.
+// ★ 메시지는 고칠 수 없다(0038). 잘못 보냈으면 바로잡는 통지를 새로 보낸다. 받는 사람은 보낼 때 고정된다.
 // ★ 외부 메신저 · 문자 · 메일로 보내지 않는다. 앱 안에서만 보인다.
 // ★ 읽었다는 표시는 「열어 봤다」는 뜻일 뿐이다 — 동의나 법적 통지 완료를 뜻하지 않는다.
 import 'server-only';
@@ -70,18 +71,6 @@ export async function sendNotice(args: { me: Me; title: unknown; body: unknown; 
   if (to.length === 0) throw new ApiError(409, 'message_no_recipients');
   const id = await insertMessage({ kind: 'notice', needs_reply: args.needsReply, title, body, ...(body_html ? { body_html } : {}), related: args.related ?? {}, audience: args.audience, sender_id: args.me.id, is_test: test }, to);
   return { id, recipients: to.length };
-}
-
-/** 직원이 관리자에게 보내는 문의 — 켜져 있는 관리자 전원이 받는다(누가 답해도 된다) */
-export async function sendInquiry(args: { me: Me; title: unknown; body: unknown; bodyHtml?: unknown; related?: Related }): Promise<{ id: string }> {
-  const title = clean(args.title, 120);
-  const { body, body_html } = richOrText(args.body, args.bodyHtml);
-  if (title.length < 1 || title.length > 120 || body.length < 1 || body.length > 4000) throw new ApiError(400, 'message_invalid');
-  const { data: admins } = await db().from('profiles').select('id, employee_no').eq('role', 'admin').eq('active', true);
-  const test = isTestNo(args.me.employeeNo);
-  const to = (admins ?? []).filter((p) => p.id !== args.me.id && isTestNo(p.employee_no as string | null) === test).map((p) => p.id as string);
-  if (to.length === 0) throw new ApiError(409, 'message_no_recipients');
-  return { id: await insertMessage({ kind: 'inquiry', needs_reply: true, title, body, ...(body_html ? { body_html } : {}), related: args.related ?? {}, audience: { admins: true }, sender_id: args.me.id, is_test: test }, to) };
 }
 
 /** 프로그램이 만드는 알림 — 같은 열쇠로는 한 번만 들어간다(다시 시도해도 중복되지 않는다). 이미 있으면 그 메시지 번호를 돌려준다 */
@@ -162,24 +151,4 @@ export async function loadThread(id: string, me: Me): Promise<Thread | null> {
     // 여러 명에게 보낸 통지에서는 다른 직원의 회신이 서로 보이지 않는다: 받는 사람은 자기 회신만 본다. (관리자가 그 직원에게 답할 때는 그 사람에게만 가는 새 메시지를 보낸다 — answerTo)
     replies: (rep ?? []).filter((r) => canSeeAll || (rec ?? []).length <= 1 || r.author_id === me.id).map((r) => ({ id: r.id as string, authorId: r.author_id as string, body: r.body as string, createdAt: r.created_at as string })),
   };
-}
-
-/** 회신 — 받는 사람, 보낸 사람, 관리자만 */
-export async function replyTo(id: string, me: Me, body: unknown): Promise<void> {
-  const text = clean(body, 4000);
-  if (text.length < 1 || text.length > 4000) throw new ApiError(400, 'message_invalid');
-  const t = await loadThread(id, me);
-  if (!t) throw new ApiError(404, 'not_found');
-  const { error } = await db().from('work_message_replies').insert({ message_id: id, author_id: me.id, body: text });
-  if (error) boom('replyTo', error);
-}
-
-/** 여러 명에게 보낸 통지의 회신에 답하기 — 그 직원 한 명에게만 가는 새 메시지를 만든다(원래 메시지를 가리킨다). 관리자만 */
-export async function answerTo(args: { id: string; employeeId: string; me: Me; body: unknown }): Promise<{ id: string }> {
-  const text = clean(args.body, 4000);
-  if (text.length < 1 || text.length > 4000) throw new ApiError(400, 'message_invalid');
-  const t = await loadThread(args.id, args.me);
-  if (!t || args.me.role !== 'admin') throw new ApiError(404, 'not_found');
-  if (!t.recipients.some((r) => r.employeeId === args.employeeId) && t.senderId !== args.employeeId) throw new ApiError(400, 'message_invalid');
-  return { id: await insertMessage({ kind: 'notice', needs_reply: false, title: `Re: ${t.title}`.slice(0, 120), body: text, related: { type: 'message', id: t.id, href: `/punch/messages/${t.id}` }, audience: { employeeIds: [args.employeeId] }, sender_id: args.me.id, is_test: isTestNo(args.me.employeeNo) }, [args.employeeId]) };
 }

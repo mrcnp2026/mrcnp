@@ -251,7 +251,8 @@
     "pin_busy": "Another attempt overlapped. Please try again.",
     "super_full": "Up to 3 super admins (including the CEO). Change one of them to employee first.",
     "top_only": "Only a super admin can do this.",
-    "pending_exists": "A request is waiting. Handle it in the inbox first."
+    "pending_exists": "A request is waiting. Handle it in the inbox first.",
+    "board_admin_only": "Only admins can post on the company board. Replies are not available."
   },
   "admin": {
     "nav": {
@@ -5165,14 +5166,14 @@
   },
   "messages": {
     "title": "Company board",
-    "intro": "Notices from the company and inquiries you sent. Opening a message records it as read.",
+    "intro": "Posts from the company. Opening one records that you read it.",
     "adminTitle": "Company board",
-    "adminIntro": "Send notices to staff and check who read them and their replies. Sent messages cannot be edited or deleted.",
+    "adminIntro": "Post to employees and see who read it. Employees cannot post or reply. Posts can't be edited or deleted.",
     "composeTitle": "Send a notice",
     "tabNotices": "Announcements",
-    "tabInbox": "Received",
+    "tabInbox": "Posts",
     "tabSent": "My inquiries",
-    "tabSentAdmin": "Sent notices",
+    "tabSentAdmin": "Posted",
     "tabInquiries": "Inquiries",
     "to": {
       "all": "All staff",

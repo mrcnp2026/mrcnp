@@ -1,7 +1,6 @@
-// 업무 메시지 (관리자) — 통지 보내기, 보낸 통지와 읽음 수, 직원에게서 온 문의 (PRD v1.3 37.4, L19).
+// 사내게시판 (관리자) — 글 올리기, 올린 글과 읽음 수 (PRD v1.3 37.4, L19). 직원 문의 · 답글은 없다(2026-10-16 의뢰인 알림-8).
 import { getTranslations } from 'next-intl/server';
 import { HelpTip } from '@/components/Help';
-import Link from 'next/link';
 import { NoticeCompose } from '@/components/MessageForms';
 import { MessageList } from '@/components/MessageViews';
 import { Card, CardTitle, PageShell } from '@/components/ui';
@@ -9,15 +8,13 @@ import { getMe } from '@/lib/auth';
 import { buildOrgTree } from '@/lib/org';
 import { loadOrgGroups } from '@/lib/org-data';
 import { createAdminClient } from '@/lib/supabase/admin';
-import { loadInbox, loadSent } from '@/lib/work-messages';
+import { loadSent } from '@/lib/work-messages';
 
-export default async function AdminMessagesPage({ searchParams }: { searchParams: Promise<{ box?: string }> }) {
+export default async function AdminMessagesPage() {
   const me = (await getMe())!;
-  const [t, sp] = await Promise.all([getTranslations('messages'), searchParams]);
-  const inbox = sp.box === 'in';
-  const [items, groups, { data: staff }] = await Promise.all([inbox ? loadInbox(me) : loadSent(me), loadOrgGroups(), createAdminClient().from('profiles').select('id, name, employee_no, active').order('name')]);
+  const t = await getTranslations('messages');
+  const [items, groups, { data: staff }] = await Promise.all([loadSent(me), loadOrgGroups(), createAdminClient().from('profiles').select('id, name, employee_no, active').order('name')]);
   const names = new Map((staff ?? []).map((p) => [p.id as string, p.name as string]));
-  const tab = (on: boolean) => `flex min-h-11 flex-1 lg:flex-none lg:px-4 items-center justify-center border-b-2 text-sm font-bold ${on ? 'border-text text-text lg:border-primary lg:text-primary' : 'border-transparent text-muted hover:text-text'}`;
   return (
     <PageShell wide>
       <div>
@@ -32,15 +29,8 @@ export default async function AdminMessagesPage({ searchParams }: { searchParams
           />
         </div>
       </Card>
-      <nav className="flex border-b border-border">
-        <Link href="/admin/messages" aria-current={!inbox ? 'page' : undefined} className={tab(!inbox)}>
-          {t('tabSentAdmin')}
-        </Link>
-        <Link href="/admin/messages?box=in" aria-current={inbox ? 'page' : undefined} className={tab(inbox)}>
-          {t('tabInquiries')}
-        </Link>
-      </nav>
-      <MessageList items={items} base="/admin/messages" names={names} sent={!inbox} />
+      <h2 className="text-lg font-bold">{t('tabSentAdmin')}</h2>
+      <MessageList items={items} base="/admin/messages" names={names} sent />
     </PageShell>
   );
 }

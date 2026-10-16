@@ -4,7 +4,6 @@ import { getFormatter, getTranslations } from 'next-intl/server';
 import Link from 'next/link';
 import { NoticeBody as MessageBody } from '@/components/NoticeBody';
 import { RichHtml } from '@/components/RichHtml';
-import { ReplyForm } from '@/components/MessageForms';
 import { Card, Chip } from '@/components/ui';
 import type { MessageLine, Thread } from '@/lib/work-messages';
 
@@ -39,13 +38,10 @@ export async function MessageList({ items, base, names, sent = false }: { items:
   );
 }
 
-export async function MessageThread({ thread, meId, names, back, admin = false }: { thread: Thread; meId: string; names: Map<string, string>; back: string; admin?: boolean }) {
+export async function MessageThread({ thread, meId, names, back }: { thread: Thread; meId: string; names: Map<string, string>; back: string; admin?: boolean }) {
   const [t, f] = await Promise.all([getTranslations('messages'), getFormatter()]);
   const stamp = (iso: string) => f.dateTime(new Date(iso), { year: 'numeric', month: 'numeric', day: 'numeric', hour: '2-digit', minute: '2-digit', hourCycle: 'h23' });
   const who = (id: string | null) => (id ? (names.get(id) ?? '') : t('system'));
-  const many = thread.recipients.length > 1;
-  // 여러 명에게 보낸 통지에서 관리자가 답할 때는 한 명을 골라 그 사람에게만 간다
-  const answerTo = admin && many ? thread.recipients.map((r) => ({ id: r.employeeId, label: names.get(r.employeeId) ?? '' })).sort((a, b) => a.label.localeCompare(b.label)) : undefined;
   return (
     <>
       <Link href={back} className="inline-flex min-h-9 items-center self-start text-sm font-medium text-muted">
@@ -78,17 +74,18 @@ export async function MessageThread({ thread, meId, names, back, admin = false }
           <p className="text-xs text-faint">{t('readNote')}</p>
         </Card>
       )}
-      <Card className="flex flex-col gap-3">
-        <p className="text-sm font-bold">{t('repliesTitle', { n: thread.replies.length })}</p>
-        {thread.replies.map((r) => (
-          <div key={r.id} className={`flex flex-col gap-1 rounded-button p-3 ${r.authorId === meId ? 'bg-primary-tint' : 'bg-surface'}`}>
-            <p className="num text-xs text-muted">{who(r.authorId)} · {stamp(r.createdAt)}</p>
-            <MessageBody text={r.body} />
-          </div>
-        ))}
-        {!admin && many && thread.iAmRecipient && <p className="text-xs text-faint">{t('manyNote')}</p>}
-        {thread.kind !== 'system' || thread.senderId ? <ReplyForm id={thread.id} answerTo={answerTo} /> : <p className="text-xs text-faint">{t('systemNote')}</p>}
-      </Card>
+      {/* 답글 없음(2026-10-16 의뢰인 알림-8). 예전에 달린 회신만 읽기로 보인다 */}
+      {thread.replies.length > 0 && (
+        <Card className="flex flex-col gap-3">
+          <p className="text-sm font-bold">{t('repliesTitle', { n: thread.replies.length })}</p>
+          {thread.replies.map((r) => (
+            <div key={r.id} className={`flex flex-col gap-1 rounded-button p-3 ${r.authorId === meId ? 'bg-primary-tint' : 'bg-surface'}`}>
+              <p className="num text-xs text-muted">{who(r.authorId)} · {stamp(r.createdAt)}</p>
+              <MessageBody text={r.body} />
+            </div>
+          ))}
+        </Card>
+      )}
     </>
   );
 }

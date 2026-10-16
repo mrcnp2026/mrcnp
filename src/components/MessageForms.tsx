@@ -1,5 +1,5 @@
 'use client';
-// 업무 메시지의 입력부 — 통지 쓰기(관리자) · 문의 쓰기(직원) · 회신 · 그 직원에게만 답하기. 보내면 화면을 새로 읽는다.
+// 사내게시판 글쓰기(관리자만, 2026-10-16 의뢰인 알림-8: 직원 글쓰기 · 답글 없음). 보내면 화면을 새로 읽는다.
 import { useTranslations } from 'next-intl';
 import { useRouter } from 'next/navigation';
 import { useState } from 'react';
@@ -9,7 +9,6 @@ import { RichEditor } from '@/components/RichEditor';
 import { Button } from '@/components/ui';
 
 const field = 'min-h-9 rounded-button border border-border bg-bg px-3 text-sm';
-const area = 'min-h-28 rounded-button border border-border bg-bg p-3 text-sm';
 type Err = { code: string; requestId?: string } | null;
 
 function useSend() {
@@ -46,7 +45,7 @@ export function NoticeCompose({ groups, people }: { groups: { id: string; label:
         const el = e.currentTarget;
         const f = new FormData(el);
         setDone(null);
-        const r = await send<{ recipients: number }>({ action: 'send', to, groupIds: f.getAll('groupIds'), employeeIds: f.getAll('employeeIds'), title: f.get('title'), bodyHtml: f.get('bodyHtml'), needsReply: f.get('needsReply') === 'on' });
+        const r = await send<{ recipients: number }>({ action: 'send', to, groupIds: f.getAll('groupIds'), employeeIds: f.getAll('employeeIds'), title: f.get('title'), bodyHtml: f.get('bodyHtml') });
         if (r) {
           setDone(t('sentTo', { n: r.recipients }));
           el.reset();
@@ -83,10 +82,6 @@ export function NoticeCompose({ groups, people }: { groups: { id: string; label:
       <input name="title" required maxLength={120} placeholder={t('fTitle')} aria-label={t('fTitle')} className={field} autoComplete="off" />
       {/* 2026-10-16: 사진 · 간단한 서식 — 숨은 칸 bodyHtml로 보낸다(서버가 거른다) */}
       <RichEditor key={formKey} name="bodyHtml" kind="message" placeholder={t('fBody')} minHeight="min-h-40" />
-      <label className="flex min-h-9 items-center gap-2">
-        <input type="checkbox" name="needsReply" className="size-5 accent-primary" />
-        {t('fNeedsReply')}
-      </label>
       <p className="text-xs text-faint">{t('composeHint')}</p>
       {err && <ErrorNote code={err.code} requestId={err.requestId} namespace="messages" />}
       <div className="flex items-center gap-3">
@@ -94,91 +89,6 @@ export function NoticeCompose({ groups, people }: { groups: { id: string; label:
           {t('send')}
         </Button>
         {done && <span role="status" className="text-ok">{done}</span>}
-      </div>
-    </form>
-  );
-}
-
-/** 직원: 관리자에게 문의 */
-export function InquiryCompose() {
-  const t = useTranslations('messages');
-  const { busy, err, send, router } = useSend();
-  const [open, setOpen] = useState(false);
-  if (!open)
-    return (
-      <div className="flex justify-end">
-        <Button type="button" size="sm" onClick={() => setOpen(true)}>
-          {t('ask')}
-        </Button>
-      </div>
-    );
-  return (
-    <form
-      className="flex flex-col gap-3 rounded-card border border-border bg-bg p-4 text-sm"
-      onSubmit={async (e) => {
-        e.preventDefault();
-        const f = new FormData(e.currentTarget);
-        const r = await send<{ id: string }>({ action: 'inquiry', title: f.get('title'), bodyHtml: f.get('bodyHtml') });
-        if (r) router.push(`/punch/messages/${r.id}`);
-      }}
-    >
-      <p className="font-bold">{t('askTitle')}</p>
-      <input name="title" required maxLength={120} placeholder={t('fTitle')} aria-label={t('fTitle')} className={field} autoComplete="off" />
-      <RichEditor name="bodyHtml" kind="message" placeholder={t('fBody')} minHeight="min-h-40" />
-      <p className="text-xs text-faint">{t('askHint')}</p>
-      {err && <ErrorNote code={err.code} requestId={err.requestId} namespace="messages" />}
-      <span className="flex gap-2">
-        <Button type="submit" size="sm" disabled={busy}>
-          {t('send')}
-        </Button>
-        <Button type="button" size="sm" variant="outline" disabled={busy} onClick={() => setOpen(false)}>
-          {t('cancel')}
-        </Button>
-      </span>
-    </form>
-  );
-}
-
-/** 회신. answerTo가 있으면(관리자가 여러 명에게 보낸 통지에서) 고른 직원 한 명에게만 가는 새 메시지로 답한다 */
-export function ReplyForm({ id, answerTo }: { id: string; answerTo?: { id: string; label: string }[] }) {
-  const t = useTranslations('messages');
-  const { busy, err, send } = useSend();
-  const [done, setDone] = useState(false);
-  return (
-    <form
-      className="flex flex-col gap-2 text-sm"
-      onSubmit={async (e) => {
-        e.preventDefault();
-        const el = e.currentTarget;
-        const f = new FormData(el);
-        setDone(false);
-        const r = await send(answerTo ? { action: 'answer', id, employeeId: f.get('employeeId'), body: f.get('body') } : { action: 'reply', id, body: f.get('body') });
-        if (r) {
-          el.reset();
-          setDone(!!answerTo);
-        }
-      }}
-    >
-      {answerTo && (
-        <label className="flex flex-col gap-1">
-          <span className="font-bold">{t('answerTo')}</span>
-          <select name="employeeId" required className={field}>
-            {answerTo.map((p) => (
-              <option key={p.id} value={p.id}>
-                {p.label}
-              </option>
-            ))}
-          </select>
-        </label>
-      )}
-      <textarea name="body" required maxLength={4000} placeholder={t(answerTo ? 'fAnswer' : 'fReply')} aria-label={t(answerTo ? 'fAnswer' : 'fReply')} className={area} />
-      {answerTo && <p className="text-xs text-faint">{t('answerHint')}</p>}
-      {err && <ErrorNote code={err.code} requestId={err.requestId} namespace="messages" />}
-      <div className="flex items-center gap-3">
-        <Button type="submit" size="sm" disabled={busy}>
-          {t(answerTo ? 'answerDo' : 'replyDo')}
-        </Button>
-        {done && <span role="status" className="text-ok">{t('answerDone')}</span>}
       </div>
     </form>
   );
