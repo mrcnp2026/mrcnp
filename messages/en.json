@@ -5091,7 +5091,11 @@
     "reqLeave": "Request leave",
     "reqShift": "Request a shift",
     "noRule": "No company work rule yet, so the schedule cannot be shown.",
-    "hint": "You cannot clock in or out on a PC. Use your registered phone to clock in and out; here you can view schedules and records and send requests."
+    "hint": "You cannot clock in or out on a PC. Use your registered phone to clock in and out; here you can view schedules and records and send requests.",
+    "tagLate": "Late",
+    "tagNoOut": "No clock-out",
+    "tagNone": "No record",
+    "tagDeemed": "Deemed"
   },
   "payslip": {
     "title": "My payslips",

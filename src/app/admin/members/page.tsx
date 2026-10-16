@@ -66,7 +66,7 @@ export default async function MembersPage({ searchParams }: { searchParams: Prom
   const withPhone = new Set([...(keys ?? []).map((k) => k.employee_id), ...(people ?? []).filter((p) => p.password_set_at).map((p) => p.id)]);
   // 검사 전용 계정(e2e-audit, e2e-audit2)은 검사 중에만 켜진다 — 꺼져 있으면 목록에 안 보이게
   const all: Row[] = (people ?? [])
-    .filter((p) => p.active || !p.employee_no?.startsWith('e2e-audit'))
+    .filter((p) => p.active || !p.employee_no?.startsWith('e2e-'))
     .map((p) => ({ id: p.id, name: p.name, employeeNo: p.employee_no, phone: p.phone, email: p.email, role: p.role, active: p.active, groupId: p.group_id, jobTitle: p.job_title, canViewPayroll: p.can_view_payroll, joinedOn: p.joined_on, jobId: p.job_id, level: (p.role === 'admin' ? (p.admin_level === 'ceo' ? 'ceo' : 'super') : null) as 'super' | 'ceo' | null }));
   const active = all.filter((p) => p.active);
   const inactive = all.filter((p) => !p.active);

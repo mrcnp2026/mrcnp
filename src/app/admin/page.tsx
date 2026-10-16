@@ -1,6 +1,7 @@
 // ① 홈 — 오늘 현황판(7-9) + 처리할 일 요약 (마스터 5장). 관리자가 폰을 열었을 때 첫 화면에서 끝나야 한다.
 // 홈에서 승인하지 않는다 — 요약을 누르면 처리함으로 간다 (5장 규칙 2).
 // 연습 기록은 기본으로 빼고(4-6), 연습 기간에는 "연습 기록으로 보기"로 따로 볼 수 있다 (연습 배너가 항상 붙는다).
+import { leaveBalancesFor } from '@/lib/leave-balance-data';
 import { ChevronRight, Inbox, NotebookPen, TriangleAlert } from 'lucide-react';
 import { getFormatter, getTranslations } from 'next-intl/server';
 import Link from 'next/link';
@@ -14,7 +15,7 @@ import { getMe } from '@/lib/auth';
 import { findMissingPunches } from '@/lib/missing-punch';
 import { weekTotalMinutes } from '@/lib/period';
 import { isProxyCorrection } from '@/lib/day-detail';
-import { calcLeaveBalance, fullLeaveSet } from '@/lib/leave';
+import { fullLeaveSet } from '@/lib/leave';
 import { loadAllLeaveTypes, loadLeaveGrants, loadLeaveRequests } from '@/lib/leave-data';
 import { daysFor, leaveDaysFor, loadPeriod, pendingCounts, syncOvertimeRequests, workDaysFor } from '@/lib/period-data';
 import { createAdminClient } from '@/lib/supabase/admin';
@@ -155,9 +156,11 @@ export default async function AdminHome({ searchParams }: { searchParams: Promis
     { key: 'careNoGroup', n: real.filter((p) => !p.groupId).length },
     { key: 'careNoJob', n: real.filter((p) => !p.jobId).length },
   ] as const;
+  // 원장(시프티에서 옮긴 연차 등)이 있으면 원장 숫자로 — 예전 계산만 쓰던 곳은 옮긴 직원이 모두 0으로 보였다 (2026-10-17)
+  const balances = await leaveBalancesFor(real.map((p) => ({ employeeId: p.id, asOf: today, practice: OFFICE.practiceMode, grants: grants.filter((g) => g.employeeId === p.id), requests: leaveReqs.filter((r) => r.employeeId === p.id), types: leaveTypes })), today, OFFICE.practiceMode);
   const leaveRows = real
-    .map((p) => ({ p, bal: calcLeaveBalance({ grants: grants.filter((g) => g.employeeId === p.id), requests: leaveReqs.filter((r) => r.employeeId === p.id), types: leaveTypes, asOf: today }) }))
-    .filter((x) => x.bal.grant);
+    .map((p) => ({ p, bal: balances.get(p.id)! }))
+    .filter((x) => x.bal.grant || x.bal.ledger);
   const num = (v: number) => fmt.number(v, { maximumFractionDigits: 4 });
   const cardLink = 'inline-flex min-h-8 items-center self-end text-sm font-bold text-primary';
 

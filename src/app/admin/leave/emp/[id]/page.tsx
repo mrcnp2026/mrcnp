@@ -1,6 +1,8 @@
 // 휴가 발생 — 직원 한 명 (의뢰인 2026-10-11: 시프티의 「휴가 발생」 화면처럼) — 기준일 · 산정 기간 · 총/사용/남은 · 발생 내역(만료됨·발생됨·예정됨) · 발생 건 추가.
 // 발생 건 = 연차 부여(leave_grants) 한 줄. 기준일에 적용되는 건이 「발생됨」, 그보다 앞선 건이 「만료됨」, 시작일이 기준일 뒤인 건이 「예정됨」이다.
 // ★ 발생 일수는 관리자가 넣는다 (4-7). 자동 발생(회계연도 기준·매달 1일)과 휴가 그룹별 발생은 결정 뒤에 만든다 (결정 문서 급여-10).
+import { OFFICE } from '@/config/office';
+import { leaveBalanceFor } from '@/lib/leave-balance-data';
 import { getMe } from '@/lib/auth';
 import { scopeFilter } from '@/lib/scope';
 import { getFormatter, getTranslations } from 'next-intl/server';
@@ -8,7 +10,7 @@ import { notFound } from 'next/navigation';
 import { DetailBar, Field, FieldList } from '@/components/detail';
 import { Card, Chip, PageShell } from '@/components/ui';
 import { addDays } from '@/lib/calendar';
-import { calcLeaveBalance, suggestGrant } from '@/lib/leave';
+import { suggestGrant } from '@/lib/leave';
 import { loadAllLeaveTypes, loadLeaveGrants, loadLeaveRequests } from '@/lib/leave-data';
 import { createAdminClient } from '@/lib/supabase/admin';
 import { toKstDate } from '@/lib/time';
@@ -36,7 +38,8 @@ export default async function LeaveAccrualPage({ params, searchParams }: { param
   const top = !!viewer?.top && sp.live !== '1';
   const typeOptions = types.filter((x) => x.active).map((x) => ({ code: x.code, name: leaveTypeName(types, x.code, tv), unit: x.dayUnit, deducts: x.deductsBalance, hours: x.hours ?? x.dayUnit * 8, startTime: x.startTime ?? null, endTime: x.endTime ?? null, group: x.groupName ?? null }));
   const live = requests.filter((r) => r.status === 'approved' || r.status === 'pending').sort((a, b) => (a.startDate < b.startDate ? 1 : -1)).slice(0, 30);
-  const bal = calcLeaveBalance({ grants, requests, types, asOf });
+  // 원장(시프티에서 옮긴 연차 등)이 있으면 원장 숫자로 — 예전 계산만 쓰던 곳은 옮긴 직원이 모두 0으로 보였다 (2026-10-17)
+  const bal = await leaveBalanceFor({ employeeId: id, asOf, practice: OFFICE.practiceMode && sp.live !== '1' ? true : false, grants, requests, types });
   const sorted = [...grants].sort((a, b) => (a.effectiveFrom < b.effectiveFrom ? 1 : -1)); // 새 것이 위
   const asc = [...sorted].reverse();
   const until = (g: (typeof grants)[number]) => {
@@ -58,7 +61,7 @@ export default async function LeaveAccrualPage({ params, searchParams }: { param
           {bal.grant && ` · ${t('period', { from: dot(bal.grant.effectiveFrom), to: until(bal.grant) ? dot(until(bal.grant) as string) : t('open') })}`}
         </p>
       </section>
-      {bal.grant ? (
+      {bal.grant || bal.ledger ? (
         <dl className="num -mx-4 grid grid-cols-3 divide-x divide-border border-y border-border bg-bg text-center lg:mx-0 lg:rounded-card lg:border">
           {(
             [
