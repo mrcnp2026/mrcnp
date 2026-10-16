@@ -2931,7 +2931,8 @@
         "leave_group_in_use": "People are still in this group. Move them first.",
         "leave_member_overlap": "Another membership already covers that date.",
         "leave_policy_missing": "Start the default accrual policy first."
-      }
+      },
+      "groupsTitle": "Leave policy groups"
     },
     "anomalies": {
       "title": "Attendance exceptions",

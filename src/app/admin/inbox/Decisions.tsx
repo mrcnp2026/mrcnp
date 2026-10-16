@@ -183,7 +183,7 @@ export function LeaveCancel({ id, name }: { id: string; name: string }) {
   if (done) return <p className="text-sm font-semibold text-muted">{t(done === 'already' ? 'already' : 'doneMsg')}</p>;
   if (!ask)
     return (
-      <Button variant="outline" className="self-start" onClick={() => setAsk(true)}>
+      <Button variant="outline" className="self-start whitespace-nowrap lg:min-h-9 lg:px-3 lg:text-sm" onClick={() => setAsk(true)}>
         {t('leaveCancel')}
       </Button>
     );

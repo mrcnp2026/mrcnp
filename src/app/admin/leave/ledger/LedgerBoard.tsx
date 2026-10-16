@@ -3,7 +3,8 @@
 import { useTranslations } from 'next-intl';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { useState, type ReactNode } from 'react';
+import { Children, cloneElement, isValidElement, useState, type ReactElement, type ReactNode } from 'react';
+import { Fold } from '@/components/Fold';
 import { callApi } from '@/components/client-api';
 import { ErrorNote } from '@/components/ErrorNote';
 import { Button, Card, CardTitle, Chip } from '@/components/ui';
@@ -19,9 +20,15 @@ type Res = { accrual?: { created: number; existing: number; noHireDate: number; 
 
 const field = 'min-h-9 rounded-button border border-border bg-bg px-3 text-sm';
 function Table({ heads, children }: { heads: string[]; children: ReactNode }) {
+  // 폰: 한 줄 = 한 카드(칸 이름을 앞에 붙여 세로로) — 옆으로 밀어 보던 표를 없앴다 (2026-10-16 디자인)
+  const rows = Children.map(children, (row) => {
+    if (!isValidElement<{ children?: ReactNode }>(row)) return row;
+    let i = 0;
+    return cloneElement(row, {}, Children.map(row.props.children, (cell) => (isValidElement(cell) ? cloneElement(cell as ReactElement<Record<string, unknown>>, { 'data-label': heads[i++] ?? '' }) : cell)));
+  });
   return (
-    <div className="overflow-x-auto rounded-card border border-border bg-bg">
-      <table className="w-full text-sm">
+    <div className="overflow-x-auto rounded-card border border-border bg-bg max-lg:px-3">
+      <table className="w-full text-sm max-lg:[&_thead]:hidden">
         <thead>
           <tr className="border-b border-border bg-surface text-left">
             {heads.map((h, i) => (
@@ -31,7 +38,7 @@ function Table({ heads, children }: { heads: string[]; children: ReactNode }) {
             ))}
           </tr>
         </thead>
-        <tbody>{children}</tbody>
+        <tbody className="max-lg:[&_td]:flex max-lg:[&_td]:items-center max-lg:[&_td]:justify-between max-lg:[&_td]:gap-3 max-lg:[&_td]:px-1! max-lg:[&_td]:py-1! max-lg:[&_td]:text-right max-lg:[&_td]:before:shrink-0 max-lg:[&_td]:before:text-xs max-lg:[&_td]:before:text-faint max-lg:[&_td]:before:content-[attr(data-label)] max-lg:[&_td:empty]:hidden max-lg:[&_tr]:flex max-lg:[&_tr]:flex-col max-lg:[&_tr]:border-b max-lg:[&_tr]:border-border max-lg:[&_tr]:py-2">{rows}</tbody>
       </table>
     </div>
   );
@@ -90,101 +97,6 @@ export function LedgerBoard(props: { group?: { id: string; name: string } | null
       {err && <ErrorNote code={err.code} requestId={err.requestId} namespace="admin.leaveLedger" />}
       {msg && <p role="status" className="rounded-card border border-border bg-bg p-3 text-sm text-ok">{msg}</p>}
 
-      <Card>
-        <CardTitle aside={policy && <Chip tone={policy.verification === 'VERIFIED' ? 'ok' : 'warn'}>{t(policy.verification === 'VERIFIED' ? 'verified' : 'temporary')}</Chip>}>{props.group ? t('policyTitleGroup', { name: props.group.name }) : t('policyTitle')}</CardTitle>
-        {!policy ? (
-          <div className="flex flex-col items-start gap-3 pt-3">
-            <p className="text-sm text-muted">{t('policyNone')}</p>
-            <Button type="button" size="sm" disabled={busy} onClick={() => run({ action: 'seed', groupName: t('defaultGroup') })}>
-              {t('seed')}
-            </Button>
-          </div>
-        ) : (
-          <div className="flex flex-col gap-3 pt-3 text-sm">
-            <ul className="flex flex-col gap-1 text-muted">
-              <li>{t(policy.value.basis === 'hire_date' ? 'basisHire' : 'basisFiscal', { start: policy.value.fiscalStart })}</li>
-              <li>{t('ruleFirstYear', { max: policy.value.monthlyMax })}</li>
-              <li>{t('ruleAnnual', { base: policy.value.baseDays, every: policy.value.extraEveryYears, max: policy.value.maxDays })}</li>
-              <li>{t('ruleDay', { hours: policy.value.dayMinutes / 60 })}</li>
-              <li>{policy.value.carryMaxDays > 0 ? t('ruleCarry', { max: policy.value.carryMaxDays, months: policy.value.carryValidMonths }) : t('ruleCarryNone')}</li>
-              <li>{policy.value.advanceMaxDays > 0 ? t('ruleAdvance', { max: policy.value.advanceMaxDays }) : t('ruleAdvanceNone')}</li>
-              <li className="num text-faint">{t('policyVersion', { n: policy.version, from: policy.validFrom })}</li>
-            </ul>
-            <p className="text-xs text-faint">{t('policyCaveat')}</p>
-            <div className="flex flex-wrap gap-2">
-              <Button type="button" size="sm" variant="outline" disabled={busy} onClick={() => setEdit(!edit)}>
-                {t('policyEdit')}
-              </Button>
-              <Button type="button" size="sm" variant="outline" disabled={busy} onClick={() => run({ action: 'verify', id: policy.id, state: policy.verification === 'VERIFIED' ? 'TEMPORARY' : 'VERIFIED' })}>
-                {t(policy.verification === 'VERIFIED' ? 'markTemporary' : 'markVerified')}
-              </Button>
-            </div>
-            {edit && (
-              <form
-                className="grid gap-3 border-t border-border pt-3 md:grid-cols-2"
-                onSubmit={async (e) => {
-                  e.preventDefault();
-                  const f = new FormData(e.currentTarget);
-                  await run({ action: 'policy', groupId: props.group?.id ?? null, expectedVersion: policy.version, validFrom: f.get('validFrom'), reason: f.get('reason'), policy: { ...policy.value, basis: f.get('basis'), fiscalStart: f.get('fiscalStart'), rounding: f.get('rounding'), carryMaxDays: Number(f.get('carryMaxDays')), carryValidMonths: Number(f.get('carryValidMonths')), advanceMaxDays: Number(f.get('advanceMaxDays')) } });
-                }}
-              >
-                <label className="flex flex-col gap-1">
-                  <span className="font-bold">{t('fBasis')}</span>
-                  <select name="basis" defaultValue={policy.value.basis} className={field}>
-                    <option value="hire_date">{t('optHire')}</option>
-                    <option value="fiscal_year">{t('optFiscal')}</option>
-                  </select>
-                </label>
-                <label className="flex flex-col gap-1">
-                  <span className="font-bold">{t('fFiscalStart')}</span>
-                  <input name="fiscalStart" defaultValue={policy.value.fiscalStart} pattern="(0[1-9]|1[0-2])-(0[1-9]|[12][0-9]|3[01])" required className={field} autoComplete="off" />
-                </label>
-                <label className="flex flex-col gap-1">
-                  <span className="font-bold">{t('fRounding')}</span>
-                  <select name="rounding" defaultValue={policy.value.rounding} className={field}>
-                    <option value="ceil_day">{t('optCeilDay')}</option>
-                    <option value="ceil_half">{t('optCeilHalf')}</option>
-                    <option value="none">{t('optNone')}</option>
-                  </select>
-                </label>
-                <label className="flex flex-col gap-1">
-                  <span className="font-bold">{t('fCarryMax')}</span>
-                  <input name="carryMaxDays" type="number" min="0" max="60" step="0.5" defaultValue={policy.value.carryMaxDays} required className={field} />
-                </label>
-                <label className="flex flex-col gap-1">
-                  <span className="font-bold">{t('fCarryMonths')}</span>
-                  <input name="carryValidMonths" type="number" min="1" max="36" step="1" defaultValue={policy.value.carryValidMonths} required className={field} />
-                </label>
-                <label className="flex flex-col gap-1">
-                  <span className="font-bold">{t('fAdvanceMax')}</span>
-                  <input name="advanceMaxDays" type="number" min="0" max="60" step="0.5" defaultValue={policy.value.advanceMaxDays} required className={field} />
-                </label>
-                <label className="flex flex-col gap-1">
-                  <span className="font-bold">{t('fValidFrom')}</span>
-                  <input name="validFrom" type="date" defaultValue={props.today} required className={field} />
-                </label>
-                <label className="flex flex-col gap-1 md:col-span-2">
-                  <span className="font-bold">{t('fReason')}</span>
-                  <input name="reason" required minLength={2} maxLength={500} className={field} autoComplete="off" />
-                </label>
-                <p className="text-xs text-faint md:col-span-2">{t('policyEditHint')}</p>
-                <div className="md:col-span-2">
-                  <Button type="submit" size="sm" disabled={busy}>
-                    {t('policySave')}
-                  </Button>
-                </div>
-              </form>
-            )}
-            {props.history.length > 0 && (
-              <ul className="num flex flex-col gap-1 border-t border-border pt-3 text-xs text-faint">
-                {props.history.map((h) => (
-                  <li key={h.version}>{t('historyLine', { n: h.version, from: h.validFrom, to: h.validTo ?? '', basis: t(h.basis === 'hire_date' ? 'optHire' : 'optFiscal'), reason: h.reason ?? '' })}</li>
-                ))}
-              </ul>
-            )}
-          </div>
-        )}
-      </Card>
 
       {policy && (
         <Card>
@@ -442,6 +354,101 @@ export function LedgerBoard(props: { group?: { id: string; name: string } | null
           </div>
         </Card>
       )}
+      {/* 연차 생성 기준 — 자주 바꾸지 않으므로 맨 아래에 접어 둔다 (2026-10-16 디자인: 잔여부터 보이게) */}
+      <Fold title={props.group ? t('policyTitleGroup', { name: props.group.name }) : t('policyTitle')} summary={policy ? `${t(policy.verification === 'VERIFIED' ? 'verified' : 'temporary')} · ${policy.validFrom}` : t('policyNone')} aside={policy ? <Chip tone={policy.verification === 'VERIFIED' ? 'ok' : 'warn'}>{t(policy.verification === 'VERIFIED' ? 'verified' : 'temporary')}</Chip> : undefined} open={!policy}>
+        {!policy ? (
+          <div className="flex flex-col items-start gap-3 pt-3">
+            <p className="text-sm text-muted">{t('policyNone')}</p>
+            <Button type="button" size="sm" disabled={busy} onClick={() => run({ action: 'seed', groupName: t('defaultGroup') })}>
+              {t('seed')}
+            </Button>
+          </div>
+        ) : (
+          <div className="flex flex-col gap-3 pt-3 text-sm">
+            <ul className="flex flex-col gap-1 text-muted">
+              <li>{t(policy.value.basis === 'hire_date' ? 'basisHire' : 'basisFiscal', { start: policy.value.fiscalStart })}</li>
+              <li>{t('ruleFirstYear', { max: policy.value.monthlyMax })}</li>
+              <li>{t('ruleAnnual', { base: policy.value.baseDays, every: policy.value.extraEveryYears, max: policy.value.maxDays })}</li>
+              <li>{t('ruleDay', { hours: policy.value.dayMinutes / 60 })}</li>
+              <li>{policy.value.carryMaxDays > 0 ? t('ruleCarry', { max: policy.value.carryMaxDays, months: policy.value.carryValidMonths }) : t('ruleCarryNone')}</li>
+              <li>{policy.value.advanceMaxDays > 0 ? t('ruleAdvance', { max: policy.value.advanceMaxDays }) : t('ruleAdvanceNone')}</li>
+              <li className="num text-faint">{t('policyVersion', { n: policy.version, from: policy.validFrom })}</li>
+            </ul>
+            <p className="text-xs text-faint">{t('policyCaveat')}</p>
+            <div className="flex flex-wrap gap-2">
+              <Button type="button" size="sm" variant="outline" disabled={busy} onClick={() => setEdit(!edit)}>
+                {t('policyEdit')}
+              </Button>
+              <Button type="button" size="sm" variant="outline" disabled={busy} onClick={() => run({ action: 'verify', id: policy.id, state: policy.verification === 'VERIFIED' ? 'TEMPORARY' : 'VERIFIED' })}>
+                {t(policy.verification === 'VERIFIED' ? 'markTemporary' : 'markVerified')}
+              </Button>
+            </div>
+            {edit && (
+              <form
+                className="grid gap-3 border-t border-border pt-3 md:grid-cols-2"
+                onSubmit={async (e) => {
+                  e.preventDefault();
+                  const f = new FormData(e.currentTarget);
+                  await run({ action: 'policy', groupId: props.group?.id ?? null, expectedVersion: policy.version, validFrom: f.get('validFrom'), reason: f.get('reason'), policy: { ...policy.value, basis: f.get('basis'), fiscalStart: f.get('fiscalStart'), rounding: f.get('rounding'), carryMaxDays: Number(f.get('carryMaxDays')), carryValidMonths: Number(f.get('carryValidMonths')), advanceMaxDays: Number(f.get('advanceMaxDays')) } });
+                }}
+              >
+                <label className="flex flex-col gap-1">
+                  <span className="font-bold">{t('fBasis')}</span>
+                  <select name="basis" defaultValue={policy.value.basis} className={field}>
+                    <option value="hire_date">{t('optHire')}</option>
+                    <option value="fiscal_year">{t('optFiscal')}</option>
+                  </select>
+                </label>
+                <label className="flex flex-col gap-1">
+                  <span className="font-bold">{t('fFiscalStart')}</span>
+                  <input name="fiscalStart" defaultValue={policy.value.fiscalStart} pattern="(0[1-9]|1[0-2])-(0[1-9]|[12][0-9]|3[01])" required className={field} autoComplete="off" />
+                </label>
+                <label className="flex flex-col gap-1">
+                  <span className="font-bold">{t('fRounding')}</span>
+                  <select name="rounding" defaultValue={policy.value.rounding} className={field}>
+                    <option value="ceil_day">{t('optCeilDay')}</option>
+                    <option value="ceil_half">{t('optCeilHalf')}</option>
+                    <option value="none">{t('optNone')}</option>
+                  </select>
+                </label>
+                <label className="flex flex-col gap-1">
+                  <span className="font-bold">{t('fCarryMax')}</span>
+                  <input name="carryMaxDays" type="number" min="0" max="60" step="0.5" defaultValue={policy.value.carryMaxDays} required className={field} />
+                </label>
+                <label className="flex flex-col gap-1">
+                  <span className="font-bold">{t('fCarryMonths')}</span>
+                  <input name="carryValidMonths" type="number" min="1" max="36" step="1" defaultValue={policy.value.carryValidMonths} required className={field} />
+                </label>
+                <label className="flex flex-col gap-1">
+                  <span className="font-bold">{t('fAdvanceMax')}</span>
+                  <input name="advanceMaxDays" type="number" min="0" max="60" step="0.5" defaultValue={policy.value.advanceMaxDays} required className={field} />
+                </label>
+                <label className="flex flex-col gap-1">
+                  <span className="font-bold">{t('fValidFrom')}</span>
+                  <input name="validFrom" type="date" defaultValue={props.today} required className={field} />
+                </label>
+                <label className="flex flex-col gap-1 md:col-span-2">
+                  <span className="font-bold">{t('fReason')}</span>
+                  <input name="reason" required minLength={2} maxLength={500} className={field} autoComplete="off" />
+                </label>
+                <p className="text-xs text-faint md:col-span-2">{t('policyEditHint')}</p>
+                <div className="md:col-span-2">
+                  <Button type="submit" size="sm" disabled={busy}>
+                    {t('policySave')}
+                  </Button>
+                </div>
+              </form>
+            )}
+            {props.history.length > 0 && (
+              <ul className="num flex flex-col gap-1 border-t border-border pt-3 text-xs text-faint">
+                {props.history.map((h) => (
+                  <li key={h.version}>{t('historyLine', { n: h.version, from: h.validFrom, to: h.validTo ?? '', basis: t(h.basis === 'hire_date' ? 'optHire' : 'optFiscal'), reason: h.reason ?? '' })}</li>
+                ))}
+              </ul>
+            )}
+          </div>
+        )}
+      </Fold>
     </div>
   );
 }

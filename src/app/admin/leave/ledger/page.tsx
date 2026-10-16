@@ -12,6 +12,7 @@ import { hiddenTestIds } from '@/lib/period-data';
 import { createAdminClient } from '@/lib/supabase/admin';
 import { toKstDate } from '@/lib/time';
 import { LedgerBoard, type BalanceLine, type EntryLine, type LotLine } from './LedgerBoard';
+import { Fold } from '@/components/Fold';
 import { PolicyGroups } from './PolicyGroups';
 
 export default async function LeaveLedgerPage({ searchParams }: { searchParams: Promise<{ emp?: string; live?: string; pg?: string }> }) {
@@ -67,12 +68,6 @@ export default async function LeaveLedgerPage({ searchParams }: { searchParams: 
   return (
     <PageShell wide>
       <ListHead title={t('title')} desc={t('intro')} settingsHref="/admin/settings?tab=leave" settingsLabel={tGear('item.setLeave')} />
-      <PolicyGroups
-        today={today}
-        current={pg?.id ?? null}
-        groups={pgroups.map((g) => ({ ...g, members: g.members.map((m) => ({ employeeId: m.employeeId, name: nameOf.get(m.employeeId) ?? '', validFrom: m.validFrom })) }))}
-        people={(staff ?? []).filter((p) => p.active && !hiddenSet.has(p.id as string)).map((p) => ({ id: p.id as string, name: p.name as string, groupId: pgroups.find((g) => !g.isDefault && g.members.some((m) => m.employeeId === p.id))?.id ?? null }))}
-      />
       <LedgerBoard
         group={pg ? { id: pg.id, name: pg.name } : null}
         today={today}
@@ -85,6 +80,15 @@ export default async function LeaveLedgerPage({ searchParams }: { searchParams: 
         balances={balances}
         emp={emp ? { id: emp, name: nameOf.get(emp) ?? '', lots: empLots, entries: empEntries, settlements: settlements.map((x) => ({ id: x.id, retireOn: x.retireOn, revision: x.revision, state: x.state, unused: d(x.unusedMinutes), advance: d(x.advanceMinutes), hireBasis: x.snapshot.hireBasisMinutes === null ? null : d(x.snapshot.hireBasisMinutes), granted: d(x.snapshot.grantedMinutes), lots: x.snapshot.lots.map((l) => ({ grantedOn: l.grantedOn, days: d(l.minutes) })) })) } : null}
       />
+      {/* 휴가 정책 그룹 — 가끔 바꾸는 설정이라 맨 아래에 접어 둔다 (2026-10-16 디자인) */}
+      <Fold title={t('groupsTitle')} summary={pgroups.map((g) => `${g.name} ${g.members.length}`).join(' · ')}>
+        <PolicyGroups
+          today={today}
+          current={pg?.id ?? null}
+          groups={pgroups.map((g) => ({ ...g, members: g.members.map((m) => ({ employeeId: m.employeeId, name: nameOf.get(m.employeeId) ?? '', validFrom: m.validFrom })) }))}
+          people={(staff ?? []).filter((p) => p.active && !hiddenSet.has(p.id as string)).map((p) => ({ id: p.id as string, name: p.name as string, groupId: pgroups.find((g) => !g.isDefault && g.members.some((m) => m.employeeId === p.id))?.id ?? null }))}
+        />
+      </Fold>
     </PageShell>
   );
 }
