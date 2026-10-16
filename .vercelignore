@@ -1,0 +1,6 @@
+# Vercel 배포에 올리지 않는 것 (2026-10-16) — 로컬 작업 사본 · 화면 사진 · 임시 스크립트
+.claude
+shots
+outputs-pc
+scripts/_q.mts
+.env*.local
