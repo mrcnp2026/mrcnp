@@ -8,7 +8,7 @@ import { ErrorNote } from '@/components/ErrorNote';
 import { Button } from '@/components/ui';
 import { InviteView, type Invite } from './InviteView';
 
-export function NewInviteButton({ employeeId, name, compact = false, again = false }: { employeeId: string; name: string; compact?: boolean; again?: boolean }) {
+export function NewInviteButton({ employeeId, name, compact = false, again = false, icon = false }: { employeeId: string; name: string; compact?: boolean; again?: boolean; icon?: boolean }) {
   const t = useTranslations('admin.members');
   const [stage, setStage] = useState<'idle' | 'confirm' | 'busy'>('idle');
   const [invite, setInvite] = useState<Invite | null>(null);
@@ -25,10 +25,17 @@ export function NewInviteButton({ employeeId, name, compact = false, again = fal
   }
   // 카드 안의 작은 버튼. 이미 가입한 사람은 "비밀번호를 잊었을 때" 다시 보내는 것이라 글자를 바꾼다
   const button = (
+    icon ? (
+      // 폰 목록 줄: 아이콘만(이름 · 상태 글자가 잘리지 않게, 2026-10-16 디자인)
+      <button type="button" onClick={() => setStage('confirm')} aria-label={`${name} — ${t(again ? 'reInviteShort' : 'inviteShort')}`} title={t(again ? 'reInviteShort' : 'inviteShort')} className="flex size-11 shrink-0 items-center justify-center rounded-button bg-primary-tint text-primary">
+        <Send aria-hidden size={18} strokeWidth={2} />
+      </button>
+    ) : (
     <Button variant="outline" onClick={() => setStage('confirm')} className={compact ? 'min-h-11 px-3 text-sm whitespace-nowrap' : 'shrink-0 text-sm'}>
       <Send aria-hidden size={16} strokeWidth={2} />
       {compact ? t(again ? 'reInviteShort' : 'inviteShort') : again ? t('reInvite') : t('newInvite')}
     </Button>
+    )
   );
   if (stage === 'idle') return button;
   // 확인은 아래에서 올라오는 창 — 좁은 2열 카드 안에서 글자가 찌그러지지 않게

@@ -27,7 +27,7 @@ export function RoleCell({
   const grade = role === 'admin' ? (level === 'ceo' ? 'ceo' : 'super') : role === 'manager' ? 'manager' : 'employee';
   const top = role === 'admin';
   return (
-    <span className="flex flex-wrap items-center gap-1">
+    <span className="flex items-center gap-1 whitespace-nowrap">
       {grade === 'employee' ? <span className="text-muted">{tm('grade.employee')}</span> : <Chip tone="info">{tm(`grade.${grade}`)}</Chip>}
       {waiting && <Chip tone="warn">{t('roleWaiting')}</Chip>}
       {!self && !waiting && (!top || actorTop) && (

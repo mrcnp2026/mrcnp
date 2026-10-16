@@ -312,7 +312,7 @@
       "f_joined": "가입",
       "f_pending": "미합류",
       "joined": "가입함",
-      "notJoined": "아직 가입 안 함",
+      "notJoined": "미가입",
       "reInvite": "링크 다시 보내기",
       "emptyFilter": "해당하는 직원이 없습니다.",
       "inviteShort": "링크 보내기",

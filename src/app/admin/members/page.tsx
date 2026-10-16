@@ -26,6 +26,8 @@ import { loadPendingSignups } from '@/lib/signup';
 // 탭 (2026-10-11 의뢰인: 시프티의 직원 관리처럼) — 현재직원 · 미합류(초대했지만 아직 가입 전) · 비활성(퇴사 등으로 꺼 둔 사람)
 // 2026-10-16 디자인: 「현재직원」은 재직 중인 사람 전부(가입 여부는 줄마다 표시) — 실제 직원 24명을 넣고 보니 가입 전 23명이 첫 화면에서 빠져 있었다
 type Filter = 'current' | 'pending' | 'inactive';
+// 휴대폰 번호 보기 좋게 (01012345678 → 010-1234-5678). 저장 값은 그대로
+const showPhone = (v: string | null) => (v && /^01\d{8,9}$/.test(v) ? v.replace(/^(01\d)(\d{3,4})(\d{4})$/, '$1-$2-$3') : (v ?? ''));
 type Row = { id: string; name: string; employeeNo: string | null; phone: string | null; email: string | null; role: string; active: boolean; groupId: string | null; jobTitle: string | null; canViewPayroll: boolean; joinedOn: string | null; jobId: string | null; level: 'super' | 'ceo' | null };
 
 export default async function MembersPage({ searchParams }: { searchParams: Promise<{ f?: string }> }) {
@@ -95,11 +97,11 @@ export default async function MembersPage({ searchParams }: { searchParams: Prom
             </span>
           </span>
           {/* > 까지 링크 안에 둔다 — 화살표를 눌러도 상세로 간다 (2026-10-06 의뢰인) */}
-          {!(p.active && !ok) && <ChevronRight aria-hidden size={18} strokeWidth={2} className="mr-2 shrink-0 text-faint" />}
+          <ChevronRight aria-hidden size={18} strokeWidth={2} className="shrink-0 text-faint" />
         </Link>
         {p.active && !ok && (
           <span className="shrink-0">
-            <NewInviteButton employeeId={p.id} name={p.name} compact />
+            <NewInviteButton employeeId={p.id} name={p.name} icon />
           </span>
         )}
       </li>
@@ -178,7 +180,7 @@ export default async function MembersPage({ searchParams }: { searchParams: Prom
             { key: 'no', label: t('colNo') },
             { key: 'phone', label: t('infoPhone') },
             { key: 'group', label: t('colGroup') },
-            { key: 'title', label: t('colTitle') },
+            ...(list.some((p) => p.jobTitle) ? [{ key: 'title', label: t('colTitle') }] : []),
             { key: 'job', label: t('colJob') },
             { key: 'joined', label: t('infoJoined') },
             { key: 'status', label: t('colStatus') },
@@ -194,10 +196,10 @@ export default async function MembersPage({ searchParams }: { searchParams: Prom
                 name: { text: p.name, node: <Link href={`/admin/members/${p.id}`} className="font-bold hover:text-primary">{p.name}</Link> },
                 role: { text: roleText, node: <RoleCell employeeId={p.id} role={p.role} self={p.id === me.id} waiting={roleWaiting.has(p.id)} level={p.level} actorTop={me.top} /> },
                 no: { text: p.employeeNo ?? '' },
-                phone: { text: p.phone ?? '', node: <span className="num whitespace-nowrap">{p.phone ?? ''}</span> },
-                group: { text: groupPath(groups, p.groupId) ?? t('unassigned') },
+                phone: { text: p.phone ?? '', node: <span className="num whitespace-nowrap">{showPhone(p.phone)}</span> },
+                group: { text: groupPath(groups, p.groupId) ?? t('unassigned'), node: <span className="whitespace-nowrap">{groupPath(groups, p.groupId) ?? t('unassigned')}</span> },
                 title: { text: p.jobTitle ?? '' },
-                job: { text: (p.jobId && jobName.get(p.jobId)) || '' },
+                job: { text: (p.jobId && jobName.get(p.jobId)) || '', node: <span className="whitespace-nowrap">{(p.jobId && jobName.get(p.jobId)) || ''}</span> },
                 joined: { text: p.joinedOn ?? '', node: <span className="num whitespace-nowrap">{p.joinedOn ?? ''}</span> },
                 status: { text: !p.active ? t('inactive') : ok ? t('joined') : t('notJoined'), node: !p.active ? <Chip>{t('inactive')}</Chip> : ok ? <Chip tone="ok">{t('joined')}</Chip> : <Chip tone="warn">{t('notJoined')}</Chip> },
                 act: { text: '', node: p.active && !ok ? <NewInviteButton employeeId={p.id} name={p.name} compact /> : null },
