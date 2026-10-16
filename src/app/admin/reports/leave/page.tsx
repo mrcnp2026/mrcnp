@@ -1,6 +1,7 @@
 // 휴가 리포트 — 부서/전사의 받은 연차 · 사용 · 소멸 · 잔여 · 선사용 · 소진율 (PRD v1.3 37.5, L22). 관리자만.
 // 숫자는 휴가 원장의 합이다. 화면과 「엑셀 받기」가 같은 계산(buildLeaveReport)을 쓴다. 휴가 사유는 나오지 않는다.
 import { getTranslations } from 'next-intl/server';
+import type { ReactNode } from 'react';
 import { leaveTypeName } from '@/lib/leave';
 import { loadAllLeaveTypes } from '@/lib/leave-data';
 import { HelpTip } from '@/components/Help';
@@ -25,11 +26,28 @@ export default async function LeaveReportPage({ searchParams }: { searchParams: 
   const groupId = options.some((o) => o.id === sp.g) ? sp.g! : null;
   const withInactive = sp.inactive === '1';
   const r = await buildLeaveReport({ asOf, practice, groupId, withInactive });
-  const day = (n: number) => t('days', { n });
+  // 30분 단위(1/16일)로 떨어지면 그대로, 비례 발생처럼 안 떨어지면 소수 둘째 자리까지 (2026-10-17 디자인: 153.5292일)
+  const day = (n: number) => t('days', { n: Math.abs(n * 16 - Math.round(n * 16)) < 1e-6 ? n : Math.round(n * 100) / 100 });
   const rate = (v: number | null) => (v === null ? t('rateNone') : t('pct', { n: v }));
   const qs = new URLSearchParams({ to: asOf, ...(groupId ? { g: groupId } : {}), ...(withInactive ? { inactive: '1' } : {}), ...(sp.live === '1' ? { live: '1' } : {}) }).toString();
   const cols = ['lGranted', 'lUsed', 'lExpired', 'lRemaining', 'lAdvance', 'lRate'] as const;
   const cells = (s: LeaveSum & { rate: number | null }) => [day(s.granted), day(s.used), day(s.expired), day(s.remaining), day(s.advance), rate(s.rate)];
+  // 폰: 표 대신 두 줄 목록(이름 · 잔여 / 받은 · 사용 · 소진율, 소멸 · 선사용은 있을 때만) — 표가 옆으로 잘렸다 (2026-10-17 디자인)
+  const mobile = (items: { key: string; name: ReactNode; sub?: string; sum: (LeaveSum & { rate: number | null }) | null }[], cls = '') => (
+    <ul className={`divide-y divide-border rounded-card border border-border bg-bg lg:hidden ${cls}`}>
+      {items.map((x) => (
+        <li key={x.key} className="flex flex-col gap-0.5 px-3 py-2.5">
+          <div className="flex items-baseline justify-between gap-2">
+            <span className="min-w-0 truncate font-bold">{x.name}</span>
+            {x.sum && <span className="num shrink-0 text-sm text-muted">{t('lRemaining')} <b className={`text-base ${x.sum.remaining < 0 ? 'text-danger' : 'text-primary'}`}>{day(x.sum.remaining)}</b></span>}
+          </div>
+          <p className="num text-xs text-muted">
+            {[x.sub, ...(x.sum ? [`${t('lGranted')} ${day(x.sum.granted)}`, `${t('lUsed')} ${day(x.sum.used)}`, x.sum.expired ? `${t('lExpired')} ${day(x.sum.expired)}` : '', x.sum.advance ? `${t('lAdvance')} ${day(x.sum.advance)}` : '', `${t('lRate')} ${rate(x.sum.rate)}`] : [t('notStarted')])].filter(Boolean).join(' · ')}
+          </p>
+        </li>
+      ))}
+    </ul>
+  );
 
   return (
     <PageShell wide>
@@ -73,7 +91,11 @@ export default async function LeaveReportPage({ searchParams }: { searchParams: 
       </div>
 
       <h2 className="text-lg font-bold">{t('byGroup')}</h2>
-      <div className="overflow-x-auto rounded-card border border-border bg-bg">
+      {mobile([
+        ...r.groups.map((g) => ({ key: g.groupId ?? '', name: g.groupId === null ? t('unassigned') : g.name, sub: t('startedValue', { n: g.started, all: g.people }), sum: g })),
+        { key: 'total', name: t('total'), sub: t('startedValue', { n: r.total.started, all: r.total.people }), sum: r.total },
+      ])}
+      <div className="overflow-x-auto rounded-card border border-border bg-bg max-lg:hidden">
         <table className="w-full text-sm">
           <thead>
             <tr className="border-b border-border bg-surface text-left">
@@ -108,7 +130,8 @@ export default async function LeaveReportPage({ searchParams }: { searchParams: 
       </div>
 
       <h2 className="text-lg font-bold">{t('byPolicyGroup')}</h2>
-      <div className="overflow-x-auto rounded-card border border-border bg-bg">
+      {mobile(r.policyGroups.map((g) => ({ key: g.groupId, name: <>{g.name}{g.excluded && <span className="ml-1 text-xs font-normal text-warn">{t('excludedTag')}</span>}</>, sub: t('startedValue', { n: g.started, all: g.people }), sum: g })))}
+      <div className="overflow-x-auto rounded-card border border-border bg-bg max-lg:hidden">
         <table className="w-full text-sm" data-policy-groups>
           <thead>
             <tr className="border-b border-border bg-surface text-left">
@@ -168,7 +191,13 @@ export default async function LeaveReportPage({ searchParams }: { searchParams: 
       <p className="text-xs text-faint">{t('typeNote')}</p>
 
       <h2 className="text-lg font-bold">{t('byEmployee', { n: r.employees.length })}</h2>
-      <div className="overflow-x-auto rounded-card border border-border bg-bg">
+      {mobile(r.employees.map((e) => ({
+        key: e.employeeId,
+        name: <Link href={`/admin/leave/ledger?emp=${e.employeeId}#detail`} className="text-primary">{e.name}{!e.active && <span className="ml-2 text-xs font-normal text-faint">{t('inactive')}</span>}</Link>,
+        sub: e.joinedOn ?? undefined,
+        sum: e.isStarted ? e : null,
+      })))}
+      <div className="overflow-x-auto rounded-card border border-border bg-bg max-lg:hidden">
         <table className="w-full text-sm">
           <thead>
             <tr className="border-b border-border bg-surface text-left">

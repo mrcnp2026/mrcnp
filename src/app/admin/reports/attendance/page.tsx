@@ -195,27 +195,34 @@ export default async function AttendanceReportPage({ searchParams }: { searchPar
       <p className="text-xs text-faint">{t('attNote')}</p>
 
       <h2 className="text-lg font-bold">{t('trendTitle')}</h2>
-      <div className="grid grid-cols-2 gap-2 lg:grid-cols-5 lg:gap-3" data-trend>
+      {/* 폰은 한 줄에 그래프 하나 — 두 칸이면 「4725.8」 같은 숫자가 막대보다 넓어 상자 밖으로 나갔다 (2026-10-17 의뢰인) */}
+      <div className="grid grid-cols-1 gap-2 sm:grid-cols-2 lg:grid-cols-3 lg:gap-3 2xl:grid-cols-5" data-trend>
         {METRICS.map((mt) => {
           const vals = trend.map((x) => (x.s ? mt.v(x.s) : null));
           const max = Math.max(1, ...vals.map((v) => v ?? 0));
+          // 막대 위 숫자는 짧게: 100 이상은 정수, 그 아래는 소수 한 자리
+          const short = (v: number | null) => (v == null ? '–' : Math.abs(v) >= 100 ? Math.round(v).toLocaleString('ko-KR') : String(Math.round(v * 10) / 10));
           return (
-            <section key={mt.key} className="rounded-card border border-border bg-bg p-3">
-              <h3 className="text-sm font-bold">{t(mt.key)}</h3>
-              <div className="mt-2 flex h-28 items-end gap-1.5" role="img" aria-label={t('trendAria', { name: t(mt.key), values: trend.map((x, i) => `${x.m} ${vals[i] ?? '-'}`).join(', ') })}>
+            <section key={mt.key} className="min-w-0 overflow-hidden rounded-card border border-border bg-bg p-3">
+              <h3 className="flex items-baseline justify-between gap-2 text-sm font-bold">
+                {t(mt.key)}
+                <span className="text-xs font-normal text-faint">{t(mt.unit)}</span>
+              </h3>
+              <div className="mt-2 flex h-24 items-stretch gap-1.5" role="img" aria-label={t('trendAria', { name: t(mt.key), values: trend.map((x, i) => `${x.m} ${vals[i] ?? '-'}`).join(', ') })}>
                 {trend.map((x, i) => (
-                  <div key={x.m} className="flex h-full flex-1 flex-col items-center justify-end gap-1">
-                    <span className="num text-xs text-muted">{vals[i] ?? '–'}</span>
-                    <div className={`w-full rounded-t-sm ${x.m === month ? 'bg-primary' : 'bg-primary-tint'}`} style={{ height: `${vals[i] ? Math.max(4, (vals[i]! / max) * 100) : 0}%` }} />
+                  <div key={x.m} className="flex min-w-0 flex-1 flex-col items-center gap-1">
+                    <div className="flex w-full flex-1 flex-col items-center justify-end gap-0.5">
+                      <span className="num max-w-full truncate text-xs text-muted">{short(vals[i])}</span>
+                      <div className={`w-full rounded-t-sm ${x.m === month ? 'bg-primary' : 'bg-primary-tint'}`} style={{ height: `${vals[i] ? Math.max(4, (vals[i]! / max) * 75) : 0}%` }} />
+                    </div>
                   </div>
                 ))}
               </div>
               <div className="mt-1 flex gap-1.5">
                 {trend.map((x) => (
-                  <span key={x.m} className="num flex-1 text-center text-xs text-faint">{x.m.slice(5)}</span>
+                  <span key={x.m} className="num min-w-0 flex-1 text-center text-xs text-faint">{x.m.slice(5)}</span>
                 ))}
               </div>
-              <p className="pt-1 text-xs text-faint">{t(mt.unit)}</p>
             </section>
           );
         })}

@@ -47,6 +47,7 @@ export async function buildAttendanceDeptReport(args: { ym: string; practice: bo
   const scope = args.groupId ? groupScope(groups, args.groupId) : null;
   const employees: AttEmp[] = [];
   for (const l of lines) {
+    if (l.employeeNo === OFFICE.ownerEmployeeNo && l.review.recordDays.length === 0 && !l.close) continue; // 시스템관리자(admin)는 직원이 아니다 — 기록이 없으면 리포트에서 뺀다 (2026-10-17 디자인: 연간 리포트에 결근 9일로 나왔다)
     const gid = groupAt(l.employeeId, l.groupId);
     if (scope && !(gid && scope.has(gid))) continue;
     if (args.employeeId && l.employeeId !== args.employeeId) continue;

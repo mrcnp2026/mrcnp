@@ -4,6 +4,7 @@
 // ★ 선사용 · 소멸은 따로 적는다. 숨겨서 비율을 맞추지 않는다.
 // ★ 원장을 시작하지 않은 직원(승인된 지급 건이 없음)은 숫자를 비워 두고, 예전 계산의 잔여만 참고로 적는다.
 import 'server-only';
+import { OFFICE } from '@/config/office';
 import ExcelJS from 'exceljs';
 import { calcLeaveBalance } from '@/lib/leave';
 import { loadAllLeaveTypes, loadLeaveGrants, loadLeaveRequests } from '@/lib/leave-data';
@@ -36,6 +37,7 @@ export async function buildLeaveReport(args: { asOf: string; practice: boolean; 
   const employees: LeaveEmp[] = [];
   for (const p of staff ?? []) {
     if ((p.employee_no as string | null)?.startsWith('e2e-')) continue;
+    if (p.employee_no === OFFICE.ownerEmployeeNo) continue; // 시스템관리자(admin)는 직원이 아니다 (2026-10-17)
     if (!p.active && !args.withInactive) continue;
     if (scope && !(p.group_id && scope.has(p.group_id as string))) continue;
     const mine = lots.filter((l) => l.employeeId === p.id);
