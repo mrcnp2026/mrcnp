@@ -2485,7 +2485,11 @@
       "colDiffOut": "Out vs plan",
       "diffPlus": "+ {n}",
       "diffMinus": "- {n}",
-      "pcIntro": "Punch records for the chosen period, one per line. Click a line to fix or add that day; the circle on the right confirms the day."
+      "pcIntro": "Punch records for the chosen period, one per line. Click a line to fix or add that day; the circle on the right confirms the day.",
+      "colPlace": "Place",
+      "colDiff": "vs schedule",
+      "diffInShort": "In",
+      "diffOutShort": "Out"
     },
     "recordDetail": {
       "title": "Attendance record",
@@ -2518,7 +2522,8 @@
       "confirmed": "Confirmed",
       "confirmedBy": "Confirmed by",
       "cannotConfirm": "A clock-in or clock-out is missing, so this cannot be confirmed yet. Fill it in under Edit first.",
-      "hintConfirmed": "This record is confirmed. It is used for payroll, and corrections are blocked. Undo the confirmation to change it."
+      "hintConfirmed": "This record is confirmed. It is used for payroll, and corrections are blocked. Undo the confirmation to change it.",
+      "viaImport": "Moved from Shiftee"
     },
     "scheduleDetail": {
       "title": "Schedule",

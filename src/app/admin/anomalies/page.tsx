@@ -5,6 +5,7 @@ import { getTranslations } from 'next-intl/server';
 import Link from 'next/link';
 import { FilterBar, ListHead, ListTable, StatusCards } from '@/components/listframe';
 import { Card, CardTitle, Chip, PageShell } from '@/components/ui';
+import { Pager, pageOf } from '@/components/Pager';
 import { OFFICE } from '@/config/office';
 import { ANOMALY_TYPES, summarizeAnomalies, type AnomalyType } from '@/lib/anomaly';
 import { collectAnomalies, loadAnomalyPolicy, loadAnomalyReviews } from '@/lib/anomaly-data';
@@ -22,8 +23,8 @@ const shift = (ym: string, by: number) => {
   return new Date(Date.UTC(y, m - 1 + by, 1)).toISOString().slice(0, 7);
 };
 
-export default async function AnomaliesPage({ searchParams }: { searchParams: Promise<{ m?: string; live?: string; k?: string; st?: string }> }) {
-  const [t, sp] = await Promise.all([getTranslations('admin.anomalies'), searchParams]);
+export default async function AnomaliesPage({ searchParams }: { searchParams: Promise<{ m?: string; live?: string; k?: string; st?: string; p?: string }> }) {
+  const [t, tc, sp] = await Promise.all([getTranslations('admin.anomalies'), getTranslations('common'), searchParams]);
   const today = toKstDate(new Date());
   const month = isMonth(sp.m) && sp.m <= today.slice(0, 7) ? sp.m : today.slice(0, 7);
   const practice = OFFICE.practiceMode && sp.live !== '1';
@@ -43,6 +44,8 @@ export default async function AnomaliesPage({ searchParams }: { searchParams: Pr
   const rows = sum.shown
     .filter((x) => (!only || x.types.includes(only)) && (!st || stateOf(x) === st))
     .sort((a, b) => Number(b.block) - Number(a.block) || b.workDate.localeCompare(a.workDate) || (nameOf.get(a.employeeId)?.name ?? '').localeCompare(nameOf.get(b.employeeId)?.name ?? ''));
+  // 한 쪽에 20일씩 (2026-10-16 디자인: 실제 기록을 넣고 보니 폰에서 249일이 한 줄로 이어져 6만 px가 넘었다)
+  const paged = pageOf(rows, sp.p, 20);
   const live = sp.live === '1' ? '&live=1' : '';
   const link = (m: string, k?: string | null, s?: string | null) => `/admin/anomalies?m=${m}${k ? `&k=${k}` : ''}${s ? `&st=${s}` : ''}${live}`;
   const count = (s: string) => sum.shown.filter((x) => stateOf(x) === s).length;
@@ -104,13 +107,17 @@ export default async function AnomaliesPage({ searchParams }: { searchParams: Pr
         head={[{ label: t('colDate') }, { label: t('colName') }, { label: t('colGroup') }, { label: t('colWhat') }, { label: t('colEffect') }, { label: t('notify.col') }, { label: '' }]}
         empty={rows.length === 0 ? t('empty') : undefined}
       >
-        {rows.map((r) => {
+        {paged.items.map((r) => {
           const p = nameOf.get(r.employeeId);
           return (
             <tr key={`${r.employeeId}${r.workDate}`}>
-              <td className="num whitespace-nowrap">{r.workDate}</td>
-              <td className="font-bold whitespace-nowrap">{p?.name}</td>
-              <td className="text-muted">{groupPath(groups, p?.groupId) ?? ''}</td>
+              {/* 폰: 첫 줄에 날짜 · 이름을 함께(카드가 짧아지게), 지점은 PC에서만 */}
+              <td className="num whitespace-nowrap">
+                {r.workDate}
+                <span className="pl-2 font-bold lg:hidden">{p?.name}</span>
+              </td>
+              <td className="font-bold whitespace-nowrap max-lg:hidden!">{p?.name}</td>
+              <td className="text-muted max-lg:hidden!">{groupPath(groups, p?.groupId) ?? ''}</td>
               <td>
                 <span className="flex flex-wrap gap-1 py-2">
                   {r.types.map((k) => (
@@ -139,6 +146,7 @@ export default async function AnomaliesPage({ searchParams }: { searchParams: Pr
           );
         })}
       </ListTable>
+      <Pager page={paged.page} pages={paged.pages} param="p" params={{ m: month, k: only ?? undefined, st: st ?? undefined, live: sp.live === '1' ? '1' : undefined }} label={tc('pages')} />
 
       <Card className="scroll-mt-20">
         <span id="policy" />

@@ -24,7 +24,7 @@ import type { HolidayRow, PunchCorrection, PunchEvent, WorkRule } from '@/lib/ty
 // startsOn: 입사일(joined_on), 비어 있으면 계정을 만든 날 — 그 전 날짜는 미기록·결근으로 세지 않는다 (7-8 요점 3)
 export type Person = { id: string; name: string; employeeNo: string | null; role: 'admin' | 'manager' | 'employee'; active: boolean; joinedOn: string | null; startsOn: string; groupId: string | null; shiftTemplateId: string | null; jobId: string | null };
 
-export type EventRow = PunchEvent & { ipVerified: boolean; verifiedBy: 'ip' | 'gps' | null; source: 'web' | 'qr' | 'admin'; note: string | null; clientIp: string | null; locationId: string | null };
+export type EventRow = PunchEvent & { ipVerified: boolean; verifiedBy: 'ip' | 'gps' | null; source: 'web' | 'qr' | 'admin' | 'import'; note: string | null; clientIp: string | null; locationId: string | null };
 
 export type CorrectionRow = PunchCorrection & {
   reason: string;

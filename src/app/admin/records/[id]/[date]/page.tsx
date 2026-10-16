@@ -44,6 +44,7 @@ export default async function RecordDetailPage({ params, searchParams }: { param
     const e = eventAt(d);
     if (!e) return t('viaFix');
     if (e.source === 'admin') return t('viaAdmin');
+    if (e.source === 'import') return [t('viaImport'), e.locationId ? placeName.get(e.locationId) : null].filter(Boolean).join(' · '); // 시프티에서 옮긴 기록 — 그때 찍은 장소 이름
     if (e.verifiedBy === 'gps' && e.locationId && placeName.get(e.locationId)) return placeName.get(e.locationId) as string;
     return t(e.verifiedBy === 'ip' ? 'viaIp' : e.verifiedBy === 'gps' ? 'viaGps' : 'viaNone');
   };

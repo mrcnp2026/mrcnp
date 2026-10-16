@@ -22,7 +22,7 @@ export async function recordPunch(input: {
   now: Date;
   clientIp: string | null;
   ipVerified: boolean;
-  source: 'web' | 'qr' | 'admin';
+  source: 'web' | 'qr' | 'admin' | 'import'; // import = 시프티에서 옮김 (묶음 20)
   isTest: boolean;
   passkeyId: string | null;
   verifiedBy: 'ip' | 'gps' | null; // 무엇으로 사무실을 확인했는가 (ipVerified가 true면 반드시 있다)

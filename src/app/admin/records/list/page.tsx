@@ -28,10 +28,13 @@ import { SHIFT_COLOR_CLASS } from '@/lib/shifts';
 import { kstDateTime, toKstDate } from '@/lib/time';
 import { RecordAdd } from './RecordAdd';
 
-const DATES_PER_PAGE = 7;
+// 폰: 한 쪽에 하루(최근 날부터) — 실제 직원 24명을 넣고 보니 7일이면 8천 px가 넘었다 (2026-10-16 디자인)
+const DATES_PER_PAGE = 1;
+// PC 표: 한 쪽에 60줄
+const ROWS_PER_PAGE = 60;
 type Line = { key: string; idx: number; id: string; name: string; sub: string; color: string; date: string; start: string; end: string | null; deemed: boolean; confirmed: boolean; open: boolean; outside: boolean; sort: number };
 
-export default async function RecordListPage({ searchParams }: { searchParams: Promise<{ q?: string; g?: string; from?: string; to?: string; live?: string; p?: string }> }) {
+export default async function RecordListPage({ searchParams }: { searchParams: Promise<{ q?: string; g?: string; from?: string; to?: string; live?: string; p?: string; pp?: string }> }) {
   const tGear = await getTranslations('frame');
   const [t, tc, f, sp] = await Promise.all([getTranslations('admin.recordList'), getTranslations('common'), getFormatter(), searchParams]);
   const practice = OFFICE.practiceMode && sp.live !== '1';
@@ -94,8 +97,9 @@ export default async function RecordListPage({ searchParams }: { searchParams: P
       });
     }
   }
-  const dates = [...new Set(lines.map((x) => x.date))].sort();
+  const dates = [...new Set(lines.map((x) => x.date))].sort().reverse();
   const page = pageOf(dates, sp.p, DATES_PER_PAGE);
+  const pcPage = pageOf([...dayRows].sort((a, b) => b.date.localeCompare(a.date) || a.name.localeCompare(b.name)), sp.pp, ROWS_PER_PAGE);
   const hm = (min: number) => t('hm', { h: Math.floor(min / 60), m: min % 60 });
   const keep = { live: sp.live === '1' ? '1' : undefined };
   // + 버튼(기록 추가): 지금 운영 모드의 기록에만, 본인 것은 빼고 (직원별 기록 화면의 대리 등록과 같은 규칙)
@@ -157,12 +161,12 @@ export default async function RecordListPage({ searchParams }: { searchParams: P
           <table className="w-full text-left text-sm">
             <thead>
               <tr>
-                {(['colEmployee', 'colDate', 'colTime', 'colPlan', 'colPlaceIn', 'colPlaceOut'] as const).map((k) => (
+                {(['colEmployee', 'colDate', 'colTime', 'colPlan', 'colPlace'] as const).map((k) => (
                   <th key={k} scope="col" className="px-2.5 py-2.5">
                     {t(k)}
                   </th>
                 ))}
-                {(['colBreak', 'colTotal', 'colPayable', 'colDiffIn', 'colDiffOut'] as const).map((k) => (
+                {(['colBreak', 'colTotal', 'colPayable', 'colDiff'] as const).map((k) => (
                   <th key={k} scope="col" className="px-2.5 py-2.5 text-right">
                     {t(k)}
                   </th>
@@ -178,14 +182,12 @@ export default async function RecordListPage({ searchParams }: { searchParams: P
             <tbody>
               {dayRows.length === 0 && (
                 <tr>
-                  <td colSpan={13} className="px-4 py-8 text-center text-faint">
+                  <td colSpan={11} className="px-4 py-8 text-center text-faint">
                     {data.rule ? t('empty') : t('noRule')}
                   </td>
                 </tr>
               )}
-              {[...dayRows]
-                .sort((a, b) => b.date.localeCompare(a.date) || a.name.localeCompare(b.name))
-                .map((r) => (
+              {pcPage.items.map((r) => (
                   <tr key={r.key}>
                     <td className="px-2.5 py-2.5 whitespace-nowrap">
                       <Link href={`/admin/records/${r.id}/${r.date}${sp.live === '1' ? '?live=1' : ''}`} className="font-bold hover:text-primary">
@@ -196,16 +198,21 @@ export default async function RecordListPage({ searchParams }: { searchParams: P
                     <td className="num px-2.5 py-2.5 whitespace-nowrap">{f.dateTime(kstDateTime(r.date, '12:00'), { month: '2-digit', day: '2-digit', weekday: 'short' })}</td>
                     <td className="num px-2.5 py-2.5 whitespace-nowrap">{r.time}</td>
                     <td className="num px-2.5 py-2.5 whitespace-nowrap text-muted">{r.plan}</td>
-                    <td className="px-2.5 py-2.5 text-muted">{r.placeIn}</td>
-                    <td className="px-2.5 py-2.5 text-muted">{r.placeOut}</td>
+                    {/* 출근 · 퇴근 장소를 한 칸에 — 같으면 하나만, 다르면 「출근 → 퇴근」 */}
+                    <td className="px-2.5 py-2.5 whitespace-nowrap text-muted">{r.placeIn === r.placeOut || !r.placeOut ? r.placeIn : `${r.placeIn || '–'} → ${r.placeOut}`}</td>
                     <td className="num px-2.5 py-2.5 text-right whitespace-nowrap text-muted">{t('min', { n: r.breakMin })}</td>
                     <td className="num px-2.5 py-2.5 text-right whitespace-nowrap">{hm(r.net)}</td>
                     <td className="num px-2.5 py-2.5 text-right font-bold whitespace-nowrap">{hm(r.payable)}</td>
-                    {[r.diffIn, r.diffOut].map((v, i) => (
-                      <td key={i} className={`num px-2.5 py-2.5 text-right whitespace-nowrap ${v !== null && ((i === 0 && v > 0) || (i === 1 && v < 0)) ? 'text-warn' : 'text-muted'}`}>
-                        {v === null || v === 0 ? '' : t(v > 0 ? 'diffPlus' : 'diffMinus', { n: Math.abs(v) < 60 ? t('min', { n: Math.abs(v) }) : hm(Math.abs(v)) })}
-                      </td>
-                    ))}
+                    {/* 일정과의 차이 — 출근 · 퇴근을 한 칸에 두 줄로. 늦은 출근 · 이른 퇴근은 주황 */}
+                    <td className="num px-2.5 py-2.5 text-right text-xs leading-snug whitespace-nowrap">
+                      {[r.diffIn, r.diffOut].map((v, i) =>
+                        v === null || v === 0 ? null : (
+                          <span key={i} className={`block ${(i === 0 && v > 0) || (i === 1 && v < 0) ? 'text-warn' : 'text-muted'}`}>
+                            {t(i === 0 ? 'diffInShort' : 'diffOutShort')} {t(v > 0 ? 'diffPlus' : 'diffMinus', { n: Math.abs(v) < 60 ? t('min', { n: Math.abs(v) }) : hm(Math.abs(v)) })}
+                          </span>
+                        ),
+                      )}
+                    </td>
                     <td className="px-2.5 py-2.5">
                       <span className="flex flex-wrap gap-1">
                         {r.deemed && <Chip>{t('deemed')}</Chip>}
@@ -221,6 +228,7 @@ export default async function RecordListPage({ searchParams }: { searchParams: P
             </tbody>
           </table>
         </div>
+        <Pager page={pcPage.page} pages={pcPage.pages} param="pp" params={{ ...sp }} label={tc('pages')} />
       </div>
       <div className="flex flex-col lg:hidden">
       <ListBar
