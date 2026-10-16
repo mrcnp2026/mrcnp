@@ -15,7 +15,7 @@ export async function GET(_req: Request, ctx: { params: Promise<{ id: string }> 
   const me = await getMe();
   if (!me || me.role !== 'admin' || !me.canViewPayroll) return deny(403, 'forbidden');
   const { id } = await ctx.params;
-  if (!/^[0-9a-f-]{36}$/i.test(id)) return deny(404, 'not_found');
+  if (!/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(id)) return deny(404, 'not_found');
   const board = await loadDailyBoard(id, me);
   if (!board || !board.run.generationId) return deny(404, 'not_found');
   const { run, lines } = board;

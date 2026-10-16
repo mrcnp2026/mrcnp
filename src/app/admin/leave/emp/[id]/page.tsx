@@ -19,7 +19,7 @@ import { DirectLeaveRow } from './DirectLeaveRow';
 
 export default async function LeaveAccrualPage({ params, searchParams }: { params: Promise<{ id: string }>; searchParams: Promise<{ to?: string; live?: string }> }) {
   const [t, tl, tv, f, { id }, sp] = await Promise.all([getTranslations('admin.leaveAccrual'), getTranslations('admin.leave'), getTranslations('leave'), getFormatter(), params, searchParams]);
-  if (!/^[0-9a-f-]{36}$/i.test(id)) notFound();
+  if (!/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(id)) notFound();
   const today = toKstDate(new Date());
   const asOf = sp.to && /^\d{4}-\d{2}-\d{2}$/.test(sp.to) && !Number.isNaN(Date.parse(`${sp.to}T00:00:00Z`)) ? sp.to : today;
   const [{ data: p }, types, grants, requests] = await Promise.all([

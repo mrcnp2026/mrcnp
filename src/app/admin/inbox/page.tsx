@@ -73,7 +73,7 @@ export default async function InboxPage({ searchParams }: { searchParams: Promis
   // 한 건만 보기 (2026-10-11 의뢰인: 시프티처럼 대기중은 한 목록, 줄을 누르면 그 요청 하나를 처리하는 화면) — ?k=종류&id=요청
   const FOCUS_KINDS = ['punch', 'shift', 'leaveDelete', 'overtime', 'corrections', 'leave', 'work'] as const;
   type FocusKind = (typeof FOCUS_KINDS)[number];
-  const focus = (FOCUS_KINDS as readonly string[]).includes(sp.k ?? '') && /^[0-9a-f-]{36}$/i.test(sp.id ?? '') ? { k: sp.k as FocusKind, id: sp.id as string } : null;
+  const focus = (FOCUS_KINDS as readonly string[]).includes(sp.k ?? '') && /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(sp.id ?? '') ? { k: sp.k as FocusKind, id: sp.id as string } : null;
   const only = (k: FocusKind, id: string) => !focus || (focus.k === k && focus.id === id);
   const ot = (otAll ?? []).filter((o) => hit(o.employee_id) && only('overtime', o.id));
   const co = (coAll ?? []).filter((c) => hit(c.employee_id) && only('corrections', c.id));

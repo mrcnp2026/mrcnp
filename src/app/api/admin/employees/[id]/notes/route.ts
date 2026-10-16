@@ -11,7 +11,7 @@ export const POST = api<{ params: Promise<{ id: string }> }>('admin.employees.no
   await assertStaffTarget(me.id, id);
   const b = await readJson(req);
   if (typeof b.remove === 'string') {
-    if (!/^[0-9a-f-]{36}$/i.test(b.remove)) throw new ApiError(400, 'invalid_input');
+    if (!/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(b.remove)) throw new ApiError(400, 'invalid_input');
     await hideStaffNote(id, b.remove, me.id);
     return { ok: true };
   }

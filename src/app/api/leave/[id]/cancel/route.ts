@@ -7,7 +7,7 @@ export const POST = api<{ params: Promise<{ id: string }> }>('leave.cancel', asy
   const me = await getMe();
   if (!me) throw new ApiError(401, 'not_signed_in');
   const { id } = await ctx.params;
-  if (!/^[0-9a-f-]{36}$/i.test(id)) throw new ApiError(404, 'not_found');
+  if (!/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(id)) throw new ApiError(404, 'not_found');
   const { data, error } = await createAdminClient().rpc('cancel_leave', { p_id: id, p_employee: me.id });
   if (error) throw new Error(`cancel_leave: ${error.code}`);
   if (data === 'not_found') throw new ApiError(404, 'not_found');

@@ -6,7 +6,7 @@ import { toRetirementInput } from '@/lib/payroll/retirement';
 import { createCase, finalizeCase, reviseCase, suggestInput, updateCase, withdrawCase } from '@/lib/payroll/retirement-data';
 
 export const maxDuration = 60;
-const UUID = /^[0-9a-f-]{36}$/i;
+const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 const clean = (v: unknown, max: number): string => (typeof v === 'string' ? v.replace(/[\u0000-\u0008\u000B\u000C\u000E-\u001F\u007F]/g, '').trim().slice(0, max) : '');
 
 export const POST = api('admin.payroll.retirement', async (req, ctx) => {

@@ -10,7 +10,7 @@ export default async function MyMessagePage({ params }: { params: Promise<{ id: 
   const me = await getMe();
   if (!me) redirect('/login');
   const { id } = await params;
-  if (!/^[0-9a-f-]{36}$/i.test(id)) notFound();
+  if (!/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(id)) notFound();
   // 직원 화면에서는 관리자라도 「받았거나 보낸 것」만 연다(전체 관리는 관리자 화면에서)
   const thread = await loadThread(id, { ...me, role: me.role === 'admin' ? 'employee' : me.role });
   if (!thread) notFound();

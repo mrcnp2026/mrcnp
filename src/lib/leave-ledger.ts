@@ -275,7 +275,7 @@ export function settleLeave(args: { lots: readonly Lot[]; entries: readonly Entr
 //   weekdays: 1=월 … 7=일, 비우면(null) 회사 근무일 그대로 · targets: 부서/팀 · 직원, 둘 다 비우면 모두
 export type LeaveTypeRule = { maxDaysPerRequest: number | null; minNoticeDays: number | null; reasonRequired: boolean; weekdays: number[] | null; targets: { groupIds: string[]; employeeIds: string[] }; nameEn: string | null };
 export const NO_TYPE_RULE: LeaveTypeRule = { maxDaysPerRequest: null, minNoticeDays: null, reasonRequired: false, weekdays: null, targets: { groupIds: [], employeeIds: [] }, nameEn: null };
-const ID = /^[0-9a-f-]{36}$/i;
+const ID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 export function validateTypeRule(v: unknown): LeaveTypeRule | null {
   if (!v || typeof v !== 'object') return null;
   const o = v as Record<string, unknown>;

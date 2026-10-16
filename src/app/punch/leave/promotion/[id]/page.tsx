@@ -15,7 +15,7 @@ export default async function MyPromotionPage({ params }: { params: Promise<{ id
   const me = await getMe();
   if (!me) redirect('/login');
   const [t, { id }] = await Promise.all([getTranslations('promotionPlan'), params]);
-  if (!/^[0-9a-f-]{36}$/i.test(id)) notFound();
+  if (!/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(id)) notFound();
   const x = await loadMyTarget(id, me.id);
   if (!x) notFound();
   const { campaign: c, target: v } = x;

@@ -4,7 +4,7 @@ import { api, ApiError, readJson } from '@/lib/api';
 import { getMe } from '@/lib/auth';
 import { sendNotice, type Audience } from '@/lib/work-messages';
 
-const UUID = /^[0-9a-f-]{36}$/i;
+const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 const ids = (v: unknown): string[] | null => (Array.isArray(v) && v.length > 0 && v.length <= 500 && v.every((x) => typeof x === 'string' && UUID.test(x)) ? [...new Set(v as string[])] : null);
 
 export const POST = api('messages', async (req) => {

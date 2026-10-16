@@ -22,9 +22,14 @@ export function PageEnter() {
       if (!m || seen.has(m)) return false;
       seen.add(m);
       // 공지 · 사내게시판은 폰에서 아래에서 천천히 밀려 올라온다 (2026-10-17 의뢰인)
+      // transform 대신 top(position: relative)으로 움직인다 — transform은 본문 안의 고정 요소(+ 버튼 · 판)까지 같이 끌고 가고 sticky 제목 줄을 깨뜨린다
       const board = /^\/(punch|admin)\/(notices|messages)(\/|$)/.test(path) && window.matchMedia('(max-width: 1023px)').matches;
-      if (board) m.animate([{ opacity: 0.4, transform: 'translateY(45vh)' }, { opacity: 1, transform: 'none' }], { duration: 460, easing: 'cubic-bezier(.2,.8,.2,1)' });
-      else m.animate([{ opacity: 0, transform: 'translateY(10px)' }, { opacity: 1, transform: 'none' }], { duration: 240, easing: 'cubic-bezier(.2,.8,.2,1)' });
+      const was = m.style.position;
+      m.style.position = 'relative';
+      const a = board
+        ? m.animate([{ opacity: 0.4, top: '45vh' }, { opacity: 1, top: '0px' }], { duration: 460, easing: 'cubic-bezier(.2,.8,.2,1)' })
+        : m.animate([{ opacity: 0, top: '10px' }, { opacity: 1, top: '0px' }], { duration: 240, easing: 'cubic-bezier(.2,.8,.2,1)' });
+      a.onfinish = a.oncancel = () => (m.style.position = was);
       return true;
     };
     if (play()) return;

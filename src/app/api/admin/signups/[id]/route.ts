@@ -7,7 +7,7 @@ export const POST = api<{ params: Promise<{ id: string }> }>('admin.signups.deci
   const me = await requireAdmin();
   if (!me) throw new ApiError(403, 'forbidden');
   const { id } = await ctx.params;
-  if (!/^[0-9a-f-]{36}$/i.test(id)) throw new ApiError(400, 'invalid_input');
+  if (!/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(id)) throw new ApiError(400, 'invalid_input');
   const b = await readJson(req);
   if (b.action === 'approve') return approveSignup({ id, actorId: me.id, employeeNo: b.employeeNo, groupId: b.groupId, joinedOn: b.joinedOn });
   if (b.action === 'reject') {

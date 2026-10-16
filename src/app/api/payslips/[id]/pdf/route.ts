@@ -15,7 +15,7 @@ export async function GET(_req: Request, ctx: { params: Promise<{ id: string }> 
   const me = await getMe();
   if (!me) return deny(401, 'not_signed_in');
   const { id } = await ctx.params;
-  if (!/^[0-9a-f-]{36}$/i.test(id)) return deny(404, 'not_found');
+  if (!/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(id)) return deny(404, 'not_found');
   const found = await loadMySlip(me.id, id, OFFICE.practiceMode);
   if (!found) return deny(404, 'not_found');
   const { slip, lines, time } = found;

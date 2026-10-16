@@ -38,7 +38,7 @@ export default async function MemberDetailPage({ params }: { params: Promise<{ i
   const f = await getFormatter();
   const me = (await getMe())!;
   const { id } = await params;
-  if (!/^[0-9a-f-]{36}$/i.test(id)) notFound();
+  if (!/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(id)) notFound();
   const db = createAdminClient();
   const [{ data: p }, { data: keys }, groups] = await Promise.all([
     db.from('profiles').select('id, name, employee_no, role, active, joined_on, locale, can_view_payroll, group_id, phone, email, job_title, password_set_at, shift_template_id, job_id, admin_level').eq('id', id).maybeSingle(),

@@ -15,7 +15,7 @@ const TONE = { CANDIDATE: 'neutral', EXCLUDED: 'neutral', NOTIFIED: 'warn', PLAN
 
 export default async function PromotionDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const [t, f, { id }] = await Promise.all([getTranslations('admin.promotion'), getFormatter(), params]);
-  if (!/^[0-9a-f-]{36}$/i.test(id)) notFound();
+  if (!/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(id)) notFound();
   const x = await loadCampaign(id);
   if (!x) notFound();
   const { campaign: c, targets } = x;

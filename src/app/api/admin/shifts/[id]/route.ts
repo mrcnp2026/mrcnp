@@ -7,7 +7,7 @@ import { requireAdmin } from '@/lib/auth';
 import { validateTemplate } from '@/lib/shifts';
 import { createAdminClient } from '@/lib/supabase/admin';
 
-const UUID = /^[0-9a-f-]{36}$/i;
+const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
 export const POST = api<{ params: Promise<{ id: string }> }>('admin.shifts.update', async (req, ctx) => {
   await requireConsole(); // 통합설정 잠금 — 숫자 4자리로 연 관리자만 (2026-10-14 결정 사항 개발-29)

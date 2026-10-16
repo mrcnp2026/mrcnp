@@ -18,7 +18,7 @@ const AUTO_CODES: { code: string; kind: 'PAYMENT' | 'DEDUCTION' }[] = [
 export default async function PayStatementPage({ params }: { params: Promise<{ id: string; employeeId: string }> }) {
   const [t, f, me, { id, employeeId }] = await Promise.all([getTranslations('admin.payRuns'), getFormatter(), getMe(), params]);
   if (!me || me.role !== 'admin' || !me.canViewPayroll) return <PageShell><p className="rounded-card bg-warn-tint p-4 text-sm text-warn">{t('forbidden')}</p></PageShell>;
-  if (!/^[0-9a-f-]{36}$/i.test(id) || !/^[0-9a-f-]{36}$/i.test(employeeId)) notFound();
+  if (!/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(id) || !/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(employeeId)) notFound();
   const run = await loadRun(id);
   if (!run || run.kind === 'DAILY') notFound(); // 일용 대장은 일용직 화면에서 연다
   const db = createAdminClient();

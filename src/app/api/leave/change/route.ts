@@ -9,7 +9,7 @@ export const POST = api('leave.change.create', async (req) => {
   const me = await getMe();
   if (!me) throw new ApiError(401, 'not_signed_in');
   const b = await readJson(req);
-  if (typeof b.leaveId !== 'string' || !/^[0-9a-f-]{36}$/i.test(b.leaveId)) throw new ApiError(400, 'invalid_input');
+  if (typeof b.leaveId !== 'string' || !/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(b.leaveId)) throw new ApiError(400, 'invalid_input');
   const reason = cleanText(b.reason);
   if (reason.length < 1 || reason.length > 200) throw new ApiError(400, 'reason_required');
   const db = createAdminClient();

@@ -22,7 +22,7 @@ export function safeDetail(d: SafeDetail): Record<string, string | number> {
   if (typeof d.httpStatus === 'number') out.httpStatus = d.httpStatus;
   if (d.dbCode && /^[A-Z0-9]{2,10}$/.test(d.dbCode)) out.dbCode = d.dbCode;
   if (typeof d.ms === 'number') out.ms = Math.round(d.ms);
-  if (d.requestId && /^[0-9a-f-]{36}$/.test(d.requestId)) out.requestId = d.requestId;
+  if (d.requestId && /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/.test(d.requestId)) out.requestId = d.requestId;
   return out;
 }
 

@@ -5,7 +5,7 @@ import { requirePayroll } from '@/lib/payroll/data';
 import { withdrawUploads } from '@/lib/payroll/slip-upload-data';
 import { cleanReason } from '@/lib/staff-rules';
 
-const UUID = /^[0-9a-f-]{36}$/i;
+const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
 export const POST = api('admin.payroll.slips.withdraw', async (req, ctx) => {
   const me = await requirePayroll();

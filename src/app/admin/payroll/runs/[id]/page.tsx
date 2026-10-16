@@ -19,7 +19,7 @@ const TONE = { DRAFT: 'neutral', CALCULATED: 'info', REVIEWED: 'warn', FINALIZED
 export default async function PayRunPage({ params, searchParams }: { params: Promise<{ id: string }>; searchParams: Promise<{ existed?: string }> }) {
   const [t, f, me, { id }] = await Promise.all([getTranslations('admin.payRuns'), getFormatter(), getMe(), params]);
   if (!me || me.role !== 'admin' || !me.canViewPayroll) return <PageShell><p className="rounded-card bg-warn-tint p-4 text-sm text-warn">{t('forbidden')}</p></PageShell>;
-  if (!/^[0-9a-f-]{36}$/i.test(id)) notFound();
+  if (!/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(id)) notFound();
   const run = await loadRun(id);
   if (!run || run.kind === 'DAILY') notFound(); // 일용 대장은 일용직 화면에서 연다
   const [{ lines, stale }, groups, { data: who }] = await Promise.all([loadRunBoard(run), loadOrgGroups(), createAdminClient().from('profiles').select('id, name').in('id', [run.createdBy, run.reviewedBy, run.finalizedBy].filter((x): x is string => !!x))]);

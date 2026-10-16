@@ -13,7 +13,7 @@ export const POST = api<{ params: Promise<{ id: string }> }>('admin.punchRequest
   if (!viewer) throw new ApiError(403, 'forbidden');
   const me = viewer.me;
   const { id } = await ctx.params;
-  if (!/^[0-9a-f-]{36}$/i.test(id)) throw new ApiError(404, 'not_found');
+  if (!/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(id)) throw new ApiError(404, 'not_found');
   const b = await readJson(req);
   if (b.decision !== 'approved' && b.decision !== 'rejected') throw new ApiError(400, 'invalid_input');
   const db = createAdminClient();

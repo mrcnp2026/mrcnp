@@ -7,7 +7,7 @@ export const POST = api<{ params: Promise<{ id: string }> }>('leave.promotion.pl
   const me = await getMe();
   if (!me) throw new ApiError(401, 'not_signed_in');
   const { id } = await ctx.params;
-  if (!/^[0-9a-f-]{36}$/i.test(id)) throw new ApiError(400, 'invalid_input');
+  if (!/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(id)) throw new ApiError(400, 'invalid_input');
   const b = await readJson(req);
   if (!Array.isArray(b.dates) || !b.dates.every((d) => typeof d === 'string')) throw new ApiError(400, 'promotion_plan_invalid');
   const note = typeof b.note === 'string' ? b.note.trim().slice(0, 300) : '';

@@ -18,7 +18,7 @@ export const POST = api<{ params: Promise<{ id: string }> }>('admin.punches.fix'
   if (!me) throw new ApiError(403, 'forbidden');
   if (!me.top) throw new ApiError(403, 'top_only'); // 직권 수정은 최고관리자만
   const { id } = await ctx.params;
-  if (!/^[0-9a-f-]{36}$/i.test(id)) throw new ApiError(404, 'not_found');
+  if (!/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(id)) throw new ApiError(404, 'not_found');
   const b = await readJson(req);
   const action = b.action;
   if (action !== 'modify' && action !== 'void') throw new ApiError(400, 'invalid_input');

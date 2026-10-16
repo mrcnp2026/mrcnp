@@ -11,7 +11,7 @@ export const POST = api('admin.groups.create', async (req) => {
   const name = cleanGroupName(b.name);
   if (!name) throw new ApiError(400, 'invalid_group_name');
   const parentId = b.parentId === undefined || b.parentId === null || b.parentId === '' ? null : b.parentId;
-  if (parentId !== null && (typeof parentId !== 'string' || !/^[0-9a-f-]{36}$/i.test(parentId))) throw new ApiError(400, 'invalid_input');
+  if (parentId !== null && (typeof parentId !== 'string' || !/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(parentId))) throw new ApiError(400, 'invalid_input');
   const db = createAdminClient();
   if (parentId) {
     const { data: parent } = await db.from('org_groups').select('id, parent_id, active').eq('id', parentId).maybeSingle();

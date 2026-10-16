@@ -13,7 +13,7 @@ const RTONE = { DRAFT: 'neutral', CALCULATED: 'info', REVIEWED: 'warn', FINALIZE
 export default async function DailyRunPage({ params }: { params: Promise<{ id: string }> }) {
   const [t, f, me, { id }] = await Promise.all([getTranslations('admin.daily'), getFormatter(), getMe(), params]);
   if (!me || me.role !== 'admin' || !me.canViewPayroll) return <PageShell><p className="rounded-card bg-warn-tint p-4 text-sm text-warn">{t('forbidden')}</p></PageShell>;
-  if (!/^[0-9a-f-]{36}$/i.test(id)) notFound();
+  if (!/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(id)) notFound();
   const board = await loadDailyBoard(id, me);
   if (!board) notFound();
   const { run, lines, stale } = board;

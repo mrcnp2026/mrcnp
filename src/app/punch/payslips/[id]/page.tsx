@@ -18,7 +18,7 @@ export default async function MyPayslipPage({ params }: { params: Promise<{ id: 
   const me = await getMe();
   if (!me) redirect('/login');
   const [t, f, { id }] = await Promise.all([getTranslations('payslip'), getFormatter(), params]);
-  if (!/^[0-9a-f-]{36}$/i.test(id)) notFound();
+  if (!/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(id)) notFound();
   const found = await loadMySlip(me.id, id, OFFICE.practiceMode);
   if (!found) notFound();
   const { slip, lines, previous, replacedBy } = found;

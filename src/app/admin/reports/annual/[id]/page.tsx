@@ -17,7 +17,7 @@ export const maxDuration = 60;
 
 export default async function AnnualEmployeePage({ params, searchParams }: { params: Promise<{ id: string }>; searchParams: Promise<{ y?: string; k?: string; live?: string }> }) {
   const [t, { id }, sp, groups] = await Promise.all([getTranslations('admin.annual'), params, searchParams, loadOrgGroups()]);
-  if (!/^[0-9a-f-]{36}$/i.test(id)) notFound();
+  if (!/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(id)) notFound();
   const thisYear = Number(toKstDate(new Date()).slice(0, 4));
   const y = Number(sp.y);
   const year = Number.isInteger(y) && y >= 2000 && y <= thisYear ? y : thisYear;

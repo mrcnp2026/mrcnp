@@ -119,7 +119,7 @@ export type ShiftInput = { date: string; startTime: string; endTime: string; kin
 
 /** 날짜별 일정 입력값 검사 */
 export function validateShift(b: Record<string, unknown>): { ok: true; value: ShiftInput } | { ok: false; code: 'invalid_date' | 'invalid_time' | 'invalid_input' | 'no_people' } {
-  const UUID = /^[0-9a-f-]{36}$/i;
+  const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
   if (typeof b.date !== 'string' || !/^\d{4}-\d{2}-\d{2}$/.test(b.date) || Number.isNaN(Date.parse(`${b.date}T00:00:00Z`))) return { ok: false, code: 'invalid_date' };
   const { startTime, endTime } = b;
   if (typeof startTime !== 'string' || typeof endTime !== 'string' || !TIME.test(startTime) || !TIME.test(endTime) || startTime >= endTime) return { ok: false, code: 'invalid_time' };

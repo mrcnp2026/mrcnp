@@ -24,7 +24,7 @@ export const POST = api('admin.records.confirm', async (req) => {
   const items: Item[] = [];
   for (const x of b.items as unknown[]) {
     const it = x as { employeeId?: unknown; date?: unknown };
-    if (typeof it?.employeeId !== 'string' || !/^[0-9a-f-]{36}$/i.test(it.employeeId) || typeof it.date !== 'string' || !/^\d{4}-\d{2}-\d{2}$/.test(it.date)) throw new ApiError(400, 'invalid_input');
+    if (typeof it?.employeeId !== 'string' || !/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(it.employeeId) || typeof it.date !== 'string' || !/^\d{4}-\d{2}-\d{2}$/.test(it.date)) throw new ApiError(400, 'invalid_input');
     if (!items.some((y) => y.employeeId === it.employeeId && y.date === it.date)) items.push({ employeeId: it.employeeId, date: it.date });
   }
   const practice = OFFICE.practiceMode;

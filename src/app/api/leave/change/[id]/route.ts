@@ -7,7 +7,7 @@ export const POST = api<{ params: Promise<{ id: string }> }>('leave.change.cance
   const me = await getMe();
   if (!me) throw new ApiError(401, 'not_signed_in');
   const { id } = await ctx.params;
-  if (!/^[0-9a-f-]{36}$/i.test(id)) throw new ApiError(404, 'not_found');
+  if (!/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(id)) throw new ApiError(404, 'not_found');
   const b = await readJson(req);
   if (b.cancel !== true) throw new ApiError(400, 'invalid_input');
   const { data, error } = await createAdminClient().from('leave_change_requests').update({ status: 'cancelled', decided_at: new Date().toISOString() }).eq('id', id).eq('employee_id', me.id).eq('status', 'pending').select('id');

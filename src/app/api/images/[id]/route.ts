@@ -6,7 +6,7 @@ export async function GET(_req: Request, ctx: { params: Promise<{ id: string }> 
   const me = await getMe();
   if (!me) return new Response(null, { status: 401 });
   const { id } = await ctx.params;
-  if (!/^[0-9a-f-]{36}$/i.test(id)) return new Response(null, { status: 404 });
+  if (!/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(id)) return new Response(null, { status: 404 });
   const db = createAdminClient();
   const { data: row } = await db.from('content_images').select('storage_path, mime').eq('id', id).maybeSingle();
   if (!row) return new Response(null, { status: 404 });

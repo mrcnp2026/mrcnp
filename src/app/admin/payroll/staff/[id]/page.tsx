@@ -19,7 +19,7 @@ import { ContractForm, ItemForms, TaxForm } from './StaffPayForms';
 export default async function StaffPayDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const [t, f, me, { id }] = await Promise.all([getTranslations('admin.staffPay'), getFormatter(), getMe(), params]);
   if (!me || me.role !== 'admin' || !me.canViewPayroll) return <PageShell><p className="rounded-card bg-warn-tint p-4 text-sm text-warn">{t('forbidden')}</p></PageShell>;
-  if (!/^[0-9a-f-]{36}$/i.test(id)) notFound();
+  if (!/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(id)) notFound();
   const db = createAdminClient();
   const [{ data: p }, pay, groups, items, { data: staff }, reliefOn] = await Promise.all([
     db.from('profiles').select('id, name, employee_no, group_id, joined_on, active').eq('id', id).maybeSingle(),

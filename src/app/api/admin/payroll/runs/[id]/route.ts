@@ -6,7 +6,7 @@ import { publishRun, unpublishStatement } from '@/lib/payroll/publish-data';
 import { addOverride, calculateRun, finalizeRun, reviewRun, setMember, startCorrection, withdrawOverride } from '@/lib/payroll/run-data';
 
 export const maxDuration = 60;
-const UUID = /^[0-9a-f-]{36}$/i;
+const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 const reasonOf = (v: unknown): string | null => {
   if (typeof v !== 'string') return null;
   const s = v.replace(/[\u0000-\u0008\u000B-\u001F\u007F]/g, '').trim();

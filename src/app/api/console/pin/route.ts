@@ -15,7 +15,7 @@ export const POST = api('console.pin', async (req) => {
   if (b.action === 'open') return openConsole(me, pin);
   if (b.action === 'reset') {
     await requireConsole(); // 지우는 사람도 통합설정을 연 상태여야 한다(권한 화면에서 누른다)
-    if (typeof b.employeeId !== 'string' || !/^[0-9a-f-]{36}$/i.test(b.employeeId)) throw new ApiError(400, 'invalid_input');
+    if (typeof b.employeeId !== 'string' || !/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(b.employeeId)) throw new ApiError(400, 'invalid_input');
     await resetPin(me, b.employeeId);
     return { ok: true };
   }

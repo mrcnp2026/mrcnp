@@ -13,7 +13,7 @@ import { kstDateTime } from '@/lib/time';
 
 export default async function LeaveDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const [t, tl, ts, f, { id }] = await Promise.all([getTranslations('admin.leaveDetail'), getTranslations('leave'), getTranslations('requests.status'), getFormatter(), params]);
-  if (!/^[0-9a-f-]{36}$/.test(id)) notFound();
+  if (!/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/.test(id)) notFound();
   const [live, test, types, { data: staff }] = await Promise.all([loadLeaveRequests({ practice: false }), loadLeaveRequests({ practice: true }), loadAllLeaveTypes(), createAdminClient().from('profiles').select('id, name')]);
   const r = [...live, ...test].find((x) => x.id === id);
   if (!r) notFound();

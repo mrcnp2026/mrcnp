@@ -14,7 +14,7 @@ import { CaseActions, CaseForm } from '../RetirementForms';
 export default async function RetirementCasePage({ params }: { params: Promise<{ id: string }> }) {
   const [t, f, me, { id }] = await Promise.all([getTranslations('admin.retirement'), getFormatter(), getMe(), params]);
   if (!me || me.role !== 'admin' || !me.canViewPayroll) return <PageShell><p className="rounded-card bg-warn-tint p-4 text-sm text-warn">{t('forbidden')}</p></PageShell>;
-  if (!/^[0-9a-f-]{36}$/i.test(id)) notFound();
+  if (!/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(id)) notFound();
   const k = await loadCase(id);
   if (!k) notFound();
   const { data: p } = await createAdminClient().from('profiles').select('name, employee_no').eq('id', k.employeeId).maybeSingle();

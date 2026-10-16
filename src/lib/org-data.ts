@@ -12,7 +12,7 @@ export async function loadOrgGroups(): Promise<OrgGroup[]> {
 /** 직원에게 줄 수 있는 그룹인가 (있는 그룹이고 숨기지 않았다). null은 미배정 */
 export async function assignableGroup(id: unknown): Promise<string | null | undefined> {
   if (id === undefined || id === null || id === '') return null;
-  if (typeof id !== 'string' || !/^[0-9a-f-]{36}$/i.test(id)) return undefined;
+  if (typeof id !== 'string' || !/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(id)) return undefined;
   const { data } = await createAdminClient().from('org_groups').select('id, active').eq('id', id).maybeSingle();
   return data?.active ? data.id : undefined;
 }

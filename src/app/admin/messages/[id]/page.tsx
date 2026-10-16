@@ -9,7 +9,7 @@ import { loadThread } from '@/lib/work-messages';
 export default async function AdminMessagePage({ params }: { params: Promise<{ id: string }> }) {
   const me = (await getMe())!;
   const { id } = await params;
-  if (!/^[0-9a-f-]{36}$/i.test(id)) notFound();
+  if (!/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(id)) notFound();
   const thread = await loadThread(id, me);
   if (!thread) notFound();
   const { data: staff } = await createAdminClient().from('profiles').select('id, name');

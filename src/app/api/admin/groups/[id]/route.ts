@@ -43,7 +43,7 @@ export const POST = api<{ params: Promise<{ id: string }> }>('admin.groups.updat
   // 이 지점에서 쓰는 출퇴근 장소 (2026-10-10) — 보낸 목록으로 통째로 맞춘다. 빈 목록이면 "켜진 장소 전체"로 돌아간다
   let places: string[] | null = null;
   if (b.locationIds !== undefined) {
-    if (!Array.isArray(b.locationIds) || b.locationIds.length > 50 || b.locationIds.some((x) => typeof x !== 'string' || !/^[0-9a-f-]{36}$/i.test(x))) throw new ApiError(400, 'invalid_input');
+    if (!Array.isArray(b.locationIds) || b.locationIds.length > 50 || b.locationIds.some((x) => typeof x !== 'string' || !/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(x))) throw new ApiError(400, 'invalid_input');
     places = [...new Set(b.locationIds as string[])];
     if (places.length) {
       const { data: found } = await db.from('office_locations').select('id').in('id', places);

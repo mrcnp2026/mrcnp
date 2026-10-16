@@ -14,9 +14,9 @@ const field = 'min-h-9 rounded-button border border-border bg-bg px-3 text-sm';
 export default async function NoticePage({ params, searchParams }: { params: Promise<{ id: string }>; searchParams: Promise<{ run?: string; live?: string }> }) {
   const [t, f, me, { id }, sp] = await Promise.all([getTranslations('admin.insurance'), getFormatter(), getMe(), params, searchParams]);
   if (!me || me.role !== 'admin' || !me.canViewPayroll) return <PageShell><p className="rounded-card bg-warn-tint p-4 text-sm text-warn">{t('forbidden')}</p></PageShell>;
-  if (!/^[0-9a-f-]{36}$/i.test(id)) notFound();
+  if (!/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(id)) notFound();
   const practice = OFFICE.practiceMode && sp.live !== '1';
-  const v = await loadNotice({ id, runId: sp.run && /^[0-9a-f-]{36}$/i.test(sp.run) ? sp.run : null, practice, testViewer: !!me.employeeNo?.startsWith('e2e-') });
+  const v = await loadNotice({ id, runId: sp.run && /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(sp.run) ? sp.run : null, practice, testViewer: !!me.employeeNo?.startsWith('e2e-') });
   if (!v) notFound();
   const won = (n: number | null) => (n === null ? '' : t('won', { n: f.number(n) }));
   const signed = (n: number | null) => (n === null ? '' : t('won', { n: f.number(n, { signDisplay: 'exceptZero' }) }));

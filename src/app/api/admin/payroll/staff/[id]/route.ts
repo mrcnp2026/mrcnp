@@ -8,7 +8,7 @@ import { cleanText, isDate } from '@/lib/payroll/settings';
 import { addStaffItem, endStaffItem, saveContract, saveTax } from '@/lib/payroll/staff-data';
 import { createAdminClient } from '@/lib/supabase/admin';
 
-const UUID = /^[0-9a-f-]{36}$/i;
+const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
 export const POST = api<{ params: Promise<{ id: string }> }>('admin.payroll.staff', async (req, ctx) => {
   const me = await requirePayroll();

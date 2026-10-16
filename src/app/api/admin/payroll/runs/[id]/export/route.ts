@@ -20,7 +20,7 @@ export async function GET(_req: Request, ctx: { params: Promise<{ id: string }> 
     return deny(e instanceof ApiError ? e.status : 500, e instanceof ApiError ? e.code : 'generic');
   }
   const { id } = await ctx.params;
-  if (!/^[0-9a-f-]{36}$/i.test(id)) return deny(400, 'invalid_input');
+  if (!/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(id)) return deny(400, 'invalid_input');
   const run = await loadRun(id);
   if (!run) return deny(404, 'not_found');
   if (!run.generationId) return deny(409, 'payroll_not_calculated');

@@ -6,7 +6,7 @@ import { toDailyItems, type DailyTerms } from '@/lib/payroll/daily';
 import { addEngagement, addPayee, addWork, calculateDaily, createDailyRun, finalizeDaily, reviewDaily, setEngagement, setPayeeActive, setWorkStatus, startDailyCorrection } from '@/lib/payroll/daily-data';
 
 export const maxDuration = 60;
-const UUID = /^[0-9a-f-]{36}$/i;
+const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 const isId = (v: unknown): v is string => typeof v === 'string' && UUID.test(v);
 const isDate = (v: unknown): v is string => typeof v === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(v) && !Number.isNaN(Date.parse(`${v}T00:00:00Z`));
 const clean = (v: unknown, max: number): string => (typeof v === 'string' ? v.replace(/[\u0000-\u0008\u000B\u000C\u000E-\u001F\u007F]/g, '').trim().slice(0, max) : '');

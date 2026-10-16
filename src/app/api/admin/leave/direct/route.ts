@@ -13,7 +13,7 @@ import { assertStaffTarget } from '@/lib/staff-data';
 import { cleanReason } from '@/lib/staff-rules';
 import { createAdminClient } from '@/lib/supabase/admin';
 
-const UUID = /^[0-9a-f-]{36}$/i;
+const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
 export const POST = api('admin.leave.direct', async (req, ctx) => {
   const me = await requireAdmin();

@@ -25,7 +25,7 @@ export async function GET(req: Request): Promise<Response> {
   const g = u.searchParams.get('g');
   const groupId = g && groups.some((x) => x.id === g) ? g : null;
   const e = u.searchParams.get('e');
-  const employeeId = e && /^[0-9a-f-]{36}$/i.test(e) ? e : undefined;
+  const employeeId = e && /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(e) ? e : undefined;
   const practice = OFFICE.practiceMode && u.searchParams.get('live') !== '1';
   const t = await getTranslations({ locale: 'ko', namespace: 'admin.annual' });
   const r = await buildAnnualReport({ year, practice, groupId: employeeId ? null : groupId, employeeId });

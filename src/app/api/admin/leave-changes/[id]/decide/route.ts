@@ -7,7 +7,7 @@ export const POST = api<{ params: Promise<{ id: string }> }>('admin.leaveChanges
   const viewer = await requireStaffViewer();
   if (!viewer) throw new ApiError(403, 'forbidden');
   const { id } = await ctx.params;
-  if (!/^[0-9a-f-]{36}$/i.test(id)) throw new ApiError(404, 'not_found');
+  if (!/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(id)) throw new ApiError(404, 'not_found');
   const b = await readJson(req);
   if (b.decision !== 'approved' && b.decision !== 'rejected') throw new ApiError(400, 'invalid_input');
   const result = await atomicRpc<string>('decide_leave_change_atomic', { p_id: id, p_decision: b.decision, p_decided_by: viewer.me.id, p_request_id: ctx.requestId });

@@ -10,7 +10,7 @@ export const POST = api<{ params: Promise<{ id: string }> }>('admin.places.updat
   const me = await requireAdmin();
   if (!me) throw new ApiError(403, 'forbidden');
   const { id } = await ctx.params;
-  if (!/^[0-9a-f-]{36}$/i.test(id)) throw new ApiError(404, 'not_found');
+  if (!/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(id)) throw new ApiError(404, 'not_found');
   const b = await readJson(req);
   const patch: Record<string, unknown> = { updated_by: me.id };
   if (b.active !== undefined) {

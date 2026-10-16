@@ -19,7 +19,7 @@ export default async function BranchPage({ params }: { params: Promise<{ id: str
   const t = await getTranslations('admin.branches');
   const tc = await getTranslations('common');
   const { id } = await params;
-  if (!/^[0-9a-f-]{36}$/i.test(id)) notFound();
+  if (!/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(id)) notFound();
   const db = createAdminClient();
   const { data: g } = await db.from('org_groups').select('id, name, parent_id, memo, active').eq('id', id).maybeSingle();
   if (!g) notFound();
