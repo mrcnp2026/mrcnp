@@ -86,7 +86,15 @@ export default async function PayrollPage({ searchParams }: { searchParams: Prom
           </a>
         </div>
       </header>
-      {practice && <p className="rounded-card bg-primary-tint p-3 text-sm text-primary">{tr('practiceBanner')}</p>}
+      {/* 연습 · 실제 기록 바꾸기 — 근태 월 집계와 같은 링크 (2026-10-16: 실제 기록을 옮긴 뒤 이 화면에서는 실제 쪽으로 갈 길이 없었다) */}
+      {OFFICE.practiceMode && (
+        <p className="flex flex-wrap items-center gap-x-3 rounded-card bg-primary-tint p-3 text-sm text-primary">
+          {practice && <span className="min-w-0 flex-1">{tr('practiceBanner')}</span>}
+          <Link href={practice ? `?m=${ym}&live=1` : `?m=${ym}`} className="ml-auto inline-flex min-h-9 items-center font-bold underline">
+            {practice ? tr('showLive') : tr('showPractice')}
+          </Link>
+        </p>
+      )}
       {unconfirmed > 0 ? (
         <p className="rounded-card border border-warn bg-warn-tint p-3 text-sm text-warn">
           {t('unconfirmed', { n: unconfirmed })}{' '}
