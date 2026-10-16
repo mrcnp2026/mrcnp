@@ -130,7 +130,28 @@ export default async function LeavePage({ searchParams }: { searchParams: Promis
             <ChevronRight aria-hidden size={16} />
           </Link>
         </div>
-        <div className="overflow-x-auto">
+        {/* 폰: 달마다 작은 칸 4×3 — 옆으로 밀어 보던 12달 표를 없앴다 (2026-10-16 디자인). 칸 안: 연차 사용 · 그 밖의 휴가 · 승인 대기 */}
+        <div className="flex flex-col gap-2 lg:hidden">
+          <ul className="num grid grid-cols-4 gap-1.5">
+            {monthly.map((m) => {
+              const any = m.deducted > 0 || m.other > 0 || m.pending > 0;
+              return (
+                <li key={m.month} className={`flex min-h-14 flex-col items-center justify-center rounded-button px-1 py-1.5 text-center ${any ? 'bg-primary-tint' : 'bg-surface'}`}>
+                  <span className="text-xs text-muted">{t('monthN', { n: m.month })}</span>
+                  <span className={`text-sm font-bold ${any ? 'text-primary' : 'text-faint'}`}>{m.deducted > 0 ? cell(m.deducted) : '–'}</span>
+                  {m.other > 0 && <span className="text-xs text-muted">+{cell(m.other)}</span>}
+                  {m.pending > 0 && <span className="text-xs text-warn">{cell(m.pending)}</span>}
+                </li>
+              );
+            })}
+          </ul>
+          <p className="num flex flex-wrap gap-x-3 text-xs text-muted">
+            <span>{t('monthly.deducted')} <b className="text-text">{cell(total.deducted)}</b></span>
+            <span>{t('monthly.other')} <b className="text-text">{cell(total.other)}</b></span>
+            {total.pending > 0 && <span className="text-warn">{t('monthly.pending')} <b>{cell(total.pending)}</b></span>}
+          </p>
+        </div>
+        <div className="hidden overflow-x-auto lg:block">
           <table className="num w-full text-sm">
             <thead>
               <tr className="border-b border-border">
