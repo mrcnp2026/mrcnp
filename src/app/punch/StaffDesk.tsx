@@ -1,6 +1,7 @@
 // PC 직원 모드의 첫 화면 「스케줄」 — 시프티 PC 직원 모드 홈의 구성 (2026-10-11 의뢰인 스샷 `스샷/직원모드 홈.png`):
 //   왼쪽 좁은 칸 = 내 근로 통계 · 내 휴가 통계 / 오른쪽 = [‹][›][오늘] 달 이름 · 요청 버튼들 · 월 달력(일~토).
 // PC에서는 출퇴근을 찍지 않는다(확정-13) — 그래서 폰 홈의 출근/퇴근 카드 대신 이 화면을 보인다. 폰에서는 보이지 않는다.
+// 디자인(2026-10-16 의뢰인: 「달력이 예쁘지 않다, 톤 · 결이 다르다」): 견본 「나 · 파랑」(개발-22)에 맞춰 — 카드 하나 · 가는 선 · 주말은 칸을 칠하지 않고 날짜 색만 · 일정은 옅은 파랑 딱지 · 버튼은 파랑 하나 + 테두리.
 import { CalendarPlus, ChevronLeft, ChevronRight, MapPinned, Plane } from 'lucide-react';
 import { getFormatter, getTranslations } from 'next-intl/server';
 import Link from 'next/link';
@@ -48,7 +49,7 @@ export async function StaffDesk({ meId, today, month }: { meId: string; today: s
     if (inMonth) leaveUnits += onLeave.reduce((a, x) => a + x.unit, 0);
     const wd = isoWeekday(d);
     const holiday = period.rule ? resolveDayType(d, period.ruleAt(d) ?? period.rule, period.holidays) === 'holiday' : false;
-    return { d, inMonth, items: off ? [] : plan.items, onLeave, red: wd >= 6 || holiday || holidayName.has(d), name: holidayName.get(d) ?? null };
+    return { d, inMonth, items: off ? [] : plan.items, onLeave, red: wd === 7 || holiday || holidayName.has(d), sat: wd === 6 && !holiday && !holidayName.has(d), name: holidayName.get(d) ?? null };
   });
   const sum = (k: 'netMinutes' | 'payableMinutes') => rows.reduce((a, r) => a + r[k], 0);
   const over = rows.reduce((a, r) => a + r.overtimeMinutes + r.holidayMinutes, 0);
@@ -60,25 +61,26 @@ export async function StaffDesk({ meId, today, month }: { meId: string; today: s
   };
   const href = (v: string) => (v === today.slice(0, 7) ? '/punch' : `/punch?m=${v}`);
   const weekdays = [...Array(7)].map((_, i) => f.dateTime(kstDateTime(addDays(gridStart, i), '12:00'), { weekday: 'short' }));
-  const stat = 'flex items-baseline justify-between gap-3 py-1.5 text-sm';
-  const tool = 'inline-flex h-8 items-center gap-1.5 rounded-button px-3 text-sm font-bold whitespace-nowrap';
+  const stat = 'flex items-baseline justify-between gap-3 py-2 text-sm';
+  const tool = 'inline-flex h-9 items-center gap-1.5 rounded-button px-3.5 text-sm font-semibold whitespace-nowrap';
+  const card = 'rounded-card border border-border bg-bg p-5 shadow-card';
 
   return (
     <div className="hidden lg:grid lg:grid-cols-[17rem_minmax(0,1fr)] lg:gap-8">
-      <aside className="flex flex-col gap-6">
-        <section>
-          <h2 className="pb-2 font-bold">{t('workStats')}</h2>
-          <p className="num pb-2 text-sm text-muted">{first.replaceAll('-', '.')} - {last.replaceAll('-', '.')}</p>
-          <dl className="num divide-y divide-border border-t border-border">
-            <div className={stat}><dt className="text-muted">{t('planned')}</dt><dd className="font-bold">{hm(planned)}</dd></div>
-            <div className={stat}><dt className="text-muted">{t('actual')}</dt><dd className="font-bold">{hm(sum('netMinutes'))}</dd></div>
-            <div className={stat}><dt className="text-muted">{t('payable')}</dt><dd className="font-bold">{hm(sum('payableMinutes'))}</dd></div>
-            <div className={stat}><dt className="text-muted">{t('overtime')}</dt><dd className={`font-bold ${over > 0 ? 'text-danger' : ''}`}>{hm(over)}</dd></div>
-            <div className={stat}><dt className="text-muted">{t('leaveUsed')}</dt><dd className="font-bold">{t('days', { n: n(leaveUnits) })}</dd></div>
+      <aside className="flex flex-col gap-4">
+        <section className={card}>
+          <h2 className="font-bold">{t('workStats')}</h2>
+          <p className="num pt-0.5 pb-3 text-xs text-faint">{first.replaceAll('-', '.')} - {last.replaceAll('-', '.')}</p>
+          <dl className="num divide-y divide-border">
+            <div className={stat}><dt className="text-muted">{t('planned')}</dt><dd className="font-semibold">{hm(planned)}</dd></div>
+            <div className={stat}><dt className="text-muted">{t('actual')}</dt><dd className="font-semibold">{hm(sum('netMinutes'))}</dd></div>
+            <div className={stat}><dt className="text-muted">{t('payable')}</dt><dd className="font-semibold">{hm(sum('payableMinutes'))}</dd></div>
+            <div className={stat}><dt className="text-muted">{t('overtime')}</dt><dd className={`font-semibold ${over > 0 ? 'text-danger' : ''}`}>{hm(over)}</dd></div>
+            <div className={stat}><dt className="text-muted">{t('leaveUsed')}</dt><dd className="font-semibold">{t('days', { n: n(leaveUnits) })}</dd></div>
           </dl>
         </section>
-        <section>
-          <h2 className="pb-2 font-bold">{t('leaveStats')}</h2>
+        <section className={card}>
+          <h2 className="pb-3 font-bold">{t('leaveStats')}</h2>
           <table className="num w-full text-sm">
             <thead>
               <tr className="text-muted">
@@ -98,7 +100,7 @@ export async function StaffDesk({ meId, today, month }: { meId: string; today: s
             </tbody>
           </table>
           {bal.pending > 0 && <p className="num pt-1 text-xs text-warn">{t('pending', { n: n(bal.pending) })}</p>}
-          <Link href="/punch/leave" className="inline-flex min-h-9 items-center text-sm font-bold text-primary">{t('leaveLink')} ›</Link>
+          <Link href="/punch/leave" className="inline-flex min-h-9 items-center pt-1 text-sm font-semibold text-primary">{t('leaveLink')} ›</Link>
         </section>
       </aside>
 
@@ -112,36 +114,42 @@ export async function StaffDesk({ meId, today, month }: { meId: string; today: s
           <h1 className="num pl-2 text-2xl font-bold">{f.dateTime(kstDateTime(first, '12:00'), { year: 'numeric', month: 'long' })}</h1>
           <div className="ml-auto flex flex-wrap gap-2">
             <Link href="/punch/leave?new=work" className={`${tool} border border-border bg-bg text-text hover:bg-surface`}><MapPinned aria-hidden size={16} />{t('reqWork')}</Link>
-            <Link href="/punch/leave?new=leave" className={`${tool} bg-ok text-on-primary`}><Plane aria-hidden size={16} />{t('reqLeave')}</Link>
+            <Link href="/punch/leave?new=leave" className={`${tool} border border-border bg-bg text-text hover:bg-surface`}><Plane aria-hidden size={16} />{t('reqLeave')}</Link>
             <Link href="/punch/schedule/request" className={`${tool} bg-primary text-on-primary`}><CalendarPlus aria-hidden size={16} />{t('reqShift')}</Link>
           </div>
         </div>
         {!period.rule && <p className="rounded-card bg-warn-tint p-3 text-sm text-warn">{t('noRule')}</p>}
-        <div className="grid grid-cols-7 border-t border-l border-border bg-bg">
-          {weekdays.map((w, i) => (
-            <div key={w} className={`border-r border-b border-border bg-surface py-2 text-center text-sm font-semibold ${i === 0 || i === 6 ? 'text-danger' : 'text-muted'}`}>{w}</div>
-          ))}
-          {cells.map((c) => (
-            <div key={c.d} className={`flex min-h-24 flex-col gap-1 border-r border-b border-border p-1.5 ${c.red ? 'bg-danger-tint' : c.inMonth ? '' : 'bg-surface'} ${c.inMonth ? '' : 'opacity-60'}`}>
-              <div className="flex items-center gap-1.5">
-                <span className={`num flex h-6 min-w-6 items-center justify-center rounded-chip px-1 text-sm font-bold ${c.d === today ? 'bg-primary text-on-primary' : c.red ? 'text-danger' : ''}`}>{c.d.endsWith('-01') ? `${Number(c.d.slice(5, 7))}/1` : Number(c.d.slice(8))}</span>
-                {c.name && <span className="truncate text-xs text-danger">{c.name}</span>}
+        <div className="overflow-hidden rounded-card border border-border bg-bg shadow-card">
+          <div className="grid grid-cols-7 border-b border-border">
+            {weekdays.map((w, i) => (
+              <div key={w} className={`py-2.5 text-center text-xs font-semibold ${i === 0 ? 'text-danger' : i === 6 ? 'text-primary' : 'text-muted'}`}>{w}</div>
+            ))}
+          </div>
+          <div className="grid grid-cols-7">
+            {cells.map((c, i) => (
+              <div key={c.d} className={`flex min-h-28 flex-col gap-1 p-2 ${i >= 7 ? 'border-t border-border' : ''} ${i % 7 ? 'border-l border-border' : ''} ${c.d === today ? 'bg-primary-tint/40' : ''}`}>
+                <div className="flex items-center gap-1.5">
+                  <span className={`num flex h-6 min-w-6 items-center justify-center rounded-chip px-1 text-sm ${c.d === today ? 'bg-primary font-bold text-on-primary' : !c.inMonth ? 'text-faint opacity-60' : c.red ? 'font-semibold text-danger' : c.sat ? 'font-semibold text-primary' : 'font-semibold text-text'}`}>{c.d.endsWith('-01') ? `${Number(c.d.slice(5, 7))}/1` : Number(c.d.slice(8))}</span>
+                  {c.name && <span className="truncate text-xs text-danger">{c.name}</span>}
+                </div>
+                <div className={`flex flex-col gap-1 ${c.inMonth ? '' : 'opacity-50'}`}>
+                  {c.onLeave.map((l) => (
+                    <p key={l.requestId} className="flex items-center gap-1 rounded-button bg-ok-tint px-1.5 py-0.5 text-xs font-medium text-ok">
+                      <Plane aria-hidden size={12} className="shrink-0" />
+                      <span className="truncate">{leaveTypeName(types, l.typeCode, tl)}</span>
+                    </p>
+                  ))}
+                  {c.items.map((it) => (
+                    <p key={`${it.shiftId ?? it.source}${it.startTime}`} className="num flex items-center gap-1.5 rounded-button bg-primary-tint px-1.5 py-0.5 text-xs font-medium text-primary">
+                      {it.color && <span aria-hidden className={`size-1.5 shrink-0 rounded-chip ${SHIFT_COLOR_CLASS[it.color]}`} />}
+                      <span className="truncate">{it.startTime} – {it.endTime}</span>
+                      {it.kind !== 'none' && <span className="ml-auto shrink-0 text-xs font-normal text-muted">{tk(it.kind)}</span>}
+                    </p>
+                  ))}
+                </div>
               </div>
-              {c.onLeave.map((l) => (
-                <p key={l.requestId} className="flex items-center gap-1 rounded-button bg-surface px-1.5 py-0.5 text-xs text-muted">
-                  <Plane aria-hidden size={12} className="shrink-0" />
-                  <span className="truncate">{leaveTypeName(types, l.typeCode, tl)}</span>
-                </p>
-              ))}
-              {c.items.map((it) => (
-                <p key={`${it.shiftId ?? it.source}${it.startTime}`} className="num flex items-center gap-1.5 text-xs">
-                  <span aria-hidden className={`size-2 shrink-0 rounded-chip ${it.color ? SHIFT_COLOR_CLASS[it.color] : 'bg-muted'}`} />
-                  <span className="truncate">{it.startTime} - {it.endTime}</span>
-                  {it.kind !== 'none' && <span className="ml-auto shrink-0 rounded-button bg-nav px-1 text-on-primary">{tk(it.kind)}</span>}
-                </p>
-              ))}
-            </div>
-          ))}
+            ))}
+          </div>
         </div>
         <p className="text-sm text-faint">{t('hint')}</p>
       </section>

@@ -195,3 +195,19 @@ button:not(:disabled):active, a:active, summary:active, [role='button']:active {
 .rich-body img { display: block; max-width: 100%; height: auto; border-radius: 8px; border: 1px solid var(--color-border); margin: 0.6em 0; }
 .rich-body img.ProseMirror-selectednode { outline: 3px solid var(--color-primary); }
 .rich-body p.is-editor-empty:first-child::before { content: attr(data-placeholder); color: var(--color-faint); float: left; height: 0; pointer-events: none; }
+
+/* 표 공통 모양 (2026-10-16 의뢰인: 「표들이 다 톤 · 결이 다르다」 → 견본 「나 · 파랑」, 개발-22)
+   머리 글자는 작은 회색 · 굵게, 머리 아래 · 줄 사이는 가는 가로선만, 세로선 없음, PC에서 줄에 올리면 옅은 바탕.
+   기본값만 준다(base 층) — 화면마다 붙인 Tailwind 클래스가 있으면 그것이 이긴다. 달력 · 시간표(border-separate)는 건드리지 않는다. */
+@layer base {
+  :where(table:not(.border-separate)) { border-collapse: collapse; }
+  :where(table:not(.border-separate)) :where(thead th) { color: var(--color-muted); font-weight: 600; font-size: var(--t-text-xs); letter-spacing: 0.01em; white-space: nowrap; vertical-align: middle; }
+  :where(table:not(.border-separate)) :where(thead tr:last-child) { border-bottom: 1px solid var(--color-border); }
+  :where(table:not(.border-separate)) :where(tbody tr) { border-top: 1px solid var(--color-border); }
+  :where(table:not(.border-separate)) :where(tbody tr:first-child) { border-top: 0; }
+  :where(table:not(.border-separate)) :where(td) { vertical-align: middle; }
+  :where(table:not(.border-separate)) :where(tfoot tr) { border-top: 1px solid var(--color-border); font-weight: 600; }
+  @media (min-width: 1024px) {
+    :where(table:not(.border-separate)) :where(tbody tr:hover) { background: color-mix(in srgb, var(--color-surface) 60%, transparent); }
+  }
+}

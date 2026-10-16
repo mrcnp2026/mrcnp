@@ -54,7 +54,7 @@ export async function MyAttendance({ me, sp, base, defaultView, extra }: { me: {
   const evs = data.events.filter((e) => e.employeeId === me.id);
 
   const hm = (d: Date) => f.dateTime(d, { hour: '2-digit', minute: '2-digit', hourCycle: 'h23' });
-  const dur = (min: number) => t('dur', { h: Math.floor(min / 60), m: String(min % 60).padStart(2, '0') });
+  const dur = (min: number) => t('dur', { h: Math.floor(min / 60), m: min % 60 });
   const leaveMin = (d: string) => Math.round((leave.get(d) ?? []).reduce((a, x) => a + x.unit, 0) * 8 * 60);
 
   const info = (d: string) => {
@@ -179,7 +179,7 @@ export async function MyAttendance({ me, sp, base, defaultView, extra }: { me: {
         <section className="grid gap-4 rounded-card border border-border bg-bg p-4 lg:grid-cols-[minmax(0,5fr)_minmax(0,4fr)_minmax(0,3fr)] lg:divide-x lg:divide-border lg:p-6" data-week-summary>
           <div className="flex flex-col gap-2 lg:pr-6">
             <p className="font-bold">
-              {t('weekSum')} <span className="num text-ok">{dur(s.net)}</span>
+              {t('weekSum')} <span className="num text-primary">{dur(s.net)}</span>
             </p>
             <p className="text-xs text-muted">{leftStd > 0 ? t('needMore', { left: dur(leftStd) }) : t('reached')}</p>
             <div className="relative mt-1 h-2 rounded-chip bg-surface">
@@ -195,8 +195,8 @@ export async function MyAttendance({ me, sp, base, defaultView, extra }: { me: {
             </div>
           </div>
           <dl className="grid grid-cols-2 gap-3 lg:px-6">
-            {stat(t('leftDays'), <span className="text-ok">{t('days', { n: s.left })}</span>, t('ofDays', { n: s.all }))}
-            {stat(t('leftHours'), <span className="text-ok">{dur(leftStd)}</span>, t('ofHours', { n: 40 }))}
+            {stat(t('leftDays'), <span className="text-primary">{t('days', { n: s.left })}</span>, t('ofDays', { n: s.all }))}
+            {stat(t('leftHours'), <span className="text-primary">{dur(leftStd)}</span>, t('ofHours', { n: 40 }))}
           </dl>
           <dl className="grid grid-cols-2 gap-3 lg:pl-6">
             {stat(t('total'), dur(s.net))}
@@ -335,7 +335,7 @@ export async function MyAttendance({ me, sp, base, defaultView, extra }: { me: {
             {stat(t('regular'), dur(s.regular))}
             {stat(t('otPending'), dur(s.otPending), undefined, s.otPending > 0 ? 'text-danger' : '')}
             {stat(t('otApproved'), dur(s.otApproved))}
-            {stat(t('leftDays'), <span className="text-ok">{t('days', { n: s.left })}</span>, t('ofDays', { n: s.all }))}
+            {stat(t('leftDays'), <span className="text-primary">{t('days', { n: s.left })}</span>, t('ofDays', { n: s.all }))}
           </dl>
         </section>
         <section className="overflow-hidden rounded-card border border-border bg-bg" data-month-grid>
@@ -359,7 +359,7 @@ export async function MyAttendance({ me, sp, base, defaultView, extra }: { me: {
                     {x.holiday && <span className="truncate text-center text-xs text-danger lg:text-left">{x.holiday}</span>}
                     {/* 폰: 근무 시간 숫자와 점만 · PC: 주간과 같은 표시 */}
                     <span className="flex flex-col items-center gap-0.5 lg:hidden">
-                      {x.r && x.firstIn && !x.live && x.r.netMinutes > 0 && <span className="num text-xs font-semibold text-ok">{t('hShort', { n: Math.round((x.r.netMinutes / 60) * 10) / 10 })}</span>}
+                      {x.r && x.firstIn && !x.live && x.r.netMinutes > 0 && <span className="num text-xs font-semibold text-primary">{t('hShort', { n: Math.round((x.r.netMinutes / 60) * 10) / 10 })}</span>}
                       <span className="flex gap-0.5">
                         {x.late && <span aria-hidden className="size-1.5 rounded-chip bg-danger" />}
                         {x.otMin > 0 && <span aria-hidden className="size-1.5 rounded-chip bg-warn" />}

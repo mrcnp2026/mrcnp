@@ -5565,7 +5565,7 @@
     "ruleLine": "기본 근무 ({from} ~ {to})",
     "history": "신청 이력",
     "noRule": "회사 근무 규칙이 아직 없습니다. 관리자에게 알려 주세요.",
-    "dur": "{h}h {m}m",
+    "dur": "{h}시간 {m}분",
     "hours": "{n}h",
     "hShort": "{n}h",
     "days": "{n}일",
