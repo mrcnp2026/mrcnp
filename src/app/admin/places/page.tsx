@@ -42,7 +42,7 @@ export default async function PlacesPage({ searchParams }: { searchParams: Promi
                 name: { text: l.label ?? t('unnamed'), node: <Link href={`/admin/places/${l.id}`} className="font-bold hover:text-primary">{l.label ?? t('unnamed')}</Link> },
                 // 주소는 한 줄로 줄여 「…」 — 전체 주소는 마우스를 올리면 보인다 (2026-10-17 의뢰인)
                 address: { text: l.address ?? '', node: <span title={l.address ?? ''} className="block max-w-88 truncate">{l.address ?? ''}</span> },
-                radius: { text: t('radiusM', { n: l.radiusM }) },
+                radius: { text: l.anywhere ? t('radiusAny') : t('radiusM', { n: l.radiusM }) },
                 used: { text: String(used(l.id)) },
               },
             }))}
@@ -68,7 +68,7 @@ export default async function PlacesPage({ searchParams }: { searchParams: Promi
                   </span>
                   {/* 반경 · 쓰는 지점은 오른쪽에 두 줄로 좁게 — 주소 칸이 넓어진다 */}
                   <span className="num flex shrink-0 flex-col items-end text-xs text-muted">
-                    <span>{t('radiusM', { n: l.radiusM })}</span>
+                    <span>{l.anywhere ? t('radiusAny') : t('radiusM', { n: l.radiusM })}</span>
                     {used(l.id) > 0 && <span className="text-faint">{t('usedBy', { n: used(l.id) })}</span>}
                   </span>
                   <ChevronRight aria-hidden size={20} className="shrink-0 text-faint" />

@@ -41,7 +41,7 @@ export default async function PlacePage({ params }: { params: Promise<{ id: stri
             <Field label={t('address')}>{p.address ?? t('noAddress')}</Field>
             <Field label={t('method')}>{t('methodCoords')}</Field>
             <Field label={t('radius')}>
-              <span className="num">{t('radiusM', { n: p.radiusM })}</span>
+              <span className="num">{p.anywhere ? t('radiusAny') : t('radiusM', { n: p.radiusM })}</span>
             </Field>
             <Field label={t('coords')}>
               <span className="num">
@@ -67,7 +67,7 @@ export default async function PlacePage({ params }: { params: Promise<{ id: stri
         </div>
         <AddSheet id="place-edit" title={t('edit')} modal>
           <Card className="flex flex-col gap-3">
-            <PlaceForm key={`${p.lat},${p.lng},${p.radiusM},${p.label},${p.address}`} sheet="place-edit" initial={{ id: p.id, label: p.label ?? '', address: p.address ?? '', lat: p.lat, lng: p.lng, radiusM: p.radiusM }} />
+            <PlaceForm key={`${p.lat},${p.lng},${p.radiusM},${p.label},${p.address},${p.anywhere}`} sheet="place-edit" initial={{ id: p.id, label: p.label ?? '', address: p.address ?? '', lat: p.lat, lng: p.lng, radiusM: p.radiusM, anywhere: p.anywhere }} />
           </Card>
         </AddSheet>
       </div>

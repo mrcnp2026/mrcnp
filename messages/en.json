@@ -2148,7 +2148,10 @@
       "colName": "Place",
       "colAddress": "Address",
       "colRadius": "Radius",
-      "colUsed": "Used by"
+      "colUsed": "Used by",
+      "anywhere": "Anywhere (no radius)",
+      "anywhereHelp": "Staff of branches using this place are verified here wherever they punch. Other places come first when inside their radius. Not accepted without phone location.",
+      "radiusAny": "Anywhere"
     },
     "branches": {
       "title": "Branches",

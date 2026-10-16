@@ -17,7 +17,7 @@ export const POST = api('admin.places.create', async (req) => {
   if (!label || address === undefined) throw new ApiError(400, 'invalid_place');
   const { data, error } = await createAdminClient()
     .from('office_locations')
-    .insert({ label, address, lat: v.lat, lng: v.lng, radius_m: v.radiusM, created_by: me.id, updated_by: me.id })
+    .insert({ label, address, lat: v.lat, lng: v.lng, radius_m: v.radiusM, anywhere: b.anywhere === true, created_by: me.id, updated_by: me.id })
     .select('id')
     .single();
   if (error) throw new Error(`places.create: ${error.code}`);

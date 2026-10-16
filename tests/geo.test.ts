@@ -91,3 +91,25 @@ describe('지점별 출퇴근 장소 · 지도 계산 (2026-10-10)', () => {
     expect(cleanPlaceText(3, 40)).toBeUndefined();
   });
 });
+
+describe('「어디서나」 장소 (묶음 21, 2026-10-17)', () => {
+  const office: OfficeLocation = { id: 'o', label: '공장', lat: 35.7, lng: 129.3, radiusM: 80, active: true };
+  const remote: OfficeLocation = { id: 'r', label: '원격', lat: 35.7, lng: 129.3, radiusM: 1000, active: true, anywhere: true };
+  const far = { lat: 37.5, lng: 127.0, accuracyM: 20 };
+  const near = { lat: 35.7, lng: 129.3, accuracyM: 20 };
+  it('반경 밖 먼 곳이어도 어디서나 장소로 확인', () => {
+    const v = verifyGeo(far, [office, remote]);
+    expect(v).toMatchObject({ verified: true, reason: 'ok', locationId: 'r' });
+  });
+  it('다른 장소 반경 안이면 그 장소가 먼저', () => {
+    expect(verifyGeo(near, [remote, office]).locationId).toBe('o');
+  });
+  it('위치가 없거나 오차가 크면 인정하지 않는다', () => {
+    expect(verifyGeo(null, [remote]).verified).toBe(false);
+    expect(verifyGeo({ ...far, accuracyM: 5000 }, [remote]).verified).toBe(false);
+  });
+  it('지점에 붙인 장소가 없을 때의 「전체」에는 어디서나 장소를 넣지 않는다', () => {
+    expect(allowedLocations([office, remote], [], ['g']).map((l) => l.id)).toEqual(['o']);
+    expect(allowedLocations([office, remote], [{ groupId: 'g', locationId: 'r' }], ['g']).map((l) => l.id)).toEqual(['r']);
+  });
+});

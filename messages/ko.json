@@ -2148,7 +2148,10 @@
       "colName": "출퇴근 장소",
       "colAddress": "근무지 주소",
       "colRadius": "좌표 반경",
-      "colUsed": "쓰는 지점"
+      "colUsed": "쓰는 지점",
+      "anywhere": "어디서나 (반경 없음)",
+      "anywhereHelp": "이 장소를 쓰는 지점의 직원은 어디서 찍어도 이 장소로 확인됩니다. 다른 장소 반경 안이면 그 장소가 먼저입니다. 폰 위치가 꺼져 있으면 인정하지 않습니다.",
+      "radiusAny": "어디서나"
     },
     "branches": {
       "title": "지점",

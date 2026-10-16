@@ -17,6 +17,10 @@ export const POST = api<{ params: Promise<{ id: string }> }>('admin.places.updat
     if (typeof b.active !== 'boolean') throw new ApiError(400, 'invalid_input');
     patch.active = b.active;
   }
+  if (b.anywhere !== undefined) {
+    if (typeof b.anywhere !== 'boolean') throw new ApiError(400, 'invalid_input');
+    patch.anywhere = b.anywhere; // 묶음 21: 반경과 상관없이 어디서나
+  }
   if (b.lat !== undefined || b.lng !== undefined || b.radiusM !== undefined) {
     const v = validateLocation(b);
     if (!v) throw new ApiError(400, 'invalid_location');

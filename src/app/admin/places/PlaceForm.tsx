@@ -14,7 +14,7 @@ const field = 'min-h-11 w-full rounded-button border border-border bg-bg px-3 te
 // 좌표를 아직 안 넣었을 때 지도가 처음 보여 주는 곳 (회사 소재지 부근 — 핀은 누를 때 생긴다)
 const START = { lat: 35.7167, lng: 129.3167 };
 
-export type PlaceValues = { id: string; label: string; address: string; lat: number; lng: number; radiusM: number };
+export type PlaceValues = { id: string; label: string; address: string; lat: number; lng: number; radiusM: number; anywhere?: boolean };
 
 export function PlaceForm({ initial, sheet }: { initial?: PlaceValues; sheet: string }) {
   const t = useTranslations('admin.places');
@@ -22,6 +22,7 @@ export function PlaceForm({ initial, sheet }: { initial?: PlaceValues; sheet: st
   const [lat, setLat] = useState(initial ? String(initial.lat) : '');
   const [lng, setLng] = useState(initial ? String(initial.lng) : '');
   const [radius, setRadius] = useState(String(initial?.radiusM ?? 80));
+  const [anywhere, setAnywhere] = useState(!!initial?.anywhere);
   const [locating, setLocating] = useState<'idle' | 'busy' | 'failed'>('idle');
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState<{ code: string; requestId?: string } | null>(null);
@@ -38,7 +39,7 @@ export function PlaceForm({ initial, sheet }: { initial?: PlaceValues; sheet: st
         const fd = new FormData(e.currentTarget);
         setBusy(true);
         setErr(null);
-        const res = await callApi<{ id?: string }>(initial ? `/api/admin/places/${initial.id}` : '/api/admin/places', { label: fd.get('label'), address: fd.get('address'), lat, lng, radiusM: radius });
+        const res = await callApi<{ id?: string }>(initial ? `/api/admin/places/${initial.id}` : '/api/admin/places', { label: fd.get('label'), address: fd.get('address'), lat, lng, radiusM: radius, anywhere });
         setBusy(false);
         if (!res.ok) return setErr(res);
         window.dispatchEvent(new CustomEvent(CLOSE_SHEET_EVENT, { detail: sheet }));
@@ -98,7 +99,15 @@ export function PlaceForm({ initial, sheet }: { initial?: PlaceValues; sheet: st
           <input value={lng} onChange={(e) => setLng(e.target.value)} required inputMode="decimal" maxLength={12} className={`num ${field}`} autoComplete="off" />
         </label>
       </div>
-      <label className="flex flex-col gap-1 text-sm text-muted">
+      {/* 어디서나 (묶음 21): 켜면 반경과 상관없이 이 장소로 확인 — 외근 · 원격근무용. 위치가 꺼져 있으면 인정하지 않는다 */}
+      <label className="flex min-h-11 items-start gap-3 rounded-button border border-border bg-bg p-3 text-sm">
+        <input type="checkbox" checked={anywhere} onChange={(e) => setAnywhere(e.target.checked)} className="mt-0.5 size-5 shrink-0 accent-primary" />
+        <span className="flex flex-col gap-0.5">
+          <span className="font-bold text-text">{t('anywhere')}</span>
+          <span className="text-muted">{t('anywhereHelp')}</span>
+        </span>
+      </label>
+      <label className={`flex flex-col gap-1 text-sm text-muted ${anywhere ? 'opacity-50' : ''}`}>
         {t('radiusInput')}
         <input value={radius} onChange={(e) => setRadius(e.target.value)} type="number" inputMode="numeric" min={30} max={1000} required className={`num ${field}`} />
       </label>

@@ -3,7 +3,8 @@
 //   그래서 "무엇으로 확인했는지"(ip/gps)를 기록에 따로 남긴다. 신원 확인(패스키)은 그대로 필수다.
 // ★ 사무실 밖으로 판정된 좌표는 저장하지 않는다 (집 등 사생활 위치가 남지 않게). 확인된 좌표도 약 1m 단위로 줄여 저장한다.
 
-export type OfficeLocation = { id: string; label: string | null; lat: number; lng: number; radiusM: number; active: boolean; address?: string | null };
+// anywhere: 반경과 상관없이 어디서 찍어도 이 장소로 확인 (묶음 21, 2026-10-17 의뢰인: 「외근 / 원격근무」)
+export type OfficeLocation = { id: string; label: string | null; lat: number; lng: number; radiusM: number; active: boolean; address?: string | null; anywhere?: boolean };
 export type Coords = { lat: number; lng: number; accuracyM: number };
 
 /** 폰이 알려 준 오차가 이보다 크면 믿지 않는다 (실내에서 WiFi·기지국으로 잡힌 수백 m 오차 값을 거른다) */
@@ -46,10 +47,16 @@ export function verifyGeo(coords: Coords | null, locations: readonly OfficeLocat
   let nearest = Infinity;
   let hit: { id: string; d: number } | null = null; // 반경이 겹치면 가장 가까운 장소로 적는다
   for (const l of on) {
+    if (l.anywhere) continue; // 「어디서나」 장소는 마지막 후보 — 다른 장소의 반경 안이면 그 장소가 먼저
     const d = distanceM(coords, l);
     if (d < nearest) nearest = d;
     if (d <= l.radiusM && (!hit || d < hit.d)) hit = { id: l.id, d };
   }
+  // 아무 반경에도 없으면 「어디서나」 장소로 확인한다. 위치가 없거나 오차가 크면 위에서 이미 걸러졌다 —
+  // 위치 없이는 인정하지 않는다 (2026-10-17 의뢰인, 묶음 21)
+  const anywhere = hit ? undefined : on.find((l) => l.anywhere);
+  if (anywhere) hit = { id: anywhere.id, d: distanceM(coords, anywhere) };
+  if (!Number.isFinite(nearest)) nearest = hit?.d ?? 0;
   return { verified: !!hit, reason: hit ? 'ok' : 'outside', nearestM: Math.round(nearest), locationId: hit?.id ?? null };
 }
 
@@ -76,7 +83,8 @@ export function validateLocation(b: Record<string, unknown>): { lat: number; lng
 export function allowedLocations(locations: readonly OfficeLocation[], links: readonly { groupId: string; locationId: string }[], groupIds: readonly string[]): OfficeLocation[] {
   const mine = new Set(links.filter((k) => groupIds.includes(k.groupId)).map((k) => k.locationId));
   const picked = locations.filter((l) => l.active && mine.has(l.id));
-  return picked.length > 0 ? picked : locations.filter((l) => l.active);
+  // 지점에 붙인 장소가 없으면 켜진 장소 전체로 확인하되 「어디서나」 장소는 뺀다 — 아무나 어디서든 찍히지 않게 (묶음 21)
+  return picked.length > 0 ? picked : locations.filter((l) => l.active && !l.anywhere);
 }
 
 /** 장소 이름·주소·메모: 비우면 null, 너무 길면 undefined */
