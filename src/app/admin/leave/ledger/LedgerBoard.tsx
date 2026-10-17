@@ -90,7 +90,8 @@ export function LedgerBoard(props: { group?: { id: string; name: string } | null
     });
   const why = (l: LotLine) => (l.rule === 'monthly' ? t('rule.monthly', { n: l.month ?? 0 }) : l.rule === 'annual' || l.rule === 'fiscal_annual' ? t(`rule.${l.rule}`, { n: l.years ?? 0 }) : t.has(`rule.${l.rule}`) ? t(`rule.${l.rule}`, { n: 0 }) : t('rule.manual', { n: 0 }));
   const range = (l: LotLine) => (l.usableTo ? t('range', { from: l.usableFrom, to: l.usableTo }) : t('rangeOpen', { from: l.usableFrom }));
-  const day = (n: number) => t('days', { n });
+  const r2 = (n: number) => (Math.abs(n * 16 - Math.round(n * 16)) < 1e-6 ? n : Math.round(n * 100) / 100); // 비례 발생(10.9896)은 소수 둘째 자리까지
+  const day = (n: number) => t('days', { n: r2(n) });
 
   return (
     <div className="flex flex-col gap-4">
@@ -192,7 +193,7 @@ export function LedgerBoard(props: { group?: { id: string; name: string } | null
                 {b.started && b.old !== null && b.old !== b.remaining && <Chip tone="warn">{t('cmpDiff')}</Chip>}
                 <span className="num shrink-0 text-right">
                   <span className={`block text-lg leading-tight font-bold ${b.remaining < 0 ? 'text-warn' : ''}`}>{b.started ? day(b.remaining) : '–'}</span>
-                  {b.advance > 0 && <span className="block text-xs text-warn">{t(b.advanceOver ? 'advanceOver' : 'advance', { n: b.advance })}</span>}
+                  {b.advance > 0 && <span className="block text-xs text-warn">{t(b.advanceOver ? 'advanceOver' : 'advance', { n: r2(b.advance) })}</span>}
                 </span>
                 <ChevronRight aria-hidden size={18} className="shrink-0 text-faint" />
               </Link>
@@ -213,7 +214,7 @@ export function LedgerBoard(props: { group?: { id: string; name: string } | null
               <td className="num px-3 py-2">{b.started ? day(b.expired) : ''}</td>
               <td className="num px-3 py-2 font-bold">
                 {b.started ? day(b.remaining) : ''}
-                {b.advance > 0 && <span className="block text-xs font-normal text-warn">{t(b.advanceOver ? 'advanceOver' : 'advance', { n: b.advance })}</span>}
+                {b.advance > 0 && <span className="block text-xs font-normal text-warn">{t(b.advanceOver ? 'advanceOver' : 'advance', { n: r2(b.advance) })}</span>}
                 {b.upcoming > 0 && <span className="block text-xs font-normal text-faint">{t('upcoming', { n: b.upcoming })}</span>}
               </td>
               <td className="num px-3 py-2">{b.old === null ? '' : day(b.old)}</td>

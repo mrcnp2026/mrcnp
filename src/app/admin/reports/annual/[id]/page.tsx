@@ -90,7 +90,8 @@ export default async function AnnualEmployeePage({ params, searchParams }: { par
                   className={`flex min-h-16 flex-col justify-center rounded-card border px-2 py-2 lg:shadow-card ${on ? 'border-primary bg-primary-tint' : 'border-border bg-bg hover:border-primary'}`}
                 >
                   <span className={`truncate text-xs ${on ? 'font-bold text-primary' : 'text-muted'}`}>{t(`m.${m}`)}</span>
-                  <b className={`num truncate text-base ${m === 'over52' && v > 0 ? 'text-danger' : ''}`}>{unit(m, v)}</b>
+                  {/* 칸이 좁아 100 이상은 정수로 (2026-10-17 디자인: 「1474....」로 잘렸다) */}
+                  <b className={`num truncate text-sm lg:text-base ${m === 'over52' && v > 0 ? 'text-danger' : ''}`}>{unit(m, Math.abs(v) >= 100 ? Math.round(v) : v)}</b>
                 </Link>
               );
             })}

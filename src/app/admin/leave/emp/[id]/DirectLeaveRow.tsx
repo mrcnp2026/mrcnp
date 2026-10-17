@@ -11,15 +11,16 @@ export function DirectLeaveRow({ today, types, direct, name, approved }: { today
   const t = useTranslations('leave');
   const [open, setOpen] = useState(false);
   return (
-    <div className="flex flex-col gap-2">
-      <div className="flex flex-wrap items-center gap-2">
-        <button type="button" onClick={() => setOpen((v) => !v)} aria-expanded={open} className="min-h-11 rounded-button border border-border bg-bg px-3 text-sm font-bold text-primary" data-direct-leave-edit>
+    // 버튼은 날짜 줄 오른쪽에 작게, 펼친 양식은 그 아래 한 줄 전체 (2026-10-17 디자인: 건마다 큰 버튼 줄이 따로 있어 30건이 길었다)
+    <div className="contents">
+      <div className="ml-auto flex items-center gap-2">
+        <button type="button" onClick={() => setOpen((v) => !v)} aria-expanded={open} className="min-h-9 rounded-button border border-border bg-bg px-3 text-sm font-bold text-primary" data-direct-leave-edit>
           {t(open ? 'directClose' : 'directEditOpen')}
         </button>
         {/* 대기 중인 휴가는 요청함에서 승인 · 거절한다 — 삭제(취소)는 승인된 것만 */}
-        {approved && <LeaveCancel id={direct.replaceId} name={name} />}
+        {approved && <LeaveCancel id={direct.replaceId} name={name} compact />}
       </div>
-      {open && <LeaveForm today={today} types={types} direct={direct} />}
+      {open && <div className="basis-full"><LeaveForm today={today} types={types} direct={direct} /></div>}
     </div>
   );
 }

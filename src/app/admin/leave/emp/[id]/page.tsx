@@ -18,6 +18,7 @@ import { GrantForm } from '../../GrantForm';
 import { LeaveForm } from '@/app/punch/leave/LeaveForm';
 import { leaveTypeName } from '@/lib/leave';
 import { DirectLeaveRow } from './DirectLeaveRow';
+import { loadLots } from '@/lib/leave-ledger-data';
 
 export default async function LeaveAccrualPage({ params, searchParams }: { params: Promise<{ id: string }>; searchParams: Promise<{ to?: string; live?: string }> }) {
   const [t, tl, tv, f, { id }, sp] = await Promise.all([getTranslations('admin.leaveAccrual'), getTranslations('admin.leave'), getTranslations('leave'), getFormatter(), params, searchParams]);
@@ -40,13 +41,15 @@ export default async function LeaveAccrualPage({ params, searchParams }: { param
   const live = requests.filter((r) => r.status === 'approved' || r.status === 'pending').sort((a, b) => (a.startDate < b.startDate ? 1 : -1)).slice(0, 30);
   // 원장(시프티에서 옮긴 연차 등)이 있으면 원장 숫자로 — 예전 계산만 쓰던 곳은 옮긴 직원이 모두 0으로 보였다 (2026-10-17)
   const bal = await leaveBalanceFor({ employeeId: id, asOf, practice: OFFICE.practiceMode && sp.live !== '1' ? true : false, grants, requests, types });
+  // 원장 지급 건 — 원장을 쓰는 직원은 이것이 발생 내역이다 (2026-10-17 디자인: 옮긴 직원은 총 17일인데 「발생 내역이 없습니다」였다)
+  const lots = bal.ledger ? (await loadLots({ employeeId: id, states: ['APPROVED'] })).sort((a, b) => (a.usableFrom < b.usableFrom ? 1 : -1)) : [];
   const sorted = [...grants].sort((a, b) => (a.effectiveFrom < b.effectiveFrom ? 1 : -1)); // 새 것이 위
   const asc = [...sorted].reverse();
   const until = (g: (typeof grants)[number]) => {
     const next = asc[asc.indexOf(g) + 1];
     return next ? addDays(next.effectiveFrom, -1) : null;
   };
-  const n = (v: number) => f.number(v, { maximumFractionDigits: 4 });
+  const n = (v: number) => f.number(v, { maximumFractionDigits: Math.abs(v * 16 - Math.round(v * 16)) < 1e-6 ? 4 : 2 }); // 비례 발생은 소수 둘째 자리까지
   const dot = (d: string) => d.replaceAll('-', '.');
   const hiredOn = p.joined_on as string | null;
   const ref = hiredOn ? suggestGrant(hiredOn, today) : null;
@@ -83,8 +86,28 @@ export default async function LeaveAccrualPage({ params, searchParams }: { param
 
       <section className="flex flex-col gap-2">
         <h2 className="px-1 font-bold">{t('history')}</h2>
-        {sorted.length === 0 && <p className="rounded-card bg-bg p-5 text-sm text-faint">{t('historyNone')}</p>}
-        {sorted.length > 0 && (
+        {sorted.length === 0 && lots.length === 0 && <p className="rounded-card bg-bg p-5 text-sm text-faint">{t('historyNone')}</p>}
+        {lots.length > 0 && (
+          <ul className="-mx-4 divide-y divide-border border-y border-border bg-bg lg:mx-0 lg:rounded-card lg:border">
+            {lots.map((l) => {
+              const end = l.usableTo ? addDays(l.usableTo, -1) : null; // 원장의 끝은 「이 날부터 못 씀」이라 하루 앞까지 보인다
+              const state = l.usableFrom > asOf ? 'planned' : end && end < asOf ? 'expired' : 'active';
+              return (
+                <li key={l.id} className="flex min-h-16 items-center gap-3 px-5 py-2">
+                  <span className="flex min-w-0 flex-1 flex-col">
+                    <span className="num font-bold">
+                      {dot(l.usableFrom)} - {end ? dot(end) : t('open')}
+                    </span>
+                    <span className="truncate text-sm text-muted">{t(`lotKind.${l.kind}`)}</span>
+                  </span>
+                  <span className="num shrink-0 font-bold">{tl('granted')} {n(l.quantityMinutes / l.dayMinutes)}</span>
+                  <Chip tone={state === 'active' ? 'ok' : state === 'planned' ? 'warn' : 'neutral'}>{t(state)}</Chip>
+                </li>
+              );
+            })}
+          </ul>
+        )}
+        {sorted.length > 0 && lots.length === 0 && (
           <ul className="-mx-4 divide-y divide-border border-y border-border bg-bg lg:mx-0 lg:rounded-card lg:border">
             {sorted.map((g) => {
               const state = g.effectiveFrom > asOf ? 'planned' : g.id === bal.grant?.id ? 'active' : 'expired';
@@ -117,15 +140,17 @@ export default async function LeaveAccrualPage({ params, searchParams }: { param
           {live.length > 0 && (
             <ul className="-mx-4 divide-y divide-border border-y border-border bg-bg lg:mx-0 lg:rounded-card lg:border">
               {live.map((r) => (
-                <li key={r.id} className="flex flex-col gap-2 px-5 py-3">
-                  <span className="flex flex-wrap items-center gap-2">
+                <li key={r.id} className="flex flex-wrap items-center gap-2 px-5 py-2.5">
+                  <span className="flex min-w-0 flex-col">
                     <span className="num font-bold">
                       {dot(r.startDate)}
                       {r.endDate !== r.startDate && ` - ${dot(r.endDate)}`}
                       {r.startTime && ` ${r.startTime}-${r.endTime ?? ''}`}
                     </span>
-                    <span className="text-sm text-muted">{leaveTypeName(types, r.typeCode, tv)} · {tv('days', { n: n(r.days) })}</span>
-                    {r.status === 'pending' && <Chip tone="warn">{tv('status.pending')}</Chip>}
+                    <span className="text-sm text-muted">
+                      {leaveTypeName(types, r.typeCode, tv)} · {tv('days', { n: n(r.days) })}
+                      {r.status === 'pending' && <Chip tone="warn">{tv('status.pending')}</Chip>}
+                    </span>
                   </span>
                   <DirectLeaveRow today={today} types={typeOptions} name={p.name as string} approved={r.status === 'approved'} direct={{ employeeId: id, replaceId: r.id, initial: { typeCode: r.typeCode, startDate: r.startDate, endDate: r.endDate, startTime: r.startTime ?? null } }} />
                 </li>

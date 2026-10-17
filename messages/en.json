@@ -2617,7 +2617,17 @@
       "none": "X",
       "toManage": "Hire date · edit current entry",
       "toManageValue": "Leave management",
-      "hint": "Accrued days are entered by an admin. Automatic accrual and accrual by leave group are not available yet."
+      "hint": "Accrued days are entered by an admin. Automatic accrual and accrual by leave group are not available yet.",
+      "lotKind": {
+        "annual": "Annual",
+        "monthly": "Monthly",
+        "carry": "Carried over",
+        "compensatory": "Compensatory",
+        "manual": "Manual",
+        "migrated": "Moved from Shiftee",
+        "periodic": "Periodic",
+        "on_request": "On request"
+      }
     },
     "recordCalendar": {
       "title": "Attendance",
@@ -2740,8 +2750,8 @@
     "leaveLedger": {
       "title": "Leave ledger",
       "intro": "Records when leave was granted and how it was used, line by line. New leave arrives as a candidate and counts only after an admin approves it.",
-      "stage": "Comparison stage: employees still see the balance from the old calculation. Check that both numbers match here before switching to the ledger.",
-      "stagePractice": "Comparison stage: employees still see the balance from the old calculation. Usage shown here is from practice requests.",
+      "stage": "Staff with an approved grant use this ledger balance on every screen (home, leave request, admin). Only staff without a grant use the old calculation.",
+      "stagePractice": "Staff with an approved grant use this ledger balance on every screen. Usage is shown from practice requests.",
       "saved": "Saved.",
       "temporary": "Temporary",
       "verified": "Verified",

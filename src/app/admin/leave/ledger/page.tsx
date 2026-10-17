@@ -1,5 +1,5 @@
 // 휴가 원장 — 연차 정책(통상 방식) · 연차 후보 만들기와 승인 · 직원별 잔여(원장과 예전 계산 대조) · 지급 건과 원장 내역 (PRD v1.3 36 · 38장).
-// ★ 대조 단계: 직원에게 보이는 잔여는 아직 예전 계산이다. 이 화면에서 두 숫자가 맞는지 본 뒤에 원장으로 바꾼다.
+// ★ 지급 건이 승인된 직원은 모든 화면이 원장 잔여를 쓴다(leave-balance-data.ts). 지급 건이 없는 직원만 예전 계산이다.
 import { getTranslations } from 'next-intl/server';
 import { ListHead } from '@/components/listframe';
 import { PageShell } from '@/components/ui';
@@ -30,7 +30,7 @@ export default async function LeaveLedgerPage({ searchParams }: { searchParams: 
     loadLeaveGrants(),
     loadLeaveRequests({ practice }),
     loadAllLeaveTypes(),
-    createAdminClient().from('profiles').select('id, name, joined_on, active').order('name'),
+    createAdminClient().from('profiles').select('id, name, joined_on, active, employee_no').order('name'),
   ]);
   const nameOf = new Map((staff ?? []).map((p) => [p.id as string, p.name as string]));
   const hiddenSet = new Set(await hiddenTestIds());
@@ -44,6 +44,8 @@ export default async function LeaveLedgerPage({ searchParams }: { searchParams: 
   const remAll = lotRemaining(lots, shown);
   const balances: BalanceLine[] = (staff ?? [])
     .filter((p) => p.active || lots.some((l) => l.employeeId === p.id))
+    // 시스템관리자 · 시험 계정(e2e-)은 직원이 아니다 (2026-10-17 디자인)
+    .filter((p) => p.employee_no !== OFFICE.ownerEmployeeNo && !(p.employee_no as string | null)?.startsWith('e2e-'))
     .map((p) => {
       const mine = lots.filter((l) => l.employeeId === p.id);
       const b = ledgerBalance(mine, shown.filter((e) => e.employeeId === p.id), today);
