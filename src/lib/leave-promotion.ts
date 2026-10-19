@@ -58,8 +58,10 @@ export async function createCampaign(args: { title: string; basisOn: string; pla
     const b = ledgerBalance(mine, live.filter((e) => e.employeeId === p.id), args.basisOn);
     if (b.remaining > 0) rows.push({ employee_id: p.id as string, remaining_minutes: b.remaining });
   }
-  const { data, error } = await c.from('leave_promotion_campaigns').insert({ title: args.title, basis_on: args.basisOn, plan_due_on: args.planDueOn, notice_body: args.noticeBody, policy_note: args.policyNote, created_by: args.me.id, is_test: test, ...(args.periodEnd ? { period_end: args.periodEnd, leave_kind: args.leaveKind ?? 'ANNUAL' } : {}) }).select('id').single();
-  if (error?.code === 'PGRST204' || error?.code === '42703') throw new ApiError(503, 'db_update_required');
+  const base = { title: args.title, basis_on: args.basisOn, plan_due_on: args.planDueOn, notice_body: args.noticeBody, policy_note: args.policyNote, created_by: args.me.id, is_test: test };
+  let { data, error } = await c.from('leave_promotion_campaigns').insert({ ...base, ...(args.periodEnd ? { period_end: args.periodEnd, leave_kind: args.leaveKind ?? 'ANNUAL' } : {}) }).select('id').single();
+  // 사용기간 칸(묶음 30)이 아직 없으면 그 칸 없이 만든다 — 법정 기간 안내만 빠진다
+  if ((error?.code === 'PGRST204' || error?.code === '42703') && args.periodEnd) ({ data, error } = await c.from('leave_promotion_campaigns').insert(base).select('id').single());
   if (error || !data) boom('createCampaign', error);
   if (rows.length > 0) {
     const t = await c.from('leave_promotion_targets').insert(rows.map((r) => ({ ...r, campaign_id: data!.id })));
