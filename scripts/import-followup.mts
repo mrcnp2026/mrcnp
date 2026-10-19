@@ -1,5 +1,5 @@
 // 시프티 엑셀로 기록을 넣은 뒤 마무리 (2026-10-17 의뢰인: 1월에 모든 직원이 앱을 쓰기 전까지는 엑셀로 DB를 갱신한다).
-//   ① 그 기간의 달 집계 화면을 한 번씩 열어 연장 요청을 만든다(화면이 열릴 때 계산 결과로 만들어진다)
+//   ① 그 기간의 연장 요청을 만든다(/api/admin/overtime/sync — 2026-10-19부터 화면을 열어도 계산하지 않는다)
 //   ② 옮겨 온 기록(source 'import')에서 생긴 대기 연장은 승인한다 — 결정 2026-10-16 「옮긴 연장은 승인된 것으로」
 //   ③ 퇴근이 빠진 날을 보여 준다 — 채우는 방법은 결정에 따라(2026-10-17 50일은 「그날 일정 끝 시각」)
 //   ④ 기록이 있는 날을 확정한다(퇴근이 빠진 날 · 대기 정정이 있는 날은 사이트가 건너뛰고 이유를 알려 준다)
@@ -65,10 +65,13 @@ const api = await request.newContext({ baseURL: BASE, extraHTTPHeaders: { origin
 const login = await api.post('/api/auth/login', { data: { id, password: pw } });
 if (!login.ok()) throw new Error(`로그인 실패 ${login.status()}`);
 
-// ① 달마다 집계 화면을 열어 연장 요청을 만든다
-const months = new Set<string>();
-for (let d = FROM; d <= TO; d = new Date(Date.parse(d) + 86400000).toISOString().slice(0, 10)) months.add(d.slice(0, 7));
-for (const ym of months) console.log(`① ${ym} 집계 열기`, (await api.get(`/admin/records?ym=${ym}`, { timeout: 120000 })).status());
+// ① 그 기간의 연장 요청을 만든다 — 2026-10-19부터 화면을 열어도 계산하지 않아서 맞추기 API를 부른다(한 번에 최대 60일씩)
+for (let d = FROM; d <= TO; ) {
+  const end = [new Date(Date.parse(d) + 59 * 86400000).toISOString().slice(0, 10), TO].sort()[0];
+  const r = await api.post('/api/admin/overtime/sync', { data: { from: d, to: end }, timeout: 120000 });
+  console.log(`① ${d} ~ ${end} 연장 맞추기`, r.status(), r.ok() ? (await r.json()).changed + '건' : await r.text());
+  d = new Date(Date.parse(end) + 86400000).toISOString().slice(0, 10);
+}
 
 // ② 옮겨 온 기록의 대기 연장 승인
 const pending = await allOf<{ id: string; employee_id: string; work_date: string; overtime_minutes: number; night_minutes: number; holiday_minutes: number }>((a, b) =>

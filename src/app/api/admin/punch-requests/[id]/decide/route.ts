@@ -1,6 +1,7 @@
 // 반경 밖 「출근/퇴근 요청」 승인·거절 (의뢰인 2026-10-10: 시프티 방식).
 // 승인: 요청한 시각 그대로 출퇴근 기록을 만든다 (사무실 확인은 안 된 기록으로 — ip_verified=false). 거절: 기록이 생기지 않는다.
 // 같은 요청을 두 번 승인해도 기록은 하나다 — record_punch가 같은 시각·같은 종류를 한 건으로 본다 (중복 방지).
+import { syncOvertimeFor } from '@/lib/period-data';
 import { OFFICE } from '@/config/office';
 import { api, ApiError, readJson } from '@/lib/api';
 import { isPeriodLocked, recordPunch } from '@/lib/punch';
@@ -41,5 +42,7 @@ export const POST = api<{ params: Promise<{ id: string }> }>('admin.punchRequest
   if (!done?.length) return { result: 'already' };
   const { error: e2 } = await db.from('decision_log').insert({ subject_table: 'punch_requests', subject_id: id, decision: b.decision, reason: null, decided_by: me.id, request_id: ctx.requestId });
   if (e2) throw new Error(`punchRequests.log: ${e2.code}`);
+  // 기록이 바뀐 날의 연장근로 확인을 바로 맞춘다 (2026-10-19 — 화면을 열 때 하던 계산을 옮김)
+  syncOvertimeFor(r.employee_id, [r.work_date]);
   return { result: 'ok' };
 });

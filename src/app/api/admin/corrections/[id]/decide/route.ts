@@ -1,5 +1,6 @@
 // 정정 승인·거부 (7-10). 원본(punch_events)은 절대 고치지 않는다 — punch_corrections.status만 바뀐다 (4-1).
 // 같은 날·같은 종류 빠진 기록 추가가 이미 승인돼 있으면 'conflict' (부분 유일 인덱스, R-4)
+import { syncOvertimeFor } from '@/lib/period-data';
 import { api, ApiError, readJson } from '@/lib/api';
 import { assertNotConfirmed } from '@/lib/confirm-data';
 import { isPeriodLocked } from '@/lib/punch';
@@ -29,5 +30,7 @@ export const POST = api<{ params: Promise<{ id: string }> }>('admin.corrections.
   });
   if (error) throw new Error(`decide_correction: ${error.code}`);
   // 승인 뒤 그 주 재계산은 화면을 열 때 일어난다 (calcWeek가 월요일부터, 연장 요청은 needs_review로) — B-25
+  // 기록이 바뀐 날의 연장근로 확인을 바로 맞춘다 (2026-10-19 — 화면을 열 때 하던 계산을 옮김)
+  syncOvertimeFor(c.employee_id, [c.work_date]);
   return { result: data };
 });

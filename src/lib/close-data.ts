@@ -10,7 +10,7 @@ import { addDays } from '@/lib/calendar';
 import { monthSpan, reviewMonth, type CloseReview, type PendingCounts } from '@/lib/close-review';
 import { confirmKey, loadConfirms } from '@/lib/confirm-data';
 import { canonical } from '@/lib/payroll/reference';
-import { daysFor, loadPeriod, type PeriodData } from '@/lib/period-data';
+import { daysFor, loadPeriod, syncOvertimeRange, type PeriodData } from '@/lib/period-data';
 import { summarizeAnomalies } from '@/lib/anomaly';
 import { collectAnomalies, loadAnomalyPolicy, loadAnomalyReviews } from '@/lib/anomaly-data';
 import { loadStaff } from '@/lib/staff-data';
@@ -52,6 +52,8 @@ function inputHash(data: PeriodData, employeeId: string, from: string, last: str
 export async function loadCloseBoard(ym: string, practice: boolean): Promise<{ lines: CloseLine[]; data: PeriodData; from: string; last: string }> {
   const { from, to, last } = monthSpan(ym);
   const db = createAdminClient();
+  // 마감 판단 전에 그 달의 연장근로 확인을 맞춘다 — 빠진 확인이 있는 채로 마감되지 않게 (2026-10-19: 화면을 열 때 하던 계산을 옮김)
+  await syncOvertimeRange(from, last, practice);
   const [data, confirms, closes, { data: pr }, { data: sr }, anomalyPolicy, reviews] = await Promise.all([
     loadPeriod(from, last, practice),
     loadConfirms(from, last, practice),

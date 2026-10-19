@@ -1,5 +1,6 @@
 // 날짜별 근무일정 넣기 (의뢰인 2026-10-10 2단계) — 여러 직원에게 같은 날 같은 일정을 한 번에. 관리자만.
 // 같은 직원·날짜·시작·끝이 이미 있으면 다시 만들지 않는다 (두 번 눌러도 한 건).
+import { syncOvertimeFor } from '@/lib/period-data';
 import { api, ApiError, readJson } from '@/lib/api';
 import { rethrowDbRule } from '@/lib/atomic-rpc';
 import { assertAttendanceEditable } from '@/lib/confirm-data';
@@ -42,5 +43,7 @@ export const POST = api('admin.schedule.create', async (req) => {
     rethrowDbRule(error); // 확정한 날 · 마감 기간은 DB도 막는다(묶음 12) — 409로 알린다
     if (error) throw new Error(`schedule.create: ${error.code}`);
   }
+  // 기록이 바뀐 날의 연장근로 확인을 바로 맞춘다 (2026-10-19 — 화면을 열 때 하던 계산을 옮김)
+  syncOvertimeFor(rows.map((r) => r.employee_id), [s.date]);
   return { created: rows.length, skipped: skip.size, notAllowed: blocked.length };
 });

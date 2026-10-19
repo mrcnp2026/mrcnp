@@ -1,4 +1,5 @@
 // 근무일정 생성 요청 승인·거절 (의뢰인 2026-10-11). 승인: 그 날짜에 날짜별 일정을 한 건 만든다 (같은 직원·날짜·시각의 일정이 이미 있으면 그것을 쓴다). 거절: 만들지 않는다.
+import { syncOvertimeFor } from '@/lib/period-data';
 import { api, ApiError, readJson } from '@/lib/api';
 import { requireApprover, requireStaffViewer } from '@/lib/scope';
 import { createAdminClient } from '@/lib/supabase/admin';
@@ -37,5 +38,6 @@ export const POST = api<{ params: Promise<{ id: string }> }>('admin.scheduleRequ
   if (!done?.length) return { result: 'already' };
   const { error: e2 } = await db.from('decision_log').insert({ subject_table: 'shift_requests', subject_id: id, decision: b.decision, reason: null, decided_by: me.id, request_id: ctx.requestId });
   if (e2) throw new Error(`scheduleRequests.log: ${e2.code}`);
+  if (b.decision === 'approved') syncOvertimeFor(r.employee_id, [r.work_date]); // 승인으로 일정이 생겼다 (2026-10-19)
   return { result: 'ok' };
 });

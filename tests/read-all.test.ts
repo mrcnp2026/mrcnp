@@ -15,3 +15,10 @@ it('쪽보다 적게 오면 빈 쪽을 다시 묻지 않는다 (2026-10-19 속�
   expect(result.data.length).toBe(37);
   expect(calls).toBe(1);
 });
+it('쪽이 꽉 차면 다음 쪽들을 한꺼번에 읽어도 빠짐없이 순서대로 (2026-10-19 속도)', async () => {
+  for (const n of [500, 501, 1000, 1999, 2000, 2001, 4321]) {
+    const rows = Array.from({ length: n }, (_, id) => ({ id }));
+    const result = await readAll(async (from, to) => ({ data: rows.slice(from, to + 1), error: null }));
+    expect(result.data).toEqual(rows);
+  }
+});

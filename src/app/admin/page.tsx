@@ -17,7 +17,7 @@ import { weekTotalMinutes } from '@/lib/period';
 import { isProxyCorrection } from '@/lib/day-detail';
 import { fullLeaveSet } from '@/lib/leave';
 import { loadAllLeaveTypes, loadLeaveGrants, loadLeaveRequests } from '@/lib/leave-data';
-import { daysFor, leaveDaysFor, loadPeriod, pendingCounts, syncOvertimeRequests, workDaysFor } from '@/lib/period-data';
+import { daysFor, leaveDaysFor, loadPeriod, pendingCounts, workDaysFor } from '@/lib/period-data';
 import { createAdminClient } from '@/lib/supabase/admin';
 import { kstDateTime, toKstDate } from '@/lib/time';
 import { buildTodayBoard, type BoardPerson } from '@/lib/today';
@@ -39,7 +39,7 @@ export default async function AdminHome({ searchParams }: { searchParams: Promis
   const now = new Date();
   const today = toKstDate(now);
   const data = await loadPeriod(addDays(today, -13), today, practiceView);
-  await syncOvertimeRequests(data, today);
+  // 연장근로 확인은 여기서 만들지 않는다 — 기록이 바뀔 때 바로(syncOvertimeFor) + 새벽 정기 작업이 맞춘다 (2026-10-19 속도)
   const counts = await pendingCounts(practiceView);
   // 오늘 근무노트 — 같은 직원·같은 날은 가장 최근 것만 (고친 노트는 새 행, 이전은 기록으로 남음 — R-10-2)
   const { data: noteRows } = await createAdminClient()

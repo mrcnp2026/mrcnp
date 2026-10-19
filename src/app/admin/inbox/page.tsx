@@ -17,8 +17,9 @@ import { leaveBalanceFor } from '@/lib/leave-balance-data';
 import { OFFICE } from '@/config/office';
 import { resolveDayType } from '@/config/labor-rules';
 import { getMe } from '@/lib/auth';
-import { addDays } from '@/lib/calendar';
-import { hiddenTestIds, loadPeriod, pendingCounts, syncOvertimeRequests } from '@/lib/period-data';
+import { hiddenTestIds, pendingCounts } from '@/lib/period-data';
+import { loadHolidays, loadRuleVersions } from '@/lib/attendance-data';
+import { ruleAt } from '@/lib/rule-at';
 import { loadStaff } from '@/lib/staff-data';
 import { approvalBlocked } from '@/lib/staff-rules';
 import { createAdminClient } from '@/lib/supabase/admin';
@@ -60,8 +61,8 @@ export default async function InboxPage({ searchParams }: { searchParams: Promis
   const practice = OFFICE.practiceMode && sp.live !== '1';
   if (sp.tab === 'done') return <DoneTab sp={sp} practice={practice} />;
   const today = toKstDate(new Date());
-  const data = await loadPeriod(addDays(today, -31), today, practice);
-  await syncOvertimeRequests(data, today);
+  // 연장근로 확인은 여기서 만들지 않는다 — 기록이 바뀔 때 바로(syncOvertimeFor) + 새벽 정기 작업이 맞춘다 (2026-10-19 속도).
+  // 31일치 전 직원 기록도 읽지 않는다 — 쓰던 것은 한 건 보기의 그날 근무규칙 · 공휴일뿐이라 그것만 읽는다(아래 dayPreview)
 
   const db = createAdminClient();
   const [{ data: otAll }, { data: coAll }, { data: staff }] = await Promise.all([
@@ -224,12 +225,13 @@ export default async function InboxPage({ searchParams }: { searchParams: Promis
   const dayNote = focusDay
     ? (((await db.from('work_notes').select('body').eq('employee_id', focusDay.employee_id).eq('work_date', focusDay.work_date).eq('is_test', practice).order('created_at', { ascending: false }).limit(1)).data?.[0]?.body as string | undefined) ?? null)
     : null;
+  const dayRule = focusDay ? (ruleAt(await loadRuleVersions(), focusDay.work_date) ?? ruleAt(await loadRuleVersions(), today)) : null;
+  const dayHolidays = focusDay ? await loadHolidays(focusDay.work_date, focusDay.work_date) : [];
   const dayPreview = (() => {
     if (!focusDay || punchPending.length === 0) return null;
     const pin = punchPending.find((r) => r.kind === 'in');
     const pout = punchPending.find((r) => r.kind === 'out');
-    const rule = data.ruleAt(focusDay.work_date) ?? data.rule;
-    const off = rule ? resolveDayType(focusDay.work_date, rule, data.holidays) !== 'workday' : false;
+    const off = dayRule ? resolveDayType(focusDay.work_date, dayRule, dayHolidays) !== 'workday' : false;
     const span = pin && pout ? Math.max(0, Math.round((Date.parse(pout.requested_at) - Date.parse(pin.requested_at)) / 60000)) : null;
     return t(off ? 'dayPreviewOff' : 'dayPreview', { from: pin ? hm(pin.requested_at) : '—', to: pout ? hm(pout.requested_at) : '—', min: span ?? 0, known: span === null ? 'no' : 'yes' });
   })();

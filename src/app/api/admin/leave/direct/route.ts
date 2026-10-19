@@ -3,6 +3,7 @@
 // ★ 직권: 지난 날 한도 · 종류별 신청 규칙 · 잔여 검사를 건너뛴다(lib/leave-request.ts direct). 겹침 · 확정된 날 · 마감은 그대로 막는다.
 //   고치기 = 기존 휴가를 취소하고 새 휴가를 만들어 바로 승인한다 — 두 기록 모두 남고, 결정 기록에 누가 · 왜가 남는다.
 //   새 휴가 검사를 먼저 끝낸 뒤에 기존 것을 취소한다(검사에서 막히면 아무것도 바뀌지 않는다).
+import { syncOvertimeFor } from '@/lib/period-data';
 import { OFFICE } from '@/config/office';
 import { api, ApiError, readJson } from '@/lib/api';
 import { atomicRpc, rethrowDbRule } from '@/lib/atomic-rpc';
@@ -60,5 +61,6 @@ export const POST = api('admin.leave.direct', async (req, ctx) => {
   if (error) rethrowDbRule(error);
   if (error || !data) throw new Error(`leave.direct.insert: ${error?.code}`);
   const result = await atomicRpc<string>('decide_leave_atomic', { p_id: data.id, p_decision: 'approved', p_decided_by: me.id, p_reason: why, p_request_id: ctx.requestId });
+  syncOvertimeFor(employeeId, [plan.start, plan.end]); // 직권 휴가로 그날 근무 시간 기준이 바뀐다 (2026-10-19)
   return { id: data.id, days: plan.days, result };
 });

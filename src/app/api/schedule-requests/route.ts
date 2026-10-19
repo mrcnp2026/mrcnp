@@ -1,5 +1,6 @@
 // 직원의 「근무일정 생성 요청」 (의뢰인 2026-10-11: 시프티의 근무일정 요청 — 특근·잔업·하루만 다른 시각).
 // 오늘부터의 날짜만. 작성자·상태는 서버가 정한다. 같은 날·같은 시각의 대기 중 요청이 있으면 막는다. 승인되면 날짜별 일정이 만들어진다.
+import { syncOvertimeFor } from '@/lib/period-data';
 import { OFFICE } from '@/config/office';
 import { rethrowDbRule } from '@/lib/atomic-rpc';
 import { api, ApiError, readJson } from '@/lib/api';
@@ -47,5 +48,6 @@ export const POST = api('scheduleRequests.create', async (req) => {
     .single();
   if (error) throw new Error(`scheduleRequests.create: ${error.code}`);
   if (direct) await db.from('decision_log').insert({ subject_table: 'shift_requests', subject_id: data.id, decision: 'approved', reason: 'direct', decided_by: me.id, request_id: null });
+  if (direct) syncOvertimeFor(me.id, [v.value.date]); // 바로 반영 방식이면 일정이 생겼다
   return { id: data.id, direct };
 });

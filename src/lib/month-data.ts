@@ -18,14 +18,15 @@ export function isYearMonth(s: unknown): s is string {
   return typeof s === 'string' && /^\d{4}-(0[1-9]|1[0-2])$/.test(s);
 }
 
-/** confirmedOnly: 급여용 — 확정된 날의 기록만 센다 (의뢰인 2026-10-11). 출퇴근기록 화면의 월 집계는 넘기지 않는다 */
-export async function buildMonth(ym: string, practice: boolean, opts: { confirmedOnly?: boolean } = {}): Promise<{ data: PeriodData; rows: { person: Person; summary: MonthSummary }[] }> {
+/** confirmedOnly: 급여용 — 확정된 날의 기록만 센다 (의뢰인 2026-10-11). 출퇴근기록 화면의 월 집계는 넘기지 않는다
+ *  sync: 연장근로 확인을 먼저 맞춘다 — 급여 화면 · 급여 내려받기만 (2026-10-19: 월 집계 · 리포트는 화면을 열 때 계산하지 않는다) */
+export async function buildMonth(ym: string, practice: boolean, opts: { confirmedOnly?: boolean; sync?: boolean } = {}): Promise<{ data: PeriodData; rows: { person: Person; summary: MonthSummary }[] }> {
   const { from, to } = monthRange(ym);
   const now = new Date();
   const today = toKstDate(now);
   const data = await loadPeriod(from, to, practice);
-  // 이 달의 확인 대상 연장 요청을 먼저 맞춘다 (열 때 계산 — 예약 작업 없음)
-  if (await syncOvertimeRequests(data, today < to ? today : to)) {
+  // 급여용이면 이 달의 연장근로 확인을 먼저 맞춘다 (돈이 걸린 계산이라 빠진 것이 없게)
+  if (opts.sync && (await syncOvertimeRequests(data, today < to ? today : to))) {
     Object.assign(data, await loadPeriod(from, to, practice));
   }
   const confirms = opts.confirmedOnly ? await loadConfirms(from, to, practice) : null;

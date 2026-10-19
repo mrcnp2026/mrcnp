@@ -7,6 +7,7 @@
 //    예외(예전처럼 ip_verified=false로 바로 기록): 사무실 인터넷·출퇴근 장소가 하나도 없는 회사, 그날 승인된 외근·출장·재택이 있는 직원 (lib/punch-requests.ts).
 // ★ GPS (2026-10-05): 인터넷 주소로 사무실이 확인되지 않을 때만, 폰이 함께 보낸 위치(body.geo)로 한 번 더 본다.
 //    위치는 폰이 보낸 값이라 인터넷 주소보다 약한 증거다 — 확인 수단(verified_by)을 기록에 남긴다. 사무실 밖 좌표는 저장하지 않는다.
+import { syncOvertimeFor } from '@/lib/period-data';
 import { OFFICE } from '@/config/office';
 import { api, ApiError, readJson } from '@/lib/api';
 import { officeCidrs } from '@/lib/attendance-data';
@@ -99,6 +100,8 @@ export const POST = api('punch', async (req) => {
     isTest: OFFICE.practiceMode,
     passkeyId,
   });
+  // 기록이 바뀐 날의 연장근로 확인을 바로 맞춘다 (2026-10-19 — 화면을 열 때 하던 계산을 옮김)
+  if (event.kind === 'out' && !deduped) syncOvertimeFor(who.employeeId, [event.workDate]);
   return {
     requested: false,
     kind: event.kind,

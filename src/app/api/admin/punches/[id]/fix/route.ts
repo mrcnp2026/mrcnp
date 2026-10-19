@@ -2,6 +2,7 @@
 // ★ 원본(punch_events)은 그대로 둔다 — 관리자 이름의 정정을 만들고 바로 승인한다(대리 등록과 같은 길, proxy-punch.ts 머리말).
 //   같은 기록에 이미 승인된 수정 · 무효가 있으면 그것을 먼저 취소하고 새로 넣는다(마지막 판단 하나만 남게).
 //   누가 · 언제 · 왜가 정정 기록과 결정 기록(decision_log)에 남는다. 확정된 날 · 마감된 달은 고치지 못한다(먼저 푼다).
+import { syncOvertimeFor } from '@/lib/period-data';
 import { OFFICE } from '@/config/office';
 import { api, ApiError, readJson } from '@/lib/api';
 import { requireAdmin } from '@/lib/auth';
@@ -63,5 +64,7 @@ export const POST = api<{ params: Promise<{ id: string }> }>('admin.punches.fix'
   const { data: result, error: e2 } = await db.rpc('decide_correction', { p_id: row.id, p_decision: 'approved', p_decided_by: me.id, p_reason: reason, p_request_id: ctx.requestId });
   if (e2) throw new Error(`fix.decide: ${e2.code}`);
   if (result !== 'ok') throw new ApiError(409, 'already');
+  // 기록이 바뀐 날의 연장근로 확인을 바로 맞춘다 (2026-10-19 — 화면을 열 때 하던 계산을 옮김)
+  syncOvertimeFor(ev.employee_id, [ev.work_date]);
   return { id: row.id };
 });

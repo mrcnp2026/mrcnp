@@ -2,6 +2,7 @@
 // 예약 작업(cron)을 만들지 않는다 (3장) — 처리함·현황판·월간 집계를 **열 때** 계산하고 필요한 요청 행을 만든다.
 import 'server-only';
 import { cache } from 'react';
+import { after } from 'next/server';
 import { readAll } from '@/lib/read-all';
 import { resolveDayType } from '@/config/labor-rules';
 import { OFFICE } from '@/config/office';
@@ -230,7 +231,7 @@ export function daysFor(data: PeriodData, employeeId: string, from = data.from, 
  * - 있는데 지금 집계와 다르면 사실 칸은 그대로 두고 recomputed_*에 새 값 + needs_review (R-4) — 인정분을 코드가 줄이지 않는다
  * 반환: 새로 만들거나 바뀐 건수
  */
-export async function syncOvertimeRequests(data: PeriodData, upTo: string): Promise<number> {
+export async function syncOvertimeRequests(data: PeriodData, upTo: string, only?: ReadonlySet<string>): Promise<number> {
   if (!data.rule) return 0;
   const db = createAdminClient();
   const existing = new Map(data.overtime.map((o) => [`${o.employeeId}|${o.workDate}`, o]));
@@ -238,6 +239,7 @@ export async function syncOvertimeRequests(data: PeriodData, upTo: string): Prom
   const reviews: { id: string; o: number; n: number; h: number }[] = [];
 
   for (const p of data.people) {
+    if (only && !only.has(p.id)) continue; // 한 사람만 맞출 때 (기록이 바뀐 직후, syncOvertimeFor)
     for (const d of daysFor(data, p.id, data.from, upTo < data.to ? upTo : data.to)) {
       if (d.pairs.some((x) => x.in && !x.out)) continue; // 근무 중
       const draft = buildOvertimeRequest({ employeeId: p.id, workDate: d.workDate, work: d, thresholdMinutes: OFFICE.overtimeReviewThresholdMin });
@@ -277,6 +279,34 @@ export async function syncOvertimeRequests(data: PeriodData, upTo: string): Prom
     if (error) throw new Error(`syncOvertime.review: ${error.message}`);
   }
   return inserts.length + reviews.length;
+}
+
+/**
+ * 연장근로 확인을 기간 전체로 맞춘다 (2026-10-19 의뢰인: 화면을 열 때마다 하던 계산을 옮김).
+ * 새벽 정기 작업(/api/cron/overtime-sync) · 월 마감 · 급여 계산 직전 · 엑셀 갱신 마무리가 부른다. 오늘 뒤 날짜는 세지 않는다.
+ */
+export async function syncOvertimeRange(from: string, to: string, practice = OFFICE.practiceMode, only?: ReadonlySet<string>): Promise<number> {
+  const today = toKstDate(new Date());
+  const upTo = to < today ? to : today;
+  if (from > upTo) return 0;
+  return syncOvertimeRequests(await loadPeriod(from, upTo, practice), upTo, only);
+}
+
+/**
+ * 기록이 바뀐 직후 그 사람의 그 날짜들만 맞춘다 — 「출퇴근을 고치면 연장 요청이 바로 생긴다」(2026-10-19 의뢰인: 그대로 유지).
+ * 응답을 돌려준 뒤(after) 돌아서 누른 사람은 기다리지 않는다. 실패해도 저장은 그대로이고, 새벽 정기 작업이 다시 맞춘다.
+ */
+export function syncOvertimeFor(employeeIds: string | string[], dates: (string | null | undefined)[]): void {
+  const ids = new Set(Array.isArray(employeeIds) ? employeeIds : [employeeIds]);
+  const ds = dates.filter((d): d is string => typeof d === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(d)).sort();
+  if (ds.length === 0 || ids.size === 0) return;
+  after(async () => {
+    try {
+      await syncOvertimeRange(ds[0], ds[ds.length - 1], OFFICE.practiceMode, ids);
+    } catch (e) {
+      console.error(JSON.stringify({ route: 'syncOvertimeFor', detail: String((e as Error)?.message ?? e).slice(0, 200) }));
+    }
+  });
 }
 
 /** 꺼져 있는 검사 전용 계정(e2e-…) — 이 계정들의 요청은 요청함·요청 숫자에 넣지 않는다 (검사가 남긴 요청이 실제 관리자에게 보이던 문제, 2026-10-11) */

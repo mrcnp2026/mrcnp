@@ -2,6 +2,7 @@
 // ★ 원본(punch_events)에는 쓰지 않는다 — 관리자 이름의 "빠진 기록 추가" 정정을 만들고 바로 승인한다 (proxy-punch.ts 머리말).
 //   누가(requested_by·approved_by)·언제·왜(reason)가 정정 기록과 결정 기록(decision_log)에 남는다.
 // 시각·작성자·연습 여부는 서버가 정한다. 같은 날·같은 종류 기록이 이미 있으면 넣지 않는다.
+import { syncOvertimeFor } from '@/lib/period-data';
 import { OFFICE } from '@/config/office';
 import { api, ApiError, readJson } from '@/lib/api';
 import { assertStaffTarget } from '@/lib/staff-data';
@@ -70,5 +71,7 @@ export const POST = api<{ params: Promise<{ id: string }> }>('admin.proxy.punch'
     await decide('rejected');
     throw new ApiError(409, 'already_exists');
   }
+  // 기록이 바뀐 날의 연장근로 확인을 바로 맞춘다 (2026-10-19 — 화면을 열 때 하던 계산을 옮김)
+  syncOvertimeFor(id, [plan.workDate]);
   return { id: row.id, at: plan.at.toISOString() };
 });

@@ -51,7 +51,7 @@ export default async function PayrollPage({ searchParams }: { searchParams: Prom
     );
   }
   // 확정한 기록만 급여 계산에 쓴다 (의뢰인 2026-10-11) — 미확정 기록이 있으면 위에 알린다
-  const { rows } = await buildMonth(ym, practice, { confirmedOnly: true });
+  const { rows } = await buildMonth(ym, practice, { confirmedOnly: true, sync: true });
   const unconfirmed = rows.reduce((a, r) => a + r.summary.unconfirmedDates.length, 0);
 
   // 이 달 합계 (숫자 칸) — 표와 같은 값의 합

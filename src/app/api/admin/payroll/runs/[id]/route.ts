@@ -3,7 +3,8 @@
 import { api, ApiError, readJson } from '@/lib/api';
 import { requirePayroll } from '@/lib/payroll/data';
 import { publishRun, unpublishStatement } from '@/lib/payroll/publish-data';
-import { addOverride, calculateRun, finalizeRun, reviewRun, setMember, startCorrection, withdrawOverride } from '@/lib/payroll/run-data';
+import { addOverride, calculateRun, finalizeRun, loadRun, reviewRun, setMember, startCorrection, withdrawOverride } from '@/lib/payroll/run-data';
+import { syncOvertimeRange } from '@/lib/period-data';
 
 export const maxDuration = 60;
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
@@ -22,7 +23,12 @@ export const POST = api<{ params: Promise<{ id: string }> }>('admin.payroll.run'
   if (b.action === 'calculate' || b.action === 'review' || b.action === 'finalize') {
     if (!Number.isInteger(b.expectedVersion)) throw new ApiError(400, 'invalid_input');
     const args = { ...common, expectedVersion: b.expectedVersion as number };
-    if (b.action === 'calculate') return { calculated: await calculateRun(args) };
+    if (b.action === 'calculate') {
+      // 계산 전에 그 기간의 연장근로 확인을 맞춘다 (2026-10-19 — 화면을 열 때 하던 계산을 옮김). 기간 끝(periodTo)은 다음 날 0시라 하루 전까지
+      const run = await loadRun(id);
+      if (run && run.kind !== 'DAILY') await syncOvertimeRange(run.periodFrom, new Date(Date.parse(`${run.periodTo}T00:00:00Z`) - 86400000).toISOString().slice(0, 10), run.isTest);
+      return { calculated: await calculateRun(args) };
+    }
     if (b.action === 'review') await reviewRun(args);
     else await finalizeRun(args);
     return { ok: true };
