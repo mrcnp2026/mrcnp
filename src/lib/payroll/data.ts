@@ -58,9 +58,15 @@ export type ItemRow = ItemInput & { id: string; inUse: boolean; validFrom: strin
 const toItem = (r: Record<string, unknown>): ItemRow => ({
   id: r.id as string, code: r.code as string, kind: r.kind as ItemRow['kind'], koName: r.ko_name as string, enName: r.en_name as string, calcKind: r.calc_kind as ItemRow['calcKind'],
   defaultAmount: r.default_amount === null ? null : Number(r.default_amount), fixedAllowance: r.fixed_allowance as boolean, taxTreatment: r.tax_treatment as ItemRow['taxTreatment'],
-  taxExemptLimit: r.tax_exempt_limit === null ? null : Number(r.tax_exempt_limit), ordinaryWage: r.ordinary_wage as ItemRow['ordinaryWage'], sort: r.sort as number, inUse: r.in_use as boolean,
+  taxExemptLimit: r.tax_exempt_limit === null ? null : Number(r.tax_exempt_limit), taxExemptAnnualLimit: r.tax_exempt_annual_limit === null || r.tax_exempt_annual_limit === undefined ? null : Number(r.tax_exempt_annual_limit), ordinaryWage: r.ordinary_wage as ItemRow['ordinaryWage'], sort: r.sort as number, inUse: r.in_use as boolean,
   validFrom: r.valid_from as string, validTo: r.valid_to as string | null, version: r.version as number, verification: r.verification_state as Verify, verificationNote: r.verification_note as string | null,
 });
+
+/** 연간 비과세 한도 칸(DB 0062, 묶음 28)이 있는가 */
+export async function annualLimitReady(): Promise<boolean> {
+  const { error } = await db().from('payroll_item_versions').select('tax_exempt_annual_limit').limit(1);
+  return !error;
+}
 
 /** 지금 쓰는 판(끝나는 날이 열려 있는 판) — 코드마다 하나 */
 export async function loadItems(kind?: 'PAYMENT' | 'DEDUCTION', asOf?: string): Promise<ItemRow[]> {
@@ -75,9 +81,12 @@ export async function loadItems(kind?: 'PAYMENT' | 'DEDUCTION', asOf?: string): 
 /** 항목 등록 또는 고침(새 판). 종류(지급/공제)는 바꿀 수 없다 */
 export async function saveItem(args: { input: ItemInput; validFrom: string; reason: string | null; expectedVersion: number; me: Me }): Promise<ItemRow> {
   const i = args.input;
+  // 연간 한도는 칸(묶음 28)이 있을 때만 보낸다 — 비우면 보내지 않는다(새 판에서 빈 값)
+  const annual = i.taxExemptAnnualLimit ?? null;
+  if (annual !== null && !(await annualLimitReady())) throw new ApiError(503, 'db_update_required');
   const row = await atomicRpc<Record<string, unknown>>('append_payroll_version_atomic', {
     p_table: 'payroll_item_versions', p_identity: i.code, p_valid_from: args.validFrom, p_reason: args.reason, p_expected_version: args.expectedVersion, p_actor: args.me.id,
-    p_values: { kind: i.kind, ko_name: i.koName, en_name: i.enName, calc_kind: i.calcKind, default_amount: i.defaultAmount, fixed_allowance: i.fixedAllowance, tax_treatment: i.taxTreatment, tax_exempt_limit: i.taxExemptLimit, ordinary_wage: i.ordinaryWage, sort: i.sort },
+    p_values: { kind: i.kind, ko_name: i.koName, en_name: i.enName, calc_kind: i.calcKind, default_amount: i.defaultAmount, fixed_allowance: i.fixedAllowance, tax_treatment: i.taxTreatment, tax_exempt_limit: i.taxExemptLimit, ...(annual !== null ? { tax_exempt_annual_limit: annual } : {}), ordinary_wage: i.ordinaryWage, sort: i.sort },
   });
   return toItem(row);
 }

@@ -9,7 +9,7 @@ import { groupPath } from '@/lib/org';
 import { loadOrgGroups } from '@/lib/org-data';
 import { INSURERS, referenceHourly, setupGaps, versionAt } from '@/lib/payroll/contract';
 import { loadItems, reliefSwitches } from '@/lib/payroll/data';
-import { loadPayHistory, previewPay } from '@/lib/payroll/run-data';
+import { exemptYtdForYear, loadPayHistory, previewPay } from '@/lib/payroll/run-data';
 import { OFFICE } from '@/config/office';
 import { loadStaffPay } from '@/lib/payroll/staff-data';
 import { createAdminClient } from '@/lib/supabase/admin';
@@ -41,7 +41,10 @@ export default async function StaffPayDetailPage({ params }: { params: Promise<{
   const itemName = (code: string) => items.find((x) => x.code === code)?.koName ?? code;
   const hourly = contract ? referenceHourly(contract) : null;
   // 예상 지급 · 공제 — 계약만으로 한 달 치를 계산해 본 값. 대장을 만들지 않는다
-  const [preview, tr, history] = await Promise.all([previewPay(id, today), getTranslations('admin.payRuns'), loadPayHistory(id, OFFICE.practiceMode)]);
+  const [preview, tr, history, ytd] = await Promise.all([previewPay(id, today), getTranslations('admin.payRuns'), loadPayHistory(id, OFFICE.practiceMode), exemptYtdForYear(id, today.slice(0, 4), OFFICE.practiceMode)]);
+  // 올해 비과세 누적 (2026-10-19): 비과세 · 일부 비과세 항목과 올해 확정한 급여에서 이미 비과세로 뺀 합계 · 연간 한도 · 남은 한도
+  const exemptItems = items.filter((x) => x.kind === 'PAYMENT' && (x.taxTreatment === 'EXEMPT' || x.taxTreatment === 'PARTIAL') && (x.inUse || ytd[x.code]));
+  const exemptRows = [...exemptItems.map((x) => ({ code: x.code, name: x.koName, used: ytd[x.code] ?? 0, monthly: x.taxExemptLimit, annual: x.taxExemptAnnualLimit ?? null })), ...Object.keys(ytd).filter((c) => !exemptItems.some((x) => x.code === c)).map((c) => ({ code: c, name: itemName(c), used: ytd[c], monthly: null, annual: null }))];
   const dk = (d: string) => d.replace(/[.-]/g, '_');
   const whyNot = (b: { code: string; detail?: string }) => (tr.has(`blocker.${b.code}`) ? tr(`blocker.${b.code}`, { detail: b.detail ? (tr.has(`detail.${dk(b.detail)}`) ? tr(`detail.${dk(b.detail)}`) : b.detail) : '' }) : b.code);
   const lineName = (code: string, fallback: string) => (tr.has(`line.${code}`) ? tr(`line.${code}`) : (items.find((x) => x.code === code)?.koName ?? fallback));
@@ -199,6 +202,30 @@ export default async function StaffPayDetailPage({ params }: { params: Promise<{
                 </Link>
               </li>
             ))}
+          </ul>
+        )}
+      </Card>
+
+      <Card>
+        <CardTitle>{t('exemptTitle', { year: today.slice(0, 4) })}</CardTitle>
+        <p className="pt-1 text-sm text-faint">{t('exemptIntro')}</p>
+        {exemptRows.length === 0 ? (
+          <p className="pt-2 text-sm text-faint">{t('exemptNone')}</p>
+        ) : (
+          <ul className="mt-2 flex flex-col divide-y divide-border" data-exempt-ytd>
+            {exemptRows.map((r) => {
+              const left = r.annual === null ? null : Math.max(0, r.annual - r.used);
+              return (
+                <li key={r.code} className="flex flex-wrap items-center gap-x-3 gap-y-0.5 py-2 text-sm">
+                  <span className="font-semibold">{r.name}</span>
+                  <span className="text-xs text-muted">{[r.monthly !== null ? t('exemptMonthly', { amount: won(r.monthly) }) : null, r.annual !== null ? t('exemptAnnual', { amount: won(r.annual) }) : t('exemptNoAnnual')].filter(Boolean).join(' · ')}</span>
+                  <span className="num ml-auto text-right">
+                    <span className="font-bold">{t('exemptUsed', { amount: won(r.used) })}</span>
+                    {left !== null && <span className={`block text-xs ${left === 0 ? 'text-warn' : 'text-faint'}`}>{left === 0 ? t('exemptFull') : t('exemptLeft', { amount: won(left) })}</span>}
+                  </span>
+                </li>
+              );
+            })}
           </ul>
         )}
       </Card>

@@ -250,6 +250,9 @@ export function ItemForm({ kind, item, today }: { kind: 'PAYMENT' | 'DEDUCTION';
           <Row label={t('item.limit')} hint={t('item.limitHint')}>
             <input name="taxExemptLimit" inputMode="numeric" pattern="[0-9,]*" defaultValue={item?.taxExemptLimit ?? ''} className={`num ${field} lg:max-w-56`} autoComplete="off" />
           </Row>
+          <Row label={t('item.annualLimit')} hint={t('item.annualLimitHint')}>
+            <input name="taxExemptAnnualLimit" inputMode="numeric" pattern="[0-9,]*" defaultValue={item?.taxExemptAnnualLimit ?? ''} className={`num ${field} lg:max-w-56`} autoComplete="off" />
+          </Row>
           <Row label={t('item.ordinary')} hint={t('item.ordinaryHint')}>
             <select name="ordinaryWage" defaultValue={item?.ordinaryWage ?? 'UNKNOWN'} className={`${field} lg:max-w-72`}>
               {opts(ORDINARY, (k) => t(`ordinary.${k}`))}

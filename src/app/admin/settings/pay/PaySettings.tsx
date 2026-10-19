@@ -171,6 +171,7 @@ export async function PaySettings({ sp }: { sp: SP }) {
                       <dd>
                         {t(`tax.${it.taxTreatment}`)}
                         {it.taxExemptLimit !== null && <span className="num text-xs text-faint"> · {t('item.limitOf', { amount: won(it.taxExemptLimit) })}</span>}
+                        {it.taxExemptAnnualLimit != null && <span className="num text-xs text-faint"> · {t('item.annualLimitOf', { amount: won(it.taxExemptAnnualLimit) })}</span>}
                       </dd>
                       <dt className="text-muted">{t('item.colOrdinary')}</dt>
                       <dd>{t(`ordinary.${it.ordinaryWage}`)}</dd>
@@ -215,6 +216,7 @@ export async function PaySettings({ sp }: { sp: SP }) {
                         <td className="px-4 py-2 whitespace-nowrap">
                           {t(`tax.${it.taxTreatment}`)}
                           {it.taxExemptLimit !== null && <span className="num block text-xs text-faint">{t('item.limitOf', { amount: won(it.taxExemptLimit) })}</span>}
+                          {it.taxExemptAnnualLimit != null && <span className="num block text-xs text-faint">{t('item.annualLimitOf', { amount: won(it.taxExemptAnnualLimit) })}</span>}
                         </td>
                         <td className="px-4 py-2 whitespace-nowrap">{t(`ordinary.${it.ordinaryWage}`)}</td>
                       </>

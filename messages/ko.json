@@ -1250,7 +1250,10 @@
         "colState": "검증",
         "colUse": "사용 여부",
         "useOf": "{name} 사용 여부",
-        "note": "항목을 고치면 새 판이 쌓이고, 이미 명세서에 쓰인 옛 이름과 금액은 그대로 남습니다."
+        "note": "항목을 고치면 새 판이 쌓이고, 이미 명세서에 쓰인 옛 이름과 금액은 그대로 남습니다.",
+        "annualLimit": "연간 비과세 한도(원)",
+        "annualLimitHint": "한 해 동안 비과세로 뺄 수 있는 합계 — 예: 생산직 연장근로수당 2,400,000. 비우면 연간 한도 없음(달마다의 한도만). 넘는 금액은 그 달부터 과세로 계산합니다.",
+        "annualLimitOf": "연 {amount}"
       },
       "calcKind": {
         "FIXED": "고정 금액",
@@ -3440,7 +3443,16 @@
       "historyRevision": "정정 {n}판",
       "historyPayDate": "지급일 {date}",
       "historySums": "지급 {pay} · 공제 {deduction}",
-      "empty": "찾는 직원이 없습니다."
+      "empty": "찾는 직원이 없습니다.",
+      "exemptTitle": "{year}년 비과세 누적",
+      "exemptIntro": "올해 확정한 급여에서 항목마다 비과세로 뺀 합계입니다. 연간 한도가 있는 항목은 한도를 넘는 만큼 다음 급여부터 과세로 돌립니다. 회사 엑셀로 올린 명세서는 과세 구분이 없어 들어가지 않습니다.",
+      "exemptNone": "비과세 항목이 없습니다.",
+      "exemptMonthly": "월 한도 {amount}",
+      "exemptAnnual": "연간 한도 {amount}",
+      "exemptNoAnnual": "연간 한도 없음",
+      "exemptUsed": "올해 {amount}",
+      "exemptLeft": "남은 한도 {amount}",
+      "exemptFull": "연간 한도를 다 썼습니다 — 넘는 금액은 과세"
     },
     "payRuns": {
       "title": "급여대장",
@@ -3626,7 +3638,8 @@
         "basis_unverified": "검증되지 않은 급여 기준이 있습니다 ({detail}).",
         "policy_changed_in_period": "귀속 기간 중 기준이 바뀌었습니다 ({detail}). 기간별 계산 기준을 검토해 주세요.",
         "leave_duration_mismatch": "휴가 시간과 일정의 순근무시간이 맞지 않습니다 ({detail}). 휴가·일정을 검토해 주세요.",
-        "weekly_rest_with_absence": "이 달에 결근한 날이 있습니다({detail}). 주휴수당은 빼지 않고 그대로 넣었습니다 — 결근한 주의 주휴를 뺄지는 회사가 정해야 합니다(결정 사항 급여-41). 빼야 하면 「금액 조정」으로 고쳐 주세요."
+        "weekly_rest_with_absence": "이 달에 결근한 날이 있습니다({detail}). 주휴수당은 빼지 않고 그대로 넣었습니다 — 결근한 주의 주휴를 뺄지는 회사가 정해야 합니다(결정 사항 급여-41). 빼야 하면 「금액 조정」으로 고쳐 주세요.",
+        "exempt_annual_reached": "비과세 연간 한도에 닿아 넘는 금액을 과세로 계산했습니다 ({detail})"
       },
       "detail": {
         "pension": "국민연금",

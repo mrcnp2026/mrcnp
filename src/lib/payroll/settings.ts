@@ -96,6 +96,7 @@ export const ORDINARY = ['INCLUDED', 'EXCLUDED', 'UNKNOWN'] as const;
 export type ItemInput = {
   code: string; kind: 'PAYMENT' | 'DEDUCTION'; koName: string; enName: string; calcKind: (typeof CALC_KINDS)[number];
   defaultAmount: number | null; fixedAllowance: boolean; taxTreatment: (typeof TAX_TREATMENTS)[number]; taxExemptLimit: number | null;
+  taxExemptAnnualLimit?: number | null; // 연간 비과세 한도(원) — 묶음 28 (2026-10-19). 없으면 연간 한도 없음
   ordinaryWage: (typeof ORDINARY)[number]; sort: number;
 };
 const won = (v: unknown): number | null | undefined => {
@@ -112,13 +113,14 @@ export function validateItem(b: Record<string, unknown>): Result<ItemInput> {
   const calcKind = one(b.calcKind, CALC_KINDS);
   const defaultAmount = won(b.defaultAmount);
   const taxExemptLimit = won(b.taxExemptLimit);
+  const taxExemptAnnualLimit = won(b.taxExemptAnnualLimit);
   const ordinaryWage = one(b.ordinaryWage ?? 'UNKNOWN', ORDINARY);
   // 공제 항목에는 과세 구분이 없다. 지급 항목은 꼭 골라야 한다
   const taxTreatment = kind === 'DEDUCTION' ? 'NOT_APPLICABLE' : one(b.taxTreatment, ['TAXABLE', 'EXEMPT', 'PARTIAL'] as const);
   const sort = b.sort === undefined || b.sort === '' ? 0 : int(b.sort, 0, 9999);
-  if (!code || !kind || !koName || !enName || !calcKind || defaultAmount === undefined || taxExemptLimit === undefined || !ordinaryWage || !taxTreatment || sort === undefined) return bad;
-  if (taxTreatment !== 'PARTIAL' && taxTreatment !== 'EXEMPT' && taxExemptLimit !== null) return bad; // 한도는 비과세 · 일부 비과세에만
-  return { ok: true, value: { code, kind, koName, enName, calcKind, defaultAmount, fixedAllowance: b.fixedAllowance === true, taxTreatment, taxExemptLimit, ordinaryWage, sort } };
+  if (!code || !kind || !koName || !enName || !calcKind || defaultAmount === undefined || taxExemptLimit === undefined || taxExemptAnnualLimit === undefined || !ordinaryWage || !taxTreatment || sort === undefined) return bad;
+  if (taxTreatment !== 'PARTIAL' && taxTreatment !== 'EXEMPT' && (taxExemptLimit !== null || taxExemptAnnualLimit !== null)) return bad; // 한도는 비과세 · 일부 비과세에만
+  return { ok: true, value: { code, kind, koName, enName, calcKind, defaultAmount, fixedAllowance: b.fixedAllowance === true, taxTreatment, taxExemptLimit, taxExemptAnnualLimit, ordinaryWage, sort } };
 }
 
 /**

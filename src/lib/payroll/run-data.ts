@@ -198,6 +198,7 @@ async function buildInputs(run: RunRow): Promise<Built> {
   const noticeInputs = insuranceBasis === 'NOTICE' ? await loadNoticeInputs(run) : new Map<string, { notices: EngineInput['notices']; blockers: Blocker[] }>();
   const bonus = run.kind === 'BONUS';
   const priorOf = bonus ? await loadPrior(run) : null;
+  const exemptYtd = await loadExemptYtd(run); // 같은 해 앞서 확정한 명세의 항목별 비과세 합계 (2026-10-19)
 
   const contracts = (cons ?? []) as Row[];
   const taxRows = (taxes ?? []) as Row[];
@@ -302,7 +303,7 @@ async function buildInputs(run: RunRow): Promise<Built> {
       const amount = a.amount === null ? it.defaultAmount : Number(a.amount);
       if (amount === null) { pre.push({ code: 'item_amount_missing', detail: it.code }); continue; }
       const taxable = it.taxTreatment === 'EXEMPT' ? 'EXEMPT' : it.taxTreatment === 'PARTIAL' ? 'PARTIAL' : 'TAXABLE';
-      engineItems.push({ code: it.code, kind: it.kind, label: it.koName, amount, taxable, exemptLimit: it.taxExemptLimit, insurable: taxable !== 'EXEMPT', ordinaryWage: it.ordinaryWage, itemVersionId: it.id });
+      engineItems.push({ code: it.code, kind: it.kind, label: it.koName, amount, taxable, exemptLimit: it.taxExemptLimit, exemptAnnualLimit: it.taxExemptAnnualLimit ?? null, insurable: taxable !== 'EXEMPT', ordinaryWage: it.ordinaryWage, itemVersionId: it.id });
     }
     const overrides: EngineOverride[] = ((ovs ?? []) as Row[]).filter((o) => o.employee_id === id).map((o) => ({ id: o.id as string, itemCode: o.item_code as string, kind: o.kind as 'PAYMENT' | 'DEDUCTION', amount: Number(o.proposed_amount), label: itemAt(o.item_code as string)?.koName }));
     // 상여: 같은 달에 앞서 확정한 명세(정규 + 앞 차수 상여)의 과세 합계와 세액을 넘긴다 → 세금은 차액만. 4대보험은 상여 대장에서 계산하지 않는다(경고로 알린다)
@@ -310,7 +311,7 @@ async function buildInputs(run: RunRow): Promise<Built> {
     const notice = noticeInputs.get(id);
     if (!bonus && notice) pre.push(...notice.blockers);
     if (!bonus && insuranceBasis === 'NOTICE' && overrides.some((o) => ['PENSION_SETTLE', 'HEALTH_SETTLE', 'EMPLOYMENT_SETTLE'].includes(o.itemCode))) pre.push({ code: 'notice_settlement_duplicate' });
-    const input: MemberInput['input'] = { runKind: bonus ? 'BONUS' : 'REGULAR', contract, tax, time, partialMonth, items: engineItems, policy, reference, insuranceBasis, notices: notice?.notices, overrides, prior, skipInsurance: bonus, minimumHourly: bonus ? null : minimumHourly };
+    const input: MemberInput['input'] = { runKind: bonus ? 'BONUS' : 'REGULAR', contract, tax, time, partialMonth, items: engineItems, policy, reference, insuranceBasis, notices: notice?.notices, overrides, prior, skipInsurance: bonus, minimumHourly: bonus ? null : minimumHourly, exemptYtd: exemptYtd.get(id) ?? {} };
     members.push({ employeeId: id, input, pre, notes, closeId: (close?.id as string | undefined) ?? null, contractId: (con?.id as string | undefined) ?? null, taxId: (taxRow?.id as string | undefined) ?? null, snapshot: { contract, tax, time, attendance: facts, items: engineItems, notices: notice?.notices ?? null, overrides, partialMonth, prior, closeHash: close?.input_hash ?? null } });
   }
   const usedItems = items.filter((it) => members.some((m) => m.input.items.some((x) => x.itemVersionId === it.id)));
@@ -336,6 +337,56 @@ async function buildInputs(run: RunRow): Promise<Built> {
  * 확정한 정규 대장이 없으면 빈 Map(= 전원 차단: 앞선 명세를 모른다). 있으면 '*' 표시를 넣고, 그 대장에 명세가 없는 직원은 0으로 본다(그 달 정규 급여가 없던 사람).
  * 과세 합계는 명세서 스냅샷에 적혀 있어야 한다 — 없으면(예전 계산) 그 직원은 차단된다.
  */
+/**
+ * 같은 해(귀속 기간 시작일의 연도)에 이 대장보다 앞서 확정한 명세에서, 직원 · 항목마다 이미 비과세로 뺀 합계 (2026-10-19 비과세 연간 누적).
+ * 앞선 달의 정규 · 상여 + 같은 달의 정규(상여 대장일 때) · 앞 차수 상여. 대장(종류 · 기간 · 차수)마다 가장 새 확정 판만 센다(정정 전 판을 두 번 세지 않는다).
+ * 줄마다 계산 때 남긴 calc_trace.exempt를 더한다 — 엔진 1.3 전에 계산한 줄은 비과세 금액이 없어 0으로 본다.
+ */
+export async function loadExemptYtd(run: Pick<RunRow, 'id' | 'kind' | 'periodFrom' | 'periodTo' | 'sequence' | 'isTest'>, employeeIds?: string[]): Promise<Map<string, Record<string, number>>> {
+  const c = db();
+  const out = new Map<string, Record<string, number>>();
+  const yearStart = `${run.periodFrom.slice(0, 4)}-01-01`;
+  const { data: runs, error } = await c.from('payroll_runs').select('id, run_kind, period_from, period_to, sequence, revision, current_generation_id').eq('is_test', run.isTest).eq('status', 'FINALIZED').in('run_kind', ['REGULAR', 'BONUS']).gte('period_from', yearStart).lte('period_from', run.periodFrom);
+  if (error) fail('loadExemptYtd', error);
+  const earlier = (r: Row) => {
+    if ((r.period_from as string) < run.periodFrom) return true;
+    if ((r.period_to as string) !== run.periodTo) return false;
+    if (run.kind === 'REGULAR') return false; // 같은 달 정규 대장 자신(다른 판)은 빼고, 같은 달 상여는 정규 뒤에 계산한다
+    return r.run_kind === 'REGULAR' || (r.sequence as number) < run.sequence;
+  };
+  const latest = new Map<string, Row>();
+  for (const r of ((runs ?? []) as Row[]).filter((x) => x.id !== run.id && earlier(x))) {
+    const k = `${r.run_kind}:${r.period_from}:${r.period_to}:${r.sequence}`;
+    if (!latest.has(k) || (latest.get(k)!.revision as number) < (r.revision as number)) latest.set(k, r);
+  }
+  const gens = [...latest.values()].map((r) => r.current_generation_id as string).filter(Boolean);
+  if (gens.length === 0) return out;
+  let sq = c.from('payroll_statements').select('id, employee_id').in('generation_id', gens).eq('state', 'OK');
+  if (employeeIds) sq = sq.in('employee_id', employeeIds);
+  const { data: sts, error: e2 } = await sq;
+  if (e2) fail('loadExemptYtd.statements', e2);
+  const who = new Map((sts ?? []).map((s) => [s.id as string, s.employee_id as string]));
+  if (who.size === 0) return out;
+  const { data: lines, error: e3 } = await c.from('payroll_statement_items').select('statement_id, item_code, calc_trace').in('statement_id', [...who.keys()]).eq('kind', 'PAYMENT');
+  if (e3) fail('loadExemptYtd.lines', e3);
+  for (const l of (lines ?? []) as Row[]) {
+    const ex = Number((l.calc_trace as Row | null)?.exempt ?? 0);
+    if (!Number.isFinite(ex) || ex === 0) continue;
+    const emp = who.get(l.statement_id as string)!;
+    const cur = out.get(emp) ?? {};
+    cur[l.item_code as string] = (cur[l.item_code as string] ?? 0) + ex;
+    out.set(emp, cur);
+  }
+  return out;
+}
+
+/** 그 해에 확정한 급여 전부의 항목별 비과세 합계 — 사원별 급여 화면의 「올해 비과세 누적」 */
+export async function exemptYtdForYear(employeeId: string, year: string, practice: boolean): Promise<Record<string, number>> {
+  // 그 해 12월 31일에 시작하는 가상의 상여 대장 「앞」에 있는 것 = 그 해 확정한 정규 · 상여 전부
+  const all = await loadExemptYtd({ id: '', kind: 'BONUS', periodFrom: `${year}-12-31`, periodTo: '9999-12-31', sequence: 9999, isTest: practice }, [employeeId]);
+  return all.get(employeeId) ?? {};
+}
+
 async function loadPrior(run: RunRow): Promise<Map<string, { taxable: number; incomeTax: number; localTax: number }>> {
   const c = db();
   const out = new Map<string, { taxable: number; incomeTax: number; localTax: number }>();

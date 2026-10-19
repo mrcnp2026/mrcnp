@@ -6,7 +6,7 @@
 import { AUTO_PAYMENT_CODES, canonicalItemCode } from './reserved-items';
 import { add, dec, div, hoursOf, isNeg, max, min, mul, sub, text, toWon, type Dec, type Rounding } from './decimal';
 
-export const ENGINE_VERSION = 'engine-1.2'; // 1.2 (2026-10-16): 시급제 주휴 · 유급휴일, 시급제 기본급은 소정 시간만 + 연장 · 휴일 줄에 1배 포함
+export const ENGINE_VERSION = 'engine-1.3'; // 1.3 (2026-10-19): 비과세 연간 한도 · 누적. 1.2 (2026-10-16): 시급제 주휴 · 유급휴일, 시급제 기본급은 소정 시간만 + 연장 · 휴일 줄에 1배 포함
 
 export type EngineContract = { payType: 'MONTHLY' | 'HOURLY' | 'ANNUAL'; amount: number; monthlyHours: number | null; annualDivisor: number | null; included: { overtimeHours: number | null; holidayHours: number | null } };
 export type Tri = 'YES' | 'NO' | 'UNKNOWN';
@@ -25,7 +25,8 @@ export type EngineTime = {
   weeklyRestMinutes?: number; paidHolidayMinutes?: number; // 시급제의 주휴 · 유급휴일 시간 (weekly-rest.ts) — 월급 · 연봉제는 쓰지 않는다
   workDays?: number; // 일한 날 수 — 명세서의 근로일수 (계산에는 쓰지 않는다)
 };
-export type EngineItem = { code: string; kind: 'PAYMENT' | 'DEDUCTION'; label: string; amount: number; taxable: 'TAXABLE' | 'EXEMPT' | 'PARTIAL'; exemptLimit: number | null; insurable: boolean; itemVersionId?: string | null; ordinaryWage?: 'INCLUDED' | 'EXCLUDED' | 'UNKNOWN' };
+// exemptAnnualLimit: 그 해 비과세로 뺄 수 있는 합계(예: 생산직 연장근로수당 240만원). 없으면 연간 한도 없음 (2026-10-19)
+export type EngineItem = { code: string; kind: 'PAYMENT' | 'DEDUCTION'; label: string; amount: number; taxable: 'TAXABLE' | 'EXEMPT' | 'PARTIAL'; exemptLimit: number | null; exemptAnnualLimit?: number | null; insurable: boolean; itemVersionId?: string | null; ordinaryWage?: 'INCLUDED' | 'EXCLUDED' | 'UNKNOWN' };
 export type EnginePolicy = {
   deductUnpaidLeave?: boolean;
   deductLateness?: boolean;
@@ -54,6 +55,7 @@ export type EngineInput = {
   notices?: Partial<Record<'pension' | 'health' | 'employment' | 'accident', { employee: number; employer: number | null; id: string }>>;
   prior?: { taxable: number; incomeTax: number; localTax: number } | null; // 상여: 같은 징수 묶음에서 앞서 낸 명세의 과세 합계와 세액
   skipInsurance?: boolean; // 상여 대장: 4대보험을 여기서 계산하지 않는다(정기 급여에서 이미 냈거나 정산으로 맞춘다) — 경고로 알린다
+  exemptYtd?: Record<string, number>; // 같은 해(귀속 연도) 앞서 확정한 명세에서 항목마다 이미 비과세로 뺀 합계 — 연간 한도 계산에 쓴다 (2026-10-19)
   minimumHourly?: number | null; // 그 달에 적용되는 최저시급(승인된 기준 자료). 계약의 시간당 임금이 이보다 낮으면 「참고」로 알린다(막지 않는다)
 };
 
@@ -209,9 +211,22 @@ export function calculateStatement(input: EngineInput): EngineResult {
     const it = itemOf.get(l.code);
     const mode = it?.taxable ?? 'TAXABLE'; // 기본급 · 시간 수당 · 직접 넣은 지급은 과세
     if (mode === 'TAXABLE') taxable += l.amount;
-    else if (mode === 'PARTIAL') {
-      if (it!.exemptLimit === null) block('exempt_limit_missing', l.code);
-      else taxable += Math.max(0, l.amount - it!.exemptLimit);
+    else if (mode === 'PARTIAL' && it!.exemptLimit === null) block('exempt_limit_missing', l.code);
+    else {
+      // 비과세분 = 이 달 한도(PARTIAL) 안에서, 연간 한도가 있으면 그 해 남은 만큼만. 넘는 부분은 과세로 돌린다
+      let exempt = mode === 'PARTIAL' ? Math.min(l.amount, it!.exemptLimit!) : l.amount; // 연간 한도가 없으면 예전 계산과 같다(과세 = 금액 − 한도, 음수면 0)
+      const annual = it!.exemptAnnualLimit ?? null;
+      if (annual !== null) {
+        const used = input.exemptYtd?.[l.code] ?? 0;
+        const left = Math.max(0, annual - used);
+        if (exempt > left) {
+          exempt = left;
+          warnings.push({ code: 'exempt_annual_reached', detail: l.code });
+        }
+        l.trace = { ...l.trace, exemptAnnualLimit: annual, exemptYtdBefore: used };
+      }
+      l.trace = { ...l.trace, exempt };
+      taxable += l.amount - exempt;
     }
     if (it ? it.insurable : true) insurable += l.amount;
   }

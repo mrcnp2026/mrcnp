@@ -1250,7 +1250,10 @@
         "colState": "Verification",
         "colUse": "In use",
         "useOf": "{name} in use",
-        "note": "Editing an item adds a new version. Names and amounts already used on payslips stay as they were."
+        "note": "Editing an item adds a new version. Names and amounts already used on payslips stay as they were.",
+        "annualLimit": "Yearly tax-exempt limit (KRW)",
+        "annualLimitHint": "Total that can be tax-exempt in a year — e.g. production overtime 2,400,000. Leave blank for no yearly limit (monthly limit only). The excess is taxed from that month.",
+        "annualLimitOf": "yearly {amount}"
       },
       "calcKind": {
         "FIXED": "Fixed amount",
@@ -3440,7 +3443,16 @@
       "historyRevision": "Correction {n}",
       "historyPayDate": "Paid {date}",
       "historySums": "Pay {pay} · Deductions {deduction}",
-      "empty": "No matching staff."
+      "empty": "No matching staff.",
+      "exemptTitle": "Tax-exempt total for {year}",
+      "exemptIntro": "Tax-exempt amounts per item from payroll finalized this year. Items with a yearly limit are taxed on the excess from the next payroll. Payslips uploaded from the company spreadsheet have no tax split and are not included.",
+      "exemptNone": "No tax-exempt items.",
+      "exemptMonthly": "Monthly limit {amount}",
+      "exemptAnnual": "Yearly limit {amount}",
+      "exemptNoAnnual": "No yearly limit",
+      "exemptUsed": "This year {amount}",
+      "exemptLeft": "Remaining {amount}",
+      "exemptFull": "Yearly limit used up — the excess is taxed"
     },
     "payRuns": {
       "title": "Payroll ledgers",
@@ -3626,7 +3638,8 @@
         "basis_unverified": "Payroll basis is not verified ({detail}).",
         "policy_changed_in_period": "A payroll basis changed during this period ({detail}). Review the period calculation.",
         "leave_duration_mismatch": "Leave duration does not match scheduled work time ({detail}). Review the leave and schedule.",
-        "weekly_rest_with_absence": "There were absent days this month ({detail}). Weekly paid rest was not reduced — whether to drop it for a week with an absence is a company decision. Use an adjustment if needed."
+        "weekly_rest_with_absence": "There were absent days this month ({detail}). Weekly paid rest was not reduced — whether to drop it for a week with an absence is a company decision. Use an adjustment if needed.",
+        "exempt_annual_reached": "Yearly tax-exempt limit reached — the excess was taxed ({detail})"
       },
       "detail": {
         "pension": "national pension",
