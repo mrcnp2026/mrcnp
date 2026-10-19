@@ -787,7 +787,14 @@
       "groupFilter": "Filter by department or team",
       "toList": "Record list",
       "payableCol": "Payable",
-      "intro": "Each employee’s hours, payable hours, lateness and absences for the month. Click a name for their daily records."
+      "intro": "Each employee’s hours, payable hours, lateness and absences for the month. Click a name for their daily records.",
+      "picked": {
+        "late": "{n} people late this month",
+        "absent": "{n} people with absences this month",
+        "pending": "{n} people with unapproved overtime"
+      },
+      "pickedClear": "Show all",
+      "lateMin": "{n} min late"
     },
     "notices": {
       "title": "Notices",

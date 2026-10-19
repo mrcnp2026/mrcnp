@@ -4,7 +4,7 @@
 // 직원 이름(넓은 화면)·「날짜별 기록 보기」(폰)를 누르면 그 직원의 하루 단위 기록으로 간다 (records/[id]).
 import { ChevronDown, ChevronLeft, ChevronRight, Download, ShieldAlert } from 'lucide-react';
 import { HelpTip } from '@/components/Help';
-import { getTranslations } from 'next-intl/server';
+import { getFormatter, getTranslations } from 'next-intl/server';
 import Link from 'next/link';
 import { GroupFilter } from '@/components/GroupFilter';
 import { Pager, pageOf } from '@/components/Pager';
@@ -16,7 +16,8 @@ import { FLAG } from '@/lib/flags';
 import { buildMonth, isYearMonth } from '@/lib/month-data';
 import { buildOrgTree, groupScope } from '@/lib/org';
 import { loadOrgGroups } from '@/lib/org-data';
-import { toKstDate } from '@/lib/time';
+import { kstDateTime, toKstDate } from '@/lib/time';
+import { groupPath } from '@/lib/org';
 
 function shift(ym: string, n: number) {
   const [y, m] = ym.split('-').map(Number);
@@ -45,12 +46,19 @@ export default async function RecordsPage({ searchParams }: { searchParams: Prom
     Number(r.late_count) > 0 || Number(r.absent_days) > 0 || Number(r.pending_overtime_minutes) > 0 || String(r.flags).split(';').some((f) => f.startsWith('block:') && f !== FLAG.LEAVE_MODULE_MISSING);
   const issueRows = rows.filter((x) => hasIssue(x.summary.row));
   const onlyIssues = sp.f === 'issues';
-  const pageRows = pageOf(onlyIssues ? issueRows : rows, sp.p, 10);
+  // 요약 숫자를 누르면 그 사람만 (2026-10-19 의뢰인: 이 달 지각 · 결근을 누르면 누가 그런지 바로) — 폰 목록 · PC 표 둘 다 같은 걸러진 목록
+  const pick = sp.f === 'late' || sp.f === 'absent' || sp.f === 'pending' ? sp.f : null;
+  const pickTest = { late: (r: (typeof rows)[number]['summary']['row']) => Number(r.late_count) > 0, absent: (r: (typeof rows)[number]['summary']['row']) => Number(r.absent_days) > 0, pending: (r: (typeof rows)[number]['summary']['row']) => Number(r.pending_overtime_minutes) > 0 };
+  const shown = pick ? rows.filter((x) => pickTest[pick](x.summary.row)).sort((a, b) => (pick === 'late' ? Number(b.summary.row.late_count) - Number(a.summary.row.late_count) : pick === 'absent' ? Number(b.summary.row.absent_days) - Number(a.summary.row.absent_days) : 0)) : rows;
+  const pageRows = pageOf(pick ? shown : onlyIssues ? issueRows : rows, sp.p, 10);
   const totals = {
     late: rows.reduce((a, x) => a + Number(x.summary.row.late_count), 0),
     absent: rows.reduce((a, x) => a + Number(x.summary.row.absent_days), 0),
     pending: rows.filter((x) => Number(x.summary.row.pending_overtime_minutes) > 0).length,
   };
+  const f = await getFormatter();
+  const md = (d: string) => f.dateTime(kstDateTime(d, '12:00'), { month: 'numeric', day: 'numeric', weekday: 'short' });
+  const clock = (iso: string) => f.dateTime(new Date(iso), { hour: '2-digit', minute: '2-digit', hourCycle: 'h23' });
   const hm = (min: number) => t('hm', { h: Math.floor(min / 60), m: String(min % 60).padStart(2, '0') });
 
   return (
@@ -89,21 +97,72 @@ export default async function RecordsPage({ searchParams }: { searchParams: Prom
       {/* 이 달 요약 — 한 줄로 */}
       {rows.length > 0 && (
         <Card className="grid grid-cols-3 p-2 text-center">
-          {[
-            { k: 'sumLate', n: totals.late, warn: totals.late > 0 },
-            { k: 'sumAbsent', n: totals.absent, warn: totals.absent > 0 },
-            { k: 'sumPending', n: totals.pending, warn: totals.pending > 0 },
-          ].map((x) => (
-            <div key={x.k} className="flex min-h-16 flex-col items-center justify-center">
-              <span className={`num text-2xl leading-none font-extrabold ${x.warn ? 'text-warn' : ''}`}>{x.n}</span>
-              <span className="mt-1 text-xs text-muted">{t(x.k)}</span>
-            </div>
-          ))}
+          {(
+            [
+              { f: 'late', k: 'sumLate', n: totals.late },
+              { f: 'absent', k: 'sumAbsent', n: totals.absent },
+              { f: 'pending', k: 'sumPending', n: totals.pending },
+            ] as const
+          ).map((x) =>
+            x.n > 0 ? (
+              // 누르면 그 사람만, 다시 누르면 전체 (숫자가 0이면 누를 것이 없다)
+              <Link key={x.k} href={`${q(ym)}${pick === x.f ? '' : `&f=${x.f}`}`} scroll={false} aria-pressed={pick === x.f} className={`flex min-h-16 flex-col items-center justify-center rounded-button transition-colors duration-150 ${pick === x.f ? 'bg-warn-tint ring-2 ring-warn' : 'hover:bg-surface'}`}>
+                <span className="num text-2xl leading-none font-extrabold text-warn underline decoration-warn/40 underline-offset-4">{x.n}</span>
+                <span className="mt-1 text-xs text-muted">{t(x.k)}</span>
+              </Link>
+            ) : (
+              <div key={x.k} className="flex min-h-16 flex-col items-center justify-center">
+                <span className="num text-2xl leading-none font-extrabold">{x.n}</span>
+                <span className="mt-1 text-xs text-muted">{t(x.k)}</span>
+              </div>
+            ),
+          )}
+        </Card>
+      )}
+      {/* 숫자를 누른 뒤의 상세 — 사람마다 그 날짜들 (지각: 출근 시각 · 늦은 분 / 결근: 날짜 / 연장 미승인: 날짜 · 시간). 날짜를 누르면 그날 기록 (폰 · PC 같은 카드) */}
+      {pick && (
+        <Card className="flex flex-col gap-0 p-0">
+          <div className="flex flex-wrap items-center justify-between gap-2 border-b border-border bg-warn-tint px-4 py-2 text-sm text-warn lg:px-5">
+            <span className="font-bold">{t(`picked.${pick}`, { n: shown.length })}</span>
+            <Link href={q(ym)} scroll={false} className="inline-flex min-h-9 items-center font-semibold text-primary">
+              {t('pickedClear')}
+            </Link>
+          </div>
+          <ul className="divide-y divide-border">
+            {shown.map(({ person, summary: s }) => {
+              const items =
+                pick === 'late'
+                  ? s.lateDays.map((x) => ({ d: x.date, text: `${md(x.date)} ${clock(x.at)} · ${t('lateMin', { n: x.minutes })}` }))
+                  : pick === 'absent'
+                    ? s.absentDates.map((d) => ({ d, text: md(d) }))
+                    : s.pendingDays.map((x) => ({ d: x.date, text: `${md(x.date)} · ${hm(x.minutes)}` }));
+              return (
+                <li key={person.id} className="flex flex-col gap-2 px-4 py-3 lg:flex-row lg:items-start lg:gap-4 lg:px-5">
+                  <div className="flex items-baseline justify-between gap-2 lg:w-52 lg:shrink-0 lg:flex-col lg:items-start lg:gap-0.5">
+                    <Link href={`/admin/records/${person.id}${q(ym)}`} className="font-bold hover:text-primary">
+                      {person.name}
+                    </Link>
+                    <span className="num text-sm text-warn">
+                      {pick === 'late' ? t('late', { n: Number(s.row.late_count), m: Number(s.row.late_minutes) }) : pick === 'absent' ? t('absent', { n: s.absentDates.length }) : hm(Number(s.row.pending_overtime_minutes))}
+                    </span>
+                    <span className="hidden truncate text-xs text-faint lg:block">{groupPath(groups, person.groupId)}</span>
+                  </div>
+                  <span className="flex flex-wrap gap-1.5">
+                    {items.map((x) => (
+                      <Link key={x.d} href={`/admin/records/${person.id}/${x.d}${OFFICE.practiceMode && !practice ? '?live=1' : ''}`} className="num inline-flex min-h-8 items-center rounded-button border border-warn/40 bg-bg px-2.5 text-sm hover:bg-warn-tint">
+                        {x.text}
+                      </Link>
+                    ))}
+                  </span>
+                </li>
+              );
+            })}
+          </ul>
         </Card>
       )}
 
       {/* 폰: 직원 한 명 = 한 줄 (이름 · 근무시간 · 예외 표시). 누르면 펼쳐서 연장·야간·휴일. 10명씩 페이지 (2026-10-02 의뢰인) */}
-      {rows.length > 0 && (
+      {rows.length > 0 && !pick && (
         <div className="flex flex-col gap-2 md:hidden">
           <nav className="grid grid-cols-2 rounded-card bg-bg p-1" aria-label={t('filter')}>
             {(['all', 'issues'] as const).map((k) => (
@@ -111,8 +170,8 @@ export default async function RecordsPage({ searchParams }: { searchParams: Prom
                 key={k}
                 href={`${q(ym)}${k === 'issues' ? '&f=issues' : ''}`}
                 scroll={false}
-                aria-current={onlyIssues === (k === 'issues') ? 'page' : undefined}
-                className={`flex min-h-11 items-center justify-center rounded-button text-sm font-bold ${onlyIssues === (k === 'issues') ? 'bg-primary-tint text-primary' : 'text-muted'}`}
+                aria-current={!pick && onlyIssues === (k === 'issues') ? 'page' : undefined}
+                className={`flex min-h-11 items-center justify-center rounded-button text-sm font-bold ${!pick && onlyIssues === (k === 'issues') ? 'bg-primary-tint text-primary' : 'text-muted'}`}
               >
                 {t(k === 'all' ? 'fAll' : 'fIssues', { n: k === 'all' ? rows.length : issueRows.length })}
               </Link>
@@ -170,7 +229,7 @@ export default async function RecordsPage({ searchParams }: { searchParams: Prom
                 );
               })}
             </ul>
-            <Pager page={pageRows.page} pages={pageRows.pages} param="p" params={{ m: ym, live: OFFICE.practiceMode && !practice ? '1' : undefined, f: onlyIssues ? 'issues' : undefined, g: g || undefined }} label={t('pages')} />
+            <Pager page={pageRows.page} pages={pageRows.pages} param="p" params={{ m: ym, live: OFFICE.practiceMode && !practice ? '1' : undefined, f: pick ?? (onlyIssues ? 'issues' : undefined), g: g || undefined }} label={t('pages')} />
           </Card>
         </div>
       )}
@@ -187,7 +246,7 @@ export default async function RecordsPage({ searchParams }: { searchParams: Prom
               </tr>
             </thead>
             <tbody className="divide-y divide-border">
-              {rows.map(({ person, summary: s }) => {
+              {shown.map(({ person, summary: s }) => {
                 const r = s.row;
                 return (
                   <tr key={person.id}>
@@ -204,8 +263,8 @@ export default async function RecordsPage({ searchParams }: { searchParams: Prom
                     <td className="px-2 py-2 text-right whitespace-nowrap">{hm(Number(r.unreviewed_overtime_minutes))}</td>
                     <td className="px-2 py-2 text-right whitespace-nowrap">{hm(Number(r.night_minutes))}</td>
                     <td className="px-2 py-2 text-right whitespace-nowrap">{hm(Number(r.holiday_within8_minutes) + Number(r.holiday_over8_minutes))}</td>
-                    <td className={`px-2 py-2 text-right whitespace-nowrap ${Number(r.late_count) > 0 ? 'text-warn' : ''}`}>{r.late_count}</td>
-                    <td className={`px-2 py-2 text-right whitespace-nowrap ${Number(r.absent_days) > 0 ? 'text-warn' : ''}`}>{r.absent_days}</td>
+                    <td className={`px-2 py-2 text-right whitespace-nowrap ${Number(r.late_count) > 0 ? 'text-warn' : ''} ${pick === 'late' ? 'bg-warn-tint font-bold' : ''}`}>{r.late_count}</td>
+                    <td className={`px-2 py-2 text-right whitespace-nowrap ${Number(r.absent_days) > 0 ? 'text-warn' : ''} ${pick === 'absent' ? 'bg-warn-tint font-bold' : ''}`}>{r.absent_days}</td>
                   </tr>
                 );
               })}

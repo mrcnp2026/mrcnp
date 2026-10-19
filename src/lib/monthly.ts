@@ -30,6 +30,8 @@ export type MonthSummary = {
   netMinutes: number; // 실제 근로 합계 (화면용)
   payableMinutes: number; // 급여용 시간 합계 — 끊는 단위를 적용한 것 (확정-9). 끊지 않으면 netMinutes와 같다
   absentDates: string[];
+  lateDays: { date: string; at: string; minutes: number }[]; // 지각한 날 · 첫 출근 시각(ISO) · 늦은 분 (2026-10-19 월 집계 숫자 누르면 상세)
+  pendingDays: { date: string; minutes: number }[]; // 연장 · 야간 · 휴일 확인이 아직 안 된 날 (보류 포함)
   missingOutDates: string[];
   leaveDates: string[]; // 승인된 휴가가 있는 근무일
   paidLeaveDays: number; // 유급휴가 일수 (연차·반차·경조사 등) — 화면·엑셀용. 급여용 CSV 칸 목록은 그대로
@@ -78,6 +80,8 @@ export function summarizeMonth(args: {
   let lateMinutes = 0;
   const flags = new Set<string>();
   const absentDates: string[] = [];
+  const lateDays: MonthSummary['lateDays'] = [];
+  const pendingDays: MonthSummary['pendingDays'] = [];
   const missingOutDates: string[] = [];
   const leaveDates: string[] = [];
   const workDates: string[] = [];
@@ -114,6 +118,7 @@ export function summarizeMonth(args: {
         pe.overtime += p.overtime;
         pe.night += p.night;
         pe.holiday += p.holiday;
+        if (p.overtime + p.night + p.holiday > 0) pendingDays.push({ date: d.workDate, minutes: p.overtime + p.night + p.holiday });
         if (req.needsReview) flags.add(NEEDS_REVIEW);
       } else if (!buildOvertimeRequest({ employeeId: '', workDate: d.workDate, work: d, thresholdMinutes: args.thresholdMinutes })) {
         // 임계값 미만: 승인 대기에 안 올렸지만 사라지지 않는다 (7-7 요점 2, B-28)
@@ -123,6 +128,7 @@ export function summarizeMonth(args: {
         pe.overtime += d.overtimeMinutes;
         pe.night += d.nightMinutes;
         pe.holiday += d.holidayMinutes;
+        if (d.overtimeMinutes + d.nightMinutes + d.holidayMinutes > 0) pendingDays.push({ date: d.workDate, minutes: d.overtimeMinutes + d.nightMinutes + d.holidayMinutes });
       }
     }
 
@@ -132,6 +138,7 @@ export function summarizeMonth(args: {
       if (l.verdict === 'late') {
         lateCount++;
         lateMinutes += l.lateMinutes;
+        lateDays.push({ date: d.workDate, at: firstIn.toISOString(), minutes: l.lateMinutes });
       }
     }
     // 휴가 (②-2): ★ 유급휴가일은 결근이 아니다 (B-2). 무급은 무급휴가 일수로. 휴가일에 출근 기록이 있으면 경고만 (요점 4)
@@ -167,6 +174,8 @@ export function summarizeMonth(args: {
     netMinutes: s.net,
     payableMinutes: s.payable,
     absentDates,
+    lateDays,
+    pendingDays,
     missingOutDates,
     leaveDates,
     paidLeaveDays: roundDays(paidLeave),
