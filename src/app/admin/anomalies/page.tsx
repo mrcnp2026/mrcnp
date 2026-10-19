@@ -57,11 +57,11 @@ export default async function AnomaliesPage({ searchParams }: { searchParams: Pr
     if (!o?.assigneeId && task.policy.assignee === 'approvers') return t('task.approversShort');
     return taskOfRow(x).assignees.map((id) => handlerName.get(id) ?? '').join(', ');
   };
-  const taskCell = (x: (typeof sum.shown)[number], phone = false) => {
+  const taskCell = (x: (typeof sum.shown)[number]) => {
     const tk = taskOfRow(x);
     const o = overrides?.get(anomalyKey(x.employeeId, x.workDate));
     return (
-      <span className={`flex ${phone ? 'flex-row flex-wrap items-center gap-x-3' : 'flex-col'} gap-1 text-sm`}>
+      <span className="flex flex-col gap-1 text-sm">
         <span className="text-muted">{who(x)}</span>
         {tk.due && <span className="num">{t('task.dueOn', { date: tk.due.slice(5) })}</span>}
         {tk.overdueDays > 0 && <Chip tone="warn">{t('task.overdue', { n: tk.overdueDays })}</Chip>}
@@ -153,8 +153,10 @@ export default async function AnomaliesPage({ searchParams }: { searchParams: Pr
                         {t(`type.${k}`)}
                       </Chip>
                     ))}
+                    {/* 폰: 담당 · 기한은 기본값이면 따로 줄을 쓰지 않는다 — 지났거나 이 건만 바꿨을 때만 (2026-10-19 디자인: 건마다 세 줄이라 3,500px) */}
+                    {taskOfRow(r).overdueDays > 0 && <Chip tone="warn">{t('task.overdue', { n: taskOfRow(r).overdueDays })}</Chip>}
+                    {taskOfRow(r).custom && <span className="text-xs text-muted">{[who(r), taskOfRow(r).due ? t('task.dueOn', { date: taskOfRow(r).due!.slice(5) }) : null].filter(Boolean).join(' · ')}</span>}
                   </span>
-                  {taskCell(r, true)}
                   <span className="flex flex-wrap items-center gap-x-3 gap-y-1 text-sm">
                     {r.block ? <Chip tone="warn">{t('effectBlock')}</Chip> : <ReviewButton employeeId={r.employeeId} workDate={r.workDate} types={r.types} reviewed={r.reviewed} live={sp.live === '1'} />}
                     {sentAt.has(r.employeeId) ? (
@@ -162,6 +164,7 @@ export default async function AnomaliesPage({ searchParams }: { searchParams: Pr
                 ) : (
                   (r.block || !r.reviewed) && <NotifyButton month={month} employeeIds={[r.employeeId]} live={sp.live === '1'} label={t('notify.one')} confirm={t('notify.confirmOne', { name: p?.name ?? '' })} />
                 )}
+                    {isOpen(r) && <TaskEdit employeeId={r.employeeId} workDate={r.workDate} assigneeId={overrides?.get(anomalyKey(r.employeeId, r.workDate))?.assigneeId ?? null} dueOn={overrides?.get(anomalyKey(r.employeeId, r.workDate))?.dueOn ?? null} note={overrides?.get(anomalyKey(r.employeeId, r.workDate))?.note ?? null} people={handlers} live={sp.live === '1'} ready={overrides !== null} short />}
                     <Link href={`/admin/records/${r.employeeId}?m=${month}${live}`} className="ml-auto font-bold text-primary">
                       {t('toRecords')} ›
                     </Link>

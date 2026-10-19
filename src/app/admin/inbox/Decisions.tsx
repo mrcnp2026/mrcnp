@@ -243,9 +243,16 @@ export function LeaveCancel({ id, name, compact = false }: { id: string; name: s
   if (done) return <p className="text-sm font-semibold text-muted">{t(done === 'already' ? 'already' : 'doneMsg')}</p>;
   if (!ask)
     return (
-      <Button variant="outline" size={compact ? 'sm' : 'md'} className="self-start whitespace-nowrap lg:min-h-9 lg:px-3 lg:text-sm" onClick={() => setAsk(true)}>
-        {t('leaveCancel')}
-      </Button>
+      compact ? (
+        // 목록 줄마다 놓이는 되돌리기 — 작은 글자 단추로(파란 단추가 줄마다 있어 눈에 띄었다, 2026-10-19 디자인)
+        <button type="button" className="inline-flex min-h-9 items-center self-start text-sm font-bold whitespace-nowrap text-muted hover:text-danger" onClick={() => setAsk(true)}>
+          {t('leaveCancel')}
+        </button>
+      ) : (
+        <Button variant="outline" size="md" className="self-start whitespace-nowrap lg:min-h-9 lg:px-3 lg:text-sm" onClick={() => setAsk(true)}>
+          {t('leaveCancel')}
+        </Button>
+      )
     );
   return (
     <div className="flex flex-col gap-2 rounded-card border border-border p-3">

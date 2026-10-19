@@ -11,7 +11,7 @@ import type { AnomalyTaskPolicy } from '@/lib/anomaly';
 const field = 'min-h-11 w-full rounded-button border border-border bg-bg px-3 text-sm lg:min-h-9';
 type Person = { id: string; name: string };
 
-export function TaskEdit({ employeeId, workDate, assigneeId, dueOn, note, people, live, ready }: { employeeId: string; workDate: string; assigneeId: string | null; dueOn: string | null; note: string | null; people: Person[]; live: boolean; ready: boolean }) {
+export function TaskEdit({ employeeId, workDate, assigneeId, dueOn, note, people, live, ready, short = false }: { employeeId: string; workDate: string; assigneeId: string | null; dueOn: string | null; note: string | null; people: Person[]; live: boolean; ready: boolean; short?: boolean }) {
   const t = useTranslations('admin.anomalies.task');
   const router = useRouter();
   const [open, setOpen] = useState(false);
@@ -20,7 +20,7 @@ export function TaskEdit({ employeeId, workDate, assigneeId, dueOn, note, people
   if (!open)
     return (
       <button type="button" onClick={() => setOpen(true)} className="inline-flex min-h-8 items-center text-sm font-bold whitespace-nowrap text-primary hover:underline">
-        {t('change')}
+        {t(short ? 'changeShort' : 'change')}
       </button>
     );
   return (

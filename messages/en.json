@@ -3217,7 +3217,8 @@
         "policyHint": "Only issues from {start} get a due date (earlier ones have none). \"Handled\" means marked as checked for check-only types, or the record fixed so the issue disappears for blocking types.",
         "invalid_assignee": "Only admins or branch managers can be owners.",
         "invalid_due": "The due date must be on or after the day of the issue.",
-        "db_update_required": "DB change set 27 needs to be applied."
+        "db_update_required": "DB change set 27 needs to be applied.",
+        "changeShort": "Owner · due"
       }
     },
     "leaveTypeRule": {

@@ -3217,7 +3217,8 @@
         "policyHint": "{start}부터 생긴 이상 기록에만 기한을 매깁니다(그 전 기록은 기한 없음). 「처리」는 확인 필요 유형은 「확인함」, 마감 차단 유형은 기록을 고쳐 이상이 사라지는 것입니다.",
         "invalid_assignee": "관리자 · 지점관리자만 담당자로 정할 수 있습니다.",
         "invalid_due": "기한은 이상이 생긴 날 이후여야 합니다.",
-        "db_update_required": "DB 변경(묶음 27) 적용이 필요합니다."
+        "db_update_required": "DB 변경(묶음 27) 적용이 필요합니다.",
+        "changeShort": "담당 · 기한"
       }
     },
     "leaveTypeRule": {
