@@ -4594,6 +4594,37 @@
       },
       "warn": "Restoring overwrites current records. Do it with the developer and tell the other top admins first.",
       "onlySystem": "Only the system admin account can download backups."
+    },
+    "slipMail": {
+      "colMail": "Email",
+      "sendUnsent": "Email {n} not yet sent",
+      "send": "Send email",
+      "resend": "Send again",
+      "sending": "Sending {done}/{all}",
+      "confirm": "Email the payslip PDF to {n} people. Staff without an email address are skipped and logged as \"no email\".",
+      "confirmYes": "Send",
+      "cancel": "Cancel",
+      "result": "Sent {sent} · failed {failed} · no email {noEmail} · skipped {skipped}",
+      "oneNoEmail": "No email address. Add one in the staff details.",
+      "oneFailed": "Could not send. Please try again shortly.",
+      "oneSkipped": "Not sent — this payslip is not currently published.",
+      "statusNone": "Not emailed",
+      "statusSent": "Emailed {at}",
+      "statusFailed": "Email failed",
+      "statusNoEmail": "No email",
+      "logTitle": "Email log ({n})",
+      "rev": "rev {n}",
+      "result_SENT": "Sent",
+      "result_FAILED": "Failed",
+      "result_NO_EMAIL": "No email",
+      "by": "by {name}",
+      "hint": "Sends the PDF to the email in staff details. The message body has no amounts. Re-uploading creates a new revision that shows as not emailed again.",
+      "hintRun": "Only published payslips are sent. The PDF goes to the email in staff details; the message body has no amounts.",
+      "dbPending": "The database table for the email log is not there yet (after DB change set 26 is approved and applied).",
+      "notReady": "The sending mail account is not set up yet (Gmail app password).",
+      "mail_not_configured": "The sending mail account is not set up yet.",
+      "db_update_required": "DB change set 26 needs to be applied.",
+      "payroll_forbidden": "Only top admins can do this."
     }
   },
   "side": {
@@ -6109,5 +6140,11 @@
     "ask": "Location is needed for punches and outside-work / correction requests.",
     "allow": "Allow location",
     "denied": "Location is blocked. Tap the lock icon left of the address bar (or Settings › Site settings › Location) and set this site to Allow. Your phone's location must also be on."
+  },
+  "payslipMail": {
+    "subject": "[{company}] Payslip for {month}",
+    "subjectBonus": "[{company}] Bonus statement for {month}",
+    "subjectRevision": " (corrected, rev {n})",
+    "body": "Dear {name},\n\nPlease find your payslip for {month} attached (pay date {payDate}).\nThe amounts are in the attached PDF.\n\nYou can also see it under \"My pay\" in the app:\n{link}\n\nThis mailbox is not monitored. Please ask your company contact if you have questions.\n\n{company}"
   }
 }

@@ -12,12 +12,15 @@ import { loadRevisions, loadRun, loadRunBoard } from '@/lib/payroll/run-data';
 import { createAdminClient } from '@/lib/supabase/admin';
 import { toKstDate } from '@/lib/time';
 import { loadPublication } from '@/lib/payroll/publish-data';
+import { lastMailBySlip, loadSlipMails, mailReady } from '@/lib/payroll/slip-mail';
+import { SlipMailSend } from '../../slips/SlipMail';
+import { MailLog, MailStatus } from '../../slips/SlipMailParts';
 import { CorrectionStart, MemberToggle, PublishAll, PublishToggle, RunActions } from '../RunForms';
 
 const TONE = { DRAFT: 'neutral', CALCULATED: 'info', REVIEWED: 'warn', FINALIZED: 'ok' } as const;
 
 export default async function PayRunPage({ params, searchParams }: { params: Promise<{ id: string }>; searchParams: Promise<{ existed?: string }> }) {
-  const [t, f, me, { id }] = await Promise.all([getTranslations('admin.payRuns'), getFormatter(), getMe(), params]);
+  const [t, tm, f, me, { id }] = await Promise.all([getTranslations('admin.payRuns'), getTranslations('admin.slipMail'), getFormatter(), getMe(), params]);
   if (!me || me.role !== 'admin' || !me.canViewPayroll) return <PageShell><p className="rounded-card bg-warn-tint p-4 text-sm text-warn">{t('forbidden')}</p></PageShell>;
   if (!/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(id)) notFound();
   const run = await loadRun(id);
@@ -45,6 +48,14 @@ export default async function PayRunPage({ params, searchParams }: { params: Pro
   // 확정한 대장: 직원별 공개 상태 (공개는 확정과 따로 한다)
   const pub: Map<string, { statementId: string; published: boolean; at: string | null }> = final ? await loadPublication(run.id, run.generationId) : new Map();
   const waiting = [...pub.values()].filter((x) => !x.published).length;
+  // 메일 발송 (2026-10-19): 공개 중인 명세서만 보낸다. 발송 여부는 명세서마다 마지막 기록
+  const mails = final ? await loadSlipMails([...pub.values()].map((x) => x.statementId)) : [];
+  const lastMail = lastMailBySlip(mails ?? []);
+  const { data: everyone } = final ? await createAdminClient().from('profiles').select('id, name, email') : { data: [] };
+  const hasEmail = new Set((everyone ?? []).filter((p) => (p.email as string | null)?.trim()).map((p) => p.id as string));
+  const names = new Map((everyone ?? []).map((p) => [p.id as string, p.name as string]));
+  const unsentMail = [...pub].filter(([, x]) => x.published && lastMail.get(x.statementId)?.result !== 'SENT').map(([employeeId, x]) => ({ employeeId, slipId: x.statementId }));
+  const mailOk = mailReady() && mails !== null;
   const dk = (d: string) => d.replace(/[.-]/g, '_'); // 번역 열쇠에는 점 · 줄표를 쓸 수 없다
   const why = (b: { code: string; detail?: string }) => (t.has(`blocker.${b.code}`) ? t(`blocker.${b.code}`, { detail: b.detail ? (t.has(`detail.${dk(b.detail)}`) ? t(`detail.${dk(b.detail)}`) : b.detail) : '' }) : `${b.code}${b.detail ? ` (${b.detail})` : ''}`);
 
@@ -99,6 +110,13 @@ export default async function PayRunPage({ params, searchParams }: { params: Pro
           <p className="text-sm text-muted">{t('finalNote')}</p>
           <p className="num text-sm">{t('pubSummary', { on: pub.size - waiting, off: waiting })}</p>
           {!replaced && <PublishAll id={run.id} waiting={waiting} />}
+          {pub.size - waiting > 0 && (
+            <div className="flex flex-col gap-1">
+              <SlipMailSend items={unsentMail} label={tm('sendUnsent', { n: unsentMail.length })} ready={mailOk} />
+              <p className="text-xs text-faint">{mails === null ? tm('dbPending') : !mailReady() ? tm('notReady') : tm('hintRun')}</p>
+            </div>
+          )}
+          <MailLog mails={mails ?? []} names={names} />
           {!newer && <CorrectionStart id={run.id} />}
         </Card>
       ) : (
@@ -254,6 +272,12 @@ export default async function PayRunPage({ params, searchParams }: { params: Pro
                     <span className="flex flex-col gap-1">
                       {pub.get(l.employeeId)!.published ? <Chip tone="ok">{t('pubOn', { date: toKstDate(new Date(pub.get(l.employeeId)!.at ?? 0)) })}</Chip> : <Chip>{t(pub.get(l.employeeId)!.at ? 'pubWithdrawn' : 'pubOff')}</Chip>}
                       {(!replaced || pub.get(l.employeeId)!.published) && <PublishToggle id={run.id} employeeId={l.employeeId} published={pub.get(l.employeeId)!.published} name={l.name} />}
+                      {pub.get(l.employeeId)!.published && (
+                        <>
+                          <MailStatus last={lastMail.get(pub.get(l.employeeId)!.statementId)} hasEmail={hasEmail.has(l.employeeId)} />
+                          <SlipMailSend one items={[{ employeeId: l.employeeId, slipId: pub.get(l.employeeId)!.statementId }]} label={tm(lastMail.has(pub.get(l.employeeId)!.statementId) ? 'resend' : 'send')} ready={mailOk} />
+                        </>
+                      )}
                     </span>
                   )}
                 </td>
