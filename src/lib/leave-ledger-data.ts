@@ -233,7 +233,7 @@ export async function decideLots(args: { ids: string[]; decision: 'approve' | 'r
 }
 
 /** 관리자가 직접 넣는 지급 건(보상 · 이월 · 옛 잔여 옮기기). 넣은 사람이 승인자다 — 바로 승인된다 */
-export async function addManualLot(args: { employeeId: string; kind: 'manual' | 'carry' | 'compensatory' | 'migrated'; minutes: number; usableFrom: string; usableTo: string | null; note: string; me: Me }): Promise<DecideResult> {
+export async function addManualLot(args: { employeeId: string; kind: 'manual' | 'carry' | 'compensatory' | 'migrated'; minutes: number; usableFrom: string; usableTo: string | null; note: string; me: Me; basis?: Record<string, unknown>; dedupeKey?: string }): Promise<DecideResult> { // basis · dedupeKey: 연장 → 보상휴가(payroll/overtime-comp.ts)처럼 근거를 잇는 지급
   const c = db();
   const { data: p } = await c.from('profiles').select('id').eq('id', args.employeeId).maybeSingle();
   if (!p) throw new ApiError(404, 'not_found');
@@ -241,7 +241,7 @@ export async function addManualLot(args: { employeeId: string; kind: 'manual' | 
     .from('leave_grant_lots')
     .insert({
       employee_id: args.employeeId, type_code: ACCRUAL_TYPE, lot_kind: args.kind, granted_on: args.usableFrom, usable_from: args.usableFrom, usable_to: args.usableTo, quantity_minutes: args.minutes, day_minutes: DAY_MINUTES,
-      basis: { rule: 'manual' }, dedupe_key: `manual:${crypto.randomUUID()}`, note: args.note, created_by: args.me.id,
+      basis: args.basis ?? { rule: 'manual' }, dedupe_key: args.dedupeKey ?? `manual:${crypto.randomUUID()}`, note: args.note, created_by: args.me.id,
     })
     .select('id')
     .single();

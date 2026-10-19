@@ -3639,7 +3639,9 @@
         "policy_changed_in_period": "귀속 기간 중 기준이 바뀌었습니다 ({detail}). 기간별 계산 기준을 검토해 주세요.",
         "leave_duration_mismatch": "휴가 시간과 일정의 순근무시간이 맞지 않습니다 ({detail}). 휴가·일정을 검토해 주세요.",
         "weekly_rest_with_absence": "이 달에 결근한 날이 있습니다({detail}). 주휴수당은 빼지 않고 그대로 넣었습니다 — 결근한 주의 주휴를 뺄지는 회사가 정해야 합니다(결정 사항 급여-41). 빼야 하면 「금액 조정」으로 고쳐 주세요.",
-        "exempt_annual_reached": "비과세 연간 한도에 닿아 넘는 금액을 과세로 계산했습니다 ({detail})"
+        "exempt_annual_reached": "비과세 연간 한도에 닿아 넘는 금액을 과세로 계산했습니다 ({detail})",
+        "comp_exceeds_overtime": "보상휴가로 돌린 연장이 이 달 인정 연장보다 많습니다 ({detail}분) — 연장 → 보상휴가에서 취소하거나 연장 인정을 확인하세요",
+        "overtime_comp_leave": "연장 {detail}시간을 보상휴가로 돌려 연장수당에서 뺐습니다"
       },
       "detail": {
         "pension": "국민연금",
@@ -4672,6 +4674,48 @@
       "oneNoBirth": "생년월일이 없어 PDF 비밀번호를 만들 수 없습니다. 직원 정보 › 개인 정보에서 생년월일을 넣어 주세요.",
       "statusNoBirth": "생년월일 없음",
       "result_NO_BIRTH": "생년월일 없음"
+    },
+    "overtimeComp": {
+      "title": "연장 → 보상휴가",
+      "intro": "연장근로 시간을 돈 대신 휴가로 줍니다(보상휴가제). 돌린 시간은 그 달 급여에서 연장수당으로 주지 않고, 휴가는 연차 원장에 「보상」으로 바로 들어갑니다. 그 달 급여대장을 확정한 뒤에는 돌리거나 취소할 수 없습니다.",
+      "forbidden": "최고관리자만 볼 수 있습니다.",
+      "createTitle": "보상휴가로 돌리기",
+      "dbPending": "DB 변경(묶음 29) 승인 뒤에 쓸 수 있습니다.",
+      "employee": "직원",
+      "pick": "직원 고르기",
+      "month": "연장한 달",
+      "room": "이 달 승인 연장 {approved}시간 · 이미 돌린 {converted}시간 · 돌릴 수 있는 {left}시간",
+      "finalized": "이 달 급여대장을 이미 확정했습니다 — 연장수당이 나갔으므로 돌릴 수 없습니다.",
+      "hours": "돌릴 연장 시간",
+      "hoursHint": "15분(0.25시간) 단위. 승인된 연장 안에서.",
+      "rate": "배율",
+      "rateHint": "연장 1시간을 휴가 몇 시간으로 줄지 — 기본은 법정 가산과 같은 1.5",
+      "preview": "연장 {h}시간 → 보상휴가 {leave}시간",
+      "usableTo": "쓸 수 있는 마지막 날(선택)",
+      "usableToHint": "비우면 기한 없음",
+      "note": "메모(선택)",
+      "submit": "보상휴가 지급",
+      "done": "연장 {h}시간을 보상휴가 {leave}시간으로 지급했습니다.",
+      "listTitle": "돌린 기록 {n}건",
+      "listEmpty": "아직 돌린 기록이 없습니다.",
+      "line": "연장 {h}시간 → 휴가 {leave}시간 (×{rate})",
+      "granted": "지급함",
+      "cancelled": "취소",
+      "cancelledWhy": "취소 사유: {reason}",
+      "by": "{name} · {at}",
+      "cancel": "취소",
+      "cancelWarn": "지급한 보상휴가를 거두고, 이 시간은 다시 연장수당으로 계산됩니다. 휴가를 이미 썼으면 취소할 수 없습니다.",
+      "cancelReason": "취소 사유",
+      "cancelYes": "취소하기",
+      "back": "닫기",
+      "legal": "보상휴가제는 근로자대표와 서면 합의가 있어야 쓸 수 있습니다(근로기준법 제57조). 지금은 연장근로만 돌릴 수 있습니다 — 휴일 · 야간은 따로 만듭니다.",
+      "comp_exceeds_overtime": "돌릴 수 있는 연장 시간보다 많습니다.",
+      "payroll_finalized": "그 달 급여대장을 이미 확정해 바꿀 수 없습니다.",
+      "comp_in_use": "보상휴가를 이미 써서 취소할 수 없습니다. 쓴 휴가를 먼저 취소해 주세요.",
+      "comp_grant_failed": "휴가 지급에 실패했습니다. 다시 해 주세요.",
+      "invalid_minutes": "시간은 15분(0.25시간) 단위로 넣어 주세요.",
+      "invalid_rate": "배율은 1 ~ 3 사이로 넣어 주세요.",
+      "db_update_required": "DB 변경(묶음 29) 적용이 필요합니다."
     }
   },
   "side": {
@@ -4804,7 +4848,8 @@
     "findMenu": "메뉴 찾기",
     "noMenu": "맞는 메뉴가 없습니다.",
     "paySlips": "명세서 올리기",
-    "roleSystem": "시스템관리자"
+    "roleSystem": "시스템관리자",
+    "payOvertimeComp": "연장 → 보상휴가"
   },
   "nav": {
     "home": "홈",
@@ -5814,7 +5859,8 @@
       "setEsign": "전자계약",
       "paySlips": "명세서 올리기",
       "backups": "데이터베이스 백업",
-      "setHolidays": "휴일"
+      "setHolidays": "휴일",
+      "payOvertimeComp": "연장 → 보상휴가"
     },
     "search": {
       "placeholder": "검색",

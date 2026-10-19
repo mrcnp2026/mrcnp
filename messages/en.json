@@ -3639,7 +3639,9 @@
         "policy_changed_in_period": "A payroll basis changed during this period ({detail}). Review the period calculation.",
         "leave_duration_mismatch": "Leave duration does not match scheduled work time ({detail}). Review the leave and schedule.",
         "weekly_rest_with_absence": "There were absent days this month ({detail}). Weekly paid rest was not reduced — whether to drop it for a week with an absence is a company decision. Use an adjustment if needed.",
-        "exempt_annual_reached": "Yearly tax-exempt limit reached — the excess was taxed ({detail})"
+        "exempt_annual_reached": "Yearly tax-exempt limit reached — the excess was taxed ({detail})",
+        "comp_exceeds_overtime": "Converted overtime exceeds this month's approved overtime ({detail} min) — cancel it in Overtime → comp leave or check approvals",
+        "overtime_comp_leave": "{detail}h of overtime converted to comp leave and removed from overtime pay"
       },
       "detail": {
         "pension": "national pension",
@@ -4672,6 +4674,48 @@
       "oneNoBirth": "No birth date, so the PDF password cannot be made. Add it under staff details › personal info.",
       "statusNoBirth": "No birth date",
       "result_NO_BIRTH": "No birth date"
+    },
+    "overtimeComp": {
+      "title": "Overtime → comp leave",
+      "intro": "Give overtime as leave instead of pay (compensatory leave). Converted hours are not paid as overtime that month, and the leave goes straight into the leave ledger as \"compensatory\". After that month's payroll is finalized it can no longer be converted or cancelled.",
+      "forbidden": "Only top admins can see this.",
+      "createTitle": "Convert to comp leave",
+      "dbPending": "Available after DB change set 29 is approved.",
+      "employee": "Employee",
+      "pick": "Choose",
+      "month": "Month of overtime",
+      "room": "Approved overtime {approved}h · already converted {converted}h · available {left}h",
+      "finalized": "This month's payroll is finalized — overtime was already paid, so it cannot be converted.",
+      "hours": "Overtime hours to convert",
+      "hoursHint": "In 15-minute (0.25h) steps, within approved overtime.",
+      "rate": "Rate",
+      "rateHint": "Leave hours per overtime hour — default 1.5, same as the legal premium",
+      "preview": "Overtime {h}h → comp leave {leave}h",
+      "usableTo": "Last usable day (optional)",
+      "usableToHint": "Leave blank for no expiry",
+      "note": "Note (optional)",
+      "submit": "Grant comp leave",
+      "done": "Granted {leave}h of comp leave for {h}h of overtime.",
+      "listTitle": "Conversions ({n})",
+      "listEmpty": "No conversions yet.",
+      "line": "Overtime {h}h → leave {leave}h (×{rate})",
+      "granted": "Granted",
+      "cancelled": "Cancelled",
+      "cancelledWhy": "Reason: {reason}",
+      "by": "{name} · {at}",
+      "cancel": "Cancel",
+      "cancelWarn": "The comp leave is withdrawn and these hours are paid as overtime again. It cannot be cancelled if the leave was already used.",
+      "cancelReason": "Reason",
+      "cancelYes": "Cancel it",
+      "back": "Close",
+      "legal": "Compensatory leave requires a written agreement with the employee representative (Labor Standards Act Art. 57). Only overtime can be converted for now — holiday and night work later.",
+      "comp_exceeds_overtime": "More than the overtime available to convert.",
+      "payroll_finalized": "That month's payroll is finalized and cannot be changed.",
+      "comp_in_use": "The comp leave was already used. Cancel the used leave first.",
+      "comp_grant_failed": "Granting the leave failed. Please try again.",
+      "invalid_minutes": "Enter hours in 15-minute (0.25h) steps.",
+      "invalid_rate": "Rate must be between 1 and 3.",
+      "db_update_required": "DB change set 29 needs to be applied."
     }
   },
   "side": {
@@ -4804,7 +4848,8 @@
     "findMenu": "Find a menu",
     "noMenu": "No matching menu.",
     "paySlips": "Upload payslips",
-    "roleSystem": "System admin"
+    "roleSystem": "System admin",
+    "payOvertimeComp": "Overtime → comp leave"
   },
   "nav": {
     "home": "Home",
@@ -5814,7 +5859,8 @@
       "setEsign": "E-contracts",
       "paySlips": "Upload payslips",
       "backups": "Database backups",
-      "setHolidays": "Holidays"
+      "setHolidays": "Holidays",
+      "payOvertimeComp": "Overtime → comp leave"
     },
     "search": {
       "placeholder": "Search",

@@ -3,6 +3,8 @@
 // ★ 근태는 읽기만 한다(연장 요청을 맞추는 쓰기를 하지 않는다). 마감된 달만 계산에 쓴다 — 마감하지 않은 직원은 「차단」이다.
 // ★ 다시 계산하면 새 계산 세대가 생긴다. 실패한 계산은 앞의 성공한 결과를 덮지 않는다. 확정한 대장은 DB가 바꾸지 못하게 막는다(0037).
 // ★ 검토 · 확정할 때 입력을 다시 읽어, 계산한 뒤에 바뀐 것이 있으면(오래됨) 막는다.
+import { applyCompMinutes } from './comp-time';
+import { compMinutesFor } from './overtime-comp';
 import 'server-only';
 import { readAll } from '@/lib/read-all';
 import { atomicRpc } from '@/lib/atomic-rpc';
@@ -199,6 +201,7 @@ async function buildInputs(run: RunRow): Promise<Built> {
   const bonus = run.kind === 'BONUS';
   const priorOf = bonus ? await loadPrior(run) : null;
   const exemptYtd = await loadExemptYtd(run); // 같은 해 앞서 확정한 명세의 항목별 비과세 합계 (2026-10-19)
+  const comp = bonus ? new Map<string, number>() : await compMinutesFor(ym, run.isTest); // 보상휴가로 돌린 연장(분) — 연장수당에서 뺀다 (2026-10-19, 묶음 29)
 
   const contracts = (cons ?? []) as Row[];
   const taxRows = (taxes ?? []) as Row[];
@@ -279,6 +282,16 @@ async function buildInputs(run: RunRow): Promise<Built> {
         facts = attendance;
         const t = timeFromAttendance(attendance, (con!.time_basis as 'ACTUAL' | 'ROUNDED' | 'SCHEDULE') ?? 'ACTUAL', contract.payType, 480, basis.premiumTimeBasis);
         time = t.time;
+        // 보상휴가로 돌린 연장은 돈으로 주지 않는다 — 인정 연장과 일한 시간에서 같이 뺀다(정규 시간은 그대로). 돌린 분이 인정 연장보다 많으면 막는다
+        const converted = comp.get(id) ?? 0;
+        if (time && converted > 0) {
+          const c2 = applyCompMinutes(time, converted);
+          if (c2.exceeds) pre.push({ code: 'comp_exceeds_overtime', detail: `${converted} > ${time.overtimeMinutes}` });
+          else {
+            time = c2.time;
+            notes.push({ code: 'overtime_comp_leave', detail: String(Math.round((converted / 60) * 100) / 100) });
+          }
+        }
         // 명세서의 근로일수: 확정한 날 가운데 일한 시간이 있는 날
         const workDays = daysFor(period, id, from, last).filter((d) => d.netMinutes > 0 && confirms.has(confirmKey(id, d.workDate))).length;
         if (time) time = { ...time, workDays };
