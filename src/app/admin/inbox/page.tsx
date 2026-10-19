@@ -139,7 +139,13 @@ export default async function InboxPage({ searchParams }: { searchParams: Promis
           ))}
         </ul>
         {pin && <PlaceMap lat={pin.lat} lng={pin.lng} radiusM={0} labels={labels} />}
-        {base && <PlaceMap lat={base.lat} lng={base.lng} radiusM={base.radiusM} labels={labels} />}
+        {/* 실제로 찍은 위치(GPS)가 없으면 출퇴근 장소 지도는 접어 둔다 — 옮긴 기록에도 사무실 지도가 화면 1/3을 차지했다 (2026-10-19 디자인) */}
+        {base && (
+          <details className="text-sm">
+            <summary className="flex min-h-9 cursor-pointer items-center text-muted">{t('placeMap', { name: base.label ?? '' })}</summary>
+            <PlaceMap lat={base.lat} lng={base.lng} radiusM={base.radiusM} labels={labels} />
+          </details>
+        )}
       </div>
     );
   };
@@ -580,7 +586,7 @@ async function DoneTab({ sp, practice }: { sp: { live?: string; tab?: string; dp
   const me = (await getMe())!;
   const [all, leaveTypes, { data: staff }, hidden] = await Promise.all([loadRequests({ practice }), loadAllLeaveTypes(), createAdminClient().from('profiles').select('id, name, employee_no'), loadHidden(me.id)]);
   const items = withoutHidden(all, hidden.keys); // 이 관리자가 지운 처리된 요청은 빼고 — 다른 관리자 목록에는 남는다 (2026-10-19)
-  const check = new Set((staff ?? []).filter((p) => p.employee_no?.startsWith('e2e-')).map((p) => p.id as string));
+  const check = new Set((staff ?? []).filter((p) => p.employee_no?.startsWith('e2e-') || p.employee_no === OFFICE.ownerEmployeeNo).map((p) => p.id as string)); // 시스템관리자는 직원이 아니다 — 완료 목록에서도 뺀다 (2026-10-19 디자인)
   const names = new Map((staff ?? []).map((p) => [p.id as string, p.name as string]));
   const q = (sp.q ?? '').trim().slice(0, 40).toLowerCase();
   const page = pageOf(splitRequests(items.filter((x) => !check.has(x.employeeId) && (!q || (names.get(x.employeeId) ?? '').toLowerCase().includes(q)))).done, sp.dp, LIST_PAGE);

@@ -21,7 +21,7 @@ export async function loadRequests(opts: { employeeId?: string; practice?: boole
   };
   const [co, ot, lv, wk, pr, sh, lc] = await Promise.all([
     read('punch_corrections', 'id, employee_id, work_date, correction_type, target_id, kind, new_punched_at, status, reason, requested_by, approved_by, created_at, decided_at'),
-    read('overtime_requests', 'id, employee_id, work_date, overtime_minutes, holiday_minutes, status, reason, approved_by, created_at, decided_at'),
+    read('overtime_requests', 'id, employee_id, work_date, overtime_minutes, holiday_minutes, status, reason, approved_by, created_at, decided_at, needs_review'),
     read('leave_requests', 'id, employee_id, type_code, start_date, end_date, days, start_time, end_time, status, reason, approved_by, created_at, decided_at, source'),
     read('work_requests', 'id, employee_id, kind, start_date, end_date, start_time, end_time, place, status, reason, approved_by, created_at, decided_at'),
     read('punch_requests', 'id, employee_id, kind, requested_at, work_date, nearest_m, geo_reason, status, approved_by, created_at, decided_at'),

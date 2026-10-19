@@ -758,7 +758,8 @@
       "dayPreview": "요청한 시각 {from} – {to}{known, select, yes { · 약 {min}분} other {}}",
       "dayPreviewOff": "휴일 근무 · 요청한 시각 {from} – {to}{known, select, yes { · 약 {min}분} other {}}",
       "dayReason": "직원이 남긴 사유",
-      "dayNoReason": "사유 없음 — 직원이 아직 남기지 않았습니다"
+      "dayNoReason": "사유 없음 — 직원이 아직 남기지 않았습니다",
+      "placeMap": "출퇴근 장소 지도 — {name}"
     },
     "records": {
       "title": "월 집계",
@@ -5418,7 +5419,8 @@
     "hideAll": "이 쪽 처리된 요청 모두 지우기",
     "hideAllAsk": "이 쪽의 처리된 요청 {n}건을 목록에서 지울까요?",
     "hideHint": "지워도 요청 기록(휴가 · 정정 등)은 그대로 남고, 내 목록에서만 보이지 않습니다. 대기 중인 요청은 지울 수 없습니다.",
-    "hideFailed": "지우지 못했습니다. 잠시 뒤 다시 해 주세요."
+    "hideFailed": "지우지 못했습니다. 잠시 뒤 다시 해 주세요.",
+    "recheck": "재확인 필요"
   },
   "scheduleRequest": {
     "title": "근무일정 요청",

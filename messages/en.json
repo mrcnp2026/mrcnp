@@ -758,7 +758,8 @@
       "dayPreview": "Requested {from} – {to}{known, select, yes { · about {min} min} other {}}",
       "dayPreviewOff": "Holiday work · requested {from} – {to}{known, select, yes { · about {min} min} other {}}",
       "dayReason": "Reason from the employee",
-      "dayNoReason": "No reason left yet"
+      "dayNoReason": "No reason left yet",
+      "placeMap": "Work location map — {name}"
     },
     "records": {
       "title": "Monthly totals",
@@ -5418,7 +5419,8 @@
     "hideAll": "Remove all processed on this page",
     "hideAllAsk": "Remove {n} processed requests on this page from the list?",
     "hideHint": "Removing only hides it from your list. The request record (leave, correction, etc.) stays. Pending requests can't be removed.",
-    "hideFailed": "Couldn't remove. Please try again shortly."
+    "hideFailed": "Couldn't remove. Please try again shortly.",
+    "recheck": "Recheck"
   },
   "scheduleRequest": {
     "title": "Schedule request",

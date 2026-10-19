@@ -24,6 +24,7 @@ export type ReqItem = {
   createdAt: string | null;
   decidedAt: string | null;
   decidedBy: string | null;
+  recheck?: boolean; // 연장근로: 처리했지만 기록이 바뀌어 다시 확인해야 함 (목록에 「재확인 필요」, 2026-10-19 디자인)
 };
 
 type Row = Record<string, unknown>;
@@ -36,7 +37,7 @@ const base = (kind: ReqKind, r: Row, date: string, endDate = date): ReqItem => (
 });
 
 export const fromCorrection = (r: Row): ReqItem => ({ ...base('correction', r, String(r.work_date)), sub: s(r.correction_type), punchKind: r.kind === 'in' || r.kind === 'out' ? r.kind : null, newAt: s(r.new_punched_at), oldAt: s(r.old_punched_at) });
-export const fromOvertime = (r: Row): ReqItem => ({ ...base('overtime', r, String(r.work_date)), minutes: Number(r.overtime_minutes ?? 0) + Number(r.holiday_minutes ?? 0) });
+export const fromOvertime = (r: Row): ReqItem => ({ ...base('overtime', r, String(r.work_date)), minutes: Number(r.overtime_minutes ?? 0) + Number(r.holiday_minutes ?? 0), recheck: r.needs_review === true });
 export const fromLeave = (r: Row): ReqItem => ({ ...base('leave', r, String(r.start_date), String(r.end_date)), sub: s(r.type_code), days: Number(r.days), startTime: hm(r.start_time), endTime: hm(r.end_time) });
 export const fromWork = (r: Row): ReqItem => ({ ...base('work', r, String(r.start_date), String(r.end_date)), sub: s(r.kind), place: s(r.place), startTime: hm(r.start_time), endTime: hm(r.end_time) });
 
