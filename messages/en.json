@@ -1070,7 +1070,8 @@
       "fixNextDay": "Next day (after midnight)",
       "fixVoidWarn": "This record will count as not made. The original punch and the reason are kept.",
       "fixSave": "Change",
-      "fixVoidConfirm": "Delete"
+      "fixVoidConfirm": "Delete",
+      "imported": "Imported from Shiftee"
     },
     "org": {
       "title": "Org chart",

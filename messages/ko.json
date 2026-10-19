@@ -1070,7 +1070,8 @@
       "fixNextDay": "다음 날 (자정 넘긴 퇴근)",
       "fixVoidWarn": "이 기록을 없는 것으로 칩니다. 원래 찍은 기록과 사유는 남습니다.",
       "fixSave": "바꾸기",
-      "fixVoidConfirm": "지우기"
+      "fixVoidConfirm": "지우기",
+      "imported": "시프티에서 옮김"
     },
     "org": {
       "title": "조직도",

@@ -128,7 +128,7 @@ export default async function EmployeeRecordsPage({ params, searchParams }: { pa
           const none = !d.firstIn && !d.lastOut;
           return (
             <li key={d.workDate}>
-              <Card className="flex flex-col gap-2 py-3">
+              <Card className="flex flex-col gap-1.5 py-3">
                 <div className="flex items-baseline justify-between gap-2">
                   <span className="font-semibold">
                     {dayLabel(d.workDate)}
@@ -147,8 +147,9 @@ export default async function EmployeeRecordsPage({ params, searchParams }: { pa
                     ) : d.lastOut ? tr('outLine', { time: hm(d.lastOut) }) : <span className="text-warn">{tr('noOut')}</span>}
                   </p>
                 )}
-                {(d.lateMinutes > 0 || d.leave.length > 0 || d.work || d.outside || d.corrected || d.pendingCorrection || d.proxy || d.extraMinutes > 0) && (
-                  <div className="flex flex-wrap items-center gap-2">
+                {/* 표시 · 원래 기록을 한 줄에 — 폰에서 날마다 「원래 기록 · 정정 내역」 줄이 따로 있어 한 달이 3,000px를 넘었다 (2026-10-19 디자인). 펼치면 아래로 한 줄 전체 */}
+                {(d.lateMinutes > 0 || d.leave.length > 0 || d.work || d.outside || d.corrected || d.pendingCorrection || d.proxy || d.extraMinutes > 0 || raw.length > 0 || corr.length > 0) && (
+                  <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
                     {d.lateMinutes > 0 && <Chip tone="warn">{th('lateBy', { n: d.lateMinutes })}</Chip>}
                     {d.outside && <Chip tone="warn">{th('outside')}</Chip>}
                     {d.leave.map((l) => <Chip key={l.requestId} tone="info">{leaveTypeName(data.leaveTypes, l.typeCode, tl)}{l.startTime ? ` ${l.startTime}-${l.endTime}` : ''}</Chip>)}
@@ -157,17 +158,15 @@ export default async function EmployeeRecordsPage({ params, searchParams }: { pa
                     {d.corrected && <Chip tone="info">{tr('corrected')}</Chip>}
                     {d.pendingCorrection && <Chip>{tr('correctionPending')}</Chip>}
                     {d.extraMinutes > 0 && <span className="num text-xs text-muted">{t('extra', { t: dur(d.extraMinutes) })}</span>}
-                  </div>
-                )}
                 {(raw.length > 0 || corr.length > 0) && (
-                  <details className="text-sm">
-                    <summary className="flex min-h-11 cursor-pointer items-center text-muted">{t('rawTitle', { n: raw.length + corr.length })}</summary>
+                  <details className="ml-auto text-sm open:ml-0 open:basis-full">
+                    <summary className="flex min-h-9 cursor-pointer items-center justify-end text-xs text-muted">{t('rawTitle', { n: raw.length + corr.length })}</summary>
                     <ul className="flex flex-col gap-2 pb-1">
                       {raw.map((e) => (
                         <li key={e.id} className="num flex flex-wrap items-baseline gap-x-2 text-muted">
                           <span className="font-semibold text-text">{ti(`kind.${e.kind}`)} {hm(e.punchedAt)}</span>
                           <span>{t('rawPunched')}</span>
-                          {!e.ipVerified && <span className="text-warn">{th('outside')}</span>}
+                          {e.source === 'import' ? <span>{t('imported')}</span> : !e.ipVerified && e.source !== 'admin' && <span className="text-warn">{th('outside')}</span>}
                           {e.verifiedBy === 'gps' && <span className="text-ok">{t('byGps')}</span>}
                           {canFix && <DirectFix eventId={e.id} label={`${ti(`kind.${e.kind}`)} ${hm(e.punchedAt)}`} time={hm(e.punchedAt)} canNextDay={e.kind === 'out'} />}
                         </li>
@@ -194,6 +193,8 @@ export default async function EmployeeRecordsPage({ params, searchParams }: { pa
                       })}
                     </ul>
                   </details>
+                )}
+                  </div>
                 )}
                 {canEnter && d.canAdd.length > 0 && (
                   <ProxyEntry key={(d.missing === 'out' ? ['out'] : d.canAdd).join()} employeeId={id} name={person.name} workDate={d.workDate} dateLabel={dayLabel(d.workDate)} kinds={d.missing === 'out' ? ['out'] : d.canAdd} today={today} />

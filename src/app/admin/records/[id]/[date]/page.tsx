@@ -55,6 +55,8 @@ export default async function RecordDetailPage({ params, searchParams }: { param
   // 확정은 지금 운영 모드의 기록에만 (연습 기간에 「실제 기록 보기」로 들어온 화면에서는 하지 않는다)
   const canConfirm = practice === OFFICE.practiceMode && (await getMe())?.role === 'admin'; // 지점관리자는 보기만 (manager-rules.ts)
   const confirm = (await loadConfirms(date, date, practice)).get(confirmKey(id, date));
+  // 확정한 사람 — 직원 목록에서 숨긴 시스템관리자(시프티 기록을 옮기며 확정)도 이름이 보이게 직접 찾는다 (2026-10-19 디자인: 「| 10.16 23:55」처럼 이름이 비었다)
+  const confirmer = confirm ? (data.people.find((p) => p.id === confirm.confirmedBy)?.name ?? (await createAdminClient().from('profiles').select('name, employee_no').eq('id', confirm.confirmedBy).maybeSingle()).data?.name ?? null) : null;
   const closed = day.pairs.every((p) => p.in && p.out);
   const others = day.pairs.map((p, i) => ({ p, i })).filter((x) => x.i !== idx && (x.p.in || x.p.out));
 
@@ -99,7 +101,7 @@ export default async function RecordDetailPage({ params, searchParams }: { param
       )}
       {confirm && (
         <FieldList>
-          <Field label={t('confirmedBy')} value={`${data.people.find((p) => p.id === confirm.confirmedBy)?.name ?? ''} | ${f.dateTime(new Date(confirm.confirmedAt), { month: 'numeric', day: 'numeric', hour: '2-digit', minute: '2-digit', hourCycle: 'h23' })}`} />
+          <Field label={t('confirmedBy')} value={`${confirmer ?? ''}${confirmer ? ' | ' : ''}${f.dateTime(new Date(confirm.confirmedAt), { month: 'numeric', day: 'numeric', hour: '2-digit', minute: '2-digit', hourCycle: 'h23' })}`} />
         </FieldList>
       )}
       {canConfirm && (confirm || closed) && <ConfirmButton item={{ employeeId: id, date }} confirmed={!!confirm} />}

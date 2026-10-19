@@ -31,7 +31,7 @@ export const isProxyCorrection = (c: Pick<PunchCorrection, 'correctionType' | 's
 
 export function buildDayDetails(args: {
   days: DayRow[]; // 그 직원의 기간 계산 (daysFor)
-  events: { workDate: string; kind: PunchKind; punchedAt: Date; ipVerified: boolean }[]; // 그 직원의 원본 기록
+  events: { workDate: string; kind: PunchKind; punchedAt: Date; ipVerified: boolean; source?: string | null }[]; // 그 직원의 원본 기록 (source: 시프티에서 옮긴 기록 import · 관리자 대리 입력 admin은 위치를 확인하지 않았다)
   corrections: (PunchCorrection & { requestedBy: string })[]; // 그 직원의 정정 (모든 상태)
   leave: Map<string, LeaveOnDay[]>;
   work: Map<string, WorkKind>;
@@ -77,7 +77,8 @@ export function buildDayDetails(args: {
       lateMinutes: late?.verdict === 'late' ? late.lateMinutes : 0,
       leave,
       work,
-      outside: !!firstInEvent && !firstInEvent.ipVerified && !work,
+      // 시프티에서 옮긴 기록 · 관리자가 넣은 기록은 앱의 위치 확인을 거치지 않았다 — 「사무실 밖」으로 보지 않는다 (2026-10-19 디자인: 옮긴 기록 전부에 경고가 붙었다)
+      outside: !!firstInEvent && !firstInEvent.ipVerified && firstInEvent.source !== 'import' && firstInEvent.source !== 'admin' && !work,
       corrected: mine.some((c) => c.status === 'approved' && !isProxyCorrection(c)),
       pendingCorrection: mine.some((c) => c.status === 'pending'),
       proxy: mine.some(isProxyCorrection),

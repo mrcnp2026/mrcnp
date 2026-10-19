@@ -307,7 +307,7 @@ export default async function RecordListPage({ searchParams }: { searchParams: P
         );
       })}
       </div>
-      <Pager page={page.page} pages={page.pages} param="p" params={{ ...sp }} label={tc('pages')} />
+      <Pager page={page.page} pages={page.pages} param="p" params={{ ...sp }} label={tc('pages')} labelOf={(n) => { const d = dates[n - 1]; return d ? f.dateTime(new Date(`${d}T12:00:00+09:00`), { month: 'long', day: 'numeric', weekday: 'short' }) : String(n); }} />
       <div className="flex flex-wrap items-center justify-between gap-x-3 px-1 pt-2 text-sm">
         <span className="text-muted">{practice ? t('practice') : t('live')}</span>
         <Link href="/admin/records" className="inline-flex min-h-11 items-center font-medium text-primary">
