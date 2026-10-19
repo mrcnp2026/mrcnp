@@ -470,7 +470,13 @@
         "payNoneShort": "계약 없음",
         "payEdit": "사원별 급여에서 고치기",
         "payAdd": "사원별 급여에서 계약 넣기",
-        "payHidden": "급여 화면을 볼 수 있는 관리자만 보입니다."
+        "payHidden": "급여 화면을 볼 수 있는 관리자만 보입니다.",
+        "slipTitle": "급(상)여 명세서",
+        "slipPay": "급여",
+        "slipLatest": "최근 {month} {kind} · 실지급 {net}원 · 모두 {n}건",
+        "slipNone": "공개된 명세서 없음",
+        "slipEmpty": "이 직원에게 공개된 명세서가 아직 없습니다. 급여대장을 확정해 공개하거나, 급여 › 급여명세서 올리기로 올리면 여기에 보입니다.",
+        "slipCount": "{n}건"
       }
     },
     "more": {

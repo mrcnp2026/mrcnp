@@ -24,13 +24,16 @@ import { loadShiftTemplates } from '@/lib/shift-data';
 import { MAX_TOP, SHOWN_GRADES } from '@/lib/staff-rules';
 import { GradeForm, type GradeKey } from './GradeForm';
 import { ShiftPick } from './ShiftPick';
+import { Pager, pageOf } from '@/components/Pager';
+import { loadMySlips } from '@/lib/payroll/publish-data';
+import { OFFICE } from '@/config/office';
 import { ProfileSection } from './ProfileSection';
 import { StaffNotes } from './StaffNotes';
 import { loadStaffNotes } from '@/lib/staff-notes';
 import { StaffDetailsForm } from '@/components/StaffDetailsForm';
 import { loadStaffDetails } from '@/lib/staff-details';
 
-export default async function MemberDetailPage({ params }: { params: Promise<{ id: string }> }) {
+export default async function MemberDetailPage({ params, searchParams }: { params: Promise<{ id: string }>; searchParams: Promise<{ sp?: string }> }) {
   const t = await getTranslations('admin.members');
   const td = await getTranslations('details');
   const tc = await getTranslations('common');
@@ -73,6 +76,13 @@ export default async function MemberDetailPage({ params }: { params: Promise<{ i
     ? await db.from('payroll_contract_versions').select('pay_type, amount, valid_from').eq('employee_id', id).eq('status', 'active').lte('valid_from', today).or(`valid_to.is.null,valid_to.gt.${today}`).order('valid_from', { ascending: false }).limit(1).maybeSingle()
     : { data: null };
   const payText = contract ? tw('payValue', { type: tpay(contract.pay_type as string), amount: f.number(Number(contract.amount)), from: contract.valid_from as string }) : tw('payNone');
+  // 급(상)여 명세서 (2026-10-19 의뢰인: 직원 화면에서 최근 6개월, 넘으면 쪽 넘김) — 그 직원이 「내 급여」에서 보는 공개된 명세서 그대로. 급여를 볼 수 있는 관리자만
+  const slipSp = (await searchParams).sp;
+  const slips = seePay ? await loadMySlips(id, OFFICE.practiceMode) : [];
+  const slipPage = pageOf(slips, slipSp, 6);
+  const tps = await getTranslations('payslip');
+  const slipSummary = slips.length ? tw('slipLatest', { month: slips[0].month, kind: slips[0].kind === 'BONUS' ? tps('bonus') : tw('slipPay'), net: f.number(slips[0].net), n: slips.length }) : tw('slipNone');
+  const slipHref = (x: (typeof slips)[number]) => (x.runId ? `/admin/payroll/runs/${x.runId}/${id}` : `/admin/payroll/slips?m=${x.month}`);
   const workPaySummary = [workKind, shiftTpl?.name ?? tw('shiftNoneShort'), seePay ? (contract ? tpay(contract.pay_type as string) : tw('payNoneShort')) : null].filter(Boolean).join(' · ');
   const day = (s: string) => f.dateTime(new Date(s), { dateStyle: 'medium' });
   const agreedAt = await consentAt(p.id);
@@ -207,6 +217,42 @@ export default async function MemberDetailPage({ params }: { params: Promise<{ i
               </Link>
             </div>
           </Fold>
+
+          {/* 급(상)여 명세서 (2026-10-19 의뢰인): 접힌 채 한 줄(가장 최근 달 · 실지급) — 펴면 6개월씩, 넘으면 쪽 넘김. 폰 · PC 같은 접기 카드 */}
+          {seePay && (
+            <Fold id="slips" title={tw('slipTitle')} summary={slipSummary} open={!!slipSp} aside={slips.length > 0 ? <Chip tone="info">{tw('slipCount', { n: slips.length })}</Chip> : undefined}>
+              {slips.length === 0 ? (
+                <p className="text-sm text-faint">{tw('slipEmpty')}</p>
+              ) : (
+                <div className="flex flex-col gap-2">
+                  <ul className="flex flex-col divide-y divide-border">
+                    {slipPage.items.map((x) => (
+                      <li key={x.id}>
+                        <Link href={slipHref(x)} className="flex flex-col gap-0.5 py-2.5 hover:bg-surface lg:flex-row lg:items-center lg:gap-4 lg:px-1">
+                          <span className="flex items-center gap-2 lg:w-44 lg:shrink-0">
+                            <span className="num font-bold">{x.month}</span>
+                            <Chip tone={x.kind === 'BONUS' ? 'info' : 'neutral'}>{x.kind === 'BONUS' ? tps('bonus') : tw('slipPay')}</Chip>
+                            {x.revision > 1 && <span className="text-xs text-warn">{tps('corrected', { n: x.revision })}</span>}
+                          </span>
+                          <span className="num flex flex-1 flex-wrap items-baseline justify-between gap-x-4 gap-y-0.5 text-sm">
+                            <span className="text-muted">
+                              {tps('pay')} {f.number(x.pay)} · {tps('deduction')} {f.number(x.deduction)}
+                            </span>
+                            <span>
+                              <span className="text-muted">{tps('net')} </span>
+                              <b className="text-base">{tps('won', { n: f.number(x.net) })}</b>
+                            </span>
+                          </span>
+                          <span className="num text-xs text-faint lg:w-32 lg:text-right">{tps('payDate', { date: x.payDate })}</span>
+                        </Link>
+                      </li>
+                    ))}
+                  </ul>
+                  <Pager page={slipPage.page} pages={slipPage.pages} param="sp" params={{}} anchor="slips" label={tc('pages')} />
+                </div>
+              )}
+            </Fold>
+          )}
 
           {/* 비고 (묶음 19): 관리자만 보는 그 사람에 대한 메모 — 4건씩 넘겨 본다 */}
           <Fold id="notes" title={tn('title')} summary={notesSummary} aside={notes && notes.length > 0 ? <Chip tone="info">{tn('countChip', { n: notes.length })}</Chip> : undefined}>
