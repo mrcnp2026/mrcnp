@@ -36,7 +36,7 @@ type Initial = {
 const field = 'min-h-11 w-full rounded-button border border-border bg-bg px-3 text-base text-text';
 const LANG: Record<string, string> = { en: 'English', vi: 'Tiếng Việt', th: 'ภาษาไทย' };
 
-export function NoticeEditor({ people, initial }: { people: { id: string; name: string }[]; initial: Initial | null }) {
+export function NoticeEditor({ people, initial, translate: canTranslate = true }: { people: { id: string; name: string }[]; initial: Initial | null; translate?: boolean }) {
   const t = useTranslations('admin.notices');
   const tc = useTranslations('common');
   const router = useRouter();
@@ -210,9 +210,12 @@ export function NoticeEditor({ people, initial }: { people: { id: string; name: 
           <CardTitle icon={Languages} help={t('translationsHint')}>
             {t('translations')}
           </CardTitle>
-          <Button variant="outline" disabled={busy} onClick={translate} className="w-full">
-            {t('translate')}
-          </Button>
+          {/* 통합설정 › 메시지 「번역 초안」을 끄면 단추를 보이지 않는다 (2026-10-19) — 이미 있는 번역은 그대로 고칠 수 있다 */}
+          {canTranslate && (
+            <Button variant="outline" disabled={busy} onClick={translate} className="w-full">
+              {t('translate')}
+            </Button>
+          )}
           {trs.map((tr, i) => (
             <div key={tr.locale} className="flex flex-col gap-2 rounded-button border border-border p-3">
               <div className="flex flex-wrap items-center gap-2">

@@ -1,7 +1,7 @@
 // 명세서 PDF 응답 — 직원용(내 명세서)과 관리자용(대장의 한 사람)이 같은 틀을 쓴다. 문구는 번역 파일(payslip)에서 읽는다.
 import 'server-only';
 import { getTranslations } from 'next-intl/server';
-import { BRAND } from '@/config/brand';
+import { companyName } from '@/lib/company'; // 통합설정 › 회사 기본설정의 회사명 (2026-10-18)
 import { groupPath } from '@/lib/org';
 import { loadOrgGroups } from '@/lib/org-data';
 import { buildSlipPdf } from './slip-pdf';
@@ -50,7 +50,7 @@ export async function slipPdfBytes(a: SlipPdfInput): Promise<{ bytes: Uint8Array
     : null;
   const bytes = await buildSlipPdf({
     work,
-    company: BRAND.name, no: a.no, name: a.name, employeeNo: a.employeeNo ?? '', group: groupPath(groups, a.groupId) ?? '', periodFrom: a.periodFrom, periodTo: a.periodTo, payDate: a.payDate, revision: a.revision, pay: a.pay, deduction: a.deduction, net: a.net,
+    company: await companyName(), no: a.no, name: a.name, employeeNo: a.employeeNo ?? '', group: groupPath(groups, a.groupId) ?? '', periodFrom: a.periodFrom, periodTo: a.periodTo, payDate: a.payDate, revision: a.revision, pay: a.pay, deduction: a.deduction, net: a.net,
     // 사업주 부담은 직원용 면에 넣지 않는다
     lines: a.lines.flatMap((l) => (l.kind === 'EMPLOYER' ? [] : [{ kind: l.kind, label: t.has(`line.${l.code}`) ? t(`line.${l.code}`) : l.label, how: how(l), amount: l.amount }])),
     labels: {

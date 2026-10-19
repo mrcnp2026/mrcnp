@@ -24,7 +24,9 @@ import { loadJobs } from '@/lib/job-data';
 import { missingRange } from '@/lib/missing-list';
 import { buildOrgTree, groupPath, groupScope } from '@/lib/org';
 import { loadOrgGroups } from '@/lib/org-data';
-import { daysFor, loadPeriod } from '@/lib/period-data';
+import { daysFor, leaveDaysFor, loadPeriod } from '@/lib/period-data';
+import { judgeLateness } from '@/lib/lateness';
+import { leaveTypeName } from '@/lib/leave';
 import { SHIFT_COLOR_CLASS } from '@/lib/shifts';
 import { kstDateTime, toKstDate } from '@/lib/time';
 import { RecordAdd } from './RecordAdd';
@@ -37,7 +39,7 @@ type Line = { key: string; idx: number; id: string; name: string; sub: string; c
 
 export default async function RecordListPage({ searchParams }: { searchParams: Promise<{ q?: string; g?: string; from?: string; to?: string; live?: string; p?: string; pp?: string; dm?: string }> }) {
   const tGear = await getTranslations('frame');
-  const [t, tc, f, sp] = await Promise.all([getTranslations('admin.recordList'), getTranslations('common'), getFormatter(), searchParams]);
+  const [t, tc, f, sp, tCal, tl] = await Promise.all([getTranslations('admin.recordList'), getTranslations('common'), getFormatter(), searchParams, getTranslations('admin.recordCalendar'), getTranslations('leave')]);
   const practice = OFFICE.practiceMode && sp.live !== '1';
   const today = toKstDate(new Date());
   // 기본 기간: 이번 달 1일 ~ 오늘 (한 번에 62일까지)
@@ -62,7 +64,7 @@ export default async function RecordListPage({ searchParams }: { searchParams: P
 
   const lines: Line[] = [];
   // PC 표: 한 줄 = 직원의 하루 (시프티 PC 「출퇴근기록 목록형」). 찍힌 그대로의 시간과 급여용 시간(끊은 것)을 나란히 보인다
-  const dayRows: { key: string; id: string; name: string; sub: string; date: string; time: string; plan: string; breakMin: number; net: number; payable: number; deemed: boolean; confirmed: boolean; open: boolean; placeIn: string; placeOut: string; diffIn: number | null; diffOut: number | null }[] = [];
+  const dayRows: { key: string; id: string; name: string; sub: string; date: string; time: string; plan: string; breakMin: number; net: number; payable: number; deemed: boolean; confirmed: boolean; open: boolean; placeIn: string; placeOut: string; diffIn: number | null; diffOut: number | null; late: boolean; leaveNames: string }[] = [];
   // 출근 · 퇴근 장소(어느 출퇴근 장소로 확인됐는가)와 일정 대비 오차 — 시프티 목록형의 열 (2026-10-11 의뢰인 스샷 `스샷/출퇴근기록 목록형.png`)
   const placeName = new Map((await loadOfficeLocations(true)).map((l) => [l.id, l.label ?? '']));
   const placeOf = (employeeId: string, date: string, kind: 'in' | 'out') => {
@@ -80,6 +82,7 @@ export default async function RecordListPage({ searchParams }: { searchParams: P
     const job = p.jobId ? jobOf.get(p.jobId) : undefined;
     const sub = [groupPath(groups, p.groupId), job?.name].filter(Boolean).join(' / ');
     // 간주 근무 줄: 그날 일정이 간주 근무이고 찍은 기록·승인된 정정이 하나도 없을 때 (계산이 일정 시간으로 채운 줄)
+    const leaveOf = leaveDaysFor(data, p.id);
     for (const d of daysFor(data, p.id)) {
       if (d.pairs.length === 0) continue;
       totalOf.set(d.workDate, (totalOf.get(d.workDate) ?? 0) + d.netMinutes);
@@ -88,7 +91,12 @@ export default async function RecordListPage({ searchParams }: { searchParams: P
         const first = d.pairs.find((x) => x.in)?.in;
         const last = [...d.pairs].reverse().find((x) => x.out)?.out;
         const stillOpen = d.pairs.some((x) => x.in && !x.out);
+        // 지각 · 휴가도 상태 칸에 (2026-10-19 의뢰인: PC에서는 지각 · 퇴근 미기록 · 휴가를 구분할 수 없었다) — 달력형과 같은 판정
+        const rule = data.ruleFor(p.id, d.workDate) ?? data.rule;
+        const late = !!first && !d.deemed && d.dayType === 'workday' && !!rule && judgeLateness({ punchedAt: first, workDate: d.workDate, rule, isHoliday: false }).verdict === 'late';
+        const leaveNames = [...new Set((leaveOf.get(d.workDate) ?? []).map((l) => leaveTypeName(data.leaveTypes, l.typeCode, tl)))].join(' · ');
         dayRows.push({
+          late, leaveNames,
           key: `${p.id}${d.workDate}`, id: p.id, name: p.name, sub, date: d.workDate,
           time: `${first ? clock(first) : '–'} - ${last && !stillOpen ? clock(last) : '–'}`,
           plan: plan.items.length ? plan.items.map((it) => `${it.startTime} - ${it.endTime}`).join(', ') : t('noPlan'),
@@ -208,13 +216,14 @@ export default async function RecordListPage({ searchParams }: { searchParams: P
                       {r.sub && <span className="block max-w-40 truncate text-xs text-faint" title={r.sub}>{r.sub}</span>}
                     </td>
                     <td className="num px-2.5 py-2.5 whitespace-nowrap">{f.dateTime(kstDateTime(r.date, '12:00'), { month: '2-digit', day: '2-digit', weekday: 'short' })}</td>
-                    <td className="num px-2.5 py-2.5 whitespace-nowrap">{r.time}</td>
+                    <td className={`num px-2.5 py-2.5 whitespace-nowrap ${r.late ? 'font-bold text-danger' : ''}`}>{r.time}</td>
                     <td className="num px-2.5 py-2.5 whitespace-nowrap text-muted">{r.plan}</td>
                     {/* 출근 · 퇴근 장소를 한 칸에 — 같으면 하나만, 다르면 「출근 → 퇴근」 */}
                     <td className="max-w-44 truncate px-2.5 py-2.5 whitespace-nowrap text-muted" title={r.placeIn === r.placeOut || !r.placeOut ? r.placeIn : `${r.placeIn || '–'} → ${r.placeOut}`}>{r.placeIn === r.placeOut || !r.placeOut ? r.placeIn : `${r.placeIn || '–'} → ${r.placeOut}`}</td>
                     <td className="num px-2.5 py-2.5 text-right whitespace-nowrap text-muted">{t('min', { n: r.breakMin })}</td>
                     <td className="num px-2.5 py-2.5 text-right whitespace-nowrap">{hm(r.net)}</td>
-                    <td className="num px-2.5 py-2.5 text-right font-bold whitespace-nowrap">{hm(r.payable)}</td>
+                    {/* 굵은 글씨는 문제가 있는 값에만 — 모든 줄이 굵으면 눈에 띄는 것이 없다 (2026-10-19 의뢰인) */}
+                    <td className="num px-2.5 py-2.5 text-right whitespace-nowrap">{hm(r.payable)}</td>
                     {/* 일정과의 차이 — 출근 · 퇴근을 한 칸에 두 줄로. 늦은 출근 · 이른 퇴근은 주황 */}
                     <td className="num px-2.5 py-2.5 text-right text-xs leading-snug whitespace-nowrap">
                       {[r.diffIn, r.diffOut].map((v, i) =>
@@ -227,8 +236,10 @@ export default async function RecordListPage({ searchParams }: { searchParams: P
                     </td>
                     <td className="px-2.5 py-2.5">
                       <span className="flex flex-wrap gap-1">
-                        {r.deemed && <Chip>{t('deemed')}</Chip>}
+                        {r.late && <Chip tone="danger">{tCal('dotLate')}</Chip>}
                         {r.open && r.date !== today && <Chip tone="warn">{t('noOut')}</Chip>}
+                        {r.leaveNames && <Chip tone="info">{r.leaveNames}</Chip>}
+                        {r.deemed && <Chip>{t('deemed')}</Chip>}
                         {r.open && r.date === today && <Chip tone="info">{t('working')}</Chip>}
                       </span>
                     </td>

@@ -86,7 +86,6 @@ describe('메뉴 구성표', () => {
     expect(at('/admin/settings', 'tab=pay&section=income-tax&year=2026')).toBe('console/aPay/payIncomeTax');
     expect(at('/admin/payroll/runs/abc/def')).toBe('admin/mPay/payRuns');
     expect(at('/admin/payroll/daily/runs/abc')).toBe('admin/mPay/payDaily');
-    expect(at('/admin/manage/report-snapshots')).toBe('admin/mReports/reportSnapshots');
     expect(at('/admin/console')).toBe('console/undefined/undefined');
     expect(at('/punch')).toBe('my/home/myHome');
     expect(at('/punch/home-settings')).toBe('my/home/myHome');

@@ -1,9 +1,9 @@
 // 근태 리포트 — 부서/전사의 한 달 근태 합계와 직원별 내역 (PRD v1.3 35.4, A21). 관리자만.
 // 화면과 「엑셀 받기」가 같은 계산(buildAttendanceDeptReport)을 쓴다 — 조건이 같으면 숫자가 같다. 금액은 없다.
-import { getTranslations } from 'next-intl/server';
+import { getFormatter, getTranslations } from 'next-intl/server';
 import { createAdminClient } from '@/lib/supabase/admin';
 import { HelpTip } from '@/components/Help';
-import { ChevronRight } from 'lucide-react';
+import { ChevronDown, ChevronRight } from 'lucide-react';
 import Link from 'next/link';
 import { Chip, PageShell } from '@/components/ui';
 import { OFFICE } from '@/config/office';
@@ -24,11 +24,14 @@ export default async function AttendanceReportPage({ searchParams }: { searchPar
   const groupId = options.some((o) => o.id === sp.g) ? sp.g! : null;
   const basis = sp.basis === 'current' ? 'current' : 'at_month_end';
   const r = await buildAttendanceDeptReport({ ym: month, practice, groupId, basis });
-  const h = (min: number) => t('hours', { n: Math.round((min / 60) * 10) / 10 });
+  // 2026-10-18 디자인: 시간은 천 단위 쉼표(1,089.7시간), 일수는 소수 둘째 자리까지(8.0625 → 8.06)
+  const f = await getFormatter();
+  const h = (min: number) => t('hours', { n: f.number(Math.round((min / 60) * 10) / 10, { maximumFractionDigits: 1 }) });
+  const dayN = (n: number) => f.number(Math.round(n * 100) / 100, { maximumFractionDigits: 2 });
   const qs = new URLSearchParams({ m: month, ...(groupId ? { g: groupId } : {}), ...(basis === 'current' ? { basis } : {}), ...(sp.live === '1' ? { live: '1' } : {}) }).toString();
   const cols = ['cPeople', 'cNet', 'cPayable', 'cOvertime', 'cNight', 'cHoliday', 'cLate', 'cAbsent', 'cPaidLeave', 'cAnomaly', 'cPending', 'cClose'] as const;
   const cells = (s: AttSum) => [
-    s.people, h(s.netMinutes), h(s.payableMinutes), h(s.overtimeMinutes), h(s.nightMinutes), h(s.holidayMinutes), s.lateCount, s.absentDays, s.paidLeaveDays,
+    s.people, h(s.netMinutes), h(s.payableMinutes), h(s.overtimeMinutes), h(s.nightMinutes), h(s.holidayMinutes), s.lateCount, dayN(s.absentDays), dayN(s.paidLeaveDays),
     s.anomalyBlock + s.anomalyCheck === 0 ? 0 : t('anomalyValue', { block: s.anomalyBlock, check: s.anomalyCheck }), s.pending, t('closeValue', { closed: s.closed, all: s.people }),
   ];
   const provisional = r.total.people - r.total.closed;
@@ -42,8 +45,47 @@ export default async function AttendanceReportPage({ searchParams }: { searchPar
     { key: 'cOvertime', v: (x: AttSum) => Math.round((x.overtimeMinutes / 60) * 10) / 10, unit: 'hUnit' },
     { key: 'cLate', v: (x: AttSum) => x.lateCount, unit: 'countUnit' },
     { key: 'cAbsent', v: (x: AttSum) => x.absentDays, unit: 'dayUnit' },
-    { key: 'cPaidLeave', v: (x: AttSum) => x.paidLeaveDays, unit: 'dayUnit' },
+    { key: 'cPaidLeave', v: (x: AttSum) => Math.round(x.paidLeaveDays * 100) / 100, unit: 'dayUnit' },
   ] as const;
+
+  // 최근 6개월 그래프 — 폰은 직원 목록 아래로 화면이 아주 길어져 접어 둔다(PC는 펼친 채) (2026-10-18 디자인)
+  const trendCharts = (
+    <>
+      {/* 폰은 한 줄에 그래프 하나 — 두 칸이면 「4725.8」 같은 숫자가 막대보다 넓어 상자 밖으로 나갔다 (2026-10-17 의뢰인) */}
+      <div className="grid grid-cols-1 gap-2 sm:grid-cols-2 lg:grid-cols-3 lg:gap-3 2xl:grid-cols-5" data-trend>
+        {METRICS.map((mt) => {
+          const vals = trend.map((x) => (x.s ? mt.v(x.s) : null));
+          const max = Math.max(1, ...vals.map((v) => v ?? 0));
+          // 막대 위 숫자는 짧게: 100 이상은 정수, 그 아래는 소수 한 자리
+          const short = (v: number | null) => (v == null ? '–' : Math.abs(v) >= 100 ? Math.round(v).toLocaleString('ko-KR') : String(Math.round(v * 10) / 10));
+          return (
+            <section key={mt.key} className="min-w-0 overflow-hidden rounded-card border border-border bg-bg p-3">
+              <h3 className="flex items-baseline justify-between gap-2 text-sm font-bold">
+                {t(mt.key)}
+                <span className="text-xs font-normal text-faint">{t(mt.unit)}</span>
+              </h3>
+              <div className="mt-2 flex h-24 items-stretch gap-1.5" role="img" aria-label={t('trendAria', { name: t(mt.key), values: trend.map((x, i) => `${x.m} ${vals[i] ?? '-'}`).join(', ') })}>
+                {trend.map((x, i) => (
+                  <div key={x.m} className="flex min-w-0 flex-1 flex-col items-center gap-1">
+                    <div className="flex w-full flex-1 flex-col items-center justify-end gap-0.5">
+                      <span className="num max-w-full truncate text-xs text-muted">{short(vals[i])}</span>
+                      <div className={`w-full rounded-t-sm ${x.m === month ? 'bg-primary' : 'bg-primary-tint'}`} style={{ height: `${vals[i] ? Math.max(4, (vals[i]! / max) * 75) : 0}%` }} />
+                    </div>
+                  </div>
+                ))}
+              </div>
+              <div className="mt-1 flex gap-1.5">
+                {trend.map((x) => (
+                  <span key={x.m} className="num min-w-0 flex-1 text-center text-xs text-faint">{x.m.slice(5)}</span>
+                ))}
+              </div>
+            </section>
+          );
+        })}
+      </div>
+      <p className="text-xs text-faint">{t('trendNote')}</p>
+    </>
+  );
 
   return (
     <PageShell wide>
@@ -194,40 +236,15 @@ export default async function AttendanceReportPage({ searchParams }: { searchPar
       </div>
       <p className="text-xs text-faint">{t('attNote')}</p>
 
-      <h2 className="text-lg font-bold">{t('trendTitle')}</h2>
-      {/* 폰은 한 줄에 그래프 하나 — 두 칸이면 「4725.8」 같은 숫자가 막대보다 넓어 상자 밖으로 나갔다 (2026-10-17 의뢰인) */}
-      <div className="grid grid-cols-1 gap-2 sm:grid-cols-2 lg:grid-cols-3 lg:gap-3 2xl:grid-cols-5" data-trend>
-        {METRICS.map((mt) => {
-          const vals = trend.map((x) => (x.s ? mt.v(x.s) : null));
-          const max = Math.max(1, ...vals.map((v) => v ?? 0));
-          // 막대 위 숫자는 짧게: 100 이상은 정수, 그 아래는 소수 한 자리
-          const short = (v: number | null) => (v == null ? '–' : Math.abs(v) >= 100 ? Math.round(v).toLocaleString('ko-KR') : String(Math.round(v * 10) / 10));
-          return (
-            <section key={mt.key} className="min-w-0 overflow-hidden rounded-card border border-border bg-bg p-3">
-              <h3 className="flex items-baseline justify-between gap-2 text-sm font-bold">
-                {t(mt.key)}
-                <span className="text-xs font-normal text-faint">{t(mt.unit)}</span>
-              </h3>
-              <div className="mt-2 flex h-24 items-stretch gap-1.5" role="img" aria-label={t('trendAria', { name: t(mt.key), values: trend.map((x, i) => `${x.m} ${vals[i] ?? '-'}`).join(', ') })}>
-                {trend.map((x, i) => (
-                  <div key={x.m} className="flex min-w-0 flex-1 flex-col items-center gap-1">
-                    <div className="flex w-full flex-1 flex-col items-center justify-end gap-0.5">
-                      <span className="num max-w-full truncate text-xs text-muted">{short(vals[i])}</span>
-                      <div className={`w-full rounded-t-sm ${x.m === month ? 'bg-primary' : 'bg-primary-tint'}`} style={{ height: `${vals[i] ? Math.max(4, (vals[i]! / max) * 75) : 0}%` }} />
-                    </div>
-                  </div>
-                ))}
-              </div>
-              <div className="mt-1 flex gap-1.5">
-                {trend.map((x) => (
-                  <span key={x.m} className="num min-w-0 flex-1 text-center text-xs text-faint">{x.m.slice(5)}</span>
-                ))}
-              </div>
-            </section>
-          );
-        })}
-      </div>
-      <p className="text-xs text-faint">{t('trendNote')}</p>
+      <h2 className="hidden text-lg font-bold lg:block">{t('trendTitle')}</h2>
+      <div className="hidden flex-col gap-2 lg:flex">{trendCharts}</div>
+      <details className="group rounded-card bg-bg px-4 lg:hidden">
+        <summary className="flex min-h-12 cursor-pointer list-none items-center justify-between gap-2 font-bold">
+          {t('trendTitle')}
+          <ChevronDown aria-hidden size={18} className="shrink-0 text-muted transition-transform group-open:rotate-180" />
+        </summary>
+        <div className="flex flex-col gap-2 pb-4">{trendCharts}</div>
+      </details>
     </PageShell>
   );
 }

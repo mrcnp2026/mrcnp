@@ -18,7 +18,32 @@ export function PolicyForm({ policy, version, counts }: { policy: AnomalyPolicy;
   const dirty = ANOMALY_TYPES.some((k) => value[k] !== policy[k]);
   return (
     <div className="flex flex-col gap-3">
-      <div className="overflow-x-auto rounded-card border border-border bg-bg">
+      {/* 폰: 유형마다 한 묶음 — 표의 좁은 첫 칸에서 설명이 한두 글자씩 줄을 바꿔 화면이 아주 길어졌다 (2026-10-18 디자인) */}
+      <ul className="divide-y divide-border rounded-card border border-border bg-bg lg:hidden">
+        {ANOMALY_TYPES.map((k) => (
+          <li key={k} className="flex flex-col gap-1.5 px-3 py-2.5">
+            <div className="flex items-center gap-2">
+              <span className="min-w-0 flex-1 font-bold">{t(`type.${k}`)}</span>
+              <span className="num text-sm text-muted">{t('colCount')} {counts[k] ?? 0}</span>
+            </div>
+            <p className="text-xs text-faint">{t(`why.${k}`)}</p>
+            <select
+              value={value[k]}
+              aria-label={t(`type.${k}`)}
+              onChange={(e) => {
+                setDone(false);
+                setValue({ ...value, [k]: e.target.value as AnomalyLevel });
+              }}
+              className="min-h-11 w-full rounded-button border border-border bg-bg px-3 text-sm"
+            >
+              <option value="block">{t('level.block')}</option>
+              <option value="check">{t('level.check')}</option>
+              <option value="off">{t('level.off')}</option>
+            </select>
+          </li>
+        ))}
+      </ul>
+      <div className="hidden overflow-x-auto rounded-card border border-border bg-bg lg:block">
         <table className="w-full text-sm">
           <thead>
             <tr className="border-b border-border bg-surface text-left">

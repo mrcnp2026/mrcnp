@@ -10,6 +10,7 @@ import { leaveDaysFor, loadPeriod, workDaysFor } from '@/lib/period-data';
 import { planPunchAlerts, type PersonMisses } from '@/lib/punch-alerts';
 import { firstTime, notifyApprovers, pushConfigured, sendPush } from '@/lib/push';
 import { approverIdsFor } from '@/lib/scope';
+import { switchOn } from '@/lib/switches';
 import { createAdminClient } from '@/lib/supabase/admin';
 import { toKstDate } from '@/lib/time';
 
@@ -20,8 +21,11 @@ async function nameOf(employeeId: string): Promise<string> {
   return (data?.name as string | undefined) ?? '직원';
 }
 
+// 통합설정 › 알림의 「폰 알림」 스위치를 끄면 셋 다 보내지 않는다 (2026-10-19). 「시험 보내기」는 그대로 된다
+const pushOn = async () => pushConfigured() && (await switchOn('notify.push'));
+
 export async function notifyLeaveRequest(id: string): Promise<void> {
-  if (!pushConfigured()) return;
+  if (!(await pushOn())) return;
   const db = createAdminClient();
   const { data: r } = await db.from('leave_requests').select('employee_id, type_code, start_date, end_date, days, start_time').eq('id', id).maybeSingle();
   if (!r) return;
@@ -36,7 +40,7 @@ export async function notifyLeaveRequest(id: string): Promise<void> {
 }
 
 export async function notifyCorrectionRequest(id: string): Promise<void> {
-  if (!pushConfigured()) return;
+  if (!(await pushOn())) return;
   const { data: r } = await createAdminClient().from('punch_corrections').select('employee_id, correction_type, work_date, kind, reason').eq('id', id).maybeSingle();
   if (!r) return;
   const what = r.correction_type === 'add_missing' ? '빠진 기록 추가' : r.correction_type === 'void' ? '기록 지우기' : '시각 고치기';
@@ -55,7 +59,7 @@ export async function notifyCorrectionRequest(id: string): Promise<void> {
  * 같은 알림은 한 번만(push_sent). 연습 모드에서는 보내지 않는다(연습 기간엔 모두 미출근으로 보여 알림이 쏟아진다).
  */
 export async function notifyPunchAlerts(now = new Date()): Promise<{ checked: number; planned: number; sent: number }> {
-  if (!pushConfigured() || OFFICE.practiceMode) return { checked: 0, planned: 0, sent: 0 };
+  if (!(await pushOn()) || OFFICE.practiceMode) return { checked: 0, planned: 0, sent: 0 };
   const today = toKstDate(now);
   const yesterday = addDays(today, -1);
   const data = await loadPeriod(addDays(today, -2), today, false);
@@ -71,7 +75,8 @@ export async function notifyPunchAlerts(now = new Date()): Promise<{ checked: nu
   ]);
   const joined = new Set([...(pw ?? []).map((x) => x.id), ...(keys ?? []).map((x) => x.employee_id)]);
   const people: PersonMisses[] = [];
-  for (const p of data.people.filter((x) => x.active && joined.has(x.id) && !x.employeeNo?.startsWith('e2e-') && x.employeeNo !== OFFICE.ownerEmployeeNo)) {
+  // 최고관리자(관리자 전원, 권한-10) · 시스템관리자 · 간주근무자는 출퇴근 기록이 없어도 알림을 보내지 않는다 (2026-10-19 의뢰인)
+  for (const p of data.people.filter((x) => x.active && joined.has(x.id) && !x.employeeNo?.startsWith('e2e-') && x.employeeNo !== OFFICE.ownerEmployeeNo && x.role !== 'admin')) {
     if (data.templateOf(p.id)?.kind === 'deemed') continue;
     const rule = data.ruleFor(p.id, today) ?? data.rule;
     const misses = findMissingPunches({
@@ -83,7 +88,8 @@ export async function notifyPunchAlerts(now = new Date()): Promise<{ checked: nu
       fullLeaveDates: new Set([...fullLeaveSet(leaveDaysFor(data, p.id)), ...workDaysFor(data, p.id).keys()]),
       lookbackDays: 2, includeToday: true,
     });
-    people.push({ id: p.id, name: p.name, startTime: rule.startTime.slice(0, 5), endTime: rule.endTime.slice(0, 5), misses });
+    // 그날 일정이 간주 근무인 날도 뺀다
+    people.push({ id: p.id, name: p.name, startTime: rule.startTime.slice(0, 5), endTime: rule.endTime.slice(0, 5), misses: misses.filter((m) => !data.planFor(p.id, m.workDate).deemed) });
   }
   const approvers = new Map<string, string[]>();
   for (const p of people.filter((x) => x.misses.length > 0)) approvers.set(p.id, await approverIdsFor(p.id));

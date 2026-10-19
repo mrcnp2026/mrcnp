@@ -95,7 +95,7 @@ export default async function MemberDetailPage({ params }: { params: Promise<{ i
   // 등급 (2026-10-16 의뢰인 권한-10): 관리자 = 최고관리자(대표자 포함 최대 3명, 대표자 1명) · 지점관리자 · 일반직원
   const grade: GradeKey = p.role === 'admin' ? (p.admin_level === 'ceo' ? 'ceo' : 'super') : (p.role as GradeKey);
   const targetTop = p.role === 'admin';
-  const { data: tops } = await db.from('profiles').select('id, name, admin_level').eq('role', 'admin').eq('active', true);
+  const { data: tops } = await db.from('profiles').select('id, name, admin_level').eq('role', 'admin').eq('active', true).or('admin_level.is.null,admin_level.neq.system'); // 시스템관리자는 최고관리자 3명에 세지 않는다 (묶음 23)
   const topNames = (tops ?? []).map((x) => x.name as string);
   const ceoName = (tops ?? []).find((x) => x.admin_level === 'ceo' && x.id !== p.id)?.name as string | undefined;
   // 오너는 다른 관리자가 있어도 자기 출퇴근 기기를 직접 해제한다 (staff-rules.checkDeviceRevoke)

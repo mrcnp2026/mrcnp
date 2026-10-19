@@ -19,6 +19,7 @@ import { loadOrgGroups } from '@/lib/org-data';
 import { SHIFT_KINDS } from '@/lib/shifts';
 import { createAdminClient } from '@/lib/supabase/admin';
 import { toKstDate } from '@/lib/time';
+import { NOT_SYSTEM_ADMIN } from '@/lib/system-admin'; // 시스템관리자는 목록에 보이지 않는다 (2026-10-18)
 
 // 이어진 날짜를 「시작 ~ 끝」 묶음으로 (마감 관리의 「마감된 기간들」)
 function dayRanges(days: string[]): string[] {
@@ -125,7 +126,7 @@ export default async function ManageInfoPage({ params }: { params: Promise<{ top
     const today = toKstDate(new Date());
     const from = `${new Date(Date.parse(`${today.slice(0, 7)}-01T00:00:00Z`) - 62 * 864e5).toISOString().slice(0, 7)}-01`;
     const [{ data: people }, groups, jobs, confirms] = await Promise.all([
-      createAdminClient().from('profiles').select('id, name, employee_no, group_id, job_id').eq('active', true).order('name'),
+      createAdminClient().from('profiles').select('id, name, employee_no, group_id, job_id').or(NOT_SYSTEM_ADMIN).eq('active', true).order('name'),
       loadOrgGroups(),
       loadJobs(),
       loadConfirms(from, today, OFFICE.practiceMode),

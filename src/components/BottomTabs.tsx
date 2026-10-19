@@ -4,7 +4,7 @@
 //   관리자 모드: 현황 · 요청(배지) · 근태 · 휴가 · 전체(관리자 앱 + 통합설정을 아이콘 격자 한 장으로 — 다우오피스 · 시프티 폰 앱 방식)
 // 어느 모드인지는 지금 주소로 정한다(config/nav.ts의 locate — PC 틀과 같은 표). 근무일정 · 공지 · 조직도 등은 왼쪽 위 메뉴(MenuDrawer).
 // 예전(2026-10-10~10-14)에는 직원 · 관리자가 같은 5칸을 썼고, 관리자 모드에서 「홈」이 직원 홈으로 가던 문제가 있었다.
-import { BellRing, CalendarDays, ChartPie, Clock, House, LayoutGrid, type LucideIcon, Settings, Wallet, X } from 'lucide-react';
+import { BellRing, Building2, CalendarDays, ChartPie, Clock, House, LayoutGrid, type LucideIcon, Network, Plane, Settings, Wallet, X } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 import Link from 'next/link';
 import { useSearchParams } from 'next/navigation';
@@ -29,6 +29,14 @@ const ADMIN_TABS: Tab[] = [
   { key: 'leave', icon: CalendarDays, href: '/admin/leave', apps: ['mLeave'] },
 ];
 
+// 통합설정 안: 자주 쓰는 기준 넷 + 전체(통합설정 앱 격자) — 관리자 모드로는 위 띠의 [관리자 모드]나 전체 격자의 맨 끝으로 (2026-10-18 의뢰인)
+const CONSOLE_TABS: Tab[] = [
+  { key: 'cBasic', icon: Building2, href: '/admin/settings', apps: ['cBasic'] },
+  { key: 'cOrg', icon: Network, href: '/admin/branches', apps: ['cOrg'] },
+  { key: 'cWork', icon: Clock, href: '/admin/places', apps: ['aAttendance'] },
+  { key: 'cLeave', icon: Plane, href: '/admin/leave/types', apps: ['aLeave'] },
+];
+
 export function BottomTabs({ role }: { role: NavRole; inboxCount?: number }) {
   const inboxCount = useAlerts().requests; // 화면을 옮길 때마다 다시 센 숫자
   const t = useTranslations('nav');
@@ -47,9 +55,10 @@ export function BottomTabs({ role }: { role: NavRole; inboxCount?: number }) {
   const at = locate(path, query, role);
   // 표에 없는 화면(검색 등)은 주소 앞부분으로 모드를 정한다
   const adminMode = role !== 'employee' && (at.leaf ? at.space !== 'my' : path === '/admin' || path.startsWith('/admin/'));
-  const allApps = adminMode ? appsFor('admin', role) : [];
+  const consoleMode = role === 'admin' && at.space === 'console';
+  const allApps = consoleMode ? appsFor('console', role) : adminMode ? appsFor('admin', role) : [];
   // 지점관리자는 열 수 있는 앱의 탭만 (현황 · 관리 화면은 관리자 전용 — manager-rules.ts)
-  const tabs = adminMode ? ADMIN_TABS.filter((x) => allApps.some((a) => x.apps.includes(a.key))) : MY_TABS;
+  const tabs = consoleMode ? CONSOLE_TABS : adminMode ? ADMIN_TABS.filter((x) => allApps.some((a) => x.apps.includes(a.key))) : MY_TABS;
   const appKey = at.leaf ? at.app?.key : undefined;
   const under = (h: string) => path === h || path.startsWith(`${h}/`);
   const activeKey = (tabs.find((x) => x.also?.some(under)) ?? tabs.find((x) => !!appKey && x.apps.includes(appKey)))?.key;
@@ -58,7 +67,7 @@ export function BottomTabs({ role }: { role: NavRole; inboxCount?: number }) {
 
   return (
     <>
-      <nav className="fixed inset-x-0 bottom-0 z-20 bg-nav pb-[env(safe-area-inset-bottom)] lg:hidden" data-tabs={adminMode ? 'admin' : 'my'}>
+      <nav className="fixed inset-x-0 bottom-0 z-20 bg-nav pb-[env(safe-area-inset-bottom)] lg:hidden" data-tabs={consoleMode ? 'console' : adminMode ? 'admin' : 'my'}>
         <ul className="mx-auto flex max-w-md">
           {tabs.map(({ key, icon, href }) => {
             const here = key === activeKey;
@@ -116,18 +125,19 @@ export function BottomTabs({ role }: { role: NavRole; inboxCount?: number }) {
                         <span className={`flex size-12 items-center justify-center rounded-card ${on ? 'bg-primary text-on-primary' : 'bg-primary-tint text-primary'}`}>
                           <Icon aria-hidden size={22} strokeWidth={2} />
                         </span>
-                        <span className={on ? 'font-bold' : ''}>{tf(`appFull.${a.key}`)}</span>
+                        <span className={on ? 'font-bold' : ''}>{tf(consoleMode ? `app.${a.key}` : `appFull.${a.key}`)}</span>
                       </Link>
                     </li>
                   );
                 })}
                 {role === 'admin' && (
                   <li>
-                    <Link href={CONSOLE_HOME} onClick={() => setGrid(false)} className="flex flex-col items-center gap-1.5 rounded-button px-1 py-2 text-center text-xs active:bg-primary-tint">
+                    {/* 통합설정 안에서는 맨 끝이 「관리자 모드」로 돌아가는 길 */}
+                    <Link href={consoleMode ? '/admin' : CONSOLE_HOME} onClick={() => setGrid(false)} className="flex flex-col items-center gap-1.5 rounded-button px-1 py-2 text-center text-xs active:bg-primary-tint">
                       <span className="flex size-12 items-center justify-center rounded-card bg-bg text-muted">
-                        <Settings aria-hidden size={22} strokeWidth={2} />
+                        {consoleMode ? <ChartPie aria-hidden size={22} strokeWidth={2} /> : <Settings aria-hidden size={22} strokeWidth={2} />}
                       </span>
-                      <span>{tf('space.console')}</span>
+                      <span>{tf(consoleMode ? 'space.admin' : 'space.console')}</span>
                     </Link>
                   </li>
                 )}

@@ -13,6 +13,7 @@ import { loadShiftTemplates } from '@/lib/shift-data';
 import { SHIFT_COLOR_CLASS, spanMinutes } from '@/lib/shifts';
 import { createAdminClient } from '@/lib/supabase/admin';
 import { ShiftAssignForm, ShiftForm, ShiftToggle } from '../ShiftForms';
+import { NOT_SYSTEM_ADMIN } from '@/lib/system-admin'; // 시스템관리자는 목록에 보이지 않는다 (2026-10-18)
 
 export default async function ShiftPage({ params }: { params: Promise<{ id: string }> }) {
   const t = await getTranslations('admin.shifts');
@@ -21,7 +22,7 @@ export default async function ShiftPage({ params }: { params: Promise<{ id: stri
   const [all, groups, { data: ppl }] = await Promise.all([
     loadShiftTemplates(true),
     loadOrgGroups(),
-    createAdminClient().from('profiles').select('id, name, employee_no, group_id, shift_template_id').eq('active', true).order('name'),
+    createAdminClient().from('profiles').select('id, name, employee_no, group_id, shift_template_id').or(NOT_SYSTEM_ADMIN).eq('active', true).order('name'),
   ]);
   const x = all.find((s) => s.id === id);
   if (!x) notFound();

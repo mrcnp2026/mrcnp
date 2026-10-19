@@ -11,6 +11,7 @@ import { entriesFor, ledgerBalance } from '@/lib/leave-ledger';
 import { loadEntries, loadLots } from '@/lib/leave-ledger-data';
 import { createAdminClient } from '@/lib/supabase/admin';
 import { sendSystem, isTestNo } from '@/lib/work-messages';
+import { NOT_SYSTEM_ADMIN } from '@/lib/system-admin'; // 시스템관리자는 목록에 보이지 않는다 (2026-10-18)
 
 const db = () => createAdminClient();
 type Row = Record<string, unknown>;
@@ -43,7 +44,7 @@ export async function loadCampaign(id: string): Promise<{ campaign: Campaign; ta
 /** 촉진 만들기(초안). 대상 후보 = 기준일에 쓸 수 있는 연차가 남은 직원(켜져 있는 직원, 검사 전용 계정 제외) */
 export async function createCampaign(args: { title: string; basisOn: string; planDueOn: string; noticeBody: string; policyNote: string | null; me: Me }): Promise<{ id: string; candidates: number }> {
   const c = db();
-  const [lots, entries, { data: staff }] = await Promise.all([loadLots({ states: ['APPROVED'] }), loadEntries(), c.from('profiles').select('id, employee_no, active')]);
+  const [lots, entries, { data: staff }] = await Promise.all([loadLots({ states: ['APPROVED'] }), loadEntries(), c.from('profiles').select('id, employee_no, active').or(NOT_SYSTEM_ADMIN)]);
   const live = entriesFor(entries, false);
   const test = isTestNo(args.me.employeeNo); // 검사 계정이 만든 촉진은 검사 계정만 대상으로 삼고, 실제 목록에 보이지 않는다
   const rows: { employee_id: string; remaining_minutes: number }[] = [];

@@ -3,8 +3,10 @@
 import { OFFICE } from '@/config/office';
 import { api, ApiError, readJson } from '@/lib/api';
 import { getMe } from '@/lib/auth';
+import { requireSwitch } from '@/lib/switches';
 import { addDays } from '@/lib/calendar';
 import { isPeriodLocked } from '@/lib/punch';
+import { requestGeo } from '@/lib/request-geo';
 import { createAdminClient } from '@/lib/supabase/admin';
 import { cleanText } from '@/lib/text';
 import { toKstDate } from '@/lib/time';
@@ -17,6 +19,7 @@ const TIME = /^\d{2}:\d{2}$/;
 export const POST = api('work.create', async (req) => {
   const me = await getMe();
   if (!me) throw new ApiError(401, 'not_signed_in');
+  await requireSwitch('request.work'); // 통합설정 › 요청 스위치 (2026-10-19)
   const b = await readJson(req);
   if (!WORK_KINDS.includes(b.kind as WorkKind)) throw new ApiError(400, 'invalid_input');
   const kind = b.kind as WorkKind;
@@ -44,6 +47,7 @@ export const POST = api('work.create', async (req) => {
     .insert({
       employee_id: me.id, kind, start_date: start, end_date: end, start_time: st, end_time: et, place, reason: reason || null,
       status: 'pending', requested_by: me.id, is_test: OFFICE.practiceMode,
+      ...(await requestGeo(me.id, b.geo)),
     })
     .select('id')
     .single();

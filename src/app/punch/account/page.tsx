@@ -3,6 +3,8 @@
 //   접혀 있어도 한 줄 요약이 보인다. 내 정보가 비어 있으면 펼친 채로 열어 넣게 한다. 비밀번호는 드물게 바꾸므로 접어 둔다.
 // 지문 로그인만 쓰던 사람(비밀번호 없음)은 여기서 비밀번호를 처음 만든다 — 그래야 PC·다른 폰에서도 로그인할 수 있다(그때는 펼친 채로).
 import { getFormatter, getTranslations } from 'next-intl/server';
+import { ChevronRight, Settings } from 'lucide-react';
+import Link from 'next/link';
 import { redirect } from 'next/navigation';
 import { Fold } from '@/components/Fold';
 import { PageShell } from '@/components/ui';
@@ -18,7 +20,7 @@ import { toKstDate } from '@/lib/time';
 export default async function AccountPage() {
   const me = await getMe();
   if (!me) redirect('/login');
-  const [t, td, f] = await Promise.all([getTranslations('account'), getTranslations('details'), getFormatter()]);
+  const [t, td, f, th] = await Promise.all([getTranslations('account'), getTranslations('details'), getFormatter(), getTranslations('home')]);
   const [details, { data: p }, groups] = await Promise.all([
     loadStaffDetails(me.id),
     createAdminClient().from('profiles').select('password_set_at, phone, email, group_id, job_title').eq('id', me.id).maybeSingle(),
@@ -84,6 +86,12 @@ export default async function AccountPage() {
           {!hasPassword && <p className="pb-3 text-sm text-muted">{t('createNote')}</p>}
           <PasswordForm hasPassword={hasPassword} />
         </Fold>
+        {/* 홈 설정 — 홈 맨 아래에서 이리로 옮겼다 (2026-10-18 의뢰인) */}
+        <Link href="/punch/home-settings" className="flex min-h-14 items-center gap-3 rounded-card border border-border bg-bg px-4 font-semibold">
+          <Settings aria-hidden size={18} className="shrink-0 text-muted" />
+          <span className="flex-1">{th('settingsLink')}</span>
+          <ChevronRight aria-hidden size={18} className="text-faint" />
+        </Link>
       </div>
     </PageShell>
   );

@@ -13,6 +13,7 @@ import { Row, RowList } from '@/components/list';
 import { Pager, pageOf } from '@/components/Pager';
 import { Card, CardTitle, Chip, PageShell } from '@/components/ui';
 import { getMe } from '@/lib/auth';
+import { switchOn } from '@/lib/switches';
 import { calcLeaveBalance, leaveTypeName, monthlyLeaveUse } from '@/lib/leave';
 import { loadAllLeaveTypes, loadLeaveGrants, loadLeaveRequests } from '@/lib/leave-data';
 import { endingSoonest, entriesFor, isTypeTarget, ledgerBalance, lotRemaining, minutesToDays } from '@/lib/leave-ledger';
@@ -74,6 +75,7 @@ export default async function LeavePage({ searchParams }: { searchParams: Promis
   // 회사가 보낸 연차 사용 촉진 가운데 내가 계획을 내야 하는 것
   const promos = await loadMyOpenTargets(me.id);
 
+  const hourlyOn = await switchOn('leave.hourly'); // 통합설정 › 휴가 「시간 단위 휴가」를 끄면 하루 미만 종류를 고를 수 없다 (2026-10-19)
   return (
     <PageShell wide>
       {promos.map((p) => (
@@ -211,7 +213,7 @@ export default async function LeavePage({ searchParams }: { searchParams: Promis
 
       {/* 폰: 양식은 + 버튼을 누르면 올라온다 (2026-10-10 의뢰인) · PC: 제자리에 펼쳐 둔다 */}
       <AddSheet id="leave" title={t('request')} defaultOpen={sp.new === 'leave'} modal>
-        <LeaveForm today={today} types={types.filter((x) => x.active && mayUse(x.code)).map((x) => ({ code: x.code, name: nameOf(x.code), unit: x.dayUnit, deducts: x.deductsBalance, hours: x.hours ?? x.dayUnit * 8, startTime: x.startTime ?? null, endTime: x.endTime ?? null, group: x.groupName ?? null }))} />
+        <LeaveForm today={today} types={types.filter((x) => x.active && mayUse(x.code) && (hourlyOn || x.dayUnit >= 1)).map((x) => ({ code: x.code, name: nameOf(x.code), unit: x.dayUnit, deducts: x.deductsBalance, hours: x.hours ?? x.dayUnit * 8, startTime: x.startTime ?? null, endTime: x.endTime ?? null, group: x.groupName ?? null }))} />
       </AddSheet>
 
       <section id="mine" className="order-3 flex scroll-mt-16 flex-col gap-2 lg:order-5">

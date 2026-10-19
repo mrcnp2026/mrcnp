@@ -13,6 +13,7 @@ import { loadOrgGroups } from '@/lib/org-data';
 import { loadAllStaffDetails } from '@/lib/staff-details';
 import { createAdminClient } from '@/lib/supabase/admin';
 import { toKstDate } from '@/lib/time';
+import { NOT_SYSTEM_ADMIN } from '@/lib/system-admin'; // 시스템관리자는 목록에 보이지 않는다 (2026-10-18)
 
 const STATUS = { pending: '대기', approved: '승인', rejected: '거절', cancelled: '취소' } as const;
 const YEAR = /^\d{4}$/;
@@ -27,7 +28,7 @@ export async function GET(req: NextRequest) {
   const now = new Date();
   const stamp = toKstDate(now).replace(/-/g, '');
   // 검사 전용 계정(e2e-…)은 화면 목록과 같이 뺀다
-  const { data: people } = await db.from('profiles').select('id, name, employee_no, role, active, group_id, job_title, joined_on, password_set_at').order('name');
+  const { data: people } = await db.from('profiles').select('id, name, employee_no, role, active, group_id, job_title, joined_on, password_set_at').or(NOT_SYSTEM_ADMIN).order('name');
   const staff = (people ?? []).filter((p) => !p.employee_no?.startsWith('e2e-'));
 
   let sheet: ListSheet;

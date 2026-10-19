@@ -1,4 +1,5 @@
-// 「이번주 근무」 카드 (2026-10-10 의뢰인: 시프티 홈처럼) — 요일 7칸(그날 일정) + 막대(실제 / 계획) + 40·52시간 눈금.
+// 「이번주 근무」 카드 (2026-10-10 의뢰인: 시프티 홈처럼) — 요일 7칸 + 막대(실제 / 계획) + 40·52시간 눈금.
+// 2026-10-18 의뢰인: 요일 칸은 일정이 아니라 **실제 출근 · 퇴근 시각**. 아직 안 찍은 날만 일정을 흐리게 보인다.
 // 서버가 계산한 값만 그린다 — 화면이 다시 계산하지 않는다. 막대 길이는 52시간 = 100%, 넘으면 끝에서 멈춘다.
 // 색만 쓰지 않고 숫자와 상태 글자를 함께. 알림은 보내지 않는다 (7-13 요점 3). 5인 미만이면 색 없이 숫자만 (요점 4).
 import { AlertTriangle, CalendarDays, ChevronLeft, ChevronRight } from 'lucide-react';
@@ -7,7 +8,7 @@ import Link from 'next/link';
 import { Card } from '@/components/ui';
 import type { weeklyHours } from '@/lib/weekly-hours';
 
-export type WeekCell = { date: string; label: string; red: boolean; today: boolean; start: string | null; end: string | null; leave: boolean };
+export type WeekCell = { date: string; label: string; red: boolean; today: boolean; start: string | null; end: string | null; leave: boolean; inAt?: string | null; outAt?: string | null; working?: boolean };
 
 export async function WeekBar({
   week,
@@ -17,6 +18,7 @@ export async function WeekBar({
   planMinutes,
   range,
   nav,
+  limitNotice = true,
 }: {
   week: ReturnType<typeof weeklyHours> | null;
   regularHours: number;
@@ -25,6 +27,7 @@ export async function WeekBar({
   planMinutes: number;
   range: string;
   nav?: { prev: string | null; next: string | null; thisWeek: boolean }; // 주 고르기 (지난 주 · 다음 주). 이번 주가 아니면 제목이 「주간 근무」
+  limitNotice?: boolean; // 통합설정 › 리포트 「주 52시간 관리」 스위치 — 끄면 주의 · 한도 초과 표시를 하지 않는다 (2026-10-19)
 }) {
   const t = await getTranslations('home.week');
   if (!week) {
@@ -40,12 +43,12 @@ export async function WeekBar({
   const otPct = Math.min(week.overtimeMinutes / limitMin, 1 - regPct / 100) * 100;
   const planPct = pct(planMinutes);
   const hm = (min: number) => (min % 60 === 0 ? t('hours', { h: min / 60 }) : t('total', { h: Math.floor(min / 60), m: min % 60 }));
-  const warn = week.colored && week.level !== 'normal';
+  const warn = limitNotice && week.colored && week.level !== 'normal';
   const tone = !warn ? 'text-ok' : week.level === 'over' ? 'text-danger' : 'text-warn';
 
   return (
-    <Card className="flex flex-col gap-3">
-      <div className="flex items-center justify-between gap-2">
+    <Card className="flex flex-col gap-2 p-4 lg:gap-3 lg:p-5">
+      <div className="-my-1 flex items-center justify-between gap-2">
         <h2 className="text-lg font-bold">{t(nav && !nav.thisWeek ? 'titleOther' : 'title')}</h2>
         <span className="flex items-center">
           {nav &&
@@ -72,14 +75,19 @@ export async function WeekBar({
       </div>
       <ol className="-mx-2 grid grid-cols-7 gap-1">
         {cells.map((c) => (
-          <li key={c.date} className={`flex min-h-20 flex-col items-center gap-1 rounded-button px-0.5 py-2 text-center ${c.today ? 'bg-primary-tint' : 'bg-surface'}`}>
+          <li key={c.date} className={`flex min-h-16 flex-col items-center gap-0.5 rounded-button px-0.5 py-1.5 text-center ${c.today ? 'bg-primary-tint' : 'bg-surface'}`}>
             <span className={`text-sm font-bold ${c.today ? 'text-primary' : c.red ? 'text-danger' : ''}`}>{c.today ? t('today') : c.label}</span>
-            {c.leave ? (
+            {c.inAt ? (
+              <span className="num flex flex-col text-xs leading-snug">
+                <span className="font-bold">{c.inAt}</span>
+                <span className={c.outAt ? 'font-semibold' : 'text-primary'}>{c.outAt ?? (c.working ? t('workingShort') : '—')}</span>
+              </span>
+            ) : c.leave ? (
               <span className="text-xs text-primary">{t('leave')}</span>
             ) : c.start ? (
-              <span className="num flex flex-col text-xs leading-snug">
-                <span className="font-semibold">{c.start}</span>
-                <span className="text-muted">{c.end}</span>
+              <span className="num flex flex-col text-xs leading-snug text-faint">
+                <span>{c.start}</span>
+                <span>{c.end}</span>
               </span>
             ) : (
               <span className="text-xs leading-snug text-muted">{t('none')}</span>
@@ -87,9 +95,10 @@ export async function WeekBar({
           </li>
         ))}
       </ol>
+      <p className="-mt-1 text-xs text-faint">{t('legend')}</p>
       <div className="flex flex-col gap-1">
         {/* 계획 눈금: 이번 주 일정의 합 (휴게 제외) */}
-        <div className="relative h-9" aria-hidden>
+        <div className="relative h-7" aria-hidden>
           {planMinutes > 0 && (
             <span className="absolute bottom-0 flex -translate-x-1/2 flex-col items-center text-xs leading-none" style={{ left: `${planPct}%` }}>
               <span className="whitespace-nowrap">{t('plan')}</span>
@@ -105,7 +114,7 @@ export async function WeekBar({
         <div className="num relative h-6 text-sm">
           <span className="absolute left-0 flex items-center gap-1">
             {warn && <AlertTriangle aria-hidden size={16} strokeWidth={2} className={tone} />}
-            <span className={`font-bold ${tone}`}>{week.totalMinutes > limitMin ? t('over52') : hm(week.totalMinutes)}</span>
+            <span className={`font-bold ${tone}`}>{limitNotice && week.totalMinutes > limitMin ? t('over52') : hm(week.totalMinutes)}</span>
             <span className="text-muted">/ {hm(planMinutes)}</span>
           </span>
           <span className="absolute -translate-x-1/2 text-muted" style={{ left: `${(regularHours / limitHours) * 100}%` }}>

@@ -15,17 +15,19 @@ import { buildOrgTree } from '@/lib/org';
 import { loadOrgGroups } from '@/lib/org-data';
 import { createAdminClient } from '@/lib/supabase/admin';
 import { BranchAddForm } from './BranchForms';
+import { NOT_SYSTEM_ADMIN } from '@/lib/system-admin'; // 시스템관리자는 목록에 보이지 않는다 (2026-10-18)
 
 export default async function BranchesPage({ searchParams }: { searchParams: Promise<{ tab?: string; q?: string }> }) {
   const t = await getTranslations('admin.branches');
   const tc = await getTranslations('common');
+  const ts = await getTranslations('side');
   const sp = await searchParams;
   const off = sp.tab === 'off';
   const q = (sp.q ?? '').trim().toLowerCase();
   const [groups, links, { data: people }] = await Promise.all([
     loadOrgGroups(),
     loadGroupLocationLinks(),
-    createAdminClient().from('profiles').select('group_id').eq('active', true).not('group_id', 'is', null),
+    createAdminClient().from('profiles').select('group_id').or(NOT_SYSTEM_ADMIN).eq('active', true).not('group_id', 'is', null),
   ]);
   const countOf = new Map<string, number>();
   for (const p of people ?? []) countOf.set(p.group_id, (countOf.get(p.group_id) ?? 0) + 1);
@@ -39,7 +41,7 @@ export default async function BranchesPage({ searchParams }: { searchParams: Pro
 
   return (
     <PageShell wide>
-      <DetailBar sheet={{ id: 'branch', label: t('add'), mobile: tc('addShort') }} back="/punch" backLabel={tc('back')} title={t('title')} extra={<Help>{t('intro')}</Help>} desc={t('intro')} action={{ href: '/admin/members/groups', label: t('diagram') }} />
+      <DetailBar sheet={{ id: 'branch', label: t('add'), mobile: tc('addShort') }} back="/admin/console" backLabel={tc('back')} menuLabel={ts('menu')} title={t('title')} extra={<Help>{t('intro')}</Help>} desc={t('intro')} action={{ href: '/admin/members/groups', label: t('diagram') }} />
       <div className="grid grid-cols-1 items-start gap-3">
         {/* PC: 시프티의 목록 — 「비활성화된 … 보기」 토글 + 열마다 검색 · 정렬이 되는 표 (2026-10-11 의뢰인 스샷). 폰은 아래의 탭 + 줄 목록 */}
         <div className="hidden flex-col gap-3 lg:flex">

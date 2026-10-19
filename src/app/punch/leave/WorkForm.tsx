@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import { useState } from 'react';
 import { DateTimeInput } from '@/components/DateTimeInput';
 import { callApi } from '@/components/client-api';
+import { currentPosition } from '@/components/current-position';
 import { ErrorNote } from '@/components/ErrorNote';
 import { Button, Card } from '@/components/ui';
 
@@ -39,6 +40,7 @@ export function WorkForm({ today, initialDate }: { today: string; initialDate: s
             endTime: hours ? fd.get('endTime') : null,
             place: fd.get('place'),
             reason: fd.get('reason'),
+            geo: await currentPosition(), // 보내는 순간의 위치 (결정 출퇴근-9) — 못 받으면 비워서 보낸다
           });
           setBusy(false);
           if (!r.ok) return setErr(r);

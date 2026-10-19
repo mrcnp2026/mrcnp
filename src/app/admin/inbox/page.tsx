@@ -3,7 +3,7 @@
 // 누가·언제 처리했는지 항상 보인다 (R-2의 5).
 import { scopeFilter } from '@/lib/scope';
 import { distanceText } from '@/lib/geo';
-import { loadLocationsFor } from '@/lib/geo-data';
+import { loadLocationsFor, loadOfficeLocations } from '@/lib/geo-data';
 import { X } from 'lucide-react';
 import { getFormatter, getTranslations } from 'next-intl/server';
 import { Pager, pageOf } from '@/components/Pager';
@@ -15,6 +15,7 @@ import { RequestTabs } from '@/components/RequestTabs';
 import { Card, Chip, PageShell } from '@/components/ui';
 import { leaveBalanceFor } from '@/lib/leave-balance-data';
 import { OFFICE } from '@/config/office';
+import { resolveDayType } from '@/config/labor-rules';
 import { getMe } from '@/lib/auth';
 import { addDays } from '@/lib/calendar';
 import { hiddenTestIds, loadPeriod, pendingCounts, syncOvertimeRequests } from '@/lib/period-data';
@@ -28,11 +29,15 @@ import { loadAllLeaveTypes, loadLeaveGrants, loadLeaveRequests } from '@/lib/lea
 import { loadRequests, REQUEST_WINDOW_DAYS } from '@/lib/request-data';
 import { fromOvertime, splitRequests } from '@/lib/requests';
 import { RequestRows } from '@/components/RequestRows';
+import { HideRequests } from '@/components/HideRequests';
+import { loadHidden, withoutHidden } from '@/lib/request-hides';
 import { loadWorkRequests } from '@/lib/work-data';
-import { CorrectionDecision, LeaveDecision, OvertimeDecision, WorkDecision } from './Decisions';
+import { ApproveDay, CorrectionDecision, LeaveDecision, OvertimeDecision, WorkDecision } from './Decisions';
 
 // 요청은 종류마다 한 쪽에 5건까지 — 넘으면 아래에 쪽 번호 (2026-10-06 의뢰인)
 const REQUEST_PAGE = 5;
+// 대기중 · 완료 한 목록은 한 쪽에 10건 (2026-10-19 의뢰인: 많아지면 페이지 넘김, 폰 · PC 둘 다)
+const LIST_PAGE = 10;
 
 export default async function InboxPage({ searchParams }: { searchParams: Promise<{ live?: string; op?: string; cp?: string; lp?: string; wp?: string; tab?: string; dp?: string; q?: string; k?: string; id?: string; pp?: string; rk?: string }> }) {
   const t = await getTranslations('admin.inbox');
@@ -74,9 +79,17 @@ export default async function InboxPage({ searchParams }: { searchParams: Promis
   const FOCUS_KINDS = ['punch', 'shift', 'leaveDelete', 'overtime', 'corrections', 'leave', 'work'] as const;
   type FocusKind = (typeof FOCUS_KINDS)[number];
   const focus = (FOCUS_KINDS as readonly string[]).includes(sp.k ?? '') && /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(sp.id ?? '') ? { k: sp.k as FocusKind, id: sp.id as string } : null;
-  const only = (k: FocusKind, id: string) => !focus || (focus.k === k && focus.id === id);
-  const ot = (otAll ?? []).filter((o) => hit(o.employee_id) && only('overtime', o.id));
-  const co = (coAll ?? []).filter((c) => hit(c.employee_id) && only('corrections', c.id));
+  // 같은 사람 · 같은 날의 출근/퇴근 요청 · 정정 · 연장근로는 한 화면에 모아 한 번에 승인한다 (2026-10-18 의뢰인: 셋을 따로 누르면 불편하다)
+  const DAY_KINDS: readonly FocusKind[] = ['punch', 'corrections', 'overtime'];
+  const focusDay: { employee_id: string; work_date: string } | null = !focus || !DAY_KINDS.includes(focus.k)
+    ? null
+    : focus.k === 'overtime' ? ((otAll ?? []).find((o) => o.id === focus.id) ?? null)
+    : focus.k === 'corrections' ? ((coAll ?? []).find((c) => c.id === focus.id) ?? null)
+    : ((await db.from('punch_requests').select('employee_id, work_date').eq('id', focus.id).maybeSingle()).data ?? null);
+  const only = (k: FocusKind, id: string, day?: { e: string; d: string }) =>
+    !focus || (focus.k === k && focus.id === id) || (!!day && !!focusDay && DAY_KINDS.includes(k) && focusDay.employee_id === day.e && focusDay.work_date === day.d);
+  const ot = (otAll ?? []).filter((o) => hit(o.employee_id) && only('overtime', o.id, { e: o.employee_id, d: o.work_date }));
+  const co = (coAll ?? []).filter((c) => hit(c.employee_id) && only('corrections', c.id, { e: c.employee_id, d: c.work_date }));
   const keys = [...(ot ?? []).map((o) => [o.employee_id, o.work_date]), ...(co ?? []).map((c) => [c.employee_id, c.work_date])];
   const empIds = [...new Set(keys.map((k) => k[0]))];
   const dates = [...new Set(keys.map((k) => k[1]))];
@@ -85,17 +98,50 @@ export default async function InboxPage({ searchParams }: { searchParams: Promis
       ? db.from('work_notes').select('employee_id, work_date, body, created_at').in('employee_id', empIds).in('work_date', dates).eq('is_test', practice).order('created_at', { ascending: false })
       : Promise.resolve({ data: [] as { employee_id: string; work_date: string; body: string }[] }),
     empIds.length
-      ? db.from('punch_events').select('id, employee_id, work_date, kind, punched_at').in('employee_id', empIds).in('work_date', dates).eq('is_test', practice).order('punched_at')
-      : Promise.resolve({ data: [] as { id: string; employee_id: string; work_date: string; kind: string; punched_at: string }[] }),
+      ? db.from('punch_events').select('id, employee_id, work_date, kind, punched_at, verified_by, source, location_id, geo_lat, geo_lng').in('employee_id', empIds).in('work_date', dates).eq('is_test', practice).order('punched_at')
+      : Promise.resolve({ data: [] as { id: string; employee_id: string; work_date: string; kind: string; punched_at: string; verified_by: string | null; source: string; location_id: string | null; geo_lat: number | null; geo_lng: number | null }[] }),
   ]);
   const noteOf = (e: string, d: string) => notes?.find((n) => n.employee_id === e && n.work_date === d)?.body ?? null;
   const hm = (iso: string | null) => (iso ? f.dateTime(new Date(iso), { hour: '2-digit', minute: '2-digit', hourCycle: 'h23' }) : '—');
   const dayLabel = (d: string) => f.dateTime(new Date(`${d}T12:00:00+09:00`), { month: 'short', day: 'numeric', weekday: 'short' });
   const punchesOf = (e: string, d: string) =>
     (evs ?? []).filter((x) => x.employee_id === e && x.work_date === d).map((x) => `${x.kind === 'in' ? '↘' : '↗'} ${hm(x.punched_at)}`).join('  ');
+  // 연장근로 상세의 출퇴근 위치 (2026-10-18 의뢰인: 연장근로 요청에 퇴근 위치가 안 나온다) — 연장근로는 직원이 쓰는 요청이 아니라
+  // 출퇴근 기록에서 저절로 생기므로, 그날 출근 · 퇴근을 어디서 어떻게 확인했는지를 보여 준다. 한 건 보기에서만 장소를 읽는다
+  const placeOf = new Map(focus?.k === 'overtime' ? (await loadOfficeLocations(true)).map((l) => [l.id, l]) : []);
+  const wherePunched = (e: string, d: string) => {
+    const day = (evs ?? []).filter((x) => x.employee_id === e && x.work_date === d);
+    if (day.length === 0) return null;
+    const how = (x: (typeof day)[number]) => {
+      const place = x.location_id ? placeOf.get(x.location_id)?.label : null;
+      if (x.verified_by === 'gps') return place ? t('whereGpsAt', { name: place }) : t('whereGps');
+      if (x.verified_by === 'ip') return t('whereIp');
+      if (x.source === 'admin') return t('whereAdmin');
+      if (x.source === 'import') return t('whereImport');
+      return t('whereNone');
+    };
+    const lastOut = [...day].reverse().find((x) => x.kind === 'out');
+    const pin = lastOut && lastOut.geo_lat !== null && lastOut.geo_lng !== null ? { lat: Number(lastOut.geo_lat), lng: Number(lastOut.geo_lng), r: 0 } : null;
+    const base = !pin && lastOut?.location_id ? placeOf.get(lastOut.location_id) : null;
+    const labels = { zoomIn: t('zoomIn'), zoomOut: t('zoomOut'), credit: t('mapCredit'), map: t('mapOut') };
+    return (
+      <div className="flex flex-col gap-1.5" data-overtime-where>
+        <p className="text-xs font-semibold text-muted">{t('whereTitle')}</p>
+        <ul className="num flex flex-col gap-0.5 text-sm">
+          {day.map((x) => (
+            <li key={x.id}>
+              {x.kind === 'in' ? '↘' : '↗'} {hm(x.punched_at)} {t(x.kind === 'in' ? 'whereIn' : 'whereOut')} · <span className="text-muted">{how(x)}</span>
+            </li>
+          ))}
+        </ul>
+        {pin && <PlaceMap lat={pin.lat} lng={pin.lng} radiusM={0} labels={labels} />}
+        {base && <PlaceMap lat={base.lat} lng={base.lng} radiusM={base.radiusM} labels={labels} />}
+      </div>
+    );
+  };
 
   const { data: punchRows } = await db.from('punch_requests').select(OFFICE.requestLocation ? 'id, employee_id, kind, requested_at, work_date, nearest_m, geo_reason, lat, lng' : 'id, employee_id, kind, requested_at, work_date, nearest_m, geo_reason').eq('is_test', practice).eq('status', 'pending').order('requested_at');
-  const punchPending = ((punchRows ?? []) as unknown as { id: string; employee_id: string; kind: 'in' | 'out'; requested_at: string; work_date: string; nearest_m: number | null; geo_reason: string; lat?: number | null; lng?: number | null }[]).filter((r) => hit(r.employee_id) && only('punch', r.id));
+  const punchPending = ((punchRows ?? []) as unknown as { id: string; employee_id: string; kind: 'in' | 'out'; requested_at: string; work_date: string; nearest_m: number | null; geo_reason: string; lat?: number | null; lng?: number | null }[]).filter((r) => hit(r.employee_id) && only('punch', r.id, { e: r.employee_id, d: r.work_date }));
   // 요청한 사람에게 적용되는 출퇴근 장소(우측 패널 지도용) — 한 건 보기에서만 읽는다
   const baseOf = new Map<string, Awaited<ReturnType<typeof loadLocationsFor>>[number]>();
   if (focus) for (const id of new Set(punchPending.map((r) => r.employee_id))) {
@@ -163,8 +209,30 @@ export default async function InboxPage({ searchParams }: { searchParams: Promis
   const rk = (RKINDS as readonly string[]).includes(sp.rk ?? '') ? (sp.rk as string) : null;
   const rkLink = (k: string | null) => `/admin/inbox?${[k ? `rk=${k}` : '', sp.live === '1' ? 'live=1' : '', q ? `q=${encodeURIComponent(q)}` : ''].filter(Boolean).join('&')}`;
   const shownList = rk ? listed.filter((x) => x.kind === rk) : listed;
-  const listPage = pageOf(shownList, sp.pp, 20);
+  const listPage = pageOf(shownList, sp.pp, LIST_PAGE);
   const focusHref = (r: { kind: string; id: string }) => `/admin/inbox?k=${r.kind === 'correction' ? 'corrections' : r.kind}&id=${r.id}${sp.live === '1' ? '&live=1' : ''}`;
+  // 한 번에 승인할 것 — 출퇴근 요청 · 정정을 먼저 승인하고 연장근로는 그 뒤(출퇴근이 바뀌면 연장근로가 다시 계산된다). 자기 요청 · 상위 등급 요청은 뺀다
+  const dayBatch = !focusDay || cannot(focusDay.employee_id)
+    ? []
+    : [
+        ...punchPending.map((r) => ({ url: `/api/admin/punch-requests/${r.id}/decide`, body: { decision: 'approved' } })),
+        ...co.map((c) => ({ url: `/api/admin/corrections/${c.id}/decide`, body: { decision: 'approved' } })),
+        ...ot.filter((o) => o.status === 'pending').map((o) => ({ url: `/api/admin/overtime/${o.id}/decide`, body: { decision: 'approved', approvedMinutes: null, approvedNightMinutes: null, approvedHolidayMinutes: null } })),
+      ];
+  // 출근 · 퇴근 요청만 있는 날: 요청한 시각으로 대략의 근무 시간 · 휴일 여부를 미리 보인다(정확한 연장 · 야간 · 휴일 구분은 승인 뒤 앱이 계산)
+  // 직원이 출근 · 퇴근 때 남긴 사유(근무노트) — 하루 카드에 같이 보인다 (2026-10-18 의뢰인: 관리자가 따로 묻지 않게)
+  const dayNote = focusDay
+    ? (((await db.from('work_notes').select('body').eq('employee_id', focusDay.employee_id).eq('work_date', focusDay.work_date).eq('is_test', practice).order('created_at', { ascending: false }).limit(1)).data?.[0]?.body as string | undefined) ?? null)
+    : null;
+  const dayPreview = (() => {
+    if (!focusDay || punchPending.length === 0) return null;
+    const pin = punchPending.find((r) => r.kind === 'in');
+    const pout = punchPending.find((r) => r.kind === 'out');
+    const rule = data.ruleAt(focusDay.work_date) ?? data.rule;
+    const off = rule ? resolveDayType(focusDay.work_date, rule, data.holidays) !== 'workday' : false;
+    const span = pin && pout ? Math.max(0, Math.round((Date.parse(pout.requested_at) - Date.parse(pin.requested_at)) / 60000)) : null;
+    return t(off ? 'dayPreviewOff' : 'dayPreview', { from: pin ? hm(pin.requested_at) : '—', to: pout ? hm(pout.requested_at) : '—', min: span ?? 0, known: span === null ? 'no' : 'yes' });
+  })();
   const focusCount = focus ? ot.length + co.length + leavePending.length + workPending.length + punchPending.length + shiftPending.length + delPending.length : 0;
   const empty = <p className="rounded-card bg-bg p-5 text-sm text-faint">{t('empty')}</p>;
   const hint = (text: string) => (
@@ -173,6 +241,18 @@ export default async function InboxPage({ searchParams }: { searchParams: Promis
       <Help>{text}</Help>
     </div>
   );
+
+  // 요청을 쓴 순간의 위치 (외근 · 정정, 결정 출퇴근-9 · DB 0055) — 한 건 보기에서만. 못 받았으면 「위치 없음」
+  const sentFrom = (lat: unknown, lng: unknown) =>
+    !focus || !OFFICE.requestLocation ? null : typeof lat === 'number' && typeof lng === 'number' ? (
+      <div className="flex flex-col gap-1.5" data-request-where>
+        <p className="text-xs font-semibold text-muted">{t('sentFrom')}</p>
+        <PlaceMap lat={lat} lng={lng} radiusM={0} labels={{ zoomIn: t('zoomIn'), zoomOut: t('zoomOut'), credit: t('mapCredit'), map: t('map') }} />
+        <p className="rounded-button bg-surface p-2 text-xs text-muted">{t('mapShared')}</p>
+      </div>
+    ) : (
+      <p className="rounded-button bg-surface p-2 text-xs text-muted" data-request-where>{t('mapNone')}</p>
+    );
 
   const overtimeTab = (
     <>
@@ -203,6 +283,7 @@ export default async function InboxPage({ searchParams }: { searchParams: Promis
               ))}
             </dl>
             {o.reason && <p className="text-sm"><span className="text-muted">{t('reason')}: </span>{o.reason}</p>}
+            {focus && wherePunched(o.employee_id, o.work_date)}
             {noteOf(o.employee_id, o.work_date) && (
               <p className="rounded-button bg-surface p-2 text-sm">
                 <span className="block text-xs text-muted">{t('note')}</span>
@@ -235,6 +316,7 @@ export default async function InboxPage({ searchParams }: { searchParams: Promis
             </div>
             <p className="num">{line}</p>
             <p className="text-sm"><span className="text-muted">{t('reason')}: </span>{c.reason}</p>
+            {sentFrom(c.lat, c.lng)}
             {cannot(c.employee_id) ? (c.employee_id === me.id ? ownNote : rankNote) : <CorrectionDecision id={c.id} name={name.get(c.employee_id) ?? ''} />}
           </Card>
         ))}
@@ -293,6 +375,7 @@ export default async function InboxPage({ searchParams }: { searchParams: Promis
               {t(`workKind.${w.kind}`)} · <span className="font-normal">{t('place')}: {w.place}</span>
             </p>
             {w.reason && <p className="text-sm"><span className="text-muted">{t('reason')}: </span>{w.reason}</p>}
+            {sentFrom(w.lat, w.lng)}
             {cannot(w.employeeId) ? (w.employeeId === me.id ? ownNote : rankNote) : <WorkDecision id={w.id} name={name.get(w.employeeId) ?? ''} summary={`${t(`workKind.${w.kind}`)} (${when})`} />}
           </Card>
         ))}
@@ -360,6 +443,19 @@ export default async function InboxPage({ searchParams }: { searchParams: Promis
           </Link>
         </div>
         {focusCount === 0 && <div className="hidden lg:block">{gone}</div>}
+        {(dayBatch.length > 1 || (dayBatch.length > 0 && punchPending.length > 0)) && (
+          <ApproveDay
+            name={name.get(focusDay!.employee_id) ?? ''}
+            day={dayLabel(focusDay!.work_date)}
+            count={dayBatch.length}
+            items={dayBatch}
+            punchFirst={punchPending.length > 0}
+            employeeId={focusDay!.employee_id}
+            workDate={focusDay!.work_date}
+            preview={dayPreview}
+            note={dayNote}
+          />
+        )}
       {/* 반경 밖 출근/퇴근 요청 (2026-10-10 의뢰인: 시프티 방식) — 승인해야 기록이 되므로 맨 위에 둔다 */}
       {punchPending.length > 0 && (
         <section id="punch" className="flex scroll-mt-16 flex-col gap-2">
@@ -461,8 +557,8 @@ export default async function InboxPage({ searchParams }: { searchParams: Promis
         </section>
       )}
 
-        {focus.k === 'overtime' && <div id="overtime" className="flex flex-col gap-3">{overtimeTab}</div>}
-        {focus.k === 'corrections' && <div id="corrections" className="flex flex-col gap-3">{correctionsTab}</div>}
+        {(focus.k === 'overtime' || (focusDay && ot.length > 0)) && <div id="overtime" className="flex flex-col gap-3">{overtimeTab}</div>}
+        {(focus.k === 'corrections' || (focusDay && co.length > 0)) && <div id="corrections" className="flex flex-col gap-3">{correctionsTab}</div>}
         {focus.k === 'leave' && <div id="leave" className="flex flex-col gap-3">{leaveTab}</div>}
         {focus.k === 'work' && <div id="work" className="flex flex-col gap-3">{workTab}</div>}
       </div>
@@ -474,20 +570,37 @@ export default async function InboxPage({ searchParams }: { searchParams: Promis
 // 완료 — 최근 두 달 동안 처리된 요청 전부 (종류가 달라도 한 목록). 자동 검사 계정(e2e-…)의 요청은 뺀다
 async function DoneTab({ sp, practice }: { sp: { live?: string; tab?: string; dp?: string; q?: string }; practice: boolean }) {
   const [t, tr, tc] = await Promise.all([getTranslations('admin.inbox'), getTranslations('requests'), getTranslations('common')]);
-  const [items, leaveTypes, { data: staff }] = await Promise.all([loadRequests({ practice }), loadAllLeaveTypes(), createAdminClient().from('profiles').select('id, name, employee_no')]);
+  const me = (await getMe())!;
+  const [all, leaveTypes, { data: staff }, hidden] = await Promise.all([loadRequests({ practice }), loadAllLeaveTypes(), createAdminClient().from('profiles').select('id, name, employee_no'), loadHidden(me.id)]);
+  const items = withoutHidden(all, hidden.keys); // 이 관리자가 지운 처리된 요청은 빼고 — 다른 관리자 목록에는 남는다 (2026-10-19)
   const check = new Set((staff ?? []).filter((p) => p.employee_no?.startsWith('e2e-')).map((p) => p.id as string));
   const names = new Map((staff ?? []).map((p) => [p.id as string, p.name as string]));
   const q = (sp.q ?? '').trim().slice(0, 40).toLowerCase();
-  const page = pageOf(splitRequests(items.filter((x) => !check.has(x.employeeId) && (!q || (names.get(x.employeeId) ?? '').toLowerCase().includes(q)))).done, sp.dp, 20);
+  const page = pageOf(splitRequests(items.filter((x) => !check.has(x.employeeId) && (!q || (names.get(x.employeeId) ?? '').toLowerCase().includes(q)))).done, sp.dp, LIST_PAGE);
+  const hrefOf = (r: (typeof items)[number]) => (r.kind === 'leave' ? `/admin/leave/req/${r.key.split(':')[1]}` : r.kind === 'shift' ? `/admin/schedule?d=${r.date}` : `/admin/records/${r.employeeId}?m=${r.date.slice(0, 7)}`);
   return (
     <PageShell wide>
       <h1 className="sr-only">{t('title')}</h1>
       <RequestTabs admin active="done" live={sp.live === '1'} q={q} counts={{ pending: (await pendingCounts(practice)).total }} />
       {practice && <p className="rounded-card bg-primary-tint p-3 text-sm text-primary">{t('practiceBanner')}</p>}
       {page.items.length === 0 && <p className="rounded-card bg-bg p-5 text-sm text-faint">{tr('emptyDone', { days: REQUEST_WINDOW_DAYS })}</p>}
-      <RequestRows items={page.items} leaveTypes={leaveTypes} names={names} showName hrefOf={(r) => (r.kind === 'leave' ? `/admin/leave/req/${r.key.split(':')[1]}` : r.kind === 'shift' ? `/admin/schedule?d=${r.date}` : `/admin/records/${r.employeeId}?m=${r.date.slice(0, 7)}`)} />
+      {/* 폰: 두 줄 목록 · PC: 대기중과 같은 표 */}
+      <div className="flex flex-col gap-3 lg:hidden">
+        <RequestRows items={page.items} leaveTypes={leaveTypes} names={names} showName hrefOf={hrefOf} hideable={hidden.ready} />
+      </div>
+      {page.items.length > 0 && (
+        <div className="hidden lg:block">
+          <RequestRows table openKey="view" items={page.items} leaveTypes={leaveTypes} names={names} showName hrefOf={hrefOf} hideable={hidden.ready} />
+        </div>
+      )}
       <Pager page={page.page} pages={page.pages} param="dp" params={sp} label={tc('pages')} />
       {page.items.length > 0 && <p className="text-sm text-faint">{tr('doneHint', { days: REQUEST_WINDOW_DAYS })}</p>}
+      {hidden.ready && page.items.length > 0 && (
+        <div className="flex flex-col gap-2 lg:flex-row lg:items-center lg:justify-between">
+          <p className="text-sm text-faint">{tr('hideHint')}</p>
+          <div><HideRequests all keys={page.items.map((r) => r.key)} /></div>
+        </div>
+      )}
     </PageShell>
   );
 }

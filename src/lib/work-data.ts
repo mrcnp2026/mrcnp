@@ -11,6 +11,7 @@ const toWork = (r: any): WorkRequest => ({
   id: r.id, employeeId: r.employee_id, kind: r.kind, startDate: r.start_date, endDate: r.end_date,
   startTime: r.start_time ? String(r.start_time).slice(0, 5) : null, endTime: r.end_time ? String(r.end_time).slice(0, 5) : null,
   place: r.place, reason: r.reason, status: r.status, createdAt: r.created_at, decidedAt: r.decided_at, approvedBy: r.approved_by,
+  lat: typeof r.lat === 'number' ? r.lat : null, lng: typeof r.lng === 'number' ? r.lng : null,
 });
 
 /** 기간과 겹치는 외근 신청. employeeId를 주면 그 직원 것만 */

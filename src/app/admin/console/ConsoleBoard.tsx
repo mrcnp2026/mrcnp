@@ -21,13 +21,8 @@ export function ConsoleBoard() {
     return () => m.removeEventListener('change', on);
   }, []);
   const word = q.trim().toLowerCase();
-  const toggle = (k: string) =>
-    setUnfold((s) => {
-      const n = new Set(s);
-      if (n.has(k)) n.delete(k);
-      else n.add(k);
-      return n;
-    });
+  // 한 번에 한 묶음만 펼친다 — 「기본」을 펼친 채 「조직」을 누르면 「기본」은 저절로 접힌다 (2026-10-19 의뢰인)
+  const toggle = (k: string) => setUnfold((s) => (s.has(k) ? new Set() : new Set([k])));
   const sections = (['company', 'apps'] as const).map((s) => ({
     s,
     apps: CONSOLE_APPS.filter((a) => a.section === s)

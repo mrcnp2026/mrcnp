@@ -5,11 +5,13 @@ import { PageEnter } from './PageEnter';
 import { getLocale, getTranslations } from 'next-intl/server';
 import type { ReactNode } from 'react';
 import { CONSENT } from '@/config/consent';
+import { SYSTEM_ADMIN_NO as OFFICE_SYSTEM_NO } from '@/lib/system-admin';
 import { languageOptions } from '@/i18n/locales';
 import type { Me } from '@/lib/auth';
 import { hasConsent } from '@/lib/consent';
 import { visibleNoticesNow } from '@/lib/notices';
 import { pendingCounts } from '@/lib/period-data';
+import { switchOn } from '@/lib/switches';
 import { unreadCount } from '@/lib/work-messages';
 import { AlertBell, AlertsProvider } from './Alerts';
 import { PhoneSearchLink } from './DeskTop';
@@ -32,7 +34,8 @@ export async function AppFrame({ me, children, overlay }: { me: Me; children: Re
   const role = me.role === 'admin' ? 'admin' : branchManager ? 'manager' : 'employee';
   const [consented, inboxCount, notices, unreadMsg] = await Promise.all([
     hasConsent(me.id), // 관리자도 직원이다 — 같은 동의 창
-    isAdmin ? pendingCounts().then((c) => c.total) : 0,
+    // 통합설정 › 알림의 「요청 알림」을 끄면 요청 숫자를 보이지 않는다 (2026-10-19)
+    isAdmin && (await switchOn('notify.request')) ? pendingCounts().then((c) => c.total) : 0,
     visibleNoticesNow(me.id, await getLocale()),
     unreadCount(me.id),
   ]);
@@ -55,7 +58,7 @@ export async function AppFrame({ me, children, overlay }: { me: Me; children: Re
             <AlertBell approver={isAdmin} />
           </span>
           <ConsoleLink role={role} />
-          <AccountMenu name={me.name} roleLabel={ts(branchManager ? 'roleManager' : isAdmin ? 'roleAdmin' : 'roleEmployee')}>
+          <AccountMenu name={me.name} roleLabel={ts(me.employeeNo === OFFICE_SYSTEM_NO ? 'roleSystem' : branchManager ? 'roleManager' : isAdmin ? 'roleAdmin' : 'roleEmployee')}>
             <LanguageSwitcher options={languages} />
             <SignOutButton />
           </AccountMenu>

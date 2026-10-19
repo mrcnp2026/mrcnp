@@ -9,11 +9,12 @@ import { buildOrgTree } from '@/lib/org';
 import { loadOrgGroups } from '@/lib/org-data';
 import { createAdminClient } from '@/lib/supabase/admin';
 import { loadSent } from '@/lib/work-messages';
+import { NOT_SYSTEM_ADMIN } from '@/lib/system-admin'; // 시스템관리자는 목록에 보이지 않는다 (2026-10-18)
 
 export default async function AdminMessagesPage() {
   const me = (await getMe())!;
   const t = await getTranslations('messages');
-  const [items, groups, { data: staff }] = await Promise.all([loadSent(me), loadOrgGroups(), createAdminClient().from('profiles').select('id, name, employee_no, active').order('name')]);
+  const [items, groups, { data: staff }] = await Promise.all([loadSent(me), loadOrgGroups(), createAdminClient().from('profiles').select('id, name, employee_no, active').or(NOT_SYSTEM_ADMIN).order('name')]);
   const names = new Map((staff ?? []).map((p) => [p.id as string, p.name as string]));
   return (
     <PageShell wide>

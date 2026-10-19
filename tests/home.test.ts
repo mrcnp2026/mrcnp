@@ -32,8 +32,8 @@ describe('pickWeek', () => {
 describe('홈 카드 켜고 끄기', () => {
   it('값이 없으면 전부 켜짐', () => expect(homeCardsOn(undefined).size).toBe(5));
   it('꺼 둔 것만 빠지고, 모르는 이름은 무시', () => {
-    const on = homeCardsOn('week, note,xxx');
+    const on = homeCardsOn('week, news,xxx');
     expect([...on]).toEqual(['report', 'missing', 'situation']);
-    expect(homeCookieValue(on)).toBe('week,note');
+    expect(homeCookieValue(on)).toBe('week,news');
   });
 });

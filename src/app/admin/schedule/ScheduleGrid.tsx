@@ -14,10 +14,12 @@ export type GridDay = { date: string; label: string; holiday: string | null; red
 const TINT: Record<ShiftColor, string> = { primary: 'bg-primary/10', ok: 'bg-ok/10', warn: 'bg-warn/15', danger: 'bg-danger/10', text: 'bg-text/10', muted: 'bg-muted/10' };
 
 export function ScheduleGrid({ days, rows, dense, labels }: { days: GridDay[]; rows: GridRow[]; dense: boolean; labels: { employee: string; people: string; empty: string } }) {
-  const colW = dense ? 'min-w-17' : 'min-w-40';
+  // 주 보기 칸 128px — 160px이면 1440px 화면에서 한 주 7일이 다 안 들어가 옆으로 밀어야 했다 (2026-10-18 디자인)
+  const colW = dense ? 'min-w-17' : 'min-w-32';
   return (
     <div className="overflow-x-auto rounded-card border border-border bg-bg shadow-card">
-      <table className="w-full border-separate border-spacing-0 text-sm">
+      {/* 주 보기는 칸 폭을 고정한다 — 자동 폭이면 긴 장소 이름 때문에 칸이 넓어져 7일이 다 안 들어갔다 (2026-10-18 디자인). 이름 칸 11rem + 날짜 칸 8rem씩이 최소 */}
+      <table className={`w-full border-separate border-spacing-0 text-sm ${dense ? '' : 'table-fixed'}`} style={dense ? undefined : { minWidth: `${11 + days.length * 8}rem` }}>
         <thead>
           <tr>
             <th scope="col" className="sticky left-0 z-10 w-44 min-w-44 border-r border-border px-3 py-2 text-left">

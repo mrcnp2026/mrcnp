@@ -8,7 +8,7 @@ import { headers } from 'next/headers';
 import Link from 'next/link';
 import type { ReactNode } from 'react';
 import { SettingBox, SettingGroup, SettingRow, UseMark } from '@/components/settings';
-import { Card, CardTitle, Chip, PageShell } from '@/components/ui';
+import { Chip, PageShell } from '@/components/ui';
 import { OFFICE } from '@/config/office';
 import { addDays } from '@/lib/calendar';
 import { createAdminClient } from '@/lib/supabase/admin';
@@ -19,24 +19,29 @@ import { loadOrgGroups } from '@/lib/org-data';
 import { PAY_SECTIONS } from '@/lib/payroll/settings';
 import { PaySettings } from './pay/PaySettings';
 import { PinReset } from './PinReset';
+import { CompanyForm } from './CompanyForm';
+import { companyProfile } from '@/lib/company';
+import { isSwitchKey, switches } from '@/lib/switches';
+import { SwitchToggle } from '@/components/SwitchToggle';
+import { BRAND } from '@/config/brand';
 import { getMe } from '@/lib/auth';
 import { ConfirmButton, HolidayForm, NetworkForm, RuleForm } from './SettingsForms';
 
 // 탭 이름 · 순서는 시프티의 회사 설정 (2026-10-11 의뢰인 스샷 `스샷/관리-회사설정*.png`). 일반 · 근무일정 · 출퇴근기록 · 휴게시간은 바꿀 수 있는 설정이고,
 // 나머지 탭은 지금 앱이 동작하는 방식을 같은 줄 모양으로 보여 준다(on = 쓰는 기능인가, href = 관련 관리 화면)
-const TABS = ['general', 'notify', 'access', 'branch', 'staff', 'work', 'punch', 'break', 'leave', 'request', 'message', 'esign', 'closing', 'report', 'pay', 'security', 'advanced'] as const;
+const TABS = ['general', 'holidays', 'notify', 'access', 'branch', 'staff', 'work', 'punch', 'break', 'leave', 'request', 'message', 'esign', 'closing', 'report', 'pay', 'security', 'advanced'] as const;
 type Tab = (typeof TABS)[number];
 const INFO: Partial<Record<Tab, { k: string; on: boolean; href?: string }[]>> = {
-  notify: [{ k: 'notice', on: true }, { k: 'request', on: true }, { k: 'push', on: false }],
+  notify: [{ k: 'notice', on: true }, { k: 'request', on: true }, { k: 'push', on: true }],
   access: [{ k: 'admin', on: true }, { k: 'payroll', on: true }, { k: 'employee', on: true }, { k: 'change', on: true }],
   branch: [{ k: 'parent', on: true }, { k: 'places', on: true, href: '/admin/branches' }],
   staff: [{ k: 'number', on: true }, { k: 'invite', on: true }, { k: 'device', on: true, href: '/admin/members' }],
   leave: [{ k: 'hourly', on: true, href: '/admin/leave/types' }, { k: 'pending', on: true }, { k: 'accrual', on: false, href: '/admin/manage/accrual-rule' }],
   request: [{ k: 'punch', on: true }, { k: 'correction', on: true }, { k: 'overtime', on: true }, { k: 'shift', on: true }, { k: 'leave', on: true }, { k: 'leaveDelete', on: true }, { k: 'work', on: true }, { k: 'approver', on: true, href: '/admin/manage/approval-rules' }, { k: 'custom', on: false }],
   message: [{ k: 'notice', on: true, href: '/admin/notices' }, { k: 'translate', on: true }, { k: 'auto', on: false }],
-  closing: [{ k: 'day', on: true }, { k: 'month', on: false }],
-  report: [{ k: 'monthly', on: true, href: '/admin/records' }, { k: 'week52', on: true }, { k: 'snapshot', on: false }],
-  pay: [{ k: 'scope', on: true, href: '/admin/payroll' }, { k: 'viewer', on: true }, { k: 'tax', on: false }],
+  closing: [{ k: 'day', on: true }, { k: 'month', on: true, href: '/admin/closing' }],
+  report: [{ k: 'monthly', on: true, href: '/admin/records' }, { k: 'week52', on: true }],
+  pay: [{ k: 'scope', on: true, href: '/admin/payroll' }, { k: 'viewer', on: true }, { k: 'tax', on: true, href: '/admin/payroll/staff' }],
   esign: [{ k: 'use', on: false }],
   advanced: [{ k: 'homeCards', on: true }, { k: 'bulk', on: false }, { k: 'brand', on: true }],
   security: [{ k: 'login', on: true }, { k: 'audit', on: true }, { k: 'consent', on: true }, { k: 'ip', on: false }],
@@ -81,7 +86,7 @@ export default async function SettingsPage({ searchParams }: { searchParams: Pro
       ? await (async () => {
           const db0 = createAdminClient();
           const [{ data: ppl }, { data: scopes }, groups, { data: pins }] = await Promise.all([
-            db0.from('profiles').select('id, name, employee_no, role, admin_level, can_view_payroll').eq('active', true).order('name'),
+            db0.from('profiles').select('id, name, employee_no, role, admin_level, can_view_payroll').eq('active', true).order('name'), // 시스템관리자도 여기에는 한 줄 보인다 (2026-10-18 의뢰인)
             db0.from('staff_manager_scopes').select('manager_id, group_id').eq('active', true),
             loadOrgGroups(),
             db0.from('console_pins').select('employee_id'),
@@ -90,7 +95,7 @@ export default async function SettingsPage({ searchParams }: { searchParams: Pro
           const real = (ppl ?? []).filter((x) => !(x.employee_no as string | null)?.startsWith('e2e-'));
           const gname = new Map(groups.map((g) => [g.id, g.name]));
           return {
-            staff: real.length,
+            staff: real.filter((x) => x.admin_level !== 'system').length,
             rows: real
               .filter((x) => x.role !== 'employee')
               .sort((a, b) => (a.role === b.role ? 0 : a.role === 'admin' ? -1 : 1))
@@ -100,7 +105,11 @@ export default async function SettingsPage({ searchParams }: { searchParams: Pro
         })()
       : null;
   const ta = await getTranslations('admin.settings.access');
+  const tco = await getTranslations('admin.settings.company');
+  const company = await companyProfile();
   const ti = await getTranslations('admin.settings.info');
+  const tsw = await getTranslations('admin.settings.switch');
+  const sw = await switches(); // 켜고 끄는 항목 (2026-10-19 의뢰인) — 나머지는 법 · 계산에 걸려 있어 고정
   const t = await getTranslations('admin.settings');
   const ts = await getTranslations('side');
   const memberText = await getTranslations('admin.members');
@@ -185,13 +194,12 @@ export default async function SettingsPage({ searchParams }: { searchParams: Pro
 
   return (
     <PageShell wide>
-      <h1 className="px-1 text-2xl font-extrabold tracking-tight lg:hidden">{t('title')}</h1>
-
-      {/* ── PC ── */}
-      <div className="hidden lg:flex lg:flex-col lg:gap-4">
-        <div className="flex items-start gap-4">
+      {/* PC · 폰 같은 내용 — 고른 탭의 줄만 보인다 (2026-10-18 의뢰인: 폰에서는 어느 탭을 눌러도 근무시간 · 휴일 · 인터넷 · 근무지 카드 넉 장만 보였다).
+          설정 줄(components/settings)은 폰에서 세로로 쌓인다. 폰에서 옆으로 넘치는 표(공휴일 · 권한)만 폰용 목록을 따로 둔다 */}
+      <div className="flex flex-col gap-3 lg:gap-4">
+        <div className="flex flex-wrap items-start gap-3 lg:flex-nowrap lg:gap-4">
           <div className="min-w-0 flex-1">
-            <h1 className="flex flex-wrap items-center gap-x-1 text-2xl font-bold">{tf(`item.set${tab[0].toUpperCase()}${tab.slice(1)}`)}<HelpTip>{tp(tab === 'general' ? 'descGeneral' : tab === 'work' ? 'descWork' : tab === 'punch' ? 'descPunch' : tab === 'break' ? 'descBreak' : `desc_${tab}`)}</HelpTip></h1>
+            <h1 className="flex flex-wrap items-center gap-x-1 text-2xl font-bold">{tf(`item.set${tab[0].toUpperCase()}${tab.slice(1)}`)}<HelpTip>{tp(tab === 'general' ? 'descGeneral' : tab === 'holidays' ? 'descHolidays' : tab === 'work' ? 'descWork' : tab === 'punch' ? 'descPunch' : tab === 'break' ? 'descBreak' : `desc_${tab}`)}</HelpTip></h1>
           </div>
           {(tab === 'work' || tab === 'punch' || tab === 'break') && ruleForm}
         </div>
@@ -212,7 +220,22 @@ export default async function SettingsPage({ searchParams }: { searchParams: Pro
                   </>
                 }
               >
-                <UseMark on={r.on} label={ti(`${tab}.${r.k}.value`)} />
+                {isSwitchKey(`${tab}.${r.k}`) ? (
+                  <>
+                    {/* 스위치는 PC에서 바꾼다 (2026-10-19 의뢰인: PC에만 있어도 된다) · 폰은 지금 상태만 */}
+                    <span className="hidden lg:inline-flex">
+                      <SwitchToggle k={`${tab}.${r.k}`} on={sw[`${tab}.${r.k}` as keyof typeof sw]} label={ti(`${tab}.${r.k}.label`)} />
+                    </span>
+                    <span className="lg:hidden">
+                      <UseMark on={sw[`${tab}.${r.k}` as keyof typeof sw]} label={tsw(sw[`${tab}.${r.k}` as keyof typeof sw] ? 'on' : 'off')} />
+                    </span>
+                  </>
+                ) : (
+                  <span className="inline-flex flex-col items-end gap-1">
+                    <UseMark on={r.on} label={ti(`${tab}.${r.k}.value`)} />
+                    <span className="text-xs text-faint" title={tsw('fixedWhy')}>{tsw('fixed')}</span>
+                  </span>
+                )}
               </SettingRow>
             ))}
           {tab === 'request' && (
@@ -222,13 +245,51 @@ export default async function SettingsPage({ searchParams }: { searchParams: Pro
           )}
           {tab === 'general' && (
             <>
-              <SetRow label={tp('weekStart')}>
-                <p className="font-bold">{tp('weekStartValue')}</p>
-                <p className="text-muted">{tp('weekStartNote')}</p>
-              </SetRow>
+              {/* 회사 정보 (2026-10-18 의뢰인: 휴일 넣고 빼기보다 회사 정보가 먼저 — 휴일은 「휴일」 메뉴로 뺐다) */}
+              <SettingGroup>{tco('title')}</SettingGroup>
+              <CompanyForm initial={{ name: company.name || BRAND.name, ceo: company.ceo, bizNo: company.bizNo, address: company.address, phone: company.phone, policy: company.policy, hasLogo: !!company.logoPath, logoAt: company.logoAt }} />
+              <SettingGroup>{tco('fixedTitle')}</SettingGroup>
+              {(['country', 'unit', 'weekStart', 'timeFormat', 'holidayCountry', 'night'] as const).map((k) => (
+                <SetRow key={k} side label={tco(`fixed.${k}`)}>
+                  <p className="font-bold">{tco(`fixedValue.${k}`)}</p>
+                </SetRow>
+              ))}
+              <p className="pb-4 text-xs text-faint">{tco('fixedNote')}</p>
+            </>
+          )}
+          {tab === 'holidays' && (
+            <>
               <SetRow label={tp('companyHolidays')}>
                 <p className="text-muted">{t('holidayNote')}</p>
-                <table className="num w-full max-w-3xl text-sm">
+                {/* 폰: 다가오는 5개만 펼쳐 두고 나머지는 접는다 — 1년 치 25개가 화면을 길게 늘였다 (2026-10-17 디자인) */}
+                <div className="lg:hidden">
+                  {(() => {
+                    const li = (h: { the_date: string; label: string; kind: string }) => (
+                      <li key={h.the_date} className="flex min-h-12 items-center gap-2">
+                        <span className="min-w-0 flex-1">
+                          <span className="num block text-sm">{day(h.the_date)}</span>
+                          <span className="block truncate text-xs text-muted">{h.label}</span>
+                        </span>
+                        {h.kind === 'company' && <Chip tone="info">{t('kind.company')}</Chip>}
+                        <ConfirmButton body={{ action: 'holiday.remove', date: h.the_date }} label={t('remove')} confirmLabel={t('removeConfirm')} ariaLabel={t('removeOf', { what: `${h.the_date} ${h.label}` })} />
+                      </li>
+                    );
+                    const all = holidays ?? [];
+                    if (all.length === 0) return <p className="text-sm text-faint">{t('holidayNone')}</p>;
+                    return (
+                      <>
+                        <ul className="divide-y divide-border">{all.slice(0, 5).map(li)}</ul>
+                        {all.length > 5 && (
+                          <details className="group border-t border-border">
+                            <summary className="flex min-h-11 cursor-pointer items-center text-sm font-bold text-primary group-open:hidden">{t('holidayMore', { n: all.length - 5 })}</summary>
+                            <ul className="divide-y divide-border">{all.slice(5).map(li)}</ul>
+                          </details>
+                        )}
+                      </>
+                    );
+                  })()}
+                </div>
+                <table className="num hidden w-full max-w-3xl text-sm lg:table">
                   <thead>
                     <tr className="bg-surface">
                       <th scope="col" className="px-3 py-2 text-left">{tp('colDate')}</th>
@@ -366,7 +427,31 @@ export default async function SettingsPage({ searchParams }: { searchParams: Pro
           <SettingBox className="pb-4">
             <SettingGroup>{ta('title')}</SettingGroup>
             <p className="pb-3 text-sm text-muted">{ta('desc', { n: access.staff })}</p>
-            <table className="w-full text-sm">
+            {/* 폰: 사람마다 한 줄 묶음 (표는 열이 6개라 옆으로 넘친다) */}
+            <ul className="divide-y divide-border lg:hidden">
+              {access.rows.length === 0 && <li className="py-6 text-center text-sm text-faint">{ta('none')}</li>}
+              {access.rows.map((r) => (
+                <li key={r.id} className="flex flex-col gap-1.5 py-3 text-sm">
+                  <div className="flex items-center gap-2">
+                    <span className="min-w-0 flex-1 font-semibold">
+                      {r.name}
+                      {r.no && <span className="num pl-2 text-xs font-normal text-faint">{r.no}</span>}
+                    </span>
+                    {r.role !== 'employee' && <Chip tone={r.role === 'admin' ? 'info' : 'neutral'}>{r.role === 'admin' ? (r.level === 'system' ? ta('levelSystem') : memberText(r.level === 'ceo' ? 'levelCeo' : 'levelSuper')) : ts('roleManager')}</Chip>}
+                  </div>
+                  <p className="text-muted">
+                    {ta('colScope')}: {r.role === 'manager' ? r.scope.join(' · ') || ta('scopeNone') : r.role === 'admin' ? ta('scopeAll') : '–'}
+                  </p>
+                  <div className="flex flex-wrap items-center gap-2">
+                    {r.pay && <UseMark on label={ta('payYes')} />}
+                    {r.role === 'admin' && (r.pin ? <UseMark on label={ta('pinSet')} /> : <UseMark on={false} label={ta('pinNone')} />)}
+                    {r.role === 'admin' && r.pin && r.id !== access.meId && <PinReset employeeId={r.id} name={r.name} />}
+                    <Link href={`/admin/members/${r.id}`} className="ml-auto inline-flex min-h-11 items-center font-bold text-primary">{ta('change')} ›</Link>
+                  </div>
+                </li>
+              ))}
+            </ul>
+            <table className="hidden w-full text-sm lg:table">
               <thead>
                 <tr>
                   {[ta('colName'), ta('colRole'), ta('colPayroll'), ta('colScope'), ta('colPin'), ''].map((h, i) => (
@@ -387,7 +472,7 @@ export default async function SettingsPage({ searchParams }: { searchParams: Pro
                       {r.no && <span className="num pl-2 text-xs font-normal text-faint">{r.no}</span>}
                     </td>
                     <td className="px-3 py-3">
-                      {r.role === 'employee' ? <span className="text-faint">{ts('roleEmployee')}</span> : <Chip tone={r.role === 'admin' ? 'info' : 'neutral'}>{r.role === 'admin' ? memberText(r.level === 'ceo' ? 'levelCeo' : 'levelSuper') : ts('roleManager')}</Chip>}
+                      {r.role === 'employee' ? <span className="text-faint">{ts('roleEmployee')}</span> : <Chip tone={r.role === 'admin' ? 'info' : 'neutral'}>{r.role === 'admin' ? (r.level === 'system' ? ta('levelSystem') : memberText(r.level === 'ceo' ? 'levelCeo' : 'levelSuper')) : ts('roleManager')}</Chip>}
                     </td>
                     <td className="px-3 py-3">{r.pay ? <UseMark on label={ta('payYes')} /> : <span className="text-faint">–</span>}</td>
                     <td className="px-3 py-3 text-muted">{r.role === 'manager' ? r.scope.join(' · ') || ta('scopeNone') : r.role === 'admin' ? ta('scopeAll') : '–'}</td>
@@ -413,87 +498,6 @@ export default async function SettingsPage({ searchParams }: { searchParams: Pro
         )}
       </div>
 
-      {/* ── 폰 ── */}
-      <div className="flex flex-col gap-3 lg:hidden">
-      {tab === 'request' && (
-        <Card className="flex flex-col gap-2">
-          <CardTitle help={tsm('desc')}>{tsm('label')}</CardTitle>
-          <ScheduleModeForm mode={scheduleMode} />
-        </Card>
-      )}
-      <Card className="flex flex-col gap-3">
-        <CardTitle help={t('ruleNote')}>{t('ruleTitle')}</CardTitle>
-        {current ? (
-          <>
-            <p className="text-xs text-faint">{t('since', { date: day(current.effective_from) })}</p>
-            {ruleLine(current)}
-          </>
-        ) : (
-          <p className="rounded-button bg-warn-tint p-3 text-sm text-warn">{t('ruleNone')}</p>
-        )}
-        {upcoming.map((r) => (
-          <div key={r.id} className="flex flex-col gap-2 rounded-button bg-primary-tint p-3">
-            <div className="flex items-center justify-between gap-2">
-              <p className="text-sm font-bold text-primary">{t('upcoming', { date: day(r.effective_from) })}</p>
-              <ConfirmButton body={{ action: 'rule.hide', id: r.id }} label={t('ruleHide')} confirmLabel={t('ruleHideConfirm')} ariaLabel={t('ruleHideOf', { date: r.effective_from })} />
-            </div>
-            {ruleLine(r)}
-          </div>
-        ))}
-        {ruleForm}
-      </Card>
-
-      <Card className="flex flex-col gap-2">
-        <CardTitle help={t('holidayNote')} aside={<span className="num text-sm text-faint">{holidays?.length ?? 0}</span>}>{t('holidayTitle')}</CardTitle>
-        {(holidays ?? []).length === 0 && <p className="text-sm text-faint">{t('holidayNone')}</p>}
-        {/* 다가오는 5개만 펼쳐 두고 나머지는 접는다 — 1년 치 25개가 화면을 길게 늘였다 (2026-10-17 디자인) */}
-        {(() => {
-          const li = (h: { the_date: string; label: string; kind: string }) => (
-            <li key={h.the_date} className="flex min-h-12 items-center gap-2">
-              <span className="min-w-0 flex-1">
-                <span className="num block text-sm">{day(h.the_date)}</span>
-                <span className="block truncate text-xs text-muted">{h.label}</span>
-              </span>
-              {h.kind === 'company' && <Chip tone="info">{t('kind.company')}</Chip>}
-              <ConfirmButton body={{ action: 'holiday.remove', date: h.the_date }} label={t('remove')} confirmLabel={t('removeConfirm')} ariaLabel={t('removeOf', { what: `${h.the_date} ${h.label}` })} />
-            </li>
-          );
-          const all = holidays ?? [];
-          return (
-            <>
-              <ul className="divide-y divide-border">{all.slice(0, 5).map(li)}</ul>
-              {all.length > 5 && (
-                <details className="group border-t border-border">
-                  <summary className="flex min-h-11 cursor-pointer items-center text-sm font-bold text-primary group-open:hidden">{t('holidayMore', { n: all.length - 5 })}</summary>
-                  <ul className="divide-y divide-border">{all.slice(5).map(li)}</ul>
-                </details>
-              )}
-            </>
-          );
-        })()}
-        <HolidayForm monthStart={monthStart} />
-      </Card>
-
-      <Card className="flex flex-col gap-2">
-        <CardTitle help={t('networkNote')}>{t('networkTitle')}</CardTitle>
-        <p className={`rounded-button p-3 text-sm ${here ? 'bg-ok-tint text-ok' : 'bg-warn-tint text-warn'}`}>
-          {trace.ip ? t(here ? 'hereYes' : 'hereNo', { ip: trace.ip }) : t('hereUnknown')}
-        </p>
-        {(networks ?? []).length === 0 && OFFICE.allowedCidrs.length === 0 && <p className="text-sm text-faint">{t('networkNone')}</p>}
-        {networkList}
-        <NetworkForm currentIp={trace.ip} currentKnown={here} />
-      </Card>
-
-      <Card className="flex flex-col gap-2">
-        <CardTitle help={t('locationNote')} aside={<span className="num text-sm text-faint">{t('placesCount', { n: locations.filter((l) => l.active).length })}</span>}>
-          {t('locationTitle')}
-        </CardTitle>
-        <p className={`rounded-button p-3 text-sm ${locations.some((l) => l.active) ? 'bg-ok-tint text-ok' : 'bg-surface text-muted'}`}>{t(locations.some((l) => l.active) ? 'gpsOn' : 'gpsOff')}</p>
-        <Link href="/admin/places" className="inline-flex min-h-11 items-center self-start text-sm font-bold text-primary">
-          {t('placesLink')} ›
-        </Link>
-      </Card>
-      </div>
       {/* 진단 — 사무실 확인이 이상할 때만 보는 화면이라 메뉴에서 빼고 여기에 둔다 (2026-10-06) */}
       <Link href="/admin/diag" className="inline-flex min-h-11 items-center self-start px-1 text-sm text-muted">
         {tm('diag')} · {tm('diagHint')} ›

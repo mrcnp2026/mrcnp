@@ -8,6 +8,7 @@ export const WORK_KINDS: WorkKind[] = ['outside', 'business_trip', 'remote'];
 export type WorkRequest = {
   id: string; employeeId: string; kind: WorkKind; startDate: string; endDate: string; startTime: string | null; endTime: string | null;
   place: string; reason: string | null; status: 'pending' | 'approved' | 'rejected' | 'cancelled'; createdAt?: string; decidedAt?: string | null; approvedBy?: string | null;
+  lat?: number | null; lng?: number | null; // 신청을 보낸 순간의 위치 (DB 0055, 결정 출퇴근-9)
 };
 
 /** 그 날짜의 승인된 외근 종류 (여러 건이면 출장 > 외근 > 재택) */

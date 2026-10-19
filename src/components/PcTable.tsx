@@ -2,7 +2,8 @@
 // PC 공통 표 — 시프티 PC의 목록 표 모양 (2026-10-11 의뢰인 스샷 `스샷/관리-직원.png` 등):
 //   머리줄 위에 열마다 검색 칸 · 머리 글자를 누르면 정렬(고른 열은 파란 글자 + 화살표) · 가는 줄 · 위에 「총 N」.
 // 줄 자료는 서버가 만들어 넘긴다 — 칸마다 글자(text: 검색·정렬에 쓴다)와 보일 모양(node: 없으면 글자 그대로).
-// 폰에서는 쓰지 않는다(부르는 쪽이 lg에서만 보이게 한다).
+// 폰(lg 아래)에서는 표 대신 카드 목록으로 보인다 — 첫 열이 제목, 나머지 열은 「이름 값」 줄 (2026-10-18 의뢰인: 모바일 가로 스크롤 금지, 통합설정 관리 화면).
+// 폰용 목록을 따로 둔 화면은 부르는 쪽이 표를 lg에서만 보이게 감싼다 — 그때 이 카드도 같이 숨는다.
 // 2026-10-16 디자인: 한 쪽에 50줄 — 실제 휴가 260건을 넣고 보니 표가 1만 9천 px까지 길어졌다. 검색 · 정렬을 바꾸면 첫 쪽으로.
 import { ArrowDown, ArrowUp } from 'lucide-react';
 import { useMemo, useState, type ReactNode } from 'react';
@@ -15,12 +16,14 @@ export function PcTable({ cols, rows, labels, total, pageSize = 50 }: { cols: Pc
   const [find, setFind] = useState<Record<string, string>>({});
   const [sort, setSort] = useState<{ key: string; dir: 1 | -1 } | null>(null);
   const [page, setPage] = useState(1);
+  const [any, setAny] = useState(''); // 폰 카드의 검색 한 칸 — 모든 열에서 찾는다
   const shown = useMemo(() => {
     const active = Object.entries(find).filter(([, v]) => v.trim());
-    let out = rows.filter((r) => active.every(([k, v]) => (r.cells[k]?.text ?? '').toLowerCase().includes(v.trim().toLowerCase())));
+    const q = any.trim().toLowerCase();
+    let out = rows.filter((r) => active.every(([k, v]) => (r.cells[k]?.text ?? '').toLowerCase().includes(v.trim().toLowerCase())) && (!q || cols.some((c) => (r.cells[c.key]?.text ?? '').toLowerCase().includes(q))));
     if (sort) out = [...out].sort((a, b) => sort.dir * (a.cells[sort.key]?.text ?? '').localeCompare(b.cells[sort.key]?.text ?? '', undefined, { numeric: true }));
     return out;
-  }, [rows, find, sort]);
+  }, [rows, cols, find, any, sort]);
   const pages = Math.max(1, Math.ceil(shown.length / pageSize));
   const at = Math.min(page, pages);
   const slice = shown.slice((at - 1) * pageSize, at * pageSize);
@@ -33,7 +36,39 @@ export function PcTable({ cols, rows, labels, total, pageSize = 50 }: { cols: Pc
         </p>
       )}
       {/* 화면의 주 목록 표 — 견본 「나 · 파랑」처럼 위에 진한 선 한 줄(공통 목록 틀 ListTable과 같은 모양, 2026-10-16) */}
-      <div className="overflow-x-auto border-t border-text bg-bg">
+      {/* 폰: 카드 목록 */}
+      <div className="flex flex-col gap-2 lg:hidden">
+        {rows.length > 5 && (
+          <input
+            type="search"
+            value={any}
+            onChange={(e) => { setAny(e.target.value); setPage(1); }}
+            placeholder={labels.search}
+            aria-label={labels.search}
+            className="h-11 w-full rounded-button border border-border bg-bg px-3 text-base outline-none placeholder:text-faint focus:border-primary"
+          />
+        )}
+        {shown.length === 0 ? (
+          <p className="rounded-card bg-bg p-5 text-center text-sm text-faint">{labels.empty}</p>
+        ) : (
+          <ul className="divide-y divide-border overflow-hidden rounded-card border border-border bg-bg">
+            {slice.map((r) => (
+              <li key={r.id} className={`flex flex-col gap-1.5 px-4 py-3 ${r.dim ? 'opacity-60' : ''}`}>
+                <div className="min-w-0 font-bold break-words">{r.cells[cols[0].key]?.node ?? r.cells[cols[0].key]?.text ?? ''}</div>
+                <dl className="grid grid-cols-[auto_minmax(0,1fr)] gap-x-3 gap-y-1 text-sm">
+                  {cols.slice(1).filter((c) => (r.cells[c.key]?.text ?? '') !== '' || r.cells[c.key]?.node).map((c) => (
+                    <div key={c.key} className="contents">
+                      <dt className="text-muted">{c.label}</dt>
+                      <dd className="min-w-0 break-words">{r.cells[c.key]?.node ?? r.cells[c.key]?.text}</dd>
+                    </div>
+                  ))}
+                </dl>
+              </li>
+            ))}
+          </ul>
+        )}
+      </div>
+      <div className="hidden overflow-x-auto border-t border-text bg-bg lg:block">
         <table className="w-full text-sm">
           <thead>
             <tr>

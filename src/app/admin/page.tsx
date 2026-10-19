@@ -27,6 +27,7 @@ import { BoardView } from './BoardView';
 import { BarCard, DonutCard, LineCard } from './Analytics';
 import { KpiRow } from './KpiRow';
 import { WeekLimitCard } from './WeekLimitCard';
+import { switchOn } from '@/lib/switches';
 
 export default async function AdminHome({ searchParams }: { searchParams: Promise<{ live?: string; np?: string }> }) {
   const t = await getTranslations('admin.home');
@@ -337,7 +338,7 @@ export default async function AdminHome({ searchParams }: { searchParams: Promis
         bars={daily.map((x) => ({ key: x.d, label: md(x.d), n: x.late, tip: t('lateTip', { date: longDay(x.d), n: x.late }) }))}
       />
       <div className="flex flex-col gap-3 lg:col-span-3 lg:grid lg:grid-cols-2 lg:gap-4">
-      {data.rule && (
+      {data.rule && (await switchOn('report.week52')) && (
         <WeekLimitCard
           rows={weekLimitList(people, { regularMin: LABOR.weeklyRegularLimitMin, cautionMin: OFFICE.weeklyCautionHours * 60, limitMin: OFFICE.weeklyLimitHours * 60 })}
           limitMin={OFFICE.weeklyLimitHours * 60}

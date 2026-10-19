@@ -40,7 +40,7 @@ export function Button({
   );
 }
 
-type Tone = 'neutral' | 'ok' | 'warn' | 'info';
+type Tone = 'neutral' | 'ok' | 'warn' | 'info' | 'danger'; // danger: 지각처럼 꼭 봐야 하는 것 (2026-10-19)
 // 주황은 ⚠, 초록은 ✓ 아이콘과 글자를 항상 함께 — 색만으로 의미를 전하지 않는다 (R-10-8 색 규칙 3)
 export function Chip({ tone = 'neutral', children }: { tone?: Tone; children: ReactNode }) {
   const cls: Record<Tone, string> = {
@@ -48,11 +48,12 @@ export function Chip({ tone = 'neutral', children }: { tone?: Tone; children: Re
     ok: 'bg-ok-tint text-ok',
     warn: 'bg-warn-tint text-warn',
     info: 'bg-primary-tint text-primary',
+    danger: 'bg-danger-tint text-danger',
   };
   return (
     <span className={`inline-flex items-center gap-1 rounded-button px-2 py-1 text-xs font-bold whitespace-nowrap ${cls[tone]}`}>
       {tone === 'ok' && <Check aria-hidden size={14} strokeWidth={1.75} />}
-      {tone === 'warn' && <AlertTriangle aria-hidden size={14} strokeWidth={1.75} />}
+      {(tone === 'warn' || tone === 'danger') && <AlertTriangle aria-hidden size={14} strokeWidth={1.75} />}
       {children}
     </span>
   );

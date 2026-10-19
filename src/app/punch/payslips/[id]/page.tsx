@@ -6,7 +6,7 @@ import { notFound, redirect } from 'next/navigation';
 import { Card, CardTitle, Chip, PageShell } from '@/components/ui';
 import { OFFICE } from '@/config/office';
 import { getMe } from '@/lib/auth';
-import { BRAND } from '@/config/brand';
+import { companyName } from '@/lib/company'; // 통합설정 › 회사 기본설정의 회사명 (2026-10-18)
 import { groupPath } from '@/lib/org';
 import { loadOrgGroups } from '@/lib/org-data';
 import { loadMySlip } from '@/lib/payroll/publish-data';
@@ -49,7 +49,7 @@ export default async function MyPayslipPage({ params }: { params: Promise<{ id: 
           {slip.isTest && <Chip>{t('practice')}</Chip>}
         </h1>
         <dl className="num grid gap-x-6 gap-y-1 pt-2 text-sm md:grid-cols-2">
-          {([['hCompany', BRAND.name], ['hNo', slip.no], ['hName', `${me.name} (${me.employeeNo ?? ''})`], ['hGroup', groupPath(groups, mine?.group_id) ?? ''], ['hPeriod', `${slip.periodFrom} ~ ${slip.periodTo}`], ['hPayDate', slip.payDate]] as const).map(([k, v]) => (
+          {([['hCompany', await companyName()], ['hNo', slip.no], ['hName', `${me.name} (${me.employeeNo ?? ''})`], ['hGroup', groupPath(groups, mine?.group_id) ?? ''], ['hPeriod', `${slip.periodFrom} ~ ${slip.periodTo}`], ['hPayDate', slip.payDate]] as const).map(([k, v]) => (
             <div key={k} className="flex justify-between gap-3">
               <dt className="text-muted">{t(k)}</dt>
               <dd>{v}</dd>

@@ -11,13 +11,14 @@
 import { browserSupportsWebAuthn, startAuthentication, startRegistration } from '@simplewebauthn/browser';
 import { Check, Clock, Fingerprint, LogIn, LogOut, ShieldCheck, Smartphone } from 'lucide-react';
 import { useFormatter, useTranslations } from 'next-intl';
-import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useEffect, useState } from 'react';
 import { PUNCHED_EVENT, PUNCHING_EVENT } from '@/components/NoticeSheet';
 import { callApi, passkeyBrowserError } from '@/components/client-api';
 import { ErrorNote } from '@/components/ErrorNote';
 import { InAppWarning, RegisterTroubleshoot } from '@/components/PasskeyHelp';
+import { currentPosition } from '@/components/current-position';
+import { ReasonSheet, reasonAsk, type ReasonAsk } from './ReasonSheet';
 import { Card, Chip } from '@/components/ui';
 
 type Result = { requested?: boolean; kind: 'in' | 'out'; punchedAt: string; ipVerified: boolean; verifiedBy?: 'ip' | 'gps' | null; isTest: boolean; deduped: boolean };
@@ -40,18 +41,6 @@ function writeMark(credentialId: string) {
   }
 }
 
-/** 지금 위치 한 번 (최대 8초). 거절·실패·미지원이면 null — 위치 없이도 기록은 남는다 */
-function currentPosition(): Promise<{ lat: number; lng: number; accuracy: number } | null> {
-  return new Promise((resolve) => {
-    if (!('geolocation' in navigator)) return resolve(null);
-    navigator.geolocation.getCurrentPosition(
-      (p) => resolve({ lat: p.coords.latitude, lng: p.coords.longitude, accuracy: p.coords.accuracy }),
-      () => resolve(null),
-      { enableHighAccuracy: true, timeout: 8000, maximumAge: 30000 },
-    );
-  });
-}
-
 export function TodayCard(props: {
   dateLabel: string; // 10/10 (토)
   planLine: string | null; // 오늘 일정 「08:00 - 17:00」. 없으면 null (무일정)
@@ -65,10 +54,11 @@ export function TodayCard(props: {
   practice: boolean;
   device: { credentialId: string; label: string | null } | null; // 등록한 출퇴근 기기. 없으면 null
   phone: boolean; // 폰·태블릿에서 열었는가 — PC에서는 기기 등록을 받지 않는다 (2026-10-06 의뢰인)
+  // 찍은 뒤 사유를 물을지 정하는 값 (2026-10-18 의뢰인: 지각 · 사무실 밖 · 휴일 · 연장 · 야간이면 사유 창) — ReasonSheet
+  reason?: { today: string; planStart: string | null; planEnd: string | null; graceMin: number; offDay: boolean; overtimeGraceMin: number; note: string | null; canAskWork: boolean };
 }) {
   const t = useTranslations('home');
   const tc = useTranslations('common');
-  const tn = useTranslations('nav');
   const f = useFormatter();
   const router = useRouter();
   const [busy, setBusy] = useState(false);
@@ -110,6 +100,7 @@ export function TodayCard(props: {
   const time = (iso: string) => f.dateTime(new Date(iso), { hour: '2-digit', minute: '2-digit', hourCycle: 'h23' });
   // 출근 요청이 승인을 기다리는 동안에는 다음에 누를 것이 퇴근이다 (승인이 늦어도 퇴근 요청을 낼 수 있게, 2026-10-11)
   const [sentIn, setSentIn] = useState(false);
+  const [ask, setAsk] = useState<ReasonAsk | null>(null);
   const waitingIn = props.pendingPunch?.kind === 'in' || sentIn;
   const kind: 'in' | 'out' = props.isOpen || waitingIn ? 'out' : 'in';
 
@@ -144,6 +135,10 @@ export function TodayCard(props: {
       setJustRegistered(false);
       setResult(r.data);
       if (r.data.requested && r.data.kind === 'in') setSentIn(true);
+      // 기록이 남은 뒤 사유를 묻는다(두 번 누른 같은 기록이면 묻지 않는다)
+      if (props.reason && !r.data.deduped) {
+        setAsk(reasonAsk({ kind: r.data.kind, punchedAt: r.data.punchedAt, outside: !!r.data.requested || !r.data.ipVerified, ...props.reason }));
+      }
       router.refresh();
     } finally {
       setBusy(false);
@@ -156,9 +151,13 @@ export function TodayCard(props: {
   const state: 'before' | 'working' | 'done' = props.isOpen ? 'working' : props.lastOut ? 'done' : 'before';
   const Icon = kind === 'in' ? LogIn : LogOut;
   return (
-    <Card className="flex flex-col gap-4">
-      <div className="flex items-start justify-between gap-2">
-        <h2 className="text-2xl font-extrabold tracking-tight">{t('todayTitle')}</h2>
+    <Card className="flex flex-col gap-3 p-4">
+      {/* 제목과 날짜를 한 줄로 — 홈이 한 화면에 들어오게 (2026-10-18 의뢰인) */}
+      <div className="flex items-center justify-between gap-2">
+        <h2 className="flex items-baseline gap-2 text-xl font-extrabold tracking-tight">
+          {t('todayTitle')}
+          <span className="num text-base font-semibold text-muted">{props.dateLabel}</span>
+        </h2>
         <div className="flex flex-wrap justify-end gap-1">
           {props.lateMinutes !== null && <Chip tone="warn">{t('lateBy', { n: props.lateMinutes })}</Chip>}
           {/* 연습 모드 배지: 연한 파랑 + 파랑 글자 — 주황·초록·빨강 금지 (4-6, R-10-8 규칙 7) */}
@@ -166,9 +165,8 @@ export function TodayCard(props: {
         </div>
       </div>
       {/* 날짜 · 오늘 일정 (없으면 「무일정」) · 찍은 시각 — 왼쪽 색 막대: 근무 중이면 파랑, 아니면 초록 */}
-      <div className={`flex flex-col gap-1 border-l-4 pl-4 ${state === 'working' ? 'border-primary' : 'border-ok'}`}>
-        <p className="num text-lg">{props.dateLabel}</p>
-        <p className="num flex flex-wrap items-center gap-2 text-lg text-muted">
+      <div className={`flex flex-col gap-1 border-l-4 pl-3 ${state === 'working' ? 'border-primary' : 'border-ok'}`}>
+        <p className="num flex flex-wrap items-center gap-2 text-base text-muted">
           {props.planLine ?? t('noSchedule')}
           {!props.planLine && <Chip>{t('noScheduleChip')}</Chip>}
         </p>
@@ -265,11 +263,8 @@ export function TodayCard(props: {
         </div>
       ) : (
         // 출근은 파랑, 퇴근은 거의 검정 — 색 + 글자 + 아이콘 셋으로 구분 (색만 X).
-        // 왼쪽 「요청」 = 내 요청 화면 (+ 버튼에서 종류를 고른다) (2026-10-10 의뢰인: 시프티처럼 출근 버튼 옆에)
-        <div className="flex gap-2">
-        <Link href="/punch/requests" className="flex min-h-14 shrink-0 items-center justify-center rounded-punch border-2 border-border bg-bg px-6 text-base font-bold text-text">
-          {tn('requests')}
-        </Link>
+        // 옆의 「요청」 단추는 뺐다 — 요청은 다른 화면처럼 오른쪽 아래 + 단추에서 (2026-10-18 의뢰인)
+        <div className="flex">
         <button
           type="button"
           onClick={punch}
@@ -284,6 +279,7 @@ export function TodayCard(props: {
         </div>
       )}
 
+      {ask && props.reason && <ReasonSheet ask={ask} today={props.reason.today} note={props.reason.note} canAskWork={props.reason.canAskWork} onClose={() => setAsk(null)} />}
       {err && <ErrorNote code={err.code} requestId={err.requestId} namespace="home" />}
       {err && !device && ['register_failed', 'unsupported', 'verification_failed', 'user_verification_missing'].includes(err.code) && <RegisterTroubleshoot />}
     </Card>

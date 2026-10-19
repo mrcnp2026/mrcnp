@@ -21,7 +21,10 @@ import { OPEN_MENU_EVENT } from './MenuButton';
 import { PushToggle } from './PushToggle';
 import { SignOutButton } from './SignOutButton';
 
-type View = 'my' | 'admin';
+// 맨 위는 [직원 모드 | 관리자 모드] 둘만 (2026-10-19 의뢰인). 통합설정은 관리자 모드 맨 아래 톱니바퀴 한 줄 —
+// 누르면 숫자 잠금을 거쳐 통합설정 전체 메뉴로 들어간다. 통합설정 안에서는 서랍에 통합설정 메뉴만 보이고 위 두 버튼 모두 파란불이 꺼진다.
+// 거기서 「관리자 모드」를 누르면 오늘 현황부터 관리자 메뉴로 돌아가고 통합설정은 다시 톱니바퀴 한 줄만 남는다.
+type View = 'my' | 'admin' | 'console';
 
 export function MenuDrawer({ name, role, languages }: { name: string; role: NavRole; languages: { code: string; name: string }[] }) {
   const t = useTranslations('side');
@@ -31,7 +34,7 @@ export function MenuDrawer({ name, role, languages }: { name: string; role: NavR
   const at = locate(path, query, role);
   const here = at.leaf?.href ?? (at.space === 'console' ? CONSOLE_HOME : undefined);
   const staff = role !== 'employee';
-  const nowView: View = staff && at.space !== 'my' ? 'admin' : 'my';
+  const nowView: View = role === 'admin' && at.space === 'console' ? 'console' : staff && at.space !== 'my' ? 'admin' : 'my';
   const [open, setOpen] = useState(false);
   const [closing, setClosing] = useState(false);
   // 닫기: 왼쪽으로 밀려 들어간 뒤에 없앤다 (2026-10-17 의뢰인: 오른쪽 빈 곳을 눌러 닫을 때 갑자기 사라졌다)
@@ -79,18 +82,14 @@ export function MenuDrawer({ name, role, languages }: { name: string; role: NavR
   }, []);
 
   const apps: App[] = appsFor(view, role);
-  const appName = (a: App) => tf(`appFull.${a.key}`);
+  // 통합설정 앱 이름은 app.* 에만 있다 (appFull.* 로 찾으면 「frame.appFull.cBasic」 같은 영어 열쇠가 그대로 나왔다)
+  const appName = (a: App) => tf(view === 'console' ? `app.${a.key}` : `appFull.${a.key}`);
   const word = q.trim().toLowerCase();
   const found = word
     ? apps.flatMap((a) => a.groups.flatMap((g) => g.items.filter((l) => !l.pcOnly).map((l) => ({ href: l.href, label: tf(`item.${l.key}`), where: g.key ? `${appName(a)} › ${tf(`group.${g.key}`)}` : appName(a) })))).filter((x) => `${x.label} ${x.where}`.toLowerCase().includes(word))
     : [];
-  const toggle = (k: string) =>
-    setUnfold((s) => {
-      const n = new Set(s);
-      if (n.has(k)) n.delete(k);
-      else n.add(k);
-      return n;
-    });
+  // 한 번에 하나만 펼친다 — 다른 메뉴를 펼치면 앞의 것은 저절로 접힌다 (2026-10-19 의뢰인)
+  const toggle = (k: string) => setUnfold((s) => (s.has(k) ? new Set() : new Set([k])));
   const row = (on: boolean) => `flex min-h-11 items-center rounded-button px-3 ${on ? 'bg-primary-tint font-bold text-primary' : 'text-text active:bg-primary-tint active:text-primary'}`;
 
   return (
@@ -150,6 +149,13 @@ export function MenuDrawer({ name, role, languages }: { name: string; role: NavR
                   )
                 ) : (
                   <>
+                    {/* 통합설정 안: 맨 위 제목 줄(누르면 통합설정 전체 메뉴) 아래로 통합설정 메뉴만 */}
+                    {view === 'console' && (
+                      <Link href={CONSOLE_HOME} onClick={() => setOpen(false)} aria-current={here === CONSOLE_HOME ? 'page' : undefined} className={`${row(here === CONSOLE_HOME)} mb-1 gap-3 rounded-b-none border-b border-border font-bold`} data-drawer-console>
+                        <Settings aria-hidden size={18} strokeWidth={2} className="shrink-0 text-primary" />
+                        {tf('space.console')}
+                      </Link>
+                    )}
                     {apps.map((a) => {
                       const leaves = appLeaves(a).filter((l) => !l.pcOnly);
                       const Icon = a.icon;
@@ -206,8 +212,9 @@ export function MenuDrawer({ name, role, languages }: { name: string; role: NavR
                         </div>
                       );
                     })}
+                    {/* 관리자 모드 맨 아래 톱니바퀴 「통합설정」 */}
                     {view === 'admin' && role === 'admin' && (
-                      <Link href={CONSOLE_HOME} onClick={() => setOpen(false)} className={`${row(at.space === 'console')} mt-1 gap-3 border-t border-border font-bold`}>
+                      <Link href={CONSOLE_HOME} onClick={() => setOpen(false)} className={`${row(false)} mt-1 gap-3 rounded-t-none border-t border-border font-bold`} data-drawer-console>
                         <Settings aria-hidden size={18} strokeWidth={2} className="shrink-0 text-primary" />
                         {tf('space.console')}
                       </Link>

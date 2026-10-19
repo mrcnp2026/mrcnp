@@ -19,7 +19,7 @@ async function gh(path: string, init: RequestInit = {}, base = 'https://api.gith
     ...init,
     headers: { authorization: `Bearer ${token}`, accept: 'application/vnd.github+json', 'x-github-api-version': '2022-11-28', ...(init.headers ?? {}) },
   });
-  if (!res.ok && res.status !== 404) throw new Error(`github_${res.status}: ${(await res.text()).slice(0, 200)}`);
+  if (!res.ok && res.status !== 404 && !(res.status >= 300 && res.status < 400)) throw new Error(`github_${res.status}: ${(await res.text()).slice(0, 200)}`);
   return res;
 }
 
@@ -71,3 +71,22 @@ export async function uploadBackup(date: string, file: string, assetName: string
     'https://uploads.github.com',
   );
 }
+
+/** 백업 파일을 받을 짧은 주소(GitHub가 몇 분만 열어 두는 서명 주소) — 통합설정 › 데이터베이스 백업의 내려받기. 토큰은 서버 밖으로 나가지 않는다 */
+export async function backupDownloadUrl(releaseId: number): Promise<{ url: string; name: string } | null> {
+  const { repo } = env();
+  const rel = await gh(`/repos/${repo}/releases/${releaseId}`);
+  if (rel.status !== 200) return null;
+  const r = (await rel.json()) as { tag_name: string; assets: Array<{ id: number; name: string }> };
+  const a = /^backup-\d{4}-\d{2}-\d{2}$/.test(r.tag_name) ? r.assets[0] : undefined;
+  if (!a) return null;
+  const res = await gh(`/repos/${repo}/releases/assets/${a.id}`, { headers: { accept: 'application/octet-stream' }, redirect: 'manual' });
+  const url = res.headers.get('location');
+  return url ? { url, name: a.name } : null;
+}
+
+export const backupConfigured = () => Boolean(process.env.BACKUP_REPO && process.env.BACKUP_GITHUB_TOKEN);
+
+/** 백업 파일을 내려받을 수 있는 사람 — 시스템관리자(사번 admin) 한 계정만 (2026-10-18 의뢰인: 다른 사람은 내려받기 불가) */
+export const BACKUP_DOWNLOADER_NO = 'admin';
+export const canDownloadBackup = (me: { employeeNo: string | null } | null) => me?.employeeNo === BACKUP_DOWNLOADER_NO;

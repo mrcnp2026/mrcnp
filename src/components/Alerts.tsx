@@ -1,6 +1,6 @@
 'use client';
 // 알림 숫자 한곳 (2026-10-14 의뢰인: 요청 · 공지가 있으면 종에 표시, 처리하면 숫자가 바로 바뀌어야 한다)
-// 처음 값은 화면 틀(AppFrame)이 서버에서 세어 넘기고, 화면을 옮길 때마다 · 1분마다 · 창으로 돌아올 때 /api/me/alerts로 다시 센다.
+// 처음 값은 화면 틀(AppFrame)이 서버에서 세어 넘기고, 화면이 뜰 때 · 화면을 옮길 때마다 · 1분마다 · 창으로 돌아올 때 /api/me/alerts로 다시 센다.
 // 종 아이콘(AlertBell)과 요청 배지(앱 띠 · 하단 탭)가 같은 숫자를 쓴다.
 import { Bell, ChevronRight } from 'lucide-react';
 import { useTranslations } from 'next-intl';
@@ -23,22 +23,25 @@ export function AlertsProvider({ initial, children }: { initial: AlertCounts; ch
       // 잠깐 연결이 끊겨도 앞의 숫자를 그대로 둔다
     }
   }, []);
-  const first = useRef(true);
+  // 처음 뜰 때도 다시 센다 (2026-10-18 의뢰인: 최고관리자로 들어오니 직원 화면 종에 처리할 요청 3건이 안 나오고, 관리자 화면을 한 번 연 뒤에야 나왔다).
+  // 브라우저가 예전에 열어 둔 화면을 그대로 되살리면(뒤로 가기 · 폰에서 앱 다시 열기) 서버가 센 처음 값이 옛날 숫자다.
   useEffect(() => {
-    if (first.current) {
-      first.current = false;
-      return;
-    }
     void reload();
   }, [path, reload]);
   useEffect(() => {
     const id = window.setInterval(reload, 60_000);
     const onFocus = () => document.visibilityState === 'visible' && reload();
+    // 되살린 화면(bfcache)은 visibilitychange가 오지 않을 수 있다 — pageshow로 잡는다
+    const onShow = (e: PageTransitionEvent) => e.persisted && reload();
     document.addEventListener('visibilitychange', onFocus);
+    window.addEventListener('focus', reload);
+    window.addEventListener('pageshow', onShow);
     window.addEventListener(ALERTS_RELOAD_EVENT, reload);
     return () => {
       window.clearInterval(id);
       document.removeEventListener('visibilitychange', onFocus);
+      window.removeEventListener('focus', reload);
+      window.removeEventListener('pageshow', onShow);
       window.removeEventListener(ALERTS_RELOAD_EVENT, reload);
     };
   }, [reload]);

@@ -22,6 +22,7 @@ import { QuickFind } from '@/components/QuickFind';
 import { SignupRequests } from './SignupRequests';
 import { suggestEmployeeNo } from '@/lib/email-rules';
 import { loadPendingSignups } from '@/lib/signup';
+import { NOT_SYSTEM_ADMIN } from '@/lib/system-admin'; // 시스템관리자는 목록에 보이지 않는다 (2026-10-18)
 
 // 탭 (2026-10-11 의뢰인: 시프티의 직원 관리처럼) — 현재직원 · 미합류(초대했지만 아직 가입 전) · 비활성(퇴사 등으로 꺼 둔 사람)
 // 2026-10-16 디자인: 「현재직원」은 재직 중인 사람 전부(가입 여부는 줄마다 표시) — 실제 직원 24명을 넣고 보니 가입 전 23명이 첫 화면에서 빠져 있었다
@@ -33,13 +34,14 @@ type Row = { id: string; name: string; employeeNo: string | null; phone: string 
 export default async function MembersPage({ searchParams }: { searchParams: Promise<{ f?: string }> }) {
   const t = await getTranslations('admin.members');
   const tc = await getTranslations('common');
+  const ts = await getTranslations('side');
   const sp = await searchParams;
   const filter: Filter = sp.f === 'pending' || sp.f === 'inactive' ? sp.f : 'current';
   const db = createAdminClient();
   const me = (await getMe())!;
   const [{ data: people }, { data: keys }, groups, { data: roleReqs }, jobs, signups, { data: invs }] = await Promise.all([
     // (맨 끝) 직무: 표의 직무 열과 추가 팝업의 고르기 칸
-    db.from('profiles').select('id, name, employee_no, phone, email, role, active, group_id, job_title, password_set_at, can_view_payroll, joined_on, job_id, admin_level').order('name'),
+    db.from('profiles').select('id, name, employee_no, phone, email, role, active, group_id, job_title, password_set_at, can_view_payroll, joined_on, job_id, admin_level').or(NOT_SYSTEM_ADMIN).order('name'),
     db.from('user_passkeys').select('employee_id').is('revoked_at', null),
     loadOrgGroups(),
     db.from('role_change_requests').select('target_id').eq('status', 'pending'),
@@ -128,7 +130,7 @@ export default async function MembersPage({ searchParams }: { searchParams: Prom
 
   return (
     <PageShell wide>
-      <DetailBar back="/punch" backLabel={tc('back')} title={t('title')} desc={t('pcIntro')}
+      <DetailBar back="/punch" backLabel={tc('back')} menuLabel={ts('menu')} title={t('title')} desc={t('pcIntro')}
         extra={
           <>
           <a href="/api/admin/export/list?kind=members" className="hidden h-8 items-center gap-1 rounded-button border border-border bg-bg px-3.5 text-sm font-semibold whitespace-nowrap text-text hover:bg-surface lg:inline-flex">

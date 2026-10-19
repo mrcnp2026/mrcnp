@@ -5,7 +5,7 @@ import { LanguageSwitcher } from '@/components/LanguageSwitcher';
 import { OpenExternal } from '@/components/OpenExternal';
 import { Logo } from '@/components/Logo';
 import { Card } from '@/components/ui';
-import { BRAND } from '@/config/brand';
+import { companyName } from '@/lib/company'; // 통합설정 › 회사 기본설정의 회사명 (2026-10-18)
 import { languageOptions } from '@/i18n/locales';
 import { getMe } from '@/lib/auth';
 import { homePathForRole } from '@/lib/home-path';
@@ -27,7 +27,7 @@ export default async function LoginPage() {
             <p className="text-lg">{t('heroSub')}</p>
           </div>
         </div>
-        <p className="text-sm">© {BRAND.name}</p>
+        <p className="text-sm">© {await companyName()}</p>
       </aside>
       <main className="mx-auto flex w-full max-w-md flex-col gap-3 px-4 py-4 lg:justify-center lg:py-12">
         <OpenExternal />

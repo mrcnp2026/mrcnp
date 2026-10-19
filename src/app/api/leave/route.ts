@@ -4,6 +4,7 @@ import { after } from 'next/server';
 import { OFFICE } from '@/config/office';
 import { api, ApiError, readJson } from '@/lib/api';
 import { getMe } from '@/lib/auth';
+import { requireSwitch, switchOn } from '@/lib/switches';
 import { planLeave } from '@/lib/leave-request';
 import { notifyLeaveRequest } from '@/lib/push-events';
 import { createAdminClient } from '@/lib/supabase/admin';
@@ -11,8 +12,10 @@ import { createAdminClient } from '@/lib/supabase/admin';
 export const POST = api('leave.create', async (req) => {
   const me = await getMe();
   if (!me) throw new ApiError(401, 'not_signed_in');
+  await requireSwitch('request.leave'); // 통합설정 › 요청 스위치 (2026-10-19)
   const b = await readJson(req);
   const { typeCode, start, end, startTime, endTime, workDates, days, reason } = await planLeave(me.id, b);
+  if (startTime && !(await switchOn('leave.hourly'))) throw new ApiError(403, 'hourly_leave_off'); // 시간 단위 휴가 스위치
 
   const { data, error } = await createAdminClient()
     .from('leave_requests')

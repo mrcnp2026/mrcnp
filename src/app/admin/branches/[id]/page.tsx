@@ -14,6 +14,7 @@ import { Card, Chip, PageShell } from '@/components/ui';
 import { loadGroupLocationLinks, loadOfficeLocations } from '@/lib/geo-data';
 import { createAdminClient } from '@/lib/supabase/admin';
 import { BranchEditForm } from '../BranchForms';
+import { NOT_SYSTEM_ADMIN } from '@/lib/system-admin'; // 시스템관리자는 목록에 보이지 않는다 (2026-10-18)
 
 export default async function BranchPage({ params }: { params: Promise<{ id: string }> }) {
   const t = await getTranslations('admin.branches');
@@ -27,7 +28,7 @@ export default async function BranchPage({ params }: { params: Promise<{ id: str
     loadOfficeLocations(true),
     loadGroupLocationLinks(),
     g.parent_id ? db.from('org_groups').select('id, name').eq('id', g.parent_id).maybeSingle() : Promise.resolve({ data: null }),
-    db.from('profiles').select('id', { count: 'exact', head: true }).eq('group_id', id).eq('active', true),
+    db.from('profiles').select('id', { count: 'exact', head: true }).or(NOT_SYSTEM_ADMIN).eq('group_id', id).eq('active', true),
   ]);
   const picked = links.filter((k) => k.groupId === id).map((k) => k.locationId);
   const mine = locations.filter((l) => picked.includes(l.id));

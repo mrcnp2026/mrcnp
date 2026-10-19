@@ -6,6 +6,8 @@ import { getNotice, listNoticesForAdmin, translationLocales } from '@/lib/notice
 import { createAdminClient } from '@/lib/supabase/admin';
 import { toKstDate, toKstTime } from '@/lib/time';
 import { NoticeEditor } from '../NoticeEditor';
+import { switchOn } from '@/lib/switches';
+import { NOT_SYSTEM_ADMIN } from '@/lib/system-admin'; // 시스템관리자는 목록에 보이지 않는다 (2026-10-18)
 
 const kstInput = (d: Date) => `${toKstDate(d)}T${toKstTime(d).slice(0, 5)}`;
 
@@ -15,7 +17,7 @@ export default async function EditNoticePage({ params }: { params: Promise<{ id:
   if (!got) notFound();
   const t = await getTranslations('admin.notices');
   const [{ data }, list] = await Promise.all([
-    createAdminClient().from('profiles').select('id, name').eq('active', true).order('name'),
+    createAdminClient().from('profiles').select('id, name').or(NOT_SYSTEM_ADMIN).eq('active', true).order('name'),
     listNoticesForAdmin(new Date()),
   ]);
   const stat = list.find((r) => r.notice.id === id);
@@ -23,6 +25,7 @@ export default async function EditNoticePage({ params }: { params: Promise<{ id:
   return (
     <PageShell>
       <NoticeEditor
+        translate={await switchOn('message.translate')}
         people={(data ?? []).map((p) => ({ id: p.id, name: p.name }))}
         initial={{
           id: n.id,

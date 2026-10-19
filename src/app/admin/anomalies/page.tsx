@@ -1,6 +1,6 @@
 // 이상자 관리 — 달마다 누락 · 겹침 · 일정과 다른 기록 · 확인 안 된 근무지를 한 목록으로 보고, 유형마다 마감을 막을지 정한다 (PRD v1.3 A15).
 // 여기서는 보여 주기만 한다. 고치는 길은 그 직원의 기록 화면(정정 승인 · 대리 입력)이다.
-import { ChevronLeft, ChevronRight } from 'lucide-react';
+import { ChevronDown, ChevronLeft, ChevronRight } from 'lucide-react';
 import { getTranslations } from 'next-intl/server';
 import Link from 'next/link';
 import { FilterBar, ListHead, ListTable, StatusCards } from '@/components/listframe';
@@ -171,9 +171,20 @@ export default async function AnomaliesPage({ searchParams }: { searchParams: Pr
 
       <Card className="scroll-mt-20">
         <span id="policy" />
-        <CardTitle>{t('policyTitle')}</CardTitle>
-        <p className="pt-1 pb-3 text-sm text-faint">{t(saved.saved ? 'policyIntro' : 'policyDefault')}</p>
-        <PolicyForm policy={saved.policy} version={saved.version} counts={sum.byType} />
+        {/* 폰: 기준은 자주 바꾸지 않으니 접어 둔다 — 목록 아래로 화면이 길게 이어졌다 (2026-10-18 디자인) */}
+        <details className="group lg:hidden">
+          <summary className="flex min-h-11 cursor-pointer list-none items-center justify-between gap-2 font-bold">
+            {t('policyTitle')}
+            <ChevronDown aria-hidden size={18} className="shrink-0 text-muted transition-transform group-open:rotate-180" />
+          </summary>
+          <p className="pt-1 pb-3 text-sm text-faint">{t(saved.saved ? 'policyIntro' : 'policyDefault')}</p>
+          <PolicyForm policy={saved.policy} version={saved.version} counts={sum.byType} />
+        </details>
+        <div className="hidden lg:block">
+          <CardTitle>{t('policyTitle')}</CardTitle>
+          <p className="pt-1 pb-3 text-sm text-faint">{t(saved.saved ? 'policyIntro' : 'policyDefault')}</p>
+          <PolicyForm policy={saved.policy} version={saved.version} counts={sum.byType} />
+        </div>
       </Card>
     </PageShell>
   );

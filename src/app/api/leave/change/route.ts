@@ -2,12 +2,14 @@
 // 같은 휴가에 대기 중인 삭제 요청이 있으면 막는다. 관리자가 승인하면 그 휴가가 취소되고 잔여가 돌아온다.
 import { api, ApiError, readJson } from '@/lib/api';
 import { getMe } from '@/lib/auth';
+import { requireSwitch } from '@/lib/switches';
 import { createAdminClient } from '@/lib/supabase/admin';
 import { cleanText } from '@/lib/text';
 
 export const POST = api('leave.change.create', async (req) => {
   const me = await getMe();
   if (!me) throw new ApiError(401, 'not_signed_in');
+  await requireSwitch('request.leaveDelete'); // 통합설정 › 요청 스위치 (2026-10-19)
   const b = await readJson(req);
   if (typeof b.leaveId !== 'string' || !/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(b.leaveId)) throw new ApiError(400, 'invalid_input');
   const reason = cleanText(b.reason);

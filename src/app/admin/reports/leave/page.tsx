@@ -27,7 +27,8 @@ export default async function LeaveReportPage({ searchParams }: { searchParams: 
   const withInactive = sp.inactive === '1';
   const r = await buildLeaveReport({ asOf, practice, groupId, withInactive });
   // 30분 단위(1/16일)로 떨어지면 그대로, 비례 발생처럼 안 떨어지면 소수 둘째 자리까지 (2026-10-17 디자인: 153.5292일)
-  const day = (n: number) => t('days', { n: Math.abs(n * 16 - Math.round(n * 16)) < 1e-6 ? n : Math.round(n * 100) / 100 });
+  // 2026-10-18 디자인: 일수는 소수 둘째 자리까지(7.125 → 7.13) — 휴가 원장 화면과 같게
+  const day = (n: number) => t('days', { n: Math.round(n * 100) / 100 });
   const rate = (v: number | null) => (v === null ? t('rateNone') : t('pct', { n: v }));
   const qs = new URLSearchParams({ to: asOf, ...(groupId ? { g: groupId } : {}), ...(withInactive ? { inactive: '1' } : {}), ...(sp.live === '1' ? { live: '1' } : {}) }).toString();
   const cols = ['lGranted', 'lUsed', 'lExpired', 'lRemaining', 'lAdvance', 'lRate'] as const;
@@ -181,7 +182,7 @@ export default async function LeaveReportPage({ searchParams }: { searchParams: 
               <tr key={x.code} className="border-b border-border last:border-b-0">
                 <td className="px-3 py-2 font-bold">{typeName(x.code)}</td>
                 <td className="num px-3 py-2">{x.requests}</td>
-                <td className="num px-3 py-2">{x.days}</td>
+                <td className="num px-3 py-2">{Math.round(x.days * 100) / 100}</td>
                 <td className="num px-3 py-2">{x.people}</td>
               </tr>
             ))}

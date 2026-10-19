@@ -12,12 +12,13 @@ import { loadOrgGroups } from '@/lib/org-data';
 import { SHIFT_COLOR_CLASS } from '@/lib/shifts';
 import { createAdminClient } from '@/lib/supabase/admin';
 import { JobAssignForm, JobForm, JobToggle } from '../JobForms';
+import { NOT_SYSTEM_ADMIN } from '@/lib/system-admin'; // 시스템관리자는 목록에 보이지 않는다 (2026-10-18)
 
 export default async function JobPage({ params }: { params: Promise<{ id: string }> }) {
   const t = await getTranslations('admin.jobs');
   const tc = await getTranslations('common');
   const { id } = await params;
-  const [all, groups, { data: ppl }] = await Promise.all([loadJobs(), loadOrgGroups(), createAdminClient().from('profiles').select('id, name, employee_no, group_id, job_id').eq('active', true).order('name')]);
+  const [all, groups, { data: ppl }] = await Promise.all([loadJobs(), loadOrgGroups(), createAdminClient().from('profiles').select('id, name, employee_no, group_id, job_id').or(NOT_SYSTEM_ADMIN).eq('active', true).order('name')]);
   const x = all.find((j) => j.id === id);
   if (!x) notFound();
   const nameOf = new Map(all.map((j) => [j.id, j.name]));

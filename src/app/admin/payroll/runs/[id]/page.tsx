@@ -27,6 +27,7 @@ export default async function PayRunPage({ params, searchParams }: { params: Pro
   const won = (v: unknown) => t('won', { n: f.number(Number(v ?? 0)) });
   const included = lines.filter((l) => l.included);
   const blocked = included.filter((l) => l.state === 'BLOCKED').length;
+  const okCount = included.filter((l) => l.state === 'OK').length; // 명세서 PDF는 계산된(OK) 사람만 — 0명이면 단추를 막고 이유를 보인다 (2026-10-19: 누르면 오류 글자만 떴다)
   const missing = Array.isArray(run.totals.missing) ? (run.totals.missing as unknown as string[]) : [];
   const final = run.status === 'FINALIZED';
   // 같은 대장의 다른 판 (정정)
@@ -125,9 +126,16 @@ export default async function PayRunPage({ params, searchParams }: { params: Pro
           <a href={`/admin/payroll/slips?m=${run.periodFrom.slice(0, 7)}`} className="inline-flex h-8 items-center gap-1 rounded-button border border-border bg-bg px-3.5 text-sm font-semibold text-text hover:bg-surface">
             {t('uploadSlips')}
           </a>
-          <a href={`/api/admin/payroll/runs/${run.id}/pdf-all`} className="inline-flex h-8 items-center gap-1 rounded-button border border-border bg-bg px-3.5 text-sm font-semibold text-text hover:bg-surface">
-            {t(final ? 'pdfAll' : 'pdfAllDraft')}
-          </a>
+          {okCount > 0 ? (
+            <a href={`/api/admin/payroll/runs/${run.id}/pdf-all`} className="inline-flex h-8 items-center gap-1 rounded-button border border-border bg-bg px-3.5 text-sm font-semibold text-text hover:bg-surface">
+              {t(final ? 'pdfAll' : 'pdfAllDraft')}
+            </a>
+          ) : (
+            <span aria-disabled className="inline-flex h-8 cursor-not-allowed items-center gap-1 rounded-button border border-border bg-surface px-3.5 text-sm font-semibold text-faint">
+              {t(final ? 'pdfAll' : 'pdfAllDraft')}
+            </span>
+          )}
+          {okCount === 0 && <p className="w-full text-sm text-warn">{t('pdfNone')}</p>}
         </div>
       )}
       {run.generationId && (

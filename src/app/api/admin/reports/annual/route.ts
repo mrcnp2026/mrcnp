@@ -2,7 +2,7 @@
 // e가 있으면 그 직원 한 명의 1년치.
 import { randomUUID } from 'node:crypto';
 import { getTranslations } from 'next-intl/server';
-import { BRAND } from '@/config/brand';
+import { companyName } from '@/lib/company'; // 통합설정 › 회사 기본설정의 회사명 (2026-10-18)
 import { OFFICE } from '@/config/office';
 import { getMe } from '@/lib/auth';
 import { deny } from '@/lib/csv-response';
@@ -35,7 +35,7 @@ export async function GET(req: Request): Promise<Response> {
   const { error } = await createAdminClient().from('download_logs').insert({ actor_id: me.id, kind: 'attendance_annual_report', scope: employeeId ? `${year}:${employeeId}` : String(year), file_name: fileName });
   if (error) return deny(500, 'download_log_failed');
   const top = (id: string | null) => (id ? (groupPath(groups, id) ?? '') : t('unassigned'));
-  const wb = annualWorkbook(r, { company: BRAND.name, by: me.name, groupName: groupId && !employeeId ? (groupPath(groups, groupId) ?? '') : t('all'), groupOf: top });
+  const wb = annualWorkbook(r, { company: await companyName(), by: me.name, groupName: groupId && !employeeId ? (groupPath(groups, groupId) ?? '') : t('all'), groupOf: top });
   return new Response((await wb.xlsx.writeBuffer()) as ArrayBuffer, {
     headers: {
       'content-type': 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',

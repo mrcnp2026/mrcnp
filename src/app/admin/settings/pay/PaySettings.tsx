@@ -140,7 +140,53 @@ export async function PaySettings({ sp }: { sp: SP }) {
         {items.length === 0 ? (
           <p className="px-4 py-8 text-center text-sm text-faint lg:px-6">{t('item.none')}</p>
         ) : (
-          <div className="overflow-x-auto">
+          <>
+          {/* 폰: 항목마다 카드 한 장 — 표를 옆으로 밀지 않게 (2026-10-18 의뢰인: 모바일 가로 스크롤 금지) */}
+          <ul className="divide-y divide-border lg:hidden">
+            {items.map((it) => (
+              <li key={it.id} className={`flex flex-col gap-2 px-4 py-3 ${it.inUse ? '' : 'opacity-60'}`}>
+                <div className="flex items-start gap-2">
+                  <span className="min-w-0 flex-1">
+                    <Link href={href({ edit: it.code })} className="font-bold text-primary">
+                      {it.koName}
+                    </Link>
+                    <span className="num block text-xs break-all text-faint">
+                      {it.code} · {it.enName}
+                    </span>
+                  </span>
+                  <UseToggle path="/api/admin/payroll/items" id={it.id} on={it.inUse} label={t('item.useOf', { name: it.koName })} />
+                </div>
+                <dl className="grid grid-cols-[auto_minmax(0,1fr)] gap-x-3 gap-y-1 text-sm">
+                  <dt className="text-muted">{t('item.colCalc')}</dt>
+                  <dd>{t(`calcKind.${it.calcKind}`)}</dd>
+                  {kind === 'PAYMENT' && (
+                    <>
+                      {it.fixedAllowance && (
+                        <>
+                          <dt className="text-muted">{t('item.colFixed')}</dt>
+                          <dd>{t('item.fixedYes')}</dd>
+                        </>
+                      )}
+                      <dt className="text-muted">{t('item.colTax')}</dt>
+                      <dd>
+                        {t(`tax.${it.taxTreatment}`)}
+                        {it.taxExemptLimit !== null && <span className="num text-xs text-faint"> · {t('item.limitOf', { amount: won(it.taxExemptLimit) })}</span>}
+                      </dd>
+                      <dt className="text-muted">{t('item.colOrdinary')}</dt>
+                      <dd>{t(`ordinary.${it.ordinaryWage}`)}</dd>
+                    </>
+                  )}
+                  <dt className="text-muted">{t('item.colAmount')}</dt>
+                  <dd className="num">{won(it.defaultAmount)}</dd>
+                </dl>
+                <span className="flex flex-wrap items-center gap-2">
+                  {tempChip(it.verification)}
+                  <VerifyButton target="item" id={it.id} verified={it.verification === 'VERIFIED'} />
+                </span>
+              </li>
+            ))}
+          </ul>
+          <div className="hidden overflow-x-auto lg:block">
             <table className="w-full text-sm">
               <thead>
                 <tr className="border-b border-border bg-surface text-left">
@@ -188,6 +234,7 @@ export async function PaySettings({ sp }: { sp: SP }) {
               </tbody>
             </table>
           </div>
+          </>
         )}
         <p className="px-4 py-3 text-xs text-faint lg:px-6">{t('item.note')}</p>
       </>
@@ -234,7 +281,36 @@ export async function PaySettings({ sp }: { sp: SP }) {
             </button>
             <span className="num text-xs text-faint">{t('ref.lookupNote', { year })}</span>
           </form>
-          <div className="overflow-x-auto">
+          {/* 폰: 종류마다 카드 (2026-10-18 의뢰인: 모바일 가로 스크롤 금지) */}
+          <ul className="divide-y divide-border lg:hidden">
+            {kinds.flatMap((k) => {
+              const rows = inYear.filter((r) => r.kind === k).sort((a, b) => (a.validFrom! < b.validFrom! ? -1 : 1));
+              if (rows.length === 0)
+                return [
+                  <li key={k} className="flex flex-col gap-1 px-4 py-3 text-sm">
+                    <b>{t(`ref.${k.replace('.', '_')}`)}</b>
+                    <span className="text-faint">{t('ref.notAcquired', { year })}</span>
+                  </li>,
+                ];
+              return rows.map((r) => (
+                <li key={r.id} className="flex flex-col gap-2 px-4 py-3 text-sm">
+                  <div className="flex flex-wrap items-center gap-2">
+                    <b>{t(`ref.${k.replace('.', '_')}`)}</b>
+                    <span className="num text-muted">{period(r.validFrom, r.validTo)}</span>
+                  </div>
+                  <dl className="flex flex-col gap-0.5">{payloadLines(r)}</dl>
+                  <p className="text-xs text-muted">
+                    {r.source?.authority} · {t(`ref.origin.${r.origin}`)}
+                  </p>
+                  <span className="flex flex-wrap items-center gap-2">
+                    {tempChip(r.verification)}
+                    <VerifyButton target="reference" id={r.id} verified={r.verification === 'VERIFIED'} />
+                  </span>
+                </li>
+              ));
+            })}
+          </ul>
+          <div className="hidden overflow-x-auto lg:block">
             <table className="w-full text-sm">
               <thead>
                 <tr className="border-b border-border bg-surface text-left">
@@ -291,7 +367,26 @@ export async function PaySettings({ sp }: { sp: SP }) {
               {!table ? (
                 <p className="px-4 py-8 text-center text-sm text-faint lg:px-6">{t('ref.notAcquired', { year })}</p>
               ) : (
-                <div className="overflow-x-auto">
+                <div>
+                  {/* 폰: 월급 구간마다 카드 — 부양가족 1~11명 세액을 4칸씩 줄 바꿈 (2026-10-18 의뢰인: 모바일 가로 스크롤 금지) */}
+                  <ul className="num divide-y divide-border lg:hidden">
+                    {page.map((b) => (
+                      <li key={b.wageFrom} className="flex flex-col gap-1.5 px-4 py-2.5 text-sm">
+                        <b>
+                          {f.number(b.wageFrom)} ~ {b.wageTo === null ? '' : f.number(b.wageTo)}
+                        </b>
+                        <dl className="grid grid-cols-4 gap-1 text-xs">
+                          {b.taxes.map((x, i) => (
+                            <div key={i} className="rounded-button bg-surface px-1.5 py-1">
+                              <dt className="text-faint">{t('tax.family', { n: i + 1 })}</dt>
+                              <dd className="text-right">{x === 0 ? '-' : f.number(x)}</dd>
+                            </div>
+                          ))}
+                        </dl>
+                      </li>
+                    ))}
+                  </ul>
+                  <div className="hidden overflow-x-auto lg:block">
                   <table className="num w-full text-right text-sm">
                     <thead>
                       <tr className="border-b border-border">
@@ -320,6 +415,7 @@ export async function PaySettings({ sp }: { sp: SP }) {
                       ))}
                     </tbody>
                   </table>
+                  </div>
                   {page.length === 25 && (
                     <Link href={href({ year, from: String(page.at(-1)!.wageTo ?? '') })} className="inline-flex min-h-9 items-center px-4 text-sm font-bold text-primary">
                       {t('tax.next')} ›

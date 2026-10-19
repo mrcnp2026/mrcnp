@@ -2,7 +2,7 @@
 // 초안 · 계산됨 · 검토됨 대장도 받을 수 있지만 시트마다 「검토용」이라고 적힌다. 이체용 파일이 아니다.
 import { randomUUID } from 'node:crypto';
 import { getTranslations } from 'next-intl/server';
-import { BRAND } from '@/config/brand';
+import { companyName } from '@/lib/company'; // 통합설정 › 회사 기본설정의 회사명 (2026-10-18)
 import { ApiError } from '@/lib/api';
 import { deny } from '@/lib/csv-response';
 import { requirePayroll } from '@/lib/payroll/data';
@@ -28,7 +28,7 @@ export async function GET(_req: Request, ctx: { params: Promise<{ id: string }> 
   const t = await getTranslations({ locale: 'ko', namespace: 'admin.payRuns' });
   const requestId = randomUUID();
   const { wb, statements } = await buildRunWorkbook({
-    run, company: BRAND.name, by: me.name, now: new Date().toISOString(),
+    run, company: await companyName(), by: me.name, now: new Date().toISOString(),
     labels: {
       status: t(`status.${run.status}`), kind: t(`kind.${run.kind}`), mode: t(run.isTest ? 'practiceChip' : 'liveChip'), line: (code, fallback) => (t.has(`line.${code}`) ? t(`line.${code}`) : fallback),
       pay: t('kindPay'), deduction: t('kindDeduct'), employer: t('colEmployer'), auto: t('source.AUTO'), manual: t('source.MANUAL'), override: t('source.OVERRIDE'), blocked: t('exportBlocked'), ok: t('resultOk'), draftBanner: t('exportDraft'), finalBanner: t('status.FINALIZED'),

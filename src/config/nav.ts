@@ -58,16 +58,16 @@ export const ADMIN_APPS: App[] = [
     ],
   },
   { key: 'mTalk', icon: Megaphone, groups: one([{ href: '/admin/notices', key: 'adminNotices' }, { href: '/admin/messages', key: 'adminMessages' }]) },
-  { key: 'mReports', icon: ChartColumn, groups: one([{ href: '/admin/reports/attendance', key: 'reportAttendance' }, { href: '/admin/reports/leave', key: 'reportLeave' }, { href: '/admin/reports/annual', key: 'reportAnnual' }, { href: '/admin/manage/report-snapshots', key: 'reportSnapshots' }]) },
+  { key: 'mReports', icon: ChartColumn, groups: one([{ href: '/admin/reports/attendance', key: 'reportAttendance' }, { href: '/admin/reports/leave', key: 'reportLeave' }, { href: '/admin/reports/annual', key: 'reportAnnual' }]) }, // 저장한 리포트는 뺐다(2026-10-19 의뢰인: 빈 메뉴)
 ];
 
 // 통합설정 — 문서 07의 6장 분류 표. section: company = 회사설정, apps = App 관리
 export const CONSOLE_HOME = '/admin/console';
 export const CONSOLE_APPS: App[] = [
-  { key: 'cBasic', section: 'company', icon: Building2, groups: one([{ href: '/admin/settings', key: 'setGeneral', how: 'instant' }, { href: tab('notify'), key: 'setNotify', how: 'view' }, { href: tab('advanced'), key: 'setAdvanced', how: 'view' }]) },
+  { key: 'cBasic', section: 'company', icon: Building2, groups: one([{ href: '/admin/settings', key: 'setGeneral', how: 'instant' }, { href: tab('holidays'), key: 'setHolidays', how: 'instant' }, { href: tab('notify'), key: 'setNotify', how: 'view' }, { href: tab('advanced'), key: 'setAdvanced', how: 'view' }]) },
   { key: 'cOrg', section: 'company', icon: Network, groups: one([{ href: '/admin/branches', key: 'branches', how: 'list' }, { href: '/admin/jobs', key: 'jobs', how: 'list' }, { href: tab('branch'), key: 'setBranch', how: 'view' }]) },
   { key: 'cAccess', section: 'company', icon: ShieldCheck, groups: one([{ href: tab('access'), key: 'setAccess', how: 'view' }, { href: tab('security'), key: 'setSecurity', how: 'view' }]) },
-  { key: 'cData', section: 'company', icon: Database, groups: one([{ href: '/admin/diag', key: 'diag', how: 'view' }]) },
+  { key: 'cData', section: 'company', icon: Database, groups: one([{ href: '/admin/backups', key: 'backups', how: 'view' }, { href: '/admin/diag', key: 'diag', how: 'view' }]) }, // 데이터베이스 백업: 2026-10-18 의뢰인
   {
     key: 'aAttendance',
     section: 'apps',

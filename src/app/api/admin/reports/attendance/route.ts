@@ -1,7 +1,7 @@
 // 근태 리포트 엑셀 (PRD v1.3 35.4). 관리자만. 화면과 같은 계산 · 같은 조건으로 만든다. 금액은 없다.
 import { randomUUID } from 'node:crypto';
 import { getTranslations } from 'next-intl/server';
-import { BRAND } from '@/config/brand';
+import { companyName } from '@/lib/company'; // 통합설정 › 회사 기본설정의 회사명 (2026-10-18)
 import { OFFICE } from '@/config/office';
 import { getMe } from '@/lib/auth';
 import { isMonth } from '@/lib/close-review';
@@ -30,7 +30,7 @@ export async function GET(req: Request): Promise<Response> {
   const fileName = `${t('attFile')}_${m.replace('-', '')}.xlsx`;
   const { error } = await createAdminClient().from('download_logs').insert({ actor_id: me.id, kind: 'attendance_dept_report', scope: m, file_name: fileName });
   if (error) return deny(500, 'download_log_failed');
-  const wb = attendanceReportWorkbook(r, { company: BRAND.name, by: me.name, groupName: groupId ? (groupPath(groups, groupId) ?? '') : t('all'), unassigned: t('unassigned') });
+  const wb = attendanceReportWorkbook(r, { company: await companyName(), by: me.name, groupName: groupId ? (groupPath(groups, groupId) ?? '') : t('all'), unassigned: t('unassigned') });
   return new Response((await wb.xlsx.writeBuffer()) as ArrayBuffer, {
     headers: {
       'content-type': 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',

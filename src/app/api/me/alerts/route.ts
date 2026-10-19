@@ -4,12 +4,13 @@ import { getLocale } from 'next-intl/server';
 import { getMe } from '@/lib/auth';
 import { visibleNoticesNow } from '@/lib/notices';
 import { pendingCounts } from '@/lib/period-data';
+import { switchOn } from '@/lib/switches';
 import { unreadCount } from '@/lib/work-messages';
 
 export async function GET(): Promise<Response> {
   const me = await getMe();
   if (!me) return Response.json({ error: 'not_signed_in' }, { status: 401 });
-  const approver = me.role === 'admin' || me.role === 'manager';
+  const approver = (me.role === 'admin' || me.role === 'manager') && (await switchOn('notify.request')); // 「요청 알림」 스위치 (2026-10-19)
   const [notices, messages, requests] = await Promise.all([
     visibleNoticesNow(me.id, await getLocale()).then((n) => n.filter((x) => !x.confirmed).length),
     unreadCount(me.id),

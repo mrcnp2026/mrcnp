@@ -3,9 +3,11 @@
 import { ArrowLeft, ChevronRight } from 'lucide-react';
 import Link from 'next/link';
 import type { ReactNode } from 'react';
+import { MenuButton } from './MenuButton';
 import { SheetOpener } from './SheetOpener';
 
-export function DetailBar({ back, backLabel, title, action, extra, plain = false, sheet, desc }: { back: string; backLabel: string; title: string; action?: { href: string; label: string }; extra?: ReactNode; plain?: boolean; sheet?: { id: string; label: string; mobile?: string }; desc?: string }) {
+export function DetailBar({ back, backLabel, title, action, extra, plain = false, sheet, desc, menuLabel }: { back: string; backLabel: string; title: string; action?: { href: string; label: string }; extra?: ReactNode; plain?: boolean; sheet?: { id: string; label: string; mobile?: string }; desc?: string; menuLabel?: string }) {
+  // menuLabel: 하단 탭으로 바로 오는 맨 위 화면 — 폰에서 ← 대신 ☰ 메뉴 버튼 (2026-10-19 의뢰인: 관리자 모드 「직원」에서 메뉴가 안 나왔다)
   // desc: PC에서 제목 아래에 보이는 회색 설명 한 줄
   // sheet: 제목 오른쪽의 [추가] 버튼 — 누르면 그 창(AddSheet modal)이 뜬다. 폰은 같은 자리에 「+ 짧은 이름」 글자 버튼(sheet.mobile이 있을 때)
   //   (2026-10-17 의뢰인: PC와 폰의 작동 방식이 달랐다 — 폰만 오른쪽 아래 + 버튼이었다)
@@ -15,7 +17,9 @@ export function DetailBar({ back, backLabel, title, action, extra, plain = false
   return (
     // PC (2026-10-11, 시프티 PC 화면): 상자 없이 큰 제목(24px) + 오른쪽에 파란 주 버튼 하나. 폰은 그대로(맨 위에 붙는 흰 줄)
     <div className="sticky top-0 z-10 -mx-4 -mt-4 flex min-h-14 items-center gap-2 border-b border-border bg-bg px-4 pt-[env(safe-area-inset-top)] lg:static lg:mx-0 lg:mt-0 lg:min-h-10 lg:border-0 lg:bg-transparent lg:px-0">
-      <Link href={back} aria-label={backLabel} className={`-ml-2 flex size-11 shrink-0 items-center justify-center rounded-button text-text lg:ml-0 lg:size-8 lg:border lg:border-border lg:bg-bg lg:text-muted ${back === '/punch' ? 'lg:hidden' : ''}`}>
+      {menuLabel && <MenuButton label={menuLabel} />}
+      {/* menuLabel이 있으면 폰에서는 ☰만, PC에서는 지금처럼 ← (맨 위 화면 /punch는 PC에서도 숨김) */}
+      <Link href={back} aria-label={backLabel} className={`-ml-2 ${menuLabel ? 'hidden lg:flex' : 'flex'} size-11 shrink-0 items-center justify-center rounded-button text-text lg:ml-0 lg:size-8 lg:border lg:border-border lg:bg-bg lg:text-muted ${back === '/punch' ? 'lg:hidden' : ''}`}>
         <ArrowLeft aria-hidden size={24} strokeWidth={1.75} className="lg:size-4.5" />
       </Link>
       <div className="flex min-w-0 flex-1 flex-col">

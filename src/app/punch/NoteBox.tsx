@@ -14,10 +14,20 @@ export function NoteBox({ initial }: { initial: string | null }) {
   const t = useTranslations('home.note');
   const [saved, setSaved] = useState(initial);
   const [editing, setEditing] = useState(initial === null);
+  // 비어 있으면 한 줄로 접어 둔다 — 홈이 한 화면에 들어오게 (2026-10-18 의뢰인). 누르면 쓰는 칸이 펼쳐진다
+  const [open, setOpen] = useState(initial !== null);
   const [text, setText] = useState(initial ?? '');
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState<{ code: string; requestId?: string } | null>(null);
 
+  if (!open)
+    return (
+      <button type="button" onClick={() => setOpen(true)} className="flex min-h-12 items-center gap-2 rounded-card bg-bg px-4 text-left font-semibold">
+        <NotebookPen aria-hidden size={18} className="shrink-0 text-muted" />
+        <span className="flex-1">{t('title')}</span>
+        <span className="text-sm text-primary">{t('write')} +</span>
+      </button>
+    );
   return (
     <Card className="flex flex-col gap-2">
       <CardTitle icon={NotebookPen}>{t('title')}</CardTitle>

@@ -278,9 +278,26 @@ export default async function RecordCalendarPage({ searchParams }: { searchParam
           </button>
         </form>
       </div>
-      <p className="text-xs text-faint">
-        {practice ? t('practice') : t('live')} · {t('hint')}
-      </p>
+      <div className="flex flex-wrap items-center gap-x-4 gap-y-1">
+        <p className="text-xs text-faint">
+          {practice ? t('practice') : t('live')} · {t('hint')}
+        </p>
+        {/* 색 설명 — 폰 달력과 같다 */}
+        <ul className="ml-auto flex flex-wrap gap-x-4 gap-y-1 text-xs text-muted">
+          {(
+            [
+              ['bg-danger', 'dotLate'],
+              ['bg-warn', 'dotOpen'],
+              ['bg-primary', 'dotLeave'],
+            ] as const
+          ).map(([c, k]) => (
+            <li key={k} className="flex items-center gap-1.5">
+              <span aria-hidden className={`h-1 w-4 rounded-chip ${c}`} />
+              {t(k)}
+            </li>
+          ))}
+        </ul>
+      </div>
       <div className="overflow-x-auto rounded-card border border-border bg-bg shadow-card">
         <table className="w-full border-separate border-spacing-0 text-xs">
           <thead>
@@ -309,7 +326,7 @@ export default async function RecordCalendarPage({ searchParams }: { searchParam
                 </td>
               </tr>
             )}
-            {rows.map(({ p, cells, worked, payable, color }) => (
+            {rows.map(({ p, cells, worked, payable }) => (
               <tr key={p.id}>
                 <th scope="row" className="sticky left-0 z-10 border-r border-b border-border bg-bg px-3 py-1.5 text-left font-normal">
                   <Link href={`/admin/records/${p.id}?ym=${ym}${sp.live === '1' ? '&live=1' : ''}`} className="text-sm font-bold hover:text-primary">
@@ -317,22 +334,26 @@ export default async function RecordCalendarPage({ searchParams }: { searchParam
                   </Link>
                   <span className="block truncate text-faint">{groupPath(groups, p.groupId)}</span>
                 </th>
-                {cells.map((c) => (
-                  <td key={c.d} className={`num border-r border-b border-border p-0 text-center align-middle ${c.d === today ? 'bg-primary-tint' : redDay(c.d) ? 'bg-danger-tint' : ''}`}>
-                    {c.in || c.out ? (
-                      <Link href={`/admin/records/${p.id}/${c.d}${sp.live === '1' ? '?live=1' : ''}`} title={c.open ? t('noOut') : undefined} className={`flex flex-col px-1 py-1.5 leading-tight hover:bg-primary-tint ${c.deemed ? 'text-muted' : ''}`}>
-                        <span>{c.in ?? '–'}</span>
-                        <span className={c.open ? 'font-bold text-warn' : ''}>{c.out ?? '–'}</span>
-                        {c.deemed && <span className="text-faint">{t('deemed')}</span>}
-                        {!c.leave && c.leaveNames && <span className="truncate text-muted">{c.leaveNames}</span>}
-                        {/* 직무 색 띠 — 시프티 달력형의 칸 아래 색 띠처럼 누가 어느 직무인지 한눈에 */}
-                        <span aria-hidden className={`mt-1 h-1 ${color ? SHIFT_COLOR_CLASS[color] : 'bg-border'}`} />
-                      </Link>
-                    ) : c.leave ? (
-                      <span className="block bg-surface px-0.5 py-2 text-muted">{c.leaveNames || t('leave')}</span>
-                    ) : null}
-                  </td>
-                ))}
+                {cells.map((c) => {
+                  // 칸 아래 띠는 상태 색 (2026-10-19 의뢰인: 파란 띠만 있어 지각 · 퇴근 미기록 · 휴가를 구분할 수 없었다 — 폰 달력의 점과 같은 색)
+                  //   지각 빨강 · 퇴근 미기록 주황 · 휴가 파랑 · 정상은 띠 없음. 글자는 정상이면 보통 굵기, 문제가 있는 값만 굵게
+                  const band = c.late ? 'bg-danger' : c.open ? 'bg-warn' : c.anyLeave ? 'bg-primary' : 'bg-transparent';
+                  return (
+                    <td key={c.d} className={`num border-r border-b border-border p-0 text-center align-middle ${c.d === today ? 'bg-primary-tint' : redDay(c.d) ? 'bg-danger-tint' : ''}`}>
+                      {c.in || c.out ? (
+                        <Link href={`/admin/records/${p.id}/${c.d}${sp.live === '1' ? '?live=1' : ''}`} title={[c.late ? t('dotLate') : '', c.open ? t('noOut') : '', c.leaveNames].filter(Boolean).join(' · ') || undefined} className={`flex flex-col px-1 py-1.5 leading-tight hover:bg-primary-tint ${c.deemed ? 'text-muted' : ''}`}>
+                          <span className={c.late ? 'font-bold text-danger' : ''}>{c.in ?? '–'}</span>
+                          <span className={c.open ? 'font-bold text-warn' : ''}>{c.out ?? (c.open ? t('noOutShort') : '–')}</span>
+                          {c.deemed && <span className="text-faint">{t('deemed')}</span>}
+                          {!c.leave && c.leaveNames && <span className="truncate font-semibold text-primary">{c.leaveNames}</span>}
+                          <span aria-hidden className={`mt-1 h-1 rounded-chip ${band}`} />
+                        </Link>
+                      ) : c.leave ? (
+                        <span className="block bg-primary-tint px-0.5 py-2 font-semibold text-primary">{c.leaveNames || t('leave')}</span>
+                      ) : null}
+                    </td>
+                  );
+                })}
                 <td className="num border-b border-border px-2 py-1.5 text-right">
                   <span className="block text-sm font-bold">{t('days', { n: worked })}</span>
                   <span className="text-muted">{hm(payable)}</span>

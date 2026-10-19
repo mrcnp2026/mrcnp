@@ -16,6 +16,7 @@ import { PlaceForm } from './PlaceForm';
 export default async function PlacesPage({ searchParams }: { searchParams: Promise<{ tab?: string; q?: string; new?: string }> }) {
   const t = await getTranslations('admin.places');
   const tc = await getTranslations('common');
+  const ts = await getTranslations('side');
   const sp = await searchParams;
   const off = sp.tab === 'off';
   const q = (sp.q ?? '').trim().toLowerCase();
@@ -28,7 +29,7 @@ export default async function PlacesPage({ searchParams }: { searchParams: Promi
 
   return (
     <PageShell wide>
-      <DetailBar sheet={{ id: 'place', label: t('add'), mobile: tc('addShort') }} back="/punch" backLabel={tc('back')} title={t('title')} extra={<Help>{t('intro')}</Help>} desc={t('intro')} />
+      <DetailBar sheet={{ id: 'place', label: t('add'), mobile: tc('addShort') }} back="/admin/console" backLabel={tc('back')} menuLabel={ts('menu')} title={t('title')} extra={<Help>{t('intro')}</Help>} desc={t('intro')} />
       <div className="grid grid-cols-1 items-start gap-3">
         {/* PC: 시프티의 목록 — 「비활성화된 … 보기」 토글 + 열마다 검색 · 정렬이 되는 표 (2026-10-11 의뢰인 스샷). 폰은 아래의 탭 + 줄 목록 */}
         <div className="hidden flex-col gap-3 lg:flex">

@@ -4,18 +4,19 @@ import { getTranslations } from 'next-intl/server';
 import { HelpTip } from '@/components/Help';
 import Link from 'next/link';
 import { PageShell } from '@/components/ui';
-import { BRAND } from '@/config/brand';
+import { companyName } from '@/lib/company'; // 통합설정 › 회사 기본설정의 회사명 (2026-10-18)
 import { buildOrgTree, groupPath } from '@/lib/org';
 import { loadOrgGroups } from '@/lib/org-data';
 import { createAdminClient } from '@/lib/supabase/admin';
 import { GroupManager } from './GroupManager';
 import { OrgDiagram } from './OrgDiagram';
+import { NOT_SYSTEM_ADMIN } from '@/lib/system-admin'; // 시스템관리자는 목록에 보이지 않는다 (2026-10-18)
 
 export default async function OrgPage() {
   const t = await getTranslations('admin.org');
   const [groups, { data: people }] = await Promise.all([
     loadOrgGroups(),
-    createAdminClient().from('profiles').select('group_id').eq('active', true).not('group_id', 'is', null),
+    createAdminClient().from('profiles').select('group_id').or(NOT_SYSTEM_ADMIN).eq('active', true).not('group_id', 'is', null),
   ]);
   const countOf = new Map<string, number>();
   for (const p of people ?? []) countOf.set(p.group_id, (countOf.get(p.group_id) ?? 0) + 1);
@@ -35,7 +36,7 @@ export default async function OrgPage() {
       <div className="px-1">
         <h1 className="flex flex-wrap items-center gap-x-1 text-2xl font-bold">{t('title')}<HelpTip>{t('intro')}</HelpTip></h1>
       </div>
-      <OrgDiagram root={BRAND.name} depts={depts.filter((d) => d.active).map((d) => ({ ...d, teams: d.teams.filter((x) => x.active) }))} countLabel={(n) => t('count', { n })} />
+      <OrgDiagram root={await companyName()} depts={depts.filter((d) => d.active).map((d) => ({ ...d, teams: d.teams.filter((x) => x.active) }))} countLabel={(n) => t('count', { n })} />
       <GroupManager depts={depts} hidden={hidden} />
     </PageShell>
   );

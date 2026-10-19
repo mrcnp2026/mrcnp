@@ -21,7 +21,8 @@ export default async function MyMessagesPage() {
       <div>
         <h1 className="flex flex-wrap items-center gap-x-1 text-2xl font-bold">{t('title')}<HelpTip>{t('intro')}</HelpTip></h1>
       </div>
-      <nav className="flex border-b border-border">
+      {/* 폰에서만 — PC는 왼쪽 메뉴(공지 · 사내게시판)가 같은 일을 해서 겹쳤다 (2026-10-18 디자인) */}
+      <nav className="flex border-b border-border lg:hidden">
         <Link href="/punch/notices" className={tab(false)}>
           {t('tabNotices')}
         </Link>

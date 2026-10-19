@@ -2,7 +2,7 @@
 // 내려주기 전에 download_logs에 먼저 쓴다(쓰기가 실패하면 내려주지 않는다). 개인정보 · 금액은 없다.
 import { randomUUID } from 'node:crypto';
 import { getTranslations } from 'next-intl/server';
-import { BRAND } from '@/config/brand';
+import { companyName } from '@/lib/company'; // 통합설정 › 회사 기본설정의 회사명 (2026-10-18)
 import { ApiError } from '@/lib/api';
 import { deny } from '@/lib/csv-response';
 import { buildConfirmWorkbook } from '@/lib/payroll/confirm-sheet';
@@ -37,7 +37,7 @@ export async function GET(): Promise<Response> {
   if (error) return deny(500, 'download_log_failed');
 
   const wb = buildConfirmWorkbook({
-    company: BRAND.name,
+    company: await companyName(),
     by: me.name,
     today,
     references,

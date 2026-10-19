@@ -3,7 +3,7 @@ import { NextIntlClientProvider } from 'next-intl';
 import { getLocale, getTranslations } from 'next-intl/server';
 import { Noto_Sans, Noto_Sans_KR, Noto_Sans_Thai } from 'next/font/google';
 import { CAPTURE_INSTALL_PROMPT } from '@/components/useInstall';
-import { BRAND } from '@/config/brand';
+import { companyName } from '@/lib/company'; // 통합설정 › 회사 기본설정의 회사명 (2026-10-18)
 import { themeCssVariables } from '@/config/theme';
 import 'pretendard/dist/web/variable/pretendardvariable-dynamic-subset.css'; // 한글 · 영문 글꼴 (OFL). 쓰는 글자 조각만 내려받는다
 import './globals.css';
@@ -15,7 +15,7 @@ const kr = Noto_Sans_KR({ weight: ['400', '500', '700', '800'], variable: '--fon
 
 export async function generateMetadata(): Promise<Metadata> {
   const t = await getTranslations('common');
-  return { title: `${BRAND.name} ${t('appName')}` };
+  return { title: `${await companyName()} ${t('appName')}` };
 }
 
 export const viewport: Viewport = { width: 'device-width', initialScale: 1, viewportFit: 'cover' };

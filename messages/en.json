@@ -108,7 +108,9 @@
       "today": "Today",
       "titleOther": "Weekly work",
       "prev": "Previous week",
-      "next": "Next week"
+      "next": "Next week",
+      "workingShort": "Working",
+      "legend": "Bold = actual in/out, faint = schedule"
     },
     "note": {
       "title": "Work note",
@@ -118,7 +120,8 @@
       "saved": "Saved",
       "edit": "Edit",
       "counter": "{n}/200",
-      "cancel": "Cancel"
+      "cancel": "Cancel",
+      "write": "Write"
     },
     "missing": {
       "noOut": "No clock-out on {day}",
@@ -190,15 +193,46 @@
     },
     "settings": {
       "title": "Home settings",
-      "back": "Home",
+      "back": "Back to account",
       "hint": "Only the cards you turn on appear on Home. The Today card (clock in/out) cannot be turned off. This setting is saved on this device only.",
       "card": {
         "report": "Status · report card",
         "missing": "Missing clock-in/out card",
         "situation": "Current work status card",
         "week": "This week card",
-        "note": "Work note card"
-      }
+        "news": "News card (notices · board)"
+      },
+      "off": "Your company has turned off changing home cards. All default cards are shown."
+    },
+    "news": {
+      "title": "News",
+      "all": "See all",
+      "notice": "Notice",
+      "board": "Board",
+      "empty": "No news.",
+      "unread": "Unread"
+    },
+    "reason": {
+      "titleIn": "Clock-in recorded",
+      "titleOut": "Clock-out recorded",
+      "askIn": "Leave a one-line reason so your manager doesn't have to ask.",
+      "askOut": "Leave a line on why you worked longer. The app calculates overtime / night / holiday and sends it to your manager.",
+      "why": {
+        "late": "Clocked in {late} min after your schedule",
+        "outside": "Punched outside the office",
+        "holiday": "Today is a holiday",
+        "noPlan": "No schedule today",
+        "overtime": "Clocked out {over} min after your schedule",
+        "night": "Worked after 10 pm (night)"
+      },
+      "phIn": "e.g. bus delay / visited a client first",
+      "phOut": "e.g. delivery deadline / equipment check",
+      "label": "Reason",
+      "askWork": "Request outside work for today",
+      "placePh": "Where are you working?",
+      "note": "Saved to today's work note. You can edit it later on the Attendance screen.",
+      "save": "Save",
+      "later": "Later"
     }
   },
   "errors": {
@@ -265,7 +299,13 @@
     "invalid_phone": "Use digits and - only for the phone number.",
     "email_taken": "This email is already registered or pending. Ask an admin.",
     "signup_pending": "Your sign-up is waiting for admin approval.",
-    "ceo_taken": "There can be only one CEO. Change the current CEO to top admin first."
+    "ceo_taken": "There can be only one CEO. Change the current CEO to top admin first.",
+    "company_name_required": "Enter the company name.",
+    "logo_too_large": "The logo file is over 3 MB.",
+    "logo_type": "Only PNG, JPG or WEBP files.",
+    "feature_off": "Your company has turned this request off. Ask an admin if you need it.",
+    "hourly_leave_off": "Your company has turned off hourly leave. Please request whole days.",
+    "outside_punch_off": "You can't punch outside a registered place (outside-place requests are turned off). Please punch inside the place."
   },
   "admin": {
     "nav": {
@@ -670,7 +710,28 @@
       "unit": "",
       "rankBlocked": "A higher admin (CEO or super admin) handles this.",
       "mapBase": "Clock-in place: {name} (radius {r}m)",
-      "mapNoPoint": "This request has no location (it could not be read, or the request was sent before locations were stored), so only the base place is shown."
+      "mapNoPoint": "This request has no location (it could not be read, or the request was sent before locations were stored), so only the base place is shown.",
+      "whereTitle": "Clock-in/out location",
+      "whereIn": "In",
+      "whereOut": "Out",
+      "whereGpsAt": "Within {name} (GPS)",
+      "whereGps": "Within range (GPS)",
+      "whereIp": "Office internet",
+      "whereAdmin": "Entered by admin",
+      "whereImport": "Moved from Shiftee",
+      "whereNone": "No location",
+      "mapOut": "Clock-out location map",
+      "sentFrom": "Where the request was sent",
+      "dayTitle": "{name} · {day} · {n} requests",
+      "dayPunchFirst": "Approving records the clock-in/out and also accepts the overtime, night and holiday minutes the app calculates. To accept less, handle the cards below separately.",
+      "dayApprove": "Approve all for this day ({n})",
+      "dayConfirm": "Approve all {n}",
+      "dayAll": "Approving handles all requests for this day; overtime, night and holiday minutes are accepted as calculated.",
+      "dayDone": "Accepted — overtime {o} min · night {n} min · holiday {h} min",
+      "dayPreview": "Requested {from} – {to}{known, select, yes { · about {min} min} other {}}",
+      "dayPreviewOff": "Holiday work · requested {from} – {to}{known, select, yes { · about {min} min} other {}}",
+      "dayReason": "Reason from the employee",
+      "dayNoReason": "No reason left yet"
     },
     "records": {
       "title": "Monthly totals",
@@ -1171,6 +1232,7 @@
         "NOT_APPLICABLE": "Not applicable",
         "searchWage": "Find a wage band (KRW)",
         "tableTitle": "Tax table",
+        "family": "{n} ppl",
         "colWage": "Monthly wage (KRW), from - below",
         "next": "Next bands",
         "outOfTable": "This wage is outside the table."
@@ -1780,7 +1842,7 @@
       "roundValue": "{n}-minute steps — clock-in rounds up, clock-out rounds down",
       "roundHint": "Example: with 15-minute steps, a 07:29 clock-in counts as 07:30 and a 20:47 clock-out as 20:45. The recorded times themselves are kept.",
       "pc": {
-        "descGeneral": "Manage the week basis and company holidays.",
+        "descGeneral": "Company details (name, logo, representative, address) and the attendance policy. Holidays are under Holidays.",
         "descWork": "Manage the company's default working hours and workdays. Per-employee hours are set with shift templates.",
         "descPunch": "Manage where staff clock in, how payable time is rounded, and how the office is verified.",
         "descBreak": "Manage breaks that are deducted from working time automatically.",
@@ -1831,7 +1893,8 @@
         "go": "Open the management screen",
         "fixedNote": "These items show how the app works today. Tell us if any of them should be changed.",
         "desc_esign": "Exchanging employment contracts and similar documents by e-signature.",
-        "desc_advanced": "Other options about how screens are arranged."
+        "desc_advanced": "Other options about how screens are arranged.",
+        "descHolidays": "Add or remove public and company holidays. Only this month and later can change."
       },
       "info": {
         "notify": {
@@ -1846,9 +1909,9 @@
             "note": "The number of pending requests is shown in red next to “Requests” in the menu."
           },
           "push": {
-            "label": "Shift start · late alerts (phone)",
-            "value": "Off",
-            "note": "Phone push notifications are not available yet."
+            "label": "Punch & request alerts (phone)",
+            "value": "On",
+            "note": "Sent to people who turned on phone notifications. Admins: leave requests, corrections, no clock-in, yesterday's missing records. Staff: their own missing clock-in/out. Top admins and deemed-hours staff get no punch alerts. Each person turns it on/off in Menu › Phone notifications."
           }
         },
         "access": {
@@ -1991,8 +2054,8 @@
           },
           "month": {
             "label": "Period closing",
-            "value": "Off",
-            "note": "Closing a period per employee to block requests is not available yet."
+            "value": "On",
+            "note": "Close and reopen each month per employee in Closing. A closed month cannot be edited."
           }
         },
         "report": {
@@ -2005,18 +2068,13 @@
             "label": "52-hour week",
             "value": "Caution from 48 h · limit 52 h",
             "note": "Weeks over the thresholds are flagged on the home and record screens."
-          },
-          "snapshot": {
-            "label": "Report snapshots",
-            "value": "Off",
-            "note": "Saving a report at a point in time is not available."
           }
         },
         "pay": {
           "scope": {
             "label": "Payroll scope",
-            "value": "Working-time totals",
-            "note": "Totals used for pay (payable time, overtime, night, holiday) can be downloaded."
+            "value": "Payroll & payslips",
+            "note": "Hours, payroll runs (calculate, review, finalize) and publishing payslips."
           },
           "viewer": {
             "label": "Payroll screen",
@@ -2025,8 +2083,8 @@
           },
           "tax": {
             "label": "Tax · insurance calculation",
-            "value": "Off",
-            "note": "Taxes and insurance are not calculated in this app."
+            "value": "On",
+            "note": "With a contract and tax/insurance settings per employee, payroll runs calculate income tax and social insurance. People without settings stay blocked."
           }
         },
         "security": {
@@ -2093,7 +2151,8 @@
         "pinSet": "Set",
         "pinNone": "Not set",
         "pinReset": "Clear PIN",
-        "pinResetConfirm": "Clear {name}’s console PIN? They will set a new one next time."
+        "pinResetConfirm": "Clear {name}’s console PIN? They will set a new one next time.",
+        "levelSystem": "System admin"
       },
       "scheduleMode": {
         "label": "Schedule request mode",
@@ -2104,7 +2163,54 @@
         "saved": "Saved. Applies from today.",
         "setting_same_day": "Already changed today. Change it again tomorrow."
       },
-      "holidayMore": "Show {n} more"
+      "holidayMore": "Show {n} more",
+      "company": {
+        "title": "Company",
+        "logo": "Company logo",
+        "logoPick": "Change logo",
+        "logoReset": "Use original logo",
+        "logoNote": "PNG / JPG / WEBP up to 3 MB. Margins are trimmed automatically so it matches the current logo size. Used in the top bar, sign-in page and payslips; shows everywhere within 5 minutes. The phone home-screen icon does not change here (ask the developer).",
+        "name": "Company name",
+        "namePh": "Company name",
+        "ceo": "Representative",
+        "ceoPh": "Name",
+        "bizNo": "Business reg. no.",
+        "bizNoPh": "000-00-00000",
+        "phone": "Main phone",
+        "phonePh": "055-000-0000",
+        "address": "Address",
+        "addressPh": "Head office address",
+        "policy": "Attendance policy",
+        "policyPh": "e.g. Report missing records to the admin office right away.",
+        "policyNote": "Shown as a folded line at the top of the employee Attendance screen. Hidden when empty.",
+        "save": "Save",
+        "saved": "Saved",
+        "fixedTitle": "Attendance basics",
+        "fixedNote": "These values are fixed in the app. Tell the developer if they need to change.",
+        "fixed": {
+          "country": "Country",
+          "unit": "Management unit",
+          "weekStart": "Week starts",
+          "timeFormat": "Time format",
+          "holidayCountry": "Public holidays",
+          "night": "Night hours"
+        },
+        "fixedValue": {
+          "country": "South Korea",
+          "unit": "Branch",
+          "weekStart": "Monday",
+          "timeFormat": "24-hour",
+          "holidayCountry": "South Korea",
+          "night": "22:00 – 06:00 (Labor Standards Act)"
+        }
+      },
+      "switch": {
+        "on": "On",
+        "off": "Off",
+        "failed": "Couldn't save. Please try again.",
+        "fixed": "Fixed — cannot change",
+        "fixedWhy": "Tied to law, payroll calculation or security, or not built yet, so there is no switch."
+      }
     },
     "places": {
       "title": "Work locations",
@@ -2659,7 +2765,8 @@
       "dotLeave": "Leave",
       "daySummary": "In {came} · late {late} · leave {leave}",
       "emptyDay": "No records on this day.",
-      "late": "Late"
+      "late": "Late",
+      "noOutShort": "Missing"
     },
     "closing": {
       "title": "Attendance closing",
@@ -3566,7 +3673,8 @@
       "pdfAllDraft": "Download all payslips (PDF, for review)",
       "payroll_basis_unverified": "Verify the reference data, company settings, policies and items used in this calculation before finalizing.",
       "payroll_duplicate_payment": "The same work is included in another finalized run. Check regular/daily runs and revisions.",
-      "uploadSlips": "Upload payslips"
+      "uploadSlips": "Upload payslips",
+      "pdfNone": "No one has a finished calculation, so there is no payslip PDF yet. Fill in the blocking items below (contract, tax and insurance settings) and calculate again."
     },
     "reports": {
       "attTitle": "Attendance report",
@@ -4414,6 +4522,45 @@
       "notReady": "Notes become available after DB change bundle 19 is applied.",
       "notReadyShort": "Not available yet",
       "invalid_note": "Notes must be 1–500 characters."
+    },
+    "backups": {
+      "title": "Database backups",
+      "intro": "Every Sunday at 03:00 the whole company dataset (staff, punches, leave, payroll, logins) is encrypted and uploaded to a private store. This screen shows one per month (the first backup of each month). Results are also emailed to the top admin.",
+      "offTitle": "Backups are not running yet",
+      "offBody": "The backup store and email are not set up. Finish steps 1–7 in the backup setup doc (store, token, email, backup password, values) and backups will appear here.",
+      "readFailed": "Could not read the backup store. Try again shortly; if it continues, check whether the store token has expired.",
+      "none": "None yet",
+      "count": "{n}",
+      "scheduleValue": "Sundays 03:00",
+      "stat": {
+        "latest": "Latest backup",
+        "monthlyCount": "Monthly kept",
+        "allCount": "All kept",
+        "schedule": "Backup time"
+      },
+      "listTitle": "Monthly backups (last {n} months + one per year, kept forever)",
+      "empty": "No backups yet. The first one is made next Sunday early morning.",
+      "emptyOff": "Once backups are set up, one row per month appears here.",
+      "size": "{mb} MB",
+      "keepMonthly": "Monthly",
+      "keepYearly": "Kept forever",
+      "download": "Download",
+      "downloadOf": "Download {month} backup",
+      "pages": "Backup list pages",
+      "fileNote": "Files (.sql.gz.enc) are encrypted and cannot be opened without the backup password. The last 8 weekly backups are also kept in the store.",
+      "restoreTitle": "How to restore",
+      "recentTitle": "A mistake within the last 7 days (fastest)",
+      "recentBody": "In the Supabase dashboard › Database › Backups, pick that date and restore (Pro keeps daily copies). Records after that date are lost, so export any punches made since then first.",
+      "fileTitle": "Restoring to an older date (files on this screen)",
+      "step": {
+        "s1": "Sign in as the system admin and download that month's file from the list above (other admins cannot download).",
+        "s2": "The developer opens it on a PC with \"npx tsx scripts/backup-open.mts <file>\". The backup password (kept on paper) is needed.",
+        "s3": "Load it into a new Supabase project first, not the live site, and check staff count, punches and payroll.",
+        "s4": "If correct, point the site to the new project or copy back only the lost tables — decide with the developer.",
+        "s5": "Delete the .sql file afterwards; it contains personal data."
+      },
+      "warn": "Restoring overwrites current records. Do it with the developer and tell the other top admins first.",
+      "onlySystem": "Only the system admin account can download backups."
     }
   },
   "side": {
@@ -4545,7 +4692,8 @@
     "modes": "Mode",
     "findMenu": "Find a menu",
     "noMenu": "No matching menu.",
-    "paySlips": "Upload payslips"
+    "paySlips": "Upload payslips",
+    "roleSystem": "System admin"
   },
   "nav": {
     "home": "Home",
@@ -4585,7 +4733,11 @@
       "work": "Attendance",
       "all": "All",
       "allTitle": "All menus",
-      "close": "Close"
+      "close": "Close",
+      "cBasic": "Company",
+      "cOrg": "Org",
+      "cWork": "Attendance",
+      "cLeave": "Leave"
     }
   },
   "records": {
@@ -4927,7 +5079,7 @@
       },
       "location": {
         "name": "Location",
-        "detail": "If the company turns on the office-location check, your location is checked only at the moment you punch away from the office internet. A location confirmed inside the office radius is stored with the punch. If you send a punch request from outside the radius, the location at that moment (about 1 m precision) is stored with the request so the reviewing admin can see it on a map. No other location is stored, and you are not tracked at other times."
+        "detail": "If the company turns on the office-location check, your location is checked only at the moment you punch away from the office internet. A location confirmed inside the office radius is stored with the punch. If you send a punch request from outside the radius, an outside-work / business-trip / remote-work request, or a punch correction request, the location at that moment (about 1 m precision) is stored with the request so the reviewing admin can see it on a map. Leave requests do not collect location. No other location is stored, and you are not tracked at other times."
       }
     },
     "purposeTitle": "Purpose",
@@ -5056,7 +5208,15 @@
     "pcShowDone": "Show completed",
     "intro": "Requests you sent (leave, corrections, overtime, schedule, out-of-office) and their status. You can cancel ones still waiting.",
     "mapBase": "Clock-in place: {name} (radius {r}m)",
-    "mapNoPoint": "This request has no location (it could not be read, or the request was sent before locations were stored), so only the base place is shown."
+    "mapNoPoint": "This request has no location (it could not be read, or the request was sent before locations were stored), so only the base place is shown.",
+    "hide": "Remove",
+    "hideAsk": "Remove from list?",
+    "hideYes": "Remove",
+    "hideNo": "Keep",
+    "hideAll": "Remove all processed on this page",
+    "hideAllAsk": "Remove {n} processed requests on this page from the list?",
+    "hideHint": "Removing only hides it from your list. The request record (leave, correction, etc.) stays. Pending requests can't be removed.",
+    "hideFailed": "Couldn't remove. Please try again shortly."
   },
   "scheduleRequest": {
     "title": "Schedule request",
@@ -5280,7 +5440,7 @@
     "adminIntro": "Post to employees and see who read it. Employees cannot post or reply. Posts can't be edited or deleted.",
     "composeTitle": "Send a notice",
     "tabNotices": "Announcements",
-    "tabInbox": "Posts",
+    "tabInbox": "Company board",
     "tabSent": "My inquiries",
     "tabSentAdmin": "Posted",
     "tabInquiries": "Inquiries",
@@ -5306,7 +5466,7 @@
     "answerDo": "Send answer",
     "replyDo": "Send reply",
     "answerDone": "Answer sent.",
-    "empty": "No messages.",
+    "empty": "No posts yet.",
     "unread": "Unread",
     "kind": {
       "notice": "Notice",
@@ -5541,7 +5701,9 @@
       "setStaff": "Employee rules",
       "workInfo": "Work terms",
       "setEsign": "E-contracts",
-      "paySlips": "Upload payslips"
+      "paySlips": "Upload payslips",
+      "backups": "Database backups",
+      "setHolidays": "Holidays"
     },
     "search": {
       "placeholder": "Search",
@@ -5794,7 +5956,8 @@
     "dotLate": "Late",
     "dotOt": "Overtime · no clock-out",
     "dotLeave": "Leave",
-    "corrected": "Corrected"
+    "corrected": "Corrected",
+    "policy": "Company attendance policy"
   },
   "push": {
     "title": "Phone alerts",
@@ -5907,5 +6070,10 @@
     "haveInvite": "Got an invite link or code?",
     "inviteLink": "Join with invite",
     "haveAccount": "I have an account · Log in"
+  },
+  "locationPrompt": {
+    "ask": "Location is needed for punches and outside-work / correction requests.",
+    "allow": "Allow location",
+    "denied": "Location is blocked. Tap the lock icon left of the address bar (or Settings › Site settings › Location) and set this site to Allow. Your phone's location must also be on."
   }
 }

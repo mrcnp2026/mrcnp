@@ -288,8 +288,10 @@ export async function hiddenTestIds(): Promise<string[]> {
   const testView = !!viewer?.employeeNo?.startsWith('e2e-');
   let q = createAdminClient().from('profiles').select('id').like('employee_no', 'e2e-%');
   if (testView) q = q.eq('active', false);
-  const { data } = await q;
-  return (data ?? []).map((p) => p.id as string);
+  // 시스템관리자(admin)도 뺀다 — 직원이 아니라서 출근 · 근무일정 · 요청 · 리포트 어디에도 보이지 않게 (2026-10-18 의뢰인, DB 묶음 23).
+  // 본인이 볼 때만 자기 기록이 남는다(내 화면이 비지 않게)
+  const [{ data }, { data: sys }] = await Promise.all([q, createAdminClient().from('profiles').select('id').eq('employee_no', OFFICE.ownerEmployeeNo)]);
+  return [...(data ?? []), ...(sys ?? []).filter((p) => p.id !== viewer?.id)].map((p) => p.id as string);
 }
 
 export async function pendingCounts(practice = OFFICE.practiceMode): Promise<{ overtime: number; corrections: number; leave: number; work: number; punch: number; shift: number; leaveDelete: number; total: number }> {

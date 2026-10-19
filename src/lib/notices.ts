@@ -7,6 +7,7 @@ import { ApiError } from '@/lib/api';
 import { safeRichHtml } from '@/lib/rich-text';
 import { createAdminClient } from '@/lib/supabase/admin';
 import { translateNotice } from '@/lib/translate';
+import { NOT_SYSTEM_ADMIN } from '@/lib/system-admin'; // 시스템관리자는 목록에 보이지 않는다 (2026-10-18)
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any -- supabase 행 모양 그대로
 const toNotice = (r: any): NoticeRow => ({
@@ -40,7 +41,7 @@ export async function listNoticesForAdmin(now: Date) {
   const [{ data: ns }, { data: reads }, { data: people }, { data: targets }] = await Promise.all([
     db.from('notices').select('*').order('created_at', { ascending: false }).limit(2000), // 점검 공지가 쌓여도 실제 공지가 밀려나지 않게 (뒤에서 점검 공지를 뺀다)
     db.from('notice_reads').select('notice_id, employee_id, version'),
-    db.from('profiles').select('id, name, active, employee_no'),
+    db.from('profiles').select('id, name, active, employee_no').or(NOT_SYSTEM_ADMIN),
     db.from('notice_targets').select('notice_id, employee_id'),
   ]);
   const active = (people ?? []).filter((p) => p.active);

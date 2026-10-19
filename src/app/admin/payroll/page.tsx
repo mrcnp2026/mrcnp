@@ -11,6 +11,7 @@ import { getMe } from '@/lib/auth';
 import { buildMonth, isYearMonth, monthRange } from '@/lib/month-data';
 import { createAdminClient } from '@/lib/supabase/admin';
 import { toKstDate } from '@/lib/time';
+import { NOT_SYSTEM_ADMIN } from '@/lib/system-admin'; // 시스템관리자는 목록에 보이지 않는다 (2026-10-18)
 
 function shift(ym: string, n: number) {
   const [y, m] = ym.split('-').map(Number);
@@ -35,7 +36,7 @@ export default async function PayrollPage({ searchParams }: { searchParams: Prom
 
   if (!me.canViewPayroll) {
     // 누가 급여 담당인지 알려 준다 (2026-10-06 의뢰인: 급여 담당이 있다는데 왜 못 보는지 알 수 없었다)
-    const { data: viewers } = await createAdminClient().from('profiles').select('name').eq('active', true).eq('role', 'admin').eq('can_view_payroll', true).order('name');
+    const { data: viewers } = await createAdminClient().from('profiles').select('name').or(NOT_SYSTEM_ADMIN).eq('active', true).eq('role', 'admin').eq('can_view_payroll', true).order('name');
     const names = (viewers ?? []).map((v) => v.name).join(', ') || t('noAccessNone');
     return (
       <PageShell>

@@ -41,3 +41,4 @@ export async function putSetting(key: SettingKey, value: unknown, effectiveFrom:
   if (error) throw new Error(`settings.put: ${error.code}`);
   return 'ok';
 }
+

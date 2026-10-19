@@ -18,6 +18,7 @@ import { loadLocationsFor } from '@/lib/geo-data';
 import { isPeriodLocked, recordPunch } from '@/lib/punch';
 import { geoReasonOf, punchRoute, type GeoReason } from '@/lib/punch-requests';
 import { createAdminClient } from '@/lib/supabase/admin';
+import { switchOn } from '@/lib/switches';
 import { loadWorkRequests } from '@/lib/work-data';
 import { workStatusOn } from '@/lib/work-requests';
 import { toKstDate } from '@/lib/time';
@@ -69,6 +70,8 @@ export const POST = api('punch', async (req) => {
     const today = toKstDate(now);
     const approvedAway = workStatusOn(today, who.employeeId, await loadWorkRequests({ employeeId: who.employeeId, from: today, to: today })) !== null;
     if (punchRoute({ verified: false, hasOfficeSetup: cidrs.length > 0 || places > 0, approvedAway }) === 'request') {
+      // 통합설정 › 요청의 「출근 · 퇴근 요청」을 끄면 장소 밖에서는 요청도 기록도 만들지 않는다 (2026-10-19)
+      if (!(await switchOn('request.punch'))) throw new ApiError(403, 'outside_punch_off');
       const db = createAdminClient();
       // 같은 날 같은 종류의 대기 요청이 있으면 새로 만들지 않는다 (두 번 눌러도 한 건)
       const { data: had } = await db.from('punch_requests').select('id, requested_at').eq('employee_id', who.employeeId).eq('kind', kind).eq('work_date', today).eq('status', 'pending').eq('is_test', OFFICE.practiceMode).order('requested_at').limit(1);

@@ -5,6 +5,7 @@ import { distanceText } from '@/lib/geo';
 import { getFormatter, getTranslations } from 'next-intl/server';
 import Link from 'next/link';
 import { ClickRow } from '@/components/ClickRow';
+import { HideRequests } from '@/components/HideRequests';
 import { RowList } from '@/components/list';
 import { Chip } from '@/components/ui';
 import { leaveTypeName } from '@/lib/leave';
@@ -12,7 +13,7 @@ import { ago, type ReqItem, type ReqKind } from '@/lib/requests';
 
 const ICON: Record<ReqKind, LucideIcon> = { correction: PencilLine, overtime: Clock, leave: CalendarDays, work: MapPin, punch: MapPinOff, shift: CalendarRange, leaveDelete: CalendarX };
 
-export async function RequestRows({ items, leaveTypes, names, showName = false, hrefOf, table = false, openKey = 'open' }: {
+export async function RequestRows({ items, leaveTypes, names, showName = false, hrefOf, table = false, openKey = 'open', hideable = false }: {
   items: ReqItem[];
   leaveTypes: { code: string; name: string }[];
   names: Map<string, string>;
@@ -20,6 +21,7 @@ export async function RequestRows({ items, leaveTypes, names, showName = false, 
   hrefOf: (r: ReqItem) => string;
   openKey?: 'open' | 'view'; // 줄 끝 버튼 글자 — 관리자는 「처리」, 직원은 「보기」
   table?: boolean; // PC 표 모양 (시프티의 「요청 내역」 표) — 줄 어디를 눌러도 그 요청의 상세가 열린다
+  hideable?: boolean; // 처리된 요청 줄에 「지우기」 (2026-10-19 의뢰인, 목록에서만 뺀다 — lib/request-hides.ts)
 }) {
   const [t, tco, tl, tw, f] = await Promise.all([getTranslations('requests'), getTranslations('corrections'), getTranslations('leave'), getTranslations('work'), getFormatter()]);
   const SHIFT_KIND = new Set(['normal', 'deemed', 'outside', 'remote', 'holiday', 'extra']);
@@ -99,9 +101,12 @@ export async function RequestRows({ items, leaveTypes, names, showName = false, 
                         </Link>
                       </span>
                     ) : (
-                      <Link href={hrefOf(r)} className="inline-flex h-8 items-center rounded-button border border-primary bg-bg px-4 text-sm font-bold text-primary hover:bg-primary-tint">
-                        {t(openKey)}
-                      </Link>
+                      <span className="inline-flex items-center gap-1">
+                        <Link href={hrefOf(r)} className="inline-flex h-8 items-center rounded-button border border-primary bg-bg px-4 text-sm font-bold text-primary hover:bg-primary-tint">
+                          {t(openKey)}
+                        </Link>
+                        {hideable && r.status !== 'pending' && <HideRequests keys={[r.key]} />}
+                      </span>
                     )}
                   </td>
                 </ClickRow>
@@ -121,8 +126,8 @@ export async function RequestRows({ items, leaveTypes, names, showName = false, 
         const who = r.decidedBy ? names.get(r.decidedBy) : null;
         const label = sub(r);
         return (
-          <li key={r.key}>
-            <Link href={hrefOf(r)} className="flex items-start gap-3 px-5 py-3">
+          <li key={r.key} className="relative">
+            <Link href={hrefOf(r)} className={`flex items-start gap-3 px-5 py-3 ${hideable && r.status !== 'pending' ? 'pr-14' : ''}`}>
               <span aria-hidden className="mt-1 flex size-11 shrink-0 items-center justify-center rounded-chip bg-surface text-muted">
                 <Icon size={22} strokeWidth={1.75} />
               </span>
@@ -154,6 +159,12 @@ export async function RequestRows({ items, leaveTypes, names, showName = false, 
                 </span>
               </span>
             </Link>
+            {/* 지우기는 줄 링크 밖 오른쪽 아래 — 누르면 그 자리에서 「지울까요?」를 묻는다 */}
+            {hideable && r.status !== 'pending' && (
+              <div className="absolute right-3 bottom-2 flex max-w-[calc(100%-1.5rem)] justify-end rounded-button bg-bg">
+                <HideRequests keys={[r.key]} />
+              </div>
+            )}
           </li>
         );
       })}

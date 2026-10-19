@@ -6,10 +6,12 @@ import { after } from 'next/server';
 import { OFFICE } from '@/config/office';
 import { api, ApiError, readJson } from '@/lib/api';
 import { getMe } from '@/lib/auth';
+import { requireSwitch } from '@/lib/switches';
 import { addDays } from '@/lib/calendar';
 import { assertNotConfirmed } from '@/lib/confirm-data';
 import { isPeriodLocked } from '@/lib/punch';
 import { notifyCorrectionRequest } from '@/lib/push-events';
+import { requestGeo } from '@/lib/request-geo';
 import { createAdminClient } from '@/lib/supabase/admin';
 import { cleanText } from '@/lib/text';
 import { kstDateTime, toKstDate } from '@/lib/time';
@@ -17,6 +19,7 @@ import { kstDateTime, toKstDate } from '@/lib/time';
 export const POST = api('corrections.create', async (req) => {
   const me = await getMe();
   if (!me) throw new ApiError(401, 'not_signed_in');
+  await requireSwitch('request.correction'); // 통합설정 › 요청 스위치 (2026-10-19)
   const b = await readJson(req);
   const type = b.type;
   if (type !== 'add_missing' && type !== 'modify' && type !== 'void') throw new ApiError(400, 'invalid_input');
@@ -78,6 +81,7 @@ export const POST = api('corrections.create', async (req) => {
       requested_by: me.id,
       status: 'pending',
       is_test: OFFICE.practiceMode,
+      ...(await requestGeo(me.id, b.geo)),
     })
     .select('id')
     .single();

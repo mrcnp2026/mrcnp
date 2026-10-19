@@ -4,6 +4,7 @@ import { OFFICE } from '@/config/office';
 import { rethrowDbRule } from '@/lib/atomic-rpc';
 import { api, ApiError, readJson } from '@/lib/api';
 import { getMe } from '@/lib/auth';
+import { requireSwitch } from '@/lib/switches';
 import { validateShift } from '@/lib/shifts';
 import { createAdminClient } from '@/lib/supabase/admin';
 import { cleanText } from '@/lib/text';
@@ -14,6 +15,7 @@ import { isPeriodLocked } from '@/lib/punch';
 export const POST = api('scheduleRequests.create', async (req) => {
   const me = await getMe();
   if (!me) throw new ApiError(401, 'not_signed_in');
+  await requireSwitch('request.shift'); // 통합설정 › 요청 스위치 (2026-10-19)
   const b = await readJson(req);
   const v = validateShift({ date: b.date, startTime: b.startTime, endTime: b.endTime, kind: b.kind, note: '', employeeIds: [me.id] });
   if (!v.ok) throw new ApiError(400, v.code);

@@ -17,16 +17,19 @@ import { LeaveTypeForm } from './TypeForms';
 export default async function LeaveTypesPage({ searchParams }: { searchParams: Promise<{ tab?: string }> }) {
   const [t, tl, f, sp] = await Promise.all([getTranslations('admin.leaveTypes'), getTranslations('leave'), getFormatter(), searchParams]);
   const tc = await getTranslations('common');
+  const ts = await getTranslations('side');
   const off = sp.tab === 'off';
   const all = await loadAllLeaveTypes();
   const shown = all.filter((x) => x.active !== off && (x.active || !x.name.startsWith('e2e-')));
   const groupNames = [...new Set(all.map((x) => x.groupName).filter((g): g is string => !!g))].sort((a, b) => a.localeCompare(b));
-  const sections = [...groupNames.map((g) => ({ g, rows: shown.filter((x) => x.groupName === g) })), { g: null, rows: shown.filter((x) => !x.groupName) }].filter((s) => s.rows.length);
+  // 폰 묶음 순서 = 종류의 정렬 순서(sort)에서 먼저 나오는 묶음부터 — 가나다순이면 가장 많이 쓰는 「연차휴가」가 맨 아래였다 (2026-10-18 의뢰인)
+  const firstAt = (g: string) => all.findIndex((x) => x.groupName === g);
+  const sections = [...[...groupNames].sort((a, b) => firstAt(a) - firstAt(b)).map((g) => ({ g, rows: shown.filter((x) => x.groupName === g) })), { g: null, rows: shown.filter((x) => !x.groupName) }].filter((s) => s.rows.length);
   const num = (v: number) => f.number(v, { maximumFractionDigits: 4 });
 
   return (
     <PageShell wide>
-      <DetailBar sheet={{ id: 'leave-type', label: t('add'), mobile: tc('addShort') }} back="/admin/leave" backLabel={t('back')} title={t('title')} extra={<Help>{t('intro')}</Help>} desc={t('intro')} />
+      <DetailBar sheet={{ id: 'leave-type', label: t('add'), mobile: tc('addShort') }} back="/admin/console" backLabel={tc('back')} menuLabel={ts('menu')} title={t('title')} extra={<Help>{t('intro')}</Help>} desc={t('intro')} />
       <div className="grid grid-cols-1 items-start gap-3">
         {/* PC: 시프티의 목록 — 「비활성화된 … 보기」 토글 + 열마다 검색 · 정렬이 되는 표 (2026-10-11 의뢰인 스샷). 폰은 아래의 탭 + 줄 목록 */}
         <div className="hidden flex-col gap-3 lg:flex">

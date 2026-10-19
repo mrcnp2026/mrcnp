@@ -8,6 +8,7 @@ import { PageShell } from '@/components/ui';
 import { getMe } from '@/lib/auth';
 import { HOME_CARDS, HOME_COOKIE, homeCardsOn, type HomeCard } from '@/lib/home';
 import { HomeToggles } from './HomeToggles';
+import { switchOn } from '@/lib/switches';
 
 const ADMIN_ONLY: HomeCard[] = ['report', 'missing', 'situation'];
 
@@ -19,9 +20,16 @@ export default async function HomeSettingsPage() {
   const cards = HOME_CARDS.filter((k) => !ADMIN_ONLY.includes(k)); // 관리자용 카드는 직원 홈에서 뺐다(2026-10-15) — 관리자 모드 「오늘 현황」에 있다
   return (
     <PageShell>
-      <DetailBar back="/punch" backLabel={t('back')} title={t('title')} />
-      <HomeToggles cards={[...cards]} initial={cards.filter((k) => on.has(k))} />
-      <p className="px-1 text-sm text-faint">{t('hint')}</p>
+      <DetailBar back="/punch/account" backLabel={t('back')} title={t('title')} />
+      {(await switchOn('advanced.homeCards')) ? (
+        <>
+          <HomeToggles cards={[...cards]} initial={cards.filter((k) => on.has(k))} />
+          <p className="px-1 text-sm text-faint">{t('hint')}</p>
+        </>
+      ) : (
+        // 회사가 홈 카드 바꾸기를 꺼 두었다 (통합설정 › 고급 옵션, 2026-10-19)
+        <p className="rounded-card bg-surface p-4 text-sm text-muted">{t('off')}</p>
+      )}
     </PageShell>
   );
 }

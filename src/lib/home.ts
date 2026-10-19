@@ -2,7 +2,8 @@
 // 화면은 이 결과만 그린다.
 
 /** 홈에서 켜고 끌 수 있는 카드. 「오늘 근무」(출퇴근 버튼)는 끌 수 없다 — 찍는 길이 사라지면 안 된다 */
-export const HOME_CARDS = ['report', 'missing', 'situation', 'week', 'note'] as const;
+// 2026-10-18: 근무노트는 홈에서 「출퇴근」 화면으로 옮기고, 그 자리에 「새 소식」(공지 · 사내게시판)
+export const HOME_CARDS = ['report', 'missing', 'situation', 'week', 'news'] as const;
 export type HomeCard = (typeof HOME_CARDS)[number];
 export const HOME_COOKIE = 'home_off'; // 꺼 둔 카드 이름을 쉼표로 (이 기기에만 저장)
 

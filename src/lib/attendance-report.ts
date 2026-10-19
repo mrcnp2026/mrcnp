@@ -2,6 +2,7 @@
 // 숫자는 기록 탭·급여용 CSV와 같은 buildMonth 결과를 쓴다 — 화면과 파일의 숫자가 다르면 증빙이 아니다.
 import 'server-only';
 import { BRAND } from '@/config/brand';
+import { companyName } from '@/lib/company'; // 통합설정 › 회사 기본설정의 회사명 (2026-10-18)
 import { LABOR } from '@/config/labor-rules';
 import { OFFICE } from '@/config/office';
 import { loadRuleVersions } from '@/lib/attendance-data';
@@ -140,7 +141,7 @@ export async function buildAttendanceReport(ym: string, practice: boolean, gener
   }));
 
   return {
-    company: BRAND.name,
+    company: await companyName(),
     yearMonth: ym,
     from,
     to,
