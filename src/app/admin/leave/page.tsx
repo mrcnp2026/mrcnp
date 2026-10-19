@@ -60,8 +60,8 @@ export default async function AdminLeavePage({ searchParams }: { searchParams: P
     for (const [k, v] of Object.entries({ q, g, to: asOf === today ? '' : asOf, live: sp.live === '1' ? '1' : '' })) if (v) u.set(k, v);
     return `?${u}#edit`;
   };
-  // 30분 단위(1/16일)로 떨어지는 값은 0.0625까지, 비례 발생처럼 떨어지지 않는 값은 소수 둘째 자리까지 — 10.9896이 폰 칸을 넘었다 (2026-10-17 디자인)
-  const n = (v: number) => f.number(v, { maximumFractionDigits: Math.abs(v * 16 - Math.round(v * 16)) < 1e-6 ? 4 : 2 });
+  // 15분 단위(1/32일)로 떨어지는 값은 0.03125까지, 비례 발생처럼 떨어지지 않는 값은 소수 둘째 자리까지 — 10.9896이 폰 칸을 넘었다 (2026-10-17 디자인)
+  const n = (v: number) => f.number(v, { maximumFractionDigits: Math.abs(v * 32 - Math.round(v * 32)) < 1e-6 ? 5 : 2 });
   const day = (d: string) => f.dateTime(new Date(`${d}T12:00:00+09:00`), { year: d.slice(0, 4) === today.slice(0, 4) ? undefined : 'numeric', month: 'short', day: 'numeric', weekday: 'short' });
   const name = new Map((ppl ?? []).map((p) => [p.id, p.name]));
   const leaveName = (code: string) => leaveTypeName(types, code, tl);

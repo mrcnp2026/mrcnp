@@ -34,6 +34,9 @@ import { HideRequests } from '@/components/HideRequests';
 import { loadHidden, withoutHidden } from '@/lib/request-hides';
 import { loadWorkRequests } from '@/lib/work-data';
 import { ApproveDay, CorrectionDecision, LeaveDecision, OvertimeDecision, WorkDecision } from './Decisions';
+import { LeaveFiles } from '@/components/LeaveFiles';
+import { loadLeaveFiles } from '@/lib/leave-evidence';
+import { loadTypeRules } from '@/lib/leave-ledger-data';
 
 // 요청은 종류마다 한 쪽에 5건까지 — 넘으면 아래에 쪽 번호 (2026-10-06 의뢰인)
 const REQUEST_PAGE = 5;
@@ -171,8 +174,9 @@ export default async function InboxPage({ searchParams }: { searchParams: Promis
       : Promise.resolve({ data: [] as { employee_id: string; work_date: string }[] }),
   ]);
   const leaveName = (code: string) => leaveTypeName(leaveTypes, code, tl);
-  const nDays = (v: number) => f.number(v, { maximumFractionDigits: 4 });
+  const nDays = (v: number) => f.number(v, { maximumFractionDigits: 5 });
   const lvPage = pageOf(leavePending, sp.lp, REQUEST_PAGE);
+  const [lvFiles, typeRules] = await Promise.all([loadLeaveFiles(lvPage.items.map((r) => r.id)), loadTypeRules()]); // 증빙 파일 · 「증빙 필수」 (묶음 9)
   const workPending = (await loadWorkRequests({ practice })).filter((w) => w.status === 'pending' && hit(w.employeeId) && only('work', w.id)).sort((a, b) => (a.startDate < b.startDate ? -1 : 1));
   const wkPage = pageOf(workPending, sp.wp, REQUEST_PAGE);
 
@@ -348,6 +352,7 @@ export default async function InboxPage({ searchParams }: { searchParams: Promis
             {clash.length > 0 && (
               <p className="rounded-button border border-warn bg-warn-tint p-2 text-sm text-warn">{t('leaveClash', { dates: clash.map(dayLabel).join(', ') })}</p>
             )}
+            <LeaveFiles requestId={r.id} files={lvFiles.get(r.id) ?? []} canEdit={!cannot(r.employeeId)} required={!!typeRules.get(r.typeCode)?.rule.evidenceRequired} />
             {cannot(r.employeeId) ? (r.employeeId === me.id ? ownNote : rankNote) : <LeaveDecision id={r.id} name={name.get(r.employeeId) ?? ''} summary={summary} />}
           </Card>
         ))}

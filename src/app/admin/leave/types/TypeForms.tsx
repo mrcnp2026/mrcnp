@@ -14,7 +14,7 @@ import { unitOfHours } from '@/lib/leave';
 const field = 'min-h-11 w-full rounded-button border border-border bg-bg px-3 text-base text-text disabled:text-muted';
 type Err = { code: string; requestId?: string } | null;
 export type TypeValues = { code: string; name: string; hours: number; startTime: string | null; endTime: string | null; groupName: string | null; isPaid: boolean; deductsBalance: boolean; builtin: boolean };
-const HOURS = [...Array(16)].map((_, i) => (i + 1) / 2); // 0.5 ~ 8
+const HOURS = [...Array(32)].map((_, i) => (i + 1) / 4); // 0.25 ~ 8 (15분 단위, 묶음 9 2026-10-19)
 
 export function LeaveTypeForm({ initial, sheet, groups }: { initial?: TypeValues; sheet?: string; groups: string[] }) {
   const t = useTranslations('admin.leaveTypes');

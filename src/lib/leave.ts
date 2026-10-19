@@ -12,8 +12,8 @@ export type LeaveStatus = 'pending' | 'approved' | 'rejected' | 'cancelled';
 export type LeaveTypeSnapshot = Pick<LeaveType, 'isPaid' | 'deductsBalance' | 'dayUnit' | 'hours'>;
 export type LeaveRequest = { typeSnapshot?: LeaveTypeSnapshot | null; workDates?: string[] | null; id: string; employeeId: string; typeCode: string; startDate: string; endDate: string; days: number; reason: string | null; status: LeaveStatus; startTime?: string | null; endTime?: string | null; createdAt?: string; decidedAt?: string | null; approvedBy?: string | null };
 
-/** 소수 일수의 부동소수점 찌꺼기 제거. 30분 = 0.0625일이라 넷째 자리까지 둔다 */
-export const roundDays = (n: number) => Math.round(n * 10000) / 10000;
+/** 소수 일수의 부동소수점 찌꺼기 제거. 15분 = 0.03125일이라 다섯째 자리까지 둔다 (DB 0060, 2026-10-19) */
+export const roundDays = (n: number) => Math.round(n * 100000) / 100000;
 
 /**
  * 지금 적용되는 부여(시작일이 asOf 이하인 것 중 가장 최근) 기준 잔여.
@@ -121,7 +121,7 @@ export function validateLeaveType(b: Record<string, unknown>): { ok: true; value
   const name = typeof b.name === 'string' ? b.name.trim() : '';
   if (name.length < 1 || name.length > 40) return { ok: false, code: 'invalid_name' };
   const hours = typeof b.hours === 'number' ? b.hours : typeof b.hours === 'string' && b.hours.trim() !== '' ? Number(b.hours) : NaN;
-  if (!Number.isFinite(hours) || hours < 0.5 || hours > DAY_HOURS || !Number.isInteger(hours * 2)) return { ok: false, code: 'invalid_hours' };
+  if (!Number.isFinite(hours) || hours < 0.25 || hours > DAY_HOURS || !Number.isInteger(hours * 4)) return { ok: false, code: 'invalid_hours' }; // 15분 단위 (묶음 9, 2026-10-19)
   const st = b.startTime === undefined || b.startTime === null || b.startTime === '' ? null : b.startTime;
   const et = b.endTime === undefined || b.endTime === null || b.endTime === '' ? null : b.endTime;
   if ((st === null) !== (et === null)) return { ok: false, code: 'invalid_time' };

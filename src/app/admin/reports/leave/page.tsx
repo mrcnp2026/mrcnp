@@ -26,7 +26,7 @@ export default async function LeaveReportPage({ searchParams }: { searchParams: 
   const groupId = options.some((o) => o.id === sp.g) ? sp.g! : null;
   const withInactive = sp.inactive === '1';
   const r = await buildLeaveReport({ asOf, practice, groupId, withInactive });
-  // 30분 단위(1/16일)로 떨어지면 그대로, 비례 발생처럼 안 떨어지면 소수 둘째 자리까지 (2026-10-17 디자인: 153.5292일)
+  // 15분 단위(1/32일)로 떨어지면 그대로, 비례 발생처럼 안 떨어지면 소수 둘째 자리까지 (2026-10-17 디자인: 153.5292일)
   // 2026-10-18 디자인: 일수는 소수 둘째 자리까지(7.125 → 7.13) — 휴가 원장 화면과 같게
   const day = (n: number) => t('days', { n: Math.round(n * 100) / 100 });
   const rate = (v: number | null) => (v === null ? t('rateNone') : t('pct', { n: v }));

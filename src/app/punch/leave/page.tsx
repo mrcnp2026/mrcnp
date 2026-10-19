@@ -26,6 +26,8 @@ import { loadWorkRequests } from '@/lib/work-data';
 import { CancelLeave, DeleteLeaveRequest, LeaveForm } from './LeaveForm';
 import { CancelWork, WorkForm } from './WorkForm';
 import { loadMyOpenTargets } from '@/lib/leave-promotion';
+import { LeaveFiles } from '@/components/LeaveFiles';
+import { loadLeaveFiles } from '@/lib/leave-evidence';
 
 export default async function LeavePage({ searchParams }: { searchParams: Promise<{ workDate?: string; new?: string; y?: string; lp?: string; wp?: string }> }) {
   const me = await getMe();
@@ -43,7 +45,7 @@ export default async function LeavePage({ searchParams }: { searchParams: Promis
   const reqPage = pageOf(requests, sp.lp, 10);
   const workPage = pageOf(works, sp.wp, 10);
   // 적용 대상이 아닌 종류는 신청 양식에 내놓지 않는다 (L13 — 서버도 다시 막는다)
-  const [rules, orgGroups, { data: prof }] = await Promise.all([loadTypeRules(), loadOrgGroups(), createAdminClient().from('profiles').select('group_id').eq('id', me.id).maybeSingle()]);
+  const [rules, orgGroups, { data: prof }, files] = await Promise.all([loadTypeRules(), loadOrgGroups(), createAdminClient().from('profiles').select('group_id').eq('id', me.id).maybeSingle(), loadLeaveFiles(reqPage.items.filter((r) => r.status === 'pending' || r.status === 'approved').map((r) => r.id))]); // 증빙 파일 (묶음 9)
   const mayUse = (code: string) => {
     const r = rules.get(code)?.rule;
     return !r || isTypeTarget(r, { id: me.id, groupId: (prof?.group_id as string | null) ?? null }, new Map(r.targets.groupIds.map((g) => [g, groupScope(orgGroups, g)])));
@@ -62,7 +64,7 @@ export default async function LeavePage({ searchParams }: { searchParams: Promis
   const nameOf = (code: string) => leaveTypeName(types, code, t);
   // 올해가 아니면 연도도 (지난해·먼 미래 신청이 올해로 읽히지 않게)
   const day = (d: string) => f.dateTime(new Date(`${d}T12:00:00+09:00`), { year: d.slice(0, 4) === today.slice(0, 4) ? undefined : 'numeric', month: 'short', day: 'numeric', weekday: 'short' });
-  const n = (v: number) => f.number(v, { maximumFractionDigits: 4 });
+  const n = (v: number) => f.number(v, { maximumFractionDigits: 5 });
   // 달별 사용 표 (2026-10-14 직원 화면 보강): 고른 해(없으면 올해)
   const year = /^\d{4}$/.test(sp.y ?? '') ? sp.y! : today.slice(0, 4);
   const monthly = monthlyLeaveUse(requests, types, year);
@@ -230,6 +232,7 @@ export default async function LeavePage({ searchParams }: { searchParams: Promis
               {r.startTime && ` · ${r.startTime} - ${r.endTime}`}
             </span>
             {r.reason && <span className="text-sm text-muted">{r.reason}</span>}
+            {(r.status === 'pending' || r.status === 'approved') && <LeaveFiles requestId={r.id} files={files.get(r.id) ?? []} canEdit={r.status === 'pending'} required={r.status === 'pending' && !!rules.get(r.typeCode)?.rule.evidenceRequired} />}
             {r.status === 'pending' && <CancelLeave id={r.id} />}
             {r.status === 'approved' && r.endDate >= today && <DeleteLeaveRequest leaveId={r.id} pendingId={deleteOf.get(r.id) ?? null} />}
           </Row>

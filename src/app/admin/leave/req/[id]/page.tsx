@@ -9,6 +9,8 @@ import { Chip, PageShell } from '@/components/ui';
 import { DAY_HOURS, leaveTypeName } from '@/lib/leave';
 import { loadAllLeaveTypes, loadLeaveRequests } from '@/lib/leave-data';
 import { createAdminClient } from '@/lib/supabase/admin';
+import { LeaveFiles } from '@/components/LeaveFiles';
+import { loadLeaveFiles } from '@/lib/leave-evidence';
 import { kstDateTime } from '@/lib/time';
 
 export default async function LeaveDetailPage({ params }: { params: Promise<{ id: string }> }) {
@@ -18,8 +20,9 @@ export default async function LeaveDetailPage({ params }: { params: Promise<{ id
   const r = [...live, ...test].find((x) => x.id === id);
   if (!r) notFound();
   const type = types.find((x) => x.code === r.typeCode);
+  const files = (await loadLeaveFiles([r.id])).get(r.id) ?? []; // 증빙 파일 (묶음 9)
   const names = new Map((staff ?? []).map((p) => [p.id as string, p.name as string]));
-  const n = (v: number) => f.number(v, { maximumFractionDigits: 4 });
+  const n = (v: number) => f.number(v, { maximumFractionDigits: 5 });
   const day = (d: string) => f.dateTime(kstDateTime(d, '12:00'), { year: 'numeric', month: 'long', day: 'numeric', weekday: 'short' });
   const stamp = (iso: string) => f.dateTime(new Date(iso), { year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit', second: '2-digit', hourCycle: 'h23' });
 
@@ -47,6 +50,12 @@ export default async function LeaveDetailPage({ params }: { params: Promise<{ id
         <Field label={t('decidedBy')} value={r.approvedBy ? `${names.get(r.approvedBy) ?? ''}${r.decidedAt ? ` | ${stamp(r.decidedAt)}` : ''}` : t('none')} />
         <Field label={t('created')} value={r.createdAt ? stamp(r.createdAt) : t('none')} />
       </FieldList>
+      {files.length > 0 && (
+        <section className="flex flex-col gap-1 px-1">
+          <h2 className="text-sm font-semibold text-muted">{t('files')}</h2>
+          <LeaveFiles requestId={r.id} files={files} canEdit={false} />
+        </section>
+      )}
       <p className="px-1 text-sm text-faint">{t('hint')}</p>
     </PageShell>
   );

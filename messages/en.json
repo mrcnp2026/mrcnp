@@ -305,7 +305,8 @@
     "logo_type": "Only PNG, JPG or WEBP files.",
     "feature_off": "Your company has turned this request off. Ask an admin if you need it.",
     "hourly_leave_off": "Your company has turned off hourly leave. Please request whole days.",
-    "outside_punch_off": "You can't punch outside a registered place (outside-place requests are turned off). Please punch inside the place."
+    "outside_punch_off": "You can't punch outside a registered place (outside-place requests are turned off). Please punch inside the place.",
+    "evidence_required": "This leave needs an evidence file before approval. Attach a file, then approve."
   },
   "admin": {
     "nav": {
@@ -2717,7 +2718,8 @@
       "decidedBy": "Decided by",
       "created": "Created",
       "none": "X",
-      "hint": "Approve or reject in the inbox; cancel an approval under Approved leave."
+      "hint": "Approve or reject in the inbox; cancel an approval under Approved leave.",
+      "files": "Evidence files"
     },
     "confirm": {
       "confirm": "Confirm",
@@ -3207,7 +3209,8 @@
         "7": "Sun"
       },
       "nameEn": "English name",
-      "nameEnHint": "Shown on English screens. Blank = the Korean name is shown."
+      "nameEnHint": "Shown on English screens. Blank = the Korean name is shown.",
+      "evidence": "Evidence required — cannot be approved without a file (can still be requested)"
     },
     "staffPay": {
       "title": "Pay by employee",
@@ -6149,5 +6152,17 @@
     "subjectBonus": "[{company}] Bonus statement for {month}",
     "subjectRevision": " (corrected, rev {n})",
     "body": "Dear {name},\n\nPlease find your payslip for {month} attached (pay date {payDate}).\nThe amounts are in the attached PDF.\n\nPDF password: your birth date as 6 digits (YYMMDD, e.g. 15 Jan 1990 → 900115)\n\nYou can also see it under \"My pay\" in the app:\n{link}\n\nThis mailbox is not monitored. Please ask your company contact if you have questions.\n\n{company}"
+  },
+  "leaveFiles": {
+    "add": "Attach evidence ({n}/{max})",
+    "uploading": "Uploading…",
+    "remove": "Remove {name}",
+    "hint": "PDF or photo (JPG · PNG · HEIC), up to 10MB each, 3 files. You can attach or remove only before approval.",
+    "requiredMissing": "This leave needs an evidence file before it can be approved.",
+    "evidence_too_large": "The file is too large (up to 10MB).",
+    "evidence_type": "Only PDF or photos (JPG · PNG · HEIC) can be attached.",
+    "evidence_too_many": "Up to 3 files per request.",
+    "evidence_locked": "Files cannot be added or removed after the leave is approved or rejected.",
+    "db_update_required": "DB change set 9 needs to be applied."
   }
 }

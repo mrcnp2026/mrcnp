@@ -49,7 +49,7 @@ export default async function LeaveAccrualPage({ params, searchParams }: { param
     const next = asc[asc.indexOf(g) + 1];
     return next ? addDays(next.effectiveFrom, -1) : null;
   };
-  const n = (v: number) => f.number(v, { maximumFractionDigits: Math.abs(v * 16 - Math.round(v * 16)) < 1e-6 ? 4 : 2 }); // 비례 발생은 소수 둘째 자리까지
+  const n = (v: number) => f.number(v, { maximumFractionDigits: Math.abs(v * 32 - Math.round(v * 32)) < 1e-6 ? 5 : 2 }); // 비례 발생은 소수 둘째 자리까지
   const dot = (d: string) => d.replaceAll('-', '.');
   const hiredOn = p.joined_on as string | null;
   const ref = hiredOn ? suggestGrant(hiredOn, today) : null;

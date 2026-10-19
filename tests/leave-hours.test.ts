@@ -20,7 +20,7 @@ describe('validateLeaveType', () => {
   });
   it('잘못된 값은 거절', () => {
     expect(validateLeaveType({ ...base, name: ' ' })).toEqual({ ok: false, code: 'invalid_name' });
-    expect(validateLeaveType({ ...base, hours: 0.25 })).toEqual({ ok: false, code: 'invalid_hours' });
+    expect(validateLeaveType({ ...base, hours: 0.2 })).toEqual({ ok: false, code: 'invalid_hours' }); // 15분(0.25) 단위만 — 묶음 9부터 0.25는 된다
     expect(validateLeaveType({ ...base, hours: 9 })).toEqual({ ok: false, code: 'invalid_hours' });
     expect(validateLeaveType({ ...base, endTime: null })).toEqual({ ok: false, code: 'invalid_time' });
     expect(validateLeaveType({ ...base, startTime: '15:00', endTime: '10:00' })).toEqual({ ok: false, code: 'invalid_time' });

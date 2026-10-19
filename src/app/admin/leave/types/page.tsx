@@ -25,7 +25,7 @@ export default async function LeaveTypesPage({ searchParams }: { searchParams: P
   // 폰 묶음 순서 = 종류의 정렬 순서(sort)에서 먼저 나오는 묶음부터 — 가나다순이면 가장 많이 쓰는 「연차휴가」가 맨 아래였다 (2026-10-18 의뢰인)
   const firstAt = (g: string) => all.findIndex((x) => x.groupName === g);
   const sections = [...[...groupNames].sort((a, b) => firstAt(a) - firstAt(b)).map((g) => ({ g, rows: shown.filter((x) => x.groupName === g) })), { g: null, rows: shown.filter((x) => !x.groupName) }].filter((s) => s.rows.length);
-  const num = (v: number) => f.number(v, { maximumFractionDigits: 4 });
+  const num = (v: number) => f.number(v, { maximumFractionDigits: 5 });
 
   return (
     <PageShell wide>

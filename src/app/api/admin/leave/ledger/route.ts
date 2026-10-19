@@ -70,7 +70,7 @@ export const POST = api('admin.leave.ledger', async (req) => {
   if (b.action === 'manual') {
     const days = typeof b.days === 'number' ? b.days : typeof b.days === 'string' && b.days.trim() !== '' ? Number(b.days) : NaN;
     const note = cleanText(b.note);
-    if (typeof b.employeeId !== 'string' || !UUID.test(b.employeeId) || !Number.isFinite(days) || days <= 0 || days > 99 || !Number.isInteger(days * 16)) throw new ApiError(400, 'invalid_days');
+    if (typeof b.employeeId !== 'string' || !UUID.test(b.employeeId) || !Number.isFinite(days) || days <= 0 || days > 99 || !Number.isInteger(days * 32)) throw new ApiError(400, 'invalid_days'); // 15분 단위 (묶음 9)
     if (b.kind !== 'manual' && b.kind !== 'carry' && b.kind !== 'compensatory' && b.kind !== 'migrated') throw new ApiError(400, 'invalid_input');
     const to = b.usableTo === '' || b.usableTo === null || b.usableTo === undefined ? null : b.usableTo;
     if (!isDate(b.usableFrom) || (to !== null && (!isDate(to) || to <= b.usableFrom)) || note.length < 2 || note.length > 300) throw new ApiError(400, 'invalid_input');

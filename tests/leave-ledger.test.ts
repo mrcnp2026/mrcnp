@@ -225,7 +225,7 @@ describe('휴가 종류별 신청 규칙', () => {
     expect(isTypeTarget(byPerson, { id: me, groupId: null }, new Map())).toBe(true);
     expect(validateTypeRule({ maxDaysPerRequest: null, minNoticeDays: null, reasonRequired: false, targets: { groupIds: ['x'], employeeIds: [] } })).toBeNull();
   });
-  const rule = { maxDaysPerRequest: 3, minNoticeDays: 2, reasonRequired: true, weekdays: null, targets: { groupIds: [], employeeIds: [] }, nameEn: null };
+  const rule = { maxDaysPerRequest: 3, minNoticeDays: 2, reasonRequired: true, evidenceRequired: false, weekdays: null, targets: { groupIds: [], employeeIds: [] }, nameEn: null };
   it('한도 · 미리 신청 · 사유', () => {
     const ok = { days: 2, startDate: '2026-10-20', today: '2026-10-13', reason: '병원' };
     expect(checkTypeRule(rule, ok)).toBeNull();
@@ -235,7 +235,10 @@ describe('휴가 종류별 신청 규칙', () => {
     expect(checkTypeRule(rule, { ...ok, reason: ' ' })).toBe('leave_reason_required');
   });
   it('입력 검사', () => {
-    expect(validateTypeRule({ maxDaysPerRequest: '', minNoticeDays: null, reasonRequired: false })).toEqual({ maxDaysPerRequest: null, minNoticeDays: null, reasonRequired: false, weekdays: null, targets: { groupIds: [], employeeIds: [] }, nameEn: null });
+    expect(validateTypeRule({ maxDaysPerRequest: '', minNoticeDays: null, reasonRequired: false })).toEqual({ maxDaysPerRequest: null, minNoticeDays: null, reasonRequired: false, evidenceRequired: false, weekdays: null, targets: { groupIds: [], employeeIds: [] }, nameEn: null });
+    expect(validateTypeRule({ maxDaysPerRequest: null, minNoticeDays: null, reasonRequired: false, evidenceRequired: true })?.evidenceRequired).toBe(true); // 증빙 필수 (묶음 9)
+    expect(validateTypeRule({ maxDaysPerRequest: null, minNoticeDays: null, reasonRequired: false, evidenceRequired: 'yes' })).toBeNull();
+    expect(validateTypeRule({ maxDaysPerRequest: 0.03125, minNoticeDays: null, reasonRequired: false })?.maxDaysPerRequest).toBe(0.03125); // 15분
     expect(validateTypeRule({ maxDaysPerRequest: 0, minNoticeDays: null, reasonRequired: false })).toBeNull();
     expect(validateTypeRule({ maxDaysPerRequest: 1, minNoticeDays: 1.5, reasonRequired: false })).toBeNull();
     expect(validateTypeRule({ maxDaysPerRequest: 1, minNoticeDays: 1 })).toBeNull();
