@@ -12,5 +12,15 @@ export function createAdminClient() {
   }
   return createClient(url, key, {
     auth: { persistSession: false, autoRefreshToken: false },
+    ...(process.env.PERF_LOG ? { global: { fetch: timedFetch } } : {}),
   });
 }
+
+// 속도 측정용 (PERF_LOG=1일 때만) — DB 요청마다 걸린 시간과 표 이름을 찍는다. 운영에는 켜지 않는다
+const timedFetch: typeof fetch = async (input, init) => {
+  const t = performance.now();
+  const r = await fetch(input, init);
+  const u = new URL(typeof input === 'string' ? input : input instanceof URL ? input.href : input.url);
+  console.log(`[db] ${Math.round(performance.now() - t)}ms ${init?.method ?? 'GET'} ${u.pathname.replace('/rest/v1/', '')}`);
+  return r;
+};

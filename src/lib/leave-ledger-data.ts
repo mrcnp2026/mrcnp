@@ -538,20 +538,18 @@ export async function ledgerForMany(employeeIds: readonly string[], asOf: string
   const entries = (await loadEntries()).filter((e) => withLots.includes(e.employeeId));
   const policyCache = new Map<string, Promise<PolicyRow[]>>();
   const d = (m: number) => minutesToDays(m);
+  // 직원마다 소속 그룹을 따로 묻지 않고 한 번에 읽는다 (2026-10-19 속도: 23명이면 23번을 차례로 기다렸다)
+  const { data: members, error: memberError } = await db().from('leave_policy_members').select('employee_id, group_id').in('employee_id', withLots).eq('active', true).lte('valid_from', asOf).or(`valid_to.is.null,valid_to.gt.${asOf}`);
+  if (memberError) boom('ledgerForMany.members', memberError);
+  const groupOf = new Map((members ?? []).map((m) => [m.employee_id as string, m.group_id as string]));
   for (const id of withLots) {
-    const key = await policyKeyFor(id, asOf);
+    const key = groupOf.get(id) ?? 'default';
     if (!policyCache.has(key)) policyCache.set(key, policiesForEmployee(id, asOf));
     const policies = await policyCache.get(key)!;
     const b = ledgerBalance(lots.filter((l) => l.employeeId === id), entriesFor(entries.filter((e) => e.employeeId === id), practice), asOf);
     out.set(id, { grantedDays: d(b.granted), usedDays: d(b.used), remainingDays: d(b.remaining), expiredDays: d(b.expired), advanceDays: d(b.advance), advanceMaxDays: policyAt(policies, asOf)?.policy.advanceMaxDays ?? 0 });
   }
   return out;
-}
-
-/** 정책 묶음을 가르는 열쇠 — 직원이 속한 그룹(없으면 기본) */
-async function policyKeyFor(employeeId: string, asOf: string): Promise<string> {
-  const { data } = await db().from('leave_policy_members').select('group_id').eq('employee_id', employeeId).eq('active', true).lte('valid_from', asOf).or(`valid_to.is.null,valid_to.gt.${asOf}`).maybeSingle();
-  return (data?.group_id as string | undefined) ?? 'default';
 }
 
 export { lotRemaining };

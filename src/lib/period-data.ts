@@ -1,6 +1,7 @@
 // 기간 데이터 읽기 + 연장 확인 대상 만들기. 서버 전용.
 // 예약 작업(cron)을 만들지 않는다 (3장) — 처리함·현황판·월간 집계를 **열 때** 계산하고 필요한 요청 행을 만든다.
 import 'server-only';
+import { cache } from 'react';
 import { readAll } from '@/lib/read-all';
 import { resolveDayType } from '@/config/labor-rules';
 import { OFFICE } from '@/config/office';
@@ -283,7 +284,11 @@ export async function syncOvertimeRequests(data: PeriodData, upTo: string): Prom
  * 보는 사람에게 숨길 검사 전용 계정(e2e-) — 실제 관리자에게는 검사 계정의 사람 · 기록 · 요청이 어디에도 나오지 않는다 (2026-10-14 의뢰인: 「요청 9건인데 열면 없다」).
  * 검사 계정으로 보는 검사에게는 꺼 둔 검사 계정만 숨긴다(켜진 검사 계정끼리 시험한다). 로그인한 사람이 없으면(서버 작업) 실제 쪽으로 본다
  */
+// 한 화면(요청) 안에서는 한 번만 읽는다 — 같은 화면이 여러 번 부르던 것 (2026-10-19 속도). 받는 쪽이 고쳐 써도 되게 복사본을 돌려준다
 export async function hiddenTestIds(): Promise<string[]> {
+  return [...(await hiddenOnce())];
+}
+const hiddenOnce = cache(async (): Promise<string[]> => {
   const viewer = await getMe().catch(() => null);
   const testView = !!viewer?.employeeNo?.startsWith('e2e-');
   let q = createAdminClient().from('profiles').select('id').like('employee_no', 'e2e-%');
@@ -292,9 +297,13 @@ export async function hiddenTestIds(): Promise<string[]> {
   // 본인이 볼 때만 자기 기록이 남는다(내 화면이 비지 않게)
   const [{ data }, { data: sys }] = await Promise.all([q, createAdminClient().from('profiles').select('id').eq('employee_no', OFFICE.ownerEmployeeNo)]);
   return [...(data ?? []), ...(sys ?? []).filter((p) => p.id !== viewer?.id)].map((p) => p.id as string);
-}
+});
 
+// 화면 틀(메뉴 숫자)과 본문이 같은 화면에서 두 번 세던 것 — 한 번만 (2026-10-19 속도)
 export async function pendingCounts(practice = OFFICE.practiceMode): Promise<{ overtime: number; corrections: number; leave: number; work: number; punch: number; shift: number; leaveDelete: number; total: number }> {
+  return { ...(await countsOnce(practice)) };
+}
+const countsOnce = cache(async (practice: boolean): Promise<{ overtime: number; corrections: number; leave: number; work: number; punch: number; shift: number; leaveDelete: number; total: number }> => {
   const db = createAdminClient();
   const scope = await viewerScope();
   if (scope) return pendingCountsIn(practice, scope);
@@ -312,7 +321,7 @@ export async function pendingCounts(practice = OFFICE.practiceMode): Promise<{ o
   ]);
   const r = { overtime: (a ?? 0) + (b ?? 0), corrections: c ?? 0, leave: l ?? 0, work: w ?? 0, punch: pr ?? 0, shift: sh ?? 0, leaveDelete: lc ?? 0 };
   return { ...r, total: r.overtime + r.corrections + r.leave + r.work + r.punch + r.shift + r.leaveDelete };
-}
+});
 
 /** 지점관리자의 대기 요청 수 — 맡은 지점 직원 것만. 자기 요청은 세지 않는다(관리자가 처리한다) */
 async function pendingCountsIn(practice: boolean, scope: Set<string>) {

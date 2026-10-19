@@ -51,9 +51,13 @@ export async function loadActiveRule(): Promise<WorkRule | null> {
   return ruleAt(await loadRuleVersions(), toKstDate(new Date()));
 }
 
-export async function loadHolidays(from: string, to: string): Promise<HolidayRow[]> {
+// 한 화면(요청) 안에서는 한 번만 읽는다 — 같은 화면이 여러 번 부르던 것 (2026-10-19 속도). 받는 쪽이 고쳐 써도 되게 복사본을 돌려준다
+const holidaysOnce = cache(async (from: string, to: string): Promise<HolidayRow[]> => {
   const { data } = await readAll((a,b) => createAdminClient().from('holidays').select('the_date, kind').gte('the_date', from).lte('the_date', to).order('the_date').range(a,b));
   return (data ?? []).map((h) => ({ date: h.the_date, kind: h.kind }));
+});
+export async function loadHolidays(from: string, to: string): Promise<HolidayRow[]> {
+  return [...(await holidaysOnce(from, to))];
 }
 
 /** 사무실 대역 = DB(office_networks, ②에서 화면으로 관리) + 열쇠 파일 OFFICE_CIDRS. 둘 다 쓴다 (교체가 아니라 추가, 9-5) */
