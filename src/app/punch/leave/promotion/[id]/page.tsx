@@ -28,7 +28,7 @@ export default async function MyPromotionPage({ params }: { params: Promise<{ id
       <div>
         <h1 className="flex flex-wrap items-center gap-2 text-2xl font-bold">
           {c.title}
-          <Chip tone={v.state === 'CONFIRMED' ? 'ok' : v.state === 'PLAN_SUBMITTED' ? 'info' : 'warn'}>{t(`state.${v.state}`)}</Chip>
+          <Chip tone={v.state === 'CONFIRMED' ? 'ok' : v.state === 'PLAN_SUBMITTED' || v.state === 'DESIGNATED' ? 'info' : 'warn'}>{t(`state.${v.state}`)}</Chip>
         </h1>
         <p className="num pt-1 text-sm text-faint">{t('meta', { n: Math.round(minutesToDays(v.remainingMinutes) * 100) / 100, basis: c.basisOn, due: c.planDueOn })}</p>
       </div>
@@ -40,6 +40,7 @@ export default async function MyPromotionPage({ params }: { params: Promise<{ id
         <CardTitle>{t('planTitle')}</CardTitle>
         {v.plan && <p className="num text-sm text-muted">{t('planNow', { n: v.planVersion, at: v.planSubmittedAt ? toKstDate(new Date(v.planSubmittedAt)) : '', dates: v.plan.dates.join(', ') })}</p>}
         {open ? <PlanForm targetId={v.id} dates={v.plan?.dates ?? []} note={v.plan?.note ?? null} min={c.basisOn} /> : <p className="text-sm text-faint">{t('closed')}</p>}
+        {v.designated && <p className="num rounded-button border border-warn bg-warn-tint p-2 text-sm font-semibold text-warn">{t('designated', { dates: v.designated.join(', ') })}</p>}
         {v.decisionNote && <p className="text-sm text-muted">{t('decision', { note: v.decisionNote })}</p>}
       </Card>
       <Link href="/punch/leave?new=leave" className="inline-flex min-h-11 items-center self-start rounded-button bg-primary px-4 font-bold text-on-primary">

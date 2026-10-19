@@ -3871,7 +3871,8 @@
         "NOTIFIED": "계획 제출 전",
         "PLAN_SUBMITTED": "계획 제출",
         "CONFIRMED": "확인",
-        "EXCEPTION": "따로 처리"
+        "EXCEPTION": "따로 처리",
+        "DESIGNATED": "사용 시기 지정함"
       },
       "notRead": "안 읽음",
       "planMeta": "{n}번째 제출 · {at}",
@@ -3902,7 +3903,37 @@
       "promotion_no_targets": "안내를 보낼 대상이 없습니다.",
       "promotion_wrong_state": "이 직원은 지금 처리할 수 없는 상태입니다.",
       "promotion_note_required": "사유를 2자 이상 적어 주세요.",
-      "legalShort": "법적 촉진 완료 여부는 프로그램이 판단하지 않습니다"
+      "legalShort": "법적 촉진 완료 여부는 프로그램이 판단하지 않습니다",
+      "fPeriodEnd": "사용기간 끝나는 날",
+      "fKind": "연차 종류",
+      "kind": {
+        "ANNUAL": "1년 이상 연차",
+        "UNDER_ONE_YEAR": "1년 미만 월차(처음 9일 분)"
+      },
+      "schedule": "법정 기간(임시 계산): 1차 통지 {from} ~ {to} · 직원 계획 제출은 받은 날 + 10일 · 2차 통지(회사가 시기 지정) {second}까지",
+      "fDueHint": "기본 = 기준일 + 10일(직원이 사용 시기를 알리는 법정 기간)",
+      "scheduleTitle": "법정 기간 — {kind}, {end}까지 쓰는 연차",
+      "warn": {
+        "first_early": "1차 통지를 법정 기간보다 일찍 보냈습니다.",
+        "first_late": "1차 통지를 법정 기간(10일)보다 늦게 보냈습니다.",
+        "second_late": "2차 통지를 법정 기한보다 늦게 보냈습니다."
+      },
+      "secondDue": "계획 제출 기한이 지났는데 계획을 내지 않은 직원 {n}명 — {by}까지 2차 통지(사용 시기 지정)를 보내 주세요.",
+      "designated": "회사 지정 사용일: {dates}",
+      "secondSent": "2차 통지 {at}",
+      "promotion_dates_invalid": "날짜는 오늘 이후 · 사용기간 안에서, 남은 일수만큼까지 고를 수 있습니다.",
+      "db_update_required": "DB 변경(묶음 30) 적용이 필요합니다.",
+      "second": {
+        "open": "2차 통지(사용 시기 지정)",
+        "hint": "계획을 내지 않아 회사가 사용 날짜를 정해 알립니다. 남은 연차 {n}일까지 고를 수 있습니다. 보내면 바꿀 수 없습니다.",
+        "date": "{n}번째 날짜",
+        "next": "{n}일 지정 — 다음",
+        "confirm": "{name} 님에게 {n}일의 사용 시기를 지정해 통지합니다. 보낸 뒤에는 고칠 수 없습니다.",
+        "send": "보내기",
+        "back": "취소",
+        "msgTitle": "[연차 사용 시기 지정] {title}",
+        "msgBody": "남은 연차 {days}일에 대해 사용 계획을 받지 못해, 회사가 사용 시기를 아래와 같이 지정합니다(근로기준법 제61조).\n\n지정한 날짜: {dates}\n\n지정한 날에 휴가를 신청해 사용해 주세요. 사용기간: {end}까지. 문의는 관리자에게 해 주세요."
+      }
     },
     "laborCost": {
       "title": "인건비 현황",
@@ -5654,7 +5685,8 @@
       "NOTIFIED": "계획 제출 전",
       "PLAN_SUBMITTED": "계획 제출함",
       "CONFIRMED": "확인됨",
-      "EXCEPTION": "따로 처리"
+      "EXCEPTION": "따로 처리",
+      "DESIGNATED": "회사가 사용 시기 지정"
     },
     "planNow": "제출한 계획 ({n}번째, {at}): {dates}",
     "closed": "지금은 계획을 내거나 고칠 수 없습니다.",
@@ -5670,7 +5702,8 @@
     "resubmit": "계획 고쳐 제출",
     "submitted": "제출했습니다.",
     "promotion_plan_invalid": "날짜를 확인하세요. 기준일 이후 날짜를 하나 이상 넣어야 합니다.",
-    "promotion_locked": "이 촉진은 지금 계획을 받을 수 없는 상태입니다."
+    "promotion_locked": "이 촉진은 지금 계획을 받을 수 없는 상태입니다.",
+    "designated": "회사가 지정한 사용일: {dates} — 이 날에 휴가를 신청해 주세요"
   },
   "retirementEstimate": {
     "title": "예상 퇴직금 조회",

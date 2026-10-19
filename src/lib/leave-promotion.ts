@@ -2,7 +2,8 @@
 // 흐름: 촉진 만들기(대상 후보 = 기준일에 잔여가 남은 직원) → 뺄 사람 빼기 → 안내 보내기(업무 메시지) → 직원이 사용 계획 제출 → 관리자가 확인/예외 처리 → 닫기.
 // ★ 프로그램은 「법적 촉진을 마쳤다」거나 「미사용 연차 수당을 주지 않아도 된다」고 정하지 않는다.
 //   메시지를 보냈다 · 읽었다 · 계획을 냈다는 사실과 시각만 남긴다. 통지 방식 · 기간이 요건에 맞는지는 회사가 노무 확인을 받아 판단한다.
-// ★ 통지 시기 · 기한을 프로그램이 계산해 주지 않는다. 관리자가 촉진마다 직접 정한다.
+// ★ 법정 통지 기간(근로기준법 61조)은 「사용기간 끝나는 날」 · 「1년 이상 / 1년 미만」으로 앱이 계산해 보여 준다(lib/leave-promotion-schedule.ts, 2026-10-19, 묶음 30) — 경고만 하고 막지 않는다.
+// ★ 2차 통지: 계획을 내지 않은 직원에게 회사가 사용 시기를 정해 업무 메시지로 알린다. 한 번 보내면 바꾸지 못한다(DB가 막는다). 휴가를 대신 신청하지는 않는다.
 // ★ 대상은 휴가 원장을 시작한 직원뿐이다(승인된 지급 건이 있어야 잔여를 안다).
 import 'server-only';
 import { ApiError } from '@/lib/api';
@@ -11,7 +12,9 @@ import { entriesFor, ledgerBalance } from '@/lib/leave-ledger';
 import { loadEntries, loadLots } from '@/lib/leave-ledger-data';
 import { createAdminClient } from '@/lib/supabase/admin';
 import { sendSystem, isTestNo } from '@/lib/work-messages';
-import { NOT_SYSTEM_ADMIN } from '@/lib/system-admin'; // 시스템관리자는 목록에 보이지 않는다 (2026-10-18)
+import { NOT_SYSTEM_ADMIN } from '@/lib/system-admin';
+import type { PromotionKind } from '@/lib/leave-promotion-schedule';
+import { getTranslations } from 'next-intl/server'; // 시스템관리자는 목록에 보이지 않는다 (2026-10-18)
 
 const db = () => createAdminClient();
 type Row = Record<string, unknown>;
@@ -20,12 +23,12 @@ const boom = (where: string, e: { code?: string } | null): never => {
   throw new Error(`${where}: ${e?.code ?? 'unknown'}`);
 };
 
-export type Campaign = { id: string; title: string; basisOn: string; planDueOn: string; noticeBody: string; state: 'DRAFT' | 'SENT' | 'CLOSED'; policyNote: string | null; createdBy: string; createdAt: string; sentAt: string | null; closedAt: string | null };
-const toCampaign = (r: Row): Campaign => ({ id: r.id as string, title: r.title as string, basisOn: r.basis_on as string, planDueOn: r.plan_due_on as string, noticeBody: r.notice_body as string, state: r.state as Campaign['state'], policyNote: r.policy_note as string | null, createdBy: r.created_by as string, createdAt: r.created_at as string, sentAt: r.sent_at as string | null, closedAt: r.closed_at as string | null });
-export type TargetState = 'CANDIDATE' | 'EXCLUDED' | 'NOTIFIED' | 'PLAN_SUBMITTED' | 'CONFIRMED' | 'EXCEPTION';
+export type Campaign = { id: string; title: string; basisOn: string; planDueOn: string; noticeBody: string; state: 'DRAFT' | 'SENT' | 'CLOSED'; policyNote: string | null; createdBy: string; createdAt: string; sentAt: string | null; closedAt: string | null; periodEnd: string | null; leaveKind: PromotionKind | null };
+const toCampaign = (r: Row): Campaign => ({ id: r.id as string, title: r.title as string, basisOn: r.basis_on as string, planDueOn: r.plan_due_on as string, noticeBody: r.notice_body as string, state: r.state as Campaign['state'], policyNote: r.policy_note as string | null, createdBy: r.created_by as string, createdAt: r.created_at as string, sentAt: r.sent_at as string | null, closedAt: r.closed_at as string | null, periodEnd: (r.period_end as string | null | undefined) ?? null, leaveKind: (r.leave_kind as PromotionKind | null | undefined) ?? null });
+export type TargetState = 'CANDIDATE' | 'EXCLUDED' | 'NOTIFIED' | 'PLAN_SUBMITTED' | 'CONFIRMED' | 'EXCEPTION' | 'DESIGNATED';
 export type Plan = { dates: string[]; note: string | null };
-export type Target = { id: string; campaignId: string; employeeId: string; remainingMinutes: number; state: TargetState; excludeReason: string | null; messageId: string | null; notifiedAt: string | null; plan: Plan | null; planVersion: number; planSubmittedAt: string | null; decidedBy: string | null; decidedAt: string | null; decisionNote: string | null };
-const toTarget = (r: Row): Target => ({ id: r.id as string, campaignId: r.campaign_id as string, employeeId: r.employee_id as string, remainingMinutes: r.remaining_minutes as number, state: r.state as TargetState, excludeReason: r.exclude_reason as string | null, messageId: r.message_id as string | null, notifiedAt: r.notified_at as string | null, plan: (r.plan as Plan | null) ?? null, planVersion: r.plan_version as number, planSubmittedAt: r.plan_submitted_at as string | null, decidedBy: r.decided_by as string | null, decidedAt: r.decided_at as string | null, decisionNote: r.decision_note as string | null });
+export type Target = { id: string; campaignId: string; employeeId: string; remainingMinutes: number; state: TargetState; excludeReason: string | null; messageId: string | null; notifiedAt: string | null; plan: Plan | null; planVersion: number; planSubmittedAt: string | null; decidedBy: string | null; decidedAt: string | null; decisionNote: string | null; designated: string[] | null; secondMessageId: string | null; secondNotifiedAt: string | null };
+const toTarget = (r: Row): Target => ({ id: r.id as string, campaignId: r.campaign_id as string, employeeId: r.employee_id as string, remainingMinutes: r.remaining_minutes as number, state: r.state as TargetState, excludeReason: r.exclude_reason as string | null, messageId: r.message_id as string | null, notifiedAt: r.notified_at as string | null, plan: (r.plan as Plan | null) ?? null, planVersion: r.plan_version as number, planSubmittedAt: r.plan_submitted_at as string | null, decidedBy: r.decided_by as string | null, decidedAt: r.decided_at as string | null, decisionNote: r.decision_note as string | null, designated: (r.designated as string[] | null | undefined) ?? null, secondMessageId: (r.second_message_id as string | null | undefined) ?? null, secondNotifiedAt: (r.second_notified_at as string | null | undefined) ?? null });
 
 export async function loadCampaigns(me: Me): Promise<Campaign[]> {
   const { data, error } = await db().from('leave_promotion_campaigns').select('*').eq('is_test', isTestNo(me.employeeNo)).order('created_at', { ascending: false }).limit(50);
@@ -42,7 +45,7 @@ export async function loadCampaign(id: string): Promise<{ campaign: Campaign; ta
 }
 
 /** 촉진 만들기(초안). 대상 후보 = 기준일에 쓸 수 있는 연차가 남은 직원(켜져 있는 직원, 검사 전용 계정 제외) */
-export async function createCampaign(args: { title: string; basisOn: string; planDueOn: string; noticeBody: string; policyNote: string | null; me: Me }): Promise<{ id: string; candidates: number }> {
+export async function createCampaign(args: { title: string; basisOn: string; planDueOn: string; noticeBody: string; policyNote: string | null; periodEnd?: string | null; leaveKind?: PromotionKind | null; me: Me }): Promise<{ id: string; candidates: number }> {
   const c = db();
   const [lots, entries, { data: staff }] = await Promise.all([loadLots({ states: ['APPROVED'] }), loadEntries(), c.from('profiles').select('id, employee_no, active').or(NOT_SYSTEM_ADMIN)]);
   const live = entriesFor(entries, false);
@@ -55,7 +58,8 @@ export async function createCampaign(args: { title: string; basisOn: string; pla
     const b = ledgerBalance(mine, live.filter((e) => e.employeeId === p.id), args.basisOn);
     if (b.remaining > 0) rows.push({ employee_id: p.id as string, remaining_minutes: b.remaining });
   }
-  const { data, error } = await c.from('leave_promotion_campaigns').insert({ title: args.title, basis_on: args.basisOn, plan_due_on: args.planDueOn, notice_body: args.noticeBody, policy_note: args.policyNote, created_by: args.me.id, is_test: test }).select('id').single();
+  const { data, error } = await c.from('leave_promotion_campaigns').insert({ title: args.title, basis_on: args.basisOn, plan_due_on: args.planDueOn, notice_body: args.noticeBody, policy_note: args.policyNote, created_by: args.me.id, is_test: test, ...(args.periodEnd ? { period_end: args.periodEnd, leave_kind: args.leaveKind ?? 'ANNUAL' } : {}) }).select('id').single();
+  if (error?.code === 'PGRST204' || error?.code === '42703') throw new ApiError(503, 'db_update_required');
   if (error || !data) boom('createCampaign', error);
   if (rows.length > 0) {
     const t = await c.from('leave_promotion_targets').insert(rows.map((r) => ({ ...r, campaign_id: data!.id })));
@@ -111,10 +115,38 @@ export async function decideTarget(args: { campaignId: string; targetId: string;
   if (campaign.state !== 'SENT') throw new ApiError(409, 'promotion_locked');
   const t = targets.find((x) => x.id === args.targetId);
   if (!t) throw new ApiError(404, 'not_found');
-  if (t.state !== 'NOTIFIED' && t.state !== 'PLAN_SUBMITTED' && t.state !== 'CONFIRMED' && t.state !== 'EXCEPTION') throw new ApiError(409, 'promotion_wrong_state');
+  if (t.state !== 'NOTIFIED' && t.state !== 'PLAN_SUBMITTED' && t.state !== 'CONFIRMED' && t.state !== 'EXCEPTION' && t.state !== 'DESIGNATED') throw new ApiError(409, 'promotion_wrong_state');
   if (args.decision === 'EXCEPTION' && !args.note) throw new ApiError(400, 'promotion_note_required');
   const { error } = await db().from('leave_promotion_targets').update({ state: args.decision, decided_by: args.me.id, decided_at: new Date().toISOString(), decision_note: args.note }).eq('id', t.id);
   if (error) boom('decideTarget', error);
+}
+
+/**
+ * 2차 통지 — 계획을 내지 않은 직원(통지함 · 예외)에게 회사가 사용 시기를 정해 알린다(업무 메시지, 같은 대상에게 한 번).
+ * 날짜는 오늘 이후 · 사용기간 안 · 남은 일수(올림)까지. 보내면 상태가 「사용 시기 지정함」이 되고 바꾸지 못한다.
+ */
+export async function sendSecond(args: { campaignId: string; targetId: string; dates: string[]; me: Me; today: string; hrefOf: (targetId: string) => string }): Promise<{ messageId: string }> {
+  const c = db();
+  const { campaign, targets } = await must(args.campaignId);
+  if (campaign.state !== 'SENT') throw new ApiError(409, 'promotion_locked');
+  const t = targets.find((x) => x.id === args.targetId);
+  if (!t) throw new ApiError(404, 'not_found');
+  if (t.secondMessageId) throw new ApiError(409, 'already');
+  if (t.state !== 'NOTIFIED' && t.state !== 'EXCEPTION') throw new ApiError(409, 'promotion_wrong_state'); // 계획을 낸 사람 · 확인한 사람에게는 보내지 않는다
+  const dates = [...new Set(args.dates)].sort();
+  const maxDays = Math.max(1, Math.ceil(t.remainingMinutes / 480));
+  if (dates.length === 0 || dates.length > Math.min(60, maxDays) || dates.some((d) => !/^\d{4}-\d{2}-\d{2}$/.test(d) || Number.isNaN(Date.parse(`${d}T00:00:00Z`)) || d < args.today || (campaign.periodEnd !== null && d > campaign.periodEnd))) throw new ApiError(400, 'promotion_dates_invalid');
+  const tr = await getTranslations({ locale: 'ko', namespace: 'admin.promotion.second' });
+  const days = Math.round((t.remainingMinutes / 480) * 100) / 100;
+  const messageId = await sendSystem({
+    dedupeKey: `promotion2:${t.id}`, title: tr('msgTitle', { title: campaign.title }), body: tr('msgBody', { days, dates: dates.join(', '), end: campaign.periodEnd ?? '' }),
+    needsReply: true, employeeIds: [t.employeeId], senderId: args.me.id, isTest: isTestNo(args.me.employeeNo), related: { type: 'promotion', id: t.id, href: args.hrefOf(t.id) },
+  });
+  if (!messageId) throw new Error('sendSecond: message not sent');
+  const { error } = await c.from('leave_promotion_targets').update({ state: 'DESIGNATED', designated: dates, second_message_id: messageId, second_notified_at: new Date().toISOString(), second_by: args.me.id }).eq('id', t.id).is('second_message_id', null);
+  if (error?.code === 'PGRST204' || error?.code === '42703') throw new ApiError(503, 'db_update_required');
+  if (error) boom('sendSecond', error);
+  return { messageId };
 }
 
 export async function closeCampaign(args: { campaignId: string; me: Me }): Promise<void> {

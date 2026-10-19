@@ -9,9 +9,10 @@ import { minutesToDays } from '@/lib/leave-ledger';
 import { loadCampaign } from '@/lib/leave-promotion';
 import { createAdminClient } from '@/lib/supabase/admin';
 import { toKstDate } from '@/lib/time';
-import { CampaignActions, TargetControls } from '../PromotionForms';
+import { CampaignActions, SecondNotice, TargetControls } from '../PromotionForms';
+import { promotionSchedule, scheduleWarnings } from '@/lib/leave-promotion-schedule';
 
-const TONE = { CANDIDATE: 'neutral', EXCLUDED: 'neutral', NOTIFIED: 'warn', PLAN_SUBMITTED: 'info', CONFIRMED: 'ok', EXCEPTION: 'warn' } as const;
+const TONE = { CANDIDATE: 'neutral', EXCLUDED: 'neutral', NOTIFIED: 'warn', PLAN_SUBMITTED: 'info', CONFIRMED: 'ok', EXCEPTION: 'warn', DESIGNATED: 'info' } as const;
 
 export default async function PromotionDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const [t, f, { id }] = await Promise.all([getTranslations('admin.promotion'), getFormatter(), params]);
@@ -30,6 +31,13 @@ export default async function PromotionDetailPage({ params }: { params: Promise<
   const stamp = (iso: string) => f.dateTime(new Date(iso), { month: 'numeric', day: 'numeric', hour: '2-digit', minute: '2-digit', hourCycle: 'h23' });
   const rows = [...targets].sort((a, b) => (names.get(a.employeeId) ?? '').localeCompare(names.get(b.employeeId) ?? ''));
   const count = (s: string) => targets.filter((v) => v.state === s).length;
+  // 법정 기간 (2026-10-19, 묶음 30) — 만들 때 사용기간 끝나는 날을 넣은 촉진만
+  const today = toKstDate(new Date());
+  const sched = c.periodEnd && c.leaveKind ? promotionSchedule(c.periodEnd, c.leaveKind) : null;
+  const firstSent = c.sentAt ? toKstDate(new Date(c.sentAt)) : null;
+  const lastSecond = targets.map((v) => v.secondNotifiedAt).filter((x): x is string => !!x).sort().at(-1);
+  const warns = sched ? scheduleWarnings(sched, { firstSentOn: firstSent, secondSentOn: lastSecond ? toKstDate(new Date(lastSecond)) : null }) : [];
+  const secondDue = c.state === 'SENT' && today > c.planDueOn ? targets.filter((v) => (v.state === 'NOTIFIED' || v.state === 'EXCEPTION') && !v.secondMessageId).length : 0;
 
   return (
     <PageShell wide>
@@ -44,6 +52,16 @@ export default async function PromotionDetailPage({ params }: { params: Promise<
         <p className="num pt-1 text-sm text-faint">{t('meta', { basis: c.basisOn, due: c.planDueOn })}{c.sentAt && ` · ${t('sentOn', { date: toKstDate(new Date(c.sentAt)) })}`}</p>
       </div>
       <WarnLine short={t('legalShort')}>{t('legal')}</WarnLine>
+      {sched && (
+        <Card className="flex flex-col gap-1 text-sm">
+          <CardTitle>{t('scheduleTitle', { kind: t(`kind.${c.leaveKind}`), end: c.periodEnd ?? '' })}</CardTitle>
+          <p className="num">{t('schedule', { from: sched.firstFrom, to: sched.firstTo, second: sched.secondBy })}</p>
+          {warns.map((w) => (
+            <p key={w} className="text-warn">{t(`warn.${w}`)}</p>
+          ))}
+          {secondDue > 0 && <p className="font-semibold text-warn">{t('secondDue', { n: secondDue, by: sched.secondBy })}</p>}
+        </Card>
+      )}
       <Card className="flex flex-col gap-3">
         <CardTitle>{t('noticeTitle')}</CardTitle>
         <NoticeBody text={c.noticeBody} />
@@ -83,6 +101,12 @@ export default async function PromotionDetailPage({ params }: { params: Promise<
                   )}
                 </td>
                 <td className="num px-3 py-3">
+                  {v.designated && (
+                    <span className="flex flex-col gap-1 pb-1">
+                      <span className="font-semibold">{t('designated', { dates: v.designated.join(', ') })}</span>
+                      {v.secondNotifiedAt && <span className="text-xs text-faint">{t('secondSent', { at: stamp(v.secondNotifiedAt) })}</span>}
+                    </span>
+                  )}
                   {v.plan ? (
                     <span className="flex flex-col gap-1">
                       <span>{v.plan.dates.join(', ')}</span>
@@ -94,7 +118,12 @@ export default async function PromotionDetailPage({ params }: { params: Promise<
                   )}
                 </td>
                 <td className="px-3 py-3">
-                  <TargetControls campaignId={c.id} targetId={v.id} campaignState={c.state} state={v.state} name={names.get(v.employeeId) ?? ''} />
+                  <span className="flex flex-col gap-2">
+                    <TargetControls campaignId={c.id} targetId={v.id} campaignState={c.state} state={v.state} name={names.get(v.employeeId) ?? ''} />
+                    {c.state === 'SENT' && (v.state === 'NOTIFIED' || v.state === 'EXCEPTION') && !v.secondMessageId && (
+                      <SecondNotice campaignId={c.id} targetId={v.id} name={names.get(v.employeeId) ?? ''} maxDates={Math.max(1, Math.ceil(v.remainingMinutes / 480))} min={today} max={c.periodEnd} />
+                    )}
+                  </span>
                 </td>
               </tr>
             ))}

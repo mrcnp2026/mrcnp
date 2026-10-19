@@ -2,7 +2,8 @@
 // 프로그램은 통지 · 계획 · 처리의 사실과 시각만 남긴다. 법적 촉진 완료 여부를 정하지 않는다.
 import { api, ApiError, readJson } from '@/lib/api';
 import { requireAdmin } from '@/lib/auth';
-import { closeCampaign, createCampaign, decideTarget, sendCampaign, setTargetIncluded } from '@/lib/leave-promotion';
+import { closeCampaign, createCampaign, decideTarget, sendCampaign, sendSecond, setTargetIncluded } from '@/lib/leave-promotion';
+import { toKstDate } from '@/lib/time';
 
 export const maxDuration = 60;
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
@@ -17,7 +18,10 @@ export const POST = api('admin.leave.promotion', async (req) => {
   if (b.action === 'create') {
     const title = text(b.title, 80), body = text(b.noticeBody, 4000), note = text(b.policyNote, 1000);
     if (title.length < 1 || title.length > 80 || body.length < 1 || body.length > 4000 || note.length > 1000 || !isDate(b.basisOn) || !isDate(b.planDueOn) || b.planDueOn < b.basisOn) throw new ApiError(400, 'invalid_input');
-    return createCampaign({ title, basisOn: b.basisOn, planDueOn: b.planDueOn, noticeBody: body, policyNote: note || null, me });
+    // 사용기간 끝나는 날 · 연차 종류(묶음 30) — 있으면 법정 통지 기간을 계산해 보인다
+    const periodEnd = b.periodEnd === undefined || b.periodEnd === null || b.periodEnd === '' ? null : isDate(b.periodEnd) ? b.periodEnd : undefined;
+    if (periodEnd === undefined || (b.leaveKind !== undefined && b.leaveKind !== 'ANNUAL' && b.leaveKind !== 'UNDER_ONE_YEAR')) throw new ApiError(400, 'invalid_input');
+    return createCampaign({ title, basisOn: b.basisOn, planDueOn: b.planDueOn, noticeBody: body, policyNote: note || null, periodEnd, leaveKind: (b.leaveKind as 'ANNUAL' | 'UNDER_ONE_YEAR' | undefined) ?? null, me });
   }
   if (typeof b.campaignId !== 'string' || !UUID.test(b.campaignId)) throw new ApiError(400, 'invalid_input');
   if (b.action === 'send') return sendCampaign({ campaignId: b.campaignId, me, hrefOf: (id) => `/punch/leave/promotion/${id}` });
@@ -31,6 +35,11 @@ export const POST = api('admin.leave.promotion', async (req) => {
     if (b.action === 'exclude' && (reason.length < 2 || reason.length > 300)) throw new ApiError(400, 'promotion_note_required');
     await setTargetIncluded({ campaignId: b.campaignId, targetId: b.targetId, include: b.action === 'include', reason: b.action === 'exclude' ? reason : null });
     return { ok: true };
+  }
+  if (b.action === 'second') {
+    const dates = Array.isArray(b.dates) ? (b.dates as unknown[]).filter(isDate) : [];
+    if (dates.length === 0 || dates.length !== (b.dates as unknown[]).length) throw new ApiError(400, 'promotion_dates_invalid');
+    return sendSecond({ campaignId: b.campaignId, targetId: b.targetId, dates, me, today: toKstDate(new Date()), hrefOf: (id) => `/punch/leave/promotion/${id}` });
   }
   if (b.action === 'decide') {
     const note = text(b.note, 500);

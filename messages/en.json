@@ -3871,7 +3871,8 @@
         "NOTIFIED": "No plan yet",
         "PLAN_SUBMITTED": "Plan submitted",
         "CONFIRMED": "Confirmed",
-        "EXCEPTION": "Separate"
+        "EXCEPTION": "Separate",
+        "DESIGNATED": "Dates set"
       },
       "notRead": "Unread",
       "planMeta": "No. {n} · {at}",
@@ -3902,7 +3903,37 @@
       "promotion_no_targets": "There is no one to notify.",
       "promotion_wrong_state": "This person cannot be handled in the current state.",
       "promotion_note_required": "Enter a reason of at least 2 characters.",
-      "legalShort": "The app does not decide whether legal promotion is complete"
+      "legalShort": "The app does not decide whether legal promotion is complete",
+      "fPeriodEnd": "Leave period ends",
+      "fKind": "Leave type",
+      "kind": {
+        "ANNUAL": "Annual leave (1 year+)",
+        "UNDER_ONE_YEAR": "Monthly leave under 1 year (first 9 days)"
+      },
+      "schedule": "Legal windows (provisional): first notice {from} ~ {to} · employee plan due 10 days after receipt · second notice (company sets dates) by {second}",
+      "fDueHint": "Default = basis date + 10 days (the legal window for the employee to reply)",
+      "scheduleTitle": "Legal windows — {kind}, leave usable until {end}",
+      "warn": {
+        "first_early": "The first notice was sent before the legal window.",
+        "first_late": "The first notice was sent after the 10-day legal window.",
+        "second_late": "The second notice was sent after the legal deadline."
+      },
+      "secondDue": "{n} employees passed the plan deadline without a plan — send the second notice (set dates) by {by}.",
+      "designated": "Company-set leave dates: {dates}",
+      "secondSent": "Second notice {at}",
+      "promotion_dates_invalid": "Dates must be from today, within the leave period, and no more than the remaining days.",
+      "db_update_required": "DB change set 30 needs to be applied.",
+      "second": {
+        "open": "Second notice (set dates)",
+        "hint": "No plan was submitted, so the company sets the leave dates. Up to {n} remaining days. Cannot be changed after sending.",
+        "date": "Date {n}",
+        "next": "Set {n} days — next",
+        "confirm": "Send {name} a notice setting {n} leave dates. It cannot be changed after sending.",
+        "send": "Send",
+        "back": "Cancel",
+        "msgTitle": "[Leave dates set] {title}",
+        "msgBody": "No plan was received for your {days} remaining leave days, so the company sets the dates as below (Labor Standards Act Art. 61).\n\nDates: {dates}\n\nPlease request leave on these dates. Usable until {end}. Contact your manager with questions."
+      }
     },
     "laborCost": {
       "title": "Labor cost",
@@ -5654,7 +5685,8 @@
       "NOTIFIED": "Plan not submitted",
       "PLAN_SUBMITTED": "Plan submitted",
       "CONFIRMED": "Confirmed",
-      "EXCEPTION": "Handled separately"
+      "EXCEPTION": "Handled separately",
+      "DESIGNATED": "Dates set by company"
     },
     "planNow": "Submitted plan (no. {n}, {at}): {dates}",
     "closed": "The plan cannot be submitted or changed now.",
@@ -5670,7 +5702,8 @@
     "resubmit": "Resubmit plan",
     "submitted": "Submitted.",
     "promotion_plan_invalid": "Check the dates. Enter at least one date on or after the basis date.",
-    "promotion_locked": "This campaign cannot accept plans right now."
+    "promotion_locked": "This campaign cannot accept plans right now.",
+    "designated": "Company-set leave dates: {dates} — please request leave on these days"
   },
   "retirementEstimate": {
     "title": "Estimated retirement pay",
