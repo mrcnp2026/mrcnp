@@ -72,10 +72,11 @@ export default async function PayRunsPage({ searchParams }: { searchParams: Prom
               <Chip tone={TONE[r.status]}>{t(`status.${r.status}`)}</Chip>
             </td>
             <td className="num">{r.generationId ? t('membersValue', { ok: Number(r.totals.ok ?? 0), blocked: Number(r.totals.blocked ?? 0) }) : ''}</td>
-            <td className="num text-right whitespace-nowrap">{r.generationId ? won(r.totals.pay) : ''}</td>
-            <td className="num text-right whitespace-nowrap">{r.generationId ? won(r.totals.deduction) : ''}</td>
+            {/* 폰 카드는 달 · 지급일 · 상태 · 대상 · 실지급만 — 지급 · 공제 · 사업주 부담은 대장을 열면 (2026-10-19 디자인: 대장마다 8줄) */}
+            <td className="num text-right whitespace-nowrap max-lg:hidden!">{r.generationId ? won(r.totals.pay) : ''}</td>
+            <td className="num text-right whitespace-nowrap max-lg:hidden!">{r.generationId ? won(r.totals.deduction) : ''}</td>
             <td className="num text-right font-bold whitespace-nowrap">{r.generationId ? won(r.totals.net) : ''}</td>
-            <td className="num text-right whitespace-nowrap">{r.generationId ? won(r.totals.employer) : ''}</td>
+            <td className="num text-right whitespace-nowrap max-lg:hidden!">{r.generationId ? won(r.totals.employer) : ''}</td>
           </tr>
         ))}
       </ListTable>

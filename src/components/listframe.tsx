@@ -44,8 +44,8 @@ export function StatusCards({ groups }: { groups: { title: string; cards: Status
       {groups.map((g) => (
         <section key={g.title} className="rounded-card bg-surface p-2 lg:p-3">
           <h2 className="px-1 pb-1.5 text-xs font-bold text-muted lg:pb-2 lg:text-sm">{g.title}</h2>
-          {/* 폰: 한 줄에 셋, 작게 (2026-10-16 디자인: 카드만으로 첫 화면이 찼다) · PC: 칸 폭에 맞춰 */}
-          <div className="grid grid-cols-3 gap-1.5 lg:grid-cols-[repeat(auto-fill,minmax(7rem,1fr))] lg:gap-2">
+          {/* 폰: 한 줄에 셋, 작게 (2026-10-16 디자인: 카드만으로 첫 화면이 찼다) — 넷이면 한 줄에 넷, 둘이면 둘(한 칸만 다음 줄로 떨어지지 않게, 2026-10-19) · PC: 칸 폭에 맞춰 */}
+          <div className={`grid ${g.cards.length === 4 ? 'grid-cols-4' : g.cards.length === 2 ? 'grid-cols-2' : 'grid-cols-3'} gap-1.5 lg:grid-cols-[repeat(auto-fill,minmax(7rem,1fr))] lg:gap-2`}>
             {g.cards.map((c) => (
               <Link
                 key={c.key}
