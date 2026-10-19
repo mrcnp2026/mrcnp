@@ -3,6 +3,7 @@
 // ★ 원장은 지급 건이 승인된 직원만 쌓는다 — 지급 건이 하나도 없는 직원의 휴가를 전부 「선사용」으로 적지 않기 위해서다.
 // ★ 원장 줄은 고치거나 지울 수 없다(0035). 그래서 넣기 전에 계획(planRequest · planExpiry)을 세우고, 같은 열쇠는 한 번만 들어간다.
 import 'server-only';
+import { OFFICE } from '@/config/office';
 import { readAll } from '@/lib/read-all';
 import { ApiError } from '@/lib/api';
 import type { Me } from '@/lib/auth';
@@ -111,7 +112,7 @@ const lotKey = (employeeId: string, p: PlannedLot) => `${employeeId}:${ACCRUAL_T
  * 재직 중인 직원마다 asOf까지 발생한 연차를 「후보」로 만든다(아직 쓸 수 있는 건만). 같은 발생은 한 번만 — 다시 눌러도 늘지 않는다.
  * 입사일이 없는 직원은 건너뛴다(추측하지 않는다). 생성 제외 그룹의 직원도 건너뛴다.
  */
-export async function runAccrual(args: { asOf: string; me: Me }): Promise<AccrualResult> {
+export async function runAccrual(args: { asOf: string; me: Me; keep?: (employeeId: string, lot: PlannedLot) => boolean; createdIds?: string[] }): Promise<AccrualResult> {
   const c = db();
   const policies = await loadDefaultPolicies();
   const row = policyAt(policies, args.asOf);
@@ -143,6 +144,7 @@ export async function runAccrual(args: { asOf: string; me: Me }): Promise<Accrua
     if (m && excluded.has(m.group_id as string)) { res.excluded++; continue; }
     const use = (m && groupRow.get(m.group_id as string)) || row;
     for (const p of planAccrual({ hiredOn: s.joined_on as string, asOf: args.asOf, policy: use.policy, liveOnly: true })) {
+      if (args.keep && !args.keep(s.id as string, p)) continue; // 자동 발생: 시프티에서 옮긴 기간 · 자동 시작 전은 건너뛴다
       const key = lotKey(s.id as string, p);
       if (have.has(key)) { res.existing++; continue; }
       rows.push({
@@ -152,8 +154,11 @@ export async function runAccrual(args: { asOf: string; me: Me }): Promise<Accrua
     }
   }
   for (const r of rows) {
-    const { error } = await c.from('leave_grant_lots').insert(r);
-    if (!error) res.created++;
+    const { data: made, error } = await c.from('leave_grant_lots').insert(r).select('id').single();
+    if (!error) {
+      res.created++;
+      args.createdIds?.push(made.id as string);
+    }
     else if (error.code === '23505') res.existing++; // 다른 관리자가 같은 때 만들었다
     else boom('runAccrual.insert', error);
   }
@@ -247,6 +252,47 @@ export async function addManualLot(args: { employeeId: string; kind: 'manual' | 
 }
 
 // ── 신청 ↔ 원장 ──
+/** 자동 발생을 시작한 날 — 이 날보다 앞의 지급은 자동으로 만들지 않는다(그 전 것은 시프티에서 옮겼거나 관리자가 넣었다) */
+export const AUTO_ACCRUAL_FROM = '2026-10-17';
+/** 자동으로 만들 지급 종류 — 연차 기준이 정해지면 'annual'을 더한다(회계연도면 기준 판도 함께 바꾼다) */
+const AUTO_KINDS = new Set(['monthly']);
+
+/**
+ * 입사일 기준 연차를 매일 자동으로 만들고 바로 지급한다 (2026-10-19 의뢰인: 「자동 생성 + 자동 승인」). 정기 작업 /api/cron/leave-accrual이 부른다.
+ * 시프티에서 옮긴 지급 건은 12월까지 미리 잡힌 월차가 있어서, 직원마다 「옮긴 마지막 지급일」 다음 날부터만 만든다 — 같은 기간이 두 번 생기지 않게.
+ * 지급한 사람은 시스템관리자로 남는다. 기준은 노무 확인 전 「임시」(검증 대기 기록).
+ */
+export async function autoAccrue(asOf: string): Promise<AccrualResult & { approved: number }> {
+  const c = db();
+  const [{ data: sys }, { data: migrated, error }] = await Promise.all([
+    c.from('profiles').select('id').eq('employee_no', OFFICE.ownerEmployeeNo).maybeSingle(),
+    c.from('leave_grant_lots').select('employee_id, granted_on, quantity_minutes').eq('lot_kind', 'migrated').eq('state', 'APPROVED').limit(20000),
+  ]);
+  if (error) boom('autoAccrue.migrated', error);
+  if (!sys) throw new Error('autoAccrue: system admin missing');
+  const me = { id: sys.id as string } as Me; // 정기 작업에는 로그인한 사람이 없다 — 지급 기록의 「누가」는 시스템관리자
+  const lastMigrated = new Map<string, string>();
+  const migratedDays = new Map<string, number>(); // 옮긴 1일짜리 지급 건 수 = 시프티에서 이미 받은 월차 개수 (입사 1년 차 직원)
+  for (const m of migrated ?? []) {
+    const id = m.employee_id as string;
+    const cur = lastMigrated.get(id);
+    if (!cur || (m.granted_on as string) > cur) lastMigrated.set(id, m.granted_on as string);
+    if (Number(m.quantity_minutes) === DAY_MINUTES) migratedDays.set(id, (migratedDays.get(id) ?? 0) + 1);
+  }
+  // 지금 자동은 입사 1년 차 월차(매달 1일)만 — 입사일 기준이든 회계연도 기준이든 같다. 1년 이상의 연차는 기준(입사일 / 회계연도 1월 1일)을 정한 뒤 켠다
+  //   (2026-10-19 확인: 시프티는 회계연도 1월 1일로 줬고 앱 기준은 입사일 — 그대로 켜면 같은 해 연차가 두 번 생긴다. 결정 급여-10)
+  // 월차는 날짜가 시프티와 며칠씩 다를 수 있어(25일 · 27일 등) 날짜 대신 개수로 이어 간다: k번째 월차는 시프티에서 받은 월차가 k개보다 적을 때만
+  const keep = (employeeId: string, lot: PlannedLot) => {
+    if (!AUTO_KINDS.has(lot.kind) || lot.grantedOn < AUTO_ACCRUAL_FROM) return false;
+    if (lot.kind === 'monthly') return (lot.basis.month ?? 0) > (migratedDays.get(employeeId) ?? 0);
+    return lot.grantedOn > (lastMigrated.get(employeeId) ?? '');
+  };
+  const createdIds: string[] = [];
+  const res = await runAccrual({ asOf, me, keep, createdIds });
+  const decided = createdIds.length ? await decideLots({ ids: createdIds, decision: 'approve', me }) : [];
+  return { ...res, approved: decided.filter((d) => d.result === 'approved').length };
+}
+
 /**
  * 그 직원의 휴가 신청을 원장에 맞춘다(연습 · 운영 각각). 승인된 지급 건이 없으면 아무것도 하지 않는다.
  * 가장 이른 지급 건의 사용 시작일 뒤에 시작한 신청과, 이미 원장에 줄이 있는 신청만 본다.

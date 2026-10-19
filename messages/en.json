@@ -2011,8 +2011,8 @@
           },
           "accrual": {
             "label": "Automatic accrual",
-            "value": "Off",
-            "note": "A reference value is calculated from the hire date; a manager confirms and enters the grant."
+            "value": "Monthly auto · annual after decision",
+            "note": "First-year monthly leave (1 day a month) is created and granted automatically every night (continuing from migrated Shiftee grants, up to 11). Annual leave turns automatic once the basis (hire date / fiscal year Jan 1) is decided — until then use Accrue in the leave ledger."
           }
         },
         "request": {
