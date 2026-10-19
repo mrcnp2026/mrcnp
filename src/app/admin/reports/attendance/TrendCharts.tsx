@@ -2,7 +2,7 @@
 // 폰 · PC 두 곳에 같은 그래프가 있어 계산은 reportOnce로 한 번만 한다. 이번 달은 본문 표와 같은 계산을 다시 쓴다.
 import { getTranslations } from 'next-intl/server';
 import { cache } from 'react';
-import { buildAttendanceDeptReport, type AttSum } from '@/lib/report-attendance';
+import { attendanceRate, buildAttendanceDeptReport, type AttSum } from '@/lib/report-attendance';
 import { createAdminClient } from '@/lib/supabase/admin';
 
 /** 같은 조건의 리포트는 한 화면에서 한 번만 센다 */
@@ -19,6 +19,7 @@ export async function TrendCharts({ month, practice, groupId, basis }: { month: 
   const t = await getTranslations('admin.reports');
   const trend = await trendOnce(month, practice, groupId, basis);
   const METRICS = [
+    { key: 'cRate', v: (x: AttSum) => attendanceRate(x), unit: 'pctUnit' },
     { key: 'cNet', v: (x: AttSum) => Math.round((x.netMinutes / 60) * 10) / 10, unit: 'hUnit' },
     { key: 'cOvertime', v: (x: AttSum) => Math.round((x.overtimeMinutes / 60) * 10) / 10, unit: 'hUnit' },
     { key: 'cLate', v: (x: AttSum) => x.lateCount, unit: 'countUnit' },
@@ -30,7 +31,7 @@ export async function TrendCharts({ month, practice, groupId, basis }: { month: 
   return (
     <>
       {/* 폰은 한 줄에 그래프 하나 — 두 칸이면 「4725.8」 같은 숫자가 막대보다 넓어 상자 밖으로 나갔다 (2026-10-17 의뢰인) */}
-      <div className="grid grid-cols-1 gap-2 sm:grid-cols-2 lg:grid-cols-3 lg:gap-3 2xl:grid-cols-5" data-trend>
+      <div className="grid grid-cols-1 gap-2 sm:grid-cols-2 lg:grid-cols-3 lg:gap-3 2xl:grid-cols-6" data-trend>
         {METRICS.map((mt) => {
           const vals = trend.map((x) => (x.s ? mt.v(x.s) : null));
           const max = Math.max(1, ...vals.map((v) => v ?? 0));

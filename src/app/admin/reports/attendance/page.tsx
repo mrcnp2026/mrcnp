@@ -10,13 +10,14 @@ import { OFFICE } from '@/config/office';
 import { isMonth } from '@/lib/close-review';
 import { buildOrgTree } from '@/lib/org';
 import { loadOrgGroups } from '@/lib/org-data';
-import { type AttSum } from '@/lib/report-attendance';
+import { attendanceRate, type AttSum } from '@/lib/report-attendance';
+import { DailyRate } from './DailyRate';
 import { reportOnce, TrendCharts } from './TrendCharts';
 import { toKstDate } from '@/lib/time';
 
 const field = 'min-h-9 w-full rounded-button border border-border bg-bg px-3 text-sm lg:w-auto';
 
-export default async function AttendanceReportPage({ searchParams }: { searchParams: Promise<{ m?: string; g?: string; basis?: string; live?: string }> }) {
+export default async function AttendanceReportPage({ searchParams }: { searchParams: Promise<{ m?: string; g?: string; basis?: string; live?: string; tr?: string }> }) {
   const [t, sp, groups] = await Promise.all([getTranslations('admin.reports'), searchParams, loadOrgGroups()]);
   const today = toKstDate(new Date());
   const month = isMonth(sp.m) && sp.m <= today.slice(0, 7) ? sp.m : today.slice(0, 7);
@@ -30,10 +31,11 @@ export default async function AttendanceReportPage({ searchParams }: { searchPar
   const h = (min: number) => t('hours', { n: f.number(Math.round((min / 60) * 10) / 10, { maximumFractionDigits: 1 }) });
   const dayN = (n: number) => f.number(Math.round(n * 100) / 100, { maximumFractionDigits: 2 });
   const qs = new URLSearchParams({ m: month, ...(groupId ? { g: groupId } : {}), ...(basis === 'current' ? { basis } : {}), ...(sp.live === '1' ? { live: '1' } : {}) }).toString();
-  const cols = ['cPeople', 'cNet', 'cPayable', 'cOvertime', 'cNight', 'cHoliday', 'cLate', 'cAbsent', 'cPaidLeave', 'cAnomaly', 'cPending', 'cClose'] as const;
+  const cols = ['cPeople', 'cNet', 'cPayable', 'cOvertime', 'cNight', 'cHoliday', 'cLate', 'cAbsent', 'cPaidLeave', 'cAnomaly', 'cPending', 'cRate', 'cClose'] as const;
+  const rate = (s: AttSum) => { const v = attendanceRate(s); return v === null ? '–' : t('pct', { n: f.number(v, { maximumFractionDigits: 1 }) }); }; // 출근율 (2026-10-19)
   const cells = (s: AttSum) => [
     s.people, h(s.netMinutes), h(s.payableMinutes), h(s.overtimeMinutes), h(s.nightMinutes), h(s.holidayMinutes), s.lateCount, dayN(s.absentDays), dayN(s.paidLeaveDays),
-    s.anomalyBlock + s.anomalyCheck === 0 ? 0 : t('anomalyValue', { block: s.anomalyBlock, check: s.anomalyCheck }), s.pending, t('closeValue', { closed: s.closed, all: s.people }),
+    s.anomalyBlock + s.anomalyCheck === 0 ? 0 : t('anomalyValue', { block: s.anomalyBlock, check: s.anomalyCheck }), s.pending, rate(s), t('closeValue', { closed: s.closed, all: s.people }),
   ];
   const provisional = r.total.people - r.total.closed;
   return (
@@ -88,7 +90,7 @@ export default async function AttendanceReportPage({ searchParams }: { searchPar
           <li key={x.key} className={`rounded-card border border-border p-3 ${x.total ? 'bg-surface' : 'bg-bg'}`}>
             <p className="font-bold">{x.name}</p>
             <dl className="num mt-1 grid grid-cols-3 gap-x-3 gap-y-1 text-sm">
-              {([0, 2, 3, 6, 9, 11] as const).map((i) => (
+              {([0, 11, 2, 3, 6, 12] as const).map((i) => (
                 <div key={i} className="flex flex-col">
                   <dt className="text-xs text-faint">{t(cols[i])}</dt>
                   <dd>{cells(x.s)[i]}</dd>
@@ -143,7 +145,7 @@ export default async function AttendanceReportPage({ searchParams }: { searchPar
                     {e.isClosed ? <Chip tone="ok">{t('closed')}</Chip> : <Chip tone="warn">{t('open')}</Chip>}
                   </span>
                   <span className="num truncate text-xs text-muted">
-                    {t('cPayable')} {c[2]} · {t('cOvertime')} {c[3]} · {t('cLate')} {c[6]}
+                    {t('cRate')} {c[11]} · {t('cPayable')} {c[2]} · {t('cOvertime')} {c[3]} · {t('cLate')} {c[6]}
                   </span>
                 </span>
                 <ChevronRight aria-hidden size={18} className="shrink-0 text-faint" />
@@ -184,6 +186,9 @@ export default async function AttendanceReportPage({ searchParams }: { searchPar
         {r.employees.length === 0 && <p className="p-4 text-sm text-faint">{t('empty')}</p>}
       </div>
       <p className="text-xs text-faint">{t('attNote')}</p>
+
+      {/* 출근율 일별 · 주별 (2026-10-19) — 이 달 안에서 */}
+      <DailyRate daily={r.daily} mode={sp.tr === 'w' ? 'week' : 'day'} hrefOf={(m) => `/admin/reports/attendance?${new URLSearchParams({ ...Object.fromEntries(new URLSearchParams(qs)), ...(m === 'week' ? { tr: 'w' } : {}) }).toString()}`} />
 
       <h2 className="hidden text-lg font-bold lg:block">{t('trendTitle')}</h2>
       {/* 6개월 추이는 늦게 채운다 — 표가 먼저 보이고 그래프는 뒤따라 (2026-10-19 속도: 달마다 다시 세느라 화면 전체가 5초 기다렸다) */}

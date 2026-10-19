@@ -37,6 +37,9 @@ export type MonthSummary = {
   paidLeaveDays: number; // 유급휴가 일수 (연차·반차·경조사 등) — 화면·엑셀용. 급여용 CSV 칸 목록은 그대로
   workDates: string[]; // 승인된 외근·출장·재택 근무일
   unconfirmedDates: string[]; // 기록은 있는데 확정되지 않아 합계에서 뺀 날 (confirmed를 넘겼을 때만 채워진다)
+  // 출근율 (2026-10-19, 임시 정의 개발-51): 출근해야 했던 날 = 근무일 · 입사 후 · 지난 날 · 하루 전부 휴가가 아닌 날 / 출근한 날 = 그중 출근 기록이 있거나 승인된 외근 · 출장 · 재택인 날
+  dueDates: string[];
+  presentDates: string[];
 };
 
 // 급여를 막는 사유(block:)와 사람이 봐야 할 사실(warn:)을 접두어로 나눈다 (7-10). ③은 block:만 차단한다 (부록 R-11 #7)
@@ -86,6 +89,8 @@ export function summarizeMonth(args: {
   const leaveDates: string[] = [];
   const workDates: string[] = [];
   const unconfirmedDates: string[] = [];
+  const dueDates: string[] = [];
+  const presentDates: string[] = [];
   let paidLeave = 0;
   let unpaidLeave = 0;
   const reqByDate = new Map(args.requests.map((r) => [r.workDate, r]));
@@ -155,6 +160,10 @@ export function summarizeMonth(args: {
     const past = d.workDate < args.today || (d.workDate === args.today && args.now >= kstDateTime(d.workDate, OFFICE.absentCheckTime));
     const wk = args.work?.get(d.workDate);
     if (wk) workDates.push(d.workDate);
+    if (d.dayType === 'workday' && past && !isFullDayLeave(lv) && (!args.joinedOn || d.workDate >= args.joinedOn)) {
+      dueDates.push(d.workDate);
+      if (firstIn || wk) presentDates.push(d.workDate);
+    }
     if (d.dayType === 'workday' && past && !firstIn && !isFullDayLeave(lv) && (!args.joinedOn || d.workDate >= args.joinedOn)) {
       if (wk) flags.add(FLAG.WORK_DAY_NO_HOURS);
       else absentDates.push(d.workDate);
@@ -181,6 +190,8 @@ export function summarizeMonth(args: {
     paidLeaveDays: roundDays(paidLeave),
     workDates,
     unconfirmedDates,
+    dueDates,
+    presentDates,
     row: {
       employee_no: args.employeeNo,
       name: args.name,

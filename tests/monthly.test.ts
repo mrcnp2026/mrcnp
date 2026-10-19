@@ -190,3 +190,19 @@ describe('기록 확정 (의뢰인 2026-10-11: 확정한 기록만 급여 계산
     expect(String(r.row.flags)).not.toContain('미확정 기록');
   });
 });
+
+describe('출근율의 분모 · 분자 (2026-10-19, 임시 정의)', () => {
+  const L = (typeCode: string, isPaid: boolean, unit: number): LeaveOnDay => ({ typeCode, isPaid, unit, requestId: 'r' });
+  it('출근해야 했던 날 = 입사 후 근무일에서 하루 전부 휴가를 뺀 날, 출근한 날 = 그중 출근 기록이 있는 날', () => {
+    // 10-12(월) 입사 ~ 10-30(금): 근무일 15일. 10-12 연차(하루) → 14일. 출근 기록 2일
+    const r = month([ev('in', '2026-10-13', '09:00'), ev('out', '2026-10-13', '18:00'), ev('in', '2026-10-14', '09:20'), ev('out', '2026-10-14', '18:00')], { leave: new Map([['2026-10-12', [L('annual', true, 1)]]]) });
+    expect(r.dueDates).toHaveLength(14);
+    expect(r.dueDates).not.toContain('2026-10-12');
+    expect(r.presentDates).toEqual(['2026-10-13', '2026-10-14']);
+    expect(r.presentDates.length + r.absentDates.length).toBe(r.dueDates.length); // 출근 + 결근 = 출근해야 했던 날
+  });
+  it('반차만 낸 날은 출근해야 했던 날에 남는다', () => {
+    const r = month([], { leave: new Map([['2026-10-14', [L('half', true, 0.5)]]]) });
+    expect(r.dueDates).toContain('2026-10-14');
+  });
+});

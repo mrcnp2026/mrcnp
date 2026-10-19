@@ -5,9 +5,9 @@ import type { AttEmp, AttReport } from '@/lib/report-attendance';
 
 const emp = (o: Partial<AttEmp> & { employeeId: string; name: string }): AttEmp => ({
   people: 1, closed: 0, netMinutes: 0, payableMinutes: 0, regularMinutes: 0, overtimeMinutes: 0, nightMinutes: 0, holidayMinutes: 0, lateCount: 0, absentDays: 0, paidLeaveDays: 0, unpaidLeaveDays: 0,
-  anomalyBlock: 0, anomalyCheck: 0, pending: 0, unconfirmedDays: 0, employeeNo: null, groupId: null, isClosed: false, ...o,
+  anomalyBlock: 0, anomalyCheck: 0, pending: 0, unconfirmedDays: 0, dueDays: 0, presentDays: 0, employeeNo: null, groupId: null, isClosed: false, ...o,
 });
-const rep = (month: string, employees: AttEmp[]): AttReport => ({ month, practice: false, basis: 'at_month_end', groupId: null, employees, groups: [], total: emp({ employeeId: '', name: '' }), generatedAt: '' });
+const rep = (month: string, employees: AttEmp[]): AttReport => ({ month, practice: false, basis: 'at_month_end', groupId: null, employees, groups: [], total: emp({ employeeId: '', name: '' }), daily: [], generatedAt: '' });
 const days = (from: string, n: number, minutes: number) => Array.from({ length: n }, (_, i) => { const d = new Date(`${from}T00:00:00Z`); d.setUTCDate(d.getUTCDate() + i); return { date: d.toISOString().slice(0, 10), minutes }; });
 
 describe('collectAnnual', () => {

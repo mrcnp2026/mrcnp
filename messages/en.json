@@ -3833,7 +3833,21 @@
       "hUnit": "Unit: hours",
       "countUnit": "Unit: times",
       "dayUnit": "Unit: days",
-      "trendNote": "Recounted per month with the same team and basis as above. The dark bar is the selected month. Months without a work rule show “–”. Unclosed months are provisional."
+      "trendNote": "Recounted per month with the same team and basis as above. The dark bar is the selected month. Months without a work rule show “–”. Unclosed months are provisional.",
+      "cRate": "Attendance",
+      "pctUnit": "%",
+      "rate": {
+        "title": "Attendance rate trend",
+        "day": "Daily",
+        "week": "Weekly",
+        "weekOf": "wk {date}",
+        "aria": "Attendance rate: {values}",
+        "tip": "{date} attendance {rate}% — present {present} / expected {due}, late {late}",
+        "table": "Show as table",
+        "row": "{rate}% · present {present}/{due} · late {late}",
+        "empty": "No expected workdays in this month yet.",
+        "note": "Attendance = days present ÷ expected workdays. Expected = workdays after joining, already past, not fully on leave; present = of those, days with a clock-in or approved field/business/remote work (provisional definition)."
+      }
     },
     "promotion": {
       "title": "Leave use promotion",

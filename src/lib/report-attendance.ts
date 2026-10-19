@@ -16,12 +16,16 @@ import { daysFor, leaveDaysFor, workDaysFor } from '@/lib/period-data';
 import { createAdminClient } from '@/lib/supabase/admin';
 import { toKstDate } from '@/lib/time';
 
-export type AttSum = { people: number; closed: number; netMinutes: number; payableMinutes: number; regularMinutes: number; overtimeMinutes: number; nightMinutes: number; holidayMinutes: number; lateCount: number; absentDays: number; paidLeaveDays: number; unpaidLeaveDays: number; anomalyBlock: number; anomalyCheck: number; pending: number; unconfirmedDays: number };
+export type AttSum = { people: number; closed: number; netMinutes: number; payableMinutes: number; regularMinutes: number; overtimeMinutes: number; nightMinutes: number; holidayMinutes: number; lateCount: number; absentDays: number; paidLeaveDays: number; unpaidLeaveDays: number; anomalyBlock: number; anomalyCheck: number; pending: number; unconfirmedDays: number; dueDays: number; presentDays: number };
 export type AttEmp = AttSum & { employeeId: string; name: string; employeeNo: string | null; groupId: string | null; isClosed: boolean; dayTotals?: { date: string; minutes: number }[] };
 export type AttGroup = AttSum & { groupId: string | null; name: string };
-export type AttReport = { month: string; practice: boolean; basis: 'at_month_end' | 'current'; groupId: string | null; employees: AttEmp[]; groups: AttGroup[]; total: AttSum; generatedAt: string };
+// daily: 날마다 출근해야 했던 사람 · 출근한 사람 · 지각한 사람 (출근율 일별 · 주별 추이, 2026-10-19)
+export type AttDay = { date: string; due: number; present: number; late: number };
+export type AttReport = { month: string; practice: boolean; basis: 'at_month_end' | 'current'; groupId: string | null; employees: AttEmp[]; groups: AttGroup[]; total: AttSum; daily: AttDay[]; generatedAt: string };
+/** 출근율(%) — 출근해야 했던 날이 없으면 null */
+export const attendanceRate = (s: Pick<AttSum, 'dueDays' | 'presentDays'>): number | null => (s.dueDays > 0 ? Math.round((s.presentDays / s.dueDays) * 1000) / 10 : null);
 
-const zero = (): AttSum => ({ people: 0, closed: 0, netMinutes: 0, payableMinutes: 0, regularMinutes: 0, overtimeMinutes: 0, nightMinutes: 0, holidayMinutes: 0, lateCount: 0, absentDays: 0, paidLeaveDays: 0, unpaidLeaveDays: 0, anomalyBlock: 0, anomalyCheck: 0, pending: 0, unconfirmedDays: 0 });
+const zero = (): AttSum => ({ people: 0, closed: 0, netMinutes: 0, payableMinutes: 0, regularMinutes: 0, overtimeMinutes: 0, nightMinutes: 0, holidayMinutes: 0, lateCount: 0, absentDays: 0, paidLeaveDays: 0, unpaidLeaveDays: 0, anomalyBlock: 0, anomalyCheck: 0, pending: 0, unconfirmedDays: 0, dueDays: 0, presentDays: 0 });
 const KEYS = Object.keys(zero()) as (keyof AttSum)[];
 const addTo = (a: AttSum, b: AttSum) => { for (const k of KEYS) a[k] += b[k]; };
 
@@ -46,6 +50,8 @@ export async function buildAttendanceDeptReport(args: { ym: string; practice: bo
   };
   const scope = args.groupId ? groupScope(groups, args.groupId) : null;
   const employees: AttEmp[] = [];
+  const byDay = new Map<string, AttDay>();
+  const bump = (date: string, k: 'due' | 'present' | 'late') => { const x = byDay.get(date) ?? { date, due: 0, present: 0, late: 0 }; x[k]++; byDay.set(date, x); };
   for (const l of lines) {
     if (l.employeeNo === OFFICE.ownerEmployeeNo && l.review.recordDays.length === 0 && !l.close) continue; // 시스템관리자(admin)는 직원이 아니다 — 기록이 없으면 리포트에서 뺀다 (2026-10-17 디자인: 연간 리포트에 결근 9일로 나왔다)
     const gid = groupAt(l.employeeId, l.groupId);
@@ -66,7 +72,11 @@ export async function buildAttendanceDeptReport(args: { ym: string; practice: bo
       Object.assign(row, {
         netMinutes: s.netMinutes, payableMinutes: s.payableMinutes, regularMinutes: n('regular_minutes'), overtimeMinutes: n('approved_overtime_minutes'), nightMinutes: n('approved_night_minutes'),
         holidayMinutes: n('approved_holiday_within8_minutes') + n('approved_holiday_over8_minutes'), lateCount: n('late_count'), absentDays: n('absent_days'), paidLeaveDays: s.paidLeaveDays, unpaidLeaveDays: n('unpaid_leave_days'),
+        dueDays: s.dueDates.length, presentDays: s.presentDates.length,
       });
+      for (const d of s.dueDates) bump(d, 'due');
+      for (const d of s.presentDates) bump(d, 'present');
+      for (const d of s.lateDays) bump(d.date, 'late');
     }
     const a = anomalies.get(l.employeeId);
     row.anomalyBlock = a?.block ?? 0;
@@ -87,7 +97,7 @@ export async function buildAttendanceDeptReport(args: { ym: string; practice: bo
     addTo(by.get(key)!, e);
     addTo(total, e);
   }
-  return { month: args.ym, practice: args.practice, basis: args.basis, groupId: args.groupId, employees, groups: [...by.values()].sort((a, b) => (a.groupId === null ? 1 : b.groupId === null ? -1 : a.name.localeCompare(b.name))), total, generatedAt: now.toISOString() };
+  return { month: args.ym, practice: args.practice, basis: args.basis, groupId: args.groupId, employees, groups: [...by.values()].sort((a, b) => (a.groupId === null ? 1 : b.groupId === null ? -1 : a.name.localeCompare(b.name))), total, daily: [...byDay.values()].sort((a, b) => a.date.localeCompare(b.date)), generatedAt: now.toISOString() };
 }
 
 const FONT = 'Malgun Gothic';
@@ -99,8 +109,8 @@ const hours = (m: number) => Math.round((m / 60) * 100) / 100;
 export function attendanceReportWorkbook(r: AttReport, args: { company: string; by: string; groupName: string; unassigned: string }): ExcelJS.Workbook {
   const wb = new ExcelJS.Workbook();
   wb.creator = args.company;
-  const cols = ['대상(명)', '마감(명)', '실제(시간)', '급여용(시간)', '소정(시간)', '인정 연장(시간)', '인정 야간(시간)', '인정 휴일(시간)', '지각(회)', '결근(일)', '유급휴가(일)', '무급휴가(일)', '이상-차단(일)', '이상-확인(일)', '대기 요청(건)', '미확정(일)'];
-  const vals = (s: AttSum) => [s.people, s.closed, hours(s.netMinutes), hours(s.payableMinutes), hours(s.regularMinutes), hours(s.overtimeMinutes), hours(s.nightMinutes), hours(s.holidayMinutes), s.lateCount, s.absentDays, s.paidLeaveDays, s.unpaidLeaveDays, s.anomalyBlock, s.anomalyCheck, s.pending, s.unconfirmedDays];
+  const cols = ['대상(명)', '마감(명)', '실제(시간)', '급여용(시간)', '소정(시간)', '인정 연장(시간)', '인정 야간(시간)', '인정 휴일(시간)', '지각(회)', '결근(일)', '유급휴가(일)', '무급휴가(일)', '이상-차단(일)', '이상-확인(일)', '대기 요청(건)', '미확정(일)', '출근해야 한 날(일)', '출근한 날(일)', '출근율(%)'];
+  const vals = (s: AttSum) => [s.people, s.closed, hours(s.netMinutes), hours(s.payableMinutes), hours(s.regularMinutes), hours(s.overtimeMinutes), hours(s.nightMinutes), hours(s.holidayMinutes), s.lateCount, s.absentDays, s.paidLeaveDays, s.unpaidLeaveDays, s.anomalyBlock, s.anomalyCheck, s.pending, s.unconfirmedDays, s.dueDays, s.presentDays, attendanceRate(s)];
   const banner = `${args.company} · ${r.month} 근태 리포트 · ${r.total.closed === r.total.people && r.total.people > 0 ? '확정(전원 마감)' : `잠정 ${r.total.people - r.total.closed}명 포함`}`;
   const sheet = (name: string, lead: string[], rows: (string | number | null)[][]) => {
     const ws = wb.addWorksheet(name, { views: [{ state: 'frozen', ySplit: 2 }] });
@@ -131,6 +141,7 @@ export function attendanceReportWorkbook(r: AttReport, args: { company: string; 
     ['귀속 달', r.month], ['부서 조건', args.groupName], ['소속 기준', r.basis === 'current' ? '지금 소속' : '그 달 마지막 날의 소속(이력이 없으면 지금 소속)'], ['기록', r.practice ? '연습' : '운영'],
     ['확정/잠정', `마감 ${r.total.closed}명 · 마감 전 ${r.total.people - r.total.closed}명`], ['생성 일시', r.generatedAt], ['내보낸 사람', args.by],
     ['안내', '마감한 직원의 값은 확정, 마감 전 직원의 값은 바뀔 수 있는 잠정치입니다. 연장 · 야간 · 휴일은 인정(승인)된 시간만 셉니다. 금액은 들어 있지 않습니다.'],
+    ['출근율', '출근한 날 ÷ 출근해야 했던 날. 출근해야 했던 날 = 근무일 · 입사 후 · 지난 날 · 하루 전부 휴가가 아닌 날. 출근한 날 = 그중 출근 기록이 있거나 승인된 외근 · 출장 · 재택인 날 (임시 정의)'],
   ].forEach((row, i) => row.forEach((v, j) => { const c = meta.getRow(i + 1).getCell(j + 1); c.value = safe(v); c.font = { name: FONT, size: 10, bold: j === 0 }; c.alignment = { wrapText: true, vertical: 'top' }; }));
   return wb;
 }
