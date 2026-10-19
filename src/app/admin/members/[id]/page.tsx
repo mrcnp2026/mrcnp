@@ -23,6 +23,7 @@ import { loadJobs } from '@/lib/job-data';
 import { loadShiftTemplates } from '@/lib/shift-data';
 import { MAX_TOP, SHOWN_GRADES } from '@/lib/staff-rules';
 import { GradeForm, type GradeKey } from './GradeForm';
+import { ShiftPick } from './ShiftPick';
 import { ProfileSection } from './ProfileSection';
 import { StaffNotes } from './StaffNotes';
 import { loadStaffNotes } from '@/lib/staff-notes';
@@ -58,9 +59,21 @@ export default async function MemberDetailPage({ params }: { params: Promise<{ i
   const managed = p.role === 'manager' ? await loadManagedGroups(p.id) : []; // 지점관리자가 맡은 지점
   const options = tree.flatMap((d) => [{ id: d.id, label: d.name }, ...d.teams.map((x) => ({ id: x.id, label: `${d.name} › ${x.name}` }))]);
   const path = groupPath(groups, p.group_id);
-  // 적용된 근무일정 틀 (2026-10-10) — 바꾸는 곳은 「근무일정 틀」 화면
   const jobName = p.job_id ? ((await loadJobs()).find((x) => x.id === p.job_id)?.name ?? null) : null;
-  const shiftName = p.shift_template_id ? ((await loadShiftTemplates(true)).find((x) => x.id === p.shift_template_id)?.name ?? null) : null;
+  // 근무 · 급여 (2026-10-19 의뢰인): 근무일정 틀은 여기서 바로 고르고(틀 만들기는 통합설정), 급여 계약은 보이기만 하고 고치기는 사원별 급여
+  const tw = await getTranslations('admin.members.workPay');
+  const tk = await getTranslations('admin.shifts.kinds');
+  const tpay = await getTranslations('admin.staffPay.payType');
+  const templates = await loadShiftTemplates(true);
+  const shiftTpl = p.shift_template_id ? (templates.find((x) => x.id === p.shift_template_id) ?? null) : null;
+  const shiftOptions = templates.filter((x) => x.active || x.id === p.shift_template_id).map((x) => ({ id: x.id, label: `${x.name} · ${tk(x.kind)} ${x.startTime}–${x.endTime}` }));
+  const workKind = shiftTpl?.kind === 'deemed' ? tw('kindDeemed') : tw('kindNormal');
+  const seePay = me.canViewPayroll;
+  const { data: contract } = seePay
+    ? await db.from('payroll_contract_versions').select('pay_type, amount, valid_from').eq('employee_id', id).eq('status', 'active').lte('valid_from', today).or(`valid_to.is.null,valid_to.gt.${today}`).order('valid_from', { ascending: false }).limit(1).maybeSingle()
+    : { data: null };
+  const payText = contract ? tw('payValue', { type: tpay(contract.pay_type as string), amount: f.number(Number(contract.amount)), from: contract.valid_from as string }) : tw('payNone');
+  const workPaySummary = [workKind, shiftTpl?.name ?? tw('shiftNoneShort'), seePay ? (contract ? tpay(contract.pay_type as string) : tw('payNoneShort')) : null].filter(Boolean).join(' · ');
   const day = (s: string) => f.dateTime(new Date(s), { dateStyle: 'medium' });
   const agreedAt = await consentAt(p.id);
   const notes = await loadStaffNotes(p.id); // 비고 (묶음 19) — 표가 없으면 null
@@ -72,7 +85,6 @@ export default async function MemberDetailPage({ params }: { params: Promise<{ i
     { k: t('colGroup'), v: path ?? t('unassigned') },
     { k: t('jobTitleShort'), v: p.job_title ?? '–' },
     { k: t('colJob'), v: jobName ?? t('jobNone') },
-    { k: t('shiftShort'), v: shiftName ?? t('shiftNone') },
     { k: t('infoJoined'), v: joinedText },
   ];
   const basicSummary = [path ?? t('unassigned'), p.job_title, t('joinedShort', { date: joinedText })].filter(Boolean).join(' · ');
@@ -148,6 +160,39 @@ export default async function MemberDetailPage({ params }: { params: Promise<{ i
               groups={options}
               today={today}
             />
+          </Fold>
+
+          {/* 근무 · 급여 (2026-10-19 의뢰인): 근무 방식은 여기서 바로 고르고, 급여 계약은 보기 + 사원별 급여 바로가기 */}
+          <Fold id="workpay" title={tw('title')} summary={workPaySummary} aside={seePay && !contract ? <Chip tone="warn">{tw('payNoneShort')}</Chip> : undefined}>
+            <div className="flex flex-col gap-3">
+              <div className="flex flex-col gap-1.5 lg:flex-row lg:items-start lg:gap-3">
+                <span className="w-24 shrink-0 pt-2 text-sm text-muted">{tw('shift')}</span>
+                <div className="flex min-w-0 flex-1 flex-col gap-1">
+                  {me.role === 'admin' && p.active ? <ShiftPick employeeId={p.id} current={p.shift_template_id ?? ''} options={shiftOptions} /> : <p className="pt-2 text-sm font-semibold">{shiftTpl ? shiftOptions.find((o) => o.id === shiftTpl.id)?.label : tw('shiftNone')}</p>}
+                  <p className="text-xs text-faint">
+                    {tw(shiftTpl?.kind === 'deemed' ? 'deemedHint' : 'normalHint')}{' '}
+                    {me.role === 'admin' && (
+                      <Link href="/admin/shifts" className="font-semibold whitespace-nowrap text-primary">
+                        {tw('toTemplates')} ›
+                      </Link>
+                    )}
+                  </p>
+                </div>
+              </div>
+              <div className="flex flex-col gap-1.5 border-t border-border pt-3 lg:flex-row lg:items-center lg:gap-3">
+                <span className="w-24 shrink-0 text-sm text-muted">{tw('pay')}</span>
+                {seePay ? (
+                  <>
+                    <span className={`num min-w-0 flex-1 text-sm font-semibold ${contract ? '' : 'text-warn'}`}>{payText}</span>
+                    <Link href={`/admin/payroll/staff/${p.id}`} className="inline-flex min-h-11 items-center text-sm font-semibold text-primary lg:min-h-9">
+                      {tw(contract ? 'payEdit' : 'payAdd')} ›
+                    </Link>
+                  </>
+                ) : (
+                  <span className="text-sm text-faint">{tw('payHidden')}</span>
+                )}
+              </div>
+            </div>
           </Fold>
 
           {/* 개인 정보 (묶음 17): 생년월일 · 비상연락처 · 자격증 · 차량 + 부양가족(급여 세무 칸 값) */}

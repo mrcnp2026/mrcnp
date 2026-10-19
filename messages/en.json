@@ -451,7 +451,27 @@
       "findPh": "Find by name, number or phone",
       "findClear": "Clear",
       "inviteSentOn": "Link {date}",
-      "inviteExpired": "Link expired"
+      "inviteExpired": "Link expired",
+      "workPay": {
+        "title": "Work & pay",
+        "shift": "Shift template",
+        "shiftNone": "No template — company work rule (regular)",
+        "shiftNoneShort": "No template",
+        "kindNormal": "Regular",
+        "kindDeemed": "Deemed hours",
+        "deemedHint": "Deemed hours: counted as working the template hours on each workday without punching, and excluded from late, absence and punch alerts.",
+        "normalHint": "Calculated from punch records. The template start time is the lateness cutoff.",
+        "toTemplates": "Create templates / change times (Settings)",
+        "save": "Save",
+        "saved": "Saved.",
+        "pay": "Pay type",
+        "payValue": "{type} {amount} KRW · from {from}",
+        "payNone": "No contract — blocked in payroll runs",
+        "payNoneShort": "No contract",
+        "payEdit": "Edit in staff pay",
+        "payAdd": "Add a contract in staff pay",
+        "payHidden": "Only admins who can view payroll see this."
+      }
     },
     "more": {
       "title": "All menus",

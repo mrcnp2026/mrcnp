@@ -451,7 +451,27 @@
       "findPh": "이름 · 사번 · 휴대폰으로 찾기",
       "findClear": "지우기",
       "inviteSentOn": "링크 {date}",
-      "inviteExpired": "링크 만료"
+      "inviteExpired": "링크 만료",
+      "workPay": {
+        "title": "근무 · 급여",
+        "shift": "근무일정 틀",
+        "shiftNone": "틀 없음 — 회사 근무규칙(일반 근무)",
+        "shiftNoneShort": "틀 없음",
+        "kindNormal": "일반 근무",
+        "kindDeemed": "간주 근무",
+        "deemedHint": "간주 근무: 출퇴근을 찍지 않아도 근무일마다 틀의 시간만큼 근무로 잡히고, 지각 · 결근 · 출퇴근 알림에서 빠집니다.",
+        "normalHint": "출퇴근 기록으로 계산합니다. 틀의 시작 시각이 지각 기준입니다.",
+        "toTemplates": "틀 만들기 · 시각 바꾸기(통합설정)",
+        "save": "저장",
+        "saved": "저장했습니다.",
+        "pay": "급여 형태",
+        "payValue": "{type} {amount}원 · {from}부터",
+        "payNone": "계약 없음 — 급여대장에서 「차단」됩니다",
+        "payNoneShort": "계약 없음",
+        "payEdit": "사원별 급여에서 고치기",
+        "payAdd": "사원별 급여에서 계약 넣기",
+        "payHidden": "급여 화면을 볼 수 있는 관리자만 보입니다."
+      }
     },
     "more": {
       "title": "전체 메뉴",
