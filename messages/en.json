@@ -4601,10 +4601,10 @@
       "send": "Send email",
       "resend": "Send again",
       "sending": "Sending {done}/{all}",
-      "confirm": "Email the payslip PDF to {n} people. Staff without an email address are skipped and logged as \"no email\".",
+      "confirm": "Email the payslip PDF to {n} people. The PDF is locked with the 6-digit birth date. Staff without an email address or birth date are skipped and logged.",
       "confirmYes": "Send",
       "cancel": "Cancel",
-      "result": "Sent {sent} · failed {failed} · no email {noEmail} · skipped {skipped}",
+      "result": "Sent {sent} · failed {failed} · no email {noEmail} · no birth date {noBirth} · skipped {skipped}",
       "oneNoEmail": "No email address. Add one in the staff details.",
       "oneFailed": "Could not send. Please try again shortly.",
       "oneSkipped": "Not sent — this payslip is not currently published.",
@@ -4618,13 +4618,16 @@
       "result_FAILED": "Failed",
       "result_NO_EMAIL": "No email",
       "by": "by {name}",
-      "hint": "Sends the PDF to the email in staff details. The message body has no amounts. Re-uploading creates a new revision that shows as not emailed again.",
-      "hintRun": "Only published payslips are sent. The PDF goes to the email in staff details; the message body has no amounts.",
+      "hint": "Sends the PDF to the email in staff details. The PDF is locked with the 6-digit birth date (e.g. 900115) and the message body has no amounts. Re-uploading creates a new revision that shows as not emailed again.",
+      "hintRun": "Only published payslips are sent. The PDF goes to the email in staff details, locked with the 6-digit birth date; the message body has no amounts.",
       "dbPending": "The database table for the email log is not there yet (after DB change set 26 is approved and applied).",
       "notReady": "The sending mail account is not set up yet (Gmail app password).",
       "mail_not_configured": "The sending mail account is not set up yet.",
       "db_update_required": "DB change set 26 needs to be applied.",
-      "payroll_forbidden": "Only top admins can do this."
+      "payroll_forbidden": "Only top admins can do this.",
+      "oneNoBirth": "No birth date, so the PDF password cannot be made. Add it under staff details › personal info.",
+      "statusNoBirth": "No birth date",
+      "result_NO_BIRTH": "No birth date"
     }
   },
   "side": {
@@ -6145,6 +6148,6 @@
     "subject": "[{company}] Payslip for {month}",
     "subjectBonus": "[{company}] Bonus statement for {month}",
     "subjectRevision": " (corrected, rev {n})",
-    "body": "Dear {name},\n\nPlease find your payslip for {month} attached (pay date {payDate}).\nThe amounts are in the attached PDF.\n\nYou can also see it under \"My pay\" in the app:\n{link}\n\nThis mailbox is not monitored. Please ask your company contact if you have questions.\n\n{company}"
+    "body": "Dear {name},\n\nPlease find your payslip for {month} attached (pay date {payDate}).\nThe amounts are in the attached PDF.\n\nPDF password: your birth date as 6 digits (YYMMDD, e.g. 15 Jan 1990 → 900115)\n\nYou can also see it under \"My pay\" in the app:\n{link}\n\nThis mailbox is not monitored. Please ask your company contact if you have questions.\n\n{company}"
   }
 }

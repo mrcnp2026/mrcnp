@@ -1,6 +1,7 @@
 -- 20261019000059_payslip_mails.sql — 묶음 26 (의뢰인 2026-10-19: 급여명세서 메일 발송 + 발송 기록)
 -- 공개 중인 명세서(앱이 계산한 대장의 명세서 · 올린 명세서)를 직원 이메일(profiles.email)로 PDF를 붙여 보낸 기록.
---   · 보낼 때마다 한 줄. 보냄(SENT) · 실패(FAILED) · 이메일 없음(NO_EMAIL)을 모두 남긴다 — 「발송 여부」는 그 명세서의 마지막 줄로 본다.
+--   · 보낼 때마다 한 줄. 보냄(SENT) · 실패(FAILED) · 이메일 없음(NO_EMAIL) · 생년월일 없음(NO_BIRTH)을 모두 남긴다 — 「발송 여부」는 그 명세서의 마지막 줄로 본다.
+--   · PDF 비밀번호 = 생년월일 6자리(개발-48, 2026-10-19 의뢰인). 생년월일이 없으면 보내지 않는다(NO_BIRTH). 비밀번호 자체는 남기지 않는다.
 --   · 고치거나 지우지 못한다(트리거). 앱 서버만 읽고 쓴다.
 -- 되돌리기: drop table public.payroll_slip_mails; drop function public.guard_slip_mail();
 
@@ -12,7 +13,7 @@ create table public.payroll_slip_mails (
   pay_month date not null check (extract(day from pay_month) = 1),
   revision int not null check (revision >= 1),
   to_email text check (to_email is null or char_length(to_email) <= 320),
-  result text not null check (result in ('SENT', 'FAILED', 'NO_EMAIL')),
+  result text not null check (result in ('SENT', 'FAILED', 'NO_EMAIL', 'NO_BIRTH')),
   error_code text check (error_code is null or char_length(error_code) <= 100),
   request_id uuid,
   is_test boolean not null,

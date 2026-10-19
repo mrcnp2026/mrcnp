@@ -5,13 +5,13 @@ import type { SlipMail } from '@/lib/payroll/slip-mail';
 
 const when = (f: Awaited<ReturnType<typeof getFormatter>>, at: string) => f.dateTime(new Date(at), { month: 'numeric', day: 'numeric', hour: '2-digit', minute: '2-digit', hourCycle: 'h23', timeZone: 'Asia/Seoul' });
 
-/** 한 명세서의 발송 여부 — 마지막 기록 기준. 보낸 적이 없고 이메일도 없으면 미리 알려 준다 */
-export async function MailStatus({ last, hasEmail }: { last: SlipMail | undefined; hasEmail: boolean }) {
+/** 한 명세서의 발송 여부 — 마지막 기록 기준. 보낸 적이 없고 이메일 · 생년월일(PDF 비밀번호)이 없으면 미리 알려 준다 */
+export async function MailStatus({ last, hasEmail, hasBirth }: { last: SlipMail | undefined; hasEmail: boolean; hasBirth: boolean }) {
   const [t, f] = await Promise.all([getTranslations('admin.slipMail'), getFormatter()]);
-  if (!last) return hasEmail ? <Chip>{t('statusNone')}</Chip> : <Chip tone="warn">{t('statusNoEmail')}</Chip>;
+  if (!last) return !hasEmail ? <Chip tone="warn">{t('statusNoEmail')}</Chip> : !hasBirth ? <Chip tone="warn">{t('statusNoBirth')}</Chip> : <Chip>{t('statusNone')}</Chip>;
   if (last.result === 'SENT') return <Chip tone="ok">{t('statusSent', { at: when(f, last.at) })}</Chip>;
   if (last.result === 'FAILED') return <Chip tone="warn">{t('statusFailed')}</Chip>;
-  return <Chip tone="warn">{t('statusNoEmail')}</Chip>;
+  return <Chip tone="warn">{t(last.result === 'NO_BIRTH' ? 'statusNoBirth' : 'statusNoEmail')}</Chip>;
 }
 
 /** 발송 기록 — 접힌 채 한 줄, 펴면 새것부터 (때 · 받는 사람 · 주소 · 결과 · 보낸 사람) */

@@ -9,7 +9,7 @@ import { ErrorNote } from '@/components/ErrorNote';
 import { Button } from '@/components/ui';
 
 type Item = { employeeId: string; slipId: string };
-type Res = { sent: number; failed: number; noEmail: number; skipped: number };
+type Res = { sent: number; failed: number; noEmail: number; noBirth: number; skipped: number };
 const CHUNK = 5;
 
 export function SlipMailSend({ items, label, ready, one = false }: { items: Item[]; label: string; ready: boolean; one?: boolean }) {
@@ -27,14 +27,14 @@ export function SlipMailSend({ items, label, ready, one = false }: { items: Item
     setErr(null);
     setRes(null);
     setDone(0);
-    const sum: Res = { sent: 0, failed: 0, noEmail: 0, skipped: 0 };
+    const sum: Res = { sent: 0, failed: 0, noEmail: 0, noBirth: 0, skipped: 0 };
     for (let i = 0; i < items.length; i += CHUNK) {
       const r = await callApi<Res>('/api/admin/payroll/slips/mail', { items: items.slice(i, i + CHUNK) });
       if (!r.ok) {
         setErr(r);
         break;
       }
-      for (const k of ['sent', 'failed', 'noEmail', 'skipped'] as const) sum[k] += r.data[k];
+      for (const k of ['sent', 'failed', 'noEmail', 'noBirth', 'skipped'] as const) sum[k] += r.data[k];
       setDone(Math.min(items.length, i + CHUNK));
     }
     setBusy(false);
@@ -70,11 +70,11 @@ export function SlipMailSend({ items, label, ready, one = false }: { items: Item
         </span>
       )}
       {res && !one && (
-        <span role="status" className={res.failed > 0 ? 'text-warn' : 'text-ok'}>
+        <span role="status" className={res.failed + res.noEmail + res.noBirth > 0 ? 'text-warn' : 'text-ok'}>
           {t('result', res)}
         </span>
       )}
-      {res && one && res.sent === 0 && <span role="status" className="text-warn">{t(res.noEmail ? 'oneNoEmail' : res.failed ? 'oneFailed' : 'oneSkipped')}</span>}
+      {res && one && res.sent === 0 && <span role="status" className="text-warn">{t(res.noEmail ? 'oneNoEmail' : res.noBirth ? 'oneNoBirth' : res.failed ? 'oneFailed' : 'oneSkipped')}</span>}
       {err && <ErrorNote code={err.code} requestId={err.requestId} namespace="admin.slipMail" />}
     </span>
   );

@@ -12,7 +12,7 @@ import { loadRevisions, loadRun, loadRunBoard } from '@/lib/payroll/run-data';
 import { createAdminClient } from '@/lib/supabase/admin';
 import { toKstDate } from '@/lib/time';
 import { loadPublication } from '@/lib/payroll/publish-data';
-import { lastMailBySlip, loadSlipMails, mailReady } from '@/lib/payroll/slip-mail';
+import { birthDates, lastMailBySlip, loadSlipMails, mailReady } from '@/lib/payroll/slip-mail';
 import { SlipMailSend } from '../../slips/SlipMail';
 import { MailLog, MailStatus } from '../../slips/SlipMailParts';
 import { CorrectionStart, MemberToggle, PublishAll, PublishToggle, RunActions } from '../RunForms';
@@ -54,6 +54,7 @@ export default async function PayRunPage({ params, searchParams }: { params: Pro
   const { data: everyone } = final ? await createAdminClient().from('profiles').select('id, name, email') : { data: [] };
   const hasEmail = new Set((everyone ?? []).filter((p) => (p.email as string | null)?.trim()).map((p) => p.id as string));
   const names = new Map((everyone ?? []).map((p) => [p.id as string, p.name as string]));
+  const births = final ? await birthDates([...pub.keys()]) : new Map<string, string>();
   const unsentMail = [...pub].filter(([, x]) => x.published && lastMail.get(x.statementId)?.result !== 'SENT').map(([employeeId, x]) => ({ employeeId, slipId: x.statementId }));
   const mailOk = mailReady() && mails !== null;
   const dk = (d: string) => d.replace(/[.-]/g, '_'); // 번역 열쇠에는 점 · 줄표를 쓸 수 없다
@@ -274,7 +275,7 @@ export default async function PayRunPage({ params, searchParams }: { params: Pro
                       {(!replaced || pub.get(l.employeeId)!.published) && <PublishToggle id={run.id} employeeId={l.employeeId} published={pub.get(l.employeeId)!.published} name={l.name} />}
                       {pub.get(l.employeeId)!.published && (
                         <>
-                          <MailStatus last={lastMail.get(pub.get(l.employeeId)!.statementId)} hasEmail={hasEmail.has(l.employeeId)} />
+                          <MailStatus last={lastMail.get(pub.get(l.employeeId)!.statementId)} hasEmail={hasEmail.has(l.employeeId)} hasBirth={births.has(l.employeeId)} />
                           <SlipMailSend one items={[{ employeeId: l.employeeId, slipId: pub.get(l.employeeId)!.statementId }]} label={tm(lastMail.has(pub.get(l.employeeId)!.statementId) ? 'resend' : 'send')} ready={mailOk} />
                         </>
                       )}

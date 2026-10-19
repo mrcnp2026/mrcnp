@@ -8,7 +8,7 @@ import { ListHead } from '@/components/listframe';
 import { Card, CardTitle, Chip, PageShell } from '@/components/ui';
 import { OFFICE } from '@/config/office';
 import { getMe } from '@/lib/auth';
-import { lastMailBySlip, loadSlipMails, mailReady } from '@/lib/payroll/slip-mail';
+import { birthDates, lastMailBySlip, loadSlipMails, mailReady } from '@/lib/payroll/slip-mail';
 import { loadUploads } from '@/lib/payroll/slip-upload-data';
 import { createAdminClient } from '@/lib/supabase/admin';
 import { toKstDate } from '@/lib/time';
@@ -31,6 +31,7 @@ export default async function PaySlipsPage({ searchParams }: { searchParams: Pro
   const past = (uploads ?? []).filter((u) => u.state !== 'PUBLISHED');
   const mails = uploads ? await loadSlipMails(uploads.map((u) => u.id)) : null; // 표가 없으면 null (묶음 26 적용 전)
   const last = lastMailBySlip(mails ?? []);
+  const births = await birthDates(live.map((u) => u.employeeId));
   const unsent = live.filter((u) => last.get(u.id)?.result !== 'SENT');
   const ready = mailReady() && mails !== null;
   const names = new Map([...who].map(([id, w]) => [id, w.name]));
@@ -104,7 +105,7 @@ export default async function PaySlipsPage({ searchParams }: { searchParams: Pro
                         <td className="num px-2 py-2 text-muted">{f.dateTime(new Date(u.createdAt), { month: 'numeric', day: 'numeric', hour: '2-digit', minute: '2-digit', hourCycle: 'h23' })}</td>
                         <td className="px-2 py-2">
                           <span className="flex flex-col items-start gap-1">
-                            <MailStatus last={last.get(u.id)} hasEmail={who.get(u.employeeId)?.email ?? false} />
+                            <MailStatus last={last.get(u.id)} hasEmail={who.get(u.employeeId)?.email ?? false} hasBirth={births.has(u.employeeId)} />
                             <SlipMailSend one items={[{ employeeId: u.employeeId, slipId: u.id }]} label={tm(last.has(u.id) ? 'resend' : 'send')} ready={ready} />
                           </span>
                         </td>
