@@ -5474,7 +5474,9 @@
     "tagLate": "Late",
     "tagNoOut": "No clock-out",
     "tagNone": "No record",
-    "tagDeemed": "Deemed"
+    "tagDeemed": "Deemed",
+    "title": "My schedule",
+    "subtitle": "Your shifts and clock records for the month. Clock in and out on your registered phone."
   },
   "payslip": {
     "title": "My payslips",

@@ -5474,7 +5474,9 @@
     "tagLate": "지각",
     "tagNoOut": "퇴근 누락",
     "tagNone": "기록 없음",
-    "tagDeemed": "간주 근무"
+    "tagDeemed": "간주 근무",
+    "title": "내 스케줄",
+    "subtitle": "이 달의 근무일정과 출퇴근 기록입니다. 출근 · 퇴근은 등록한 폰에서 찍습니다."
   },
   "payslip": {
     "title": "내 명세서",

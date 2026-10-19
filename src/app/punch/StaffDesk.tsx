@@ -2,6 +2,7 @@
 //   왼쪽 좁은 칸 = 내 근로 통계 · 내 휴가 통계 / 오른쪽 = [‹][›][오늘] 달 이름 · 요청 버튼들 · 월 달력(일~토).
 // PC에서는 출퇴근을 찍지 않는다(확정-13) — 그래서 폰 홈의 출근/퇴근 카드 대신 이 화면을 보인다. 폰에서는 보이지 않는다.
 // 디자인(2026-10-16 의뢰인: 「달력이 예쁘지 않다, 톤 · 결이 다르다」): 견본 「나 · 파랑」(개발-22)에 맞춰 — 카드 하나 · 가는 선 · 주말은 칸을 칠하지 않고 날짜 색만 · 버튼은 파랑 하나 + 테두리.
+// 2026-10-19 셋째: 견본처럼 「제목 + 한 줄 설명」 아래에 「‹ 2026년 10월 ›」 한 덩어리 조절 칸 · 일정 글자를 읽히게(연회색 → 회색) · 칸 높이 줄임.
 // 2026-10-17 다시: 칸마다 같은 파랑 딱지가 반복되던 것을 — 실제 출퇴근(굵게) + 상태 딱지(지각 · 퇴근 누락 · 기록 없음)를 위에, 일정은 회색 글자로. 세로선 · 오늘 칸 색칠 없음(견본의 표처럼 가로선만).
 import { CalendarPlus, ChevronLeft, ChevronRight, MapPinned, Plane } from 'lucide-react';
 import { getFormatter, getTranslations } from 'next-intl/server';
@@ -123,13 +124,18 @@ export async function StaffDesk({ meId, today, month }: { meId: string; today: s
       </aside>
 
       <section className="flex min-w-0 flex-col gap-3">
+        <div>
+          <h1 className="text-2xl font-bold">{t('title')}</h1>
+          <p className="pt-1 text-sm text-muted">{t('subtitle')}</p>
+        </div>
         <div className="flex flex-wrap items-center gap-2">
-          <div className="flex">
-            <Link href={href(shift(-1))} aria-label={t('prev')} className="flex size-8 items-center justify-center rounded-l-button border border-border bg-bg text-muted hover:bg-surface"><ChevronLeft aria-hidden size={18} /></Link>
-            <Link href={href(shift(1))} aria-label={t('next')} className="-ml-px flex size-8 items-center justify-center rounded-r-button border border-border bg-bg text-muted hover:bg-surface"><ChevronRight aria-hidden size={18} /></Link>
+          {/* 견본의 달 고르기: 테두리 하나 안에 ‹ 달 › */}
+          <div className="inline-flex h-9 items-center rounded-button border border-border bg-bg">
+            <Link href={href(shift(-1))} aria-label={t('prev')} className="flex h-full w-9 items-center justify-center text-muted hover:text-text"><ChevronLeft aria-hidden size={16} /></Link>
+            <span className="num px-1 text-sm font-semibold">{f.dateTime(kstDateTime(first, '12:00'), { year: 'numeric', month: 'long' })}</span>
+            <Link href={href(shift(1))} aria-label={t('next')} className="flex h-full w-9 items-center justify-center text-muted hover:text-text"><ChevronRight aria-hidden size={16} /></Link>
           </div>
-          <Link href="/punch" className={`${tool} border border-border bg-bg font-medium! text-muted hover:bg-surface`}>{t('today')}</Link>
-          <h1 className="num pl-2 text-2xl font-bold">{f.dateTime(kstDateTime(first, '12:00'), { year: 'numeric', month: 'long' })}</h1>
+          {ym !== today.slice(0, 7) && <Link href="/punch" className={`${tool} border border-border bg-bg font-medium! text-muted hover:bg-surface`}>{t('today')}</Link>}
           <div className="ml-auto flex flex-wrap gap-2">
             <Link href="/punch/leave?new=work" className={`${tool} border border-border bg-bg text-text hover:bg-surface`}><MapPinned aria-hidden size={16} />{t('reqWork')}</Link>
             <Link href="/punch/leave?new=leave" className={`${tool} border border-border bg-bg text-text hover:bg-surface`}><Plane aria-hidden size={16} />{t('reqLeave')}</Link>
@@ -140,12 +146,12 @@ export async function StaffDesk({ meId, today, month }: { meId: string; today: s
         <div className="overflow-hidden rounded-card border border-border bg-bg shadow-card">
           <div className="grid grid-cols-7 border-b border-border">
             {weekdays.map((w, i) => (
-              <div key={w} className={`px-3 py-2.5 text-left text-xs font-semibold ${i === 0 ? 'text-danger' : i === 6 ? 'text-primary' : 'text-faint'}`}>{w}</div>
+              <div key={w} className={`px-3 py-2.5 text-left text-xs font-semibold ${i === 0 ? 'text-danger' : i === 6 ? 'text-primary' : 'text-muted'}`}>{w}</div>
             ))}
           </div>
           <div className="grid grid-cols-7">
             {cells.map((c, i) => (
-              <div key={c.d} className={`flex min-h-28 flex-col gap-1 px-3 py-2 ${i >= 7 ? 'border-t border-border' : ''}`}>
+              <div key={c.d} className={`flex min-h-24 flex-col gap-1 px-3 py-2 ${i >= 7 ? 'border-t border-border' : ''}`}>
                 <div className="flex items-center gap-1.5">
                   <span className={`num flex h-6 min-w-6 items-center justify-center rounded-chip px-1 text-sm ${c.d === today ? 'bg-primary font-bold text-on-primary' : !c.inMonth ? 'text-faint opacity-60' : c.red ? 'font-semibold text-danger' : c.sat ? 'font-semibold text-primary' : 'font-semibold text-text'}`}>{c.d.endsWith('-01') ? `${Number(c.d.slice(5, 7))}/1` : Number(c.d.slice(8))}</span>
                   {c.name && <span className="truncate text-xs text-danger">{c.name}</span>}
@@ -174,7 +180,7 @@ export async function StaffDesk({ meId, today, month }: { meId: string; today: s
                   ))}
                   {/* ③ 일정 — 회색 글자 (칸마다 같은 파랑 딱지가 반복되던 것) */}
                   {c.items.map((it) => (
-                    <p key={`${it.shiftId ?? it.source}${it.startTime}`} className="num flex items-center gap-1.5 text-xs text-faint">
+                    <p key={`${it.shiftId ?? it.source}${it.startTime}`} className="num flex items-center gap-1.5 text-xs text-muted">
                       {it.color && <span aria-hidden className={`size-1.5 shrink-0 rounded-chip ${SHIFT_COLOR_CLASS[it.color]}`} />}
                       <span className="truncate">{it.startTime} – {it.endTime}</span>
                       {it.kind !== 'none' && <span className="shrink-0">{tk(it.kind)}</span>}
@@ -185,7 +191,6 @@ export async function StaffDesk({ meId, today, month }: { meId: string; today: s
             ))}
           </div>
         </div>
-        <p className="text-sm text-faint">{t('hint')}</p>
       </section>
     </div>
   );
