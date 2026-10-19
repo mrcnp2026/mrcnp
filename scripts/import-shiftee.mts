@@ -167,7 +167,7 @@ if (!APPLY) {
 
 // ── 실제로 넣기 ──────────────────────────────────────────
 const api = await request.newContext({ baseURL: BASE, extraHTTPHeaders: { origin: BASE } });
-if (!(await api.post('/api/auth/login', { data: { id: 'admin', password: 'admin1234' } })).ok()) throw new Error('관리자 로그인 실패');
+if (!(await api.post('/api/auth/login', { data: { id: process.env.SITE_ID ?? '', password: process.env.SITE_PW ?? '' } })).ok()) throw new Error('관리자 로그인 실패 — 환경 변수 SITE_ID · SITE_PW에 최고관리자 계정을 넣어 주세요(비밀번호는 파일에 적지 않는다, 2026-10-19)');
 async function call<T = Record<string, unknown>>(path: string, data: Record<string, unknown>): Promise<T> {
   const r = await api.post(path, { data });
   const j = await r.json().catch(() => ({}));

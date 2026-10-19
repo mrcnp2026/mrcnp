@@ -209,7 +209,7 @@ if (accrualRows.length) {
     const { request } = await import('playwright-core');
     const BASE = 'https://mrcnp-saas.vercel.app';
     const api = await request.newContext({ baseURL: BASE, extraHTTPHeaders: { origin: BASE } });
-    if (!(await api.post('/api/auth/login', { data: { id: 'admin', password: 'admin1234' } })).ok()) throw new Error('관리자 로그인 실패');
+    if (!(await api.post('/api/auth/login', { data: { id: process.env.SITE_ID ?? '', password: process.env.SITE_PW ?? '' } })).ok()) throw new Error('관리자 로그인 실패 — 환경 변수 SITE_ID · SITE_PW에 최고관리자 계정을 넣어 주세요(비밀번호는 파일에 적지 않는다, 2026-10-19)');
     const { data: lots } = await db.from('leave_grant_lots').select('note').like('note', '시프티 2026 발생%');
     const have = new Set((lots ?? []).map((l) => l.note as string));
     let added = 0;
