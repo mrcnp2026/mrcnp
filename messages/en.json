@@ -2011,8 +2011,8 @@
           },
           "accrual": {
             "label": "Automatic accrual",
-            "value": "Monthly auto · annual after decision",
-            "note": "First-year monthly leave (1 day a month) is created and granted automatically every night (continuing from migrated Shiftee grants, up to 11). Annual leave turns automatic once the basis (hire date / fiscal year Jan 1) is decided — until then use Accrue in the leave ledger."
+            "value": "Automatic daily (fiscal year, Jan 1)",
+            "note": "Created and granted automatically every night — 1 day a month in the first year (up to 11), and on Jan 1 by years of service from 15 days (prorated in the first year). Continues from migrated Shiftee grants. The excluded group (CEO, executives) gets none."
           }
         },
         "request": {

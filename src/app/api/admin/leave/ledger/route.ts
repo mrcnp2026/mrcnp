@@ -1,5 +1,6 @@
 // 휴가 원장 — 정책 시작/고치기 · 연차 후보 만들기 · 후보 승인/반려/거두기 · 직접 지급 · 소멸 처리 · 이월 · 퇴사 정산 · 종류별 신청 규칙 (PRD v1.3 36 · 38장). 관리자만.
-// ★ 후보는 관리자가 승인해야 잔여에 들어간다. 소멸도 관리자가 눌러야 들어간다 — 자동으로 반영하지 않는다.
+// ★ 여기서 「발생」으로 만든 후보는 관리자가 승인해야 잔여에 들어간다. 소멸도 관리자가 눌러야 들어간다.
+//   2026-10-19부터 매일 새벽 정기 작업(/api/cron/leave-accrual)이 월차 · 연차를 자동으로 만들고 바로 지급한다(급여-10).
 import { api, ApiError, readJson } from '@/lib/api';
 import { requireConsole } from '@/lib/console-pin';
 import { requireAdmin } from '@/lib/auth';

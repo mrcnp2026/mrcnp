@@ -255,7 +255,7 @@ export async function addManualLot(args: { employeeId: string; kind: 'manual' | 
 /** 자동 발생을 시작한 날 — 이 날보다 앞의 지급은 자동으로 만들지 않는다(그 전 것은 시프티에서 옮겼거나 관리자가 넣었다) */
 export const AUTO_ACCRUAL_FROM = '2026-10-17';
 /** 자동으로 만들 지급 종류 — 연차 기준이 정해지면 'annual'을 더한다(회계연도면 기준 판도 함께 바꾼다) */
-const AUTO_KINDS = new Set(['monthly']);
+const AUTO_KINDS = new Set(['monthly', 'annual']); // 2026-10-19 의뢰인: 회계연도(1월 1일) 기준 + 첫해 비례분으로 정하고 연차도 자동 (급여-10)
 
 /**
  * 입사일 기준 연차를 매일 자동으로 만들고 바로 지급한다 (2026-10-19 의뢰인: 「자동 생성 + 자동 승인」). 정기 작업 /api/cron/leave-accrual이 부른다.
@@ -279,8 +279,8 @@ export async function autoAccrue(asOf: string): Promise<AccrualResult & { approv
     if (!cur || (m.granted_on as string) > cur) lastMigrated.set(id, m.granted_on as string);
     if (Number(m.quantity_minutes) === DAY_MINUTES) migratedDays.set(id, (migratedDays.get(id) ?? 0) + 1);
   }
-  // 지금 자동은 입사 1년 차 월차(매달 1일)만 — 입사일 기준이든 회계연도 기준이든 같다. 1년 이상의 연차는 기준(입사일 / 회계연도 1월 1일)을 정한 뒤 켠다
-  //   (2026-10-19 확인: 시프티는 회계연도 1월 1일로 줬고 앱 기준은 입사일 — 그대로 켜면 같은 해 연차가 두 번 생긴다. 결정 급여-10)
+  // 월차(입사 1년 차, 매달 1일)와 연차(회계연도 1월 1일, 첫해는 비례분) 둘 다 — 2026-10-19 기준을 회계연도로 바꾼 뒤 켰다(급여-10).
+  // 연차는 시프티에서 옮긴 마지막 지급일보다 뒤의 것만(같은 해가 두 번 생기지 않게). 「생성 제외」 그룹(대표자 · 임원)은 runAccrual이 건너뛴다
   // 월차는 날짜가 시프티와 며칠씩 다를 수 있어(25일 · 27일 등) 날짜 대신 개수로 이어 간다: k번째 월차는 시프티에서 받은 월차가 k개보다 적을 때만
   const keep = (employeeId: string, lot: PlannedLot) => {
     if (!AUTO_KINDS.has(lot.kind) || lot.grantedOn < AUTO_ACCRUAL_FROM) return false;
