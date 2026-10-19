@@ -27,7 +27,6 @@ export default async function MissingPage({ searchParams }: { searchParams: Prom
   const now = new Date();
   const today = toKstDate(now);
   const { from, to } = missingRange(sp.from, sp.to, today, addDays);
-  const tabKind: MissingKind = sp.tab === 'in' ? 'in' : 'out';
   const [data, groups, jobs] = await Promise.all([loadPeriod(from, to, practice), loadOrgGroups(), loadJobs()]);
   const jobOf = new Map(jobs.map((j) => [j.id, j]));
   const clock = (d: Date) => f.dateTime(d, { hour: '2-digit', minute: '2-digit', hourCycle: 'h23' });
@@ -58,6 +57,8 @@ export default async function MissingPage({ searchParams }: { searchParams: Prom
     }
   }
   const count = (k: MissingKind) => found.filter((x) => x.kind === k).length;
+  // 탭을 고르지 않고 들어오면 누락이 있는 탭부터 연다 (2026-10-19 의뢰인: 홈 「미기록 1」을 눌렀는데 퇴근 누락 탭이 열려 아무것도 안 보였다)
+  const tabKind: MissingKind = sp.tab === 'in' || sp.tab === 'out' ? sp.tab : count('out') === 0 && count('in') > 0 ? 'in' : 'out';
   const shown = found.filter((x) => x.kind === tabKind).sort((a, b) => b.workDate.localeCompare(a.workDate) || a.start.localeCompare(b.start) || a.name.localeCompare(b.name));
   const dates = [...new Set(shown.map((x) => x.workDate))];
   const q = (tab: MissingKind) => ({ pathname: '/admin/missing', query: { from, to, tab, ...(sp.live === '1' ? { live: '1' } : {}) } });

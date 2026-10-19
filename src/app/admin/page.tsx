@@ -78,7 +78,8 @@ export default async function AdminHome({ searchParams }: { searchParams: Promis
         outGraceHours: OFFICE.missingOutGraceHours, inGraceMin: OFFICE.missingInGraceMin, joinedOn: p.startsOn,
         fullLeaveDates: new Set([...fullLeave, ...work.keys()]),
       });
-      if (miss.length) {
+      // 그날 일정이 간주 근무인 날도 뺀다 — 폰 알림 · 누락 화면과 같게
+      if (miss.some((m) => !data.planFor(p.id, m.workDate).deemed)) {
         missingPeople++;
         missingNames.push(p.name);
       }
