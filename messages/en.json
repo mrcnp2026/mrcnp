@@ -2892,7 +2892,9 @@
         "body": "{month} attendance closes on {due}. After that, punch records, corrections and leave for the month cannot change. Send a [Correction request] before {due} for anything missing or wrong.",
         "last": "Sent {date} · {n} people"
       },
-      "mobileDays": "{n} days"
+      "mobileDays": "{n} days",
+      "closedGroup": "Closed ({n})",
+      "showAll": "Show"
     },
     "leaveLedger": {
       "title": "Leave ledger",

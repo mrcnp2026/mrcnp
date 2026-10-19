@@ -2892,7 +2892,9 @@
         "body": "{month} 근태를 {due}에 마감합니다. 마감하면 그 달의 출퇴근 기록 · 정정 · 휴가를 더 바꿀 수 없습니다. 빠진 기록이나 고칠 기록이 있으면 {due} 전까지 [출퇴근기록 정정 요청]으로 알려 주세요.",
         "last": "공지함 {date} · {n}명"
       },
-      "mobileDays": "{n}일 기록"
+      "mobileDays": "{n}일 기록",
+      "closedGroup": "마감된 직원 {n}명",
+      "showAll": "펼치기"
     },
     "leaveLedger": {
       "title": "휴가 원장",

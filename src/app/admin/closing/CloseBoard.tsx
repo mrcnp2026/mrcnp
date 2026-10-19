@@ -180,10 +180,12 @@ export function CloseBoard({ month, live, lines, canClose }: { month: string; li
       )}
       {err && <ErrorNote code={err.code} requestId={err.requestId} namespace="admin.closing" />}
       {notice && <p role="status" className="rounded-card border border-border bg-bg p-3 text-sm text-ok">{notice}</p>}
-      <ul className="divide-y divide-border rounded-card border border-border bg-bg lg:hidden">
-        {lines.map((l) => {
+      {/* 폰: 마감할 사람 먼저, 이미 마감된 사람은 아래에 접어 둔다 · 「다시 열기」는 상태 줄 끝 작은 단추 — 26명이 큰 단추와 함께 3,700px로 이어졌다 (2026-10-19 디자인) */}
+      {(() => {
+        const row = (l: Line) => {
           const res = resultOf(l.employeeId);
           const extra = issues(l);
+          const compact = !!l.close && !l.reopenRequest && reopen !== l.close.id;
           return (
             <li key={l.employeeId} className="flex gap-3 px-3 py-2.5">
               <span className="flex w-5 shrink-0 pt-0.5">{canClose && l.ready && !l.close && <input type="checkbox" checked={picked.has(l.employeeId)} onChange={() => toggle(l.employeeId)} aria-label={t('pick', { name: l.name })} className="size-5 accent-primary" />}</span>
@@ -200,12 +202,34 @@ export function CloseBoard({ month, live, lines, canClose }: { month: string; li
                   {extra}
                   <span className="ml-auto">{stateOf(l, res)}</span>
                 </div>
-                {manage(l)}
+                {compact ? (
+                  <button type="button" onClick={() => setReopen(l.close!.id)} className="inline-flex min-h-8 items-center self-end text-xs font-bold text-muted underline-offset-2 hover:underline">
+                    {t('reopen')}
+                  </button>
+                ) : (
+                  manage(l)
+                )}
               </div>
             </li>
           );
-        })}
-      </ul>
+        };
+        const open = lines.filter((l) => !l.close);
+        const done = lines.filter((l) => !!l.close);
+        return (
+          <div className="flex flex-col gap-2 lg:hidden">
+            {open.length > 0 && <ul className="divide-y divide-border rounded-card border border-border bg-bg">{open.map(row)}</ul>}
+            {done.length > 0 && (
+              <details className="group rounded-card border border-border bg-bg">
+                <summary className="flex min-h-11 cursor-pointer items-center justify-between px-3 text-sm font-bold">
+                  {t('closedGroup', { n: done.length })}
+                  <span className="text-xs font-normal text-muted group-open:hidden">{t('showAll')}</span>
+                </summary>
+                <ul className="divide-y divide-border border-t border-border">{done.map(row)}</ul>
+              </details>
+            )}
+          </div>
+        );
+      })()}
       <div className="overflow-x-auto rounded-card border border-border bg-bg max-lg:hidden">
         <table className="w-full text-sm">
           <thead>
