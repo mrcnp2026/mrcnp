@@ -51,7 +51,7 @@ export default async function NoticePage({ params, searchParams }: { params: Pro
       </form>
       {v.why && <p className="rounded-card border border-border bg-surface p-3 text-sm">{t(`why.${v.why}`)}</p>}
       {v.run && v.run.periodFrom.slice(0, 7) !== v.file.month && <p className="rounded-card border border-warn bg-warn-tint p-3 text-sm text-warn">{t('monthDiffers', { notice: v.file.month, run: v.run.periodFrom.slice(0, 7) })}</p>}
-      <div className="overflow-x-auto rounded-card border border-border bg-bg">
+      <div className="overflow-x-auto table-ruled">
         <table className="w-full text-sm" data-notice>
           <thead>
             <tr className="border-b border-border bg-surface text-left">

@@ -61,12 +61,13 @@ export default async function AnomaliesPage({ searchParams }: { searchParams: Pr
     const tk = taskOfRow(x);
     const o = overrides?.get(anomalyKey(x.employeeId, x.workDate));
     return (
-      <span className="flex flex-col gap-1 text-sm">
+      // 한 줄: 담당 · 기한 · 지남 · [담당 · 기한] — 두 줄이라 줄 높이가 들쭉날쭉했다 (2026-10-19 디자인: 표 전반의 톤)
+      <span className="flex flex-wrap items-center gap-x-2 gap-y-1 text-sm">
         <span className="text-muted">{who(x)}</span>
         {tk.due && <span className="num">{t('task.dueOn', { date: tk.due.slice(5) })}</span>}
         {tk.overdueDays > 0 && <Chip tone="warn">{t('task.overdue', { n: tk.overdueDays })}</Chip>}
         {tk.note && <span className="text-xs text-faint">{tk.note}</span>}
-        {isOpen(x) && <TaskEdit employeeId={x.employeeId} workDate={x.workDate} assigneeId={o?.assigneeId ?? null} dueOn={o?.dueOn ?? null} note={o?.note ?? null} people={handlers} live={sp.live === '1'} ready={overrides !== null} />}
+        {isOpen(x) && <TaskEdit employeeId={x.employeeId} workDate={x.workDate} assigneeId={o?.assigneeId ?? null} dueOn={o?.dueOn ?? null} note={o?.note ?? null} people={handlers} live={sp.live === '1'} ready={overrides !== null} short />}
       </span>
     );
   };

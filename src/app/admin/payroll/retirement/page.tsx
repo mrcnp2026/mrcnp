@@ -97,7 +97,7 @@ export default async function RetirementPage({ searchParams }: { searchParams: P
           {t('showAll')}
         </Link>
       )}
-      <div className="overflow-x-auto rounded-card border border-border bg-bg">
+      <div className="overflow-x-auto table-ruled">
         <table className="w-full text-sm">
           <thead>
             <tr className="border-b border-border bg-surface text-left">

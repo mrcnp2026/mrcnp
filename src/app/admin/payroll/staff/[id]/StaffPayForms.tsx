@@ -303,7 +303,7 @@ export function ItemForms({ employeeId, today, options, rows }: { employeeId: st
   return (
     <div className="flex flex-col gap-3 pt-3 text-sm">
       {rows.length > 0 && (
-        <div className="overflow-x-auto rounded-card border border-border bg-bg">
+        <div className="overflow-x-auto table-ruled">
           <table className="w-full text-sm">
             <thead>
               <tr className="border-b border-border bg-surface text-left">

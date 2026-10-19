@@ -96,7 +96,7 @@ export async function RequestRows({ items, leaveTypes, names, showName = false, 
                         <Link href={hrefOf(r)} className="inline-flex h-8 items-center rounded-button border border-primary bg-bg px-3 text-sm font-bold text-primary hover:bg-primary-tint">
                           {t('rowApprove')}
                         </Link>
-                        <Link href={hrefOf(r)} className="inline-flex h-8 items-center rounded-button border border-danger bg-bg px-3 text-sm font-bold text-danger">
+                        <Link href={hrefOf(r)} className="inline-flex h-8 items-center rounded-button border border-border bg-bg px-3 text-sm font-bold text-muted hover:bg-surface">
                           {t('rowReject')}
                         </Link>
                       </span>

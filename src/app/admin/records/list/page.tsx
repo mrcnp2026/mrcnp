@@ -177,7 +177,7 @@ export default async function RecordListPage({ searchParams }: { searchParams: P
           </p>
         </form>
         <p className="text-xs text-faint">{practice ? t('practice') : t('live')}</p>
-        <div className="overflow-x-auto rounded-card border border-border bg-bg shadow-card">
+        <div className="overflow-x-auto table-ruled">
           <table className="w-full text-left text-sm">
             <thead>
               <tr>

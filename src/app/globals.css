@@ -231,3 +231,9 @@ button:not(:disabled):active, a:active, summary:active, [role='button']:active {
     :where(table:not(.border-separate)) :where(tbody tr:hover) { background: color-mix(in srgb, var(--color-surface) 60%, transparent); }
   }
 }
+
+/* 목록 표의 틀 (2026-10-19 디자인 손보기: 표 전반의 톤) — 견본 「나 · 파랑」처럼 바깥 상자 · 그림자 없이, 위에 진한 가로선 하나 · 머리줄은 바탕 없이 옅은 글자.
+   ListTable(components/listframe)과 같은 모양을 손으로 짠 표에도 쓴다. 달력 모양(출퇴근 달력 · 근무일정)은 칸이라 쓰지 않는다. */
+.table-ruled { border-width: 0; border-top: 1px solid var(--color-text); border-radius: 0; box-shadow: none; background: transparent; }
+.table-ruled thead tr { background: transparent; }
+.table-ruled thead th { color: var(--color-faint); }

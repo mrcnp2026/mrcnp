@@ -43,7 +43,7 @@ export function PolicyForm({ policy, version, counts }: { policy: AnomalyPolicy;
           </li>
         ))}
       </ul>
-      <div className="hidden overflow-x-auto rounded-card border border-border bg-bg lg:block">
+      <div className="hidden overflow-x-auto table-ruled lg:block">
         <table className="w-full text-sm">
           <thead>
             <tr className="border-b border-border bg-surface text-left">

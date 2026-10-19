@@ -69,7 +69,7 @@ export default async function StaffPayPage() {
           );
         })}
       </ul>
-      <div className="hidden overflow-x-auto rounded-card border border-border bg-bg lg:block">
+      <div className="hidden overflow-x-auto table-ruled lg:block">
         <table className="w-full text-sm">
           <thead>
             <tr className="border-b border-border bg-surface text-left">
@@ -107,13 +107,10 @@ export default async function StaffPayPage() {
                     {l.gaps.length === 0 ? (
                       <Chip tone="ok">{t('stateReady')}</Chip>
                     ) : (
-                      <span className="flex flex-col gap-1">
+                      // 무엇이 빠졌는지는 마우스를 올리면(title) · 화면 읽기 프로그램에는 글로 — 줄마다 두 문장이 반복돼 줄 높이가 두 배였다 (2026-10-19 디자인: 표 전반의 톤)
+                      <span title={l.gaps.map((g) => t(`gap.${g}`)).join(' ')}>
                         <Chip tone="warn">{t('stateGap', { n: l.gaps.length })}</Chip>
-                        {l.gaps.map((g) => (
-                          <span key={g} className="text-xs text-muted">
-                            {t(`gap.${g}`)}
-                          </span>
-                        ))}
+                        <span className="sr-only">{l.gaps.map((g) => t(`gap.${g}`)).join(' ')}</span>
                       </span>
                     )}
                   </td>

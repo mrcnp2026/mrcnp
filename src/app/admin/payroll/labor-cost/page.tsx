@@ -114,7 +114,7 @@ export default async function LaborCostPage({ searchParams }: { searchParams: Pr
           {([['byMonth', t('cMonth'), r.months.map((m) => row(m.month, m.month, m))], ['byGroup', t('cGroup'), r.groups.map((g) => row(g.groupId ?? 'none', t('groupPeople', { name: g.name, n: g.people }), g))], ['byJob', t('cJob'), r.jobs.map((j) => row(j.jobId ?? 'none', t('groupPeople', { name: j.name, n: j.people }), j))], ['byEmployee', t('cEmployee'), r.employees.map((e) => row(e.employeeId, <>{e.name} <span className="num text-xs text-muted">{e.employeeNo}</span></>, e))]] as const).map(([k, first, body]) => (
             <section key={k} className="flex flex-col gap-2">
               <h2 className="text-lg font-bold">{t(k)}</h2>
-              <div className="overflow-x-auto rounded-card border border-border bg-bg">
+              <div className="overflow-x-auto table-ruled">
                 <table className="w-full text-sm" data-labor={k}>
                   {head(first)}
                   <tbody>
@@ -131,7 +131,7 @@ export default async function LaborCostPage({ searchParams }: { searchParams: Pr
               return (
                 <section key={kd} className="flex flex-col gap-2">
                   <h2 className="text-lg font-bold">{t(kd === 'PAYMENT' ? 'byPayItem' : 'byDeductionItem')}</h2>
-                  <div className="overflow-x-auto rounded-card border border-border bg-bg">
+                  <div className="overflow-x-auto table-ruled">
                     <table className="w-full text-sm" data-labor={kd === 'PAYMENT' ? 'byPayItem' : 'byDeductionItem'}>
                       <thead>
                         <tr className="border-b border-border bg-surface text-left">

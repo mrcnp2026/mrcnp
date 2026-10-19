@@ -100,13 +100,13 @@ export default async function AttendanceReportPage({ searchParams }: { searchPar
           </li>
         ))}
       </ul>
-      <div className="hidden overflow-x-auto rounded-card border border-border bg-bg lg:block">
+      <div className="hidden overflow-x-auto table-ruled lg:block">
         <table className="w-full text-sm">
           <thead>
             <tr className="border-b border-border bg-surface text-left">
-              <th scope="col" className="px-3 py-2.5 text-xs font-semibold whitespace-nowrap text-muted">{t('cGroup')}</th>
+              <th scope="col" className="px-2 py-2.5 align-bottom text-xs font-semibold text-muted">{t('cGroup')}</th>
               {cols.map((k) => (
-                <th key={k} scope="col" className="px-3 py-2.5 text-xs font-semibold whitespace-nowrap text-muted">
+                <th key={k} scope="col" className="px-2 py-2.5 align-bottom text-xs font-semibold text-muted">
                   {t(k)}
                 </th>
               ))}
@@ -115,16 +115,16 @@ export default async function AttendanceReportPage({ searchParams }: { searchPar
           <tbody>
             {r.groups.map((g) => (
               <tr key={g.groupId ?? ''} className="border-b border-border last:border-b-0">
-                <td className="px-3 py-2 font-bold whitespace-nowrap">{g.groupId === null ? t('unassigned') : g.name}</td>
+                <td className="px-2 py-2 font-bold whitespace-nowrap">{g.groupId === null ? t('unassigned') : g.name}</td>
                 {cells(g).map((v, i) => (
-                  <td key={i} className="num px-3 py-2 whitespace-nowrap">{v}</td>
+                  <td key={i} className="num px-2 py-2 whitespace-nowrap">{v}</td>
                 ))}
               </tr>
             ))}
             <tr className="bg-surface font-bold">
-              <td className="px-3 py-2">{t('total')}</td>
+              <td className="px-2 py-2">{t('total')}</td>
               {cells(r.total).map((v, i) => (
-                <td key={i} className="num px-3 py-2 whitespace-nowrap">{v}</td>
+                <td key={i} className="num px-2 py-2 whitespace-nowrap">{v}</td>
               ))}
             </tr>
           </tbody>
@@ -155,13 +155,13 @@ export default async function AttendanceReportPage({ searchParams }: { searchPar
         })}
         {r.employees.length === 0 && <li className="p-4 text-sm text-faint">{t('empty')}</li>}
       </ul>
-      <div className="hidden overflow-x-auto rounded-card border border-border bg-bg lg:block">
+      <div className="hidden overflow-x-auto table-ruled lg:block">
         <table className="w-full text-sm">
           <thead>
             <tr className="border-b border-border bg-surface text-left">
-              <th scope="col" className="px-3 py-2.5 text-xs font-semibold whitespace-nowrap text-muted">{t('cName')}</th>
+              <th scope="col" className="px-2 py-2.5 align-bottom text-xs font-semibold text-muted">{t('cName')}</th>
               {cols.slice(1).map((k) => (
-                <th key={k} scope="col" className="px-3 py-2.5 text-xs font-semibold whitespace-nowrap text-muted">
+                <th key={k} scope="col" className="px-2 py-2.5 align-bottom text-xs font-semibold text-muted">
                   {t(k)}
                 </th>
               ))}
@@ -170,15 +170,15 @@ export default async function AttendanceReportPage({ searchParams }: { searchPar
           <tbody>
             {r.employees.map((e) => (
               <tr key={e.employeeId} className="border-b border-border last:border-b-0">
-                <td className="px-3 py-2 whitespace-nowrap">
+                <td className="px-2 py-2 whitespace-nowrap">
                   <Link href={`/admin/records/${e.employeeId}?m=${month}${sp.live === '1' ? '&live=1' : ''}`} className="font-bold text-primary hover:underline">
                     {e.name}
                   </Link>
                 </td>
                 {cells(e).slice(1, -1).map((v, i) => (
-                  <td key={i} className="num px-3 py-2 whitespace-nowrap">{v}</td>
+                  <td key={i} className="num px-2 py-2 whitespace-nowrap">{v}</td>
                 ))}
-                <td className="px-3 py-2">{e.isClosed ? <Chip tone="ok">{t('closed')}</Chip> : <Chip tone="warn">{t('open')}</Chip>}</td>
+                <td className="px-2 py-2">{e.isClosed ? <Chip tone="ok">{t('closed')}</Chip> : <Chip tone="warn">{t('open')}</Chip>}</td>
               </tr>
             ))}
           </tbody>

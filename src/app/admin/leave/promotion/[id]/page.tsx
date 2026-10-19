@@ -69,7 +69,7 @@ export default async function PromotionDetailPage({ params }: { params: Promise<
         <p className="num text-sm">{t('summary', { candidate: count('CANDIDATE'), excluded: count('EXCLUDED'), notified: count('NOTIFIED'), plan: count('PLAN_SUBMITTED'), confirmed: count('CONFIRMED'), exception: count('EXCEPTION') })}</p>
         <CampaignActions id={c.id} state={c.state} candidates={count('CANDIDATE')} />
       </Card>
-      <div className="overflow-x-auto rounded-card border border-border bg-bg">
+      <div className="overflow-x-auto table-ruled">
         <table className="w-full text-sm">
           <thead>
             <tr className="border-b border-border bg-surface text-left">

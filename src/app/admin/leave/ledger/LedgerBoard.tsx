@@ -28,7 +28,7 @@ function Table({ heads, children }: { heads: string[]; children: ReactNode }) {
     return cloneElement(row, {}, Children.map(row.props.children, (cell) => (isValidElement(cell) ? cloneElement(cell as ReactElement<Record<string, unknown>>, { 'data-label': heads[i++] ?? '' }) : cell)));
   });
   return (
-    <div className="overflow-x-auto rounded-card border border-border bg-bg max-lg:px-3">
+    <div className="overflow-x-auto table-ruled max-lg:px-3">
       <table className="w-full text-sm max-lg:[&_thead]:hidden">
         <thead>
           <tr className="border-b border-border bg-surface text-left">

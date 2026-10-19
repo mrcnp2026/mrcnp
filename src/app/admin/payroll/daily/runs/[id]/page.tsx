@@ -61,7 +61,7 @@ export default async function DailyRunPage({ params }: { params: Promise<{ id: s
       {stale && <p className="rounded-card border border-warn bg-warn-tint p-3 text-sm text-warn">{t('stale')}</p>}
       {blocked > 0 && <p className="rounded-card border border-warn bg-warn-tint p-3 text-sm text-warn">{t('hasBlocked', { n: blocked })}</p>}
       <DailyRunActions id={run.id} version={run.version} status={run.status} stale={stale} blocked={blocked} latest={!newer} />
-      <div className="overflow-x-auto rounded-card border border-border bg-bg">
+      <div className="overflow-x-auto table-ruled">
         <table className="w-full text-sm" data-daily>
           <thead>
             <tr className="border-b border-border bg-surface text-left">

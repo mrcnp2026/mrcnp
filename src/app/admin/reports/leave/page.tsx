@@ -96,7 +96,7 @@ export default async function LeaveReportPage({ searchParams }: { searchParams: 
         ...r.groups.map((g) => ({ key: g.groupId ?? '', name: g.groupId === null ? t('unassigned') : g.name, sub: t('startedValue', { n: g.started, all: g.people }), sum: g })),
         { key: 'total', name: t('total'), sub: t('startedValue', { n: r.total.started, all: r.total.people }), sum: r.total },
       ])}
-      <div className="overflow-x-auto rounded-card border border-border bg-bg max-lg:hidden">
+      <div className="overflow-x-auto table-ruled max-lg:hidden">
         <table className="w-full text-sm">
           <thead>
             <tr className="border-b border-border bg-surface text-left">
@@ -132,7 +132,7 @@ export default async function LeaveReportPage({ searchParams }: { searchParams: 
 
       <h2 className="text-lg font-bold">{t('byPolicyGroup')}</h2>
       {mobile(r.policyGroups.map((g) => ({ key: g.groupId, name: <>{g.name}{g.excluded && <span className="ml-1 text-xs font-normal text-warn">{t('excludedTag')}</span>}</>, sub: t('startedValue', { n: g.started, all: g.people }), sum: g })))}
-      <div className="overflow-x-auto rounded-card border border-border bg-bg max-lg:hidden">
+      <div className="overflow-x-auto table-ruled max-lg:hidden">
         <table className="w-full text-sm" data-policy-groups>
           <thead>
             <tr className="border-b border-border bg-surface text-left">
@@ -163,7 +163,7 @@ export default async function LeaveReportPage({ searchParams }: { searchParams: 
       </div>
 
       <h2 className="text-lg font-bold">{t('byType', { from: r.yearFrom, to: r.asOf })}</h2>
-      <div className="overflow-x-auto rounded-card border border-border bg-bg">
+      <div className="overflow-x-auto table-ruled">
         <table className="w-full text-sm" data-type-use>
           <thead>
             <tr className="border-b border-border bg-surface text-left">
@@ -198,7 +198,7 @@ export default async function LeaveReportPage({ searchParams }: { searchParams: 
         sub: e.joinedOn ?? undefined,
         sum: e.isStarted ? e : null,
       })))}
-      <div className="overflow-x-auto rounded-card border border-border bg-bg max-lg:hidden">
+      <div className="overflow-x-auto table-ruled max-lg:hidden">
         <table className="w-full text-sm">
           <thead>
             <tr className="border-b border-border bg-surface text-left">

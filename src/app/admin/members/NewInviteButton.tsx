@@ -31,10 +31,18 @@ export function NewInviteButton({ employeeId, name, compact = false, again = fal
         <Send aria-hidden size={18} strokeWidth={2} />
       </button>
     ) : (
-    <Button variant="outline" onClick={() => setStage('confirm')} className={compact ? 'min-h-11 px-3 text-sm whitespace-nowrap' : 'shrink-0 text-sm'}>
+    compact ? (
+      // 표 줄마다 놓이는 단추는 글자 링크로 — 색칠한 단추가 26줄 반복되던 것 (2026-10-19 디자인: 표 전반의 톤)
+      <button type="button" onClick={() => setStage('confirm')} className="inline-flex min-h-9 items-center gap-1 text-sm font-bold whitespace-nowrap text-primary hover:underline">
+        <Send aria-hidden size={14} strokeWidth={2} />
+        {t(again ? 'reInviteShort' : 'inviteShort')}
+      </button>
+    ) : (
+    <Button variant="outline" onClick={() => setStage('confirm')} className="shrink-0 text-sm">
       <Send aria-hidden size={16} strokeWidth={2} />
-      {compact ? t(again ? 'reInviteShort' : 'inviteShort') : again ? t('reInvite') : t('newInvite')}
+      {again ? t('reInvite') : t('newInvite')}
     </Button>
+    )
     )
   );
   if (stage === 'idle') return button;

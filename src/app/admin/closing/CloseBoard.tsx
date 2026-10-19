@@ -230,7 +230,7 @@ export function CloseBoard({ month, live, lines, canClose }: { month: string; li
           </div>
         );
       })()}
-      <div className="overflow-x-auto rounded-card border border-border bg-bg max-lg:hidden">
+      <div className="overflow-x-auto table-ruled max-lg:hidden">
         <table className="w-full text-sm">
           <thead>
             <tr className="border-b border-border bg-surface text-left">

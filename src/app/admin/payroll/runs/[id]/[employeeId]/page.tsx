@@ -89,7 +89,7 @@ export default async function PayStatementPage({ params }: { params: Promise<{ i
           {(['PAYMENT', 'DEDUCTION', 'EMPLOYER'] as const).map((kind) => (
             <Card key={kind}>
               <CardTitle>{t(`section.${kind}`)}</CardTitle>
-              <div className="mt-3 overflow-x-auto rounded-card border border-border bg-bg">
+              <div className="mt-3 overflow-x-auto table-ruled">
                 <table className="w-full text-sm">
                   <thead>
                     <tr className="border-b border-border bg-surface text-left">

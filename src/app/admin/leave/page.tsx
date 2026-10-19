@@ -155,7 +155,7 @@ export default async function AdminLeavePage({ searchParams }: { searchParams: P
                     hours: { text: ty?.isPaid ? t('hoursValue', { h: n((ty.hours ?? 8) * units) }) : t('hoursValue', { h: 0 }) },
                     deduct: { text: t('daysValue', { d: n(ty?.deductsBalance ? r.days : 0) }) },
                     reason: { text: r.reason ?? '' },
-                    act: { text: '', node: admin ? <span className="inline-flex flex-col items-end"><LeaveCancel id={r.id} name={name.get(r.employeeId) ?? ''} /></span> : null },
+                    act: { text: '', node: admin ? <span className="inline-flex flex-col items-end"><LeaveCancel id={r.id} name={name.get(r.employeeId) ?? ''} compact /></span> : null },
                   },
                 };
               })}

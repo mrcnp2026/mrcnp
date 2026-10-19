@@ -65,7 +65,7 @@ export default async function DailyPage({ searchParams }: { searchParams: Promis
               <p className="text-xs text-faint">{t('payeeNote')}</p>
             </div>
           </AddSheet>
-          <div className="overflow-x-auto rounded-card border border-border bg-bg" data-payees>
+          <div className="overflow-x-auto table-ruled" data-payees>
             <table className="w-full text-sm">
               <thead>
                 <tr className="border-b border-border bg-surface text-left">
@@ -141,7 +141,7 @@ export default async function DailyPage({ searchParams }: { searchParams: Promis
             <CardTitle>{t('workTitle')}</CardTitle>
             <WorkAdd payees={payees.filter((p) => p.active).map((p) => ({ id: p.id, name: p.name, internalNo: p.internalNo, projects: [...new Set(engagements.filter((e) => e.payeeId === p.id).map((e) => e.project))] }))} day={day} live={live} />
           </Card>
-          <div className="overflow-x-auto rounded-card border border-border bg-bg">
+          <div className="overflow-x-auto table-ruled">
             <table className="w-full text-sm" data-work>
               <thead>
                 <tr className="border-b border-border bg-surface text-left">
@@ -177,7 +177,7 @@ export default async function DailyPage({ searchParams }: { searchParams: Promis
             <DailyRunCreate month={today.slice(0, 7)} payDate={today} live={live} />
             <p className="text-xs text-faint">{t('runNote')}</p>
           </Card>
-          <div className="overflow-x-auto rounded-card border border-border bg-bg">
+          <div className="overflow-x-auto table-ruled">
             <table className="w-full text-sm">
               <thead>
                 <tr className="border-b border-border bg-surface text-left">
