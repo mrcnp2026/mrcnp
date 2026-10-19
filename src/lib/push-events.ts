@@ -1,4 +1,4 @@
-// 폰 알림을 보내는 일 3가지 (2026-10-16 의뢰인: 휴가 신청 · 미출근자 · 정정 요청). 서버 전용.
+// 폰 알림을 보내는 일 (2026-10-16 의뢰인: 휴가 신청 · 미출근자 · 정정 요청 / 2026-10-19: 매주 미처리 요청 다시 알림). 서버 전용.
 // 요청 두 가지는 저장 API가 응답을 돌려준 뒤(after) 부르고, 출퇴근 알림(직원 본인 · 관리자)은 정기 작업 /api/cron/absent-watch가 부른다.
 import 'server-only';
 import { resolveDayType } from '@/config/labor-rules';
@@ -6,7 +6,7 @@ import { OFFICE } from '@/config/office';
 import { addDays } from '@/lib/calendar';
 import { fullLeaveSet } from '@/lib/leave';
 import { findMissingPunches } from '@/lib/missing-punch';
-import { leaveDaysFor, loadPeriod, workDaysFor } from '@/lib/period-data';
+import { hiddenTestIds, leaveDaysFor, loadPeriod, workDaysFor } from '@/lib/period-data';
 import { planPunchAlerts, type PersonMisses } from '@/lib/punch-alerts';
 import { firstTime, notifyApprovers, pushConfigured, sendPush } from '@/lib/push';
 import { approverIdsFor } from '@/lib/scope';
@@ -103,4 +103,55 @@ export async function notifyPunchAlerts(now = new Date()): Promise<{ checked: nu
   // 30일 지난 「보냄」 표시는 지운다
   await db.from('push_sent').delete().lt('sent_at', new Date(now.getTime() - 30 * 86_400_000).toISOString());
   return { checked: people.length, planned: plan.length, sent };
+}
+
+/**
+ * 매주 월요일 아침 — 아직 처리하지 않은 요청을 승인할 관리자에게 한 번 더 알린다 (2026-10-19 의뢰인: 알림을 받아도 잊을 수 있다).
+ * 관리자마다 한 통: 「처리하지 않은 요청 5건」 · 「휴가 2 · 정정 1 · 연장근로 2 — 가장 오래된 것 9일 전」. 정기 작업 /api/cron/weekly-pending이 부른다.
+ */
+export async function notifyWeeklyPending(now = new Date()): Promise<{ approvers: number; sent: number }> {
+  if (!(await pushOn()) || OFFICE.practiceMode) return { approvers: 0, sent: 0 };
+  const db = createAdminClient();
+  const hidden = new Set(await hiddenTestIds());
+  const KINDS = [
+    { table: 'leave_requests', label: '휴가' },
+    { table: 'punch_corrections', label: '정정' },
+    { table: 'overtime_requests', label: '연장근로' },
+    { table: 'punch_requests', label: '출퇴근 요청' },
+    { table: 'work_requests', label: '외근 · 출장' },
+    { table: 'shift_requests', label: '일정' },
+    { table: 'leave_change_requests', label: '휴가 취소' },
+  ] as const;
+  const rows = await Promise.all(KINDS.map(async (k) => {
+    const { data, error } = await db.from(k.table).select('employee_id, created_at').eq('is_test', false).eq('status', 'pending');
+    if (error) throw new Error(`weeklyPending.${k.table}: ${error.code}`);
+    return (data ?? []).filter((r) => !hidden.has(r.employee_id as string)).map((r) => ({ label: k.label, employeeId: r.employee_id as string, at: r.created_at as string }));
+  }));
+  const items = rows.flat();
+  const approvers = new Map<string, string[]>();
+  for (const id of new Set(items.map((x) => x.employeeId))) approvers.set(id, await approverIdsFor(id));
+  const per = new Map<string, { byKind: Map<string, number>; oldest: string }>();
+  for (const it of items) {
+    for (const a of approvers.get(it.employeeId) ?? []) {
+      const p = per.get(a) ?? { byKind: new Map(), oldest: it.at };
+      p.byKind.set(it.label, (p.byKind.get(it.label) ?? 0) + 1);
+      if (it.at < p.oldest) p.oldest = it.at;
+      per.set(a, p);
+    }
+  }
+  const today = toKstDate(now);
+  let sent = 0;
+  for (const [a, p] of per) {
+    if (!(await firstTime(`weekly:${a}:${today}`))) continue;
+    const total = [...p.byKind.values()].reduce((x, y) => x + y, 0);
+    const days = Math.max(0, Math.floor((now.getTime() - Date.parse(p.oldest)) / 86_400_000));
+    const kinds = KINDS.map((k) => k.label).filter((l) => p.byKind.has(l)).map((l) => `${l} ${p.byKind.get(l)}`).join(' · ');
+    sent += await sendPush([a], {
+      title: `처리하지 않은 요청 ${total}건이 남아 있습니다`,
+      body: `${kinds}${days > 0 ? ` — 가장 오래된 것 ${days}일 전` : ''}`,
+      url: '/admin/inbox',
+      tag: `weekly-pending-${today}`,
+    });
+  }
+  return { approvers: per.size, sent };
 }

@@ -1938,7 +1938,7 @@
           "push": {
             "label": "Punch & request alerts (phone)",
             "value": "On",
-            "note": "Sent to people who turned on phone notifications. Admins: leave requests, corrections, no clock-in, yesterday's missing records. Staff: their own missing clock-in/out. Top admins and deemed-hours staff get no punch alerts. Each person turns it on/off in Menu › Phone notifications."
+            "note": "Sent to people who turned on phone notifications. Admins: leave requests, corrections, no clock-in, yesterday's missing records. Staff: their own missing clock-in/out. Top admins and deemed-hours staff get no punch alerts. Each person turns it on/off in Menu › Phone notifications. Every Monday 9:00, approvers get one reminder if requests are still pending."
           }
         },
         "access": {
@@ -5810,7 +5810,8 @@
     "notices": "Unconfirmed notices",
     "messages": "Unread company board posts",
     "requests": "Requests to handle",
-    "none": "No new alerts."
+    "none": "No new alerts.",
+    "decided": "My requests processed"
   },
   "payFlow": {
     "regularLabel": "Regular payroll steps",

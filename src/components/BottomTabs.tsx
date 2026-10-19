@@ -38,7 +38,7 @@ const CONSOLE_TABS: Tab[] = [
 ];
 
 export function BottomTabs({ role }: { role: NavRole; inboxCount?: number }) {
-  const inboxCount = useAlerts().requests; // 화면을 옮길 때마다 다시 센 숫자
+  const counts = useAlerts(); // 화면을 옮길 때마다 다시 센 숫자
   const t = useTranslations('nav');
   const tf = useTranslations('frame');
   const query = useSearchParams();
@@ -80,11 +80,11 @@ export function BottomTabs({ role }: { role: NavRole; inboxCount?: number }) {
                   icon={icon}
                   active={!grid && (pressed ? pressed === href : here)}
                   onPress={() => setPressed(href)}
-                  badge={
-                    key === 'requests' && adminMode && inboxCount > 0 ? (
-                      <span className="num absolute -top-2 -right-3 min-w-5 rounded-chip bg-warn px-1 text-center text-xs leading-5 font-bold text-on-primary">{inboxCount}</span>
-                    ) : null
-                  }
+                  badge={(() => {
+                    // 요청 탭: 관리자 모드 = 처리할 요청 · 직원 모드 = 처리된 내 요청 (2026-10-19 의뢰인)
+                    const n = key === 'requests' ? (adminMode ? counts.requests : counts.decided) : 0;
+                    return n > 0 ? <span className="num absolute -top-2 -right-3 min-w-5 rounded-chip bg-danger px-1 text-center text-xs leading-5 font-bold text-on-primary">{n}</span> : null;
+                  })()}
                 />
               </li>
             );

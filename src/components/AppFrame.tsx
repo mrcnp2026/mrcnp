@@ -12,6 +12,7 @@ import { hasConsent } from '@/lib/consent';
 import { visibleNoticesNow } from '@/lib/notices';
 import { pendingCounts } from '@/lib/period-data';
 import { switchOn } from '@/lib/switches';
+import { myDecidedCount } from '@/lib/my-decided';
 import { unreadCount } from '@/lib/work-messages';
 import { AlertBell, AlertsProvider } from './Alerts';
 import { PhoneSearchLink } from './DeskTop';
@@ -32,17 +33,18 @@ export async function AppFrame({ me, children, overlay }: { me: Me; children: Re
   const isAdmin = me.role === 'admin' || branchManager;
   const ts = await getTranslations('side');
   const role = me.role === 'admin' ? 'admin' : branchManager ? 'manager' : 'employee';
-  const [consented, inboxCount, notices, unreadMsg] = await Promise.all([
+  const [consented, inboxCount, notices, unreadMsg, decided] = await Promise.all([
     hasConsent(me.id), // 관리자도 직원이다 — 같은 동의 창
     // 통합설정 › 알림의 「요청 알림」을 끄면 요청 숫자를 보이지 않는다 (2026-10-19)
     isAdmin && (await switchOn('notify.request')) ? pendingCounts().then((c) => c.total) : 0,
     visibleNoticesNow(me.id, await getLocale()),
     unreadCount(me.id),
+    myDecidedCount(me.id),
   ]);
   const unread = notices.filter((n) => !n.confirmed).length;
   const languages = languageOptions();
   return (
-    <AlertsProvider initial={{ notices: unread, messages: unreadMsg, requests: inboxCount }}>
+    <AlertsProvider initial={{ notices: unread, messages: unreadMsg, requests: inboxCount, decided }}>
       {/* PC 위 띠: 로고 · 메뉴 검색 · 공간 전환(내 화면 / 관리자 화면) · 알림 · 통합설정 · 내 메뉴 */}
       <header className="sticky top-0 z-20 hidden h-14 items-center gap-4 border-b border-border bg-bg px-5 lg:flex">
         <div className="flex w-66 shrink-0 items-center">

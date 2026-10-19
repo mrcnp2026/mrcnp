@@ -8,9 +8,19 @@ import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { createContext, useCallback, useContext, useEffect, useRef, useState, type ReactNode } from 'react';
 
-export type AlertCounts = { notices: number; messages: number; requests: number };
-const Ctx = createContext<AlertCounts>({ notices: 0, messages: 0, requests: 0 });
+// decided: 내 요청 중 처리된 것(「요청」 화면을 마지막으로 연 뒤) — 메뉴 · 종 숫자에 같이 (2026-10-19)
+export type AlertCounts = { notices: number; messages: number; requests: number; decided: number };
+const Ctx = createContext<AlertCounts>({ notices: 0, messages: 0, requests: 0, decided: 0 });
 export const useAlerts = () => useContext(Ctx);
+
+/** 메뉴 항목의 숫자 (config/nav.ts의 badge) — 처리할 요청 숫자는 관리자 · 지점관리자에게만 (서버가 0으로 보낸다) */
+export function badgeCount(c: AlertCounts, badge: 'inbox' | 'notices' | 'messages' | 'decided' | undefined): number {
+  if (badge === 'inbox') return c.requests;
+  if (badge === 'notices') return c.notices;
+  if (badge === 'messages') return c.messages;
+  if (badge === 'decided') return c.decided;
+  return 0;
+}
 
 export function AlertsProvider({ initial, children }: { initial: AlertCounts; children: ReactNode }) {
   const [counts, setCounts] = useState(initial);
@@ -71,10 +81,11 @@ export function AlertBell({ approver, size = 'pc' }: { approver: boolean; size?:
       window.removeEventListener('keydown', key);
     };
   }, [open]);
-  const total = c.notices + c.messages + (approver ? c.requests : 0);
+  const total = c.notices + c.messages + c.decided + (approver ? c.requests : 0);
   const rows = [
     { key: 'notices', n: c.notices, href: '/punch/notices' },
     { key: 'messages', n: c.messages, href: '/punch/messages' },
+    { key: 'decided', n: c.decided, href: '/punch/requests?tab=done' }, // 내 요청 중 처리된 것 (2026-10-19)
     ...(approver ? [{ key: 'requests', n: c.requests, href: '/admin/inbox' }] : []),
   ];
   return (

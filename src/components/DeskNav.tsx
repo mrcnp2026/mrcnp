@@ -8,7 +8,7 @@ import Link, { useLinkStatus } from 'next/link';
 import { useSearchParams } from 'next/navigation';
 import { useEffect, useState } from 'react';
 import { appHref, appLeaves, appsFor, CONSOLE_HOME, locate, locateHref, type App, type NavRole } from '@/config/nav';
-import { useAlerts } from './Alerts';
+import { badgeCount, useAlerts, type AlertCounts } from './Alerts';
 import { usePressedTab } from './NavTab';
 
 export const RECENT_KEY = 'nav-recent';
@@ -23,7 +23,7 @@ function Count({ n }: { n: number }) {
   return <span className="num min-w-5 rounded-chip bg-danger px-1.5 text-center text-xs leading-5 font-bold text-on-primary">{n}</span>;
 }
 
-function Panel({ app, title, active, inboxCount, onPick, t }: { app: App; title: string; active?: string; inboxCount: number; onPick: (href: string) => void; t: (k: string) => string }) {
+function Panel({ app, title, active, counts, onPick, t }: { app: App; title: string; active?: string; counts: AlertCounts; onPick: (href: string) => void; t: (k: string) => string }) {
   return (
     <nav aria-label={title} className="sticky top-14 hidden h-[calc(100dvh-3.5rem)] w-58 shrink-0 overflow-y-auto border-r border-border bg-bg px-3.5 py-5 lg:block">
       <h2 className="px-1.5 pb-3 text-xl font-bold tracking-tight">{title}</h2>
@@ -35,7 +35,7 @@ function Panel({ app, title, active, inboxCount, onPick, t }: { app: App; title:
             return (
               <Link key={s.href} href={s.href} aria-current={on ? 'page' : undefined} onClick={() => onPick(s.href)} className={`flex min-h-9 items-center gap-2 rounded-button px-2.5 text-sm ${on ? 'bg-primary-tint font-bold text-primary' : 'text-text hover:bg-surface'}`}>
                 <span className="flex-1">{t(`item.${s.key}`)}</span>
-                {s.badge === 'inbox' && inboxCount > 0 && <Count n={inboxCount} />}
+                {badgeCount(counts, s.badge) > 0 && <Count n={badgeCount(counts, s.badge)} />}
                 <Loading />
               </Link>
             );
@@ -48,7 +48,7 @@ function Panel({ app, title, active, inboxCount, onPick, t }: { app: App; title:
 
 export function DeskNav({ role }: { role: NavRole; inboxCount?: number }) {
   const t = useTranslations('frame');
-  const inboxCount = useAlerts().requests; // 화면을 옮길 때마다 다시 센 숫자 (components/Alerts)
+  const counts = useAlerts(); // 화면을 옮길 때마다 다시 센 숫자 (components/Alerts) — 메뉴마다 badge로 고른다 (2026-10-19)
   const { path, pressed, setPressed } = usePressedTab();
   const query = useSearchParams();
   const here = locate(path, query, role);
@@ -124,7 +124,7 @@ export function DeskNav({ role }: { role: NavRole; inboxCount?: number }) {
             </div>
           ))}
         </nav>
-        {at.app && <Panel app={at.app} title={t(`app.${at.app.key}`)} active={active} inboxCount={inboxCount} onPick={setPressed} t={t} />}
+        {at.app && <Panel app={at.app} title={t(`app.${at.app.key}`)} active={active} counts={counts} onPick={setPressed} t={t} />}
       </>
     );
   }
@@ -136,7 +136,7 @@ export function DeskNav({ role }: { role: NavRole; inboxCount?: number }) {
           const on = at.app?.key === a.key;
           const Icon = a.icon;
           const href = appHref(a);
-          const badge = inboxCount > 0 && appLeaves(a).some((l) => l.badge === 'inbox');
+          const appCount = appLeaves(a).reduce((n, l) => n + badgeCount(counts, l.badge), 0); // 앱 띠 숫자 = 그 앱 메뉴 숫자의 합
           return (
             <Link key={a.key} href={href} aria-current={on ? 'true' : undefined} aria-label={t(`appFull.${a.key}`)} title={wide ? undefined : t(`appFull.${a.key}`)} onClick={() => setPressed(href)} className={`relative block w-full shrink-0 overflow-hidden rounded-card ${move} ${wide ? 'h-10.5' : 'h-15'} ${on ? 'font-bold text-primary' : 'font-medium text-muted hover:bg-bg'} ${on && wide ? 'bg-primary-tint' : ''}`}>
               <span className={`absolute flex size-8 items-center justify-center rounded-button ${move} ${wide ? 'top-1.25 left-1.5' : 'top-1.5 left-3.5'} ${on && !wide ? 'bg-primary text-on-primary' : ''}`}>
@@ -149,9 +149,9 @@ export function DeskNav({ role }: { role: NavRole; inboxCount?: number }) {
               <span aria-hidden className={`absolute top-1/2 left-11.5 -translate-y-1/2 text-sm whitespace-nowrap ${move} ${wide ? 'opacity-100' : '-translate-x-4 opacity-0'}`}>
                 {t(`appFull.${a.key}`)}
               </span>
-              {badge && (
+              {appCount > 0 && (
                 <span className={`absolute ${move} ${wide ? 'top-3 right-2.5' : 'top-0.5 right-1'}`}>
-                  <Count n={inboxCount} />
+                  <Count n={appCount} />
                 </span>
               )}
               <span className="absolute top-1/2 right-0 -translate-y-1/2">
@@ -173,7 +173,7 @@ export function DeskNav({ role }: { role: NavRole; inboxCount?: number }) {
         </button>
       </nav>
       {/* 항목이 하나뿐인 앱(홈 · 요청 …)은 메뉴 판 없이 본문을 넓게 쓴다 */}
-      {at.app && appLeaves(at.app).length > 1 && <Panel app={at.app} title={t(`appFull.${at.app.key}`)} active={active} inboxCount={inboxCount} onPick={setPressed} t={t} />}
+      {at.app && appLeaves(at.app).length > 1 && <Panel app={at.app} title={t(`appFull.${at.app.key}`)} active={active} counts={counts} onPick={setPressed} t={t} />}
     </>
   );
 }

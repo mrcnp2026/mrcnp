@@ -5,16 +5,18 @@ import { getMe } from '@/lib/auth';
 import { visibleNoticesNow } from '@/lib/notices';
 import { pendingCounts } from '@/lib/period-data';
 import { switchOn } from '@/lib/switches';
+import { myDecidedCount } from '@/lib/my-decided';
 import { unreadCount } from '@/lib/work-messages';
 
 export async function GET(): Promise<Response> {
   const me = await getMe();
   if (!me) return Response.json({ error: 'not_signed_in' }, { status: 401 });
   const approver = (me.role === 'admin' || me.role === 'manager') && (await switchOn('notify.request')); // 「요청 알림」 스위치 (2026-10-19)
-  const [notices, messages, requests] = await Promise.all([
+  const [notices, messages, requests, decided] = await Promise.all([
     visibleNoticesNow(me.id, await getLocale()).then((n) => n.filter((x) => !x.confirmed).length),
     unreadCount(me.id),
     approver ? pendingCounts().then((c) => c.total) : Promise.resolve(0),
+    myDecidedCount(me.id), // 내 요청 중 처리된 것 — 「요청」 메뉴 숫자 (2026-10-19)
   ]);
-  return Response.json({ notices, messages, requests }, { headers: { 'cache-control': 'no-store' } });
+  return Response.json({ notices, messages, requests, decided }, { headers: { 'cache-control': 'no-store' } });
 }

@@ -16,6 +16,7 @@ import { useEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { appLeaves, appsFor, CONSOLE_HOME, locate, type App, type NavRole } from '@/config/nav';
 import { AddToHomeButton } from './AddToHome';
+import { badgeCount, useAlerts } from './Alerts';
 import { LanguageSwitcher } from './LanguageSwitcher';
 import { OPEN_MENU_EVENT } from './MenuButton';
 import { PushToggle } from './PushToggle';
@@ -27,6 +28,8 @@ import { SignOutButton } from './SignOutButton';
 type View = 'my' | 'admin' | 'console';
 
 export function MenuDrawer({ name, role, languages }: { name: string; role: NavRole; languages: { code: string; name: string }[] }) {
+  const counts = useAlerts(); // 메뉴 옆 숫자 — PC 왼쪽 띠와 같은 숫자 (2026-10-19 의뢰인)
+  const pill = (n: number) => (n > 0 ? <span className="num ml-auto min-w-5 shrink-0 rounded-chip bg-danger px-1.5 text-center text-xs leading-5 font-bold text-on-primary">{n}</span> : null);
   const t = useTranslations('side');
   const tf = useTranslations('frame');
   const path = usePathname();
@@ -166,6 +169,7 @@ export function MenuDrawer({ name, role, languages }: { name: string; role: NavR
                           <Link key={a.key} href={leaves[0].href} onClick={() => setOpen(false)} aria-current={mine ? 'page' : undefined} className={`${row(mine)} gap-3 font-bold`}>
                             <Icon aria-hidden size={18} strokeWidth={2} className="shrink-0 text-primary" />
                             {appName(a)}
+                            {pill(badgeCount(counts, leaves[0].badge))}
                           </Link>
                         );
                       const isOpen = unfold.has(a.key);
@@ -174,6 +178,7 @@ export function MenuDrawer({ name, role, languages }: { name: string; role: NavR
                           <button type="button" aria-expanded={isOpen} onClick={() => toggle(a.key)} className={`flex min-h-11 items-center gap-3 rounded-button px-3 text-left font-bold active:bg-primary-tint ${mine ? 'text-primary' : 'text-text'}`}>
                             <Icon aria-hidden size={18} strokeWidth={2} className="shrink-0 text-primary" />
                             <span className="flex-1">{appName(a)}</span>
+                            {pill(leaves.reduce((n, l) => n + badgeCount(counts, l.badge), 0))}
                             <ChevronDown aria-hidden size={16} className={`shrink-0 text-faint transition-transform duration-[350ms] ease-in-out ${isOpen ? 'rotate-180' : ''}`} />
                           </button>
                           {isOpen && (
@@ -188,6 +193,7 @@ export function MenuDrawer({ name, role, languages }: { name: string; role: NavR
                                 if (!g.key) return items.map((l) => (
                                   <Link key={l.href} href={l.href} onClick={() => setOpen(false)} aria-current={here === l.href ? 'page' : undefined} className={`${row(here === l.href)} text-base`}>
                                     {tf(`item.${l.key}`)}
+                                    {pill(badgeCount(counts, l.badge))}
                                   </Link>
                                 ));
                                 // 묶음에 항목이 하나만 남으면 묶음 이름 한 줄로

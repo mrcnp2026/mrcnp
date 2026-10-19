@@ -6,6 +6,7 @@ import Link from 'next/link';
 import { redirect } from 'next/navigation';
 import { Fab } from '@/components/Fab';
 import { HideRequests } from '@/components/HideRequests';
+import { SeenRequests } from '@/components/SeenRequests';
 import { Pager, pageOf } from '@/components/Pager';
 import { RequestRows } from '@/components/RequestRows';
 import { RequestTabs } from '@/components/RequestTabs';
@@ -59,6 +60,7 @@ export default async function MyRequestsPage({ searchParams }: { searchParams: P
 
   return (
     <PageShell wide>
+      <SeenRequests />
       {/* 폰은 위 줄(MineBar)이 제목을 맡는다 · PC는 제목 + ? 설명 */}
       {/* PC: 다른 화면처럼 제목 왼쪽 · 새 요청 단추 오른쪽 한 줄 (2026-10-18 디자인: 단추가 목록 위에 따로 떠 있었다) */}
       <div className="lg:flex lg:items-start lg:justify-between lg:gap-4">

@@ -11,7 +11,9 @@ import { managerCanOpen } from '@/lib/manager-rules';
 // how: 통합설정 화면 맨 위 「이 화면 쓰는 법」 띠의 종류 (2026-10-14 의뢰인: 이미 적용된 건지 · 저장해야 적용되는지 · 보기만인지 한눈에)
 export type How = 'view' | 'instant' | 'versioned' | 'list' | 'review';
 // pcOnly: 폰에서는 같은 화면이 다른 모양으로만 그려져 고를 의미가 없는 항목 — 폰 서랍에서 뺀다 (2026-10-15 의뢰인: 폰 근무일정 「달력형」이 눌러도 그대로)
-export type Leaf = { href: string; key: string; exact?: boolean; also?: string[]; badge?: 'inbox'; how?: How; pcOnly?: boolean };
+// badge: 메뉴 옆 숫자 (2026-10-19 의뢰인: 종의 알림을 메뉴에도) — inbox 처리할 요청 · notices 안 본 공지 · messages 안 읽은 사내게시판 · decided 처리된 내 요청
+export type Badge = 'inbox' | 'notices' | 'messages' | 'decided';
+export type Leaf = { href: string; key: string; exact?: boolean; also?: string[]; badge?: Badge; how?: How; pcOnly?: boolean };
 export type Group = { key: string | null; items: Leaf[] };
 export type App = { key: string; icon: LucideIcon; groups: Group[]; section?: 'company' | 'apps' };
 export type Space = 'my' | 'admin' | 'console';
@@ -26,10 +28,10 @@ export const MY_APPS: App[] = [
   // 직원에게는 근무일정이 곧 출퇴근 일정 — 직원 모드의 근무일정 메뉴는 없앴다(2026-10-15 의뢰인, 결정 사항 개발-37). 일정 요청은 내 근태현황 안에서
   { key: 'records', icon: Clock, groups: one([{ href: '/punch/records', key: 'myRecords', also: ['/punch/corrections', '/punch/schedule'] }]) },
   { key: 'leave', icon: Plane, groups: one([{ href: '/punch/leave', key: 'myLeave' }]) },
-  { key: 'requests', icon: Send, groups: one([{ href: '/punch/requests', key: 'myRequests' }]) },
+  { key: 'requests', icon: Send, groups: one([{ href: '/punch/requests', key: 'myRequests', badge: 'decided' }]) },
   { key: 'pay', icon: Wallet, groups: one([{ href: '/punch/payslips', key: 'payslips' }, { href: '/punch/retirement', key: 'myRetirement' }]) },
   // 「업무 메시지」는 2026-10-16 의뢰인 지시로 이름이 「사내게시판」이다(주소 · 코드 이름은 messages 그대로). 따로 만들었던 자유 게시판은 같은 날 지웠다
-  { key: 'talk', icon: MessagesSquare, groups: one([{ href: '/punch/notices', key: 'notices' }, { href: '/punch/messages', key: 'messages' }]) },
+  { key: 'talk', icon: MessagesSquare, groups: one([{ href: '/punch/notices', key: 'notices', badge: 'notices' }, { href: '/punch/messages', key: 'messages', badge: 'messages' }]) },
   { key: 'people', icon: UserRound, groups: one([{ href: '/punch/org', key: 'orgChart' }, { href: '/punch/account', key: 'account' }]) },
 ];
 
