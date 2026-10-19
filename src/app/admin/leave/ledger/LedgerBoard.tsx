@@ -90,7 +90,7 @@ export function LedgerBoard(props: { group?: { id: string; name: string } | null
     });
   const why = (l: LotLine) => (l.rule === 'monthly' ? t('rule.monthly', { n: l.month ?? 0 }) : l.rule === 'annual' || l.rule === 'fiscal_annual' ? t(`rule.${l.rule}`, { n: l.years ?? 0 }) : t.has(`rule.${l.rule}`) ? t(`rule.${l.rule}`, { n: 0 }) : t('rule.manual', { n: 0 }));
   const range = (l: LotLine) => (l.usableTo ? t('range', { from: l.usableFrom, to: l.usableTo }) : t('rangeOpen', { from: l.usableFrom }));
-  const r2 = (n: number) => (Math.abs(n * 32 - Math.round(n * 32)) < 1e-6 ? n : Math.round(n * 100) / 100); // 비례 발생(10.9896)은 소수 둘째 자리까지
+  const r2 = (n: number) => Math.round(n * 100) / 100; // 화면은 소수 둘째 자리까지 (2026-10-19 의뢰인) // 비례 발생(10.9896)은 소수 둘째 자리까지
   const day = (n: number) => t('days', { n: r2(n) });
 
   return (
@@ -308,7 +308,7 @@ export function LedgerBoard(props: { group?: { id: string; name: string } | null
                         <span className="font-bold">{day(s.unused)}</span>
                         {s.lots.map((l) => (
                           <span key={l.grantedOn} className="block text-xs text-faint">
-                            {t('settleLot', { date: l.grantedOn, n: l.days })}
+                            {t('settleLot', { date: l.grantedOn, n: r2(l.days) })}
                           </span>
                         ))}
                       </td>

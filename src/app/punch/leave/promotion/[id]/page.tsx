@@ -30,7 +30,7 @@ export default async function MyPromotionPage({ params }: { params: Promise<{ id
           {c.title}
           <Chip tone={v.state === 'CONFIRMED' ? 'ok' : v.state === 'PLAN_SUBMITTED' ? 'info' : 'warn'}>{t(`state.${v.state}`)}</Chip>
         </h1>
-        <p className="num pt-1 text-sm text-faint">{t('meta', { n: minutesToDays(v.remainingMinutes), basis: c.basisOn, due: c.planDueOn })}</p>
+        <p className="num pt-1 text-sm text-faint">{t('meta', { n: Math.round(minutesToDays(v.remainingMinutes) * 100) / 100, basis: c.basisOn, due: c.planDueOn })}</p>
       </div>
       <Card className="flex flex-col gap-3">
         <CardTitle>{t('noticeTitle')}</CardTitle>

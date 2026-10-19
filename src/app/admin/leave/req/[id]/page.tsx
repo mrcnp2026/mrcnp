@@ -22,7 +22,7 @@ export default async function LeaveDetailPage({ params }: { params: Promise<{ id
   const type = types.find((x) => x.code === r.typeCode);
   const files = (await loadLeaveFiles([r.id])).get(r.id) ?? []; // 증빙 파일 (묶음 9)
   const names = new Map((staff ?? []).map((p) => [p.id as string, p.name as string]));
-  const n = (v: number) => f.number(v, { maximumFractionDigits: 5 });
+  const n = (v: number) => f.number(v, { maximumFractionDigits: 2 }); // 일수는 화면에 소수 둘째 자리까지 (2026-10-19 의뢰인: 15분 = 0.03125일까지 저장하지만 폰에서 칸을 넘지 않게. 저장 · 계산은 다섯째 자리 그대로)
   const day = (d: string) => f.dateTime(kstDateTime(d, '12:00'), { year: 'numeric', month: 'long', day: 'numeric', weekday: 'short' });
   const stamp = (iso: string) => f.dateTime(new Date(iso), { year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit', second: '2-digit', hourCycle: 'h23' });
 

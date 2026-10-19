@@ -174,7 +174,7 @@ export default async function InboxPage({ searchParams }: { searchParams: Promis
       : Promise.resolve({ data: [] as { employee_id: string; work_date: string }[] }),
   ]);
   const leaveName = (code: string) => leaveTypeName(leaveTypes, code, tl);
-  const nDays = (v: number) => f.number(v, { maximumFractionDigits: 5 });
+  const nDays = (v: number) => f.number(v, { maximumFractionDigits: 2 }); // 일수는 화면에 소수 둘째 자리까지 (2026-10-19 의뢰인: 15분 = 0.03125일까지 저장하지만 폰에서 칸을 넘지 않게. 저장 · 계산은 다섯째 자리 그대로)
   const lvPage = pageOf(leavePending, sp.lp, REQUEST_PAGE);
   const [lvFiles, typeRules] = await Promise.all([loadLeaveFiles(lvPage.items.map((r) => r.id)), loadTypeRules()]); // 증빙 파일 · 「증빙 필수」 (묶음 9)
   const workPending = (await loadWorkRequests({ practice })).filter((w) => w.status === 'pending' && hit(w.employeeId) && only('work', w.id)).sort((a, b) => (a.startDate < b.startDate ? -1 : 1));

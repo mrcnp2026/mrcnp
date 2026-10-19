@@ -3168,7 +3168,9 @@
       "state": {
         "block": "Blocks closing",
         "check": "To check",
-        "done": "Checked"
+        "done": "Checked",
+        "overdue": "Overdue",
+        "mine": "Mine"
       },
       "unitDay": "d",
       "unitCase": "",
@@ -3183,6 +3185,32 @@
         "sent": "Sent to {n}.",
         "sentOn": "Notified {date}",
         "col": "Notice"
+      },
+      "task": {
+        "col": "Owner · due",
+        "approversShort": "Request approvers",
+        "dueOn": "Due {date}",
+        "overdue": "{n} days overdue",
+        "change": "Change owner · due",
+        "assignee": "Owner",
+        "assigneeDefault": "Default (as set)",
+        "due": "Due date",
+        "dueHint": "Leave blank for the default (day of the issue + set days)",
+        "note": "Note (optional)",
+        "save": "Save",
+        "cancel": "Cancel",
+        "saved": "Saved.",
+        "dbPending": "Changing a single item needs DB change set 27 approval. Default owner · due already work.",
+        "policyTitle": "Owner · due date",
+        "policyIntro": "Each unhandled attendance issue (blocks closing · needs check) gets an owner and a due date. Overdue items show \"n days overdue\", and the owner gets one phone alert at 9 am (once per item).",
+        "enabled": "Turn on due dates · overdue alerts",
+        "defaultAssignee": "Default owner",
+        "approvers": "That person's request approvers (same as request alerts)",
+        "dueDays": "Due — days after the issue",
+        "policyHint": "Only issues from {start} get a due date (earlier ones have none). \"Handled\" means marked as checked for check-only types, or the record fixed so the issue disappears for blocking types.",
+        "invalid_assignee": "Only admins or branch managers can be owners.",
+        "invalid_due": "The due date must be on or after the day of the issue.",
+        "db_update_required": "DB change set 27 needs to be applied."
       }
     },
     "leaveTypeRule": {

@@ -31,6 +31,10 @@
     {
       "path": "/api/cron/leave-accrual",
       "schedule": "10 18 * * *"
+    },
+    {
+      "path": "/api/cron/anomaly-overdue",
+      "schedule": "5 0 * * *"
     }
   ]
 }

@@ -64,7 +64,7 @@ export default async function LeavePage({ searchParams }: { searchParams: Promis
   const nameOf = (code: string) => leaveTypeName(types, code, t);
   // 올해가 아니면 연도도 (지난해·먼 미래 신청이 올해로 읽히지 않게)
   const day = (d: string) => f.dateTime(new Date(`${d}T12:00:00+09:00`), { year: d.slice(0, 4) === today.slice(0, 4) ? undefined : 'numeric', month: 'short', day: 'numeric', weekday: 'short' });
-  const n = (v: number) => f.number(v, { maximumFractionDigits: 5 });
+  const n = (v: number) => f.number(v, { maximumFractionDigits: 2 }); // 일수는 화면에 소수 둘째 자리까지 (2026-10-19 의뢰인: 15분 = 0.03125일까지 저장하지만 폰에서 칸을 넘지 않게. 저장 · 계산은 다섯째 자리 그대로)
   // 달별 사용 표 (2026-10-14 직원 화면 보강): 고른 해(없으면 올해)
   const year = /^\d{4}$/.test(sp.y ?? '') ? sp.y! : today.slice(0, 4);
   const monthly = monthlyLeaveUse(requests, types, year);

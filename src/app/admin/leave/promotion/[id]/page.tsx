@@ -66,7 +66,7 @@ export default async function PromotionDetailPage({ params }: { params: Promise<
             {rows.map((v) => (
               <tr key={v.id} className="border-b border-border align-top">
                 <td className="px-3 py-3 font-bold whitespace-nowrap">{names.get(v.employeeId) ?? ''}</td>
-                <td className="num px-3 py-3 whitespace-nowrap">{t('days', { n: minutesToDays(v.remainingMinutes) })}</td>
+                <td className="num px-3 py-3 whitespace-nowrap">{t('days', { n: Math.round(minutesToDays(v.remainingMinutes) * 100) / 100 })}</td>
                 <td className="px-3 py-3">
                   <Chip tone={TONE[v.state]}>{t(`target.${v.state}`)}</Chip>
                   {v.excludeReason && <span className="block pt-1 text-xs text-muted">{v.excludeReason}</span>}

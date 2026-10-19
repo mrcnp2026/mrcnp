@@ -70,7 +70,7 @@ export function LeaveTypeForm({ initial, sheet, groups }: { initial?: TypeValues
         <select value={hours} onChange={(e) => setHours(Number(e.target.value))} disabled={initial?.builtin} className={`num ${field}`}>
           {HOURS.map((h) => (
             <option key={h} value={h}>
-              {t('hoursOption', { h, d: unitOfHours(h) })}
+              {t('hoursOption', { h, d: Math.round(unitOfHours(h) * 100) / 100 })}
             </option>
           ))}
         </select>

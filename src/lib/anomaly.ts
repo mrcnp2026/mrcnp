@@ -91,3 +91,43 @@ export function summarizeAnomalies(items: readonly AnomalyItem[], policy: Anomal
   }
   return { shown, byEmployee, byType };
 }
+
+// ── 담당자 · 처리 기한 · 기한 지남 (2026-10-19 의뢰인, 「아직 안 만든 기능」 #40) ──
+// 기본: 그 직원의 요청을 승인하는 관리자(요청 알림을 받는 사람과 같다)가 담당, 기한은 이상이 생긴 날 + dueDays일.
+// 한 건만 바꾸려면 담당 · 기한을 따로 적는다(DB 0061, 묶음 27). 처리 = 「확인만」 유형은 확인함 표시, 「마감 차단」 유형은 기록을 고쳐 이상이 사라지는 것.
+// startsOn보다 앞선 날의 이상(시프티에서 옮긴 옛 기록 등)에는 기한을 매기지 않는다 — 기능을 켠 날 옛 기록이 한꺼번에 「기한 지남」이 되지 않게.
+export const ANOMALY_TASK_START = '2026-10-20';
+export type AnomalyTaskPolicy = { enabled: boolean; assignee: 'approvers' | string; dueDays: number; startsOn: string };
+export const DEFAULT_TASK_POLICY: AnomalyTaskPolicy = { enabled: true, assignee: 'approvers', dueDays: 3, startsOn: ANOMALY_TASK_START };
+const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
+export function validateTaskPolicy(v: unknown): AnomalyTaskPolicy | null {
+  if (!v || typeof v !== 'object') return null;
+  const o = v as Record<string, unknown>;
+  if (typeof o.enabled !== 'boolean') return null;
+  if (o.assignee !== 'approvers' && !(typeof o.assignee === 'string' && UUID_RE.test(o.assignee))) return null;
+  if (typeof o.dueDays !== 'number' || !Number.isInteger(o.dueDays) || o.dueDays < 0 || o.dueDays > 31) return null;
+  const startsOn = o.startsOn === undefined ? ANOMALY_TASK_START : o.startsOn;
+  if (typeof startsOn !== 'string' || !/^\d{4}-\d{2}-\d{2}$/.test(startsOn)) return null;
+  return { enabled: o.enabled, assignee: o.assignee as AnomalyTaskPolicy['assignee'], dueDays: o.dueDays, startsOn };
+}
+export const taskPolicyOf = (v: unknown): AnomalyTaskPolicy => validateTaskPolicy(v) ?? DEFAULT_TASK_POLICY;
+
+export type AnomalyOverride = { assigneeId: string | null; dueOn: string | null; note: string | null; setBy: string; setAt: string };
+export type AnomalyTask = { assignees: string[]; due: string | null; overdueDays: number; custom: boolean; note: string | null };
+
+const plusDays = (d: string, n: number) => new Date(Date.parse(`${d}T00:00:00Z`) + n * 86_400_000).toISOString().slice(0, 10);
+const daysBetween = (a: string, b: string) => Math.round((Date.parse(`${b}T00:00:00Z`) - Date.parse(`${a}T00:00:00Z`)) / 86_400_000);
+
+/**
+ * 한 건의 담당 · 기한. open = 아직 처리하지 않음(마감 차단이거나 확인함 표시가 없음). 처리한 건은 기한이 지나도 0일.
+ * approvers: 그 직원의 요청을 승인하는 사람들(기본 담당일 때).
+ */
+export function taskOf(args: { workDate: string; open: boolean; today: string; policy: AnomalyTaskPolicy; override?: AnomalyOverride; approvers: string[] }): AnomalyTask {
+  const { policy: p, override: o } = args;
+  const tracked = p.enabled && args.workDate >= p.startsOn;
+  const assignees = o?.assigneeId ? [o.assigneeId] : p.assignee === 'approvers' ? args.approvers : [p.assignee];
+  const due = o?.dueOn ?? (tracked ? plusDays(args.workDate, p.dueDays) : null);
+  const late = due && args.open && (tracked || !!o?.dueOn) ? Math.max(0, daysBetween(due, args.today)) : 0;
+  return { assignees, due, overdueDays: late, custom: !!(o?.assigneeId || o?.dueOn), note: o?.note ?? null };
+}
