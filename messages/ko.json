@@ -864,7 +864,38 @@
         "pending": "연장 미승인이 있는 사람 {n}명"
       },
       "pickedClear": "전체 보기",
-      "lateMin": "{n}분 늦음"
+      "lateMin": "{n}분 늦음",
+      "bulk": {
+        "title": "엑셀로 출퇴근 기록 한꺼번에 넣기",
+        "hint": "날짜를 골라 양식을 받으면 직원마다 한 줄이 들어 있습니다. 출근 · 퇴근 시각(9:00 · 0900 모두 됨)만 채워 올리세요. 다른 날짜를 섞어 적어도 됩니다. 퇴근이 출근보다 이르면 다음 날 퇴근으로 봅니다. 관리자 대리 등록처럼 사유와 넣은 사람이 남고, 이미 있는 기록은 덮지 않습니다.",
+        "sheet": "출퇴근 일괄",
+        "guide": "출근 · 퇴근 시각만 채우세요. 시각이 둘 다 빈 줄은 건너뜁니다. 사유를 비우면 「엑셀 일괄 입력」.",
+        "colNo": "사번",
+        "colName": "이름",
+        "colDate": "날짜",
+        "colIn": "출근",
+        "colOut": "퇴근",
+        "colReason": "사유",
+        "defaultReason": "엑셀 일괄 입력",
+        "download": "양식 받기",
+        "preview": "미리보기",
+        "apply": "{n}줄 넣기",
+        "nextDay": "다음 날 ",
+        "ok": "넣음",
+        "inResult": "출근 {r}",
+        "outResult": "퇴근 {r}",
+        "err": {
+          "unknown_employee": "없는 사번(또는 본인)",
+          "bad_date": "날짜가 맞지 않음",
+          "bad_time": "시각이 맞지 않음",
+          "no_time": "시각이 없음",
+          "reason_required": "사유가 너무 짧음",
+          "import_no_file": "올린 파일이 없습니다.",
+          "import_too_big": "파일이 너무 큽니다(2MB까지).",
+          "import_bad_file": "양식이 맞지 않습니다. 「양식 받기」로 받은 엑셀에 적어 올려 주세요.",
+          "import_too_many": "한 번에 500줄까지 올릴 수 있습니다."
+        }
+      }
     },
     "notices": {
       "title": "공지",

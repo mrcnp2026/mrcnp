@@ -18,6 +18,7 @@ import { buildOrgTree, groupScope } from '@/lib/org';
 import { loadOrgGroups } from '@/lib/org-data';
 import { kstDateTime, toKstDate } from '@/lib/time';
 import { groupPath } from '@/lib/org';
+import { PunchBulk } from './PunchBulk';
 
 function shift(ym: string, n: number) {
   const [y, m] = ym.split('-').map(Number);
@@ -64,6 +65,8 @@ export default async function RecordsPage({ searchParams }: { searchParams: Prom
   return (
     <PageShell wide>
       <ScopeSwitch kind="attendance" current="all" />
+      {/* 출퇴근 기록 엑셀 일괄 입력 (2026-10-20 노프로 비교) — 접힌 한 줄 */}
+      <PunchBulk today={toKstDate(new Date())} />
       <header className="flex flex-wrap items-center justify-between gap-2">
         <div className="min-w-0">
           <h1 className="flex flex-wrap items-center gap-x-1 text-2xl font-bold">{t('title')}<HelpTip>{t('intro')}</HelpTip></h1>

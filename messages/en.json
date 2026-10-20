@@ -864,7 +864,38 @@
         "pending": "{n} people with unapproved overtime"
       },
       "pickedClear": "Show all",
-      "lateMin": "{n} min late"
+      "lateMin": "{n} min late",
+      "bulk": {
+        "title": "Bulk attendance entry by Excel",
+        "hint": "Pick a date and download the template with one row per staff. Fill in clock-in/out times (9:00 or 0900) and upload. Other dates can be mixed in. If clock-out is earlier than clock-in, it counts as the next day. Like admin entry, the reason and who entered it are kept; existing records are not overwritten.",
+        "sheet": "Attendance bulk",
+        "guide": "Fill in clock-in/out only. Rows with both empty are skipped. Blank reason = \"Excel bulk entry\".",
+        "colNo": "Employee no.",
+        "colName": "Name",
+        "colDate": "Date",
+        "colIn": "In",
+        "colOut": "Out",
+        "colReason": "Reason",
+        "defaultReason": "Excel bulk entry",
+        "download": "Download template",
+        "preview": "Preview",
+        "apply": "Add {n} rows",
+        "nextDay": "next day ",
+        "ok": "added",
+        "inResult": "In {r}",
+        "outResult": "Out {r}",
+        "err": {
+          "unknown_employee": "Unknown employee no. (or yourself)",
+          "bad_date": "Invalid date",
+          "bad_time": "Invalid time",
+          "no_time": "No time",
+          "reason_required": "Reason too short",
+          "import_no_file": "No file uploaded.",
+          "import_too_big": "File is too large (2MB max).",
+          "import_bad_file": "The file doesn't match the template.",
+          "import_too_many": "Up to 500 rows at once."
+        }
+      }
     },
     "notices": {
       "title": "Notices",
