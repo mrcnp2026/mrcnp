@@ -8,7 +8,7 @@ import { deny } from '@/lib/csv-response';
 import { buildConfirmWorkbook } from '@/lib/payroll/confirm-sheet';
 import { loadItems, loadPolicies, loadReferences, loadSettingHistory, requirePayroll } from '@/lib/payroll/data';
 import { REFERENCE_KINDS } from '@/lib/payroll/reference';
-import { ALLOWANCE_KINDS, payDateFor } from '@/lib/payroll/settings';
+import { ALLOWANCE_KINDS, INSURER_KEYS, payDateFor } from '@/lib/payroll/settings';
 import { createAdminClient } from '@/lib/supabase/admin';
 import { toKstDate } from '@/lib/time';
 
@@ -57,6 +57,7 @@ export async function GET(): Promise<Response> {
       [t('s02.payDay'), `${l.payDayMode === 'MONTH_END' ? t('s02.payDayModeOf.MONTH_END') : `${l.payDay}`} (${t('s02.example', { month: today.slice(0, 7), date: payDateFor(today.slice(0, 7), l) })})`],
       [t('s02.holidayShift'), l.holidayShift ? t(`s02.holidayShiftOf.${l.holidayShift}`) : t('notChosen')],
       [t('s02.insuranceBasis'), t(`s02.insuranceBasisOf.${l.insuranceBasis}`)],
+      ...INSURER_KEYS.filter((k) => l.insuranceBasisOf?.[k]).map((k): [string, string] => [t(`s02.insurerOf.${k}`), t(`s02.insuranceBasisOf.${l.insuranceBasisOf![k]!}`)]),
       [t('s02.withholding'), `${l.withholdingRatio}%`],
     ],
   });

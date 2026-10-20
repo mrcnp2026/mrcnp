@@ -18,6 +18,13 @@ describe('급여대장 설정', () => {
   it('형식 검사: 빈 칸과 0을 구분하고, 정해지지 않은 값을 임의로 채우지 않는다', () => {
     expect(validateSetting('ledger', { payMonth: 'NEXT', payDayMode: 'FIXED_DAY', payDay: '10', holidayShift: '', insuranceBasis: 'NOTICE', withholdingRatio: '100' })).toEqual({ ok: true, value: { payMonth: 'NEXT', payDayMode: 'FIXED_DAY', payDay: 10, holidayShift: null, insuranceBasis: 'NOTICE', withholdingRatio: 100, deductUnpaidLeave: false, deductLateness: false, premiumTimeBasis: 'ACTUAL' } });
     expect(validateSetting('ledger', { payMonth: 'NEXT', payDayMode: 'FIXED_DAY', payDay: '', insuranceBasis: 'NOTICE', withholdingRatio: 100 }).ok).toBe(false); // 고정일인데 날짜 없음
+    // 보험마다 따로 (2026-10-20): 빈 칸 · 기본과 같은 값은 저장하지 않는다, 모르는 보험 이름은 거절
+    const each = validateSetting('ledger', { payMonth: 'NEXT', payDayMode: 'MONTH_END', holidayShift: '', insuranceBasis: 'PAYROLL_BASE', withholdingRatio: 100, insuranceBasisOf: { pension: 'REPORTED_BASE', health: 'REPORTED_BASE', employment: 'PAYROLL_BASE' } });
+    expect(each.ok && (each.value as { insuranceBasisOf?: unknown }).insuranceBasisOf).toEqual({ pension: 'REPORTED_BASE', health: 'REPORTED_BASE' });
+    const blank = validateSetting('ledger', { payMonth: 'NEXT', payDayMode: 'MONTH_END', holidayShift: '', insuranceBasis: 'PAYROLL_BASE', withholdingRatio: 100, insuranceBasisOf: { pension: null, health: '', employment: null } });
+    expect(blank.ok && 'insuranceBasisOf' in blank.value).toBe(false);
+    expect(validateSetting('ledger', { payMonth: 'NEXT', payDayMode: 'MONTH_END', holidayShift: '', insuranceBasis: 'PAYROLL_BASE', withholdingRatio: 100, insuranceBasisOf: { accident: 'NOTICE' } }).ok).toBe(false);
+    expect(validateSetting('ledger', { payMonth: 'NEXT', payDayMode: 'MONTH_END', holidayShift: '', insuranceBasis: 'PAYROLL_BASE', withholdingRatio: 100, insuranceBasisOf: { pension: 'ACTUAL' } }).ok).toBe(false);
     expect(validateSetting('ledger', { payMonth: 'NEXT', payDayMode: 'MONTH_END', insuranceBasis: 'NOTICE', withholdingRatio: 90 }).ok).toBe(false); // 80·100·120만
     expect(validateSetting('working-time', { weeklyHours: 40, weeklyOvertimeLimit: 12, monthlyHours: '' })).toEqual({ ok: true, value: { weeklyHours: 40, weeklyOvertimeLimit: 12, monthlyHours: null } });
     expect(validateSetting('working-time', { weeklyHours: 40, weeklyOvertimeLimit: 12, monthlyHours: 0 }).ok).toBe(false); // 분모 0 금지

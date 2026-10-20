@@ -10,7 +10,7 @@ import { useSaveRule } from '@/components/useSaveRule';
 import { Button } from '@/components/ui';
 import type { ItemRow } from '@/lib/payroll/data';
 import { MANUAL_FIELDS, RATE_KINDS, type ReferenceKind } from '@/lib/payroll/reference';
-import { CALC_KINDS, ORDINARY, type AllowanceKind, type AllowancePolicy, type EmployeeDefaults, type Ledger, type Masking, type SettingPayload, type SettingSection, type WorkingTime } from '@/lib/payroll/settings';
+import { CALC_KINDS, INSURER_KEYS, ORDINARY, type AllowanceKind, type AllowancePolicy, type EmployeeDefaults, type Ledger, type Masking, type SettingPayload, type SettingSection, type WorkingTime } from '@/lib/payroll/settings';
 
 const field = 'min-h-9 w-full rounded-button border border-border bg-bg px-3 text-sm text-text';
 const NS = 'admin.paySettings';
@@ -108,7 +108,10 @@ export function SettingForm({ section, current, version, today }: { section: Set
         const fd = new FormData(ev.currentTarget);
         const b: Record<string, unknown> = Object.fromEntries(fd);
         if (section === 'employee-defaults') Object.assign(b, { durunuri: fd.get('durunuri') === 'on', smeTaxCut: fd.get('smeTaxCut') === 'on' });
-        if (section === 'ledger') Object.assign(b, { deductUnpaidLeave: fd.get('deductUnpaidLeave') === 'on', deductLateness: fd.get('deductLateness') === 'on' });
+        if (section === 'ledger') {
+          Object.assign(b, { deductUnpaidLeave: fd.get('deductUnpaidLeave') === 'on', deductLateness: fd.get('deductLateness') === 'on', insuranceBasisOf: Object.fromEntries(INSURER_KEYS.map((k) => [k, fd.get(`basis.${k}`) || null])) });
+          for (const k of INSURER_KEYS) delete b[`basis.${k}`];
+        }
         if (await post(`/api/admin/payroll/settings/${section}`, { ...b, expectedVersion: version })) rule.settle();
       }}
     >
@@ -160,6 +163,15 @@ export function SettingForm({ section, current, version, today }: { section: Set
               {opts(['NOTICE', 'PAYROLL_BASE', 'REPORTED_BASE'], (k) => t(`s02.insuranceBasisOf.${k}`))}
             </select>
           </Row>
+          {/* 보험마다 따로 (2026-10-20) — 비우면 위 기준. 예: 연금 · 건강은 신고 보수, 고용은 그 달 급여 */}
+          {INSURER_KEYS.map((k) => (
+            <Row key={k} label={t(`s02.insurerOf.${k}`)} hint={k === 'pension' ? t('s02.insuranceEachHint') : undefined}>
+              <select name={`basis.${k}`} defaultValue={l?.insuranceBasisOf?.[k] ?? ''} className={`${field} lg:max-w-md`}>
+                <option value="">{t('s02.insuranceSame')}</option>
+                {opts(['NOTICE', 'PAYROLL_BASE', 'REPORTED_BASE'], (v) => t(`s02.insuranceBasisOf.${v}`))}
+              </select>
+            </Row>
+          ))}
           <Row label={t('s02.deductUnpaidLeave')} hint={t('s02.deductionHint')}>
             <span className="flex min-h-9 items-center gap-2"><input type="checkbox" name="deductUnpaidLeave" defaultChecked={l?.deductUnpaidLeave ?? false} className="size-5 accent-primary" />{t('use')}</span>
           </Row>

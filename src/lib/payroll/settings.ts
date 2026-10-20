@@ -14,11 +14,14 @@ export type Ledger = {
   payDay: number | null; // FIXED_DAY일 때 1~31
   holidayShift: 'KEEP' | 'PREV_BUSINESS_DAY' | 'NEXT_BUSINESS_DAY' | null; // 회사 확인 전에는 비워 둔다
   insuranceBasis: 'NOTICE' | 'PAYROLL_BASE' | 'REPORTED_BASE';
+  insuranceBasisOf?: Partial<Record<InsurerKey, 'NOTICE' | 'PAYROLL_BASE' | 'REPORTED_BASE'>>; // 보험마다 따로 고른 기준 (2026-10-20). 없는 보험은 insuranceBasis를 따른다
   withholdingRatio: 80 | 100 | 120;
   deductUnpaidLeave?: boolean;
   deductLateness?: boolean;
   premiumTimeBasis?: 'ACTUAL' | 'ROUNDED';
 };
+export const INSURER_KEYS = ['pension', 'health', 'employment'] as const;
+export type InsurerKey = (typeof INSURER_KEYS)[number];
 export type Masking = { unmaskMinutes: number };
 export type WorkingTime = { weeklyHours: number; weeklyOvertimeLimit: number; monthlyHours: number | null };
 export type SettingPayload = EmployeeDefaults | Ledger | Masking | WorkingTime;
@@ -50,7 +53,18 @@ export function validateSetting(section: SettingSection, b: Record<string, unkno
     const deductLateness = b.deductLateness ?? false;
     const premiumTimeBasis = b.premiumTimeBasis ?? 'ACTUAL';
     if (typeof deductUnpaidLeave !== 'boolean' || typeof deductLateness !== 'boolean' || !one(premiumTimeBasis, ['ACTUAL', 'ROUNDED'])) return bad;
-    return { ok: true, value: { payMonth, payDayMode, payDay, holidayShift, insuranceBasis, withholdingRatio, deductUnpaidLeave, deductLateness, premiumTimeBasis: premiumTimeBasis as 'ACTUAL' | 'ROUNDED' } };
+    // 보험마다 따로: 빈 칸은 「기본 기준과 같게」 — 저장하지 않는다. 기본과 같은 값도 저장하지 않는다
+    const each = b.insuranceBasisOf ?? {};
+    if (typeof each !== 'object' || each === null || Array.isArray(each)) return bad;
+    const insuranceBasisOf: Partial<Record<InsurerKey, Ledger['insuranceBasis']>> = {};
+    for (const [k, v] of Object.entries(each as Record<string, unknown>)) {
+      if (!(INSURER_KEYS as readonly string[]).includes(k)) return bad;
+      if (v === null || v === '' || v === undefined) continue;
+      const picked = one(v, ['NOTICE', 'PAYROLL_BASE', 'REPORTED_BASE'] as const);
+      if (!picked) return bad;
+      if (picked !== insuranceBasis) insuranceBasisOf[k as InsurerKey] = picked;
+    }
+    return { ok: true, value: { payMonth, payDayMode, payDay, holidayShift, insuranceBasis, ...(Object.keys(insuranceBasisOf).length ? { insuranceBasisOf } : {}), withholdingRatio, deductUnpaidLeave, deductLateness, premiumTimeBasis: premiumTimeBasis as 'ACTUAL' | 'ROUNDED' } };
   }
   if (section === 'masking') {
     const unmaskMinutes = int(b.unmaskMinutes, 1, 60);

@@ -6,7 +6,7 @@
 import { AUTO_PAYMENT_CODES, canonicalItemCode } from './reserved-items';
 import { add, dec, div, hoursOf, isNeg, max, min, mul, sub, text, toWon, type Dec, type Rounding } from './decimal';
 
-export const ENGINE_VERSION = 'engine-1.3'; // 1.3 (2026-10-19): 비과세 연간 한도 · 누적. 1.2 (2026-10-16): 시급제 주휴 · 유급휴일, 시급제 기본급은 소정 시간만 + 연장 · 휴일 줄에 1배 포함
+export const ENGINE_VERSION = 'engine-1.4'; // 1.4 (2026-10-20): 보험마다 공제 기준을 따로(국민연금 · 건강 · 고용, 비우면 기본 기준). 1.3 (2026-10-19): 비과세 연간 한도 · 누적. 1.2 (2026-10-16): 시급제 주휴 · 유급휴일, 시급제 기본급은 소정 시간만 + 연장 · 휴일 줄에 1배 포함
 
 export type EngineContract = { payType: 'MONTHLY' | 'HOURLY' | 'ANNUAL'; amount: number; monthlyHours: number | null; annualDivisor: number | null; included: { overtimeHours: number | null; holidayHours: number | null } };
 export type Tri = 'YES' | 'NO' | 'UNKNOWN';
@@ -49,7 +49,8 @@ export type EngineInput = {
   items: EngineItem[];
   policy: EnginePolicy;
   reference: EngineReference;
-  insuranceBasis: 'PAYROLL_BASE' | 'REPORTED' | 'NOTICE'; // 그 달 급여 기준 / 신고 보수 / 고지 보험료
+  insuranceBasis: 'PAYROLL_BASE' | 'REPORTED' | 'NOTICE'; // 그 달 급여 기준 / 신고 보수 / 고지 보험료 — 기본값. 산재(사업주)는 이 기준을 따른다
+  insuranceBasisOf?: Partial<Record<'pension' | 'health' | 'employment', 'PAYROLL_BASE' | 'REPORTED' | 'NOTICE'>>; // 보험마다 따로 고른 기준 (2026-10-20 — 예: 연금 · 건강은 신고 보수, 고용은 그 달 급여). 없으면 기본값
   withholding: Withholding | null;
   overrides: EngineOverride[];
   notices?: Partial<Record<'pension' | 'health' | 'employment' | 'accident', { employee: number; employer: number | null; id: string }>>;
@@ -234,11 +235,13 @@ export function calculateStatement(input: EngineInput): EngineResult {
   // ── 4. 보험 ──
   if (tax && input.skipInsurance) warnings.push({ code: 'insurance_not_calculated' });
   if (tax) {
+    const basisOf = (key: 'pension' | 'health' | 'employment') => input.insuranceBasisOf?.[key] ?? input.insuranceBasis;
     const insure = (key: 'pension' | 'health' | 'employment', r: InsuranceRef | null): { employee: bigint; employer: bigint } | null => {
       const st = tax.insurance[key];
+      const basis = basisOf(key);
       if (st.state === 'UNKNOWN') return block('insurance_unknown', key), null;
       if (st.state === 'NO') return null;
-      if (input.insuranceBasis === 'NOTICE') {
+      if (basis === 'NOTICE') {
         const notice = input.notices?.[key];
         if (!notice) return block('notice_required', key), null;
         const code = key.toUpperCase();
@@ -249,7 +252,7 @@ export function calculateStatement(input: EngineInput): EngineResult {
       } // 고지 자료 없이 요율 계산으로 조용히 대신하지 않는다
       if (!r) return block('reference_missing', key), null;
       let baseAmt: Dec;
-      if (input.insuranceBasis === 'REPORTED') {
+      if (basis === 'REPORTED') {
         if (st.reportedWage === null) return block('reported_wage_missing', key), null;
         baseAmt = dec(st.reportedWage);
       } else baseAmt = dec(insurable);
@@ -259,7 +262,7 @@ export function calculateStatement(input: EngineInput): EngineResult {
       // 두루누리: 지원율만큼 근로자 · 사업주 보험료를 줄여 뗀다(국민연금 · 고용보험만). 지원율은 사원별 입력값 — 임시(검증 대기 기록)
       const support = key === 'pension' ? (tax.reliefs?.durunuri?.pension ?? 0) : key === 'employment' ? (tax.reliefs?.durunuri?.employment ?? 0) : 0;
       const keep = support > 0 ? sub(dec(1), div(dec(support), dec(100))) : dec(1);
-      const trace = { basis: input.insuranceBasis, base: text(baseAmt), floor: r.floor, ceiling: r.ceiling, ...(support > 0 ? { durunuriPct: support } : {}) };
+      const trace = { basis, base: text(baseAmt), floor: r.floor, ceiling: r.ceiling, ...(support > 0 ? { durunuriPct: support } : {}) };
       const code = key.toUpperCase();
       push({ code, kind: 'DEDUCTION', label: key, raw: mul(mul(baseAmt, dec(r.employeeRate)), keep), rounding: policy.rounding.insurance, quantity: baseAmt, factor: dec(r.employeeRate), trace });
       push({ code: `${code}_EMPLOYER`, kind: 'EMPLOYER', label: `${key}Employer`, raw: mul(mul(baseAmt, dec(r.employerRate)), keep), rounding: policy.rounding.insurance, quantity: baseAmt, factor: dec(r.employerRate), trace });
@@ -271,7 +274,7 @@ export function calculateStatement(input: EngineInput): EngineResult {
     const on = !input.skipInsurance;
     if (on) insure('pension', ref.pension);
     const health = on ? insure('health', ref.health) : null;
-    if (health && input.insuranceBasis !== 'NOTICE') {
+    if (health && basisOf('health') !== 'NOTICE') {
       // 장기요양 = 건강보험료 × 비율 (보수에 비율을 곱하지 않는다)
       if (ref.ltcOfHealth === null) block('reference_missing', 'ltc');
       else {

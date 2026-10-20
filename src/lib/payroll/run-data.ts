@@ -28,7 +28,7 @@ import { restAndHolidayMinutes } from './engine/weekly-rest';
 import { calculateStatement, ENGINE_VERSION, type Blocker, type EngineInput, type EngineItem, type EngineOverride, type EngineResult, type Withholding } from './engine/engine';
 import { makeWithholding, referenceFrom, TEMP_INSURANCE_ROUNDING } from './engine/inputs';
 import { asChildRule, asTaxRules, pickAt, type ReferenceKind, type TaxBand } from './reference';
-import { DEFAULT_LEDGER, payDateFor, type AllowancePolicy, type Ledger } from './settings';
+import { DEFAULT_LEDGER, INSURER_KEYS, payDateFor, type AllowancePolicy, type InsurerKey, type Ledger } from './settings';
 import { loadStaffPay, payrollAudit, type ContractRow, type TaxRow } from './staff-data';
 
 const db = () => createAdminClient();
@@ -175,8 +175,12 @@ export async function loadCalcBasis(last: string) {
   const table = refAt('income-tax.table');
   const rules = asTaxRules(table?.payload);
   const withholding = table && rules ? makeWithholding({ bands: await loadBands(table.id), rules, childRule: asChildRule(refAt('income-tax.child-adjust')?.payload) }) : null;
-  const insuranceBasis = l.insuranceBasis === 'REPORTED_BASE' ? 'REPORTED' : l.insuranceBasis;
-  return { ledgerRow, policies, refs, premiumTimeBasis: l.premiumTimeBasis ?? 'ACTUAL', items, policy, reference, missing, bundle, withholding, insuranceBasis: insuranceBasis as EngineInput['insuranceBasis'], reliefOn, minimumHourly };
+  const toEngine = (v: Ledger['insuranceBasis']) => (v === 'REPORTED_BASE' ? 'REPORTED' : v) as EngineInput['insuranceBasis'];
+  const insuranceBasis = toEngine(l.insuranceBasis);
+  // 보험마다 따로 고른 기준 (2026-10-20). 비어 있으면 모든 보험이 기본 기준
+  const insuranceBasisOf: NonNullable<EngineInput['insuranceBasisOf']> = {};
+  for (const [k, v] of Object.entries(l.insuranceBasisOf ?? {})) if (v) insuranceBasisOf[k as InsurerKey] = toEngine(v);
+  return { ledgerRow, policies, refs, premiumTimeBasis: l.premiumTimeBasis ?? 'ACTUAL', items, policy, reference, missing, bundle, withholding, insuranceBasis, insuranceBasisOf, reliefOn, minimumHourly };
 }
 
 async function buildInputs(run: RunRow): Promise<Built> {
@@ -195,9 +199,11 @@ async function buildInputs(run: RunRow): Promise<Built> {
     loadPeriod(from, last, run.isTest),
     loadConfirms(from, last, run.isTest),
   ]);
-  const { items, policy, reference, missing, bundle, withholding, insuranceBasis, reliefOn, minimumHourly } = basis;
+  const { items, policy, reference, missing, bundle, withholding, insuranceBasis, insuranceBasisOf, reliefOn, minimumHourly } = basis;
+  const basisOf = (k: InsurerKey) => insuranceBasisOf[k] ?? insuranceBasis;
+  const anyNotice = insuranceBasis === 'NOTICE' || INSURER_KEYS.some((k) => basisOf(k) === 'NOTICE');
 
-  const noticeInputs = insuranceBasis === 'NOTICE' ? await loadNoticeInputs(run) : new Map<string, { notices: EngineInput['notices']; blockers: Blocker[] }>();
+  const noticeInputs = anyNotice ? await loadNoticeInputs(run) : new Map<string, { notices: EngineInput['notices']; blockers: Blocker[] }>();
   const bonus = run.kind === 'BONUS';
   const priorOf = bonus ? await loadPrior(run) : null;
   const exemptYtd = await loadExemptYtd(run); // 같은 해 앞서 확정한 명세의 항목별 비과세 합계 (2026-10-19)
@@ -322,9 +328,10 @@ async function buildInputs(run: RunRow): Promise<Built> {
     // 상여: 같은 달에 앞서 확정한 명세(정규 + 앞 차수 상여)의 과세 합계와 세액을 넘긴다 → 세금은 차액만. 4대보험은 상여 대장에서 계산하지 않는다(경고로 알린다)
     const prior = bonus ? (priorOf!.get(id) ?? (priorOf!.has('*') ? { taxable: 0, incomeTax: 0, localTax: 0 } : null)) : null;
     const notice = noticeInputs.get(id);
-    if (!bonus && notice) pre.push(...notice.blockers);
-    if (!bonus && insuranceBasis === 'NOTICE' && overrides.some((o) => ['PENSION_SETTLE', 'HEALTH_SETTLE', 'EMPLOYMENT_SETTLE'].includes(o.itemCode))) pre.push({ code: 'notice_settlement_duplicate' });
-    const input: MemberInput['input'] = { runKind: bonus ? 'BONUS' : 'REGULAR', contract, tax, time, partialMonth, items: engineItems, policy, reference, insuranceBasis, notices: notice?.notices, overrides, prior, skipInsurance: bonus, minimumHourly: bonus ? null : minimumHourly, exemptYtd: exemptYtd.get(id) ?? {} };
+    // 고지 기준으로 고른 보험의 고지 문제만 막는다 (산재는 기본 기준을 따른다)
+    if (!bonus && notice) pre.push(...notice.blockers.filter((x) => (x.detail === 'accident' ? insuranceBasis === 'NOTICE' : basisOf(x.detail as InsurerKey) === 'NOTICE')));
+    if (!bonus && overrides.some((o) => (o.itemCode === 'PENSION_SETTLE' && basisOf('pension') === 'NOTICE') || (o.itemCode === 'HEALTH_SETTLE' && basisOf('health') === 'NOTICE') || (o.itemCode === 'EMPLOYMENT_SETTLE' && basisOf('employment') === 'NOTICE'))) pre.push({ code: 'notice_settlement_duplicate' });
+    const input: MemberInput['input'] = { runKind: bonus ? 'BONUS' : 'REGULAR', contract, tax, time, partialMonth, items: engineItems, policy, reference, insuranceBasis, insuranceBasisOf, notices: notice?.notices, overrides, prior, skipInsurance: bonus, minimumHourly: bonus ? null : minimumHourly, exemptYtd: exemptYtd.get(id) ?? {} };
     members.push({ employeeId: id, input, pre, notes, closeId: (close?.id as string | undefined) ?? null, contractId: (con?.id as string | undefined) ?? null, taxId: (taxRow?.id as string | undefined) ?? null, snapshot: { contract, tax, time, attendance: facts, items: engineItems, notices: notice?.notices ?? null, overrides, partialMonth, prior, closeHash: close?.input_hash ?? null } });
   }
   const usedItems = items.filter((it) => members.some((m) => m.input.items.some((x) => x.itemVersionId === it.id)));
@@ -341,7 +348,7 @@ async function buildInputs(run: RunRow): Promise<Built> {
     const changed = [...(basis.ledgerRow && basis.ledgerRow.version > 1 && basis.ledgerRow.validFrom > from ? ['ledger'] : []), ...basis.policies.filter((p) => p.inUse && p.version > 1 && p.validFrom > from).map((p) => p.kind), ...usedItems.filter((i) => i.version > 1 && i.validFrom > from && member.input.items.some((x) => x.itemVersionId === i.id)).map((i) => i.code)];
     if (!bonus && changed.length) member.pre.push({ code: 'policy_changed_in_period', detail: changed.join(', ') });
   }
-  const inputHash = sha({ unverified, premiumTimeBasis: basis.premiumTimeBasis, engine: ENGINE_VERSION, policy, insuranceBasis, bundle, members: members.map((x) => ({ id: x.employeeId, pre: x.pre, close: x.closeId, contract: x.contractId, tax: x.taxId, s: x.snapshot })) });
+  const inputHash = sha({ unverified, premiumTimeBasis: basis.premiumTimeBasis, engine: ENGINE_VERSION, policy, insuranceBasis, insuranceBasisOf, bundle, members: members.map((x) => ({ id: x.employeeId, pre: x.pre, close: x.closeId, contract: x.contractId, tax: x.taxId, s: x.snapshot })) });
   return { unverified, members, withholding, bundle, missing, inputHash };
 }
 
@@ -593,7 +600,7 @@ export async function previewPay(employeeId: string, date: string): Promise<Engi
     tax: tax ? { withholdingRatio: tax.withholdingRatio, familyCount: tax.familyCount, childCount: tax.childCount, insurance: { pension: one('pension'), health: one('health'), employment: one('employment'), accident: one('accident') }, studentLoan: loanForMonth(tax.studentLoan, `${date.slice(0, 7)}-01`, date), reliefs: rel?.reliefs } : null,
     // 시급제는 일한 시간을 모르면 예상할 수 없다 → 근태 없음으로 차단된다. 월급 · 연봉제는 시간 0으로 본다
     time: con && con.payType !== 'HOURLY' ? { workedMinutes: 0, overtimeMinutes: 0, nightMinutes: 0, holidayMinutes: 0, holidayOver8Minutes: 0, paidLeaveMinutes: 0 } : null,
-    partialMonth: false, items, policy: basis.policy, reference: basis.reference, insuranceBasis: basis.insuranceBasis, withholding: basis.withholding, overrides: [], prior: null, minimumHourly: basis.minimumHourly,
+    partialMonth: false, items, policy: basis.policy, reference: basis.reference, insuranceBasis: basis.insuranceBasis, insuranceBasisOf: basis.insuranceBasisOf, withholding: basis.withholding, overrides: [], prior: null, minimumHourly: basis.minimumHourly,
   });
   if (pre.length === 0) return r;
   return { state: 'BLOCKED', lines: [], totals: null, blockers: [...pre, ...r.blockers], warnings: r.warnings, engineVersion: r.engineVersion };

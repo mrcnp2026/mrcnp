@@ -1188,6 +1188,13 @@
           "PAYROLL_BASE": "Monthly taxable total times the rate",
           "REPORTED_BASE": "Reported remuneration"
         },
+        "insurerOf": {
+          "pension": "National pension basis",
+          "health": "Health insurance basis (incl. long-term care)",
+          "employment": "Employment insurance basis"
+        },
+        "insuranceSame": "Same as above",
+        "insuranceEachHint": "Pick a different basis per insurance if needed, e.g. reported wage for pension and health, monthly taxable pay for employment. Blank follows the basis above. Industrial accident (employer) follows the basis above.",
         "withholding": "Withholding ratio",
         "withholdingHint": "Default for new employees. A ratio an employee already chose is not overwritten.",
         "example": "Example: pay for {month} is due on {date} (before any holiday shift).",

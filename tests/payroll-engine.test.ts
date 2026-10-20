@@ -146,6 +146,28 @@ describe('C05 합성 보험', () => {
   });
 });
 
+describe('보험마다 공제 기준 따로 (2026-10-20, engine-1.4)', () => {
+  // 2025.12 명세서(황진성)와 같은 섞인 방식: 국민연금 · 건강은 신고 보수 400만, 고용은 그 달 실제 지급액. 끝수는 10원 미만 버림
+  const all = { pension: ins('YES', 4_000_000), health: ins('YES', 4_000_000), employment: ins('YES', 4_000_000), accident: ins('NO') };
+  const reference = { pension: { employeeRate: '0.045', employerRate: '0.045', floor: null, ceiling: null, baseUnit: null }, health: { employeeRate: '0.03545', employerRate: '0.03545', floor: null, ceiling: null, baseUnit: null }, ltcOfHealth: '0.1281', employment: { employeeRate: '0.009', employerRate: '0.009', floor: null, ceiling: null, baseUnit: null }, accidentEmployerRate: null };
+  const base = (over: Partial<EngineInput>) => input({ contract: { payType: 'MONTHLY', amount: 4_571_450, monthlyHours: 209, annualDivisor: null, included: { overtimeHours: null, holidayHours: null } }, tax: { ...NOT_INSURED, insurance: all }, reference, policy: { ...input().policy, rounding: { pay: { mode: 'HALF_UP', unit: 1 }, insurance: { mode: 'FLOOR', unit: 10 } } }, ...over });
+  it('연금 · 건강 = 신고 보수, 고용 = 실제 지급 → 명세서 금액과 같다', () => {
+    const r = ok(calculateStatement(base({ insuranceBasis: 'PAYROLL_BASE', insuranceBasisOf: { pension: 'REPORTED', health: 'REPORTED' } })));
+    expect([amount(r, 'PENSION'), amount(r, 'HEALTH'), amount(r, 'LTC'), amount(r, 'EMPLOYMENT')]).toEqual([180_000, 141_800, 18_160, 41_140]);
+  });
+  it('따로 고르지 않으면 예전처럼 모두 기본 기준', () => {
+    const r = ok(calculateStatement(base({ insuranceBasis: 'REPORTED' })));
+    expect(amount(r, 'EMPLOYMENT')).toBe(36_000); // 400만 × 0.9%
+  });
+  it('한 보험만 고지 기준이면 그 보험만 고지 자료가 필요하다', () => {
+    const r = calculateStatement(base({ insuranceBasis: 'PAYROLL_BASE', insuranceBasisOf: { pension: 'NOTICE' } }));
+    expect(r.state).toBe('BLOCKED');
+    expect(r.blockers).toEqual([{ code: 'notice_required', detail: 'pension' }]);
+    const r2 = ok(calculateStatement(base({ insuranceBasis: 'PAYROLL_BASE', insuranceBasisOf: { pension: 'NOTICE' }, notices: { pension: { employee: 180_000, employer: 180_000, id: 'np' } } })));
+    expect([amount(r2, 'PENSION'), amount(r2, 'EMPLOYMENT')]).toEqual([180_000, 41_140]);
+  });
+});
+
 describe('C06 보험 정산', () => {
   it('고지 95,000 − 이미 공제 80,000 = 추가 15,000, 고지 70,000이면 환급 −10,000', () => {
     expect(settleNotice(95_000, 80_000)).toBe(15_000);
