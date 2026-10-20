@@ -2030,6 +2030,11 @@
             "label": "Automatic accrual",
             "value": "Automatic daily (fiscal year, Jan 1)",
             "note": "Created and granted automatically every night — 1 day a month in the first year (up to 11), and on Jan 1 by years of service from 15 days (prorated in the first year). Continues from migrated Shiftee grants. The excluded group (CEO, executives) gets none."
+          },
+          "payoutAllowances": {
+            "label": "Include ordinary-wage allowances in leave pay",
+            "value": "Included",
+            "note": "Monthly allowances marked as ordinary wage (e.g. perfect attendance) are added to the hourly rate for unused leave pay. Off = contract hourly rate only."
           }
         },
         "request": {
@@ -3127,7 +3132,9 @@
       "payoutDaily": "Daily ordinary wage ₩{daily} (ordinary hourly ₩{hourly} × one day)",
       "payoutItems": "Allowances in the ordinary hourly: {items}",
       "payoutUnknown": "Left out (ordinary-wage status unknown): {items} — confirm with a labor attorney",
-      "won": "₩{n}"
+      "won": "₩{n}",
+      "payoutTotal": "Unused leave pay total ₩{n} — what you'd pay if everyone left today (daily ordinary wage × days left). {missing} people left out (no pay contract).",
+      "payoutNoContract": "No contract"
     },
     "anomalies": {
       "title": "Attendance exceptions",

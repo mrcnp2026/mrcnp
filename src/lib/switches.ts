@@ -16,6 +16,7 @@ export const SWITCHES = [
   'request.leaveDelete', // 휴가 삭제 요청
   'request.work', // 외근 · 출장 · 재택 신청
   'leave.hourly', // 시간 단위 휴가 신청
+  'leave.payoutAllowances', // 연차수당 계산에 통상임금 수당 포함 (끄면 계약 시급만, 2026-10-20)
   'message.translate', // 공지 번역 초안
   'report.week52', // 직원 · 관리자 홈의 주 52시간 표시
   'advanced.homeCards', // 직원이 홈 카드를 켜고 끄기

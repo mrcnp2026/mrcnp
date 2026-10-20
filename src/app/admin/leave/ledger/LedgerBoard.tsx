@@ -13,7 +13,7 @@ import type { LeavePolicy } from '@/lib/leave-ledger';
 
 export type LotLine = { id: string; employeeId: string; name: string; kind: string; grantedOn: string; usableFrom: string; usableTo: string | null; days: number; remaining: number | null; state: string; note: string | null; rule: string; years: number | null; month: number | null };
 export type SettleLine = { id: string; retireOn: string; revision: number; state: string; unused: number; advance: number; hireBasis: number | null; granted: number; lots: { grantedOn: string; days: number }[]; payout: { state: 'OK' | 'NO_CONTRACT' | 'NO_HOURS'; amount: number | null; daily: number | null; hourly: number | null; items: string[]; unknown: string[] } | null };
-export type BalanceLine = { advanceOver: boolean; employeeId: string; name: string; joinedOn: string | null; active: boolean; started: boolean; granted: number; used: number; expired: number; remaining: number; advance: number; upcoming: number; old: number | null };
+export type BalanceLine = { advanceOver: boolean; employeeId: string; name: string; joinedOn: string | null; active: boolean; started: boolean; granted: number; used: number; expired: number; remaining: number; advance: number; upcoming: number; old: number | null; remainingMinutes: number; payout: number | null; payoutState: string | null };
 export type EntryLine = { id: number; event: string; days: number; on: string; lot: string | null; fromRequest: boolean };
 type Policy = { id: string; version: number; validFrom: string; verification: string; value: LeavePolicy };
 type History = { version: number; validFrom: string; validTo: string | null; basis: string; reason: string | null };
@@ -178,6 +178,12 @@ export function LedgerBoard(props: { group?: { id: string; name: string } | null
       <Card>
         <CardTitle>{t('balTitle')}</CardTitle>
         <p className="pt-1 pb-3 text-sm text-faint">{t('balIntro')}</p>
+        {/* 잔여 연차수당 합계 (2026-10-20) — 오늘 모두 퇴사한다면 줄 금액. 계약이 없는 사람은 빠진다 */}
+        {props.balances.some((b) => b.payout !== null) && (
+          <p className="num pb-3 text-sm">
+            {t('payoutTotal', { n: props.balances.reduce((a, b) => a + (b.payout ?? 0), 0).toLocaleString('ko-KR'), missing: props.balances.filter((b) => b.started && b.remainingMinutes > 0 && b.payout === null).length })}
+          </p>
+        )}
         {/* 폰: 한 사람 = 한 줄(이름 · 발생/사용 · 남은 연차 크게) — 누르면 그 사람 원장 (2026-10-16 디자인: 25명 카드로 7천 px였다) */}
         <ul className="-mx-1 flex flex-col divide-y divide-border lg:hidden">
           {props.balances.map((b) => (
@@ -194,6 +200,7 @@ export function LedgerBoard(props: { group?: { id: string; name: string } | null
                 <span className="num shrink-0 text-right">
                   <span className={`block text-lg leading-tight font-bold ${b.remaining < 0 ? 'text-warn' : ''}`}>{b.started ? day(b.remaining) : '–'}</span>
                   {b.advance > 0 && <span className="block text-xs text-warn">{t(b.advanceOver ? 'advanceOver' : 'advance', { n: r2(b.advance) })}</span>}
+                  {b.payout !== null && <span className="block text-xs text-muted">{t('won', { n: b.payout.toLocaleString('ko-KR') })}</span>}
                 </span>
                 <ChevronRight aria-hidden size={18} className="shrink-0 text-faint" />
               </Link>
@@ -201,7 +208,7 @@ export function LedgerBoard(props: { group?: { id: string; name: string } | null
           ))}
         </ul>
         <div className="hidden lg:block">
-        <Table heads={[t('colName'), t('colJoined'), t('colGrantedSum'), t('colUsed'), t('colExpired'), t('colRemaining'), t('colOld'), t('colCompare'), '']}>
+        <Table heads={[t('colName'), t('colJoined'), t('colGrantedSum'), t('colUsed'), t('colExpired'), t('colRemaining'), t('colPayout'), t('colOld'), t('colCompare'), '']}>
           {props.balances.map((b) => (
             <tr key={b.employeeId} className="border-b border-border last:border-b-0">
               <td className="px-3 py-2 font-bold">
@@ -217,6 +224,7 @@ export function LedgerBoard(props: { group?: { id: string; name: string } | null
                 {b.advance > 0 && <span className="block text-xs font-normal text-warn">{t(b.advanceOver ? 'advanceOver' : 'advance', { n: r2(b.advance) })}</span>}
                 {b.upcoming > 0 && <span className="block text-xs font-normal text-faint">{t('upcoming', { n: b.upcoming })}</span>}
               </td>
+              <td className="num px-3 py-2">{b.payout !== null ? t('won', { n: b.payout.toLocaleString('ko-KR') }) : b.payoutState && b.payoutState !== 'OK' ? <span className="text-xs text-faint">{t('payoutNoContract')}</span> : ''}</td>
               <td className="num px-3 py-2">{b.old === null ? '' : day(b.old)}</td>
               <td className="px-3 py-2">{!b.started ? <Chip tone="neutral">{t('cmpNotStarted')}</Chip> : b.old === null ? <Chip tone="info">{t('cmpLedgerOnly')}</Chip> : b.old === b.remaining ? <Chip tone="ok">{t('cmpSame')}</Chip> : <Chip tone="warn">{t('cmpDiff')}</Chip>}</td>
               <td className="px-3 py-2">

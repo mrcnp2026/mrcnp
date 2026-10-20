@@ -9,10 +9,7 @@ import { ApiError } from '@/lib/api';
 import type { Me } from '@/lib/auth';
 import { addMonths, DAY_MINUTES, entriesFor, lotRemaining, NO_TYPE_RULE, planAccrual, planExpiry, planOffset, planRequest, settleLeave, splitCarry, STANDARD_LEAVE_POLICY, validateLeavePolicy, validateTypeRule, type Entry, type LeavePolicy, type LeaveTypeRule, type Lot, type NewEntry, type PlannedLot, type Settlement, ledgerBalance, minutesToDays } from '@/lib/leave-ledger';
 import { addDays } from '@/lib/calendar';
-import { leavePayout, type PayoutItem } from '@/lib/leave-payout';
-import { versionAt } from '@/lib/payroll/contract';
-import { loadItems } from '@/lib/payroll/data';
-import { loadStaffPay } from '@/lib/payroll/staff-data';
+import { payoutsFor } from '@/lib/leave-payout-data';
 import { toKstDate } from '@/lib/time';
 import { createAdminClient } from '@/lib/supabase/admin';
 
@@ -424,18 +421,9 @@ async function computeSettlement(employeeId: string, retireOn: string): Promise<
   const [lots, entries, policies, { data: p }] = await Promise.all([loadLots({ employeeId }), loadEntries(employeeId), loadDefaultPolicies(), db().from('profiles').select('joined_on').eq('id', employeeId).maybeSingle()]);
   if (!policies[0]) throw new ApiError(409, 'leave_policy_missing');
   const s = settleLeave({ lots, entries: entriesFor(entries, false), retireOn, hiredOn: (p?.joined_on as string | null) ?? null, policy: policies[0].policy });
-  // 남은 연차 수당 (2026-10-20) — 마지막 근무일(퇴사일 전날)의 계약 · 매달 수당으로 1일 통상임금을 낸다. 퇴사일에 계약이 남아 있으면 그것을 쓴다
-  const lastDay = addDays(retireOn, -1);
-  const [pay, items] = await Promise.all([loadStaffPay(employeeId), loadItems('PAYMENT', lastDay)]);
-  const con = versionAt(pay.contracts, lastDay) ?? versionAt(pay.contracts, retireOn);
-  const assigned: PayoutItem[] = pay.items
-    .filter((a) => a.validFrom <= lastDay && (a.validTo === null || lastDay < a.validTo))
-    .flatMap((a) => {
-      const it = items.find((x) => x.code === a.itemCode);
-      const amount = a.amount ?? it?.defaultAmount ?? null;
-      return it && amount !== null ? [{ code: it.code, label: it.koName, amount, ordinaryWage: it.ordinaryWage }] : [];
-    });
-  return { ...s, payout: leavePayout({ contract: con, items: assigned, unusedMinutes: s.unusedMinutes, dayMinutes: policies[0].policy.dayMinutes }) };
+  // 남은 연차 수당 (2026-10-20) — 마지막 근무일(퇴사일 전날)의 계약 · 매달 수당으로 1일 통상임금을 낸다
+  const payouts = await payoutsFor([{ employeeId, minutes: s.unusedMinutes }], addDays(retireOn, -1), policies[0].policy.dayMinutes);
+  return { ...s, payout: payouts.get(employeeId) };
 }
 
 /** 퇴사일 기준 정산 후보를 만든다. 앞서 만든 후보는 「대체됨」으로 바꾼다. 승인하기 전에는 원장에 아무것도 넣지 않는다 */

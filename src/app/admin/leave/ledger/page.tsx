@@ -14,6 +14,7 @@ import { toKstDate } from '@/lib/time';
 import { LedgerBoard, type BalanceLine, type EntryLine, type LotLine } from './LedgerBoard';
 import { Fold } from '@/components/Fold';
 import { PolicyGroups } from './PolicyGroups';
+import { payoutsFor } from '@/lib/leave-payout-data';
 
 export default async function LeaveLedgerPage({ searchParams }: { searchParams: Promise<{ emp?: string; live?: string; pg?: string }> }) {
   const tGear = await getTranslations('frame');
@@ -56,8 +57,17 @@ export default async function LeaveLedgerPage({ searchParams }: { searchParams: 
         employeeId: p.id as string, name: p.name as string, joinedOn: (p.joined_on as string | null) ?? null, active: p.active as boolean, started,
         granted: d(b.granted), used: d(b.used), expired: d(b.expired), remaining: d(b.remaining), advance: d(b.advance), upcoming: d(b.upcoming),
         old: old.grant ? old.remaining : null,
+        remainingMinutes: b.remaining,
+        payout: null as number | null,
+        payoutState: null as string | null,
       };
     });
+  // 잔여 연차수당 (2026-10-20 노프로 비교): 지금 남은 연차를 오늘 퇴사한다면 줄 금액 — 회사가 안고 있는 연차수당 부담
+  const payouts = await payoutsFor(balances.filter((b) => b.started && b.remainingMinutes > 0).map((b) => ({ employeeId: b.employeeId, minutes: b.remainingMinutes })), today, policies[0]?.policy.dayMinutes ?? 480);
+  for (const b of balances) {
+    const p = payouts.get(b.employeeId);
+    if (p) { b.payout = p.amount; b.payoutState = p.state; }
+  }
   const emp = sp.emp && nameOf.has(sp.emp) ? sp.emp : null;
   const empLots = emp ? lots.filter((l) => l.employeeId === emp).map((l) => toLine(l, remAll)) : [];
   const lotLabel = new Map(lots.map((l) => [l.id, `${l.grantedOn}`]));
