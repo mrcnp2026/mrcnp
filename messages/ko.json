@@ -3630,7 +3630,7 @@
         "no_attendance": "이 달의 근태를 마감하지 않았습니다.",
         "proration_policy": "달 중간에 입사 · 퇴사했거나 계약이 달 중간에 시작됐습니다. 일할 계산은 자동으로 하지 않습니다 — 기본급을 조정으로 넣어 주세요.",
         "policy_missing": "가산율 정책이 없습니다 ({detail}). 회사 설정 › 급여 › 법정수당에서 넣어 주세요.",
-        "included_hours_exceeded": "계약에 포함된 시간을 넘었습니다 ({detail}). 넘는 시간의 수당은 자동으로 계산하지 않습니다 — 조정으로 넣어 주세요.",
+        "included_hours_exceeded": "계약에 포함된 시간을 넘었습니다 ({detail}). 넘은 시간은 「월급 ÷ 전체 환산시간」 시급 × 1.5로 더 줍니다.",
         "negative_item": "금액이 음수인 항목이 있습니다 ({detail}).",
         "negative_base": "기본급이 음수입니다.",
         "exempt_limit_missing": "비과세 한도가 없습니다 ({detail}).",

@@ -309,11 +309,21 @@ describe('추정하지 않는다', () => {
   it('가산율 정책이 없으면 차단', () => {
     expect(calculateStatement(input({ time: { ...NO_TIME, nightMinutes: 60 }, policy: { ...input().policy, nightPremium: null } })).blockers).toEqual([{ code: 'policy_missing', detail: 'NIGHT' }]);
   });
-  it('계약에 포함된 연장 시간 안이면 더 주지 않고, 넘으면 차단(초과분을 자동으로 계산하지 않는다)', () => {
+  it('계약에 포함된 연장 시간 안이면 더 주지 않고, 넘은 시간만 「월급 ÷ 전체 환산시간」 × 1.5 (engine-1.7)', () => {
     const c = { payType: 'MONTHLY' as const, amount: 3_000_000, monthlyHours: 209, annualDivisor: null, included: { overtimeHours: 40, holidayHours: null } };
     const within = ok(calculateStatement(input({ contract: c, time: { ...NO_TIME, overtimeMinutes: 40 * 60 } })));
     expect(within.lines.some((l) => l.code === 'OVERTIME')).toBe(false);
-    expect(calculateStatement(input({ contract: c, time: { ...NO_TIME, overtimeMinutes: 41 * 60 } })).blockers).toEqual([{ code: 'included_hours_exceeded', detail: 'OVERTIME' }]);
+    // 300만 ÷ (209 + 40 × 1.5 = 269) = 11,152.4… × 1시간 × 1.5 = 16,728.6 → 16,729
+    const over = ok(calculateStatement(input({ contract: c, time: { ...NO_TIME, overtimeMinutes: 41 * 60 } })));
+    expect(over.lines.find((l) => l.code === 'OVERTIME')?.amount).toBe(16_729);
+    expect(over.warnings).toContainEqual({ code: 'included_hours_exceeded', detail: 'OVERTIME 1h' });
+  });
+  it('209H + 연장 40H + 휴일 8H 월 300만 — 연장 45h · 휴일 16h · 휴일 8h 초과 2h', () => {
+    const c = { payType: 'MONTHLY' as const, amount: 3_000_000, monthlyHours: 209, annualDivisor: null, included: { overtimeHours: 40, holidayHours: 8 } };
+    const r = ok(calculateStatement(input({ contract: c, time: { ...NO_TIME, overtimeMinutes: 45 * 60, holidayMinutes: 18 * 60, holidayOver8Minutes: 2 * 60, nightMinutes: 60 } })));
+    const amt = (code: string) => r.lines.find((l) => l.code === code)?.amount;
+    // 통상시급 300만 ÷ 281 = 10,676.15…
+    expect([amt('OVERTIME'), amt('HOLIDAY'), amt('HOLIDAY_OVER8'), amt('NIGHT')]).toEqual([80_071, 128_114, 42_705, 5_338]); // 5h × 1.5 · 8h × 1.5 · 2h × 2 · 1h × 0.5
   });
   it('중간 입사 · 퇴사는 자동으로 일할 계산하지 않는다 — 조정으로 금액을 정하면 풀린다', () => {
     expect(calculateStatement(input({ partialMonth: true })).blockers).toEqual([{ code: 'proration_policy', detail: undefined }]);

@@ -3630,7 +3630,7 @@
         "no_attendance": "Attendance for this month is not closed.",
         "proration_policy": "Joined or left mid-month, or the contract started mid-month. Proration is not automatic — enter base pay as an adjustment.",
         "policy_missing": "No premium policy ({detail}). Enter it in Company settings › Payroll.",
-        "included_hours_exceeded": "Hours included in the contract were exceeded ({detail}). The excess is not calculated automatically — enter it as an adjustment.",
+        "included_hours_exceeded": "Hours included in the contract were exceeded ({detail}). The excess is paid at (monthly pay ÷ total converted hours) × 1.5.",
         "negative_item": "An item has a negative amount ({detail}).",
         "negative_base": "Base pay is negative.",
         "exempt_limit_missing": "No tax-exempt limit ({detail}).",

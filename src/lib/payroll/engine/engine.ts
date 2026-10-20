@@ -6,7 +6,7 @@
 import { AUTO_PAYMENT_CODES, canonicalItemCode } from './reserved-items';
 import { add, dec, div, hoursOf, isNeg, max, min, mul, sub, text, toWon, type Dec, type Rounding } from './decimal';
 
-export const ENGINE_VERSION = 'engine-1.6'; // 1.6 (2026-10-20): 외국인 단일세율 19%(조세특례제한법 제18조의2) — 비과세 없이 지급 전액 × 19%, 10원 미만 버림. 1.5 (2026-10-20): 일부 비과세(식대 등)의 비과세분을 보험 기준에서 뺌 · 건강보험 월 보험료 상한 · 하한. 1.4 (2026-10-20): 보험마다 공제 기준을 따로(국민연금 · 건강 · 고용, 비우면 기본 기준). 1.3 (2026-10-19): 비과세 연간 한도 · 누적. 1.2 (2026-10-16): 시급제 주휴 · 유급휴일, 시급제 기본급은 소정 시간만 + 연장 · 휴일 줄에 1배 포함
+export const ENGINE_VERSION = 'engine-1.7'; // 1.7 (2026-10-20): 고정 연장 · 휴일이 든 월급 — 통상시급 = 월급 ÷ (월 시간 + 포함 연장 × 1.5 + 포함 휴일 × 1.5), 넘은 시간은 그 시급 × 1.5(휴일 8h 초과 × 2)로 지급(예전: 막음). 1.6 (2026-10-20): 외국인 단일세율 19%(조세특례제한법 제18조의2) — 비과세 없이 지급 전액 × 19%, 10원 미만 버림. 1.5 (2026-10-20): 일부 비과세(식대 등)의 비과세분을 보험 기준에서 뺌 · 건강보험 월 보험료 상한 · 하한. 1.4 (2026-10-20): 보험마다 공제 기준을 따로(국민연금 · 건강 · 고용, 비우면 기본 기준). 1.3 (2026-10-19): 비과세 연간 한도 · 누적. 1.2 (2026-10-16): 시급제 주휴 · 유급휴일, 시급제 기본급은 소정 시간만 + 연장 · 휴일 줄에 1배 포함
 
 export type EngineContract = { payType: 'MONTHLY' | 'HOURLY' | 'ANNUAL'; amount: number; monthlyHours: number | null; annualDivisor: number | null; included: { overtimeHours: number | null; holidayHours: number | null } };
 export type Tri = 'YES' | 'NO' | 'UNKNOWN';
@@ -105,7 +105,16 @@ export function calculateStatement(input: EngineInput): EngineResult {
     if (c.payType === 'HOURLY') hourly = dec(c.amount);
     else if (c.monthlyHours !== null && (c.payType === 'MONTHLY' || c.annualDivisor !== null)) {
       const monthly = c.payType === 'MONTHLY' ? dec(c.amount) : div(dec(c.amount), dec(String(c.annualDivisor)));
-      hourly = div(monthly, dec(String(c.monthlyHours)));
+      // 고정 연장 · 휴일이 든 계약(2026-10-20 의뢰인: 「월급 ÷ 전체 환산시간」): 월급 안에 그 시간의 수당(1배 + 가산)이 이미 들어 있다고 본다
+      //   예: 300만 ÷ (209 + 40 × 1.5 + 8 × 1.5 = 281) = 10,676원. 이 시급으로 넘은 시간을 주고, 지각 · 무급휴가 차감에도 쓴다
+      const inclOt = c.included.overtimeHours ?? 0, inclHol = c.included.holidayHours ?? 0;
+      let divisor = dec(String(c.monthlyHours));
+      if (inclOt > 0 || inclHol > 0) {
+        if ((inclOt > 0 && policy.overtimePremium === null) || (inclHol > 0 && policy.holidayPremium === null)) block('policy_missing', 'INCLUDED');
+        if (inclOt > 0) divisor = add(divisor, mul(dec(String(inclOt)), add(dec(1), dec(policy.overtimePremium ?? '0.5'))));
+        if (inclHol > 0) divisor = add(divisor, mul(dec(String(inclHol)), add(dec(1), dec(policy.holidayPremium ?? '0.5'))));
+      }
+      hourly = div(monthly, divisor);
     }
   }
   const contractHourly = hourly;
@@ -164,9 +173,9 @@ export function calculateStatement(input: EngineInput): EngineResult {
       if (rate === null) return;
       let payMinutes = minutes;
       if (includedHours !== null && includedHours > 0) {
-        // 계약 금액에 이미 들어 있는 시간까지는 더 주지 않는다. 넘는 시간의 처리는 회사 정책이 정해지기 전에는 자동으로 계산하지 않는다
-        if (minutes > Math.round(includedHours * 60)) return block('included_hours_exceeded', code);
-        payMinutes = 0;
+        // 계약 금액에 이미 들어 있는 시간까지는 더 주지 않는다. 넘은 시간만 통상시급 × (1 + 가산)으로 준다 (2026-10-20)
+        payMinutes = Math.max(0, minutes - Math.round(includedHours * 60));
+        if (payMinutes > 0) warnings.push({ code: 'included_hours_exceeded', detail: `${code} ${Math.round((payMinutes / 60) * 100) / 100}h` });
       }
       if (payMinutes === 0) return;
       const factor = add(withBase ? baseFactor : dec(0), dec(premium));
@@ -178,8 +187,8 @@ export function calculateStatement(input: EngineInput): EngineResult {
       const within8 = time.holidayMinutes - time.holidayOver8Minutes;
       premiumLine('HOLIDAY', 'holiday', within8, policy.holidayPremium, c.included.holidayHours, true);
       if (time.holidayOver8Minutes > 0) {
-        if (c.included.holidayHours) block('included_hours_exceeded', 'HOLIDAY_OVER8');
-        else premiumLine('HOLIDAY_OVER8', 'holidayOver8', time.holidayOver8Minutes, policy.holidayOver8Premium, null, true);
+        // 휴일 8시간 넘는 시간은 고정 휴일 시간에 들지 않는다 — 늘 따로 준다
+        premiumLine('HOLIDAY_OVER8', 'holidayOver8', time.holidayOver8Minutes, policy.holidayOver8Premium, null, true);
       }
     } else if (c.payType !== 'HOURLY') block('no_attendance'); // 월급제도 연장 · 휴일이 있었는지 알아야 한다
   }
