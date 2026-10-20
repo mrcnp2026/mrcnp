@@ -1,5 +1,6 @@
 // 퇴직급여 한 건 — 넣은 값 · 검산 · 세액 · 확정/거두기 (PRD v1.3 18.6 W08). 급여 담당 관리자만.
 // 초안은 고칠 수 있고, 확정본은 그대로 남는다(잘못됐으면 사유를 적어 거두고 새 판을 만든다).
+import { Printer } from 'lucide-react';
 import { getFormatter, getTranslations } from 'next-intl/server';
 import { WarnLine } from '@/components/listframe';
 import Link from 'next/link';
@@ -87,6 +88,12 @@ export default async function RetirementCasePage({ params }: { params: Promise<{
         </Card>
       )}
       {k.state === 'DRAFT' && <p className="text-xs text-faint">{t('formula')}</p>}
+      {k.amount !== null && (
+        <a href={`/api/admin/payroll/retirement/${k.id}/pdf`} className="inline-flex min-h-11 items-center gap-1.5 self-start rounded-button border border-border bg-bg px-3 text-sm font-semibold hover:bg-surface lg:min-h-9">
+          <Printer aria-hidden size={16} />
+          {t('pdf')}
+        </a>
+      )}
       <CaseActions id={k.id} state={k.state} kind={k.kind} ready={ready} />
     </PageShell>
   );

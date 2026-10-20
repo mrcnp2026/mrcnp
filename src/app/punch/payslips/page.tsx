@@ -17,6 +17,7 @@ import { groupPath } from '@/lib/org';
 import { loadOrgGroups } from '@/lib/org-data';
 import { versionAt } from '@/lib/payroll/contract';
 import { loadItems, reliefSwitches } from '@/lib/payroll/data';
+import { loadMyDaily } from '@/lib/payroll/daily-data';
 import { loadMySlip, loadMySlips } from '@/lib/payroll/publish-data';
 import { loadStaffPay } from '@/lib/payroll/staff-data';
 import { createAdminClient } from '@/lib/supabase/admin';
@@ -67,6 +68,7 @@ export default async function MyPayPage({ searchParams }: { searchParams: Promis
     loadItems('PAYMENT'),
     loadMySlips(me.id, OFFICE.practiceMode),
   ]);
+  const daily = await loadMyDaily(me, OFFICE.practiceMode); // 일용 근로로도 받은 사람만 (대상자가 내 계정에 이어진 경우)
   const n = (v: number) => f.number(v);
   const yn = (v: 'YES' | 'NO' | 'UNKNOWN' | undefined) => (v === 'YES' ? tm('yesV') : v === 'NO' ? tm('noV') : null);
   // 지금 적용 중인 판, 없으면 곧 시작할 판 — 계약을 넣었는데 칸이 통째로 비어 보이지 않게
@@ -277,6 +279,26 @@ export default async function MyPayPage({ searchParams }: { searchParams: Promis
           </div>
         </div>
       </section>
+
+      {/* 일용 근로 지급명세 (2026-10-20, 미구현 #12) — 확정한 일용 대장만. 없으면 칸을 그리지 않는다 */}
+      {daily.length > 0 && (
+        <section className="flex flex-col gap-2 max-lg:order-2" data-daily-slips>
+          <h2 className="text-lg font-bold">{tm('dailyTitle')}</h2>
+          <ul className="flex flex-col divide-y divide-border border-t border-text bg-bg text-sm">
+            {daily.map(({ run, line }) => (
+              <li key={run.id} className="flex flex-wrap items-center gap-x-3 gap-y-1 px-3 py-2.5">
+                <span className="num min-w-0 flex-1 font-semibold">{tm('dailyLine', { month: run.periodFrom.slice(0, 7), n: run.sequence })}</span>
+                <span className="num text-muted">{tm('dailyDays', { n: f.number(line.workDays ?? 0) })}</span>
+                <span className="num font-bold">{n(line.net ?? 0)}</span>
+                <a href={`/api/payslips/daily?run=${run.id}`} className="inline-flex h-9 items-center gap-1.5 rounded-button border border-border bg-bg px-3 font-semibold hover:bg-surface">
+                  <Printer aria-hidden size={14} />
+                  {t('pdf')}
+                </a>
+              </li>
+            ))}
+          </ul>
+        </section>
+      )}
     </PageShell>
   );
 }

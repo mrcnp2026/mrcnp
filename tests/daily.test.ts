@@ -73,3 +73,16 @@ describe('toDailyItems', () => {
     expect(toDailyItems([])).toEqual([]);
   });
 });
+
+describe('같은 날 다른 현장 (2026-10-20)', () => {
+  it('같은 날 현장이 둘이면 알리고, 계산은 그대로 한다', () => {
+    const r = calcDaily([work({ id: 'a', project: 'A', quantity: 0.5 }), work({ id: 'b', project: 'B', quantity: 0.5 })], terms);
+    if (r.state !== 'OK') throw new Error('blocked');
+    expect(r.warnings).toContain('same_day_projects');
+    expect(r.gross).toBe(200_000);
+  });
+  it('같은 현장을 구간으로 나눈 것은 알리지 않는다', () => {
+    const r = calcDaily([work({ id: 'a', quantity: 0.5 }), work({ id: 'b', quantity: 0.5 })], terms);
+    expect(r.warnings).not.toContain('same_day_projects');
+  });
+});

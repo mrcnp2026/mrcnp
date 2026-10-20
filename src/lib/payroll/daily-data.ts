@@ -333,3 +333,23 @@ export async function loadDailyBoard(id: string, me: Me): Promise<{ run: RunRow;
   const stale = run.status === 'FINALIZED' ? false : (await build(run, me)).inputHash !== gen?.input_hash;
   return { run, lines, stale };
 }
+
+/** 내 일용 지급명세 (직원 본인, 2026-10-20 미구현 #12) — 대상자가 내 계정에 이어져 있고, 확정한 대장 · 정정되지 않은 판만 */
+export async function loadMyDaily(me: Me, practice: boolean): Promise<{ run: RunRow; line: DailyLine }[]> {
+  const c = db();
+  const { data: payees } = await c.from('payroll_payees').select('id').eq('profile_id', me.id).eq('is_test', practice);
+  const ids = (payees ?? []).map((p) => p.id as string);
+  if (!ids.length) return [];
+  const { data: sts } = await c.from('payroll_daily_statements').select('run_id, generation_id, payee_id').in('payee_id', ids).eq('state', 'OK').limit(500);
+  const runIds = [...new Set((sts ?? []).map((s) => s.run_id as string))];
+  if (!runIds.length) return [];
+  const { data: newer } = await c.from('payroll_runs').select('supersedes_id').in('supersedes_id', runIds).eq('status', 'FINALIZED');
+  const replaced = new Set((newer ?? []).map((r) => r.supersedes_id as string));
+  const out: { run: RunRow; line: DailyLine }[] = [];
+  for (const runId of runIds.filter((id) => !replaced.has(id))) {
+    const board = await loadDailyBoard(runId, me);
+    if (!board || board.run.status !== 'FINALIZED') continue;
+    for (const line of board.lines) if (ids.includes(line.payeeId) && line.state === 'OK' && (sts ?? []).some((s) => s.run_id === runId && s.payee_id === line.payeeId && s.generation_id === board.run.generationId)) out.push({ run: board.run, line });
+  }
+  return out.sort((a, b) => b.run.periodFrom.localeCompare(a.run.periodFrom) || b.run.sequence - a.run.sequence);
+}

@@ -77,6 +77,9 @@ export default async function DailyRunPage({ params }: { params: Promise<{ id: s
               <tr key={l.payeeId} className="border-b border-border align-top">
                 <td className="px-3 py-3">
                   <b>{l.name}</b> <span className="num text-xs text-muted">{l.internalNo}</span>
+                  {l.state === 'OK' && (
+                    <a href={`/api/admin/payroll/daily/runs/${run.id}/pdf?payee=${l.payeeId}`} className="ml-2 text-xs font-semibold text-primary hover:underline">{t('pdf')}</a>
+                  )}
                   {l.state === 'BLOCKED' && (
                     <ul className="pt-1 text-xs text-warn">
                       {l.blockers.map((b) => (

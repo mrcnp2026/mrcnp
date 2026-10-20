@@ -41,6 +41,8 @@ export function calcDaily(works: readonly DailyWork[], terms: DailyTerms): Daily
   // 세금은 「하루」 단위다 — 같은 날 여러 줄(구간 · 현장)을 넣었으면 그 날의 과세 지급액을 더한 뒤 한 번 계산한다
   const byDate = new Map<string, DailyWork[]>();
   for (const w of [...live].sort((x, y) => x.workDate.localeCompare(y.workDate) || x.id.localeCompare(y.id))) byDate.set(w.workDate, [...(byDate.get(w.workDate) ?? []), w]);
+  // 같은 날 다른 현장 두 곳 이상 — 막지는 않는다(오전 · 오후 다른 현장일 수 있다). 겹쳐 넣은 것인지 담당자가 보게 알린다 (2026-10-20, 미구현 #12)
+  if ([...byDate.values()].some((rows) => new Set(rows.map((w) => w.project)).size > 1)) warnings.push('same_day_projects');
   const days = [...byDate].map(([workDate, rows]): DailyDay => {
     const sum = (k: DailyItem['kind']) => rows.reduce((a, w) => a + w.items.filter((i) => i.kind === k).reduce((x, i) => x + i.amount, 0), 0);
     const taxable = rows.reduce((a, w) => a + Math.round(w.quantity * w.dayRate), 0) + sum('TAXABLE'), nontax = sum('NONTAX');

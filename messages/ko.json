@@ -4273,7 +4273,8 @@
       "pensionDc": "이 직원은 퇴직연금 DC 가입자입니다(가입일 {from}). 가입 기간의 퇴직급여는 매달 낸 부담금으로 적립되므로 여기서는 가입 전 기간만 계산하세요.",
       "pensionDb": "이 직원은 퇴직연금 DB 가입자입니다(가입일 {from}). 퇴직급여는 금융기관에서 지급하고, 적립금이 모자라면 그만큼만 회사가 줍니다.",
       "pensionPaid": "은행에 낸 부담금 {paid}원 · 아직 안 낸 부담금 {unpaid}원(퇴직 전에 내야 합니다).",
-      "pensionLink": "퇴직연금 화면"
+      "pensionLink": "퇴직연금 화면",
+      "pdf": "계산서 PDF"
     },
     "insurance": {
       "title": "사회보험",
@@ -4600,7 +4601,8 @@
         "no_work": "계산할 근무가 없습니다."
       },
       "warning": {
-        "insurance_not_calculated": "보험 「적용」인 사람입니다. 보험료는 프로그램이 계산하지 않았습니다(공제 항목으로 넣은 것만 반영)."
+        "insurance_not_calculated": "보험 「적용」인 사람입니다. 보험료는 프로그램이 계산하지 않았습니다(공제 항목으로 넣은 것만 반영).",
+        "same_day_projects": "같은 날 다른 현장 근무가 있습니다. 겹쳐 넣은 것이 아닌지 확인하세요(계산은 그날 합계로 합니다)."
       },
       "daysToggle": "하루별 {n}줄",
       "dayLine": "{date} · 지급 {gross} · 소득세 {tax} · 지방 {local}",
@@ -4660,7 +4662,8 @@
         "rule": "세금 규칙",
         "sum": "합계"
       },
-      "payroll_duplicate_payment": "같은 근무가 다른 확정 대장에 포함되어 있습니다. 정규·일용 대장과 정정 판을 확인해 주세요."
+      "payroll_duplicate_payment": "같은 근무가 다른 확정 대장에 포함되어 있습니다. 정규·일용 대장과 정정 판을 확인해 주세요.",
+      "pdf": "PDF"
     },
     "paySlips": {
       "title": "급여명세서 올리기",
@@ -5993,7 +5996,10 @@
       "empName": "사원명",
       "dept": "부서",
       "payTotal": "지급항목 합계",
-      "dedTotal": "공제항목 합계"
+      "dedTotal": "공제항목 합계",
+      "dailyTitle": "일용 근로 지급명세",
+      "dailyLine": "{month} 일용 {n}차",
+      "dailyDays": "{n}공수"
     },
     "workTitle": "근로 내역",
     "workDays": "근로일수",
@@ -6795,6 +6801,75 @@
       "training_signature_required": "서명을 그려 주세요.",
       "training_signature_bad": "서명을 다시 그려 주세요.",
       "training_not_target": "대상이 아니거나 이미 서명했습니다."
+    }
+  },
+  "paperPdf": {
+    "hCompany": "회사",
+    "hNo": "번호",
+    "hName": "이름 (사번)",
+    "hGroup": "소속",
+    "hPayDate": "지급일",
+    "hRevision": "판",
+    "pay": "지급",
+    "deduction": "공제",
+    "item": "항목",
+    "how": "계산 방법",
+    "amount": "금액",
+    "payTotal": "지급 합계",
+    "deductionTotal": "공제 합계",
+    "net": "실지급액",
+    "none": "항목이 없습니다.",
+    "practice": "연습",
+    "draft": "검토용",
+    "page": "{n} / {all}",
+    "won": "{n}원",
+    "days": "{n}일",
+    "corrected": "정정된 명세서입니다. 정정 사유: {reason}",
+    "d": {
+      "title": "{month} 일용 근로 지급명세서",
+      "file": "일용지급명세",
+      "group": "구분",
+      "groupValue": "일용 근로",
+      "period": "근무 기간",
+      "workTitle": "근무 내역",
+      "workDays": "근무 공수",
+      "taxable": "과세 지급",
+      "nontax": "비과세 지급",
+      "incomeTax": "소득세",
+      "localTax": "지방소득세",
+      "other": "그 밖의 공제",
+      "taxHow": "하루 단위 계산",
+      "note": "지급 항목은 근무한 날마다 그 날의 지급액입니다. 소득세는 하루 단위로 계산했습니다(하루 15만원을 뺀 금액 × 6% × 45%, 1,000원 미만은 떼지 않음 — 세무 확인 전 임시 규칙). 4대보험료는 공제 항목으로 넣은 것만 반영했습니다. 신고용 서식이 아닙니다."
+    },
+    "r": {
+      "title": "퇴직급여 계산서 ({kind})",
+      "file": "퇴직급여계산서",
+      "kind": {
+        "ESTIMATE": "추계",
+        "FINAL": "퇴직금",
+        "INTERIM": "중간정산"
+      },
+      "period": "계속근로 기간",
+      "madeOn": "만든 날",
+      "finalizedOn": "확정한 날",
+      "workTitle": "산정 내역",
+      "serviceDays": "계속근로일수",
+      "wage3m": "퇴직 전 3개월 임금",
+      "days3m": "그 3개월 일수",
+      "bonus1y": "직전 1년 상여",
+      "leavePay1y": "직전 1년 연차수당",
+      "average": "1일 평균임금",
+      "ordinary": "1일 통상임금",
+      "used": "계산에 쓴 1일 임금",
+      "usedOrdinary": "통상임금",
+      "usedAverage": "평균임금",
+      "how": "{basis} {daily}원 × 30 × {days}일 ÷ 365",
+      "departure": "출국만기보험(공단에서 받음)",
+      "departureHow": "회사는 차액만 지급",
+      "tax": "퇴직소득세 (확인된 값)",
+      "withdrawn": "거둔 것",
+      "revised": "고친 {n}판입니다.",
+      "note": "산식: 1일 평균임금 = (3개월 임금 + 상여 × 3/12 + 연차수당 × 3/12) ÷ 3개월 일수. 퇴직급여 = 1일 임금(평균임금이 통상임금보다 적으면 통상임금) × 30 × 계속근로일수 ÷ 365, 원 미만 버림. 퇴직소득세는 세무사 등이 확인한 값을 그대로 적었습니다."
     }
   }
 }

@@ -4273,7 +4273,8 @@
       "pensionDc": "This employee is in a DC pension plan (joined {from}). Benefits for the plan period are funded by monthly contributions; calculate only the period before joining here.",
       "pensionDb": "This employee is in a DB pension plan (joined {from}). The provider pays the benefit; the company pays only any shortfall.",
       "pensionPaid": "Paid to bank: {paid} won · not yet paid: {unpaid} won (pay before retirement).",
-      "pensionLink": "Pension page"
+      "pensionLink": "Pension page",
+      "pdf": "Statement PDF"
     },
     "insurance": {
       "title": "Social insurance",
@@ -4600,7 +4601,8 @@
         "no_work": "No work to calculate."
       },
       "warning": {
-        "insurance_not_calculated": "Insurance applies to this person. Premiums were not calculated by the program (only deductions you entered are included)."
+        "insurance_not_calculated": "Insurance applies to this person. Premiums were not calculated by the program (only deductions you entered are included).",
+        "same_day_projects": "Two sites on the same day. Check it is not a duplicate (tax uses the day total)."
       },
       "daysToggle": "{n} daily lines",
       "dayLine": "{date} · pay {gross} · tax {tax} · local {local}",
@@ -4660,7 +4662,8 @@
         "rule": "Tax rule",
         "sum": "Total"
       },
-      "payroll_duplicate_payment": "The same work is included in another finalized run. Check regular/daily runs and revisions."
+      "payroll_duplicate_payment": "The same work is included in another finalized run. Check regular/daily runs and revisions.",
+      "pdf": "PDF"
     },
     "paySlips": {
       "title": "Upload payslips",
@@ -5993,7 +5996,10 @@
       "empName": "Employee",
       "dept": "Department",
       "payTotal": "Pay items total",
-      "dedTotal": "Deductions total"
+      "dedTotal": "Deductions total",
+      "dailyTitle": "Daily work pay statements",
+      "dailyLine": "{month} daily #{n}",
+      "dailyDays": "{n} units"
     },
     "workTitle": "Hours worked",
     "workDays": "Days worked",
@@ -6795,6 +6801,75 @@
       "training_signature_required": "Please draw your signature.",
       "training_signature_bad": "Please draw your signature again.",
       "training_not_target": "Not an attendee or already signed."
+    }
+  },
+  "paperPdf": {
+    "hCompany": "Company",
+    "hNo": "No.",
+    "hName": "Name (ID)",
+    "hGroup": "Group",
+    "hPayDate": "Pay date",
+    "hRevision": "Revision",
+    "pay": "Payments",
+    "deduction": "Deductions",
+    "item": "Item",
+    "how": "Basis",
+    "amount": "Amount",
+    "payTotal": "Total payments",
+    "deductionTotal": "Total deductions",
+    "net": "Net pay",
+    "none": "No items.",
+    "practice": "Practice",
+    "draft": "Draft",
+    "page": "{n} / {all}",
+    "won": "{n} won",
+    "days": "{n} days",
+    "corrected": "Corrected statement. Reason: {reason}",
+    "d": {
+      "title": "{month} daily worker pay statement",
+      "file": "daily_pay",
+      "group": "Type",
+      "groupValue": "Daily work",
+      "period": "Work period",
+      "workTitle": "Work",
+      "workDays": "Work units",
+      "taxable": "Taxable pay",
+      "nontax": "Non-taxable pay",
+      "incomeTax": "Income tax",
+      "localTax": "Local income tax",
+      "other": "Other deductions",
+      "taxHow": "Per-day calculation",
+      "note": "Each payment line is one work day. Income tax is calculated per day (pay minus 150,000 won × 6% × 45%; under 1,000 won not withheld — provisional rule). Social insurance is included only where entered as a deduction. Not a filing form."
+    },
+    "r": {
+      "title": "Retirement benefit statement ({kind})",
+      "file": "retirement",
+      "kind": {
+        "ESTIMATE": "Estimate",
+        "FINAL": "Severance",
+        "INTERIM": "Interim settlement"
+      },
+      "period": "Service period",
+      "madeOn": "Created",
+      "finalizedOn": "Finalized",
+      "workTitle": "Basis",
+      "serviceDays": "Service days",
+      "wage3m": "Wages, last 3 months",
+      "days3m": "Days in those 3 months",
+      "bonus1y": "Bonus, last year",
+      "leavePay1y": "Leave pay, last year",
+      "average": "Average daily wage",
+      "ordinary": "Ordinary daily wage",
+      "used": "Daily wage used",
+      "usedOrdinary": "Ordinary",
+      "usedAverage": "Average",
+      "how": "{basis} {daily} won × 30 × {days} days ÷ 365",
+      "departure": "Departure insurance (paid by insurer)",
+      "departureHow": "Company pays the difference",
+      "tax": "Retirement income tax (confirmed)",
+      "withdrawn": "Withdrawn",
+      "revised": "Revision {n}.",
+      "note": "Average daily wage = (3-month wages + bonus × 3/12 + leave pay × 3/12) ÷ days. Benefit = daily wage (ordinary if higher) × 30 × service days ÷ 365, truncated. Retirement income tax is the confirmed value as entered."
     }
   }
 }
