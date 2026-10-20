@@ -14,22 +14,33 @@ import { loadStaffPayBoard } from '@/lib/payroll/staff-data';
 import { addDays } from '@/lib/calendar';
 import { toKstDate } from '@/lib/time';
 import { ImportPanel } from './ImportPanel';
+import { TaxBoard } from './TaxBoard';
 import { QuickFind } from '@/components/QuickFind';
 
-export default async function StaffPayPage() {
+export default async function StaffPayPage({ searchParams }: { searchParams: Promise<{ v?: string }> }) {
   const tGear = await getTranslations('frame');
   const tc = await getTranslations('common');
-  const [t, f, me] = await Promise.all([getTranslations('admin.staffPay'), getFormatter(), getMe()]);
+  const [t, f, me, sp] = await Promise.all([getTranslations('admin.staffPay'), getFormatter(), getMe(), searchParams]);
+  const taxTab = sp.v === 'tax'; // 「세액감면 · 공제등록」 탭 (2026-10-20)
   if (!me || me.role !== 'admin' || !me.canViewPayroll) return <PageShell><p className="rounded-card bg-warn-tint p-4 text-sm text-warn">{t('forbidden')}</p></PageShell>;
   const today = toKstDate(new Date());
   const [lines, groups] = await Promise.all([loadStaffPayBoard(today), loadOrgGroups()]);
   const won = (v: number) => t('won', { n: f.number(v) });
   const ready = lines.filter((l) => l.gaps.length === 0).length;
+  const tab = (on: boolean) => `flex min-h-11 items-center border-b-2 px-4 text-sm font-bold ${on ? 'border-text text-text lg:border-primary lg:text-primary' : 'border-transparent text-muted hover:text-text'}`;
 
   return (
     <PageShell wide>
       <ListHead title={t('title')} desc={t('intro')} settingsHref="/admin/settings?tab=pay" settingsLabel={tGear('item.payEmployeeDefaults')} />
       <PayFlow now="staff" />
+      <nav className="flex border-b border-border">
+        <Link href="/admin/payroll/staff" aria-current={!taxTab ? 'page' : undefined} className={tab(!taxTab)}>{t('board.tabContract')}</Link>
+        <Link href="/admin/payroll/staff?v=tax" aria-current={taxTab ? 'page' : undefined} className={tab(taxTab)}>{t('board.tabTax')}</Link>
+      </nav>
+      {taxTab ? (
+        <TaxBoard lines={lines} today={today} />
+      ) : (
+      <>
       <ImportPanel
         tomorrow={addDays(today, 1)}
         labels={{
@@ -121,6 +132,8 @@ export default async function StaffPayPage() {
         </table>
       </div>
       <p className="text-xs text-faint">{t('note')}</p>
+      </>
+      )}
     </PageShell>
   );
 }

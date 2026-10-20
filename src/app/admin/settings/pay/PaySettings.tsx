@@ -15,6 +15,7 @@ import { ALLOWANCE_KINDS, PAY_SECTIONS, payDateFor, type AllowancePolicy, type A
 import { createAdminClient } from '@/lib/supabase/admin';
 import { toKstDate } from '@/lib/time';
 import { Download } from 'lucide-react';
+import { ItemExcel } from './ItemExcel';
 import { AllowanceForm, ImportForm, ItemForm, ManualForm, RefreshButton, ReviewForm, SeedButton, SettingForm, TaxCalc, UseToggle, VerifyButton } from './PayForms';
 
 const ICONS: Record<PaySection, LucideIcon> = { 'employee-defaults': Users, ledger: ClipboardList, 'payment-items': CirclePlus, 'deduction-items': CircleMinus, 'insurance-rates': ShieldCheck, 'income-tax': TableProperties, allowances: Scale, masking: EyeOff, 'working-time': Clock };
@@ -124,6 +125,7 @@ export async function PaySettings({ sp }: { sp: SP }) {
       <>
         <div className="flex flex-wrap items-center justify-end gap-2 border-b border-border px-4 py-3 lg:px-6">
           <SeedButton path="/api/admin/payroll/items" label={t('item.seed')} />
+          <ItemExcel />
           <Link href={href({ add: '1' })} className="inline-flex h-8 items-center rounded-button bg-primary px-4 text-sm font-bold text-on-primary">
             + {t('add')}
           </Link>

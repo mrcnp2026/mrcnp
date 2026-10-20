@@ -9,7 +9,7 @@ import { useRef, useState, type ReactNode } from 'react';
 import { ErrorNote } from '@/components/ErrorNote';
 import { Button, Chip } from '@/components/ui';
 
-export type ImportRow = { key: string; title: string; detail?: string; state: 'ready' | 'problem' | 'done' | 'failed'; note?: string };
+export type ImportRow = { key: string; title: string; detail?: string; state: 'ready' | 'problem' | 'done' | 'failed' | 'skip'; note?: string }; // skip: 세지 않는 알림 줄(예: 「그대로 n개」)
 
 export function ExcelImport<T>({
   templateHref,
@@ -111,7 +111,7 @@ export function ExcelImport<T>({
           <ul className="flex max-h-80 flex-col divide-y divide-border overflow-y-auto rounded-button border border-border">
             {rows.map((r) => (
               <li key={r.key} className="flex flex-wrap items-center gap-x-3 gap-y-0.5 px-3 py-2">
-                <span className="min-w-0 flex-1 truncate font-semibold">{r.title}</span>
+                <span className={`min-w-0 flex-1 truncate ${r.state === 'skip' ? 'text-faint' : 'font-semibold'}`}>{r.title}</span>
                 {r.detail && <span className="num text-muted">{r.detail}</span>}
                 {r.state === 'done' && <CheckCircle2 aria-hidden size={16} className="text-ok" />}
                 {r.note && <span className={`w-full text-xs ${r.state === 'problem' || r.state === 'failed' ? 'text-warn' : 'text-faint'}`}>{r.note}</span>}

@@ -1622,7 +1622,55 @@
       },
       "payroll_refresh_running": "An update is already running. Check the result under History in a moment.",
       "payroll_tax_no_family_rule": "There is no rule for more than 11 dependants, so nothing is calculated.",
-      "payroll_auto_item": "Automatic calculation items cannot be assigned as fixed items. Use a statement adjustment."
+      "payroll_auto_item": "Automatic calculation items cannot be assigned as fixed items. Use a statement adjustment.",
+      "itemX": {
+        "open": "Items by Excel",
+        "sheet": "Items",
+        "guideSheet": "Guide",
+        "file": "pay_items",
+        "hint": "Download the template with current items, edit or add rows, then upload. Changed items get a new version from the start date (today if blank); past statements stay as they were. Items cannot be deleted (turn them off).",
+        "apply": "Apply {n}",
+        "isNew": "New item",
+        "changed": "Changed: {list}",
+        "from": "From {date}",
+        "same": "{n} unchanged items are left as is",
+        "col": {
+          "code": "Item code",
+          "kind": "Type",
+          "koName": "Name (Korean)",
+          "enName": "Name (English)",
+          "calcKind": "Calculation",
+          "defaultAmount": "Default amount",
+          "fixedAllowance": "Fixed allowance",
+          "taxTreatment": "Tax",
+          "taxExemptLimit": "Monthly exempt limit",
+          "taxExemptAnnualLimit": "Annual exempt limit",
+          "ordinaryWage": "Ordinary wage",
+          "sort": "Order",
+          "validFrom": "Start date",
+          "reason": "Reason"
+        },
+        "problem": {
+          "bad_code": "Row {row}: code must be 2–40 letters, digits or underscores.",
+          "bad_value": "Row {row}: a blank or unknown value.",
+          "kind_locked": "Row {row}: the type of an existing item cannot change.",
+          "duplicate": "Row {row}: same code as an earlier row.",
+          "bad_date": "Row {row}: write the start date like 2026-11-01.",
+          "past_date": "Row {row}: the date is before the current version."
+        },
+        "guide": "Pay item Excel guide\n· Keep the header labels on the Items sheet (column order may change).\n· Existing code = edit, new code = new item. Type cannot change.\n· Blank amounts mean 'needs setting', not 0.\n· Start date: blank = today.",
+        "err": {
+          "import_no_file": "Choose a file.",
+          "import_too_big": "File too large (2MB, 300 rows).",
+          "import_bad_file": "Header row not found. Use the downloaded template.",
+          "payroll_version_conflict": "Someone changed it meanwhile. Download again.",
+          "payroll_effective_from_past": "Start date is too early.",
+          "db_update_required": "Annual limit column not ready.",
+          "console_locked": "Unlock settings first.",
+          "generic": "Could not save.",
+          "forbidden": "Not allowed."
+        }
+      }
     },
     "manage": {
       "title": "Manage",
@@ -3572,7 +3620,31 @@
       "flat19Hint": "Only for foreign workers who filed the flat-rate application. When Yes, 19% applies to all pay including non-taxable allowances, with no cuts or deductions.",
       "flat19Yes": "Yes (19%)",
       "flat19No": "No (withholding table)",
-      "flat19Line": "19% flat rate · from {from}"
+      "flat19Line": "19% flat rate · from {from}",
+      "board": {
+        "tabContract": "Contracts",
+        "tabTax": "Reliefs & deductions",
+        "ratio": "Tax ratio",
+        "family": "Dependents",
+        "familyValue": "{n} ({c} children)",
+        "smeCol": "SME tax cut",
+        "durunuriCol": "Durunuri",
+        "flat19Col": "Foreign 19%",
+        "dedCol": "Personal deductions",
+        "sme": "{rate}% · until {to}",
+        "durunuri": "Pension {p}% · EI {e}%",
+        "flat19": "Applied",
+        "loanOn": "Repaying",
+        "sumSme": "SME cut {n}",
+        "sumDurunuri": "Durunuri {n}",
+        "sumFlat19": "Foreign 19% {n}",
+        "sumLoan": "Student loan {n}",
+        "sumDed": "Personal deductions {n}",
+        "sumUnknown": "To check {n}",
+        "check": "Check",
+        "offNote": "Reliefs turned off in company settings are hidden.",
+        "note": "Click a name to edit tax and personal items on the employee page (a new version from the chosen date). Unknown is not treated as no."
+      }
     },
     "payRuns": {
       "title": "Payroll ledgers",
