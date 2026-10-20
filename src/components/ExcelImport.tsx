@@ -65,13 +65,13 @@ export function ExcelImport<T>({
   const step = (n: number, on: boolean, label: string) => (
     <li className={`flex items-center gap-2 ${on ? 'font-bold text-text' : 'text-faint'}`}>
       <span className={`num flex size-6 shrink-0 items-center justify-center rounded-full text-xs ${on ? 'bg-primary text-on-primary' : 'bg-surface'}`}>{n}</span>
-      {label}
+      <span className={on ? '' : 'max-sm:sr-only'}>{label}</span>
     </li>
   );
 
   return (
     <div className="flex flex-col gap-4 text-sm">
-      <ol className="grid grid-cols-2 gap-2 sm:grid-cols-4">
+      <ol className="flex flex-wrap gap-x-3 gap-y-2 sm:grid sm:grid-cols-4 sm:gap-2">
         {step(1, !file, t('s1'))}
         {step(2, !file, t('s2'))}
         {step(3, !!rows && !applied, t('s3'))}

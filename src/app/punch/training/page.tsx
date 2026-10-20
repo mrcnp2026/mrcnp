@@ -33,7 +33,7 @@ export default async function MyTrainingPage() {
   return (
     <PageShell>
       <h1 className="text-2xl font-bold">{t('title')}</h1>
-      {list.length === 0 && <p className="text-sm text-faint">{t('empty')}</p>}
+      {list.length === 0 && <Card><p className="py-6 text-center text-sm text-faint">{t('empty')}</p></Card>}
       {todo.length > 0 && (
         <Card>
           <p className="pb-1 text-sm font-bold text-warn">{t('todoTitle', { n: todo.length })}</p>

@@ -33,8 +33,9 @@ export default async function TrainingCoursesPage() {
           {courses.map((c) => (
             <li key={c.id} className="py-2">
               <details>
+                {/* 폰: 이름이 한 줄을 다 쓰고 표시는 그 아래 줄로 (2026-10-20 디자인 점검: 이름이 좁은 칸에 세로로 쌓였다) */}
                 <summary className="flex cursor-pointer flex-wrap items-center gap-x-3 gap-y-1 text-sm">
-                  <span className={`min-w-0 flex-1 font-bold ${c.active ? '' : 'text-faint'}`}>{c.name}</span>
+                  <span className={`min-w-0 basis-full font-bold sm:basis-0 sm:flex-1 ${c.active ? '' : 'text-faint'}`}>{c.name}</span>
                   <Chip tone="neutral">{t(`cycle.${c.cycle}`)}{c.hours ? ` · ${t('hoursValue', { n: c.hours })}` : ''}</Chip>
                   <span className="text-xs text-muted">{targetText(c)}</span>
                   {c.signatureRequired && <Chip tone="info">{t('signatureOn')}</Chip>}
