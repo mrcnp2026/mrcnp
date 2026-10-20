@@ -13,6 +13,7 @@ import { getMe } from '@/lib/auth';
 import { loadEnrollments, loadNoticeFiles } from '@/lib/payroll/insurance-data';
 import { toKstDate } from '@/lib/time';
 import { EnrollAdd, EnrollControls, NoticeManual } from './InsuranceForms';
+import { NoticeUpload } from './NoticeUpload';
 
 const TONE = { UNREPORTED: 'warn', CHECKING: 'info', CONFIRMED: 'ok' } as const;
 
@@ -113,6 +114,10 @@ export default async function InsurancePage({ searchParams }: { searchParams: Pr
           <Card className="flex flex-col gap-3">
             <CardTitle>{t('manualTitle')}</CardTitle>
             <NoticeManual people={people} month={today.slice(0, 7)} live={sp.live === '1'} />
+          </Card>
+          <Card className="flex flex-col gap-3">
+            <CardTitle>{t('upload.title')}</CardTitle>
+            <NoticeUpload people={people} month={today.slice(0, 7)} live={sp.live === '1'} />
           </Card>
           {files.length === 0 && <p className="rounded-card border border-border bg-bg p-4 text-sm text-faint">{t('noticeEmpty')}</p>}
           {files.length > 0 && (

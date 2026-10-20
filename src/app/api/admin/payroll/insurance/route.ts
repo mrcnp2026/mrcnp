@@ -44,7 +44,8 @@ export const POST = api('admin.payroll.insurance', async (req, ctx) => {
       if (typeof r?.employeeId !== 'string' || !UUID.test(r.employeeId) || employee === null || (r?.employer !== '' && r?.employer !== null && r?.employer !== undefined && employer === null)) throw new ApiError(400, 'insurance_rows');
       rows.push({ employeeId: r.employeeId, employee, employer, note: clean(r.note, 150) || null });
     }
-    return saveManualNotice({ insurer: b.insurer, month: b.month, rows, practice, me, requestId });
+    const fileName = typeof b.fileName === 'string' ? clean(b.fileName, 100) || null : null; // 엑셀 · CSV에서 읽은 줄 (2026-10-20)
+    return saveManualNotice({ insurer: b.insurer, month: b.month, rows, practice, me, requestId, fileName });
   }
   if (b.action === 'notice.allocate') {
     if (typeof b.noticeId !== 'string' || !UUID.test(b.noticeId) || typeof b.runId !== 'string' || !UUID.test(b.runId)) throw new ApiError(400, 'invalid_input');

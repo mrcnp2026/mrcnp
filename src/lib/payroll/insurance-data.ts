@@ -119,16 +119,18 @@ export async function loadNoticeFiles(args: { practice: boolean; testViewer: boo
 
 export type ManualRow = { employeeId: string; employee: number; employer: number | null; note: string | null };
 /** 손으로 넣기 — 보험 · 고지월 · 직원마다 근로자 고지액(필수) · 사업주 고지액. 직원은 넣는 사람이 직접 골랐으므로 바로 이어진다 */
-export async function saveManualNotice(args: { insurer: Insurer; month: string; rows: ManualRow[]; practice: boolean; me: Me; requestId?: string }): Promise<{ id: string }> {
+export async function saveManualNotice(args: { insurer: Insurer; month: string; rows: ManualRow[]; practice: boolean; me: Me; requestId?: string; fileName?: string | null }): Promise<{ id: string }> {
+  // fileName이 있으면 엑셀 · CSV에서 읽은 줄이다(2026-10-20) — 묶음은 FILE, 줄마다 「파일 · 이름」을 근거로 남긴다
+  const fromFile = !!args.fileName;
   const c = db();
   if (args.rows.length === 0 || args.rows.length > 300 || new Set(args.rows.map((r) => r.employeeId)).size !== args.rows.length) throw new ApiError(400, 'insurance_rows');
   for (const r of args.rows) await sameSide(r.employeeId, args.me);
   const { data: staff } = await c.from('profiles').select('id, name').in('id', args.rows.map((r) => r.employeeId));
-  const { data: file, error } = await c.from('payroll_insurance_notice_files').insert({ insurer: args.insurer, notice_month: `${args.month}-01`, source_kind: 'MANUAL', row_count: args.rows.length, is_test: args.practice, uploaded_by: args.me.id }).select('id').single();
+  const { data: file, error } = await c.from('payroll_insurance_notice_files').insert({ insurer: args.insurer, notice_month: `${args.month}-01`, source_kind: fromFile ? 'FILE' : 'MANUAL', row_count: args.rows.length, is_test: args.practice, uploaded_by: args.me.id }).select('id').single();
   if (error || !file) boom('saveManualNotice.file', error);
   const now = new Date().toISOString();
   const ins = await c.from('payroll_insurance_notices').insert(args.rows.map((r, i) => ({
-    file_id: file!.id, row_key: String(i + 1), raw_name: ((staff ?? []).find((p) => p.id === r.employeeId)?.name as string | undefined) ?? null, employee_id: r.employeeId, mapping_state: 'MAPPED', mapping_basis: r.note ? `직접 입력 · ${r.note}`.slice(0, 200) : '직접 입력', mapped_by: args.me.id, mapped_at: now,
+    file_id: file!.id, row_key: String(i + 1), raw_name: ((staff ?? []).find((p) => p.id === r.employeeId)?.name as string | undefined) ?? null, employee_id: r.employeeId, mapping_state: 'MAPPED', mapping_basis: (fromFile ? `파일 ${args.fileName}${r.note ? ` · ${r.note}` : ''}` : r.note ? `직접 입력 · ${r.note}` : '직접 입력').slice(0, 200), mapped_by: args.me.id, mapped_at: now,
     components: { [KEY]: String(r.employee), ...(r.employer === null ? {} : { 'employer.notice': String(r.employer) }) },
   })));
   if (ins.error) {
@@ -136,7 +138,7 @@ export async function saveManualNotice(args: { insurer: Insurer; month: string; 
     await c.from('payroll_insurance_notice_files').update({ state: 'WITHDRAWN', withdraw_reason: '저장 실패' }).eq('id', file!.id);
     boom('saveManualNotice.rows', ins.error);
   }
-  await payrollAudit({ actorId: args.me.id, action: 'insurance.notice.save', table: 'payroll_insurance_notice_files', subjectId: file!.id as string, requestId: args.requestId, detail: { insurer: args.insurer, month: args.month, rows: args.rows.length } });
+  await payrollAudit({ actorId: args.me.id, action: 'insurance.notice.save', table: 'payroll_insurance_notice_files', subjectId: file!.id as string, requestId: args.requestId, detail: { insurer: args.insurer, month: args.month, rows: args.rows.length, ...(fromFile ? { file: args.fileName } : {}) } });
   return { id: file!.id as string };
 }
 

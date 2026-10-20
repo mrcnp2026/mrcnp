@@ -4321,7 +4321,28 @@
       "payroll_finalized": "A finalized ledger cannot change. Create a correction.",
       "version_conflict": "Someone else changed it first. Reload the screen.",
       "enrollLegalShort": "The app does not file reports with the agencies",
-      "noticeLegalShort": "Enter billed premiums by hand from the agency notice"
+      "noticeLegalShort": "Enter billed premiums by hand from the agency notice",
+      "upload": {
+        "title": "Upload notice Excel/CSV",
+        "hint": "Upload the notice file from the insurer to see its columns. Pick the employee no., name, and employee amount columns to match staff (resident numbers are not used). For health insurance, pick long-term care as the column to add.",
+        "none": "Not used",
+        "col": "Column {n}",
+        "reading": "Reading…",
+        "mNo": "Employee no. column",
+        "mName": "Name column",
+        "mEmployee": "Employee amount column",
+        "mExtra": "Column to add (LTC etc.)",
+        "mEmployer": "Employer amount column",
+        "problem": {
+          "no_person": "No matching staff — not saved",
+          "same_name": "Two people share this name — pick the employee no. column",
+          "no_amount": "No amount",
+          "duplicate": "Same staff already in an earlier row"
+        },
+        "save": "Save {n} matched",
+        "skipped": "{n} rows will be skipped",
+        "rowNote": "row {n}"
+      }
     },
     "daily": {
       "title": "Day labor",
