@@ -6,6 +6,7 @@ import { WarnLine } from '@/components/listframe';
 import { HelpTip } from '@/components/Help';
 import Link from 'next/link';
 import { AddSheet } from '@/components/AddSheet';
+import { AddTabs } from '@/components/AddTabs';
 import { SheetOpener } from '@/components/SheetOpener';
 import { Card, CardTitle, Chip, PageShell } from '@/components/ui';
 import { OFFICE } from '@/config/office';
@@ -111,14 +112,17 @@ export default async function InsurancePage({ searchParams }: { searchParams: Pr
         </>
       ) : (
         <>
-          <Card className="flex flex-col gap-3">
-            <CardTitle>{t('manualTitle')}</CardTitle>
-            <NoticeManual people={people} month={today.slice(0, 7)} live={sp.live === '1'} />
-          </Card>
-          <Card className="flex flex-col gap-3">
-            <CardTitle>{t('upload.title')}</CardTitle>
-            <NoticeUpload people={people} month={today.slice(0, 7)} live={sp.live === '1'} />
-          </Card>
+          {/* 손으로 넣기 · 고지서 파일 올리기를 단추 하나 + 가운데 창의 두 탭으로 (2026-10-20 의뢰인: 새 창 모양으로 맞추기) */}
+          <div className="flex justify-end">
+            <SheetOpener id="notice" label={t('manualTitle')} />
+          </div>
+          <AddSheet id="notice" title={t('manualTitle')} modal wide>
+            <AddTabs
+              labels={{ one: t('upload.tabManual'), many: t('upload.tabFile'), group: t('manualTitle') }}
+              one={<NoticeManual people={people} month={today.slice(0, 7)} live={sp.live === '1'} />}
+              many={<NoticeUpload people={people} month={today.slice(0, 7)} live={sp.live === '1'} />}
+            />
+          </AddSheet>
           {files.length === 0 && <p className="rounded-card border border-border bg-bg p-4 text-sm text-faint">{t('noticeEmpty')}</p>}
           {files.length > 0 && (
             <ul className="flex flex-col divide-y divide-border rounded-card border border-border bg-bg lg:hidden">

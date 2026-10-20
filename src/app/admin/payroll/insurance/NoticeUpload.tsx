@@ -1,15 +1,17 @@
 'use client';
 // 공단 고지서 엑셀 · CSV 올리기 (2026-10-20 노프로 비교) — 파일을 읽어 열 이름을 보이고, 「이름 · 근로자 고지액」 열을 고르면 직원을 맞춘다.
 // 맞춘 줄만 손으로 넣기와 같은 길(notice.save, fileName)로 저장한다. 공단 양식이 정해지지 않아 열은 담당자가 고른다(처음에는 짐작한 열).
+// 모양은 다른 엑셀 창(components/ExcelImport)과 같게 — 단계 표시 · 끌어다 놓는 칸 · 맞춤/문제 숫자 (2026-10-20 의뢰인).
+import { FileSpreadsheet, Upload } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 import { useRouter } from 'next/navigation';
-import { useState } from 'react';
+import { useRef, useState } from 'react';
 import { callApi } from '@/components/client-api';
 import { ErrorNote } from '@/components/ErrorNote';
-import { Button } from '@/components/ui';
+import { Button, Chip } from '@/components/ui';
 import { matchNotice, type NoticeMapping, type NoticeSheet } from '@/lib/payroll/notice-upload';
 
-const field = 'min-h-9 rounded-button border border-border bg-bg px-3 text-sm';
+const field = 'min-h-11 rounded-button border border-border bg-bg px-3 text-base lg:min-h-9 lg:text-sm';
 const KINDS = ['NP', 'HI', 'EI', 'IA'] as const;
 type Person = { id: string; name: string; employeeNo: string | null };
 type Err = { code: string; requestId?: string } | null;
@@ -25,6 +27,8 @@ export function NoticeUpload({ people, month, live }: { people: Person[]; month:
   const [fileName, setFileName] = useState('');
   const [err, setErr] = useState<Err>(null);
   const [busy, setBusy] = useState(false);
+  const [drag, setDrag] = useState(false);
+  const input = useRef<HTMLInputElement>(null);
   const matches = sheet && map ? matchNotice(sheet, map, people) : [];
   const good = matches.filter((m) => !m.problem);
   const pick = (k: keyof NoticeMapping, label: string) => (
@@ -65,12 +69,28 @@ export function NoticeUpload({ people, month, live }: { people: Person[]; month:
     if (!r.ok) return setErr(r);
     router.push(`/admin/payroll/insurance/notice/${r.data.id}`);
   };
+  const pickFile = (f: File | null | undefined) => {
+    if (f) void read(f);
+  };
+  const step = (n: number, on: boolean, label: string) => (
+    <li className={`flex items-center gap-2 ${on ? 'font-bold text-text' : 'text-faint'}`}>
+      <span className={`num flex size-6 shrink-0 items-center justify-center rounded-full text-xs ${on ? 'bg-primary text-on-primary' : 'bg-surface'}`}>{n}</span>
+      {label}
+    </li>
+  );
   return (
-    <div className="flex flex-col gap-3 text-sm">
-      <div className="flex flex-wrap items-end gap-3">
-        <label className="flex flex-col gap-1">
+    <div className="flex flex-col gap-4 text-sm">
+      <ol className="grid grid-cols-2 gap-2 sm:grid-cols-4">
+        {step(1, !sheet, t('s1'))}
+        {step(2, !sheet, t('s2'))}
+        {step(3, !!sheet, t('s3'))}
+        {step(4, !!sheet && good.length > 0, t('s4'))}
+      </ol>
+      <p className="text-faint">{t('hint')}</p>
+      <div className="grid grid-cols-2 gap-3 sm:flex sm:flex-wrap sm:items-end">
+        <label className="flex min-w-0 flex-col gap-1">
           <span className="font-bold">{ti('fInsurer')}</span>
-          <select value={insurer} onChange={(e) => { setInsurer(e.target.value as (typeof KINDS)[number]); setSheet(null); }} className={field}>
+          <select value={insurer} onChange={(e) => { setInsurer(e.target.value as (typeof KINDS)[number]); setSheet(null); setFileName(''); }} className={field}>
             {KINDS.map((k) => (
               <option key={k} value={k}>
                 {ti(`insurer.${k}`)}
@@ -78,14 +98,24 @@ export function NoticeUpload({ people, month, live }: { people: Person[]; month:
             ))}
           </select>
         </label>
-        <label className="flex flex-col gap-1">
+        <label className="flex min-w-0 flex-col gap-1">
           <span className="font-bold">{ti('fMonth')}</span>
           <input type="month" value={mon} onChange={(e) => setMon(e.target.value)} className={field} />
         </label>
-        <input type="file" accept=".xlsx,.csv" className="min-w-0 max-w-full" onChange={(e) => { const f = e.target.files?.[0]; if (f) void read(f); }} />
-        {busy && !sheet && <span className="text-faint">{t('reading')}</span>}
       </div>
-      <p className="text-xs text-faint">{t('hint')}</p>
+      <button
+        type="button"
+        onClick={() => input.current?.click()}
+        onDragOver={(e) => { e.preventDefault(); setDrag(true); }}
+        onDragLeave={() => setDrag(false)}
+        onDrop={(e) => { e.preventDefault(); setDrag(false); pickFile(e.dataTransfer.files?.[0]); }}
+        className={`flex min-h-24 flex-col items-center justify-center gap-1 rounded-card border-2 border-dashed px-4 py-5 text-center ${drag ? 'border-primary bg-primary-tint' : 'border-border bg-surface hover:border-primary'}`}
+      >
+        {sheet ? <FileSpreadsheet aria-hidden size={24} className="text-primary" /> : <Upload aria-hidden size={24} className="text-muted" />}
+        <span className="font-semibold">{sheet ? fileName : t('drop')}</span>
+        <span className="text-xs text-faint">{busy && !sheet ? t('reading') : sheet ? t('again') : t('dropHint')}</span>
+      </button>
+      <input ref={input} type="file" accept=".xlsx,.csv" className="hidden" onChange={(e) => { pickFile(e.target.files?.[0]); e.target.value = ''; }} />
       {sheet && map && (
         <>
           <div className="grid grid-cols-1 gap-2 sm:grid-cols-3 lg:grid-cols-5">
@@ -95,7 +125,11 @@ export function NoticeUpload({ people, month, live }: { people: Person[]; month:
             {pick('extra', t('mExtra'))}
             {pick('employer', t('mEmployer'))}
           </div>
-          <ul className="flex max-h-96 flex-col divide-y divide-border overflow-y-auto rounded-button border border-border">
+          <div className="flex flex-wrap items-center gap-2">
+            <Chip tone="ok">{t('readyCount', { n: good.length })}</Chip>
+            {matches.length > good.length && <Chip tone="warn">{t('problemCount', { n: matches.length - good.length })}</Chip>}
+          </div>
+          <ul className="flex max-h-80 flex-col divide-y divide-border overflow-y-auto rounded-button border border-border">
             {matches.map((m) => (
               <li key={m.row} className="flex flex-wrap gap-x-3 gap-y-0.5 px-3 py-2">
                 <span className="num w-8 shrink-0 text-faint">{m.row}</span>
@@ -109,7 +143,7 @@ export function NoticeUpload({ people, month, live }: { people: Person[]; month:
             ))}
           </ul>
           <div className="flex flex-wrap items-center gap-2">
-            <Button type="button" size="sm" disabled={busy || !good.length} onClick={save}>
+            <Button type="button" disabled={busy || !good.length} onClick={save}>
               {t('save', { n: good.length })}
             </Button>
             {matches.length > good.length && <span className="text-xs text-warn">{t('skipped', { n: matches.length - good.length })}</span>}

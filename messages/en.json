@@ -4430,7 +4430,18 @@
         },
         "save": "Save {n} matched",
         "skipped": "{n} rows will be skipped",
-        "rowNote": "row {n}"
+        "rowNote": "row {n}",
+        "tabManual": "Enter by hand",
+        "tabFile": "Upload notice file",
+        "s1": "Insurer & month",
+        "s2": "Upload file",
+        "s3": "Match columns",
+        "s4": "Save",
+        "drop": "Drop the notice file here or click to choose",
+        "dropHint": ".xlsx · .csv · up to 3MB",
+        "again": "Click again to choose another file",
+        "readyCount": "Matched {n}",
+        "problemCount": "{n} rows with problems"
       }
     },
     "daily": {
