@@ -20,6 +20,11 @@ export default async function RetirementCasePage({ params }: { params: Promise<{
   const { data: p } = await createAdminClient().from('profiles').select('name, employee_no').eq('id', k.employeeId).maybeSingle();
   // 검사 계정의 건은 검사 계정에게만, 실제 직원의 건은 실제 관리자에게만
   if (!p || !!(p.employee_no as string | null)?.startsWith('e2e-') !== !!me.employeeNo?.startsWith('e2e-')) notFound();
+  // 퇴직연금 가입자면 화면 위에 알린다 (2026-10-20 노프로 비교) — DC 가입 기간은 매달 부담금으로 이미 적립된다
+  const { data: plan } = await createAdminClient().from('payroll_pension_members').select('plan_kind, joined_on').eq('employee_id', k.employeeId).eq('is_test', k.isTest).order('joined_on', { ascending: false }).limit(1).maybeSingle();
+  const { data: paid } = plan?.plan_kind === 'DC' ? await createAdminClient().from('payroll_pension_contributions').select('amount, paid_on').eq('employee_id', k.employeeId).eq('is_test', k.isTest) : { data: null };
+  const paidSum = (paid ?? []).reduce((a, c) => a + (c.paid_on ? Number(c.amount) : 0), 0);
+  const unpaidSum = (paid ?? []).reduce((a, c) => a + (c.paid_on ? 0 : Number(c.amount)), 0);
   const won = (v: number | string | null) => (v === null ? t('blank') : t('won', { n: f.number(Number(v), { maximumFractionDigits: 2 }) }));
   const r = k.result, i = k.input;
   const ready = k.amount !== null && r.missing.length === 0;
@@ -49,6 +54,13 @@ export default async function RetirementCasePage({ params }: { params: Promise<{
         </p>
       </div>
       <WarnLine short={t('legalShort')}>{t('legal')}</WarnLine>
+      {plan && (
+        <p className="rounded-card bg-primary-tint p-3 text-sm" data-pension>
+          {t(plan.plan_kind === 'DC' ? 'pensionDc' : 'pensionDb', { from: plan.joined_on as string })}
+          {plan.plan_kind === 'DC' && ` ${t('pensionPaid', { paid: f.number(paidSum), unpaid: f.number(unpaidSum) })}`}{' '}
+          <Link href="/admin/payroll/pension" className="font-bold text-primary hover:underline">{t('pensionLink')}</Link>
+        </p>
+      )}
       {k.state === 'WITHDRAWN' && <p className="rounded-card border border-border bg-surface p-3 text-sm">{t('withdrawnNote', { reason: k.reason ?? '' })}</p>}
       {k.supersedesId && (
         <p className="text-sm">

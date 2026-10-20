@@ -4269,7 +4269,11 @@
       "unit": "",
       "showAll": "Show all",
       "legalShort": "For manual checking — confirm with labor/tax experts before paying",
-      "cCompanyPays": "Difference the company pays (severance − insurance)"
+      "cCompanyPays": "Difference the company pays (severance − insurance)",
+      "pensionDc": "This employee is in a DC pension plan (joined {from}). Benefits for the plan period are funded by monthly contributions; calculate only the period before joining here.",
+      "pensionDb": "This employee is in a DB pension plan (joined {from}). The provider pays the benefit; the company pays only any shortfall.",
+      "pensionPaid": "Paid to bank: {paid} won · not yet paid: {unpaid} won (pay before retirement).",
+      "pensionLink": "Pension page"
     },
     "insurance": {
       "title": "Social insurance",
