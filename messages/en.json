@@ -3062,7 +3062,7 @@
       },
       "advanceOver": "Used in advance: {n} d — over the limit",
       "settleTitle": "Leave settlement on leaving",
-      "settleHint": "Enter the last day to calculate unused leave as of that date as a candidate. Approving writes the remaining leave as settled in the ledger. The payout amount is decided in payroll. Unsettled advance use is never deducted from wages automatically.",
+      "settleHint": "Enter the leaving date to calculate unused leave and its pay (daily ordinary wage × days left) as of that day. Approving sets the unused balance to 0 as \"settled\". Add the pay to the final payroll as \"annual leave pay\". Unrepaid advance leave is not deducted from wages automatically.",
       "fRetireOn": "Last day",
       "settleMake": "Create candidate",
       "colUnused": "Unused leave",
@@ -3117,7 +3117,17 @@
         "leave_policy_missing": "Start the default accrual policy first."
       },
       "groupsTitle": "Leave policy groups",
-      "balLine": "Granted {g} · used {u}"
+      "balLine": "Granted {g} · used {u}",
+      "colPayout": "Unused leave pay",
+      "payoutOld": "Older settlement — recreate it to see the amount",
+      "payoutState": {
+        "NO_CONTRACT": "No pay contract, so no amount (staff pay)",
+        "NO_HOURS": "No monthly hours, so no amount (staff pay)"
+      },
+      "payoutDaily": "Daily ordinary wage ₩{daily} (ordinary hourly ₩{hourly} × one day)",
+      "payoutItems": "Allowances in the ordinary hourly: {items}",
+      "payoutUnknown": "Left out (ordinary-wage status unknown): {items} — confirm with a labor attorney",
+      "won": "₩{n}"
     },
     "anomalies": {
       "title": "Attendance exceptions",

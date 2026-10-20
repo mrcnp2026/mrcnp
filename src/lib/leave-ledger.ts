@@ -2,6 +2,7 @@
 // 지급 건(lot) = 발생한 휴가 한 묶음. 원장(ledger) = 지급 · 사용 · 취소 · 소멸 … 한 줄씩. 잔여 = 지급 건마다 원장 분(分)의 합.
 // ★ 여기서 만든 발생 계획은 「후보」다 — 관리자가 승인해야 잔여에 들어간다(자동 반영 없음).
 // ★ 통상 방식(근로기준법 제60조의 일반 규칙)만 계산한다. 출근율 80% · 개근 여부는 따지지 않는다 → 관리자가 후보를 보고 승인/반려한다.
+import type { LeavePayout } from '@/lib/leave-payout';
 import { addDays } from '@/lib/calendar';
 
 export const DAY_MINUTES = 480; // 하루 = 8시간 (기존 휴가 신청의 일수와 같은 기준)
@@ -255,7 +256,7 @@ export function planOffset(lots: readonly Lot[], entries: readonly Entry[], asOf
   ]);
 }
 
-export type Settlement = { lots: { lotId: string; kind: LotKind; grantedOn: string; usableTo: string | null; minutes: number }[]; unusedMinutes: number; advanceMinutes: number; hireBasisMinutes: number | null; grantedMinutes: number };
+export type Settlement = { lots: { lotId: string; kind: LotKind; grantedOn: string; usableTo: string | null; minutes: number }[]; unusedMinutes: number; advanceMinutes: number; hireBasisMinutes: number | null; grantedMinutes: number; payout?: LeavePayout }; // payout = 남은 연차 수당(2026-10-20). 예전 정산에는 없다
 /**
  * 퇴사일 기준 연차 정산 내역. 미사용 = 퇴사일에 쓸 수 있던 지급 건의 남은 분. 선사용 미상계는 따로 적는다(임금에서 자동으로 빼지 않는다).
  * hireBasisMinutes: 회계연도 기준 회사에서 「입사일 기준으로 계산했다면 받았을 총 연차」 — 받은 것(grantedMinutes)보다 많으면 차이를 더 줘야 하는지 노무 확인이 필요하다(참고 값).

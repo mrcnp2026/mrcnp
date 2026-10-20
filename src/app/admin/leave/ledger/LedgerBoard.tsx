@@ -12,7 +12,7 @@ import { Button, Card, CardTitle, Chip } from '@/components/ui';
 import type { LeavePolicy } from '@/lib/leave-ledger';
 
 export type LotLine = { id: string; employeeId: string; name: string; kind: string; grantedOn: string; usableFrom: string; usableTo: string | null; days: number; remaining: number | null; state: string; note: string | null; rule: string; years: number | null; month: number | null };
-export type SettleLine = { id: string; retireOn: string; revision: number; state: string; unused: number; advance: number; hireBasis: number | null; granted: number; lots: { grantedOn: string; days: number }[] };
+export type SettleLine = { id: string; retireOn: string; revision: number; state: string; unused: number; advance: number; hireBasis: number | null; granted: number; lots: { grantedOn: string; days: number }[]; payout: { state: 'OK' | 'NO_CONTRACT' | 'NO_HOURS'; amount: number | null; daily: number | null; hourly: number | null; items: string[]; unknown: string[] } | null };
 export type BalanceLine = { advanceOver: boolean; employeeId: string; name: string; joinedOn: string | null; active: boolean; started: boolean; granted: number; used: number; expired: number; remaining: number; advance: number; upcoming: number; old: number | null };
 export type EntryLine = { id: number; event: string; days: number; on: string; lot: string | null; fromRequest: boolean };
 type Policy = { id: string; version: number; validFrom: string; verification: string; value: LeavePolicy };
@@ -300,7 +300,7 @@ export function LedgerBoard(props: { group?: { id: string; name: string } | null
                 </Button>
               </form>
               {emp.settlements.length > 0 && (
-                <Table heads={[t('fRetireOn'), t('colUnused'), t('colAdvance'), t('colBasis'), t('colState'), '']}>
+                <Table heads={[t('fRetireOn'), t('colUnused'), t('colPayout'), t('colAdvance'), t('colBasis'), t('colState'), '']}>
                   {emp.settlements.map((s) => (
                     <tr key={s.id} className="border-b border-border align-top">
                       <td className="num px-3 py-2 whitespace-nowrap">{s.retireOn}</td>
@@ -311,6 +311,21 @@ export function LedgerBoard(props: { group?: { id: string; name: string } | null
                             {t('settleLot', { date: l.grantedOn, n: r2(l.days) })}
                           </span>
                         ))}
+                      </td>
+                      {/* 남은 연차 수당 (2026-10-20): 1일 통상임금 × 남은 일수. 예전 정산(금액 없음)은 빈칸 */}
+                      <td className="num px-3 py-2">
+                        {!s.payout ? (
+                          <span className="text-xs text-faint">{t('payoutOld')}</span>
+                        ) : s.payout.state !== 'OK' ? (
+                          <span className="text-xs text-warn">{t(`payoutState.${s.payout.state}`)}</span>
+                        ) : (
+                          <>
+                            <span className="font-bold">{t('won', { n: s.payout.amount!.toLocaleString('ko-KR') })}</span>
+                            <span className="block text-xs text-faint">{t('payoutDaily', { daily: s.payout.daily!.toLocaleString('ko-KR'), hourly: s.payout.hourly!.toLocaleString('ko-KR') })}</span>
+                            {s.payout.items.length > 0 && <span className="block text-xs text-faint">{t('payoutItems', { items: s.payout.items.join(', ') })}</span>}
+                            {s.payout.unknown.length > 0 && <span className="block text-xs text-warn">{t('payoutUnknown', { items: s.payout.unknown.join(', ') })}</span>}
+                          </>
+                        )}
                       </td>
                       <td className="num px-3 py-2">{s.advance > 0 ? <span className="text-warn">{day(s.advance)}</span> : day(0)}</td>
                       <td className="num px-3 py-2 text-xs">{s.hireBasis === null ? '' : <span className={s.hireBasis > s.granted ? 'text-warn' : 'text-faint'}>{t('settleBasis', { hire: s.hireBasis, got: s.granted })}</span>}</td>
