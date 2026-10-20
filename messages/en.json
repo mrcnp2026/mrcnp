@@ -525,7 +525,10 @@
           "email_taken": "Email already in use",
           "foreign_english_name": "English name: letters only, up to 60.",
           "foreign_dormitory": "Dormitory: up to 100 characters."
-        }
+        },
+        "tabs": "How to add",
+        "tabOne": "One by one",
+        "tabMany": "Many by Excel"
       }
     },
     "more": {
@@ -872,7 +875,7 @@
       "pickedClear": "Show all",
       "lateMin": "{n} min late",
       "bulk": {
-        "title": "Bulk attendance entry by Excel",
+        "title": "Add attendance by Excel",
         "hint": "Pick a date and download the template with one row per staff. Fill in clock-in/out times (9:00 or 0900) and upload. Other dates can be mixed in. If clock-out is earlier than clock-in, it counts as the next day. Like admin entry, the reason and who entered it are kept; existing records are not overwritten.",
         "sheet": "Attendance bulk",
         "guide": "Fill in clock-in/out only. Rows with both empty are skipped. Blank reason = \"Excel bulk entry\".",
@@ -900,7 +903,8 @@
           "import_too_big": "File is too large (2MB max).",
           "import_bad_file": "The file doesn't match the template.",
           "import_too_many": "Up to 500 rows at once."
-        }
+        },
+        "open": "Add by Excel"
       }
     },
     "notices": {
@@ -3877,8 +3881,8 @@
         "colName": "Name",
         "kindPay": "Pay",
         "kindDed": "Deduction",
-        "excelTitle": "Bulk entry by Excel",
-        "excelHint": "Download the template, fill in amounts only (advances, settlements, bonuses…), and upload. Recalculate afterwards.",
+        "excelTitle": "By Excel",
+        "excelHint": "The template lists everyone in this payroll. Enter amounts only. Blank cells are left as is; 0 adjusts to 0.",
         "download": "Download template",
         "preview": "Preview",
         "apply": "Add {n}",
@@ -3894,7 +3898,15 @@
         "amount": "Amount",
         "reason": "Reason (e.g. October bonus)",
         "who": "{n} of {all} selected",
-        "sameApply": "Add to {n}"
+        "sameApply": "Add to {n}",
+        "open": "Bulk adjustments",
+        "notSlips": "These are adjustment values (advances, settlements, bonuses…) for this payroll's calculation. Recalculate after adding. To publish statements already calculated elsewhere, use Payroll › Upload statements.",
+        "applyPeople": "Add for {n}",
+        "someFailed": "Some items could not be added",
+        "item": "Item",
+        "reasonLabel": "Reason",
+        "all": "All",
+        "none": "None"
       }
     },
     "reports": {
@@ -4928,7 +4940,7 @@
       "db_update_required": "DB change set 29 needs to be applied."
     },
     "leaveBulk": {
-      "title": "Bulk leave entry by Excel",
+      "title": "Add leave by Excel",
       "hint": "Download the template and add one leave per row. Use leave type names from the types sheet; blank end date = one day. Hourly types need a start time. Entries are approved immediately like admin-entered leave.",
       "sheet": "Leave bulk",
       "guide": "One leave per row. Dates like 2026-10-05; blank end = one day. Hourly leave needs a start time (13:00).",
@@ -4954,7 +4966,8 @@
         "import_too_big": "File is too large (2MB max).",
         "import_bad_file": "The file doesn't match the template.",
         "import_too_many": "Up to 300 rows at once."
-      }
+      },
+      "open": "Add by Excel"
     },
     "pension": {
       "title": "Retirement pension (DC)",
@@ -6622,5 +6635,20 @@
     "evidence_too_many": "Up to 3 files per request.",
     "evidence_locked": "Files cannot be added or removed after the leave is approved or rejected.",
     "db_update_required": "DB change set 9 needs to be applied."
+  },
+  "excelImport": {
+    "s1": "Get template",
+    "s2": "Fill and upload",
+    "s3": "Preview",
+    "s4": "Add",
+    "template": "Download template",
+    "drop": "Drop the Excel file here or click to choose",
+    "dropHint": ".xlsx · up to 2MB",
+    "again": "Click again to choose another file",
+    "reading": "Reading…",
+    "readyCount": "Ready {n}",
+    "problemCount": "Problems {n}",
+    "problemNote": "Rows with problems are skipped",
+    "doneCount": "Added {n}"
   }
 }

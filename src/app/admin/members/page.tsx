@@ -20,7 +20,7 @@ import { NewInviteButton } from './NewInviteButton';
 import { RoleCell } from './RoleCell';
 import { QuickFind } from '@/components/QuickFind';
 import { SignupRequests } from './SignupRequests';
-import { StaffImport } from './StaffImport';
+import { StaffAddTabs } from './StaffImport';
 import { suggestEmployeeNo } from '@/lib/email-rules';
 import { loadPendingSignups } from '@/lib/signup';
 import { NOT_SYSTEM_ADMIN } from '@/lib/system-admin'; // 시스템관리자는 목록에 보이지 않는다 (2026-10-18)
@@ -148,11 +148,10 @@ export default async function MembersPage({ searchParams }: { searchParams: Prom
       {/* PC: 가운데 팝업(두 칸) · 폰: 따로 화면(/admin/members/new) */}
       <AddSheet id="member" title={t('addTitle')} modal wide className="hidden">
         <div className="flex flex-col gap-4">
-          <RegisterWizard popup groups={buildOrgTree(groups).flatMap((d) => [{ id: d.id, label: d.name }, ...d.teams.map((x) => ({ id: x.id, label: `${d.name} › ${x.name}` }))])} jobs={jobs.filter((j) => j.active).map((j) => ({ id: j.id, label: j.name }))} locales={LOCALES.map((code) => ({ code, name: LOCALE_NAMES[code] }))} today={toKstDate(new Date())} />
+          {/* 탭: 한 명씩 · 엑셀로 여러 명 (2026-10-20 의뢰인) */}
+          <StaffAddTabs one={<RegisterWizard popup groups={buildOrgTree(groups).flatMap((d) => [{ id: d.id, label: d.name }, ...d.teams.map((x) => ({ id: x.id, label: `${d.name} › ${x.name}` }))])} jobs={jobs.filter((j) => j.active).map((j) => ({ id: j.id, label: j.name }))} locales={LOCALES.map((code) => ({ code, name: LOCALE_NAMES[code] }))} today={toKstDate(new Date())} />} />
         </div>
       </AddSheet>
-      {/* 직원 여러 명 엑셀로 등록 (2026-10-20 노프로 비교) — 접힌 한 줄 */}
-      <StaffImport />
       {/* 이메일 가입 신청 — 있을 때만 맨 위에 (2026-10-16 의뢰인 권한-6) */}
       <SignupRequests
         items={signups}

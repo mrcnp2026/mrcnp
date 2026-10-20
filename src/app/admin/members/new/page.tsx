@@ -8,6 +8,7 @@ import { buildOrgTree } from '@/lib/org';
 import { loadOrgGroups } from '@/lib/org-data';
 import { toKstDate } from '@/lib/time';
 import { RegisterWizard } from './RegisterWizard';
+import { StaffAddTabs } from '../StaffImport';
 
 export default async function NewMemberPage() {
   const t = await getTranslations('admin.members');
@@ -21,7 +22,7 @@ export default async function NewMemberPage() {
       </Link>
       <h1 className="px-1 text-2xl font-extrabold tracking-tight">{t('addTitle')}</h1>
       {localhost && <p className="rounded-card bg-warn-tint p-3 text-sm text-warn">{t('localhostWarning')}</p>}
-      <RegisterWizard groups={groups} locales={LOCALES.map((code) => ({ code, name: LOCALE_NAMES[code] }))} today={toKstDate(new Date())} />
+      <StaffAddTabs one={<RegisterWizard groups={groups} locales={LOCALES.map((code) => ({ code, name: LOCALE_NAMES[code] }))} today={toKstDate(new Date())} />} />
     </PageShell>
   );
 }

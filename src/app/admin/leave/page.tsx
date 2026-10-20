@@ -87,12 +87,12 @@ export default async function AdminLeavePage({ searchParams }: { searchParams: P
   return (
     <PageShell wide flush>
       <h1 className="sr-only lg:hidden">{t('title')}</h1>
-      {top && <LeaveBulk />}
       {/* ── PC 머리: 제목 + 설명 / [휴가 유형] ── */}
       <div className="hidden items-start gap-4 lg:flex">
         <div className="min-w-0 flex-1">
           <h1 className="flex flex-wrap items-center gap-x-1 text-2xl font-bold">{t(view === 'accrual' ? 'pcAccrual' : 'pcHistory')}<HelpTip>{t(view === 'accrual' ? 'pcAccrualIntro' : 'pcHistoryIntro')}</HelpTip></h1>
         </div>
+        {view !== 'accrual' && top && <LeaveBulk />}
         {view !== 'accrual' && admin && (
           <a href={`/api/admin/export/list?kind=leave&y=${sp.y && /^\d{4}$/.test(sp.y) ? sp.y : asOf.slice(0, 4)}${sp.live === '1' ? '&live=1' : ''}`} className="inline-flex h-8 items-center gap-1 rounded-button border border-border bg-bg px-3.5 text-sm font-semibold whitespace-nowrap text-text hover:bg-surface">
             <Download aria-hidden size={16} />
