@@ -28,7 +28,9 @@ export function referenceFrom(approved: Payloads): { reference: EngineReference;
   if (lower === null || upper === null) missing.push('pension.limit');
   const pension: InsuranceRef | null = pRate && lower !== null && upper !== null ? { ...pRate, floor: lower, ceiling: upper, baseUnit: TEMP_INSURANCE_ROUNDING.pensionBaseUnit } : null;
   const hRate = pair('health.rate');
-  const health: InsuranceRef | null = hRate ? { ...hRate, floor: null, ceiling: null, baseUnit: null } : null;
+  // 건강보험 월 보험료 상한 · 하한(고시, 2026-10-20) — 상한은 근로자 몫 그대로, 하한은 전체 하한의 절반. 자료가 없으면 예전처럼 적용하지 않는다
+  const hUpper = krw(approved['health.limit']?.premiumUpperEmployee), hLower = krw(approved['health.limit']?.premiumLower);
+  const health: InsuranceRef | null = hRate ? { ...hRate, floor: null, ceiling: null, baseUnit: null, premiumFloor: hLower === null ? null : Math.floor(hLower / 2), premiumCeiling: hUpper } : null;
   // 장기요양 = 건강보험료 × (요양 요율 ÷ 건강보험 요율)
   const income = rate(approved['ltc.rate']?.incomeRate), ofHealth = rate(approved['ltc.rate']?.healthRate);
   let ltcOfHealth: string | null = null;

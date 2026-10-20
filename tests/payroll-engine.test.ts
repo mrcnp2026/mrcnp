@@ -168,6 +168,29 @@ describe('보험마다 공제 기준 따로 (2026-10-20, engine-1.4)', () => {
   });
 });
 
+describe('보험 기준에서 비과세분 빼기 · 건강보험 보험료 상한 하한 (2026-10-20, engine-1.5)', () => {
+  const tax: EngineTax = { ...NOT_INSURED, insurance: { ...NOT_INSURED.insurance, health: ins('YES') } };
+  const health = { employeeRate: '0.03595', employerRate: '0.03595', floor: null, ceiling: null, baseUnit: null };
+  const reference = { pension: null, health, ltcOfHealth: '0.1314', employment: null, accidentEmployerRate: null };
+  const monthly = (amount: number) => ({ payType: 'MONTHLY' as const, amount, monthlyHours: 209, annualDivisor: null, included: { overtimeHours: null, holidayHours: null } });
+  it('식대 30만(한 달 20만까지 비과세) — 보험 기준에는 과세로 돌린 10만만 들어간다', () => {
+    const r = ok(calculateStatement(input({ contract: monthly(2_000_000), tax, reference, items: [{ ...item('MEAL', 'PAYMENT', 300_000, 'PARTIAL', 200_000), insurable: true }] })));
+    expect(r.totals).toMatchObject({ taxable: 2_100_000, insuranceBase: 2_100_000 });
+    expect(amount(r, 'HEALTH')).toBe(75_495); // 210만 × 3.595%
+  });
+  it('전액 비과세는 보험 기준에 넣지 않는다 (예전과 같음)', () => {
+    const r = ok(calculateStatement(input({ contract: monthly(2_000_000), tax, reference, items: [item('CAR', 'PAYMENT', 200_000, 'EXEMPT')] })));
+    expect(r.totals).toMatchObject({ insuranceBase: 2_000_000 });
+  });
+  it('월 보험료 상한 · 하한 — 근로자 · 사업주 각각', () => {
+    const capped = { ...reference, health: { ...health, premiumCeiling: 4_591_740, premiumFloor: 10_080 } };
+    const high = ok(calculateStatement(input({ contract: monthly(200_000_000), tax, reference: capped })));
+    expect([amount(high, 'HEALTH'), amount(high, 'HEALTH_EMPLOYER')]).toEqual([4_591_740, 4_591_740]);
+    const low = ok(calculateStatement(input({ contract: monthly(200_000), tax, reference: capped })));
+    expect(amount(low, 'HEALTH')).toBe(10_080); // 20만 × 3.595% = 7,190 → 하한
+  });
+});
+
 describe('C06 보험 정산', () => {
   it('고지 95,000 − 이미 공제 80,000 = 추가 15,000, 고지 70,000이면 환급 −10,000', () => {
     expect(settleNotice(95_000, 80_000)).toBe(15_000);

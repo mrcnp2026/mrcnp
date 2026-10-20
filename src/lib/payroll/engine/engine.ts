@@ -6,7 +6,7 @@
 import { AUTO_PAYMENT_CODES, canonicalItemCode } from './reserved-items';
 import { add, dec, div, hoursOf, isNeg, max, min, mul, sub, text, toWon, type Dec, type Rounding } from './decimal';
 
-export const ENGINE_VERSION = 'engine-1.4'; // 1.4 (2026-10-20): 보험마다 공제 기준을 따로(국민연금 · 건강 · 고용, 비우면 기본 기준). 1.3 (2026-10-19): 비과세 연간 한도 · 누적. 1.2 (2026-10-16): 시급제 주휴 · 유급휴일, 시급제 기본급은 소정 시간만 + 연장 · 휴일 줄에 1배 포함
+export const ENGINE_VERSION = 'engine-1.5'; // 1.5 (2026-10-20): 일부 비과세(식대 등)의 비과세분을 보험 기준에서 뺌 · 건강보험 월 보험료 상한 · 하한. 1.4 (2026-10-20): 보험마다 공제 기준을 따로(국민연금 · 건강 · 고용, 비우면 기본 기준). 1.3 (2026-10-19): 비과세 연간 한도 · 누적. 1.2 (2026-10-16): 시급제 주휴 · 유급휴일, 시급제 기본급은 소정 시간만 + 연장 · 휴일 줄에 1배 포함
 
 export type EngineContract = { payType: 'MONTHLY' | 'HOURLY' | 'ANNUAL'; amount: number; monthlyHours: number | null; annualDivisor: number | null; included: { overtimeHours: number | null; holidayHours: number | null } };
 export type Tri = 'YES' | 'NO' | 'UNKNOWN';
@@ -36,7 +36,7 @@ export type EnginePolicy = {
   holidayOver8Premium: string | null;
   rounding: { pay: Rounding; insurance: Rounding };
 };
-export type InsuranceRef = { employeeRate: string; employerRate: string; floor: number | null; ceiling: number | null; baseUnit: number | null }; // 기준액의 하한 · 상한, 기준액을 끊는 단위(예: 1000)
+export type InsuranceRef = { employeeRate: string; employerRate: string; floor: number | null; ceiling: number | null; baseUnit: number | null; premiumFloor?: number | null; premiumCeiling?: number | null }; // 기준액의 하한 · 상한, 기준액을 끊는 단위(예: 1000). premium* = 한쪽(근로자 · 사업주 각각) 월 보험료의 하한 · 상한(건강보험 고시)
 export type EngineReference = { pension: InsuranceRef | null; health: InsuranceRef | null; ltcOfHealth: string | null; employment: InsuranceRef | null; accidentEmployerRate: string | null };
 export type Withholding = (a: { taxable: number; family: number; children: number; ratio: number }) => { ok: true; incomeTax: number; localTax: number; trace?: Record<string, unknown> } | { ok: false; why: string };
 export type EngineOverride = { itemCode: string; kind: 'PAYMENT' | 'DEDUCTION'; amount: number; label?: string; id?: string };
@@ -228,6 +228,9 @@ export function calculateStatement(input: EngineInput): EngineResult {
       }
       l.trace = { ...l.trace, exempt };
       taxable += l.amount - exempt;
+      // 보험 기준(보수)도 비과세분을 뺀다 — 일부 비과세는 과세로 돌린 부분만 들어간다 (2026-10-20, engine-1.5)
+      if (it!.insurable) insurable += l.amount - exempt;
+      continue;
     }
     if (it ? it.insurable : true) insurable += l.amount;
   }
@@ -264,8 +267,16 @@ export function calculateStatement(input: EngineInput): EngineResult {
       const keep = support > 0 ? sub(dec(1), div(dec(support), dec(100))) : dec(1);
       const trace = { basis, base: text(baseAmt), floor: r.floor, ceiling: r.ceiling, ...(support > 0 ? { durunuriPct: support } : {}) };
       const code = key.toUpperCase();
-      push({ code, kind: 'DEDUCTION', label: key, raw: mul(mul(baseAmt, dec(r.employeeRate)), keep), rounding: policy.rounding.insurance, quantity: baseAmt, factor: dec(r.employeeRate), trace });
-      push({ code: `${code}_EMPLOYER`, kind: 'EMPLOYER', label: `${key}Employer`, raw: mul(mul(baseAmt, dec(r.employerRate)), keep), rounding: policy.rounding.insurance, quantity: baseAmt, factor: dec(r.employerRate), trace });
+      // 월 보험료 상한 · 하한(건강보험 고시) — 근로자 · 사업주 각각. 두루누리 지원 전 금액에 적용한다
+      const clamp = (v: Dec): Dec => {
+        let out = v;
+        if (r.premiumFloor != null) out = max(out, dec(r.premiumFloor));
+        if (r.premiumCeiling != null) out = min(out, dec(r.premiumCeiling));
+        return out;
+      };
+      const capTrace = r.premiumFloor != null || r.premiumCeiling != null ? { ...trace, premiumFloor: r.premiumFloor ?? null, premiumCeiling: r.premiumCeiling ?? null } : trace;
+      push({ code, kind: 'DEDUCTION', label: key, raw: mul(clamp(mul(baseAmt, dec(r.employeeRate))), keep), rounding: policy.rounding.insurance, quantity: baseAmt, factor: dec(r.employeeRate), trace: capTrace });
+      push({ code: `${code}_EMPLOYER`, kind: 'EMPLOYER', label: `${key}Employer`, raw: mul(clamp(mul(baseAmt, dec(r.employerRate))), keep), rounding: policy.rounding.insurance, quantity: baseAmt, factor: dec(r.employerRate), trace: capTrace });
       if (support > 0) warnings.push({ code: `durunuri_${key}`, detail: `${support}%` });
       const mine = lines.find((l) => l.code === code && l.kind === 'DEDUCTION')!;
       const theirs = lines.find((l) => l.code === `${code}_EMPLOYER`)!;

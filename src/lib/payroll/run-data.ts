@@ -130,7 +130,7 @@ export async function createRun(args: { ym: string; kind?: 'REGULAR' | 'BONUS'; 
 // ── 계산 입력 만들기 ──
 type MemberInput = { employeeId: string; input: Omit<EngineInput, 'withholding'>; pre: Blocker[]; notes: Blocker[]; closeId: string | null; contractId: string | null; taxId: string | null; snapshot: Row };
 type Built = { unverified: string[]; members: MemberInput[]; withholding: Withholding | null; bundle: Record<string, { id: string; hash: string }>; missing: ReferenceKind[]; inputHash: string };
-const REF_KINDS: ReferenceKind[] = ['pension.rate', 'pension.limit', 'health.rate', 'ltc.rate', 'employment.rate', 'income-tax.table', 'income-tax.child-adjust'];
+const REF_KINDS: ReferenceKind[] = ['pension.rate', 'pension.limit', 'health.rate', 'health.limit', 'ltc.rate', 'employment.rate', 'income-tax.table', 'income-tax.child-adjust'];
 
 async function loadBands(referenceId: string): Promise<TaxBand[]> {
   const { data } = await readAll((a,b) => db().from('payroll_tax_rows').select('wage_from, wage_to, family_count, base_tax').eq('reference_version_id', referenceId).order('wage_from').order('family_count').range(a,b));
