@@ -904,7 +904,9 @@
           "import_bad_file": "The file doesn't match the template.",
           "import_too_many": "Up to 500 rows at once."
         },
-        "open": "Add by Excel"
+        "tabs": "How to add",
+        "tabOne": "One record",
+        "tabMany": "Many by Excel"
       }
     },
     "notices": {

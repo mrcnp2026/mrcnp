@@ -18,7 +18,6 @@ import { buildOrgTree, groupScope } from '@/lib/org';
 import { loadOrgGroups } from '@/lib/org-data';
 import { kstDateTime, toKstDate } from '@/lib/time';
 import { groupPath } from '@/lib/org';
-import { PunchBulk } from './PunchBulk';
 
 function shift(ym: string, n: number) {
   const [y, m] = ym.split('-').map(Number);
@@ -69,9 +68,6 @@ export default async function RecordsPage({ searchParams }: { searchParams: Prom
         <div className="min-w-0">
           <h1 className="flex flex-wrap items-center gap-x-1 text-2xl font-bold">{t('title')}<HelpTip>{t('intro')}</HelpTip></h1>
         </div>
-        <div className="flex flex-wrap items-center gap-2">
-          {/* 엑셀로 넣기 (2026-10-20) — 단추 + 가운데 창 */}
-          <PunchBulk today={toKstDate(new Date())} />
         <nav className="flex items-center gap-1" aria-label={t('month')}>
           <Link href={q(shift(ym, -1))} className="flex min-h-11 min-w-11 items-center justify-center" aria-label={t('prev')}>
             <ChevronLeft aria-hidden size={22} strokeWidth={1.75} />
@@ -81,7 +77,6 @@ export default async function RecordsPage({ searchParams }: { searchParams: Prom
             <ChevronRight aria-hidden size={22} strokeWidth={1.75} />
           </Link>
         </nav>
-        </div>
       </header>
       {/* 바로가기 한 줄 — 기록 목록 · 연습/실제 기록 바꾸기 (2026-10-16 디자인: 링크가 한 줄씩 떨어져 세로가 길었다) */}
       <div className="flex flex-wrap items-center gap-x-4 text-sm">

@@ -30,6 +30,7 @@ import { leaveTypeName } from '@/lib/leave';
 import { SHIFT_COLOR_CLASS } from '@/lib/shifts';
 import { kstDateTime, toKstDate } from '@/lib/time';
 import { RecordAdd } from './RecordAdd';
+import { RecordAddTabs } from '../PunchBulk';
 
 // 폰: 한 쪽에 하루(최근 날부터) — 실제 직원 24명을 넣고 보니 7일이면 8천 px가 넘었다 (2026-10-16 디자인)
 const DATES_PER_PAGE = 1;
@@ -321,7 +322,8 @@ export default async function RecordListPage({ searchParams }: { searchParams: P
           <AddSheet id="record" title={t('add')} modal>
             <Card className="flex flex-col gap-3">
               <h2 className="hidden text-sm font-medium text-muted lg:block">{t('add')}</h2>
-              <RecordAdd people={addable} today={today} />
+              {/* 관리자: 한 건 · 엑셀로 여러 건 탭 (2026-10-20 의뢰인) */}
+              {admin ? <RecordAddTabs today={today} one={<RecordAdd people={addable} today={today} />} /> : <RecordAdd people={addable} today={today} />}
             </Card>
           </AddSheet>
           <Fab label={t('add')} items={[{ id: 'record', label: t('add') }]} />
