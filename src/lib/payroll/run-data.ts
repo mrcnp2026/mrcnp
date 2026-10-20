@@ -30,6 +30,7 @@ import { makeWithholding, referenceFrom, TEMP_INSURANCE_ROUNDING } from './engin
 import { asChildRule, asTaxRules, pickAt, type ReferenceKind, type TaxBand } from './reference';
 import { DEFAULT_LEDGER, INSURER_KEYS, payDateFor, type AllowancePolicy, type InsurerKey, type Ledger } from './settings';
 import { loadStaffPay, payrollAudit, type ContractRow, type TaxRow } from './staff-data';
+import { syncMonth } from './pension-data';
 
 const db = () => createAdminClient();
 type Row = Record<string, unknown>;
@@ -539,6 +540,8 @@ export async function finalizeRun(args: { id: string; expectedVersion: number; m
   if (!run.isTest && (await buildInputs(run)).unverified.length) throw new ApiError(409, 'payroll_basis_unverified');
   await setRun(run, { status: 'FINALIZED', finalized_by: args.me.id, finalized_at: new Date().toISOString() });
   await payrollAudit({ actorId: args.me.id, action: 'run.finalize', table: 'payroll_runs', subjectId: run.id, runId: run.id, requestId: args.requestId, detail: { generation: run.generationId } });
+  // 퇴직연금 DC 부담금 (묶음 32, 2026-10-20): 그 달 확정한 대장으로 다시 만든다. 실패해도 확정은 그대로 — 퇴직연금 화면에서 「다시 만들기」
+  if (run.kind !== 'DAILY') await syncMonth({ month: run.periodFrom, isTest: run.isTest, me: args.me }).catch((e) => console.error(JSON.stringify({ route: 'payroll.finalize.pension', detail: String((e as Error)?.message ?? e).slice(0, 200) })));
 }
 
 /** 대상에서 빼기(사유 필수) · 다시 넣기. 계산 결과는 오래된 것이 된다 → 다시 계산한다 */

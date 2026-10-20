@@ -4955,6 +4955,66 @@
         "import_bad_file": "양식이 맞지 않습니다. 「양식 받기」로 받은 엑셀에 적어 올려 주세요.",
         "import_too_many": "한 번에 300건까지 올릴 수 있습니다."
       }
+    },
+    "pension": {
+      "title": "퇴직연금 (DC)",
+      "intro": "확정기여형(DC) 퇴직연금은 회사가 해마다 임금총액의 1/12 이상을 직원 계좌에 넣어야 합니다(근로자퇴직급여보장법 제20조). 급여대장을 확정하면 그 달 부담금(임금총액 ÷ 12)이 저절로 만들어집니다.",
+      "note": "회사가 DC형인지 · DB형인지 · 퇴직금인지 급여 담당자 확인 전입니다(결정 사항 급여-40). DB형 · 퇴직금이면 가입자를 넣지 않으면 됩니다. 임금총액에 실비(자가운전 등)를 넣을지는 노무 확인 대기입니다.",
+      "forbidden": "급여 담당 관리자만 볼 수 있습니다.",
+      "month": "달 고르기",
+      "prev": "이전 달",
+      "next": "다음 달",
+      "won": "{n}원",
+      "monthTitle": "{m} 부담금",
+      "monthEmpty": "이 달에 DC 가입 중인 사람이 없습니다.",
+      "line": "임금총액 {wage}원 ÷ 12",
+      "noLine": "아직 없음 — 급여대장을 확정하거나 「다시 만들기」",
+      "paidChip": "{d} 냄",
+      "unpaidChip": "아직 안 냄",
+      "manualChip": "손 입력",
+      "balance": "적립 누계 {n}원",
+      "sum": "합계",
+      "sync": "확정한 급여대장으로 다시 만들기",
+      "synced": "{made}명 만들었습니다 · 낸 달 · 손 입력 {skipped}명은 그대로",
+      "export": "은행 납입 엑셀",
+      "paidOn": "은행에 낸 날",
+      "markPaid": "아직 안 낸 {n}명 「냄」 표시",
+      "markedPaid": "{n}명 표시했습니다",
+      "membersTitle": "가입자 {n}명",
+      "plan": {
+        "DC": "DC (확정기여형)",
+        "DB": "DB (확정급여형)"
+      },
+      "joinedLine": "가입 {d}",
+      "openingLine": "처음 적립금 {n}원 ({d} 기준)",
+      "endedLine": "끝 {d}",
+      "addTitle": "가입자 넣기",
+      "fEmployee": "직원",
+      "pick": "고르기",
+      "fPlan": "제도",
+      "fJoined": "가입일",
+      "fInstitution": "금융기관",
+      "fOpening": "처음 적립금 (원)",
+      "fOpeningAsOf": "처음 적립금 기준일",
+      "fEnded": "끝난 날",
+      "fNote": "메모",
+      "addMember": "넣기",
+      "saveMember": "고치기",
+      "remove": "가입자에서 빼기",
+      "removeYes": "빼기",
+      "cancel": "취소",
+      "manualTitle": "부담금 손으로 넣기",
+      "manualHint": "앱을 쓰기 전 달처럼 급여대장이 없는 달은 임금총액을 넣으면 ÷ 12로 넣습니다. 은행에 낸 달은 고칠 수 없습니다.",
+      "fMonth": "귀속 달",
+      "fWage": "임금총액 (원)",
+      "manualSave": "넣기",
+      "err": {
+        "pension_plan": "제도를 고르세요.",
+        "pension_joined": "가입일을 넣어 주세요.",
+        "pension_ended": "끝난 날은 가입일 뒤여야 합니다.",
+        "pension_opening": "처음 적립금을 넣으면 기준일도 넣어 주세요.",
+        "pension_paid": "은행에 낸 달은 고칠 수 없습니다."
+      }
     }
   },
   "side": {
@@ -5088,7 +5148,8 @@
     "noMenu": "맞는 메뉴가 없습니다.",
     "paySlips": "명세서 올리기",
     "roleSystem": "시스템관리자",
-    "payOvertimeComp": "연장 → 보상휴가"
+    "payOvertimeComp": "연장 → 보상휴가",
+    "payPension": "퇴직연금"
   },
   "nav": {
     "home": "홈",
@@ -6104,7 +6165,8 @@
       "paySlips": "명세서 올리기",
       "backups": "데이터베이스 백업",
       "setHolidays": "휴일",
-      "payOvertimeComp": "연장 → 보상휴가"
+      "payOvertimeComp": "연장 → 보상휴가",
+      "payPension": "퇴직연금"
     },
     "search": {
       "placeholder": "검색",

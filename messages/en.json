@@ -4955,6 +4955,66 @@
         "import_bad_file": "The file doesn't match the template.",
         "import_too_many": "Up to 300 rows at once."
       }
+    },
+    "pension": {
+      "title": "Retirement pension (DC)",
+      "intro": "For a defined-contribution (DC) plan, the company must pay at least 1/12 of annual wages into each worker's account. Finalizing payroll creates that month's contribution (wage total ÷ 12) automatically.",
+      "note": "Whether the company uses DC, DB or severance pay is not confirmed yet (decision 급여-40). For DB or severance, simply don't add members. Whether expense allowances count as wages awaits labor review.",
+      "forbidden": "Payroll admins only.",
+      "month": "Pick month",
+      "prev": "Previous month",
+      "next": "Next month",
+      "won": "₩{n}",
+      "monthTitle": "{m} contributions",
+      "monthEmpty": "No one is in a DC plan this month.",
+      "line": "Wage total ₩{wage} ÷ 12",
+      "noLine": "None yet — finalize payroll or rebuild",
+      "paidChip": "Paid {d}",
+      "unpaidChip": "Not paid",
+      "manualChip": "Manual",
+      "balance": "Balance ₩{n}",
+      "sum": "Total",
+      "sync": "Rebuild from finalized payroll",
+      "synced": "Built {made} · {skipped} paid or manual left as is",
+      "export": "Bank payment Excel",
+      "paidOn": "Paid on",
+      "markPaid": "Mark {n} unpaid as paid",
+      "markedPaid": "Marked {n}",
+      "membersTitle": "{n} members",
+      "plan": {
+        "DC": "DC (defined contribution)",
+        "DB": "DB (defined benefit)"
+      },
+      "joinedLine": "Joined {d}",
+      "openingLine": "Opening balance ₩{n} (as of {d})",
+      "endedLine": "Ended {d}",
+      "addTitle": "Add member",
+      "fEmployee": "Staff",
+      "pick": "Choose",
+      "fPlan": "Plan",
+      "fJoined": "Joined on",
+      "fInstitution": "Institution",
+      "fOpening": "Opening balance (₩)",
+      "fOpeningAsOf": "Opening balance as of",
+      "fEnded": "Ended on",
+      "fNote": "Note",
+      "addMember": "Add",
+      "saveMember": "Update",
+      "remove": "Remove member",
+      "removeYes": "Remove",
+      "cancel": "Cancel",
+      "manualTitle": "Add contribution manually",
+      "manualHint": "For months without payroll (before using the app), enter the wage total and ÷ 12 is added. Paid months can't change.",
+      "fMonth": "Month",
+      "fWage": "Wage total (₩)",
+      "manualSave": "Add",
+      "err": {
+        "pension_plan": "Choose a plan.",
+        "pension_joined": "Enter the join date.",
+        "pension_ended": "End date must be after the join date.",
+        "pension_opening": "Enter the as-of date with the opening balance.",
+        "pension_paid": "Paid months can't change."
+      }
     }
   },
   "side": {
@@ -5088,7 +5148,8 @@
     "noMenu": "No matching menu.",
     "paySlips": "Upload payslips",
     "roleSystem": "System admin",
-    "payOvertimeComp": "Overtime → comp leave"
+    "payOvertimeComp": "Overtime → comp leave",
+    "payPension": "Retirement pension"
   },
   "nav": {
     "home": "Home",
@@ -6104,7 +6165,8 @@
       "paySlips": "Upload payslips",
       "backups": "Database backups",
       "setHolidays": "Holidays",
-      "payOvertimeComp": "Overtime → comp leave"
+      "payOvertimeComp": "Overtime → comp leave",
+      "payPension": "Retirement pension"
     },
     "search": {
       "placeholder": "Search",
