@@ -25,14 +25,21 @@ export async function notifyStayEnding(now = new Date()): Promise<{ due: number;
   const db = createAdminClient();
   const { data: people } = await db.from('profiles').select('id, name, active, employee_no, role').in('id', staff.map((s) => s.id).concat(['00000000-0000-0000-0000-000000000000']));
   const alive = new Map((people ?? []).filter((p) => p.active && !p.employee_no?.startsWith('e2e-')).map((p) => [p.id as string, p.name as string]));
-  const due: { id: string; name: string; left: number; until: string }[] = [];
+  // 체류 기간 끝 · 체류자격외 활동허가 만료(60 · 30일 전 · 지남) · 출입국 방문 예약(3일 전 · 당일) — 묶음 32
+  const due: { id: string; name: string; left: number; until: string; what: 'stay' | 'permit' | 'visit' }[] = [];
   for (const s of staff) {
     const name = alive.get(s.id);
-    const left = daysToStayEnd(s.stayUntil, today);
-    const stage = stayStage(left);
-    if (!name || stage === null || !s.stayUntil) continue;
-    if (!(await firstTime(`stay-end:${s.id}:${s.stayUntil}:${stage}`))) continue;
-    due.push({ id: s.id, name, left: left!, until: s.stayUntil });
+    if (!name) continue;
+    for (const [what, date] of [['stay', s.stayUntil], ['permit', s.activityPermitUntil ?? null]] as const) {
+      const left = daysToStayEnd(date, today);
+      const stage = stayStage(left);
+      if (stage === null || !date) continue;
+      if (!(await firstTime(`${what === 'stay' ? 'stay-end' : 'permit-end'}:${s.id}:${date}:${stage}`))) continue;
+      due.push({ id: s.id, name, left: left!, until: date, what });
+    }
+    const v = daysToStayEnd(s.immigrationVisitOn ?? null, today);
+    const vStage = v === null ? null : v === 0 ? 0 : v > 0 && v <= 3 ? 3 : null;
+    if (vStage !== null && (await firstTime(`visit:${s.id}:${s.immigrationVisitOn}:${vStage}`))) due.push({ id: s.id, name, left: v!, until: s.immigrationVisitOn!, what: 'visit' });
   }
   if (!due.length) return none;
   const { data: admins } = await db.from('profiles').select('id, employee_no').eq('role', 'admin').eq('active', true);
@@ -40,10 +47,10 @@ export async function notifyStayEnding(now = new Date()): Promise<{ due: number;
   let sent = 0;
   for (const d of due) {
     sent += await sendPush(to, {
-      title: d.left < 0 ? `${d.name} 님 체류 기간이 지났습니다` : `${d.name} 님 체류 기간 ${d.left}일 남음`,
-      body: `체류 기간 끝 ${d.until} — 연장 · 변경 신청을 확인해 주세요`,
+      title: d.what === 'visit' ? (d.left === 0 ? `${d.name} 님 오늘 출입국 방문 예약` : `${d.name} 님 출입국 방문 예약 ${d.left}일 남음`) : d.left < 0 ? `${d.name} 님 ${d.what === 'stay' ? '체류 기간' : '활동허가'}이 지났습니다` : `${d.name} 님 ${d.what === 'stay' ? '체류 기간' : '활동허가'} ${d.left}일 남음`,
+      body: d.what === 'visit' ? `예약일 ${d.until} — 서류를 챙겨 주세요` : `${d.what === 'stay' ? '체류 기간 끝' : '체류자격외 활동허가 만료'} ${d.until} — 연장 · 변경 신청을 확인해 주세요`,
       url: `/admin/members/${d.id}#foreign`,
-      tag: `stay-end-${d.id}`,
+      tag: `${d.what}-end-${d.id}`,
     }).catch(() => 0);
   }
   return { due: due.length, sent };

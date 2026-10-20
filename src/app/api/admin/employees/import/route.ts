@@ -78,7 +78,7 @@ export const POST = api('admin.employees.import', async (req) => {
       const id = await createEmployee({ name: i.name, employeeNo: i.employeeNo, locale: 'ko', role: 'employee', joinedOn: i.joinedOn, phone: i.phone, jobTitle: i.jobTitle, groupId: i.groupId, createdBy: me.id });
       if (i.jobId || i.email) await db.from('profiles').update({ ...(i.jobId ? { job_id: i.jobId } : {}), ...(i.email ? { email: i.email } : {}), updated_by: me.id }).eq('id', id);
       if (i.email) emails.add(i.email);
-      if (i.nationality) await saveForeignInfo(id, { nationality: i.nationality, visaType: i.visaType, stayUntil: i.stayUntil, firstWorkInKorea: null }, me.id);
+      if (i.nationality || i.dormitory) await saveForeignInfo(id, { nationality: i.nationality, visaType: i.visaType, stayUntil: i.stayUntil, firstWorkInKorea: null, englishName: i.englishName, dormitory: i.dormitory }, me.id);
       await syncStaffHistorySafe(id, me.id);
       results.push({ row: l.row, ok: true });
     } catch (e) {

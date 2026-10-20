@@ -2,8 +2,8 @@
 // ★ 제안만 한다. 보험 가입 여부는 담당자가 사원별 급여 › 세무에서 근거를 적고 정한다(자동으로 바꾸지 않는다).
 // ★ 나라별 국민연금 적용은 상호주의라 해마다 바뀔 수 있다. 확인되지 않은 나라는 「공단 확인」으로 둔다 — 검증 대기 기록.
 
-export type ForeignInfo = { nationality: string | null; visaType: string | null; stayUntil: string | null; firstWorkInKorea: string | null };
-export const EMPTY_FOREIGN: ForeignInfo = { nationality: null, visaType: null, stayUntil: null, firstWorkInKorea: null };
+export type ForeignInfo = { nationality: string | null; visaType: string | null; stayUntil: string | null; firstWorkInKorea: string | null; englishName?: string | null; activityPermitUntil?: string | null; immigrationVisitOn?: string | null; dormitory?: string | null }; // 뒤 네 칸: 묶음 32
+export const EMPTY_FOREIGN: ForeignInfo = { nationality: null, visaType: null, stayUntil: null, firstWorkInKorea: null, englishName: null, activityPermitUntil: null, immigrationVisitOn: null, dormitory: null };
 
 /** 고를 수 있는 나라 (자주 쓰는 순). 목록에 없으면 「기타」로 두 글자 코드를 직접 넣는다 */
 export const COUNTRIES = ['TH', 'VN', 'CN', 'PH', 'ID', 'UZ', 'KH', 'MM', 'NP', 'MN', 'LK', 'BD', 'PK', 'KG', 'TL', 'LA', 'US'] as const;
@@ -29,7 +29,14 @@ export function cleanForeign(b: Record<string, unknown>, today: string): Foreign
   const stayUntil = date(b.stayUntil), firstWorkInKorea = date(b.firstWorkInKorea);
   if (stayUntil === undefined) return { error: 'foreign_stay' };
   if (firstWorkInKorea === undefined || (firstWorkInKorea !== null && (firstWorkInKorea < '1950-01-01' || firstWorkInKorea > today))) return { error: 'foreign_first_work' };
-  return { nationality, visaType, stayUntil, firstWorkInKorea };
+  // 묶음 32: 영어 이름(여권 표기) · 활동허가 만료일 · 출입국 방문 예약일 · 숙소
+  const plain = (v: unknown, max: number) => (v === undefined || v === null || v === '' ? null : typeof v === 'string' && v.trim().length <= max ? v.trim() : undefined);
+  const englishName = plain(b.englishName, 60), dormitory = plain(b.dormitory, 100);
+  if (englishName === undefined || (englishName !== null && !/^[A-Za-z][A-Za-z .,'-]*$/.test(englishName))) return { error: 'foreign_english_name' };
+  if (dormitory === undefined) return { error: 'foreign_dormitory' };
+  const activityPermitUntil = date(b.activityPermitUntil), immigrationVisitOn = date(b.immigrationVisitOn);
+  if (activityPermitUntil === undefined || immigrationVisitOn === undefined) return { error: 'foreign_stay' };
+  return { nationality, visaType, stayUntil, firstWorkInKorea, englishName: englishName ? englishName.toUpperCase() : null, activityPermitUntil, immigrationVisitOn, dormitory };
 }
 
 export type Suggest = 'YES' | 'NO' | 'CHECK' | 'ON_REQUEST';

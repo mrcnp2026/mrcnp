@@ -310,7 +310,9 @@
     "foreign_nationality": "Enter nationality as a 2-letter country code.",
     "foreign_visa": "Visa type is not valid (e.g. E-9).",
     "foreign_stay": "Stay end date is not valid.",
-    "foreign_first_work": "First work date must be today or earlier."
+    "foreign_first_work": "First work date must be today or earlier.",
+    "foreign_english_name": "English name: letters only, up to 60.",
+    "foreign_dormitory": "Dormitory: up to 100 characters."
   },
   "admin": {
     "nav": {
@@ -499,7 +501,9 @@
           "job": "Job",
           "nationality": "Nationality (TH, VN…)",
           "visaType": "Visa type",
-          "stayUntil": "Stay ends"
+          "stayUntil": "Stay ends",
+          "englishName": "English name",
+          "dormitory": "Dormitory"
         },
         "download": "Download template",
         "preview": "Preview",
@@ -518,7 +522,9 @@
           "import_bad_file": "The file doesn't match the template.",
           "import_too_many": "Up to 200 people at once.",
           "duplicate_no": "Employee no. already exists",
-          "email_taken": "Email already in use"
+          "email_taken": "Email already in use",
+          "foreign_english_name": "English name: letters only, up to 60.",
+          "foreign_dormitory": "Dormitory: up to 100 characters."
         }
       }
     },
@@ -6507,7 +6513,11 @@
         "TL": "Timor-Leste",
         "LA": "Laos",
         "US": "United States"
-      }
+      },
+      "englishName": "English name (passport)",
+      "dormitory": "Dormitory",
+      "permit": "Activity permit ends",
+      "visit": "Immigration visit"
     }
   },
   "signup": {

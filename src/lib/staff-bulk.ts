@@ -4,10 +4,10 @@
 import ExcelJS from 'exceljs';
 const EMPLOYEE_NO_RE = /^[A-Za-z0-9-]{1,20}$/; // lib/invite.ts와 같은 규칙 (그쪽은 서버 전용이라 여기 따로 둔다)
 
-export const STAFF_COLS = ['employeeNo', 'name', 'joinedOn', 'phone', 'email', 'jobTitle', 'group', 'job', 'nationality', 'visaType', 'stayUntil'] as const;
+export const STAFF_COLS = ['employeeNo', 'name', 'joinedOn', 'phone', 'email', 'jobTitle', 'group', 'job', 'nationality', 'visaType', 'stayUntil', 'englishName', 'dormitory'] as const; // 뒤 두 칸: 묶음 32
 export type StaffCol = (typeof STAFF_COLS)[number];
 export type StaffLabels = { sheet: string; guide: string; cols: Record<StaffCol, string> };
-export type StaffInput = { employeeNo: string; name: string; joinedOn: string | null; phone: string | null; email: string | null; jobTitle: string | null; groupId: string | null; jobId: string | null; nationality: string | null; visaType: string | null; stayUntil: string | null };
+export type StaffInput = { employeeNo: string; name: string; joinedOn: string | null; phone: string | null; email: string | null; jobTitle: string | null; groupId: string | null; jobId: string | null; nationality: string | null; visaType: string | null; stayUntil: string | null; englishName: string | null; dormitory: string | null };
 export type StaffLine = { row: number; employeeNo: string; name: string; input: StaffInput | null; error: string | null };
 type Named = { id: string; label: string };
 
@@ -74,10 +74,13 @@ export function readStaff(all: readonly unknown[][], ctx: { existingNos: Readonl
     if (nat && !/^[A-Z]{2}$/.test(nat)) { out.push(fail('foreign_nationality')); continue; }
     const visa = v.visaType.toUpperCase();
     if (visa && !/^[A-Z][0-9A-Z-]{0,9}$/.test(visa)) { out.push(fail('foreign_visa')); continue; }
+    const eng = v.englishName.toUpperCase();
+    if (eng && (eng.length > 60 || !/^[A-Z][A-Z .,'-]*$/.test(eng))) { out.push(fail('foreign_english_name')); continue; }
+    if (v.dormitory.length > 100) { out.push(fail('foreign_dormitory')); continue; }
     seen.add(v.employeeNo);
     out.push({
       row: i + 1, employeeNo: v.employeeNo, name: v.name, error: null,
-      input: { employeeNo: v.employeeNo, name: v.name, joinedOn, phone: phone || null, email: email || null, jobTitle: v.jobTitle.slice(0, 40) || null, groupId: group?.id ?? null, jobId: job?.id ?? null, nationality: nat && nat !== 'KR' ? nat : null, visaType: nat && nat !== 'KR' ? visa || null : null, stayUntil: nat && nat !== 'KR' ? stayUntil : null },
+      input: { employeeNo: v.employeeNo, name: v.name, joinedOn, phone: phone || null, email: email || null, jobTitle: v.jobTitle.slice(0, 40) || null, groupId: group?.id ?? null, jobId: job?.id ?? null, nationality: nat && nat !== 'KR' ? nat : null, visaType: nat && nat !== 'KR' ? visa || null : null, stayUntil: nat && nat !== 'KR' ? stayUntil : null, englishName: nat && nat !== 'KR' ? eng || null : null, dormitory: v.dormitory || null },
     });
   }
   return out;

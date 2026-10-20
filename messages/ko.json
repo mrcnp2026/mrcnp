@@ -310,7 +310,9 @@
     "foreign_nationality": "국적은 영문 두 글자 나라 코드로 넣어 주세요.",
     "foreign_visa": "체류 자격이 맞지 않습니다 (예: E-9).",
     "foreign_stay": "체류 기간 끝나는 날이 맞지 않습니다.",
-    "foreign_first_work": "국내 첫 근로일은 오늘이나 그 전 날짜로 넣어 주세요."
+    "foreign_first_work": "국내 첫 근로일은 오늘이나 그 전 날짜로 넣어 주세요.",
+    "foreign_english_name": "영어 이름은 영문자로 60자까지 넣어 주세요.",
+    "foreign_dormitory": "숙소는 100자까지 넣어 주세요."
   },
   "admin": {
     "nav": {
@@ -499,7 +501,9 @@
           "job": "직무",
           "nationality": "국적(TH·VN 등)",
           "visaType": "체류자격",
-          "stayUntil": "체류기간 끝"
+          "stayUntil": "체류기간 끝",
+          "englishName": "영어 이름",
+          "dormitory": "숙소"
         },
         "download": "양식 받기",
         "preview": "미리보기",
@@ -518,7 +522,9 @@
           "import_bad_file": "양식이 맞지 않습니다. 「양식 받기」로 받은 엑셀에 적어 올려 주세요.",
           "import_too_many": "한 번에 200명까지 올릴 수 있습니다.",
           "duplicate_no": "이미 있는 사번",
-          "email_taken": "이미 쓰는 이메일"
+          "email_taken": "이미 쓰는 이메일",
+          "foreign_english_name": "영어 이름은 영문자로 60자까지 넣어 주세요.",
+          "foreign_dormitory": "숙소는 100자까지 넣어 주세요."
         }
       }
     },
@@ -6507,7 +6513,11 @@
         "TL": "동티모르",
         "LA": "라오스",
         "US": "미국"
-      }
+      },
+      "englishName": "영어 이름 (여권)",
+      "dormitory": "숙소",
+      "permit": "활동허가 만료일",
+      "visit": "출입국 방문 예약일"
     }
   },
   "signup": {

@@ -35,21 +35,21 @@ export async function saveStaffDetails(employeeId: string, v: StaffDetails, acto
 // ── 외국인 정보 (묶음 31, 2026-10-20) — 관리자만 넣고 고친다. 같은 줄(staff_details)에 둔다 ──
 
 export async function loadForeignInfo(employeeId: string): Promise<ForeignInfo> {
-  const { data } = await createAdminClient().from('staff_details').select('nationality, visa_type, stay_until, first_work_in_korea').eq('id', employeeId).maybeSingle();
+  const { data } = await createAdminClient().from('staff_details').select('nationality, visa_type, stay_until, first_work_in_korea, english_name, activity_permit_until, immigration_visit_on, dormitory').eq('id', employeeId).maybeSingle();
   if (!data) return EMPTY_FOREIGN;
-  return { nationality: data.nationality ?? null, visaType: data.visa_type ?? null, stayUntil: data.stay_until ?? null, firstWorkInKorea: data.first_work_in_korea ?? null };
+  return { nationality: data.nationality ?? null, visaType: data.visa_type ?? null, stayUntil: data.stay_until ?? null, firstWorkInKorea: data.first_work_in_korea ?? null, englishName: data.english_name ?? null, activityPermitUntil: data.activity_permit_until ?? null, immigrationVisitOn: data.immigration_visit_on ?? null, dormitory: data.dormitory ?? null };
 }
 
 /** 외국인 직원 전체 (체류 기간 알림 · 목록) — 국적이 있는 사람만 */
 export async function loadForeignStaff(): Promise<(ForeignInfo & { id: string })[]> {
-  const { data } = await createAdminClient().from('staff_details').select('id, nationality, visa_type, stay_until, first_work_in_korea').not('nationality', 'is', null).limit(5000);
-  return (data ?? []).map((d) => ({ id: d.id as string, nationality: d.nationality, visaType: d.visa_type ?? null, stayUntil: d.stay_until ?? null, firstWorkInKorea: d.first_work_in_korea ?? null }));
+  const { data } = await createAdminClient().from('staff_details').select('id, nationality, visa_type, stay_until, first_work_in_korea, english_name, activity_permit_until, immigration_visit_on, dormitory').not('nationality', 'is', null).limit(5000);
+  return (data ?? []).map((d) => ({ id: d.id as string, nationality: d.nationality, visaType: d.visa_type ?? null, stayUntil: d.stay_until ?? null, firstWorkInKorea: d.first_work_in_korea ?? null, englishName: d.english_name ?? null, activityPermitUntil: d.activity_permit_until ?? null, immigrationVisitOn: d.immigration_visit_on ?? null, dormitory: d.dormitory ?? null }));
 }
 
 export async function saveForeignInfo(employeeId: string, v: ForeignInfo, actorId: string): Promise<void> {
   // 줄이 없으면 만든다(다른 개인 정보 칸은 기본값). 있으면 외국인 칸만 바꾼다
   const c = createAdminClient();
-  const row = { nationality: v.nationality, visa_type: v.visaType, stay_until: v.stayUntil, first_work_in_korea: v.firstWorkInKorea, updated_at: new Date().toISOString(), updated_by: actorId };
+  const row = { nationality: v.nationality, visa_type: v.visaType, stay_until: v.stayUntil, first_work_in_korea: v.firstWorkInKorea, english_name: v.englishName ?? null, activity_permit_until: v.activityPermitUntil ?? null, immigration_visit_on: v.immigrationVisitOn ?? null, dormitory: v.dormitory ?? null, updated_at: new Date().toISOString(), updated_by: actorId };
   const { data, error } = await c.from('staff_details').update(row).eq('id', employeeId).select('id');
   if (error) throw new Error(`saveForeignInfo: ${error.code}`);
   if (!data?.length) {

@@ -25,6 +25,11 @@ export function ForeignInfoForm({ endpoint, initial, today, payHref }: { endpoin
   const [visaType, setVisaType] = useState(initial.visaType ?? '');
   const [stayUntil, setStayUntil] = useState(initial.stayUntil ?? '');
   const [firstWork, setFirstWork] = useState(initial.firstWorkInKorea ?? '');
+  // 묶음 32: 영어 이름 · 활동허가 만료일 · 출입국 방문 예약일 · 숙소
+  const [englishName, setEnglishName] = useState(initial.englishName ?? '');
+  const [permit, setPermit] = useState(initial.activityPermitUntil ?? '');
+  const [visit, setVisit] = useState(initial.immigrationVisitOn ?? '');
+  const [dorm, setDorm] = useState(initial.dormitory ?? '');
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState<{ code: string; requestId?: string } | null>(null);
 
@@ -50,6 +55,14 @@ export function ForeignInfoForm({ endpoint, initial, today, payHref }: { endpoin
               {initial.stayUntil ? t('stayLine', { date: initial.stayUntil }) : t('stayNone')}
               {left !== null && <span className={left <= 30 ? ' font-semibold text-danger' : left <= 60 ? ' font-semibold text-warn' : ''}>{' · '}{left < 0 ? t('stayOver', { n: -left }) : t('stayLeft', { n: left })}</span>}
             </p>
+            {(initial.englishName || initial.dormitory || initial.activityPermitUntil || initial.immigrationVisitOn) && (
+              <dl className="num grid grid-cols-1 gap-x-4 gap-y-1 text-muted sm:grid-cols-2">
+                {initial.englishName && <div className="flex gap-2"><dt className="shrink-0">{t('englishName')}</dt><dd className="min-w-0 truncate font-semibold text-text">{initial.englishName}</dd></div>}
+                {initial.dormitory && <div className="flex gap-2"><dt className="shrink-0">{t('dormitory')}</dt><dd className="min-w-0 truncate font-semibold text-text">{initial.dormitory}</dd></div>}
+                {initial.activityPermitUntil && (() => { const d = daysToStayEnd(initial.activityPermitUntil, today)!; return <div className="flex gap-2"><dt className="shrink-0">{t('permit')}</dt><dd className={d <= 30 ? 'font-semibold text-danger' : d <= 60 ? 'font-semibold text-warn' : 'text-text'}>{initial.activityPermitUntil} · {d < 0 ? t('stayOver', { n: -d }) : t('stayLeft', { n: d })}</dd></div>; })()}
+                {initial.immigrationVisitOn && (() => { const d = daysToStayEnd(initial.immigrationVisitOn, today)!; return <div className="flex gap-2"><dt className="shrink-0">{t('visit')}</dt><dd className={d >= 0 && d <= 3 ? 'font-semibold text-warn' : 'text-text'}>{initial.immigrationVisitOn}{d >= 0 ? ` · ${t('stayLeft', { n: d })}` : ''}</dd></div>; })()}
+              </dl>
+            )}
             {s && (
               <div className="rounded-button border border-border p-3">
                 <p className="pb-2 font-bold">{t('suggestTitle')}</p>
@@ -83,7 +96,7 @@ export function ForeignInfoForm({ endpoint, initial, today, payHref }: { endpoin
         e.preventDefault();
         setBusy(true);
         setErr(null);
-        const r = await callApi(endpoint, { nationality: chosen || null, visaType: visaType || null, stayUntil: stayUntil || null, firstWorkInKorea: firstWork || null });
+        const r = await callApi(endpoint, { nationality: chosen || null, visaType: visaType || null, stayUntil: stayUntil || null, firstWorkInKorea: firstWork || null, englishName: englishName || null, activityPermitUntil: permit || null, immigrationVisitOn: visit || null, dormitory: dorm || null });
         setBusy(false);
         if (!r.ok) return setErr({ code: r.code, requestId: r.requestId });
         setEditing(false);
@@ -128,6 +141,22 @@ export function ForeignInfoForm({ endpoint, initial, today, payHref }: { endpoin
               <span className="text-muted">{t('firstWork')}</span>
               <input type="date" value={firstWork} max={today} onChange={(e) => setFirstWork(e.target.value)} className={input} />
               <span className="text-xs text-faint">{t('firstWorkHint')}</span>
+            </label>
+            <label className="flex min-w-0 flex-col gap-1">
+              <span className="text-muted">{t('englishName')}</span>
+              <input value={englishName} onChange={(e) => setEnglishName(e.target.value)} maxLength={60} className={`${input} uppercase`} autoComplete="off" />
+            </label>
+            <label className="flex min-w-0 flex-col gap-1">
+              <span className="text-muted">{t('dormitory')}</span>
+              <input value={dorm} onChange={(e) => setDorm(e.target.value)} maxLength={100} className={input} autoComplete="off" />
+            </label>
+            <label className="flex min-w-0 flex-col gap-1">
+              <span className="text-muted">{t('permit')}</span>
+              <input type="date" value={permit} onChange={(e) => setPermit(e.target.value)} className={input} />
+            </label>
+            <label className="flex min-w-0 flex-col gap-1">
+              <span className="text-muted">{t('visit')}</span>
+              <input type="date" value={visit} onChange={(e) => setVisit(e.target.value)} className={input} />
             </label>
           </>
         )}

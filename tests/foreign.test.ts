@@ -11,7 +11,8 @@ const TODAY = '2026-10-20';
 
 describe('외국인 정보 입력 검사', () => {
   it('나라 코드 · 체류 자격은 대문자로 맞추고, 내국인이면 나머지를 버린다', () => {
-    expect(cleanForeign({ nationality: 'th', visaType: 'e-9', stayUntil: '2027-03-01', firstWorkInKorea: '2024-05-01' }, TODAY)).toEqual({ nationality: 'TH', visaType: 'E-9', stayUntil: '2027-03-01', firstWorkInKorea: '2024-05-01' });
+    expect(cleanForeign({ nationality: 'th', visaType: 'e-9', stayUntil: '2027-03-01', firstWorkInKorea: '2024-05-01', englishName: 'somchai k', dormitory: ' 기숙사 ', activityPermitUntil: '2027-01-31' }, TODAY)).toEqual({ nationality: 'TH', visaType: 'E-9', stayUntil: '2027-03-01', firstWorkInKorea: '2024-05-01', englishName: 'SOMCHAI K', activityPermitUntil: '2027-01-31', immigrationVisitOn: null, dormitory: '기숙사' });
+    expect(cleanForeign({ nationality: 'VN', englishName: '응우옌' }, TODAY)).toEqual({ error: 'foreign_english_name' });
     expect(cleanForeign({ nationality: '', visaType: 'E-9' }, TODAY)).toEqual(EMPTY_FOREIGN);
     expect(cleanForeign({ nationality: 'KR', visaType: 'E-9' }, TODAY)).toEqual(EMPTY_FOREIGN);
   });
