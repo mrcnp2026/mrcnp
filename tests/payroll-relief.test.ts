@@ -73,9 +73,9 @@ describe('입력 검사 · 그 달에 쓸 값', () => {
     expect(reliefCovers({ from: '2026-11-01', to: null }, '2026-10-01', '2026-10-31')).toBe(false);
   });
   it('회사가 켠 것만 본다 · 켜져 있는데 「모름」이면 막는다', () => {
-    expect(reliefsForMonth({}, { sme: false, durunuri: false }, '2026-10-01', '2026-10-31')).toEqual({ reliefs: { smeRate: null, durunuri: null }, blockers: [] });
+    expect(reliefsForMonth({}, { sme: false, durunuri: false }, '2026-10-01', '2026-10-31')).toEqual({ reliefs: { smeRate: null, durunuri: null, flat19: false }, blockers: [] });
     expect(reliefsForMonth({}, { sme: true, durunuri: true }, '2026-10-01', '2026-10-31').blockers).toEqual([{ code: 'relief_unknown', detail: 'sme' }, { code: 'relief_unknown', detail: 'durunuri' }]);
     const raw = { sme: { state: 'YES', rate: 90, from: '2026-01-01', to: null }, durunuri: { state: 'YES', pensionRate: 80, employmentRate: 80, from: '2027-01-01', to: null } };
-    expect(reliefsForMonth(raw, { sme: true, durunuri: true }, '2026-10-01', '2026-10-31')).toEqual({ reliefs: { smeRate: 90, durunuri: null }, blockers: [] });
+    expect(reliefsForMonth(raw, { sme: true, durunuri: true }, '2026-10-01', '2026-10-31')).toEqual({ reliefs: { smeRate: 90, durunuri: null, flat19: false }, blockers: [] });
   });
 });

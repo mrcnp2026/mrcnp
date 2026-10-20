@@ -27,6 +27,7 @@ export default async function RetirementCasePage({ params }: { params: Promise<{
     ['f.periodFrom', k.periodFrom], ['f.periodTo', k.periodTo], ['f.excludedDays', t('daysValue', { n: f.number(i.excludedDays) })], ['cService', r.serviceDays === null ? t('blank') : t('daysValue', { n: f.number(r.serviceDays) })],
     ['f.wage3m', won(i.wage3m)], ['f.days3m', i.days3m === null ? t('blank') : t('daysValue', { n: i.days3m })], ['f.bonus1y', won(i.bonus1y)], ['f.leavePay1y', won(i.leavePay1y)],
     ['cAverage', won(r.averageDaily)], ['f.ordinaryDaily', won(i.ordinaryDaily)], ['cUsed', r.dailyUsed === null ? t('blank') : `${won(r.dailyUsed)} (${t(r.usedOrdinary ? 'usedOrdinary' : 'usedAverage')})`], ['cAmount', k.amount === null ? t('noAmount') : won(k.amount)],
+    ...(i.departureInsurance != null ? ([['f.departureInsurance', won(i.departureInsurance)], ['cCompanyPays', r.companyPays == null ? t('noAmount') : won(r.companyPays)]] as [string, string][]) : []),
     ['f.taxAmount', k.taxAmount === null ? t('blank') : won(k.taxAmount)], ['f.taxBasis', k.taxBasis ?? t('blank')],
   ];
 

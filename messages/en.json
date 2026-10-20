@@ -306,7 +306,11 @@
     "feature_off": "Your company has turned this request off. Ask an admin if you need it.",
     "hourly_leave_off": "Your company has turned off hourly leave. Please request whole days.",
     "outside_punch_off": "You can't punch outside a registered place (outside-place requests are turned off). Please punch inside the place.",
-    "evidence_required": "This leave needs an evidence file before approval. Attach a file, then approve."
+    "evidence_required": "This leave needs an evidence file before approval. Attach a file, then approve.",
+    "foreign_nationality": "Enter nationality as a 2-letter country code.",
+    "foreign_visa": "Visa type is not valid (e.g. E-9).",
+    "foreign_stay": "Stay end date is not valid.",
+    "foreign_first_work": "First work date must be today or earlier."
   },
   "admin": {
     "nav": {
@@ -3464,7 +3468,13 @@
       "exemptNoAnnual": "No yearly limit",
       "exemptUsed": "This year {amount}",
       "exemptLeft": "Remaining {amount}",
-      "exemptFull": "Yearly limit used up — the excess is taxed"
+      "exemptFull": "Yearly limit used up — the excess is taxed",
+      "tax_relief_flat19": "To set the 19% flat rate to Yes, enter a start date and basis (e.g. application date); the end must be after the start.",
+      "flat19Title": "Foreign worker 19% flat rate",
+      "flat19Hint": "Only for foreign workers who filed the flat-rate application. When Yes, 19% applies to all pay including non-taxable allowances, with no cuts or deductions.",
+      "flat19Yes": "Yes (19%)",
+      "flat19No": "No (withholding table)",
+      "flat19Line": "19% flat rate · from {from}"
     },
     "payRuns": {
       "title": "Payroll ledgers",
@@ -3653,7 +3663,9 @@
         "weekly_rest_with_absence": "There were absent days this month ({detail}). Weekly paid rest was not reduced — whether to drop it for a week with an absence is a company decision. Use an adjustment if needed.",
         "exempt_annual_reached": "Yearly tax-exempt limit reached — the excess was taxed ({detail})",
         "comp_exceeds_overtime": "Converted overtime exceeds this month's approved overtime ({detail} min) — cancel it in Overtime → comp leave or check approvals",
-        "overtime_comp_leave": "{detail}h of overtime converted to comp leave and removed from overtime pay"
+        "overtime_comp_leave": "{detail}h of overtime converted to comp leave and removed from overtime pay",
+        "flat19_applied": "Income tax calculated at the 19% flat rate for foreign workers (no exemptions or deductions).",
+        "flat19_with_sme": "The 19% flat rate can't be combined with the SME tax cut. Set only one to Yes in staff pay › tax."
       },
       "detail": {
         "pension": "national pension",
@@ -4062,7 +4074,8 @@
         "ordinaryDaily": "Ordinary daily wage (KRW, to compare)",
         "excludedDays": "Excluded days",
         "taxAmount": "Retirement income tax (KRW, confirmed)",
-        "taxBasis": "Basis of the tax amount"
+        "taxBasis": "Basis of the tax amount",
+        "departureInsurance": "Departure insurance payout (E-9 · H-2 only)"
       },
       "fieldNote": "Only 3/12 of bonus and leave pay goes into the average wage. If you enter an ordinary daily wage, the larger of the two is used. Amounts are rounded down to the won.",
       "cService": "Service days",
@@ -4123,7 +4136,8 @@
       "cardsKind": "Type",
       "unit": "",
       "showAll": "Show all",
-      "legalShort": "For manual checking — confirm with labor/tax experts before paying"
+      "legalShort": "For manual checking — confirm with labor/tax experts before paying",
+      "cCompanyPays": "Difference the company pays (severance − insurance)"
     },
     "insurance": {
       "title": "Social insurance",
@@ -6271,7 +6285,68 @@
     "sumCerts": "{n} certificates",
     "sumCar": "Has a car",
     "sumFamily": "{n} dependents",
-    "sumEmpty": "Not entered yet — tap to add"
+    "sumEmpty": "Not entered yet — tap to add",
+    "foreign": {
+      "title": "Foreign worker info",
+      "adminNote": "Admins only. Insurance and tax don't change here — use the suggestions below and set them in staff pay.",
+      "domestic": "Korean national",
+      "summary": "{country} · {visa}",
+      "visaNone": "No visa type",
+      "stayLine": "Stay ends {date}",
+      "stayNone": "Stay end date not entered",
+      "stayLeft": "{n} days left",
+      "stayOver": "{n} days past",
+      "suggestTitle": "Insurance and tax suggestion",
+      "ins": {
+        "pension": "Pension",
+        "health": "Health",
+        "employment": "Employment",
+        "accident": "Accident"
+      },
+      "sug": {
+        "YES": "Enroll",
+        "NO": "Exempt",
+        "CHECK": "Check with NPS (varies by country)",
+        "ON_REQUEST": "Enroll if the worker applies"
+      },
+      "flat": {
+        "ELIGIBLE": "Income tax: the 19% flat rate is available if the worker applies (no exemptions or deductions).",
+        "NOT_ELIGIBLE": "Income tax: not eligible for the 19% flat rate — use the withholding table.",
+        "NEED_FIRST_WORK": "Income tax: enter the first work date in Korea to check 19% flat-rate eligibility."
+      },
+      "departure": "Severance: departure guarantee insurance replaces severance. Enter the insurance payout in the retirement settlement to see the difference the company owes.",
+      "suggestNote": "Suggestions simplify the legal rules. Pension coverage by country can change — confirm with NPS.",
+      "goPay": "Set in staff pay",
+      "nationality": "Nationality",
+      "otherCountry": "Other (enter code)",
+      "otherCode": "Country code (2 letters)",
+      "visa": "Visa type",
+      "stayUntil": "Stay ends on",
+      "firstWork": "First work date in Korea",
+      "firstWorkHint": "Used to check eligibility for the 19% flat income tax.",
+      "edit": "Edit",
+      "save": "Save",
+      "cancel": "Cancel",
+      "country": {
+        "TH": "Thailand",
+        "VN": "Vietnam",
+        "CN": "China",
+        "PH": "Philippines",
+        "ID": "Indonesia",
+        "UZ": "Uzbekistan",
+        "KH": "Cambodia",
+        "MM": "Myanmar",
+        "NP": "Nepal",
+        "MN": "Mongolia",
+        "LK": "Sri Lanka",
+        "BD": "Bangladesh",
+        "PK": "Pakistan",
+        "KG": "Kyrgyzstan",
+        "TL": "Timor-Leste",
+        "LA": "Laos",
+        "US": "United States"
+      }
+    }
   },
   "signup": {
     "title": "Sign up with email",

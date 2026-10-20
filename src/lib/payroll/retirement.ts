@@ -18,6 +18,7 @@ export type RetirementInput = {
   bonus1y: number;             // 직전 1년 상여 총액
   leavePay1y: number;          // 직전 1년 연차수당
   ordinaryDaily: number | null; // 1일 통상임금 (넣으면 평균임금과 비교한다)
+  departureInsurance?: number | null; // E-9 · H-2 출국만기보험 받은 금액 (묶음 31) — 있으면 회사가 줄 차액 = 퇴직급여 − 이 금액
 };
 export type RetirementMissing = 'period' | 'wage3m' | 'days3m' | 'under_one_year' | 'bad_period' | 'bad_days3m';
 export type RetirementResult = {
@@ -27,6 +28,7 @@ export type RetirementResult = {
   dailyUsed: string | null;        // 실제로 쓴 1일 임금
   usedOrdinary: boolean;           // 통상임금이 더 커서 그것을 썼는가
   amount: number | null;           // 퇴직급여 (원). 빠진 입력이 있으면 null
+  companyPays?: number | null;     // 출국만기보험을 넣었으면 회사가 더 줄 차액(0 이상). 넣지 않았으면 없음
   rule: string;
 };
 
@@ -64,7 +66,10 @@ export function calcRetirement(i: RetirementInput): RetirementResult {
   const usedOrdinary = ordinary !== null && ordinary > average;
   const daily = usedOrdinary ? ordinary! : average;
   const amount = missing.length === 0 && serviceDays !== null ? Number(toWon(div(mul(mul(daily, dec(30)), dec(serviceDays)), dec(365)), { mode: 'FLOOR', unit: 1 })) : null;
-  return { ...base, missing, averageDaily: text(average), dailyUsed: text(daily), usedOrdinary, amount };
+  // 출국만기보험(외국인고용법 제13조): 보험금이 법정 퇴직금보다 적으면 회사가 차액을 준다. 많으면 0
+  const dep = i.departureInsurance ?? null;
+  const companyPays = dep === null ? undefined : amount === null ? null : Math.max(0, amount - dep);
+  return { ...base, missing, averageDaily: text(average), dailyUsed: text(daily), usedOrdinary, amount, ...(companyPays === undefined ? {} : { companyPays }) };
 }
 
 /** 저장 · 요청에서 온 값을 입력 모양으로 맞춘다 (모르는 값은 버린다) */
@@ -75,5 +80,5 @@ export function toRetirementInput(v: unknown): RetirementInput {
     const n = typeof x === 'number' ? x : typeof x === 'string' && x.trim() !== '' ? Number(x.replace(/,/g, '')) : NaN;
     return Number.isFinite(n) && n >= 0 && n <= 1e12 ? Math.round(n) : null;
   };
-  return { periodFrom: date(o.periodFrom), periodTo: date(o.periodTo), excludedDays: num(o.excludedDays) ?? 0, wage3m: num(o.wage3m), days3m: num(o.days3m), bonus1y: num(o.bonus1y) ?? 0, leavePay1y: num(o.leavePay1y) ?? 0, ordinaryDaily: num(o.ordinaryDaily) };
+  return { periodFrom: date(o.periodFrom), periodTo: date(o.periodTo), excludedDays: num(o.excludedDays) ?? 0, wage3m: num(o.wage3m), days3m: num(o.days3m), bonus1y: num(o.bonus1y) ?? 0, leavePay1y: num(o.leavePay1y) ?? 0, ordinaryDaily: num(o.ordinaryDaily), departureInsurance: num(o.departureInsurance) };
 }

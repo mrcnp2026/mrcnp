@@ -59,10 +59,12 @@ export type TaxInput = {
 /** 감면 · 지원 (DB 묶음 8, 2026-10-14). 회사 설정(사원급여 기본)에서 켠 것만 화면에 보이고 계산에 쓴다. 옛 판은 「모름」 */
 export type SmeRelief = { state: Tri; rate: number | null; from: string | null; to: string | null; note: string | null }; // 중소기업 취업자 소득세 감면 — 감면율 %
 export type DurunuriRelief = { state: Tri; pensionRate: number | null; employmentRate: number | null; from: string | null; to: string | null; note: string | null }; // 두루누리 — 근로자 보험료 지원율 %
-export type Reliefs = { sme: SmeRelief; durunuri: DurunuriRelief };
+export type Flat19Relief = { state: 'YES' | 'NO'; from: string | null; to: string | null; note: string | null }; // 외국인 단일세율 19%(조세특례제한법 제18조의2) — 본인 신청. 회사 설정 스위치 없이 직원마다 (묶음 31, 2026-10-20)
+export type Reliefs = { sme: SmeRelief; durunuri: DurunuriRelief; flat19?: Flat19Relief }; // flat19가 없는 예전 판 = 아니오
 export const UNKNOWN_RELIEFS: Reliefs = {
   sme: { state: 'UNKNOWN', rate: null, from: null, to: null, note: null },
   durunuri: { state: 'UNKNOWN', pensionRate: null, employmentRate: null, from: null, to: null, note: null },
+  flat19: { state: 'NO', from: null, to: null, note: null },
 };
 export const SME_RATES = [50, 70, 90, 100] as const; // 감면율 고르기(임시 — 검증 대기 기록). 대상에 따라 다르다
 /** 그 달(첫날~마지막 날)에 감면 · 지원 기간이 걸치는가 — 끝은 그 날까지 */
@@ -123,9 +125,17 @@ export function validateReliefs(v: unknown): Result<Reliefs> {
   if ([sf, st, df, dt, sn, dn, sr, pr, er].some((x) => x === undefined)) return { ok: false, code: 'tax_relief' };
   if (sState === 'YES' && (sr === null || !(SME_RATES as readonly number[]).includes(sr!) || !sf || !sn || (st && st < sf!))) return { ok: false, code: 'tax_relief_sme' };
   if (dState === 'YES' && (pr === null || er === null || (pr === 0 && er === 0) || !df || !dn || (dt && dt < df!))) return { ok: false, code: 'tax_relief_durunuri' };
+  // 단일세율 19%: 「예」면 시작일(신청한 달) · 근거(신청서 제출일 등)가 있어야 한다. 보내지 않으면 「아니오」
+  const g = (o.flat19 && typeof o.flat19 === 'object' ? o.flat19 : {}) as Record<string, unknown>;
+  const gState = g.state ?? 'NO';
+  const [gf, gt, gn] = [date(g.from), date(g.to), text(g.note, 200)];
+  if ((gState !== 'YES' && gState !== 'NO') || gf === undefined || gt === undefined || gn === undefined) return { ok: false, code: 'tax_relief' };
+  if (gState === 'YES' && (!gf || !gn || (gt && gt < gf))) return { ok: false, code: 'tax_relief_flat19' };
+  const flat19: Flat19Relief = gState === 'YES' ? { state: 'YES', from: gf!, to: gt ?? null, note: gn! } : { state: 'NO', from: null, to: null, note: gn ?? null };
   return {
     ok: true,
     value: {
+      flat19,
       sme: sState === 'YES' ? { state: 'YES', rate: sr!, from: sf!, to: st ?? null, note: sn! } : { state: sState, rate: null, from: null, to: null, note: sn ?? null },
       durunuri: dState === 'YES' ? { state: 'YES', pensionRate: pr!, employmentRate: er!, from: df!, to: dt ?? null, note: dn! } : { state: dState, pensionRate: null, employmentRate: null, from: null, to: null, note: dn ?? null },
     },
@@ -136,7 +146,7 @@ export function validateReliefs(v: unknown): Result<Reliefs> {
  * 한 달 계산에 쓸 감면 · 지원을 정한다. 회사 설정에서 끈 것은 보지 않는다.
  * 켜져 있는데 그 직원이 「모름」이면 0원으로 넘어가지 않고 막는다(relief_unknown). 「예」라도 기간이 그 달에 걸치지 않으면 적용하지 않는다.
  */
-export function reliefsForMonth(raw: unknown, on: { sme: boolean; durunuri: boolean }, from: string, last: string): { reliefs: { smeRate: number | null; durunuri: { pension: number; employment: number } | null }; blockers: { code: string; detail: string }[] } {
+export function reliefsForMonth(raw: unknown, on: { sme: boolean; durunuri: boolean }, from: string, last: string): { reliefs: { smeRate: number | null; durunuri: { pension: number; employment: number } | null; flat19: boolean }; blockers: { code: string; detail: string }[] } {
   const r = (raw && typeof raw === 'object' ? raw : {}) as Partial<Reliefs>;
   const sme = { ...UNKNOWN_RELIEFS.sme, ...(r.sme ?? {}) }, duru = { ...UNKNOWN_RELIEFS.durunuri, ...(r.durunuri ?? {}) };
   const blockers: { code: string; detail: string }[] = [];
@@ -150,7 +160,11 @@ export function reliefsForMonth(raw: unknown, on: { sme: boolean; durunuri: bool
     if (duru.state === 'UNKNOWN') blockers.push({ code: 'relief_unknown', detail: 'durunuri' });
     else if (duru.state === 'YES' && reliefCovers(duru, from, last)) durunuri = { pension: duru.pensionRate ?? 0, employment: duru.employmentRate ?? 0 };
   }
-  return { reliefs: { smeRate, durunuri }, blockers };
+  // 단일세율 19%는 회사 스위치와 상관없이 그 직원이 「예」이고 기간이 그 달에 걸치면 쓴다. 감면(중소기업)과 함께 쓰지 않는다 — 19%를 고르면 감면 · 공제가 없다
+  const g = r.flat19;
+  const flat19 = !!g && g.state === 'YES' && reliefCovers(g, from, last);
+  if (flat19 && smeRate) { blockers.push({ code: 'flat19_with_sme', detail: 'sme' }); smeRate = null; }
+  return { reliefs: { smeRate, durunuri, flat19 }, blockers };
 }
 
 export type ItemAssign = { itemCode: string; amount: number | null; note: string | null };

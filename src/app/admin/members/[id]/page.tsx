@@ -31,7 +31,9 @@ import { ProfileSection } from './ProfileSection';
 import { StaffNotes } from './StaffNotes';
 import { loadStaffNotes } from '@/lib/staff-notes';
 import { StaffDetailsForm } from '@/components/StaffDetailsForm';
-import { loadStaffDetails } from '@/lib/staff-details';
+import { ForeignInfoForm } from '@/components/ForeignInfoForm';
+import { daysToStayEnd } from '@/lib/foreign-rules';
+import { loadForeignInfo, loadStaffDetails } from '@/lib/staff-details';
 
 export default async function MemberDetailPage({ params, searchParams }: { params: Promise<{ id: string }>; searchParams: Promise<{ sp?: string }> }) {
   const t = await getTranslations('admin.members');
@@ -50,7 +52,7 @@ export default async function MemberDetailPage({ params, searchParams }: { param
     loadOrgGroups(),
   ]);
   if (!p) notFound();
-  const details = await loadStaffDetails(p.id); // 개인 정보 (묶음 17) — 직원이 넣고 관리자도 고친다
+  const [details, foreign] = await Promise.all([loadStaffDetails(p.id), loadForeignInfo(p.id)]); // 개인 정보 (묶음 17) — 직원이 넣고 관리자도 고친다 · 외국인 정보 (묶음 31) — 관리자만
   // 부양가족 · 자녀 수 (미팅 2026-10-15): 급여 세무 판(사원별 급여 › 세금)에 있는 값을 여기서도 보여 준다 — 고치는 곳은 급여 한 곳
   const today = toKstDate(new Date());
   const { data: taxNow } = await db.from('payroll_employee_tax_versions').select('family_count, child_count').eq('employee_id', id).eq('status', 'active').lte('valid_from', today).order('valid_from', { ascending: false }).limit(1).maybeSingle();
@@ -216,6 +218,12 @@ export default async function MemberDetailPage({ params, searchParams }: { param
                 {td('familyEdit')} ›
               </Link>
             </div>
+          </Fold>
+
+          {/* 외국인 정보 (묶음 31, 2026-10-20 의뢰인: 태국 · 베트남 직원) — 관리자만. 체류 기간이 60일 안이면 접힌 줄에 남은 날 */}
+          <Fold id="foreign" title={td('foreign.title')} summary={foreign.nationality ? `${td.has(`foreign.country.${foreign.nationality}`) ? td(`foreign.country.${foreign.nationality}`) : foreign.nationality} · ${foreign.visaType ?? td('foreign.visaNone')}` : td('foreign.domestic')} aside={(() => { const left = daysToStayEnd(foreign.stayUntil, today); return left !== null && left <= 60 ? <Chip tone={left <= 30 ? 'danger' : 'warn'}>{left < 0 ? td('foreign.stayOver', { n: -left }) : td('foreign.stayLeft', { n: left })}</Chip> : undefined; })()}>
+            <p className="pb-3 text-xs text-faint">{td('foreign.adminNote')}</p>
+            <ForeignInfoForm endpoint={`${api}/foreign`} initial={foreign} today={today} payHref={`/admin/payroll/staff/${p.id}`} />
           </Fold>
 
           {/* 급(상)여 명세서 (2026-10-19 의뢰인): 접힌 채 한 줄(가장 최근 달 · 실지급) — 펴면 6개월씩, 넘으면 쪽 넘김. 폰 · PC 같은 접기 카드 */}

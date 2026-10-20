@@ -12,6 +12,7 @@ import { loadItems, reliefSwitches } from '@/lib/payroll/data';
 import { exemptYtdForYear, loadPayHistory, previewPay } from '@/lib/payroll/run-data';
 import { OFFICE } from '@/config/office';
 import { loadStaffPay } from '@/lib/payroll/staff-data';
+import { loadForeignInfo } from '@/lib/staff-details';
 import { createAdminClient } from '@/lib/supabase/admin';
 import { toKstDate } from '@/lib/time';
 import { ContractForm, ItemForms, TaxForm } from './StaffPayForms';
@@ -30,6 +31,7 @@ export default async function StaffPayDetailPage({ params }: { params: Promise<{
     reliefSwitches(toKstDate(new Date())),
   ]);
   if (!p) notFound();
+  const foreign = await loadForeignInfo(id); // 외국인 직원이면 세무에 단일세율 19% 칸을 보인다 (묶음 31)
   const today = toKstDate(new Date());
   const contract = versionAt(pay.contracts, today);
   const tax = versionAt(pay.taxes, today);
@@ -111,6 +113,12 @@ export default async function StaffPayDetailPage({ params }: { params: Promise<{
               </div>
             ))}
             <div className="flex justify-between gap-3"><dt className="text-muted">{t('fLoan')}</dt><dd>{t(`tri.${tax.studentLoan.state}`)}{tax.studentLoan.monthlyAmount !== null && ` · ${won(tax.studentLoan.monthlyAmount)}`}{tax.studentLoan.from && ` · ${tax.studentLoan.to ? t('period', { from: tax.studentLoan.from, to: tax.studentLoan.to }) : t('periodOpen', { from: tax.studentLoan.from })}`}</dd></div>
+            {tax.reliefs.flat19?.state === 'YES' && (
+              <div className="flex justify-between gap-3">
+                <dt className="text-muted">{t('flat19Title')}</dt>
+                <dd>{t('flat19Line', { from: tax.reliefs.flat19.from ?? '' })}</dd>
+              </div>
+            )}
             {reliefOn.sme && (
               <div className="flex justify-between gap-3">
                 <dt className="text-muted">{t('smeTitle')}</dt>
@@ -135,7 +143,7 @@ export default async function StaffPayDetailPage({ params }: { params: Promise<{
           <p className="pt-3 text-sm text-warn">{t('gap.no_tax')}</p>
         )}
         {!reliefOn.sme && !reliefOn.durunuri && <p className="pt-2 text-xs text-faint">{t('reliefOff')}</p>}
-        <TaxForm employeeId={id} today={today} version={pay.taxes[0]?.version ?? 0} last={pay.taxes[0] ?? null} reliefOn={reliefOn} />
+        <TaxForm employeeId={id} today={today} version={pay.taxes[0]?.version ?? 0} last={pay.taxes[0] ?? null} reliefOn={reliefOn} foreign={!!foreign.nationality} />
         {pay.taxes.length > 0 && (
           <ul className="num mt-4 flex flex-col gap-1 border-t border-border pt-3 text-xs text-faint">
             {pay.taxes.map((x) => (

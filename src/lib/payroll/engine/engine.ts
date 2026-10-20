@@ -6,7 +6,7 @@
 import { AUTO_PAYMENT_CODES, canonicalItemCode } from './reserved-items';
 import { add, dec, div, hoursOf, isNeg, max, min, mul, sub, text, toWon, type Dec, type Rounding } from './decimal';
 
-export const ENGINE_VERSION = 'engine-1.5'; // 1.5 (2026-10-20): 일부 비과세(식대 등)의 비과세분을 보험 기준에서 뺌 · 건강보험 월 보험료 상한 · 하한. 1.4 (2026-10-20): 보험마다 공제 기준을 따로(국민연금 · 건강 · 고용, 비우면 기본 기준). 1.3 (2026-10-19): 비과세 연간 한도 · 누적. 1.2 (2026-10-16): 시급제 주휴 · 유급휴일, 시급제 기본급은 소정 시간만 + 연장 · 휴일 줄에 1배 포함
+export const ENGINE_VERSION = 'engine-1.6'; // 1.6 (2026-10-20): 외국인 단일세율 19%(조세특례제한법 제18조의2) — 비과세 없이 지급 전액 × 19%, 10원 미만 버림. 1.5 (2026-10-20): 일부 비과세(식대 등)의 비과세분을 보험 기준에서 뺌 · 건강보험 월 보험료 상한 · 하한. 1.4 (2026-10-20): 보험마다 공제 기준을 따로(국민연금 · 건강 · 고용, 비우면 기본 기준). 1.3 (2026-10-19): 비과세 연간 한도 · 누적. 1.2 (2026-10-16): 시급제 주휴 · 유급휴일, 시급제 기본급은 소정 시간만 + 연장 · 휴일 줄에 1배 포함
 
 export type EngineContract = { payType: 'MONTHLY' | 'HOURLY' | 'ANNUAL'; amount: number; monthlyHours: number | null; annualDivisor: number | null; included: { overtimeHours: number | null; holidayHours: number | null } };
 export type Tri = 'YES' | 'NO' | 'UNKNOWN';
@@ -17,7 +17,7 @@ export type EngineTax = {
   insurance: Record<'pension' | 'health' | 'employment' | 'accident', { state: Tri; reportedWage: number | null }>;
   studentLoan: { state: Tri; monthlyAmount: number | null };
   /** 그 달에 적용하는 감면 · 지원(넘겨주는 쪽이 회사 설정 · 기간을 보고 정한다). 없으면 적용 안 함 */
-  reliefs?: { smeRate: number | null; durunuri: { pension: number; employment: number } | null };
+  reliefs?: { smeRate: number | null; durunuri: { pension: number; employment: number } | null; flat19?: boolean }; // flat19 = 외국인 단일세율 19% (engine-1.6)
 };
 /** 한 가지 시간 축에서 나눈 분(分). 실제 시간에서 구한 연장과 끊은 총시간을 섞지 않는다 — 넘겨주는 쪽이 한 축으로 맞춰서 준다 */
 export type EngineTime = {
@@ -310,7 +310,22 @@ export function calculateStatement(input: EngineInput): EngineResult {
     }
 
     // ── 5. 소득세 · 지방소득세 ──
-    if (!input.withholding) block('reference_missing', 'income-tax');
+    if (tax.reliefs?.flat19) {
+      // 외국인 단일세율 19%: 비과세 · 공제 · 감면을 적용하지 않는다 → 그 달 지급 전액(상여는 같은 묶음의 앞 명세 과세분 포함) × 19%, 10원 미만 버림. 지방소득세 = 그 10%(10원 미만 버림)
+      if (input.runKind === 'BONUS' && !input.prior) block('bonus_prior_missing');
+      else {
+        const gross = lines.filter((x) => x.kind === 'PAYMENT').reduce((a, l) => a + l.amount, 0);
+        const group = gross + (input.runKind === 'BONUS' ? input.prior!.taxable : 0);
+        const already = input.runKind === 'BONUS' ? input.prior! : { incomeTax: 0, localTax: 0 };
+        const groupIncome = Math.floor((Math.max(0, group) * 19) / 100 / 10) * 10;
+        const groupLocal = Math.floor(groupIncome / 100) * 10;
+        const one: Rounding = { mode: 'HALF_UP', unit: 1 };
+        warnings.push({ code: 'flat19_applied' });
+        push({ code: 'INCOME_TAX', kind: 'DEDUCTION', label: 'incomeTax', raw: sub(dec(groupIncome), dec(already.incomeTax)), rounding: one, trace: { flat19: true, base: group, groupTax: groupIncome, already: already.incomeTax } });
+        push({ code: 'LOCAL_TAX', kind: 'DEDUCTION', label: 'localTax', raw: sub(dec(groupLocal), dec(already.localTax)), rounding: one, trace: { groupTax: groupLocal, already: already.localTax } });
+        taxable = gross; // 명세 · 다음 상여의 기준: 19%를 매긴 금액
+      }
+    } else if (!input.withholding) block('reference_missing', 'income-tax');
     else if (input.runKind === 'BONUS' && !input.prior) block('bonus_prior_missing');
     else {
       // 상여: 같은 징수 묶음 전체의 세액에서 앞서 낸 세액을 뺀 차액만 (정기 급여의 세금을 또 더하지 않는다)

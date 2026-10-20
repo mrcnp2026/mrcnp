@@ -130,7 +130,8 @@ export function ContractForm({ employeeId, today, version, last }: { employeeId:
   );
 }
 
-export function TaxForm({ employeeId, today, version, last, reliefOn }: { employeeId: string; today: string; version: number; last: TaxInput | null; reliefOn: { sme: boolean; durunuri: boolean } }) {
+export function TaxForm({ employeeId, today, version, last, reliefOn, foreign = false }: { employeeId: string; today: string; version: number; last: TaxInput | null; reliefOn: { sme: boolean; durunuri: boolean }; foreign?: boolean }) {
+  const showFlat = foreign || last?.reliefs.flat19?.state === 'YES'; // 외국인 직원(묶음 31)이거나 이미 「예」인 사람만
   const t = useTranslations('admin.staffPay');
   const { busy, err, done, save } = useSave(employeeId);
   const [open, setOpen] = useState(false);
@@ -155,6 +156,7 @@ export function TaxForm({ employeeId, today, version, last, reliefOn }: { employ
               reliefs: {
                 sme: reliefOn.sme ? { state: f.get('sme.state'), rate: f.get('sme.rate') || null, from: f.get('sme.from') || null, to: f.get('sme.to') || null, note: f.get('sme.note') || null } : (last?.reliefs.sme ?? UNKNOWN_RELIEFS.sme),
                 durunuri: reliefOn.durunuri ? { state: f.get('duru.state'), pensionRate: f.get('duru.pension') || null, employmentRate: f.get('duru.employment') || null, from: f.get('duru.from') || null, to: f.get('duru.to') || null, note: f.get('duru.note') || null } : (last?.reliefs.durunuri ?? UNKNOWN_RELIEFS.durunuri),
+                flat19: showFlat ? { state: f.get('flat.state'), from: f.get('flat.from') || null, to: f.get('flat.to') || null, note: f.get('flat.note') || null } : (last?.reliefs.flat19 ?? UNKNOWN_RELIEFS.flat19),
               },
             });
             if (ok) setOpen(false);
@@ -274,6 +276,27 @@ export function TaxForm({ employeeId, today, version, last, reliefOn }: { employ
             </fieldset>
           )}
           {(reliefOn.sme || reliefOn.durunuri) && <p className="text-xs text-faint md:col-span-2">{t('reliefHint')}</p>}
+          {showFlat && (
+            <fieldset className="grid gap-2 rounded-button border border-border p-3 md:col-span-2 md:grid-cols-3">
+              <legend className="px-1 font-bold">{t('flat19Title')}</legend>
+              <Label text={t('fTarget')}>
+                <select name="flat.state" defaultValue={last?.reliefs.flat19?.state ?? 'NO'} className={field}>
+                  <option value="NO">{t('flat19No')}</option>
+                  <option value="YES">{t('flat19Yes')}</option>
+                </select>
+              </Label>
+              <Label text={t('fReliefFrom')}>
+                <input name="flat.from" type="date" defaultValue={last?.reliefs.flat19?.from ?? ''} className={field} />
+              </Label>
+              <Label text={t('fReliefTo')}>
+                <input name="flat.to" type="date" defaultValue={last?.reliefs.flat19?.to ?? ''} className={field} />
+              </Label>
+              <Label text={t('fReliefNote')}>
+                <input name="flat.note" maxLength={200} defaultValue={last?.reliefs.flat19?.note ?? ''} className={field} autoComplete="off" />
+              </Label>
+              <p className="text-xs text-faint md:col-span-2">{t('flat19Hint')}</p>
+            </fieldset>
+          )}
           <Label text={t('fValidFrom')}>
             <input name="validFrom" type="date" required defaultValue={today} className={field} />
           </Label>

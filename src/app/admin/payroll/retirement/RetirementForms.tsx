@@ -32,9 +32,9 @@ function useCall() {
   return { busy, err, send, router };
 }
 
-const NUMS = ['wage3m', 'days3m', 'bonus1y', 'leavePay1y', 'ordinaryDaily', 'excludedDays'] as const;
+const NUMS = ['wage3m', 'days3m', 'bonus1y', 'leavePay1y', 'ordinaryDaily', 'excludedDays', 'departureInsurance'] as const;
 type Draft = Record<(typeof NUMS)[number], string> & { periodFrom: string; periodTo: string };
-const toDraft = (i: RetirementInput): Draft => ({ periodFrom: i.periodFrom ?? '', periodTo: i.periodTo ?? '', wage3m: i.wage3m?.toString() ?? '', days3m: i.days3m?.toString() ?? '', bonus1y: i.bonus1y ? String(i.bonus1y) : '', leavePay1y: i.leavePay1y ? String(i.leavePay1y) : '', ordinaryDaily: i.ordinaryDaily?.toString() ?? '', excludedDays: i.excludedDays ? String(i.excludedDays) : '' });
+const toDraft = (i: RetirementInput): Draft => ({ periodFrom: i.periodFrom ?? '', periodTo: i.periodTo ?? '', wage3m: i.wage3m?.toString() ?? '', days3m: i.days3m?.toString() ?? '', bonus1y: i.bonus1y ? String(i.bonus1y) : '', leavePay1y: i.leavePay1y ? String(i.leavePay1y) : '', ordinaryDaily: i.ordinaryDaily?.toString() ?? '', excludedDays: i.excludedDays ? String(i.excludedDays) : '', departureInsurance: i.departureInsurance?.toString() ?? '' });
 
 /** 입력 칸 + 바로 보이는 검산. create면 건을 만들고, 아니면 초안을 고친다 */
 export function CaseForm({ mode, employeeId, kind, id, initial, tax, live }: { mode: 'create' | 'update'; employeeId?: string; kind?: string; id?: string; initial: RetirementInput; tax?: { amount: number | null; basis: string | null }; live?: boolean }) {
@@ -78,10 +78,10 @@ export function CaseForm({ mode, employeeId, kind, id, initial, tax, live }: { m
       </div>
       <p className="text-xs text-faint">{t('fieldNote')}</p>
       <dl className="num grid gap-x-6 gap-y-1 rounded-card border border-border bg-surface p-3 md:grid-cols-2" data-check>
-        {([['cService', r.serviceDays === null ? t('blank') : t('daysValue', { n: nf(r.serviceDays) })], ['cAverage', r.averageDaily === null ? t('blank') : t('won', { n: nf(r.averageDaily) })], ['cUsed', r.dailyUsed === null ? t('blank') : `${t('won', { n: nf(r.dailyUsed) })} (${t(r.usedOrdinary ? 'usedOrdinary' : 'usedAverage')})`], ['cAmount', r.amount === null ? t('noAmount') : t('won', { n: nf(r.amount) })]] as const).map(([k, v]) => (
+        {([['cService', r.serviceDays === null ? t('blank') : t('daysValue', { n: nf(r.serviceDays) })], ['cAverage', r.averageDaily === null ? t('blank') : t('won', { n: nf(r.averageDaily) })], ['cUsed', r.dailyUsed === null ? t('blank') : `${t('won', { n: nf(r.dailyUsed) })} (${t(r.usedOrdinary ? 'usedOrdinary' : 'usedAverage')})`], ['cAmount', r.amount === null ? t('noAmount') : t('won', { n: nf(r.amount) })], ...(r.companyPays !== undefined ? [['cCompanyPays', r.companyPays === null ? t('noAmount') : t('won', { n: nf(r.companyPays) })] as const] : [])] as const).map(([k, v]) => (
           <div key={k} className="flex justify-between gap-3">
             <dt className="text-muted">{t(k)}</dt>
-            <dd className={k === 'cAmount' ? 'font-extrabold' : ''}>{v}</dd>
+            <dd className={k === 'cAmount' || k === 'cCompanyPays' ? 'font-extrabold' : ''}>{v}</dd>
           </div>
         ))}
       </dl>

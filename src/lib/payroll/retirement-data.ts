@@ -106,7 +106,7 @@ const must = async (id: string): Promise<RetirementCase> => {
 
 const fields = (input: RetirementInput, sources: Sources | null) => {
   const result = calcRetirement(input);
-  return { input_snapshot: { input, sources }, policy_refs: { rule: RETIREMENT_RULE, rounding: 'FLOOR_1' }, missing: result.missing, amount: result.amount };
+  return { input_snapshot: { input, sources }, policy_refs: { rule: RETIREMENT_RULE, rounding: 'FLOOR_1' }, missing: result.missing, amount: result.amount, departure_insurance_amount: input.departureInsurance ?? null };
 };
 
 export async function createCase(args: { employeeId: string; kind: CaseKind; input: RetirementInput; sources: Sources | null; practice: boolean; me: Me; requestId?: string }): Promise<{ id: string }> {

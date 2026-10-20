@@ -65,7 +65,7 @@ describe('calcRetirement', () => {
 
 describe('toRetirementInput', () => {
   it('글자로 온 숫자 · 쉼표를 받아 주고, 틀린 값은 비운다', () => {
-    expect(toRetirementInput({ periodFrom: '2023-01-01', periodTo: 'x', wage3m: '9,000,000', days3m: '92', bonus1y: '', ordinaryDaily: -5, excludedDays: '3' })).toEqual({ periodFrom: '2023-01-01', periodTo: null, excludedDays: 3, wage3m: 9_000_000, days3m: 92, bonus1y: 0, leavePay1y: 0, ordinaryDaily: null });
+    expect(toRetirementInput({ periodFrom: '2023-01-01', periodTo: 'x', wage3m: '9,000,000', days3m: '92', bonus1y: '', ordinaryDaily: -5, excludedDays: '3' })).toEqual({ periodFrom: '2023-01-01', periodTo: null, excludedDays: 3, wage3m: 9_000_000, days3m: 92, bonus1y: 0, leavePay1y: 0, ordinaryDaily: null, departureInsurance: null });
     expect(toRetirementInput(null).wage3m).toBeNull();
   });
 });
