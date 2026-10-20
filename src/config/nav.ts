@@ -5,7 +5,7 @@
 //   console = 통합설정 (기준 — 관리자만) = 회사설정 + App 관리
 // 화면 주소는 바꾸지 않았다 — 어느 주소가 어느 공간 · 앱 · 항목인지는 여기서 정한다(가장 길게 맞는 항목이 이긴다).
 // 이름은 번역 파일 frame.app / frame.group / frame.item 의 열쇠다.
-import { Building2, ChartColumn, Clock, Database, FileBarChart, House, type LucideIcon, Megaphone, MessagesSquare, Network, Plane, Send, ShieldCheck, SlidersHorizontal, UserRound, Users, Wallet } from 'lucide-react';
+import { Building2, ChartColumn, Clock, Database, FileBarChart, GraduationCap, House, type LucideIcon, Megaphone, MessagesSquare, Network, Plane, Send, ShieldCheck, SlidersHorizontal, UserRound, Users, Wallet } from 'lucide-react';
 import { managerCanOpen } from '@/lib/manager-rules';
 
 // how: 통합설정 화면 맨 위 「이 화면 쓰는 법」 띠의 종류 (2026-10-14 의뢰인: 이미 적용된 건지 · 저장해야 적용되는지 · 보기만인지 한눈에)
@@ -31,6 +31,7 @@ export const MY_APPS: App[] = [
   { key: 'requests', icon: Send, groups: one([{ href: '/punch/requests', key: 'myRequests', badge: 'decided' }]) },
   { key: 'pay', icon: Wallet, groups: one([{ href: '/punch/payslips', key: 'payslips' }, { href: '/punch/retirement', key: 'myRetirement' }]) },
   // 「업무 메시지」는 2026-10-16 의뢰인 지시로 이름이 「사내게시판」이다(주소 · 코드 이름은 messages 그대로). 따로 만들었던 자유 게시판은 같은 날 지웠다
+  { key: 'training', icon: GraduationCap, groups: one([{ href: '/punch/training', key: 'myTraining' }]) }, // 교육 확인 · 서명 (묶음 33)
   { key: 'talk', icon: MessagesSquare, groups: one([{ href: '/punch/notices', key: 'notices', badge: 'notices' }, { href: '/punch/messages', key: 'messages', badge: 'messages' }]) },
   { key: 'people', icon: UserRound, groups: one([{ href: '/punch/org', key: 'orgChart' }, { href: '/punch/account', key: 'account' }]) },
 ];
@@ -59,6 +60,7 @@ export const ADMIN_APPS: App[] = [
       { key: 'gPayView', items: [{ href: '/admin/payroll/labor-cost', key: 'payLabor' }] },
     ],
   },
+  { key: 'mTraining', icon: GraduationCap, groups: one([{ href: '/admin/training', key: 'trainingHome' }, { href: '/admin/training/courses', key: 'trainingCourses' }]) }, // 교육 · 안전교육 (묶음 33)
   { key: 'mTalk', icon: Megaphone, groups: one([{ href: '/admin/notices', key: 'adminNotices' }, { href: '/admin/messages', key: 'adminMessages' }]) },
   { key: 'mReports', icon: ChartColumn, groups: one([{ href: '/admin/reports/attendance', key: 'reportAttendance' }, { href: '/admin/reports/leave', key: 'reportLeave' }, { href: '/admin/reports/annual', key: 'reportAnnual' }]) }, // 저장한 리포트는 뺐다(2026-10-19 의뢰인: 빈 메뉴)
 ];
