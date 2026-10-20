@@ -482,6 +482,44 @@
         "slipNone": "공개된 명세서 없음",
         "slipEmpty": "이 직원에게 공개된 명세서가 아직 없습니다. 급여대장을 확정해 공개하거나, 급여 › 급여명세서 올리기로 올리면 여기에 보입니다.",
         "slipCount": "{n}건"
+      },
+      "import": {
+        "title": "엑셀로 여러 명 등록",
+        "hint": "양식을 받아 한 줄에 한 사람씩 적어 올리세요. 사번 · 이름은 꼭 넣고, 소속 · 직무는 양식 둘째 시트의 이름 그대로 적습니다. 주민번호 · 계좌는 받지 않습니다. 등록한 뒤 초대는 직원마다 보내 주세요.",
+        "sheet": "직원 등록",
+        "guide": "한 줄에 한 사람. 사번 · 이름은 필수, 날짜는 2026-03-01 모양. 소속 · 직무는 「목록」 시트의 이름 그대로.",
+        "col": {
+          "employeeNo": "사번",
+          "name": "이름",
+          "joinedOn": "입사일",
+          "phone": "휴대폰",
+          "email": "이메일",
+          "jobTitle": "직책",
+          "group": "소속",
+          "job": "직무",
+          "nationality": "국적(TH·VN 등)",
+          "visaType": "체류자격",
+          "stayUntil": "체류기간 끝"
+        },
+        "download": "양식 받기",
+        "preview": "미리보기",
+        "apply": "{n}명 등록",
+        "ready": "등록할 수 있음",
+        "done": "등록함",
+        "result": "{ok}명 등록 · {fail}명 실패",
+        "err": {
+          "import_required": "사번 · 이름이 비어 있음",
+          "import_duplicate": "같은 사번이 두 번",
+          "import_bad_date": "날짜 모양이 맞지 않음",
+          "import_unknown_group": "없는 소속",
+          "import_unknown_job": "없는 직무",
+          "import_no_file": "올린 파일이 없습니다.",
+          "import_too_big": "파일이 너무 큽니다(2MB까지).",
+          "import_bad_file": "양식이 맞지 않습니다. 「양식 받기」로 받은 엑셀에 적어 올려 주세요.",
+          "import_too_many": "한 번에 200명까지 올릴 수 있습니다.",
+          "duplicate_no": "이미 있는 사번",
+          "email_taken": "이미 쓰는 이메일"
+        }
       }
     },
     "more": {

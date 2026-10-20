@@ -482,6 +482,44 @@
         "slipNone": "No published payslips",
         "slipEmpty": "No payslips have been published to this employee yet. Finalize and publish a payroll run, or upload payslips in Payroll › Upload payslips.",
         "slipCount": "{n}"
+      },
+      "import": {
+        "title": "Register many by Excel",
+        "hint": "Download the template and add one person per row. Employee no. and name are required; groups and jobs must match the names on the second sheet. Resident numbers and bank accounts are not collected. Send invites per person after registering.",
+        "sheet": "Staff import",
+        "guide": "One person per row. Employee no. and name required; dates like 2026-03-01. Groups and jobs as named on the list sheet.",
+        "col": {
+          "employeeNo": "Employee no.",
+          "name": "Name",
+          "joinedOn": "Hire date",
+          "phone": "Mobile",
+          "email": "Email",
+          "jobTitle": "Title",
+          "group": "Group",
+          "job": "Job",
+          "nationality": "Nationality (TH, VN…)",
+          "visaType": "Visa type",
+          "stayUntil": "Stay ends"
+        },
+        "download": "Download template",
+        "preview": "Preview",
+        "apply": "Register {n}",
+        "ready": "Ready",
+        "done": "Registered",
+        "result": "{ok} registered · {fail} failed",
+        "err": {
+          "import_required": "Employee no. or name missing",
+          "import_duplicate": "Same employee no. twice",
+          "import_bad_date": "Invalid date",
+          "import_unknown_group": "Unknown group",
+          "import_unknown_job": "Unknown job",
+          "import_no_file": "No file uploaded.",
+          "import_too_big": "File is too large (2MB max).",
+          "import_bad_file": "The file doesn't match the template.",
+          "import_too_many": "Up to 200 people at once.",
+          "duplicate_no": "Employee no. already exists",
+          "email_taken": "Email already in use"
+        }
       }
     },
     "more": {
