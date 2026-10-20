@@ -3794,7 +3794,33 @@
       "payroll_basis_unverified": "Verify the reference data, company settings, policies and items used in this calculation before finalizing.",
       "payroll_duplicate_payment": "The same work is included in another finalized run. Check regular/daily runs and revisions.",
       "uploadSlips": "Upload payslips",
-      "pdfNone": "No one has a finished calculation, so there is no payslip PDF yet. Fill in the blocking items below (contract, tax and insurance settings) and calculate again."
+      "pdfNone": "No one has a finished calculation, so there is no payslip PDF yet. Fill in the blocking items below (contract, tax and insurance settings) and calculate again.",
+      "bulk": {
+        "sheet": "Bulk adjustments",
+        "guide": "People are matched by employee no. Blank cells are left as is; 0 means adjust to 0. Don't edit the header row.",
+        "colNo": "Employee no.",
+        "colName": "Name",
+        "kindPay": "Pay",
+        "kindDed": "Deduction",
+        "excelTitle": "Bulk entry by Excel",
+        "excelHint": "Download the template, fill in amounts only (advances, settlements, bonuses…), and upload. Recalculate afterwards.",
+        "download": "Download template",
+        "preview": "Preview",
+        "apply": "Add {n}",
+        "applied": "Added {n}{f, plural, =0 {} other { · # failed}}. Please recalculate.",
+        "empty": "No amounts",
+        "err": {
+          "unknown_employee": "Not in this payroll",
+          "bad_amount": "Amount is not a number",
+          "negative_pay": "Pay can't be negative"
+        },
+        "sameTitle": "Same amount for many",
+        "sameHint": "Add the same amount (e.g. bonus) to the selected people at once.",
+        "amount": "Amount",
+        "reason": "Reason (e.g. October bonus)",
+        "who": "{n} of {all} selected",
+        "sameApply": "Add to {n}"
+      }
     },
     "reports": {
       "attTitle": "Attendance report",

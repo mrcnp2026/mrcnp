@@ -16,6 +16,8 @@ import { birthDates, lastMailBySlip, loadSlipMails, mailReady } from '@/lib/payr
 import { SlipMailSend } from '../../slips/SlipMail';
 import { MailLog, MailStatus } from '../../slips/SlipMailParts';
 import { CorrectionStart, MemberToggle, PublishAll, PublishToggle, RunActions } from '../RunForms';
+import { BulkAdjust } from '../BulkAdjust';
+import { bulkContext } from '@/lib/payroll/bulk-data';
 
 const TONE = { DRAFT: 'neutral', CALCULATED: 'info', REVIEWED: 'warn', FINALIZED: 'ok' } as const;
 
@@ -133,6 +135,8 @@ export default async function PayRunPage({ params, searchParams }: { params: Pro
           {!stale && blocked > 0 && <p className="rounded-button border border-warn bg-warn-tint p-2 text-sm text-warn">{t('hasBlocked', { n: blocked })}</p>}
           {missing.length > 0 && <p className="text-sm text-warn">{t('missingRef', { list: missing.map((k) => (t.has(`detail.${dk(k)}`) ? t(`detail.${dk(k)}`) : k)).join(' · ') })}</p>}
           <RunActions id={run.id} version={run.version} status={run.status} stale={stale} blocked={blocked} />
+          {/* 한꺼번에 넣기 (2026-10-20 노프로 비교): 엑셀로 여러 조정 · 같은 금액 여러 명 */}
+          {await (async () => { const b = await bulkContext(run.id); return <BulkAdjust id={run.id} columns={b.columns} members={b.members} />; })()}
         </Card>
       )}
 
