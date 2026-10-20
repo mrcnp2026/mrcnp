@@ -22,6 +22,7 @@ import { loadOrgGroups } from '@/lib/org-data';
 import { createAdminClient } from '@/lib/supabase/admin';
 import { toKstDate } from '@/lib/time';
 import { LeaveCancel } from '../inbox/Decisions';
+import { LeaveBulk } from './LeaveBulk';
 import { GrantForm, JoinedOnForm } from './GrantForm';
 
 export default async function AdminLeavePage({ searchParams }: { searchParams: Promise<{ live?: string; e?: string; q?: string; g?: string; to?: string; v?: string; y?: string; ap?: string }> }) {
@@ -30,7 +31,9 @@ export default async function AdminLeavePage({ searchParams }: { searchParams: P
   const tc = await getTranslations('common');
   const f = await getFormatter();
   const sp = await searchParams;
-  const admin = (await getMe())?.role === 'admin'; // 지점관리자는 보기만 (manager-rules.ts) — 받은 연차 입력 · 휴가 취소 · 다운로드는 관리자만
+  const meNow = await getMe();
+  const admin = meNow?.role === 'admin';
+  const top = !!meNow?.top; // 휴가 엑셀 일괄 입력은 직권 휴가처럼 최고관리자만 (2026-10-20) // 지점관리자는 보기만 (manager-rules.ts) — 받은 연차 입력 · 휴가 취소 · 다운로드는 관리자만
   const inScope = await scopeFilter();
   const practice = OFFICE.practiceMode && sp.live !== '1';
   const today = toKstDate(new Date());
@@ -84,6 +87,7 @@ export default async function AdminLeavePage({ searchParams }: { searchParams: P
   return (
     <PageShell wide flush>
       <h1 className="sr-only lg:hidden">{t('title')}</h1>
+      {top && <LeaveBulk />}
       {/* ── PC 머리: 제목 + 설명 / [휴가 유형] ── */}
       <div className="hidden items-start gap-4 lg:flex">
         <div className="min-w-0 flex-1">

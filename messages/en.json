@@ -4920,6 +4920,35 @@
       "invalid_minutes": "Enter hours in 15-minute (0.25h) steps.",
       "invalid_rate": "Rate must be between 1 and 3.",
       "db_update_required": "DB change set 29 needs to be applied."
+    },
+    "leaveBulk": {
+      "title": "Bulk leave entry by Excel",
+      "hint": "Download the template and add one leave per row. Use leave type names from the types sheet; blank end date = one day. Hourly types need a start time. Entries are approved immediately like admin-entered leave.",
+      "sheet": "Leave bulk",
+      "guide": "One leave per row. Dates like 2026-10-05; blank end = one day. Hourly leave needs a start time (13:00).",
+      "typesSheet": "Types",
+      "colNo": "Employee no.",
+      "colName": "Name",
+      "colType": "Leave type",
+      "colStart": "Start",
+      "colEnd": "End",
+      "colTime": "Start time",
+      "colReason": "Reason",
+      "why": "Excel bulk entry",
+      "download": "Download template",
+      "preview": "Preview",
+      "apply": "Add {n}",
+      "done": "Added ({n} days)",
+      "err": {
+        "unknown_employee": "Unknown employee no. (or yourself)",
+        "unknown_type": "Unknown leave type",
+        "bad_date": "Invalid date",
+        "bad_time": "Invalid time",
+        "import_no_file": "No file uploaded.",
+        "import_too_big": "File is too large (2MB max).",
+        "import_bad_file": "The file doesn't match the template.",
+        "import_too_many": "Up to 300 rows at once."
+      }
     }
   },
   "side": {
