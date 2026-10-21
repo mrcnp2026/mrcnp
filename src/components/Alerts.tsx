@@ -55,6 +55,17 @@ export function AlertsProvider({ initial, children }: { initial: AlertCounts; ch
       window.removeEventListener(ALERTS_RELOAD_EVENT, reload);
     };
   }, [reload]);
+  // 앱 아이콘 숫자 (2026-10-21 의뢰인: 카카오톡처럼) — 종과 같은 숫자. 홈 화면에 설치한 앱에서만 보인다(아이폰 · PC 크롬/엣지).
+  // 앱이 닫혀 있을 때는 폰 알림을 받는 순간 서비스 워커(public/sw.js)가 다시 세어 바꾼다
+  useEffect(() => {
+    const n = counts.notices + counts.messages + counts.decided + counts.requests; // requests는 승인할 사람이 아니면 서버가 0으로 보낸다
+    const nav = navigator as Navigator & { setAppBadge?: (n?: number) => unknown; clearAppBadge?: () => unknown };
+    try {
+      void Promise.resolve(n > 0 ? nav.setAppBadge?.(n) : nav.clearAppBadge?.()).catch(() => {});
+    } catch {
+      // 숫자를 못 다는 기기 — 그대로 둔다
+    }
+  }, [counts]);
   return <Ctx.Provider value={counts}>{children}</Ctx.Provider>;
 }
 

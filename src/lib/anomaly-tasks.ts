@@ -10,7 +10,7 @@ import { anomalyKey, DEFAULT_TASK_POLICY, summarizeAnomalies, taskOf, taskPolicy
 import { collectAnomalies, loadAnomalyPolicy, loadAnomalyReviews } from '@/lib/anomaly-data';
 import { loadPolicies, savePolicy } from '@/lib/payroll/data';
 import { loadPeriod } from '@/lib/period-data';
-import { firstTime, pushConfigured, sendPush } from '@/lib/push';
+import { firstTime, pushConfigured, sendStaffPush } from '@/lib/push';
 import { approverIdsFor } from '@/lib/scope';
 import { createAdminClient } from '@/lib/supabase/admin';
 import { toKstDate } from '@/lib/time';
@@ -100,7 +100,7 @@ export async function notifyOverdueAnomalies(now = new Date()): Promise<{ overdu
   for (const [a, list] of per) {
     const first = list.sort((p, q) => p.workDate.localeCompare(q.workDate))[0];
     const head = `${names.get(first.employeeId) ?? ''} ${first.workDate.slice(5).replace('-', '/')}`;
-    sent += await sendPush([a], {
+    sent += await sendStaffPush([a], { // 알림-9: 꺼진 최고관리자는 받지 않는다
       title: `처리 기한이 지난 이상 기록 ${list.length}건`,
       body: list.length > 1 ? `${head} 외 ${list.length - 1}건 — 기록을 고치거나 확인함으로 표시해 주세요` : `${head} — 기록을 고치거나 확인함으로 표시해 주세요`,
       url: `/admin/anomalies?st=overdue&m=${first.workDate.slice(0, 7)}`,

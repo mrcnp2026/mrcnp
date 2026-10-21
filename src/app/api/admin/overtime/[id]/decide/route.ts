@@ -1,6 +1,9 @@
 // 연장 승인·부분 승인·거부 (7-7). 관리자만. 집계분(사실)은 건드리지 않고 인정분만 정한다.
 // 동시에 두 관리자가 눌러도 DB 함수가 pending일 때만 반영한다 → 나중 사람은 'already' (R-4, R-2의 6)
+import { after } from 'next/server';
 import { api, ApiError, readJson } from '@/lib/api';
+import { rejectReasonOf } from '@/lib/reject-reason';
+import { notifyDecision } from '@/lib/push-events';
 import { requireApprover, requireStaffViewer } from '@/lib/scope';
 import { createAdminClient } from '@/lib/supabase/admin';
 
@@ -27,7 +30,7 @@ export const POST = api<{ params: Promise<{ id: string }> }>('admin.overtime.dec
     p_approved_night: n,
     p_approved_holiday: h,
     p_decided_by: me.id,
-    p_reason: null,
+    p_reason: rejectReasonOf(b), // 거절 사유 (2026-10-21, 선택)
     p_request_id: ctx.requestId,
   });
   if (error) {
@@ -36,5 +39,6 @@ export const POST = api<{ params: Promise<{ id: string }> }>('admin.overtime.dec
     throw new Error(`decide_overtime: ${error.code}`);
   }
   if (data === 'not_found') throw new ApiError(404, 'not_found');
+  after(() => notifyDecision('overtime_requests', id)); // 결과를 요청한 직원 폰으로 (2026-10-21 의뢰인, 알림-12) — 실제로 바뀐 것만 보낸다
   return { result: data };
 });

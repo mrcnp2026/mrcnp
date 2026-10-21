@@ -11,15 +11,32 @@ self.addEventListener('push', (event) => {
     data = { title: '근태관리', body: event.data ? event.data.text() : '' };
   }
   event.waitUntil(
-    self.registration.showNotification(data.title || '근태관리', {
-      body: data.body || '',
-      icon: '/brand/icon-192.png',
-      badge: '/brand/icon-192.png',
-      tag: data.tag,
-      data: { url: data.url || '/admin' },
-    }),
+    Promise.all([
+      self.registration.showNotification(data.title || '근태관리', {
+        body: data.body || '',
+        icon: '/brand/icon-192.png',
+        badge: '/brand/icon-192.png',
+        tag: data.tag,
+        data: { url: data.url || '/admin' },
+      }),
+      updateBadge(),
+    ]),
   );
 });
+
+// 앱 아이콘 숫자 (2026-10-21 의뢰인: 카카오톡처럼) — 앱이 닫혀 있어도 알림이 오면 종과 같은 숫자로 바꾼다. 못 세면 그대로 둔다
+async function updateBadge() {
+  if (!self.navigator.setAppBadge) return;
+  try {
+    const r = await fetch('/api/me/alerts', { cache: 'no-store', credentials: 'same-origin' });
+    if (!r.ok) return;
+    const c = await r.json();
+    const n = (c.notices || 0) + (c.messages || 0) + (c.decided || 0) + (c.requests || 0);
+    await (n > 0 ? self.navigator.setAppBadge(n) : self.navigator.clearAppBadge());
+  } catch {
+    // 연결이 끊겼으면 다음 알림이나 앱을 열 때 맞춘다
+  }
+}
 
 self.addEventListener('notificationclick', (event) => {
   event.notification.close();

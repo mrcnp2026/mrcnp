@@ -67,6 +67,9 @@ export const OFFICE = {
   // 오너(대표) 계정의 사번 (2026-10-06 의뢰인: admin은 오너가 쓰는 계정 — 모든 것을 할 수 있어야 한다).
   // 오너는 다른 관리자의 확인 없이 권한을 바꾸고, 자기 요청도 직접 처리한다. 다른 관리자는 오너의 권한·재직 상태·로그인을 바꾸지 못한다 (staff-rules.ts)
   ownerEmployeeNo: 'admin',
+  // 관리자 폰 알림을 반드시 받는 최고관리자의 사번 (2026-10-21 의뢰인: 이상준 최고관리자는 항상 받는다 · 대표자는 받지 않는다 ·
+  // 나머지 최고관리자는 기본 끔 — 통합설정 › 알림에서 켠다). 결정 사항 알림-9 · lib/push-recipients.ts
+  pushAlwaysEmployeeNo: 'M009',
   inviteValidHours: 72, // 초대 QR 유효 시간. 지나면 관리자가 새로 발급한다
 
   // 부록 R-12-2: 계산 모듈(worktime·overtime·lateness·labor-rules)을 바꿀 때마다 올린다.

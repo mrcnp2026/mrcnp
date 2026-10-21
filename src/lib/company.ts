@@ -8,6 +8,7 @@ import { createAdminClient } from '@/lib/supabase/admin';
 export type CompanyProfile = {
   name: string; ceo: string; bizNo: string; address: string; phone: string; policy: string; logoPath: string | null; logoMime: string | null; logoAt: string | null;
   switches?: Record<string, boolean>; // 통합설정 스위치 (2026-10-19, lib/switches.ts) — 회사 정보와 같은 이력 줄에 함께 남긴다(DB 변경 없음)
+  pushAdmins?: Record<string, boolean>; // 관리자 폰 알림 받는 최고관리자 (직원 id → 켬, 2026-10-21, lib/push-recipients.ts) — 같은 이력 줄(DB 변경 없음)
 };
 const EMPTY: CompanyProfile = { name: '', ceo: '', bizNo: '', address: '', phone: '', policy: '', logoPath: null, logoMime: null, logoAt: null };
 

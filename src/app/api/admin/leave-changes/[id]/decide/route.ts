@@ -1,7 +1,11 @@
 // 삭제 요청 결정·원래 휴가 취소·원장 되돌림·감사기록을 한 트랜잭션으로 처리한다.
+import { after } from 'next/server';
 import { api, ApiError, readJson } from '@/lib/api';
+import { rejectReasonOf } from '@/lib/reject-reason';
+import { notifyDecision } from '@/lib/push-events';
 import { atomicRpc } from '@/lib/atomic-rpc';
 import { requireStaffViewer } from '@/lib/scope';
+import { createAdminClient } from '@/lib/supabase/admin';
 
 export const POST = api<{ params: Promise<{ id: string }> }>('admin.leaveChanges.decide', async (req, ctx) => {
   const viewer = await requireStaffViewer();
@@ -11,5 +15,12 @@ export const POST = api<{ params: Promise<{ id: string }> }>('admin.leaveChanges
   const b = await readJson(req);
   if (b.decision !== 'approved' && b.decision !== 'rejected') throw new ApiError(400, 'invalid_input');
   const result = await atomicRpc<string>('decide_leave_change_atomic', { p_id: id, p_decision: b.decision, p_decided_by: viewer.me.id, p_request_id: ctx.requestId });
+  // 거절 사유 (2026-10-21) — 이 결정 함수는 사유를 받지 않아 결정 기록에 사유 한 줄을 더 남긴다 (결정 기록은 고칠 수 없다)
+  const why = rejectReasonOf(b);
+  if (why && result === 'ok') {
+    const { error } = await createAdminClient().from('decision_log').insert({ subject_table: 'leave_change_requests', subject_id: id, decision: 'rejected', reason: why, decided_by: viewer.me.id, request_id: ctx.requestId });
+    if (error) console.error(JSON.stringify({ route: 'admin.leaveChanges.decide', code: 'reason_log', detail: error.code }));
+  }
+  after(() => notifyDecision('leave_change_requests', id)); // 결과를 요청한 직원 폰으로 (2026-10-21 의뢰인, 알림-12) — 실제로 바뀐 것만 보낸다
   return { result };
 });

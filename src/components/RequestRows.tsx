@@ -83,7 +83,10 @@ export async function RequestRows({ items, leaveTypes, names, showName = false, 
                       detail(r)
                     )}
                   </td>
-                  <td className={`${td} max-w-64 truncate text-muted`}>{r.reason ?? ''}</td>
+                  <td className={`${td} max-w-64 text-muted`}>
+                    <span className="block truncate">{r.reason ?? ''}</span>
+                    {r.rejectReason && <span className="block text-xs break-words text-danger">{t('rejectReason', { why: r.rejectReason })}</span>}
+                  </td>
                   <td className={`${td} whitespace-nowrap`}>
                     {r.recheck ? <Chip tone="warn">{t('recheck')}</Chip> : <Chip tone={r.status === 'approved' ? 'ok' : r.status === 'pending' ? 'warn' : 'neutral'}>{t(`status.${r.status}`)}</Chip>}
                     {r.status !== 'pending' && who && <span className="num ml-2 text-xs text-muted">{t('by', { name: who })}</span>}
@@ -152,6 +155,7 @@ export async function RequestRows({ items, leaveTypes, names, showName = false, 
                   <span className="num text-sm">{detail(r)}</span>
                 )}
                 {r.reason && <span className="truncate text-sm text-muted">{r.reason}</span>}
+                {r.rejectReason && <span className="text-sm break-words text-danger">{t('rejectReason', { why: r.rejectReason })}</span>}
                 <span className="num flex flex-wrap items-center gap-x-2 gap-y-1 text-sm">
                   {r.recheck ? <Chip tone="warn">{t('recheck')}</Chip> : <Chip tone={r.status === 'approved' ? 'ok' : r.status === 'pending' ? 'warn' : 'neutral'}>{t(`status.${r.status}`)}</Chip>}
                   {/* 처리한 사람 · 때는 한 덩어리 — 「| 10.18 23:34」만 다음 줄로 떨어지던 것 (2026-10-19 디자인) */}

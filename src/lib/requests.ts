@@ -24,6 +24,7 @@ export type ReqItem = {
   createdAt: string | null;
   decidedAt: string | null;
   decidedBy: string | null;
+  rejectReason?: string | null; // 관리자가 적은 거절 사유 (2026-10-21, decision_log) — loadRequests가 채운다
   recheck?: boolean; // 연장근로: 처리했지만 기록이 바뀌어 다시 확인해야 함 (목록에 「재확인 필요」, 2026-10-19 디자인)
 };
 

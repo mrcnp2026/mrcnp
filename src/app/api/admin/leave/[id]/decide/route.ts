@@ -1,7 +1,10 @@
 // 휴가 승인·거부 (대기 건), 승인된 휴가 취소 (4-6: 출근 기록과 충돌하면 관리자가 판단 — 자동으로 한쪽을 지우지 않는다).
 import { syncOvertimeFor } from '@/lib/period-data';
 import { atomicRpc } from '@/lib/atomic-rpc';
+import { after } from 'next/server';
 import { api, ApiError, readJson } from '@/lib/api';
+import { rejectReasonOf } from '@/lib/reject-reason';
+import { notifyDecision } from '@/lib/push-events';
 import { assertAttendanceEditable } from '@/lib/confirm-data';
 import { assertEvidence } from '@/lib/leave-evidence';
 import { requireApprover, requireStaffViewer } from '@/lib/scope';
@@ -22,7 +25,9 @@ export const POST = api<{ params: Promise<{ id: string }> }>('admin.leave.decide
   await requireApprover(r.employee_id); // 자기 요청은 다른 관리자가 처리한다 · 지점관리자는 맡은 지점만
   if (b.decision === 'approved') await assertEvidence(id); // 종류 규칙이 「증빙 필수」면 파일이 있어야 승인 (묶음 9)
   if (b.decision !== 'rejected') await assertAttendanceEditable(r.employee_id, r.start_date, r.end_date, r.is_test);
-  const data = await atomicRpc<string>('decide_leave_atomic', { p_id: id, p_decision: b.decision, p_decided_by: me.id, p_reason: null, p_request_id: ctx.requestId });
+  const data = await atomicRpc<string>('decide_leave_atomic', { p_id: id, p_decision: b.decision, p_decided_by: me.id, p_reason: rejectReasonOf(b), // 거절 사유 (2026-10-21, 선택)
+    p_request_id: ctx.requestId });
   if (b.decision !== 'rejected') syncOvertimeFor(r.employee_id, [r.start_date, r.end_date]); // 휴가가 그날 근무 시간 기준을 바꾼다 (2026-10-19)
+  after(() => notifyDecision('leave_requests', id)); // 결과를 요청한 직원 폰으로 (2026-10-21 의뢰인, 알림-12) — 실제로 바뀐 것만 보낸다
   return { result: data };
 });

@@ -17,6 +17,10 @@
       "schedule": "0 0 * * *"
     },
     {
+      "path": "/api/cron/absent-late",
+      "schedule": "0 1 * * *"
+    },
+    {
       "path": "/api/cron/punch-evening",
       "schedule": "0 12 * * *"
     },

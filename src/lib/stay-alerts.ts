@@ -3,7 +3,7 @@
 import 'server-only';
 import { OFFICE } from '@/config/office';
 import { daysToStayEnd, STAY_ALERT_DAYS } from '@/lib/foreign-rules';
-import { firstTime, pushConfigured, sendPush } from '@/lib/push';
+import { firstTime, pushConfigured, sendStaffPush } from '@/lib/push';
 import { loadForeignStaff } from '@/lib/staff-details';
 import { createAdminClient } from '@/lib/supabase/admin';
 import { switchOn } from '@/lib/switches';
@@ -46,7 +46,7 @@ export async function notifyStayEnding(now = new Date()): Promise<{ due: number;
   const to = (admins ?? []).filter((a) => !a.employee_no?.startsWith('e2e-')).map((a) => a.id as string);
   let sent = 0;
   for (const d of due) {
-    sent += await sendPush(to, {
+    sent += await sendStaffPush(to, { // 알림-9
       title: d.what === 'visit' ? (d.left === 0 ? `${d.name} 님 오늘 출입국 방문 예약` : `${d.name} 님 출입국 방문 예약 ${d.left}일 남음`) : d.left < 0 ? `${d.name} 님 ${d.what === 'stay' ? '체류 기간' : '활동허가'}이 지났습니다` : `${d.name} 님 ${d.what === 'stay' ? '체류 기간' : '활동허가'} ${d.left}일 남음`,
       body: d.what === 'visit' ? `예약일 ${d.until} — 서류를 챙겨 주세요` : `${d.what === 'stay' ? '체류 기간 끝' : '체류자격외 활동허가 만료'} ${d.until} — 연장 · 변경 신청을 확인해 주세요`,
       url: `/admin/members/${d.id}#foreign`,

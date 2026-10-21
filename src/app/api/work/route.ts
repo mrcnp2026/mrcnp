@@ -1,5 +1,6 @@
 // 직원의 외근·출장·재택 신청 (②-3 7-11). 사후 신청도 받는다(한 달 안) — 잠긴 달은 불가.
 // 장소 필수, 사유 선택 (요점 5). 상태·작성자는 서버가 정한다.
+import { after } from 'next/server';
 import { OFFICE } from '@/config/office';
 import { api, ApiError, readJson } from '@/lib/api';
 import { getMe } from '@/lib/auth';
@@ -11,6 +12,7 @@ import { createAdminClient } from '@/lib/supabase/admin';
 import { cleanText } from '@/lib/text';
 import { toKstDate } from '@/lib/time';
 import { loadWorkRequests } from '@/lib/work-data';
+import { notifyWorkRequest } from '@/lib/push-events';
 import { WORK_KINDS, type WorkKind } from '@/lib/work-requests';
 
 const DATE = /^\d{4}-\d{2}-\d{2}$/;
@@ -52,5 +54,6 @@ export const POST = api('work.create', async (req) => {
     .select('id')
     .single();
   if (error) throw new Error(`work.insert: ${error.code}`);
+  after(() => notifyWorkRequest(data.id)); // 승인할 관리자에게 바로 폰 알림 (2026-10-21 의뢰인, 알림-10)
   return { id: data.id };
 });

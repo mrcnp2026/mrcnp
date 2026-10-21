@@ -22,6 +22,7 @@ import { PinReset } from './PinReset';
 import { CompanyForm } from './CompanyForm';
 import { companyProfile } from '@/lib/company';
 import { isSwitchKey, switches } from '@/lib/switches';
+import { pushAdminRule, receivesStaffPush, savedPushAdmins } from '@/lib/push-recipients';
 import { SwitchToggle } from '@/components/SwitchToggle';
 import { BRAND } from '@/config/brand';
 import { getMe } from '@/lib/auth';
@@ -110,6 +111,18 @@ export default async function SettingsPage({ searchParams }: { searchParams: Pro
   const ti = await getTranslations('admin.settings.info');
   const tsw = await getTranslations('admin.settings.switch');
   const sw = await switches(); // 켜고 끄는 항목 (2026-10-19 의뢰인) — 나머지는 법 · 계산에 걸려 있어 고정
+  // 관리자 폰 알림 받는 사람 (2026-10-21 의뢰인, 알림-9) — 알림 탭에서만 읽는다
+  const tpa = await getTranslations('admin.settings.pushAdmins');
+  const pushAdmins =
+    tab === 'notify'
+      ? await (async () => {
+          const [{ data: ppl }, saved] = await Promise.all([createAdminClient().from('profiles').select('id, name, role, admin_level, employee_no').eq('active', true).eq('role', 'admin').order('name'), savedPushAdmins()]);
+          return (ppl ?? [])
+            .filter((x) => !(x.employee_no as string | null)?.startsWith('e2e-'))
+            .map((x) => ({ id: x.id as string, name: x.name as string, rule: pushAdminRule(x)!, on: receivesStaffPush(x, saved) }))
+            .sort((a, b) => ['always', 'choice', 'never'].indexOf(a.rule) - ['always', 'choice', 'never'].indexOf(b.rule));
+        })()
+      : null;
   const t = await getTranslations('admin.settings');
   const ts = await getTranslations('side');
   const memberText = await getTranslations('admin.members');
@@ -238,6 +251,31 @@ export default async function SettingsPage({ searchParams }: { searchParams: Pro
                 )}
               </SettingRow>
             ))}
+          {tab === 'notify' && pushAdmins && (
+            <>
+              <SettingGroup>{tpa('title')}</SettingGroup>
+              <p className="pb-1 text-sm text-muted">{tpa('intro')}</p>
+              {pushAdmins.map((a) => (
+                <SettingRow key={a.id} label={a.name} desc={tpa(`rule.${a.rule}`)}>
+                  {a.rule === 'choice' ? (
+                    <>
+                      <span className="hidden lg:inline-flex">
+                        <SwitchToggle k={`pushAdmin.${a.id}`} pushAdmin={a.id} on={a.on} label={tpa('toggle', { name: a.name })} />
+                      </span>
+                      <span className="lg:hidden">
+                        <UseMark on={a.on} label={tsw(a.on ? 'on' : 'off')} />
+                      </span>
+                    </>
+                  ) : (
+                    <span className="inline-flex flex-col items-end gap-1">
+                      <UseMark on={a.on} label={tpa(a.rule === 'always' ? 'always' : 'never')} />
+                      <span className="text-xs text-faint">{tsw('fixed')}</span>
+                    </span>
+                  )}
+                </SettingRow>
+              ))}
+            </>
+          )}
           {tab === 'request' && (
             <SettingRow label={tsm('label')} desc={tsm('desc')}>
               <ScheduleModeForm mode={scheduleMode} />

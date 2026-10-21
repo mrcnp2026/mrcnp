@@ -8,17 +8,26 @@ const plan = (people: PersonMisses[], hour: number) => planPunchAlerts({ people,
 const keys = (xs: ReturnType<typeof plan>) => xs.map((x) => x.key).sort();
 
 describe('planPunchAlerts', () => {
-  it('오늘 미출근 — 본인과 관리자에게', () => {
-    const r = plan([person('a', [{ workDate: T, kind: 'in', hasPendingRequest: false }])], 9);
-    expect(keys(r)).toEqual([`absent:a:${T}`, `self-in:a:${T}`]);
-    expect(r.find((x) => x.key.startsWith('self-in'))!.to).toEqual(['a']);
-    expect(r.find((x) => x.key.startsWith('absent'))!.to).toEqual(['boss']);
+  it('오늘 미출근 — 본인에게, 관리자에게는 근무 시작 + 1시간에 묶어서 (알림-13)', () => {
+    const miss = (id: string) => person(id, [{ workDate: T, kind: 'in', hasPendingRequest: false }]);
+    const at = (people: PersonMisses[], h: number, m: number) => planPunchAlerts({ people, today: T, yesterday: Y, hour: h, minute: h * 60 + m, approversOf: () => ['boss'] });
+    // 08:00 시작 — 8:40에는 본인에게만
+    expect(keys(at([miss('a')], 8, 40))).toEqual([`self-in:a:${T}`]);
+    // 9:10에는 관리자에게 한 통으로
+    const r = at([miss('a'), miss('b')], 9, 10);
+    const b = r.find((x) => x.key.startsWith('absent-bundle'))!;
+    expect(b.to).toEqual(['boss']);
+    expect(b.members!.map((m) => m.key)).toEqual([`absent:a:${T}:boss`, `absent:b:${T}:boss`]);
+    expect(b.build!(['직원a', '직원b']).title).toBe('오늘 미출근 2명');
+    expect(r.filter((x) => x.key.startsWith('absent')).length).toBe(1);
+    // 시작 + 3시간이 지나면(저녁 등) 관리자에게 보내지 않는다
+    expect(keys(at([miss('a')], 21, 0))).toEqual([`self-in:a:${T}`]);
   });
   it('오늘 미퇴근 — 본인에게만', () => {
     expect(keys(plan([person('a', [{ workDate: T, kind: 'out', hasPendingRequest: false }])], 21))).toEqual([`self-out:a:${T}`]);
   });
-  it('밤(22시~7시)에는 직원에게 보내지 않는다 — 관리자 미출근 알림은 간다', () => {
-    expect(keys(plan([person('a', [{ workDate: T, kind: 'in', hasPendingRequest: false }, { workDate: T, kind: 'out', hasPendingRequest: false }])], 23))).toEqual([`absent:a:${T}`]);
+  it('밤(22시~7시)에는 직원에게 보내지 않는다 — 관리자 미출근도 시작 + 3시간이 지나 가지 않는다', () => {
+    expect(keys(plan([person('a', [{ workDate: T, kind: 'in', hasPendingRequest: false }, { workDate: T, kind: 'out', hasPendingRequest: false }])], 23))).toEqual([]);
   });
   it('아침: 어제 빠진 기록 — 본인에게 정정 안내, 관리자에게 한 번에 묶어서', () => {
     const r = plan([

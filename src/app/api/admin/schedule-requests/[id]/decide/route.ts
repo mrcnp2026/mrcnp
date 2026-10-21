@@ -1,6 +1,9 @@
 // 근무일정 생성 요청 승인·거절 (의뢰인 2026-10-11). 승인: 그 날짜에 날짜별 일정을 한 건 만든다 (같은 직원·날짜·시각의 일정이 이미 있으면 그것을 쓴다). 거절: 만들지 않는다.
 import { syncOvertimeFor } from '@/lib/period-data';
+import { after } from 'next/server';
 import { api, ApiError, readJson } from '@/lib/api';
+import { rejectReasonOf } from '@/lib/reject-reason';
+import { notifyDecision } from '@/lib/push-events';
 import { requireApprover, requireStaffViewer } from '@/lib/scope';
 import { createAdminClient } from '@/lib/supabase/admin';
 
@@ -36,8 +39,9 @@ export const POST = api<{ params: Promise<{ id: string }> }>('admin.scheduleRequ
   const { data: done, error } = await db.from('shift_requests').update({ status: b.decision, approved_by: me.id, decided_at: new Date().toISOString(), shift_id: shiftId }).eq('id', id).eq('status', 'pending').select('id');
   if (error) throw new Error(`scheduleRequests.decide: ${error.code}`);
   if (!done?.length) return { result: 'already' };
-  const { error: e2 } = await db.from('decision_log').insert({ subject_table: 'shift_requests', subject_id: id, decision: b.decision, reason: null, decided_by: me.id, request_id: ctx.requestId });
+  const { error: e2 } = await db.from('decision_log').insert({ subject_table: 'shift_requests', subject_id: id, decision: b.decision, reason: rejectReasonOf(b), decided_by: me.id, request_id: ctx.requestId });
   if (e2) throw new Error(`scheduleRequests.log: ${e2.code}`);
   if (b.decision === 'approved') syncOvertimeFor(r.employee_id, [r.work_date]); // 승인으로 일정이 생겼다 (2026-10-19)
+  after(() => notifyDecision('shift_requests', id)); // 결과를 요청한 직원 폰으로 (2026-10-21 의뢰인, 알림-12) — 실제로 바뀐 것만 보낸다
   return { result: 'ok' };
 });

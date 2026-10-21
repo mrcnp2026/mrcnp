@@ -810,7 +810,9 @@
       "dayPreviewOff": "Holiday work · requested {from} – {to}{known, select, yes { · about {min} min} other {}}",
       "dayReason": "Reason from the employee",
       "dayNoReason": "No reason left yet",
-      "placeMap": "Work location map — {name}"
+      "placeMap": "Work location map — {name}",
+      "rejectReasonLabel": "Reason for rejecting (optional)",
+      "rejectReasonHint": "The employee will see this as written."
     },
     "records": {
       "title": "Monthly totals",
@@ -2090,7 +2092,7 @@
           "push": {
             "label": "Punch & request alerts (phone)",
             "value": "On",
-            "note": "Sent to people who turned on phone notifications. Admins: leave requests, corrections, no clock-in, yesterday's missing records. Staff: their own missing clock-in/out. Top admins and deemed-hours staff get no punch alerts. Each person turns it on/off in Menu › Phone notifications. Every Monday 9:00, approvers get one reminder if requests are still pending."
+            "note": "Sends to people who turned on phone alerts. Admins: leave, correction and outside-work requests, absences, late arrivals, early leaves, yesterday's missing records. Staff: their own missing clock-in/out and the result of their requests. Choose which top admins get admin alerts under \"Admins who get phone alerts\" below. Turning this off stops all phone alerts."
           }
         },
         "access": {
@@ -2394,6 +2396,18 @@
         "failed": "Couldn't save. Please try again.",
         "fixed": "Fixed — cannot change",
         "fixedWhy": "Tied to law, payroll calculation or security, or not built yet, so there is no switch."
+      },
+      "pushAdmins": {
+        "title": "Admins who get phone alerts",
+        "intro": "Top admins who receive alerts about staff requests, absences, late arrivals, early leaves and missing records. Branch managers keep getting alerts for their branch.",
+        "toggle": "Phone alerts for {name}",
+        "always": "Always",
+        "never": "Never",
+        "rule": {
+          "always": "Always receives alerts. Cannot be turned off.",
+          "never": "The CEO does not receive admin phone alerts.",
+          "choice": "Turn on to receive admin phone alerts. Off by default."
+        }
       }
     },
     "places": {
@@ -5501,7 +5515,38 @@
     "reviewWhat": "Request",
     "reviewNextDay": "next day",
     "reviewNotice": "Check the date and time before sending. The original record stays as it is, and the change counts toward working hours once an admin approves it.",
-    "reviewBack": "Close"
+    "reviewBack": "Close",
+    "todoTitle": "Records to fix ({n})",
+    "todoHint": "Tap one to fill in the date, type and time. Change the time if it differs from what actually happened.",
+    "todoPick": "Select",
+    "todoPicked": "Selected",
+    "todoPending": "Under review",
+    "todo": {
+      "missing_in": "{day} no clock-in",
+      "missing_out": "{day} no clock-out",
+      "late": "{day} late — in at {time}",
+      "early": "{day} left early — out at {time}",
+      "plannedIn": "Shift starts {time}",
+      "plannedOut": "Shift ends {time}"
+    },
+    "notice": {
+      "one": "No {what} record on {day}",
+      "many": "{n} missing clock records",
+      "line": "{day} {what}",
+      "hint": "Leave days and holidays are already excluded. Tap OK to fill in the date — just set the time.",
+      "ok": "OK",
+      "other": "Other corrections (change time · cancel record)",
+      "back": "Add {n} missing records now"
+    },
+    "quick": {
+      "hint": "Filled with your scheduled times. Change them if they differ. Untick any record you do not want to add.",
+      "send": "Send request ({n})",
+      "reasons": {
+        "forgot": "I forgot to clock in/out",
+        "phone": "Phone or app problem",
+        "field": "I started/finished on site"
+      }
+    }
   },
   "install": {
     "title": "Add to your home screen",
@@ -5879,7 +5924,8 @@
     "hideAllAsk": "Remove {n} processed requests on this page from the list?",
     "hideHint": "Removing only hides it from your list. The request record (leave, correction, etc.) stays. Pending requests can't be removed.",
     "hideFailed": "Couldn't remove. Please try again shortly.",
-    "recheck": "Recheck"
+    "recheck": "Recheck",
+    "rejectReason": "Reason: {why}"
   },
   "scheduleRequest": {
     "title": "Schedule request",

@@ -10,6 +10,17 @@ import { ErrorNote } from '@/components/ErrorNote';
 import { Button } from '@/components/ui';
 
 type Facts = { overtime: number; night: number; holiday: number };
+
+/** 거절 사유 칸 (2026-10-21 의뢰인) — 적지 않아도 거절된다. 직원의 요청 목록 · 거절 알림에 그대로 보인다 */
+function RejectReason({ value, onChange }: { value: string; onChange: (v: string) => void }) {
+  const t = useTranslations('admin.inbox');
+  return (
+    <label className="flex flex-col gap-1 text-sm text-muted">
+      {t('rejectReasonLabel')}
+      <textarea value={value} onChange={(e) => onChange(e.target.value)} maxLength={200} rows={2} placeholder={t('rejectReasonHint')} className="w-full rounded-button border border-border bg-bg p-2 text-base text-text" />
+    </label>
+  );
+}
 type Pending = { decision: 'approved' | 'rejected'; partial?: Facts };
 
 function useDecide(url: string) {
@@ -95,6 +106,7 @@ export function OvertimeDecision({ id, name, facts, compact = false }: { id: str
   const { busy, err, done, send } = useDecide(`/api/admin/overtime/${id}/decide`);
   const [pending, setPending] = useState<Pending | null>(null);
   const [partial, setPartial] = useState<Facts | null>(null);
+  const [why, setWhy] = useState('');
 
   if (done) return <p className="text-sm font-semibold text-muted">{t(done === 'already' ? 'already' : 'doneMsg')}</p>;
 
@@ -110,6 +122,7 @@ export function OvertimeDecision({ id, name, facts, compact = false }: { id: str
       <div className="flex flex-col gap-2 rounded-card border border-border p-3">
         <p className="text-sm">{summary}</p>
         {pending.decision === 'rejected' && <p className="text-xs text-muted">{t('rejectKeepsRecord')}</p>}
+        {pending.decision === 'rejected' && <RejectReason value={why} onChange={setWhy} />}
         <div className="flex gap-2">
           <Button
             size={size}
@@ -118,6 +131,7 @@ export function OvertimeDecision({ id, name, facts, compact = false }: { id: str
             onClick={() =>
               send({
                 decision: pending.decision,
+                reason: pending.decision === 'rejected' ? why : null,
                 approvedMinutes: p?.overtime ?? null,
                 approvedNightMinutes: p?.night ?? null,
                 approvedHolidayMinutes: p?.holiday ?? null,
@@ -206,13 +220,15 @@ export function LeaveDecision({
   const t = useTranslations('admin.inbox');
   const { busy, err, done, send } = useDecide(url ?? `/api/admin/leave/${id}/decide`);
   const [pending, setPending] = useState<'approved' | 'rejected' | null>(null);
+  const [why, setWhy] = useState('');
   if (done) return <p className="text-sm font-semibold text-muted">{t(done === 'already' ? 'already' : 'doneMsg')}</p>;
   if (pending) {
     return (
       <div className="flex flex-col gap-2 rounded-card border border-border p-3">
         <p className="text-sm">{t(pending === 'approved' ? keys[0] : keys[1], { name, summary })}</p>
+        {pending === 'rejected' && <RejectReason value={why} onChange={setWhy} />}
         <div className="flex gap-2">
-          <Button size={size} disabled={busy} className="flex-1" onClick={() => send({ decision: pending })}>
+          <Button size={size} disabled={busy} className="flex-1" onClick={() => send({ decision: pending, reason: pending === 'rejected' ? why : null })}>
             {t('confirm')}
           </Button>
           <Button size={size} variant="outline" className="flex-1" onClick={() => setPending(null)}>
@@ -276,14 +292,16 @@ export function CorrectionDecision({ id, name, compact = false }: { id: string; 
   const t = useTranslations('admin.inbox');
   const { busy, err, done, send } = useDecide(`/api/admin/corrections/${id}/decide`);
   const [pending, setPending] = useState<'approved' | 'rejected' | null>(null);
+  const [why, setWhy] = useState('');
   if (done) return <p className="text-sm font-semibold text-muted">{t(done === 'already' ? 'already' : done === 'conflict' ? 'conflict' : 'doneMsg')}</p>;
   if (pending) {
     return (
       <div className="flex flex-col gap-2 rounded-card border border-border p-3">
         <p className="text-sm">{t(pending === 'approved' ? 'confirmCorrection' : 'confirmCorrectionReject', { name })}</p>
         <p className="text-xs text-muted">{t('originalKept')}</p>
+        {pending === 'rejected' && <RejectReason value={why} onChange={setWhy} />}
         <div className="flex gap-2">
-          <Button size={size} disabled={busy} className="flex-1" onClick={() => send({ decision: pending })}>
+          <Button size={size} disabled={busy} className="flex-1" onClick={() => send({ decision: pending, reason: pending === 'rejected' ? why : null })}>
             {t('confirm')}
           </Button>
           <Button size={size} variant="outline" className="flex-1" onClick={() => setPending(null)}>

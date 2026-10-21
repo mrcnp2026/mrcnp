@@ -23,6 +23,7 @@ import { loadEntries, loadLots, loadTypeRules } from '@/lib/leave-ledger-data';
 import { OFFICE } from '@/config/office';
 import { toKstDate } from '@/lib/time';
 import { loadWorkRequests } from '@/lib/work-data';
+import { loadRejectReasons } from '@/lib/reject-reason';
 import { CancelLeave, DeleteLeaveRequest, LeaveForm } from './LeaveForm';
 import { CancelWork, WorkForm } from './WorkForm';
 import { loadMyOpenTargets } from '@/lib/leave-promotion';
@@ -44,6 +45,9 @@ export default async function LeavePage({ searchParams }: { searchParams: Promis
   // 긴 목록은 10건씩 (2026-10-15 의뢰인: 폰에서 끝없이 길어진다)
   const reqPage = pageOf(requests, sp.lp, 10);
   const workPage = pageOf(works, sp.wp, 10);
+  // 거절 사유 (2026-10-21 의뢰인) — 이 쪽에 보이는 거절된 휴가 · 외근만
+  const why = await loadRejectReasons([...reqPage.items.filter((r) => r.status === 'rejected').map((r) => ({ table: 'leave_requests', id: r.id })), ...workPage.items.filter((w) => w.status === 'rejected').map((w) => ({ table: 'work_requests', id: w.id }))]);
+  const trq = await getTranslations('requests');
   // 적용 대상이 아닌 종류는 신청 양식에 내놓지 않는다 (L13 — 서버도 다시 막는다)
   const [rules, orgGroups, { data: prof }, files] = await Promise.all([loadTypeRules(), loadOrgGroups(), createAdminClient().from('profiles').select('group_id').eq('id', me.id).maybeSingle(), loadLeaveFiles(reqPage.items.filter((r) => r.status === 'pending' || r.status === 'approved').map((r) => r.id))]); // 증빙 파일 (묶음 9)
   const mayUse = (code: string) => {
@@ -232,6 +236,7 @@ export default async function LeavePage({ searchParams }: { searchParams: Promis
               {r.startTime && ` · ${r.startTime} - ${r.endTime}`}
             </span>
             {r.reason && <span className="text-sm text-muted">{r.reason}</span>}
+            {why.get(`leave_requests:${r.id}`) && <span className="text-sm break-words text-danger">{trq('rejectReason', { why: why.get(`leave_requests:${r.id}`)! })}</span>}
             {(r.status === 'pending' || r.status === 'approved') && <LeaveFiles requestId={r.id} files={files.get(r.id) ?? []} canEdit={r.status === 'pending'} required={r.status === 'pending' && !!rules.get(r.typeCode)?.rule.evidenceRequired} />}
             {r.status === 'pending' && <CancelLeave id={r.id} />}
             {r.status === 'approved' && r.endDate >= today && <DeleteLeaveRequest leaveId={r.id} pendingId={deleteOf.get(r.id) ?? null} />}
@@ -276,6 +281,7 @@ export default async function LeavePage({ searchParams }: { searchParams: Promis
               {w.startTime && ` · ${w.startTime}~${w.endTime}`}
             </span>
             {w.reason && <span className="text-sm text-muted">{w.reason}</span>}
+            {why.get(`work_requests:${w.id}`) && <span className="text-sm break-words text-danger">{trq('rejectReason', { why: why.get(`work_requests:${w.id}`)! })}</span>}
             {w.status === 'pending' && <CancelWork id={w.id} />}
           </Row>
         ))}

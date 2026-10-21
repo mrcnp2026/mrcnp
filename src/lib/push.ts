@@ -1,9 +1,10 @@
 // 폰 알림 (웹 푸시, 2026-10-16 의뢰인 결정: 무료 웹 푸시 — 휴가 신청 · 미출근자 · 정정 요청). 서버 전용.
-// 받는 사람: 그 직원의 요청을 승인할 수 있는 관리자 · 지점관리자 전원 (임시 — 결정 사항 알림-6 ②).
+// 받는 사람: 그 직원의 요청을 승인할 수 있는 관리자 · 지점관리자 — 그중 최고관리자는 알림-9 규칙으로 거른다 (lib/push-recipients.ts, 2026-10-21).
 // 받는 주소는 push_subscriptions (묶음 15). 표가 없거나 열쇠(VAPID)가 없으면 조용히 건너뛴다 — 알림 때문에 요청 저장이 실패하면 안 된다.
 import 'server-only';
 import webpush from 'web-push';
 import { OFFICE } from '@/config/office';
+import { staffPushFilter } from '@/lib/push-recipients';
 import { approverIdsFor } from '@/lib/scope';
 import { createAdminClient } from '@/lib/supabase/admin';
 
@@ -57,6 +58,12 @@ export async function sendPush(userIds: string[], payload: PushPayload): Promise
   return sent;
 }
 
+/** 관리자에게 가는 알림 — 꺼진 최고관리자(대표자 · 켜지 않은 사람)는 뺀다 (알림-9). 본인 알림은 sendPush를 그대로 쓴다 */
+export async function sendStaffPush(userIds: string[], payload: PushPayload): Promise<number> {
+  if (userIds.length === 0 || !setup()) return 0;
+  return sendPush(await staffPushFilter(userIds), payload);
+}
+
 /** 같은 알림을 한 번만 — 처음이면 true (push_sent에 표시를 남긴다) */
 export async function firstTime(key: string): Promise<boolean> {
   const { error } = await createAdminClient().from('push_sent').insert({ key });
@@ -71,7 +78,7 @@ export async function notifyApprovers(employeeId: string, payload: PushPayload):
   try {
     const { data } = await createAdminClient().from('profiles').select('employee_no').eq('id', employeeId).maybeSingle();
     if (data?.employee_no?.startsWith('e2e-')) return;
-    await sendPush(await approverIdsFor(employeeId), payload);
+    await sendStaffPush(await approverIdsFor(employeeId), payload);
   } catch (e) {
     log('notify_failed', e);
   }

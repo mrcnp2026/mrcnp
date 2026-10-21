@@ -2,10 +2,12 @@
 // 위치 허용 안내 한 줄 (2026-10-18 의뢰인: 앱을 시작할 때 GPS 허용을 받아 두면 「위치 없음」이 줄어든다).
 // 웹 앱은 「항상 허용」을 강제할 수 없다 — 아직 묻지 않았으면 [위치 허용] 단추로 브라우저 허용 창을 띄우고,
 // 한 번 거부했으면 앱이 다시 물을 수 없으니 켜는 방법을 알려 준다. 허용돼 있거나 브라우저가 상태를 알려 주지 않으면 아무것도 보이지 않는다.
+// 이 기기에서 위치를 한 번이라도 받았으면 「아직 안 물음」이어도 숨긴다 (2026-10-21 의뢰인: 허용을 눌렀는데 열 때마다 다시 뜬다 —
+// 아이폰 「다음 번에 묻기」 · 안드로이드 「이번만 허용」은 매번 처음 상태로 돌아간다). 출퇴근을 누를 때 위치는 그대로 받는다.
 import { MapPin } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 import { useEffect, useState } from 'react';
-import { currentPosition } from './current-position';
+import { currentPosition, geoOkBefore, rememberGeoOk } from './current-position';
 
 type State = 'unknown' | 'granted' | 'prompt' | 'denied';
 
@@ -15,7 +17,11 @@ export function LocationPrompt() {
   const [busy, setBusy] = useState(false);
   useEffect(() => {
     let status: PermissionStatus | null = null;
-    const read = () => status && setState(status.state as State);
+    const read = () => {
+      if (!status) return;
+      if (status.state === 'granted') rememberGeoOk();
+      setState(status.state === 'prompt' && geoOkBefore() ? 'granted' : (status.state as State));
+    };
     navigator.permissions
       ?.query({ name: 'geolocation' })
       .then((s) => {

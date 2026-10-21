@@ -12,7 +12,7 @@ import { EMPLOYEE_NO_RE } from '@/lib/invite';
 import { checkPassword } from '@/lib/login-rules';
 import { cleanPhone } from '@/lib/org';
 import { assignableGroup } from '@/lib/org-data';
-import { sendPush } from '@/lib/push';
+import { sendStaffPush } from '@/lib/push';
 import { staffEmail } from '@/lib/session';
 import { switchOn } from '@/lib/switches';
 import { syncStaffHistorySafe } from '@/lib/staff-history';
@@ -58,7 +58,7 @@ export async function requestSignup(b: Record<string, unknown>): Promise<void> {
   // 관리자에게 폰 알림 (켜 둔 사람만, 통합설정 「폰 알림」 스위치가 켜져 있을 때)
   if (!(await switchOn('notify.push'))) return;
   const { data: admins } = await db.from('profiles').select('id, employee_no').eq('role', 'admin').eq('active', true);
-  await sendPush((admins ?? []).filter((a) => !a.employee_no?.startsWith('e2e-')).map((a) => a.id as string), { title: `${name} 님이 가입을 신청했습니다`, body: `${email} — 승인하면 직원으로 등록됩니다`, url: '/admin/members#signups', tag: `signup-${id}` }).catch(() => 0);
+  await sendStaffPush((admins ?? []).filter((a) => !a.employee_no?.startsWith('e2e-')).map((a) => a.id as string), { title: `${name} 님이 가입을 신청했습니다`, body: `${email} — 승인하면 직원으로 등록됩니다`, url: '/admin/members#signups', tag: `signup-${id}` }).catch(() => 0);
 }
 
 /** 로그인이 안 될 때: 승인 대기 중인 신청인지(비밀번호까지 맞을 때만 알려 준다 — 남의 이메일로 신청 여부를 떠보지 못하게) */

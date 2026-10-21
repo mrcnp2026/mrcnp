@@ -11,8 +11,9 @@ import { Row, RowList } from '@/components/list';
 import { Chip, PageShell } from '@/components/ui';
 import { getMe } from '@/lib/auth';
 import { loadEmployeeRecent } from '@/lib/employee-data';
+import { loadRejectReasons } from '@/lib/reject-reason';
 import { toKstDate } from '@/lib/time';
-import { CorrectionForm } from './CorrectionForm';
+import { CorrectionForm, type TodoItem } from './CorrectionForm';
 
 export default async function CorrectionsPage({ searchParams }: { searchParams: Promise<{ date?: string; kind?: string; new?: string }> }) {
   const me = await getMe();
@@ -24,6 +25,25 @@ export default async function CorrectionsPage({ searchParams }: { searchParams: 
   const r = await loadEmployeeRecent(me.id, new Date());
   const hm = (d: Date | null) => (d ? f.dateTime(d, { hour: '2-digit', minute: '2-digit', hourCycle: 'h23' }) : '—');
   const day = (d: string) => f.dateTime(new Date(`${d}T12:00:00+09:00`), { month: 'short', day: 'numeric', weekday: 'short' });
+  // 정정이 필요한 기록 (2026-10-21 의뢰인) — 빠진 것은 「빠진 기록 추가」, 지각 · 조퇴는 「시각 수정」으로 미리 채운다
+  const todo: TodoItem[] = r.todo.map((x) => ({
+    key: `${x.workDate}-${x.kind}-${x.issue}`,
+    type: x.issue === 'missing' ? 'add_missing' : 'modify',
+    workDate: x.workDate,
+    day: day(x.workDate),
+    kind: x.kind,
+    eventId: x.eventId,
+    time: x.issue === 'missing' ? x.planned : x.at,
+    title: t(`todo.${x.issue === 'missing' ? `missing_${x.kind}` : x.issue}`, { day: day(x.workDate), time: x.at ?? '' }),
+    sub: x.planned ? t(x.kind === 'in' ? 'todo.plannedIn' : 'todo.plannedOut', { time: x.planned }) : '',
+    pending: x.pending,
+  }));
+  // 거절 사유 (2026-10-21 의뢰인)
+  const why = await loadRejectReasons(r.corrections.filter((c) => c.status === 'rejected').map((c) => ({ table: 'punch_corrections', id: c.id })));
+  const trq = await getTranslations('requests');
+  const wantDate = sp.date && /^\d{4}-\d{2}-\d{2}$/.test(sp.date) ? sp.date : null;
+  const wantKind = sp.kind === 'in' || sp.kind === 'out' ? sp.kind : null;
+  const initialTodo = wantDate ? (todo.find((x) => x.workDate === wantDate && (!wantKind || x.kind === wantKind) && !x.pending)?.key ?? null) : null;
 
   return (
     <PageShell wide>
@@ -41,8 +61,10 @@ export default async function CorrectionsPage({ searchParams }: { searchParams: 
       <AddSheet id="correction" title={t('title')} defaultOpen={!!sp.date || sp.new === '1'} modal>
       <CorrectionForm
         today={toKstDate(new Date())}
-        initialDate={sp.date && /^\d{4}-\d{2}-\d{2}$/.test(sp.date) ? sp.date : null}
-        initialKind={sp.kind === 'in' || sp.kind === 'out' ? sp.kind : null}
+        initialDate={wantDate}
+        initialKind={wantKind}
+        todo={todo}
+        initialTodo={initialTodo}
         events={[...r.events].reverse().map((e) => ({ id: e.id, label: `${day(e.workDate)} · ${t(`kind.${e.kind}`)} ${hm(e.punchedAt)}` }))}
       />
       </AddSheet>
@@ -55,6 +77,7 @@ export default async function CorrectionsPage({ searchParams }: { searchParams: 
             <span className="font-semibold">{day(c.workDate)} · {t(`type.${c.correctionType}`)}</span>
             {c.newPunchedAt && <span className="num text-sm">{t(`kind.${c.kind}`)} {hm(c.newPunchedAt)}</span>}
             <span className="text-sm text-muted">{c.reason}</span>
+            {why.get(`punch_corrections:${c.id}`) && <span className="text-sm break-words text-danger">{trq('rejectReason', { why: why.get(`punch_corrections:${c.id}`)! })}</span>}
           </Row>
         ))}
         </RowList>

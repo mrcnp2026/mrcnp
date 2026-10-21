@@ -4,6 +4,7 @@ import { readAll } from '@/lib/read-all';
 import { OFFICE } from '@/config/office';
 import { fromCorrection, fromLeave, fromLeaveChange, fromOvertime, fromPunchRequest, fromShiftRequest, fromWork, type ReqItem } from '@/lib/requests';
 import { viewerScope, within } from '@/lib/scope';
+import { loadRejectReasons } from '@/lib/reject-reason';
 import { createAdminClient } from '@/lib/supabase/admin';
 
 export const REQUEST_WINDOW_DAYS = 62; // 완료 목록은 최근 두 달
@@ -53,5 +54,10 @@ export async function loadRequests(opts: { employeeId?: string; practice?: boole
   const coShown = co.filter((c) => !(settled(c) && c.requested_by !== c.employee_id && fromImport(c)));
   const lvShown = lv.filter((l) => l.source !== 'import');
   const all = [...pr.map(fromPunchRequest), ...sh.map(fromShiftRequest), ...lc.map(fromLeaveChange), ...coShown.map(fromCorrection), ...otShown.map(fromOvertime), ...lvShown.map(fromLeave), ...wk.map(fromWork)];
+  // 거절 사유 (2026-10-21 의뢰인) — 거절된 것만 결정 기록에서 읽는다
+  const TABLE: Record<ReqItem['kind'], string> = { correction: 'punch_corrections', overtime: 'overtime_requests', leave: 'leave_requests', work: 'work_requests', punch: 'punch_requests', shift: 'shift_requests', leaveDelete: 'leave_change_requests' };
+  const rejected = all.filter((r) => r.status === 'rejected');
+  const why = await loadRejectReasons(rejected.map((r) => ({ table: TABLE[r.kind], id: r.id })));
+  for (const r of rejected) r.rejectReason = why.get(`${TABLE[r.kind]}:${r.id}`) ?? null;
   return within(all, await viewerScope(), (r) => r.employeeId); // 지점관리자면 맡은 지점 직원 것만
 }

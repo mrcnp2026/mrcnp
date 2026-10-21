@@ -3,7 +3,10 @@
 // 같은 요청을 두 번 승인해도 기록은 하나다 — record_punch가 같은 시각·같은 종류를 한 건으로 본다 (중복 방지).
 import { syncOvertimeFor } from '@/lib/period-data';
 import { OFFICE } from '@/config/office';
+import { after } from 'next/server';
 import { api, ApiError, readJson } from '@/lib/api';
+import { rejectReasonOf } from '@/lib/reject-reason';
+import { notifyDecision, notifyLateEarly } from '@/lib/push-events';
 import { isPeriodLocked, recordPunch } from '@/lib/punch';
 import { requireApprover, requireStaffViewer } from '@/lib/scope';
 import { createAdminClient } from '@/lib/supabase/admin';
@@ -40,9 +43,11 @@ export const POST = api<{ params: Promise<{ id: string }> }>('admin.punchRequest
     .select('id');
   if (error) throw new Error(`punchRequests.decide: ${error.code}`);
   if (!done?.length) return { result: 'already' };
-  const { error: e2 } = await db.from('decision_log').insert({ subject_table: 'punch_requests', subject_id: id, decision: b.decision, reason: null, decided_by: me.id, request_id: ctx.requestId });
+  const { error: e2 } = await db.from('decision_log').insert({ subject_table: 'punch_requests', subject_id: id, decision: b.decision, reason: rejectReasonOf(b), decided_by: me.id, request_id: ctx.requestId });
   if (e2) throw new Error(`punchRequests.log: ${e2.code}`);
   // 기록이 바뀐 날의 연장근로 확인을 바로 맞춘다 (2026-10-19 — 화면을 열 때 하던 계산을 옮김)
   syncOvertimeFor(r.employee_id, [r.work_date]);
+  after(() => notifyDecision('punch_requests', id)); // 결과를 요청한 직원 폰으로 (2026-10-21 의뢰인, 알림-12) — 실제로 바뀐 것만 보낸다
+  if (b.decision === 'approved') after(() => notifyLateEarly(r.employee_id, r.work_date, r.kind)); // 승인으로 생긴 기록도 지각 · 조퇴를 본다 (알림-11)
   return { result: 'ok' };
 });
