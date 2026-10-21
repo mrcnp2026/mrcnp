@@ -4,6 +4,7 @@ import { CalendarDays, CalendarRange, CalendarX, Clock, MapPin, MapPinOff, Penci
 import { distanceText } from '@/lib/geo';
 import { getFormatter, getTranslations } from 'next-intl/server';
 import Link from 'next/link';
+import { BulkAll, BulkPick } from '@/app/admin/inbox/BulkApprove';
 import { ClickRow } from '@/components/ClickRow';
 import { HideRequests } from '@/components/HideRequests';
 import { RowList } from '@/components/list';
@@ -13,7 +14,7 @@ import { ago, type ReqItem, type ReqKind } from '@/lib/requests';
 
 const ICON: Record<ReqKind, LucideIcon> = { correction: PencilLine, overtime: Clock, leave: CalendarDays, work: MapPin, punch: MapPinOff, shift: CalendarRange, leaveDelete: CalendarX };
 
-export async function RequestRows({ items, leaveTypes, names, showName = false, hrefOf, table = false, openKey = 'open', hideable = false }: {
+export async function RequestRows({ items, leaveTypes, names, showName = false, hrefOf, table = false, openKey = 'open', hideable = false, pick }: {
   items: ReqItem[];
   leaveTypes: { code: string; name: string }[];
   names: Map<string, string>;
@@ -22,6 +23,7 @@ export async function RequestRows({ items, leaveTypes, names, showName = false, 
   openKey?: 'open' | 'view'; // 줄 끝 버튼 글자 — 관리자는 「처리」, 직원은 「보기」
   table?: boolean; // PC 표 모양 (시프티의 「요청 내역」 표) — 줄 어디를 눌러도 그 요청의 상세가 열린다
   hideable?: boolean; // 처리된 요청 줄에 「지우기」 (2026-10-19 의뢰인, 목록에서만 뺀다 — lib/request-hides.ts)
+  pick?: { urlOf: (r: ReqItem) => string; blocked: (r: ReqItem) => boolean; blockedNote: string }; // 관리자 PC 표의 왼쪽 체크박스 — 일괄 승인 (2026-10-21 의뢰인, app/admin/inbox/BulkApprove)
 }) {
   const [t, tco, tl, tw, f] = await Promise.all([getTranslations('requests'), getTranslations('corrections'), getTranslations('leave'), getTranslations('work'), getFormatter()]);
   const SHIFT_KIND = new Set(['normal', 'deemed', 'outside', 'remote', 'holiday', 'extra']);
@@ -52,6 +54,11 @@ export async function RequestRows({ items, leaveTypes, names, showName = false, 
         <table className="w-full text-sm">
           <thead>
             <tr>
+              {pick && (
+                <th scope="col" className="w-10 px-3 py-2">
+                  <BulkAll />
+                </th>
+              )}
               {[t('colKind'), t('colWho'), t('colWhat'), t('colReason'), t('colStatus'), t('colAsked'), t('colManage')].map((x) => (
                 <th key={x} scope="col" className={th}>{x}</th>
               ))}
@@ -63,6 +70,11 @@ export async function RequestRows({ items, leaveTypes, names, showName = false, 
               const label = sub(r);
               return (
                 <ClickRow key={r.key} href={hrefOf(r)}>
+                  {pick && (
+                    <td className="w-10 px-3 py-2.5 align-middle">
+                      {r.status === 'pending' && <BulkPick url={pick.urlOf(r)} kind={r.kind} label={`${names.get(r.employeeId) ?? ''} ${r.kind === 'punch' ? t(`punchKind.${r.punchKind ?? 'in'}`) : t(`kinds.${r.kind}`)}`} blocked={pick.blocked(r)} blockedNote={pick.blockedNote} />}
+                    </td>
+                  )}
                   <td className={`${td} font-bold whitespace-nowrap`}>
                     <Link href={hrefOf(r)} className="hover:text-primary">
                       {r.kind === 'punch' ? t(`punchKind.${r.punchKind ?? 'in'}`) : t(`kinds.${r.kind}`)}

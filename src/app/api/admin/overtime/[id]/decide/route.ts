@@ -10,7 +10,7 @@ import { createAdminClient } from '@/lib/supabase/admin';
 const minutes = (v: unknown) => (v === null || v === undefined ? null : Number.isInteger(v) && (v as number) >= 0 ? (v as number) : NaN);
 
 export const POST = api<{ params: Promise<{ id: string }> }>('admin.overtime.decide', async (req, ctx) => {
-  // 관리자 · 지점관리자. 누구의 요청인지 읽은 뒤 requireApprover가 다시 본다(지점관리자는 맡은 지점 직원의 요청만, 자기 요청은 못 한다)
+  // 관리자 · 지점관리자. 누구의 요청인지 읽은 뒤 requireApprover가 다시 본다(최고관리자는 본인 것도 · 지점관리자는 맡은 지점 직원 것만, 권한-10)
   const viewer = await requireStaffViewer();
   if (!viewer) throw new ApiError(403, 'forbidden');
   const me = viewer.me;
@@ -22,7 +22,7 @@ export const POST = api<{ params: Promise<{ id: string }> }>('admin.overtime.dec
   const db = createAdminClient();
   const { data: row } = await db.from('overtime_requests').select('employee_id').eq('id', id).maybeSingle();
   if (!row) throw new ApiError(404, 'not_found');
-  await requireApprover(row.employee_id); // 자기 요청은 다른 관리자가 처리한다 · 지점관리자는 맡은 지점만
+  await requireApprover(row.employee_id); // 최고관리자는 본인 요청도 처리한다(권한-10) · 지점관리자는 맡은 지점 직원만, 자기 것은 못 한다
   const { data, error } = await db.rpc('decide_overtime', {
     p_id: id,
     p_decision: b.decision,

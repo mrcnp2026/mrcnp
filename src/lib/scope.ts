@@ -70,7 +70,7 @@ export async function requireStaffViewer(): Promise<{ me: Me; readOnly: boolean 
 
 /**
  * 요청을 승인 · 거절할 수 있는 사람인가.
- *   관리자: 자기 요청은 다른 관리자가 있으면 못 한다(기존 규칙).
+ *   관리자(= 최고관리자): 누구 요청이든, 본인 요청도 처리한다 (2026-10-16 권한-10 · staff-rules approvalBlocked).
  *   지점관리자: 맡은 지점 직원의 요청만. 자기 요청은 못 한다(관리자가 처리한다).
  */
 export async function requireApprover(employeeId: string): Promise<Me> {

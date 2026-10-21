@@ -812,7 +812,16 @@
       "dayNoReason": "사유 없음 — 직원이 아직 남기지 않았습니다",
       "placeMap": "출퇴근 장소 지도 — {name}",
       "rejectReasonLabel": "거절 사유 (선택)",
-      "rejectReasonHint": "직원에게 그대로 보입니다. 예: 그날 외근 기록이 없습니다. 출장 신청으로 다시 내 주세요."
+      "rejectReasonHint": "직원에게 그대로 보입니다. 예: 그날 외근 기록이 없습니다. 출장 신청으로 다시 내 주세요.",
+      "bulkAll": "이 쪽 전체 선택",
+      "bulkNone": "승인할 요청을 왼쪽 칸에서 고르세요",
+      "bulkCount": "{n}건 선택",
+      "bulkApprove": "선택한 요청 승인 ({n}건)",
+      "bulkAsk": "선택한 {n}건을 승인합니다. 연장근로는 계산된 시간 그대로 인정됩니다.",
+      "bulkConfirm": "{n}건 승인",
+      "bulkDone": "{n}건 승인했습니다",
+      "bulkFailed": "{n}건은 처리하지 못했습니다 — 줄을 눌러 하나씩 확인해 주세요",
+      "bulkBlocked": "본인 요청 · 상위 등급 요청은 다른 관리자가 처리합니다"
     },
     "records": {
       "title": "월 집계",

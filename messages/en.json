@@ -812,7 +812,16 @@
       "dayNoReason": "No reason left yet",
       "placeMap": "Work location map — {name}",
       "rejectReasonLabel": "Reason for rejecting (optional)",
-      "rejectReasonHint": "The employee will see this as written."
+      "rejectReasonHint": "The employee will see this as written.",
+      "bulkAll": "Select all on this page",
+      "bulkNone": "Tick requests on the left to approve them together",
+      "bulkCount": "{n} selected",
+      "bulkApprove": "Approve selected ({n})",
+      "bulkAsk": "Approve the {n} selected requests? Overtime is accepted as calculated.",
+      "bulkConfirm": "Approve {n}",
+      "bulkDone": "{n} approved",
+      "bulkFailed": "{n} could not be processed — open each row to check",
+      "bulkBlocked": "Your own or higher-level requests are handled by another admin"
     },
     "records": {
       "title": "Monthly totals",

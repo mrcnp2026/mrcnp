@@ -34,6 +34,7 @@ import { HideRequests } from '@/components/HideRequests';
 import { loadHidden, withoutHidden } from '@/lib/request-hides';
 import { loadWorkRequests } from '@/lib/work-data';
 import { ApproveDay, CorrectionDecision, LeaveDecision, OvertimeDecision, WorkDecision } from './Decisions';
+import { BulkBar } from './BulkApprove';
 import { LeaveFiles } from '@/components/LeaveFiles';
 import { loadLeaveFiles } from '@/lib/leave-evidence';
 import { loadTypeRules } from '@/lib/leave-ledger-data';
@@ -48,7 +49,7 @@ export default async function InboxPage({ searchParams }: { searchParams: Promis
   const tr = await getTranslations('requests');
   const f = await getFormatter();
   const me = (await getMe())!;
-  // 자기 요청은 다른 관리자가 처리한다 — 다른 관리자가 있을 때만 막는다 (staff-rules.ts)
+  // 최고관리자는 본인 요청도 처리한다 (2026-10-16 권한-10, staff-rules.ts) — 막히는 것은 지점관리자의 본인 것 · 맡지 않은 사람 것
   // 지점관리자는 자기 요청을 처리하지 못한다 — 관리자가 한다
   // 등급별 승인 규칙 (개발-39): 처리할 수 없는 사람의 요청은 단추 대신 안내 — 본인 것 · 상위 등급 것
   const staffAll = await loadStaff();
@@ -221,6 +222,9 @@ export default async function InboxPage({ searchParams }: { searchParams: Promis
   const rkLink = (k: string | null) => `/admin/inbox?${[k ? `rk=${k}` : '', sp.live === '1' ? 'live=1' : '', q ? `q=${encodeURIComponent(q)}` : ''].filter(Boolean).join('&')}`;
   const shownList = rk ? listed.filter((x) => x.kind === rk) : listed;
   const listPage = pageOf(shownList, sp.pp, LIST_PAGE);
+  // 일괄 승인이 부를 승인 API (종류마다 원래 쓰던 것)
+  const APPROVE_PATH: Record<string, string> = { punch: 'punch-requests', correction: 'corrections', overtime: 'overtime', shift: 'schedule-requests', leave: 'leave', leaveDelete: 'leave-changes', work: 'work' };
+  const approveUrl = (r: { kind: string; id: string }) => `/api/admin/${APPROVE_PATH[r.kind]}/${r.id}/decide`;
   const focusHref = (r: { kind: string; id: string }) => `/admin/inbox?k=${r.kind === 'correction' ? 'corrections' : r.kind}&id=${r.id}${sp.live === '1' ? '&live=1' : ''}`;
   // 한 번에 승인할 것 — 출퇴근 요청 · 정정을 먼저 승인하고 연장근로는 그 뒤(출퇴근이 바뀌면 연장근로가 다시 계산된다). 자기 요청 · 상위 등급 요청은 뺀다
   const dayBatch = !focusDay || cannot(focusDay.employee_id)
@@ -440,8 +444,10 @@ export default async function InboxPage({ searchParams }: { searchParams: Promis
           <RequestRows items={listPage.items} leaveTypes={leaveTypes} names={names} showName hrefOf={focusHref} />
         </div>
         {listPage.items.length > 0 && (
-          <div className="hidden lg:block">
-            <RequestRows table items={listPage.items} leaveTypes={leaveTypes} names={names} showName hrefOf={focusHref} />
+          <div className="hidden flex-col gap-2 lg:flex">
+            {/* 체크박스로 골라 한 번에 승인 — PC만 (2026-10-21 의뢰인). 본인 · 상위 등급 요청은 고를 수 없다 */}
+            <BulkBar />
+            <RequestRows table items={listPage.items} leaveTypes={leaveTypes} names={names} showName hrefOf={focusHref} pick={{ urlOf: approveUrl, blocked: (r) => cannot(r.employeeId), blockedNote: t('bulkBlocked') }} />
           </div>
         )}
         <Pager page={listPage.page} pages={listPage.pages} param="pp" params={sp} label={tc('pages')} />

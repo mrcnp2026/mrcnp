@@ -11,7 +11,7 @@ import { requireApprover, requireStaffViewer } from '@/lib/scope';
 import { createAdminClient } from '@/lib/supabase/admin';
 
 export const POST = api<{ params: Promise<{ id: string }> }>('admin.corrections.decide', async (req, ctx) => {
-  // 관리자 · 지점관리자. 누구의 요청인지 읽은 뒤 requireApprover가 다시 본다(지점관리자는 맡은 지점 직원의 요청만, 자기 요청은 못 한다)
+  // 관리자 · 지점관리자. 누구의 요청인지 읽은 뒤 requireApprover가 다시 본다(최고관리자는 본인 것도 · 지점관리자는 맡은 지점 직원 것만, 권한-10)
   const viewer = await requireStaffViewer();
   if (!viewer) throw new ApiError(403, 'forbidden');
   const me = viewer.me;
@@ -21,7 +21,7 @@ export const POST = api<{ params: Promise<{ id: string }> }>('admin.corrections.
   const db = createAdminClient();
   const { data: c } = await db.from('punch_corrections').select('employee_id, work_date').eq('id', id).maybeSingle();
   if (!c) throw new ApiError(404, 'not_found');
-  await requireApprover(c.employee_id); // 자기 요청은 다른 관리자가 처리한다 · 지점관리자는 맡은 지점만
+  await requireApprover(c.employee_id); // 최고관리자는 본인 요청도 처리한다(권한-10) · 지점관리자는 맡은 지점 직원만, 자기 것은 못 한다
   if (await isPeriodLocked(c.employee_id, c.work_date)) throw new ApiError(409, 'period_locked');
   await assertNotConfirmed(c.employee_id, c.work_date); // 확정된 날의 기록은 바뀌지 않는다 — 먼저 확정을 푼다
   const { data, error } = await db.rpc('decide_correction', {
