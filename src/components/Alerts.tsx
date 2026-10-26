@@ -9,7 +9,7 @@ import { usePathname } from 'next/navigation';
 import { createContext, useCallback, useContext, useEffect, useRef, useState, type ReactNode } from 'react';
 
 // decided: 내 요청 중 처리된 것(「요청」 화면을 마지막으로 연 뒤) — 메뉴 · 종 숫자에 같이 (2026-10-19)
-// inquiry: 문의하기 — 안 본 답 + (답할 수 있는 관리자는) 답 안 한 받은 문의. 종 숫자 · 앱 아이콘 숫자에는 넣지 않는다 (2026-10-26)
+// inquiry: 문의하기 — 안 본 답 + (답할 수 있는 관리자는) 답 안 한 받은 문의. 종 숫자 · 앱 아이콘 숫자에도 같이 센다 (2026-10-26 의뢰인: 종에 알림이 없다)
 export type AlertCounts = { notices: number; messages: number; requests: number; decided: number; inquiry: number };
 const Ctx = createContext<AlertCounts>({ notices: 0, messages: 0, requests: 0, decided: 0, inquiry: 0 });
 export const useAlerts = () => useContext(Ctx);
@@ -60,7 +60,7 @@ export function AlertsProvider({ initial, children }: { initial: AlertCounts; ch
   // 앱 아이콘 숫자 (2026-10-21 의뢰인: 카카오톡처럼) — 종과 같은 숫자. 홈 화면에 설치한 앱에서만 보인다(아이폰 · PC 크롬/엣지).
   // 앱이 닫혀 있을 때는 폰 알림을 받는 순간 서비스 워커(public/sw.js)가 다시 세어 바꾼다
   useEffect(() => {
-    const n = counts.notices + counts.messages + counts.decided + counts.requests; // requests는 승인할 사람이 아니면 서버가 0으로 보낸다
+    const n = counts.notices + counts.messages + counts.decided + counts.requests + counts.inquiry; // requests는 승인할 사람이 아니면 서버가 0으로 보낸다
     const nav = navigator as Navigator & { setAppBadge?: (n?: number) => unknown; clearAppBadge?: () => unknown };
     try {
       void Promise.resolve(n > 0 ? nav.setAppBadge?.(n) : nav.clearAppBadge?.()).catch(() => {});
@@ -94,12 +94,13 @@ export function AlertBell({ approver, size = 'pc' }: { approver: boolean; size?:
       window.removeEventListener('keydown', key);
     };
   }, [open]);
-  const total = c.notices + c.messages + c.decided + (approver ? c.requests : 0);
+  const total = c.notices + c.messages + c.decided + c.inquiry + (approver ? c.requests : 0);
   const rows = [
     { key: 'notices', n: c.notices, href: '/punch/notices' },
     { key: 'messages', n: c.messages, href: '/punch/messages' },
     { key: 'decided', n: c.decided, href: '/punch/requests?tab=done' }, // 내 요청 중 처리된 것 (2026-10-19)
     ...(approver ? [{ key: 'requests', n: c.requests, href: '/admin/inbox' }] : []),
+    { key: 'inquiry', n: c.inquiry, href: approver ? '/admin/inquiry' : '/punch/inquiry' }, // 문의하기: 안 본 답 + 답 안 한 받은 문의 (2026-10-26)
   ];
   return (
     <div ref={box} className="relative">

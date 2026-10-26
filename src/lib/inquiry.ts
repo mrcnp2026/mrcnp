@@ -32,10 +32,10 @@ export type ToRole = 'ADMIN' | 'SYSTEM';
 /** 받는 곳 — 직원(지점관리자 포함)이 보내면 관리자들에게, 관리자가 보내면 시스템관리자에게 */
 export const routeFor = (role: Role): ToRole => (role === 'admin' ? 'SYSTEM' : 'ADMIN');
 
-/** 이 문의에 답할 수 있는가 — 시스템관리자는 모두, 최고관리자는 직원이 보낸 것(ADMIN)만. 자기 문의에는 답하지 않는다 */
+/** 이 문의에 답할 수 있는가 — 시스템관리자는 모두(본인이 보낸 것도: 관리자가 보내면 받는 곳이 시스템관리자 본인뿐일 수 있다), 최고관리자는 직원이 보낸 것(ADMIN)만. 최고관리자는 자기 문의에 답하지 않는다 */
 export function canAnswer(me: { id: string; role: Role; isSystem: boolean }, q: { toRole: ToRole; employeeId: string }): boolean {
-  if (q.employeeId === me.id) return false;
   if (me.isSystem) return true;
+  if (q.employeeId === me.id) return false;
   return me.role === 'admin' && q.toRole === 'ADMIN';
 }
 

@@ -52,11 +52,11 @@ export async function loadMine(employeeId: string, practice: boolean): Promise<I
   return toInquiries((data ?? []) as Row[]);
 }
 
-/** 받은 문의 — 시스템관리자는 전부, 최고관리자는 직원이 보낸 것만. 다른 사람은 없다 */
+/** 받은 문의 — 시스템관리자는 전부(본인이 보낸 것 포함), 최고관리자는 직원이 보낸 것만. 다른 사람은 없다 */
 export async function loadReceived(me: Me, practice: boolean): Promise<Inquiry[]> {
   const sys = isSystem(me);
   if (!sys && me.role !== 'admin') return [];
-  let q = db().from('inquiries').select('*').eq('is_test', practice).neq('employee_id', me.id).order('created_at', { ascending: false }).limit(300);
+  let q = db().from('inquiries').select('*').eq('is_test', practice).order('created_at', { ascending: false }).limit(300);
   if (!sys) q = q.eq('to_role', 'ADMIN');
   const { data, error } = await q;
   if (error) throw new Error(`inquiry.received: ${error.code}`);
@@ -89,7 +89,7 @@ export async function inquiryBadge(me: Me, practice: boolean): Promise<{ unseenA
     (async () => {
       const sys = isSystem(me);
       if (!sys && me.role !== 'admin') return 0;
-      let q = db().from('inquiries').select('id', { count: 'exact', head: true }).eq('is_test', practice).eq('state', 'OPEN').neq('employee_id', me.id);
+      let q = db().from('inquiries').select('id', { count: 'exact', head: true }).eq('is_test', practice).eq('state', 'OPEN');
       if (!sys) q = q.eq('to_role', 'ADMIN');
       return (await q).count ?? 0;
     })(),

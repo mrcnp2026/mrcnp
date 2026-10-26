@@ -7587,7 +7587,8 @@
     "messages": "Unread company board posts",
     "requests": "Requests to handle",
     "none": "No new alerts.",
-    "decided": "My requests processed"
+    "decided": "My requests processed",
+    "inquiry": "Inquiries (new answers · unanswered)"
   },
   "payCheckPage": {
     "forbidden": "Only payroll managers can view this.",

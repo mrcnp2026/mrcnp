@@ -38,14 +38,14 @@ describe('받는 곳 · 답변 권한', () => {
     expect(routeFor('manager')).toBe('ADMIN');
     expect(routeFor('admin')).toBe('SYSTEM');
   });
-  it('시스템관리자는 모두에 답하고, 최고관리자는 직원이 보낸 것(ADMIN)만, 자기 문의에는 답하지 않는다', () => {
+  it('시스템관리자는 모두에(본인 것도) 답하고, 최고관리자는 직원이 보낸 것(ADMIN)만, 최고관리자는 자기 문의에는 답하지 않는다', () => {
     const sys = { id: 's', role: 'admin' as const, isSystem: true }, boss = { id: 'b', role: 'admin' as const, isSystem: false }, mgr = { id: 'm', role: 'manager' as const, isSystem: false };
     expect(canAnswer(sys, { toRole: 'SYSTEM', employeeId: 'x' })).toBe(true);
     expect(canAnswer(sys, { toRole: 'ADMIN', employeeId: 'x' })).toBe(true);
     expect(canAnswer(boss, { toRole: 'ADMIN', employeeId: 'x' })).toBe(true);
     expect(canAnswer(boss, { toRole: 'SYSTEM', employeeId: 'x' })).toBe(false);
     expect(canAnswer(mgr, { toRole: 'ADMIN', employeeId: 'x' })).toBe(false);
-    expect(canAnswer(sys, { toRole: 'SYSTEM', employeeId: 's' })).toBe(false);
+    expect(canAnswer(sys, { toRole: 'SYSTEM', employeeId: 's' })).toBe(true); // 관리자가 보내면 받는 곳이 시스템관리자 본인뿐일 수 있다
     expect(canAnswer(boss, { toRole: 'ADMIN', employeeId: 'b' })).toBe(false);
   });
 });
