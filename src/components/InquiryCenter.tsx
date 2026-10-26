@@ -71,7 +71,11 @@ export async function InquiryCenter({ base, me, searchParams }: { base: Base; me
           <section className="flex min-w-0 flex-col gap-2">
             <h2 className="text-base font-bold">{t('mineTitle')} <span className="num text-muted">{mine.length}</span></h2>
             {mine.length === 0 && <p className="rounded-card border border-border bg-bg p-6 text-sm text-muted">{t('mineEmpty')}</p>}
-            {mine.map((q) => <Item key={q.id} q={q} t={t} path={path(q)} when={when} mode="mine" />)}
+            {mine.length > 0 && (
+              <div className="divide-y divide-border overflow-hidden rounded-card border border-border bg-bg">
+                {mine.map((q) => <Item key={q.id} q={q} t={t} path={path(q)} when={when} mode="mine" />)}
+              </div>
+            )}
           </section>
         </div>
       )}
@@ -86,7 +90,11 @@ export async function InquiryCenter({ base, me, searchParams }: { base: Base; me
             ))}
           </div>
           {shown.length === 0 && <p className="rounded-card border border-border bg-bg p-6 text-sm text-muted">{t(filter === 'open' ? 'receivedNoneOpen' : 'receivedEmpty')}</p>}
-          {shown.map((q) => <Item key={q.id} q={q} t={t} path={path(q)} when={when} mode="received" answerable={canAnswerFor(me, q)} />)}
+          {shown.length > 0 && (
+            <div className="divide-y divide-border overflow-hidden rounded-card border border-border bg-bg">
+              {shown.map((q) => <Item key={q.id} q={q} t={t} path={path(q)} when={when} mode="received" answerable={canAnswerFor(me, q)} />)}
+            </div>
+          )}
         </section>
       )}
     </PageShell>
@@ -97,20 +105,22 @@ function Item({ q, t, path, when, mode, answerable = false }: { q: Inquiry; t: T
   const open = q.state === 'OPEN';
   const fresh = mode === 'mine' && q.state === 'ANSWERED' && !q.askerSeenAt;
   return (
-    <details open={mode === 'received' ? open : fresh} className="group rounded-card border border-border bg-bg px-4 py-3">
-      <summary className="flex cursor-pointer list-none flex-col gap-1">
-        <span className="flex flex-wrap items-center gap-x-3 gap-y-1">
+    <details open={mode === 'received' ? open : fresh} className="group px-4 py-2.5">
+      <summary className="flex cursor-pointer list-none flex-col gap-0.5">
+        <span className="flex items-center gap-2">
           <Chip tone={open ? 'warn' : 'neutral'}>{t(open ? 'stateOpen' : 'stateAnswered')}</Chip>
           {fresh && <Chip tone="info">{t('newAnswer')}</Chip>}
           <span className="min-w-0 flex-1 truncate text-sm font-semibold">{q.title}</span>
-          <span className="num text-xs text-faint">{when(q.createdAt)}</span>
+          <span className="num shrink-0 text-xs text-faint">{when(q.createdAt)}</span>
         </span>
-        <span className="flex flex-wrap items-center gap-x-2 text-xs text-muted">
-          {mode === 'received' && <b className="font-semibold text-text">{q.name}</b>}
-          <span>{path}</span>
-        </span>
+        {mode === 'received' && (
+          <span className="truncate text-xs text-muted">
+            <b className="font-semibold text-text">{q.name}</b> · {path}
+          </span>
+        )}
       </summary>
-      <div className="mt-3 flex flex-col gap-3 text-sm">
+      <div className="mt-3 mb-1 flex flex-col gap-3 text-sm">
+        {mode === 'mine' && <p className="text-xs text-faint">{path}</p>}
         <p className="leading-7 whitespace-pre-line text-text">{q.body}</p>
         {q.answer && (
           <div className="rounded-button border border-primary/25 bg-primary-tint/50 px-4 py-3">
