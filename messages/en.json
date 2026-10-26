@@ -7297,8 +7297,7 @@
     "articles": "Articles",
     "questions": "Questions",
     "moreHelp": "Did not find your answer?",
-    "moreHelpBody": "Ask an administrator through the company message board.",
-    "moreHelpLink": "Open the message board",
+    "moreHelpBody": "Please ask a company administrator directly.",
     "langNote": "The help content is available in Korean only."
   },
   "frame": {

@@ -7297,8 +7297,7 @@
     "articles": "글",
     "questions": "질문",
     "moreHelp": "원하는 답을 찾지 못하셨나요?",
-    "moreHelpBody": "사내게시판으로 관리자에게 물어보세요.",
-    "moreHelpLink": "사내게시판 열기",
+    "moreHelpBody": "회사 관리자에게 직접 물어보세요.",
     "langNote": "도움말 내용은 한국어로만 제공됩니다."
   },
   "frame": {
