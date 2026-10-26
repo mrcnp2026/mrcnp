@@ -41,6 +41,8 @@ export const COLORS = {
 } as const;
 
 // 8px 격자: 4·8·12·16·24·32·48 (Tailwind 1·2·3·4·6·8·12 단계만 쓴다)
+// 메일(HTML)에 쓰는 색 — 메일 앱은 CSS 변수를 못 읽어 값을 그대로 적어야 한다. 앱 화면 색과 따로 두되 이 파일에만 둔다.
+export const MAIL_COLORS = { page: '#f4f6fa', card: '#ffffff', text: '#1f2937', body: '#374151', muted: '#6b7280', faint: '#9ca3af', action: '#2563eb', onAction: '#ffffff' } as const;
 export const RADII = { card: '6px', button: '4px', punch: '4px', chip: '9999px' } as const;
 // PC(1024px~) 디자인 기준 — 2026-10-14 의뢰인이 견본 「나 · 파랑」을 골랐다 (결정 사항 개발-22, `09 디자인 기준 견본 (2026-10-14).html`).
 //   본문 14px · 카드 모서리 12px · 버튼 8px · 옅은 선 · 강조색 한 가지(파랑) · 상태는 옅은 바탕 + 진한 글자 딱지.

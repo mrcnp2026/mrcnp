@@ -109,11 +109,11 @@ function Picker({ el, onClose }: { el: HTMLInputElement; onClose: () => void }) 
         {hasDate && (
           <div className="flex w-64 flex-col gap-1">
             <div className="flex items-center justify-between">
-              <button type="button" aria-label="prev" onClick={() => shiftMonth(-1)} className={nav}>
+              <button type="button" aria-label={t('prev')} onClick={() => shiftMonth(-1)} className={nav}>
                 <ChevronLeft aria-hidden size={16} />
               </button>
               <span className="num text-sm font-bold">{title}</span>
-              <button type="button" aria-label="next" onClick={() => shiftMonth(1)} className={nav}>
+              <button type="button" aria-label={t('next')} onClick={() => shiftMonth(1)} className={nav}>
                 <ChevronRight aria-hidden size={16} />
               </button>
             </div>

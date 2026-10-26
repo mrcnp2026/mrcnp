@@ -6,6 +6,7 @@
 // ★ 자동 발송 · 문자 · 알림톡은 하지 않는다(개발-49 2026-10-19 의뢰인) — 관리자가 단추를 눌러야 보낸다.
 // ★ 보낼 때마다 결과를 한 줄씩 쌓는다(고치거나 지우지 않는다). 발송 여부 = 그 명세서의 마지막 줄.
 import 'server-only';
+import { MAIL_COLORS as C } from '@/config/theme';
 import { getTranslations } from 'next-intl/server';
 import { ApiError } from '@/lib/api';
 import type { Me } from '@/lib/auth';
@@ -59,15 +60,15 @@ export async function birthDates(ids: string[]): Promise<Map<string, string>> {
 const esc = (v: string) => v.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
 /** 명세서 메일 본문(HTML) — 금액은 쓰지 않는다. 메일 앱은 CSS가 약해 표와 인라인 스타일로 쓴다 */
 function slipHtml(v: { title: string; lead: string; button: string; link: string; pwd: string; safe: string; foot: string; company: string }): string {
-  return `<!doctype html><html><body style="margin:0;padding:0;background:#f4f6fa;"><table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:#f4f6fa;padding:24px 12px;"><tr><td align="center">
-<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="max-width:520px;background:#ffffff;border-radius:12px;font-family:-apple-system,'Malgun Gothic','Apple SD Gothic Neo',Arial,sans-serif;color:#1f2937;">
-<tr><td style="padding:28px 28px 8px;font-size:13px;color:#6b7280;">${esc(v.company)}</td></tr>
+  return `<!doctype html><html><body style="margin:0;padding:0;background:${C.page};"><table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:${C.page};padding:24px 12px;"><tr><td align="center">
+<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="max-width:520px;background:${C.card};border-radius:12px;font-family:-apple-system,'Malgun Gothic','Apple SD Gothic Neo',Arial,sans-serif;color:${C.text};">
+<tr><td style="padding:28px 28px 8px;font-size:13px;color:${C.muted};">${esc(v.company)}</td></tr>
 <tr><td style="padding:0 28px 8px;font-size:20px;font-weight:700;line-height:1.4;">${esc(v.title)}</td></tr>
-<tr><td style="padding:0 28px 20px;font-size:14px;line-height:1.7;color:#374151;">${esc(v.lead)}</td></tr>
-<tr><td style="padding:0 28px 20px;"><a href="${esc(v.link)}" style="display:inline-block;background:#2563eb;color:#ffffff;text-decoration:none;font-weight:700;font-size:15px;padding:13px 24px;border-radius:8px;">${esc(v.button)}</a></td></tr>
-<tr><td style="padding:0 28px 16px;font-size:13px;line-height:1.6;color:#374151;background:#ffffff;"><div style="background:#f4f6fa;border-radius:8px;padding:12px 14px;">${esc(v.pwd)}</div></td></tr>
-<tr><td style="padding:0 28px 8px;font-size:12px;line-height:1.6;color:#6b7280;">${esc(v.safe)}</td></tr>
-<tr><td style="padding:0 28px 28px;font-size:12px;line-height:1.6;color:#9ca3af;">${esc(v.foot)}</td></tr>
+<tr><td style="padding:0 28px 20px;font-size:14px;line-height:1.7;color:${C.body};">${esc(v.lead)}</td></tr>
+<tr><td style="padding:0 28px 20px;"><a href="${esc(v.link)}" style="display:inline-block;background:${C.action};color:${C.onAction};text-decoration:none;font-weight:700;font-size:15px;padding:13px 24px;border-radius:8px;">${esc(v.button)}</a></td></tr>
+<tr><td style="padding:0 28px 16px;font-size:13px;line-height:1.6;color:${C.body};background:${C.card};"><div style="background:${C.page};border-radius:8px;padding:12px 14px;">${esc(v.pwd)}</div></td></tr>
+<tr><td style="padding:0 28px 8px;font-size:12px;line-height:1.6;color:${C.muted};">${esc(v.safe)}</td></tr>
+<tr><td style="padding:0 28px 28px;font-size:12px;line-height:1.6;color:${C.faint};">${esc(v.foot)}</td></tr>
 </table></td></tr></table></body></html>`;
 }
 

@@ -263,7 +263,7 @@ button:not(:disabled):active, a:active, summary:active, [role='button']:active {
 .fx-reveal { animation: fx-reveal 1200ms cubic-bezier(.45,0,.2,1) both; }
 @property --sweep { syntax: '<angle>'; inherits: false; initial-value: 362deg; }
 @keyframes fx-sweep { from { --sweep: 0deg; } to { --sweep: 362deg; } }
-.fx-sweep { -webkit-mask-image: conic-gradient(from 90deg, #000 var(--sweep), transparent calc(var(--sweep) + 1deg)); mask-image: conic-gradient(from 90deg, #000 var(--sweep), transparent calc(var(--sweep) + 1deg)); animation: fx-sweep 1200ms cubic-bezier(.45,0,.2,1) both; }
+.fx-sweep { -webkit-mask-image: conic-gradient(from 90deg, black var(--sweep), transparent calc(var(--sweep) + 1deg)); mask-image: conic-gradient(from 90deg, black var(--sweep), transparent calc(var(--sweep) + 1deg)); animation: fx-sweep 1200ms cubic-bezier(.45,0,.2,1) both; }
 @keyframes fx-fade { from { opacity: 0; } }
 .fx-fade { animation: fx-fade 900ms ease-out 300ms both; }
 @keyframes fx-pop { from { opacity: 0; transform: scale(0.3); } }
