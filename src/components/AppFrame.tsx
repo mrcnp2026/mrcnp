@@ -9,6 +9,8 @@ import Link from 'next/link';
 import type { ReactNode } from 'react';
 import { CONSENT } from '@/config/consent';
 import { SYSTEM_ADMIN_NO as OFFICE_SYSTEM_NO } from '@/lib/system-admin';
+import { OFFICE } from '@/config/office';
+import { inquiryBadge } from '@/lib/inquiry-data';
 import { languageOptions } from '@/i18n/locales';
 import type { Me } from '@/lib/auth';
 import { hasConsent } from '@/lib/consent';
@@ -24,7 +26,7 @@ import { BottomTabs } from './BottomTabs';
 import { SpaceShell } from './ConsoleSheet';
 import { ConsentGate } from './ConsentGate';
 import { DeskNav } from './DeskNav';
-import { AccountMenu, ConsoleGuide, ConsoleLink, Crumb, HelpLink, MenuSearch, SpaceSwitch } from './DeskTop';
+import { AccountMenu, ConsoleGuide, ConsoleLink, Crumb, HelpLink, InquiryLink, MenuSearch, SpaceSwitch } from './DeskTop';
 import { FrameHeader } from './FrameHeader';
 import { LanguageSwitcher } from './LanguageSwitcher';
 import { Logo } from './Logo';
@@ -40,13 +42,14 @@ export async function AppFrame({ me, children, overlay }: { me: Me; children: Re
   const tf = await getTranslations('frame');
   const ops = me.employeeNo === OFFICE_SYSTEM_NO; // 운영 현황 메뉴는 시스템관리자에게만 (2026-10-24 의뢰인)
   const role = me.role === 'admin' ? 'admin' : branchManager ? 'manager' : 'employee';
-  const [consented, inboxCount, notices, unreadMsg, decided] = await Promise.all([
+  const [consented, inboxCount, notices, unreadMsg, decided, inquiry] = await Promise.all([
     hasConsent(me.id), // 관리자도 직원이다 — 같은 동의 창
     // 통합설정 › 알림의 「요청 알림」을 끄면 요청 숫자를 보이지 않는다 (2026-10-19)
     isAdmin && (await switchOn('notify.request')) ? Promise.all([pendingCounts().then((c) => c.total), me.role === 'admin' ? pendingSignupCount() : 0]).then(([a, b]) => a + b) : 0,
     visibleNoticesNow(me.id, await getLocale()),
     unreadCount(me.id),
     myDecidedCount(me.id),
+    inquiryBadge(me, OFFICE.practiceMode).catch(() => ({ unseenAnswers: 0, waiting: 0 })), // 문의 표가 아직 없는 곳에서도 화면은 열린다
   ]);
   const unread = notices.filter((n) => !n.confirmed).length;
   const languages = languageOptions();
@@ -66,6 +69,7 @@ export async function AppFrame({ me, children, overlay }: { me: Me; children: Re
           <span className="ml-1.5">
             <AlertBell approver={isAdmin} />
           </span>
+          <InquiryLink count={inquiry.unseenAnswers + inquiry.waiting} />
           <HelpLink />
           <ConsoleLink role={role} />
           <AccountMenu name={me.name} roleLabel={ts(me.employeeNo === OFFICE_SYSTEM_NO ? 'roleSystem' : branchManager ? 'roleManager' : isAdmin ? 'roleAdmin' : 'roleEmployee')}>

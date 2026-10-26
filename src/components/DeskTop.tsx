@@ -1,7 +1,7 @@
 'use client';
 // PC 위 띠의 조각들 — 공간 전환(내 화면 / 관리자 화면) · 통합설정 톱니 · 메뉴 검색 · 내 메뉴 · 본문 위 경로 (2026-10-14 결정 사항 개발-20 · 21 · 25).
 // 어디가 어느 공간인지는 config/nav.ts가 정한다.
-import { Check, ChevronDown, ChevronRight, CircleHelp, LayoutGrid, Megaphone, Menu as MenuIcon, MessagesSquare, Plane, Search, Send, Settings, UserRound, Users, Wallet, type LucideIcon } from 'lucide-react';
+import { Check, ChevronDown, ChevronRight, CircleHelp, Headset, LayoutGrid, Megaphone, Menu as MenuIcon, MessagesSquare, Plane, Search, Send, Settings, UserRound, Users, Wallet, type LucideIcon } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 import Link from 'next/link';
 import { usePathname, useRouter, useSearchParams } from 'next/navigation';
@@ -39,6 +39,20 @@ export function SpaceSwitch({ role }: { role: NavRole }) {
         );
       })}
     </div>
+  );
+}
+
+/** 문의하기 — 종 바로 옆. 숫자 = 아직 안 본 답 + (답할 수 있는 관리자는) 답 안 한 받은 문의 (2026-10-26 의뢰인) */
+export function InquiryLink({ count }: { count: number }) {
+  const t = useTranslations('frame');
+  const path = usePathname();
+  const base = path.startsWith('/admin') ? '/admin' : '/punch';
+  const on = path.startsWith(`${base}/inquiry`);
+  return (
+    <Link href={`${base}/inquiry`} aria-label={count > 0 ? t('inquiryN', { n: count }) : t('inquiry')} title={t('inquiry')} aria-current={on ? 'page' : undefined} className={`relative flex size-9 shrink-0 items-center justify-center rounded-button ${on ? 'bg-primary-tint text-primary' : 'text-muted hover:bg-surface'}`}>
+      <Headset aria-hidden size={20} strokeWidth={1.75} />
+      {count > 0 && <span className="num absolute -top-0.5 -right-0.5 flex min-w-4.5 items-center justify-center rounded-chip bg-danger px-1 text-xs leading-4.5 font-bold text-on-primary">{count}</span>}
+    </Link>
   );
 }
 

@@ -11,12 +11,13 @@ import { fullLeaveSet } from '@/lib/leave';
 import { findMissingPunches } from '@/lib/missing-punch';
 import { hiddenTestIds, leaveDaysFor, loadPeriod, workDaysFor } from '@/lib/period-data';
 import { planPunchAlerts, type PersonMisses } from '@/lib/punch-alerts';
-import { firstTime, notifyApprovers, pushConfigured, sendPush } from '@/lib/push';
+import { firstTime, notifyApprovers, pushConfigured, sendPush, sendStaffPush } from '@/lib/push';
 import { staffPushFilter } from '@/lib/push-recipients';
 import { loadRejectReasons } from '@/lib/reject-reason';
 import { approverIdsFor } from '@/lib/scope';
 import { switchOn } from '@/lib/switches';
 import { sendSystem } from '@/lib/work-messages';
+import { SYSTEM_ADMIN_NO } from '@/lib/system-admin';
 import { createAdminClient } from '@/lib/supabase/admin';
 import { hhmm, toKstDate, toKstTime } from '@/lib/time';
 
@@ -378,4 +379,28 @@ export async function notifyBoardPost(id: string): Promise<void> {
   } catch (e) {
     console.error(JSON.stringify({ route: 'push.board', detail: String((e as Error)?.message ?? e).slice(0, 200) }));
   }
+}
+
+// ── 문의하기 (2026-10-26 의뢰인: 알림은 앱 푸시로 — DB 묶음 37) ──
+/** 새 문의 → 받는 쪽. 직원이 보낸 것은 최고관리자들(알림-9 규칙으로 거른다), 관리자가 보낸 것은 시스템관리자 */
+export async function notifyInquiry(id: string): Promise<void> {
+  if (!(await pushOn())) return;
+  const db = createAdminClient();
+  const { data: q } = await db.from('inquiries').select('employee_id, to_role, title').eq('id', id).maybeSingle();
+  if (!q) return;
+  const { data: sender } = await db.from('profiles').select('employee_no').eq('id', q.employee_id).maybeSingle();
+  if (sender?.employee_no?.startsWith('e2e-')) return; // 검사 계정의 문의는 보내지 않는다
+  const { data: admins } = await db.from('profiles').select('id, employee_no').eq('role', 'admin').eq('active', true).neq('id', q.employee_id);
+  const to = (admins ?? []).filter((a) => (q.to_role === 'SYSTEM' ? a.employee_no === SYSTEM_ADMIN_NO : true)).map((a) => a.id as string);
+  await sendStaffPush(to, { title: `${await nameOf(q.employee_id)} 님이 문의했습니다`, body: String(q.title).slice(0, 70), url: '/admin/inquiry?t=received', tag: `inquiry-${id}` });
+}
+
+/** 답변 → 보낸 사람 본인에게 (본인 알림이라 알림-9 규칙을 거치지 않는다) */
+export async function notifyInquiryAnswer(id: string): Promise<void> {
+  if (!(await pushOn())) return;
+  const db = createAdminClient();
+  const { data: q } = await db.from('inquiries').select('employee_id, title').eq('id', id).maybeSingle();
+  if (!q) return;
+  const { data: p } = await db.from('profiles').select('role').eq('id', q.employee_id).maybeSingle();
+  await sendPush([q.employee_id as string], { title: '문의에 답변이 왔습니다', body: String(q.title).slice(0, 70), url: p?.role === 'admin' ? '/admin/inquiry' : '/punch/inquiry', tag: `inquiry-answer-${id}` });
 }

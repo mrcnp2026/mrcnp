@@ -217,6 +217,7 @@ export async function HelpCenter({ base, isAdmin, searchParams }: { base: Base; 
           <Card className="flex flex-col gap-1">
             <h2 className="text-sm font-bold">{t('moreHelp')}</h2>
             <p className="text-sm text-muted">{t('moreHelpBody')}</p>
+            <Link href={`${base}/inquiry`} className="mt-1 w-fit rounded-button border border-border bg-bg px-3 py-1.5 text-sm font-medium text-text hover:bg-surface">{t('moreHelpLink')}</Link>
           </Card>
         </div>
 
