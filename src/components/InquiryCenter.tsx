@@ -63,12 +63,12 @@ export async function InquiryCenter({ base, me, searchParams }: { base: Base; me
       )}
 
       {tab === 'ask' && (
-        <div className="grid gap-6 lg:grid-cols-[minmax(0,34rem)_minmax(0,1fr)]">
+        <div className="grid gap-6 lg:grid-cols-[minmax(0,34rem)_minmax(0,30rem)]">
           <Card className="flex flex-col gap-3">
             <h2 className="text-base font-bold">{t('newTitle')}</h2>
             <AskForm spaces={spaces} topics={topics} toLabel={toLabel} />
           </Card>
-          <section className="flex min-w-0 flex-col gap-2">
+          <section className="flex min-w-0 flex-col gap-2 self-start">
             <h2 className="text-base font-bold">{t('mineTitle')} <span className="num text-muted">{mine.length}</span></h2>
             {mine.length === 0 && <p className="rounded-card border border-border bg-bg p-6 text-sm text-muted">{t('mineEmpty')}</p>}
             {mine.length > 0 && (

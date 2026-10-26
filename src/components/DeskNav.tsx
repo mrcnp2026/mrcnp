@@ -184,7 +184,7 @@ export function DeskNav({ role, initialWide = false }: { role: NavRole; inboxCou
                 {t(`appFull.${a.key}`)}
               </span>
               {appCount > 0 && (
-                <span className={`absolute ${move} ${wide ? 'top-3 right-2.5' : 'top-0.5 right-1'}`}>
+                <span className={`absolute ${move} ${wide ? 'top-1/2 right-2.5 -translate-y-1/2' : 'top-0.5 right-1'}`}>
                   <Count n={appCount} />
                 </span>
               )}
