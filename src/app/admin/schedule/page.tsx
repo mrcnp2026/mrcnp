@@ -11,7 +11,6 @@ import { getShiftKindNames } from '@/lib/settings';
 import { withKindNames } from '@/lib/shift-kind-names';
 import { Select } from '@/components/Select';
 import { getMe } from '@/lib/auth';
-import { HelpTip } from '@/components/Help';
 import { Plane } from 'lucide-react';
 import { getFormatter, getTranslations } from 'next-intl/server';
 import Link from 'next/link';
@@ -258,7 +257,7 @@ export default async function AdminSchedulePage({ searchParams }: { searchParams
       <div className="hidden flex-col gap-4 lg:flex">
         <div className="flex items-center justify-between gap-3">
           <div className="min-w-0">
-            <h1 className="flex flex-wrap items-center gap-x-1 text-2xl font-bold">{t('title')}{admin && <SettingsLink href="/admin/settings?tab=work" label={tGear('item.setWork')} />}<HelpTip>{t('pcIntro')}</HelpTip></h1>
+            <h1 className="flex flex-wrap items-center gap-x-1 text-2xl font-bold">{t('title')}{admin && <SettingsLink href="/admin/settings?tab=work" label={tGear('item.setWork')} />}</h1>
           </div>
           <div className="flex items-center gap-2">
             {admin && (

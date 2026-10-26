@@ -3,7 +3,6 @@
 // ★ 보이지 않는 것: 휴가 종류 · 사유 · 잔여 · 증빙 · 전화번호 · 급여. 하루보다 짧은 휴가는 「부분 휴가」로만 보인다.
 // 폰에서 가로로 넘치지 않게 한 줄씩 쌓는다.
 import { getTranslations } from 'next-intl/server';
-import { HelpTip } from '@/components/Help';
 import { redirect } from 'next/navigation';
 import { Chip, PageShell } from '@/components/ui';
 import { OFFICE } from '@/config/office';
@@ -48,7 +47,7 @@ export default async function OrgPage({ searchParams }: { searchParams: Promise<
   return (
     <PageShell>
       <div>
-        <h1 className="flex flex-wrap items-center gap-x-1 text-2xl font-bold">{t('title')}<HelpTip>{t('intro')}</HelpTip></h1>
+        <h1 className="flex flex-wrap items-center gap-x-1 text-2xl font-bold">{t('title')}</h1>
       </div>
       <form action="/punch/org" className="flex gap-2">
         <input name="q" defaultValue={sp.q ?? ''} placeholder={t('search')} aria-label={t('search')} className="min-h-11 min-w-0 flex-1 rounded-button border border-border bg-bg px-3" autoComplete="off" />

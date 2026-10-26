@@ -69,7 +69,7 @@ export default async function ClosingPage({ searchParams }: { searchParams: Prom
   return (
     <PageShell wide>
       <div>
-        <h1 className="flex flex-wrap items-center gap-x-1 text-2xl font-bold">{t('title')}<SettingsLink href="/admin/settings?tab=closing" label={tGear('item.setClosing')} /><HelpTip>{t('intro')}</HelpTip></h1>
+        <h1 className="flex flex-wrap items-center gap-x-1 text-2xl font-bold">{t('title')}<SettingsLink href="/admin/settings?tab=closing" label={tGear('item.setClosing')} /><HelpTip more="/admin/help?a=admin-close">{t('intro')}</HelpTip></h1>
       </div>
       <div className="flex flex-wrap items-center gap-3">
         <span className="inline-flex items-center">

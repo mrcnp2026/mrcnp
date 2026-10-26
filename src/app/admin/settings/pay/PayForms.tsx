@@ -183,7 +183,7 @@ export function SettingForm({ section, current, version, today, common }: { sect
               {opts(['KEEP', 'PREV_BUSINESS_DAY', 'NEXT_BUSINESS_DAY'], (k) => t(`s02.holidayShiftOf.${k}`))}
             </Select>
           </Row>
-          <Row label={t('s02.insuranceBasis')} explain={<Explain>{t.rich('s02.insuranceBasisExplain', { em })}</Explain>}>
+          <Row label={t('s02.insuranceBasis')} explain={<Explain link={{ href: '/admin/help?a=admin-insurance-basis', label: t('s02.insuranceBasisHelp') }}>{t.rich('s02.insuranceBasisExplain', { em })}</Explain>}>
             <Select name="insuranceBasis" defaultValue={l?.insuranceBasis ?? 'PAYROLL_BASE'} className={`${field} lg:max-w-md`}>
               {opts(['NOTICE', 'PAYROLL_BASE', 'REPORTED_BASE'], (k) => t(`s02.insuranceBasisOf.${k}`))}
             </Select>

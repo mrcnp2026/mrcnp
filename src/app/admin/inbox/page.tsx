@@ -8,7 +8,7 @@ import { X } from 'lucide-react';
 import { getFormatter, getTranslations } from 'next-intl/server';
 import { Pager, pageOf } from '@/components/Pager';
 import { DetailBar } from '@/components/detail';
-import { Help, HelpTip } from '@/components/Help';
+import { Help } from '@/components/Help';
 import { PlaceMap } from '@/components/PlaceMap';
 import { StatusCards } from '@/components/listframe';
 import { RequestTabs } from '@/components/RequestTabs';
@@ -435,7 +435,7 @@ export default async function InboxPage({ searchParams }: { searchParams: Promis
         <h1 className="sr-only lg:hidden">{t('title')}</h1>
         <div className="hidden items-start gap-4 lg:flex">
           <div className="min-w-0 flex-1">
-            <h1 className="flex flex-wrap items-center gap-x-1 text-2xl font-bold">{t('pcTitle')}<HelpTip>{t('pcIntro')}</HelpTip></h1>
+            <h1 className="flex flex-wrap items-center gap-x-1 text-2xl font-bold">{t('pcTitle')}</h1>
           </div>
           <p className="num pt-2 text-sm text-muted">
             {t('totalCount')} <b className="text-lg text-text">{listed.length + signups.length}</b>
