@@ -1,5 +1,6 @@
 'use client';
 // 교육 관리 화면의 조작부 (묶음 33, 2026-10-20) — 교육 만들기 · 고치기, 교육 종류 고치기, 대상 넣기 · 빼기 · 종이 서명 옮겨 적기, 다시 알림, 사진, 취소.
+import { Select } from '@/components/Select';
 import { Camera, Trash2 } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 import { useRouter } from 'next/navigation';
@@ -80,12 +81,12 @@ export function SessionForm({ courses, people, today, initial }: { courses: Cour
         {!initial && (
           <label className="flex min-w-0 flex-col gap-1 sm:col-span-2">
             <span className="text-muted">{t('fCourse')}</span>
-            <select name="courseId" required className={field} defaultValue="">
+            <Select name="courseId" required className={field} defaultValue="">
               <option value="">{t('pick')}</option>
               {courses.filter((c) => c.active).map((c) => (
                 <option key={c.id} value={c.id}>{c.name}</option>
               ))}
-            </select>
+            </Select>
           </label>
         )}
         <label className="flex min-w-0 flex-col gap-1">
@@ -158,11 +159,11 @@ export function CourseForm({ initial, jobs, groups, people }: { initial?: Course
         </label>
         <label className="flex min-w-0 flex-col gap-1">
           <span className="text-muted">{t('cCycle')}</span>
-          <select name="cycle" defaultValue={initial?.cycle ?? 'YEAR'} className={field}>
+          <Select name="cycle" defaultValue={initial?.cycle ?? 'YEAR'} className={field}>
             {CYCLES.map((c) => (
               <option key={c} value={c}>{t(`cycle.${c}`)}</option>
             ))}
-          </select>
+          </Select>
         </label>
         <label className="flex min-w-0 flex-col gap-1">
           <span className="text-muted">{t('cHours')}</span>
@@ -227,12 +228,12 @@ export function AddAttendee({ sessionId, options }: { sessionId: string; options
   if (!options.length) return null;
   return (
     <form className="flex flex-wrap items-center gap-2 text-sm" onSubmit={async (e) => { e.preventDefault(); const id = new FormData(e.currentTarget).get('employeeId'); if (id) await send({ action: 'attendee.set', sessionId, employeeId: id, on: true }); }}>
-      <select name="employeeId" required defaultValue="" className={`${field} w-auto`} aria-label={t('addPerson')}>
+      <Select name="employeeId" required defaultValue="" className={`${field} w-auto`} aria-label={t('addPerson')}>
         <option value="">{t('addPerson')}</option>
         {options.map((o) => (
           <option key={o.id} value={o.id}>{o.label}</option>
         ))}
-      </select>
+      </Select>
       <Button type="submit" size="sm" variant="outline" disabled={busy}>{t('add')}</Button>
       {err && <ErrorNote code={err.code} requestId={err.requestId} namespace="admin.training.err" />}
     </form>

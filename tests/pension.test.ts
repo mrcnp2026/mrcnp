@@ -15,7 +15,7 @@ describe('퇴직연금 DC', () => {
     expect(balanceOf({ openingBalance: null, openingAsOf: null }, [{ month: '2026-09-01', amount: 210_000 }])).toBe(210_000);
   });
   it('입력 검사', () => {
-    expect(cleanMember({ planKind: 'DC', joinedOn: '2026-01-01', openingBalance: '1,500,000', openingAsOf: '2026-09-30', institution: ' 기업은행 ' })).toEqual({ planKind: 'DC', joinedOn: '2026-01-01', endedOn: null, institution: '기업은행', openingBalance: 1_500_000, openingAsOf: '2026-09-30', note: null });
+    expect(cleanMember({ planKind: 'DC', joinedOn: '2026-01-01', openingBalance: '1,500,000', openingAsOf: '2026-09-30', institution: ' 기업은행 ' })).toEqual({ planKind: 'DC', joinedOn: '2026-01-01', endedOn: null, institution: '기업은행', openingBalance: 1_500_000, openingAsOf: '2026-09-30', marketValue: null, marketValueAsOf: null, note: null });
     expect(cleanMember({ planKind: 'DC', joinedOn: '2026-01-01', openingBalance: '100' })).toEqual({ error: 'pension_opening' });
     expect(cleanMember({ planKind: 'XX', joinedOn: '2026-01-01' })).toEqual({ error: 'pension_plan' });
   });

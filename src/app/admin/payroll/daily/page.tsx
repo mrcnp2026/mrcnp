@@ -1,13 +1,12 @@
 // 일용직 — 지급 대상자 · 근무 입력 · 일용 대장 (PRD v1.3 18.5 W07). 급여 담당 관리자만.
 // 대상자는 로그인 계정과 따로다(계정을 만들지 않는다). 세금은 하루 단위 임시 규칙, 4대보험료는 계산하지 않는다. 신고 파일 · 이체는 없다.
 import { getFormatter, getTranslations } from 'next-intl/server';
-import { DailyFlow } from '@/components/PayFlow';
 import { WarnLine } from '@/components/listframe';
 import { HelpTip } from '@/components/Help';
 import Link from 'next/link';
 import { AddSheet } from '@/components/AddSheet';
 import { SheetOpener } from '@/components/SheetOpener';
-import { Card, CardTitle, Chip, PageShell } from '@/components/ui';
+import { Chip, PageShell } from '@/components/ui';
 import { OFFICE } from '@/config/office';
 import { getMe } from '@/lib/auth';
 import { loadDailyRuns, loadPayees, loadWork } from '@/lib/payroll/daily-data';
@@ -28,7 +27,11 @@ export default async function DailyPage({ searchParams }: { searchParams: Promis
   const today = toKstDate(new Date());
   const month = /^\d{4}-(0[1-9]|1[0-2])$/.test(sp.m ?? '') ? sp.m! : today.slice(0, 7);
   const live = sp.live === '1';
-  const { payees, engagements } = await loadPayees(testViewer);
+  const loaded = await loadPayees(testViewer);
+  const { engagements } = loaded;
+  // 확인이 필요한 대상자(세금 · 보험 조건이 정해지지 않은 사람)를 맨 위에, 사용 중지한 사람은 맨 아래로 (2026-10-26 의뢰인: 이슈 먼저)
+  const unknownTerms = (id: string) => engagements.some((e) => e.payeeId === id && (e.taxState === 'UNKNOWN' || e.ei === 'UNKNOWN' || e.np === 'UNKNOWN' || e.hi === 'UNKNOWN'));
+  const payees = [...loaded.payees].sort((a, b) => Number(!a.active) - Number(!b.active) || Number(unknownTerms(b.id)) - Number(unknownTerms(a.id)));
   const [works, runs] = await Promise.all([view === 'work' ? loadWork({ month, practice, payeeIds: payees.map((p) => p.id) }) : Promise.resolve([]), view === 'runs' ? loadDailyRuns({ practice, testViewer }) : Promise.resolve([])]);
   const tab = (on: boolean) => `flex min-h-11 items-center border-b-2 px-4 text-sm font-bold ${on ? 'border-text text-text lg:border-primary lg:text-primary' : 'border-transparent text-muted hover:text-text'}`;
   const href = (v: string) => `/admin/payroll/daily?v=${v}${v === 'work' ? `&m=${month}` : ''}${live ? '&live=1' : ''}`;
@@ -44,7 +47,6 @@ export default async function DailyPage({ searchParams }: { searchParams: Promis
           {practice && view !== 'payees' && <Chip>{t('practice')}</Chip>}
         <HelpTip>{t('intro')}</HelpTip></h1>
       </div>
-      <DailyFlow now={view} />
       <nav className="flex border-b border-border">
         {VIEWS.map((v) => (
           <Link key={v} href={href(v)} aria-current={view === v ? 'page' : undefined} className={tab(view === v)}>{t(`tab.${v}`)}</Link>
@@ -85,7 +87,7 @@ export default async function DailyPage({ searchParams }: { searchParams: Promis
                   return (
                     <tr key={p.id} className={`border-b border-border align-top last:border-b-0 ${p.active ? '' : 'opacity-60'}`}>
                       <td className="px-3 py-3 whitespace-nowrap">
-                        <b>{p.name}</b> <span className="num text-xs text-muted">{p.internalNo}</span> {!p.active && <Chip>{t('payeeInactive')}</Chip>}
+                        <b>{p.name}</b> <span className="num text-xs text-muted">{p.internalNo}</span> {p.jobTitle && <span className="text-xs text-muted">· {p.jobTitle}</span>} {!p.active && <Chip>{t('payeeInactive')}</Chip>}
                         {(p.phone || p.note) && <span className="block text-xs text-muted">{[p.phone, p.note].filter(Boolean).join(' · ')}</span>}
                       </td>
                       <td className="px-3 py-3">
@@ -95,7 +97,7 @@ export default async function DailyPage({ searchParams }: { searchParams: Promis
                           <ul className="flex flex-col gap-1.5">
                             {mine.map((e) => (
                               <li key={e.id} className="num flex flex-wrap items-center gap-x-2">
-                                <span>{e.startsOn} ~ {e.endsOn ?? t('open')} · {e.project || t('noProject')} · {e.dayRate === null ? t('noRate') : won(e.dayRate)}</span>
+                                <span>{e.startsOn} ~ {e.endsOn ?? t('open')} · {e.project || t('noProject')} · {t(`basis.${e.payBasis}`)} {e.dayRate === null ? t('noRate') : won(e.dayRate)}</span>
                                 <EngagementOff id={e.id} label={t('engOffOf', { name: p.name })} />
                               </li>
                             ))}
@@ -128,19 +130,21 @@ export default async function DailyPage({ searchParams }: { searchParams: Promis
 
       {view === 'work' && (
         <>
-          <form action="/admin/payroll/daily" className="flex flex-wrap items-end gap-3 text-sm">
-            <input type="hidden" name="v" value="work" />
-            {live && <input type="hidden" name="live" value="1" />}
-            <label className="flex flex-col gap-1">
-              <span className="font-bold">{t('fMonth')}</span>
-              <input type="month" name="m" defaultValue={month} className={field} />
-            </label>
-            <button type="submit" className="inline-flex min-h-9 items-center rounded-button border border-border bg-bg px-4 text-sm font-bold text-primary">{t('show')}</button>
-          </form>
-          <Card className="flex flex-col gap-3">
-            <CardTitle>{t('workTitle')}</CardTitle>
-            <WorkAdd payees={payees.filter((p) => p.active).map((p) => ({ id: p.id, name: p.name, internalNo: p.internalNo, projects: [...new Set(engagements.filter((e) => e.payeeId === p.id).map((e) => e.project))] }))} day={day} live={live} />
-          </Card>
+          <div className="flex flex-wrap items-end gap-3">
+            <form action="/admin/payroll/daily" className="flex flex-wrap items-end gap-3 text-sm">
+              <input type="hidden" name="v" value="work" />
+              {live && <input type="hidden" name="live" value="1" />}
+              <label className="flex flex-col gap-1">
+                <span className="font-bold">{t('fMonth')}</span>
+                <input type="month" name="m" defaultValue={month} className={field} />
+              </label>
+              <button type="submit" className="inline-flex min-h-9 items-center rounded-button border border-border bg-bg px-4 text-sm font-bold text-primary">{t('show')}</button>
+            </form>
+            <SheetOpener id="daily-work" label={t('workTitle')} className="ml-auto inline-flex" />
+          </div>
+          <AddSheet id="daily-work" title={t('workTitle')} modal wide>
+            <WorkAdd payees={payees.filter((p) => p.active).map((p) => ({ id: p.id, name: p.name, internalNo: p.internalNo, projects: [...new Set(engagements.filter((e) => e.payeeId === p.id).map((e) => e.project))], bases: Object.fromEntries(engagements.filter((e) => e.payeeId === p.id).map((e) => [e.project, e.payBasis])) }))} day={day} live={live} />
+          </AddSheet>
           <div className="overflow-x-auto table-ruled">
             <table className="w-full text-sm" data-work>
               <thead>
@@ -172,11 +176,15 @@ export default async function DailyPage({ searchParams }: { searchParams: Promis
 
       {view === 'runs' && (
         <>
-          <Card className="flex flex-col gap-3">
-            <CardTitle>{t('runTitle')}</CardTitle>
-            <DailyRunCreate month={today.slice(0, 7)} payDate={today} live={live} />
-            <p className="text-xs text-faint">{t('runNote')}</p>
-          </Card>
+          <div className="flex justify-end">
+            <SheetOpener id="daily-run" label={t('runTitle')} />
+          </div>
+          <AddSheet id="daily-run" title={t('runTitle')} modal>
+            <div className="flex flex-col gap-3">
+              <DailyRunCreate month={today.slice(0, 7)} payDate={today} live={live} />
+              <p className="text-xs text-faint">{t('runNote')}</p>
+            </div>
+          </AddSheet>
           <div className="overflow-x-auto table-ruled">
             <table className="w-full text-sm">
               <thead>

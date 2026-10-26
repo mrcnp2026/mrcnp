@@ -1,12 +1,14 @@
 'use client';
 // 사원별 급여의 입력 양식 — 계약 · 세무/보험 · 개인 항목. 저장하면 화면을 새로 읽는다.
-// 계약 · 세무는 「새 판으로 저장」이다: 적용 시작일과(고칠 때는) 사유를 적는다. 앞 판은 남는다.
+// 계약 · 세무는 적용 시작일부터 바뀐다(이력이 남는다). 마지막 변경과 같은 날 다시 고치면 그 변경을 정정하고, 다른 날이면 사유를 적는다. 예약된(아직 시작 안 한) 변경은 취소할 수 있다.
+import { Select } from '@/components/Select';
 import { useTranslations } from 'next-intl';
 import { useRouter } from 'next/navigation';
 import { useState, type ReactNode } from 'react';
 import { callApi } from '@/components/client-api';
 import { ErrorNote } from '@/components/ErrorNote';
 import { Button } from '@/components/ui';
+import { ItemAdd } from '@/app/admin/settings/pay/ItemWizard';
 import { INSURERS, PAY_TYPES, SME_RATES, TIME_BASES, UNKNOWN_RELIEFS, type ContractInput, type PayType, type TaxInput } from '@/lib/payroll/contract';
 
 const field = 'min-h-9 rounded-button border border-border bg-bg px-3 text-sm';
@@ -40,11 +42,59 @@ const Label = ({ text, children, wide = false }: { text: string; children: React
   </label>
 );
 
+/** 찾는 고정 수당 · 공제 항목이 없을 때 여기서 바로 새로 만든다 (2026-10-25 의뢰인: 직접도 만들어 추가할 수 있어야). 통합설정의 항목 등록 안내를 그대로 쓴다 — 만들면 아래 고르는 칸에 바로 나타난다 */
+export function NewItemCreate({ today }: { today: string }) {
+  const t = useTranslations('admin.staffPay');
+  const [kind, setKind] = useState<'PAYMENT' | 'DEDUCTION'>('PAYMENT');
+  return (
+    <div className="flex flex-col gap-2 rounded-card border border-border p-3">
+      <p className="text-sm text-muted">{t('itemsCreateHint')}</p>
+      <div className="flex gap-2" role="radiogroup" aria-label={t('itemsCreateTitle')}>
+        {(['PAYMENT', 'DEDUCTION'] as const).map((k) => (
+          <button key={k} type="button" role="radio" aria-checked={kind === k} onClick={() => setKind(k)} className={`min-h-11 flex-1 rounded-button border px-3 text-sm font-bold ${kind === k ? 'border-primary bg-primary-tint text-primary' : 'border-border text-muted'}`}>
+            {t(k === 'PAYMENT' ? 'kindPay' : 'kindDeduct')}
+          </button>
+        ))}
+      </div>
+      <ItemAdd key={kind} kind={kind} today={today} />
+    </div>
+  );
+}
+
+/** 아직 시작하지 않은(예약된) 변경 취소 — 이력 줄 끝의 단추 (2026-10-25 의뢰인) */
+export function CancelVersionButton({ employeeId, kind, id }: { employeeId: string; kind: 'contract' | 'tax'; id: string }) {
+  const t = useTranslations('admin.staffPay');
+  const { busy, err, save } = useSave(employeeId);
+  const [asking, setAsking] = useState(false);
+  return (
+    <span className="ml-2 inline-flex flex-wrap items-center gap-2 align-middle">
+      {asking ? (
+        <>
+          <span className="text-warn">{t('cancelConfirm')}</span>
+          <Button type="button" size="sm" disabled={busy} onClick={async () => { if (await save({ action: `${kind}.cancel`, versionId: id })) setAsking(false); }}>
+            {t('cancelDo')}
+          </Button>
+          <Button type="button" size="sm" variant="outline" onClick={() => setAsking(false)}>
+            {t('cancelNo')}
+          </Button>
+        </>
+      ) : (
+        <Button type="button" size="sm" variant="outline" onClick={() => setAsking(true)}>
+          {t('cancelScheduled')}
+        </Button>
+      )}
+      {err && <ErrorNote code={err.code} requestId={err.requestId} namespace="admin.staffPay" />}
+    </span>
+  );
+}
+
 export function ContractForm({ employeeId, today, version, last }: { employeeId: string; today: string; version: number; last: (ContractInput & { validFrom: string }) | null }) {
   const t = useTranslations('admin.staffPay');
   const { busy, err, done, save } = useSave(employeeId);
   const [open, setOpen] = useState(false);
   const [payType, setPayType] = useState<PayType>(last?.payType ?? 'MONTHLY');
+  const [from, setFrom] = useState(today); // 적용 시작일 — 마지막 변경과 같은 날이면 그 변경을 고치는 것(정정)이라 사유가 없어도 된다
+  const needReason = !!last && from > last.validFrom;
   return (
     <div className="pt-3 text-sm">
       <Button type="button" size="sm" variant="outline" aria-expanded={open} onClick={() => setOpen(!open)}>
@@ -66,25 +116,25 @@ export function ContractForm({ employeeId, today, version, last }: { employeeId:
           }}
         >
           <Label text={t('colType')}>
-            <select name="payType" value={payType} onChange={(e) => setPayType(e.target.value as PayType)} className={field}>
+            <Select name="payType" value={payType} onChange={(e) => setPayType(e.target.value as PayType)} className={field}>
               {PAY_TYPES.map((k) => (
                 <option key={k} value={k}>
                   {t(`payType.${k}`)}
                 </option>
               ))}
-            </select>
+            </Select>
           </Label>
           <Label text={t(`amountOf.${payType}`)}>
             <input name="amount" type="number" min="1" step="1" required defaultValue={last?.amount ?? ''} className={field} />
           </Label>
           <Label text={t('fTimeBasis')}>
-            <select name="timeBasis" defaultValue={last?.timeBasis ?? 'ROUNDED'} className={field}>
+            <Select name="timeBasis" defaultValue={last?.timeBasis ?? 'ROUNDED'} className={field}>
               {TIME_BASES.map((k) => (
                 <option key={k} value={k}>
                   {t(`timeBasis.${k}`)}
                 </option>
               ))}
-            </select>
+            </Select>
           </Label>
           {payType !== 'HOURLY' && (
             <Label text={t('fMonthlyHours')}>
@@ -108,10 +158,11 @@ export function ContractForm({ employeeId, today, version, last }: { employeeId:
             <input name="incNote" maxLength={300} defaultValue={last?.included.note ?? ''} className={field} autoComplete="off" />
           </Label>
           <Label text={t('fValidFrom')}>
-            <input name="validFrom" type="date" required defaultValue={today} className={field} />
+            <input name="validFrom" type="date" required value={from} onChange={(e) => setFrom(e.target.value)} className={field} />
+            <span className="text-xs font-normal text-faint">{last && from < last.validFrom ? t('validFromBefore', { date: last.validFrom }) : t(last && from === last.validFrom ? 'validFromSame' : 'validFromHint')}</span>
           </Label>
-          <Label text={t(last ? 'fReason' : 'fReasonFirst')}>
-            <input name="reason" required={!!last} minLength={last ? 2 : undefined} maxLength={500} className={field} autoComplete="off" />
+          <Label text={t(needReason ? 'fReason' : 'fReasonFirst')}>
+            <input name="reason" required={needReason} minLength={needReason ? 2 : undefined} maxLength={500} className={field} autoComplete="off" />
           </Label>
           <p className="text-xs text-faint md:col-span-2">{t('contractHint')}</p>
           {err && (
@@ -130,11 +181,14 @@ export function ContractForm({ employeeId, today, version, last }: { employeeId:
   );
 }
 
-export function TaxForm({ employeeId, today, version, last, reliefOn, foreign = false }: { employeeId: string; today: string; version: number; last: TaxInput | null; reliefOn: { sme: boolean; durunuri: boolean }; foreign?: boolean }) {
+export function TaxForm({ reportedUsed, employeeId, today, version, last, reliefOn, foreign = false }: { reportedUsed: Record<(typeof INSURERS)[number], boolean>; employeeId: string; today: string; version: number; last: (TaxInput & { validFrom: string }) | null; reliefOn: { sme: boolean; durunuri: boolean }; foreign?: boolean }) {
   const showFlat = foreign || last?.reliefs.flat19?.state === 'YES'; // 외국인 직원(묶음 31)이거나 이미 「예」인 사람만
   const t = useTranslations('admin.staffPay');
   const { busy, err, done, save } = useSave(employeeId);
   const [open, setOpen] = useState(false);
+  const [from, setFrom] = useState(today);
+  const needReason = !!last && from > last.validFrom;
+  const [insNo, setInsNo] = useState<Record<string, boolean>>(() => Object.fromEntries(INSURERS.map((k) => [k, last?.insurance[k].state === 'NO']))); // 「가입 안함」이면 사유가 꼭 필요하다
   return (
     <div className="pt-3 text-sm">
       <Button type="button" size="sm" variant="outline" aria-expanded={open} onClick={() => setOpen(!open)}>
@@ -163,13 +217,13 @@ export function TaxForm({ employeeId, today, version, last, reliefOn, foreign = 
           }}
         >
           <Label text={t('fRatio')}>
-            <select name="ratio" defaultValue={last?.withholdingRatio ?? 100} className={field}>
+            <Select name="ratio" defaultValue={last?.withholdingRatio ?? 100} className={field}>
               {[80, 100, 120].map((k) => (
                 <option key={k} value={k}>
                   {t('pct', { n: k })}
                 </option>
               ))}
-            </select>
+            </Select>
           </Label>
           <span />
           <Label text={t('fFamilyCount')}>
@@ -182,26 +236,27 @@ export function TaxForm({ employeeId, today, version, last, reliefOn, foreign = 
             <fieldset key={k} className="flex flex-col gap-2 rounded-button border border-border p-3 md:col-span-2">
               <legend className="px-1 font-bold">{t(`insurer.${k}`)}</legend>
               <div className="grid gap-2 md:grid-cols-3">
-                <select name={`${k}.state`} defaultValue={last?.insurance[k].state ?? 'UNKNOWN'} aria-label={t('fJoin', { name: t(`insurer.${k}`) })} className={field}>
+                <Select name={`${k}.state`} defaultValue={last?.insurance[k].state ?? 'UNKNOWN'} onChange={(ev) => setInsNo((m) => ({ ...m, [k]: ev.target.value === 'NO' }))} aria-label={t('fJoin', { name: t(`insurer.${k}`) })} className={field}>
                   {(['UNKNOWN', 'YES', 'NO'] as const).map((s) => (
                     <option key={s} value={s}>
                       {t(`tri.${s}`)}
                     </option>
                   ))}
-                </select>
+                </Select>
                 <input name={`${k}.wage`} type="number" min="0" step="1" defaultValue={last?.insurance[k].reportedWage ?? ''} placeholder={t('fReported')} aria-label={t('fReported')} className={field} />
-                <input name={`${k}.note`} maxLength={200} defaultValue={last?.insurance[k].note ?? ''} placeholder={t('fExclude')} aria-label={t('fExclude')} className={field} autoComplete="off" />
+                <input name={`${k}.note`} maxLength={200} defaultValue={last?.insurance[k].note ?? ''} placeholder={t(insNo[k] ? 'fExcludeNeed' : 'fExclude')} aria-label={t('fExclude')} required={insNo[k]} className={`${field} ${insNo[k] ? 'border-danger' : ''}`} autoComplete="off" />
               </div>
+              {k !== 'accident' && <p className="text-xs text-faint">{t(reportedUsed[k] ? 'reportedUsedHint' : 'reportedUnusedHint')}</p>}
             </fieldset>
           ))}
           <Label text={t('fLoan')}>
-            <select name="loan.state" defaultValue={last?.studentLoan.state ?? 'UNKNOWN'} className={field}>
+            <Select name="loan.state" defaultValue={last?.studentLoan.state ?? 'UNKNOWN'} className={field}>
               {(['UNKNOWN', 'YES', 'NO'] as const).map((s) => (
                 <option key={s} value={s}>
                   {t(`tri.${s}`)}
                 </option>
               ))}
-            </select>
+            </Select>
           </Label>
           <Label text={t('fLoanAmount')}>
             <input name="loan.amount" type="number" min="0" step="1" defaultValue={last?.studentLoan.monthlyAmount ?? ''} className={field} />
@@ -216,23 +271,23 @@ export function TaxForm({ employeeId, today, version, last, reliefOn, foreign = 
             <fieldset className="grid gap-2 rounded-button border border-border p-3 md:col-span-2 md:grid-cols-3">
               <legend className="px-1 font-bold">{t('smeTitle')}</legend>
               <Label text={t('fTarget')}>
-                <select name="sme.state" defaultValue={last?.reliefs.sme.state ?? 'UNKNOWN'} className={field}>
+                <Select name="sme.state" defaultValue={last?.reliefs.sme.state ?? 'UNKNOWN'} className={field}>
                   {(['UNKNOWN', 'YES', 'NO'] as const).map((s) => (
                     <option key={s} value={s}>
                       {t(`tri.${s}`)}
                     </option>
                   ))}
-                </select>
+                </Select>
               </Label>
               <Label text={t('fSmeRate')}>
-                <select name="sme.rate" defaultValue={last?.reliefs.sme.rate ?? ''} className={field}>
+                <Select name="sme.rate" defaultValue={last?.reliefs.sme.rate ?? ''} className={field}>
                   <option value="">{t('notSet')}</option>
                   {SME_RATES.map((n) => (
                     <option key={n} value={n}>
                       {t('pct', { n })}
                     </option>
                   ))}
-                </select>
+                </Select>
               </Label>
               <span className="hidden md:block" />
               <Label text={t('fReliefFrom')}>
@@ -250,13 +305,13 @@ export function TaxForm({ employeeId, today, version, last, reliefOn, foreign = 
             <fieldset className="grid gap-2 rounded-button border border-border p-3 md:col-span-2 md:grid-cols-3">
               <legend className="px-1 font-bold">{t('durunuriTitle')}</legend>
               <Label text={t('fTarget')}>
-                <select name="duru.state" defaultValue={last?.reliefs.durunuri.state ?? 'UNKNOWN'} className={field}>
+                <Select name="duru.state" defaultValue={last?.reliefs.durunuri.state ?? 'UNKNOWN'} className={field}>
                   {(['UNKNOWN', 'YES', 'NO'] as const).map((s) => (
                     <option key={s} value={s}>
                       {t(`tri.${s}`)}
                     </option>
                   ))}
-                </select>
+                </Select>
               </Label>
               <Label text={t('fPensionRate')}>
                 <input name="duru.pension" type="number" min="0" max="100" step="1" defaultValue={last?.reliefs.durunuri.pensionRate ?? ''} className={field} />
@@ -280,10 +335,10 @@ export function TaxForm({ employeeId, today, version, last, reliefOn, foreign = 
             <fieldset className="grid gap-2 rounded-button border border-border p-3 md:col-span-2 md:grid-cols-3">
               <legend className="px-1 font-bold">{t('flat19Title')}</legend>
               <Label text={t('fTarget')}>
-                <select name="flat.state" defaultValue={last?.reliefs.flat19?.state ?? 'NO'} className={field}>
+                <Select name="flat.state" defaultValue={last?.reliefs.flat19?.state ?? 'NO'} className={field}>
                   <option value="NO">{t('flat19No')}</option>
                   <option value="YES">{t('flat19Yes')}</option>
-                </select>
+                </Select>
               </Label>
               <Label text={t('fReliefFrom')}>
                 <input name="flat.from" type="date" defaultValue={last?.reliefs.flat19?.from ?? ''} className={field} />
@@ -298,10 +353,11 @@ export function TaxForm({ employeeId, today, version, last, reliefOn, foreign = 
             </fieldset>
           )}
           <Label text={t('fValidFrom')}>
-            <input name="validFrom" type="date" required defaultValue={today} className={field} />
+            <input name="validFrom" type="date" required value={from} onChange={(e) => setFrom(e.target.value)} className={field} />
+            <span className="text-xs font-normal text-faint">{last && from < last.validFrom ? t('validFromBefore', { date: last.validFrom }) : t(last && from === last.validFrom ? 'validFromSame' : 'validFromHint')}</span>
           </Label>
-          <Label text={t(last ? 'fReason' : 'fReasonFirst')}>
-            <input name="reason" required={!!last} minLength={last ? 2 : undefined} maxLength={500} className={field} autoComplete="off" />
+          <Label text={t(needReason ? 'fReason' : 'fReasonFirst')}>
+            <input name="reason" required={needReason} minLength={needReason ? 2 : undefined} maxLength={500} className={field} autoComplete="off" />
           </Label>
           <p className="text-xs text-faint md:col-span-2">{t('taxHint')}</p>
           {err && (
@@ -323,6 +379,9 @@ export function TaxForm({ employeeId, today, version, last, reliefOn, foreign = 
 export function ItemForms({ employeeId, today, options, rows }: { employeeId: string; today: string; options: { code: string; label: string; defaultAmount: number | null }[]; rows: { id: string; name: string; amount: string | null; note: string | null; validFrom: string; validTo: string | null }[] }) {
   const t = useTranslations('admin.staffPay');
   const { busy, err, save } = useSave(employeeId);
+  const [pick, setPick] = useState(options[0]?.code ?? '');
+  const picked = options.find((o) => o.code === pick);
+  const needAmount = !picked || picked.defaultAmount === null; // 기본 금액이 있는 항목만 금액을 비울 수 있다 (2026-10-25)
   return (
     <div className="flex flex-col gap-3 pt-3 text-sm">
       {rows.length > 0 && (
@@ -379,16 +438,16 @@ export function ItemForms({ employeeId, today, options, rows }: { employeeId: st
           }}
         >
           <Label text={t('colItem')}>
-            <select name="itemCode" className={field}>
+            <Select name="itemCode" value={pick} onChange={(e) => setPick(e.target.value)} className={field}>
               {options.map((o) => (
                 <option key={o.code} value={o.code}>
                   {o.label}
                 </option>
               ))}
-            </select>
+            </Select>
           </Label>
           <Label text={t('fItemAmount')}>
-            <input name="amount" type="number" min="0" step="1" className={field} />
+            <input name="amount" type="number" min="0" step="1" required={needAmount} placeholder={picked?.defaultAmount != null ? t('itemDefaultIs', { n: picked.defaultAmount }) : ''} className={field} />
           </Label>
           <Label text={t('fValidFrom')}>
             <input name="validFrom" type="date" required defaultValue={today} className={field} />

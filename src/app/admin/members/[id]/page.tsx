@@ -7,9 +7,12 @@ import { notFound } from 'next/navigation';
 import { DetailBar } from '@/components/detail';
 import { Card, CardTitle, Chip, PageShell } from '@/components/ui';
 import { Fold } from '@/components/Fold';
+import { CountUp } from '@/components/CountUp';
+import { entriesFor, ledgerBalance, minutesToDays } from '@/lib/leave-ledger';
+import { loadEntries, loadLots } from '@/lib/leave-ledger-data';
 import { getMe } from '@/lib/auth';
 import { consentAt } from '@/lib/consent';
-import { buildOrgTree, groupPath } from '@/lib/org';
+import { groupPath, orgOptions } from '@/lib/org';
 import { loadOrgGroups } from '@/lib/org-data';
 import { loadManagedGroups } from '@/lib/scope';
 import { resignChecklist } from '@/lib/staff-data';
@@ -20,10 +23,8 @@ import { ManagerScope } from '../ManagerScope';
 import { ManageAction } from './ManageAction';
 import { RoleRequestCard } from './RoleRequestCard';
 import { loadJobs } from '@/lib/job-data';
-import { loadShiftTemplates } from '@/lib/shift-data';
 import { MAX_TOP, SHOWN_GRADES } from '@/lib/staff-rules';
 import { GradeForm, type GradeKey } from './GradeForm';
-import { ShiftPick } from './ShiftPick';
 import { Pager, pageOf } from '@/components/Pager';
 import { loadMySlips } from '@/lib/payroll/publish-data';
 import { OFFICE } from '@/config/office';
@@ -60,19 +61,14 @@ export default async function MemberDetailPage({ params, searchParams }: { param
   const key = keys?.[0] ?? null;
   const hasPasskey = !!key;
   const joined = !!p.password_set_at || hasPasskey;
-  const tree = buildOrgTree(groups);
   const managed = p.role === 'manager' ? await loadManagedGroups(p.id) : []; // 지점관리자가 맡은 지점
-  const options = tree.flatMap((d) => [{ id: d.id, label: d.name }, ...d.teams.map((x) => ({ id: x.id, label: `${d.name} › ${x.name}` }))]);
+  const options = orgOptions(groups);
   const path = groupPath(groups, p.group_id);
-  const jobName = p.job_id ? ((await loadJobs()).find((x) => x.id === p.job_id)?.name ?? null) : null;
+  const jobList = (await loadJobs()).filter((x) => x.active || x.id === p.job_id);
+  const jobName = p.job_id ? (jobList.find((x) => x.id === p.job_id)?.name ?? null) : null;
   // 근무 · 급여 (2026-10-19 의뢰인): 근무일정 틀은 여기서 바로 고르고(틀 만들기는 통합설정), 급여 계약은 보이기만 하고 고치기는 사원별 급여
   const tw = await getTranslations('admin.members.workPay');
-  const tk = await getTranslations('admin.shifts.kinds');
   const tpay = await getTranslations('admin.staffPay.payType');
-  const templates = await loadShiftTemplates(true);
-  const shiftTpl = p.shift_template_id ? (templates.find((x) => x.id === p.shift_template_id) ?? null) : null;
-  const shiftOptions = templates.filter((x) => x.active || x.id === p.shift_template_id).map((x) => ({ id: x.id, label: `${x.name} · ${tk(x.kind)} ${x.startTime}–${x.endTime}` }));
-  const workKind = shiftTpl?.kind === 'deemed' ? tw('kindDeemed') : tw('kindNormal');
   const seePay = me.canViewPayroll;
   const { data: contract } = seePay
     ? await db.from('payroll_contract_versions').select('pay_type, amount, valid_from').eq('employee_id', id).eq('status', 'active').lte('valid_from', today).or(`valid_to.is.null,valid_to.gt.${today}`).order('valid_from', { ascending: false }).limit(1).maybeSingle()
@@ -85,7 +81,6 @@ export default async function MemberDetailPage({ params, searchParams }: { param
   const tps = await getTranslations('payslip');
   const slipSummary = slips.length ? tw('slipLatest', { month: slips[0].month, kind: slips[0].kind === 'BONUS' ? tps('bonus') : tw('slipPay'), net: f.number(slips[0].net), n: slips.length }) : tw('slipNone');
   const slipHref = (x: (typeof slips)[number]) => (x.runId ? `/admin/payroll/runs/${x.runId}/${id}` : `/admin/payroll/slips?m=${x.month}`);
-  const workPaySummary = [workKind, shiftTpl?.name ?? tw('shiftNoneShort'), seePay ? (contract ? tpay(contract.pay_type as string) : tw('payNoneShort')) : null].filter(Boolean).join(' · ');
   const day = (s: string) => f.dateTime(new Date(s), { dateStyle: 'medium' });
   const agreedAt = await consentAt(p.id);
   const notes = await loadStaffNotes(p.id); // 비고 (묶음 19) — 표가 없으면 null
@@ -116,6 +111,16 @@ export default async function MemberDetailPage({ params, searchParams }: { param
     ? ([['overtime', todo.overtime], ['corrections', todo.corrections], ['leave', todo.leave], ['work', todo.work]] as const).filter(([, n]) => n > 0).map(([k, n]) => tm(`todo.${k}`, { n }))
     : [];
   const api = `/api/admin/employees/${p.id}`;
+  // 머리 숫자 칸 (2026-10-22 의뢰인: 「고급지지 않다」 — 이름 아래 글자만 있었다): 근속 · 남은 연차 · 로그인 · 출퇴근 기기
+  const [lots, ledgerAll] = await Promise.all([loadLots({ employeeId: p.id, states: ['APPROVED'] }), loadEntries(p.id)]);
+  const lb = lots.length > 0 ? ledgerBalance(lots, entriesFor(ledgerAll, OFFICE.practiceMode), today) : null;
+  const tenure = (() => {
+    if (!p.joined_on) return null;
+    const [y1, m1, d1] = (p.joined_on as string).split('-').map(Number);
+    const [y2, m2, d2] = today.split('-').map(Number);
+    const months = (y2 - y1) * 12 + (m2 - m1) - (d2 < d1 ? 1 : 0);
+    return months < 0 ? null : { y: Math.floor(months / 12), m: months % 12 };
+  })();
   // 등급 (2026-10-16 의뢰인 권한-10): 관리자 = 최고관리자(대표자 포함 최대 3명, 대표자 1명) · 지점관리자 · 일반직원
   const grade: GradeKey = p.role === 'admin' ? (p.admin_level === 'ceo' ? 'ceo' : 'super') : (p.role as GradeKey);
   const targetTop = p.role === 'admin';
@@ -133,11 +138,15 @@ export default async function MemberDetailPage({ params, searchParams }: { param
       ].filter(Boolean).join(' · ')
     : '';
 
+  const stayLeft = daysToStayEnd(foreign.stayUntil, today);
+  const stayChip = stayLeft !== null && stayLeft <= 60 ? <Chip tone={stayLeft <= 30 ? 'danger' : 'warn'}>{stayLeft < 0 ? td('foreign.stayOver', { n: -stayLeft }) : td('foreign.stayLeft', { n: stayLeft })}</Chip> : null;
+  const foreignText = foreign.nationality ? `${td.has(`foreign.country.${foreign.nationality}`) ? td(`foreign.country.${foreign.nationality}`) : foreign.nationality} · ${foreign.visaType ?? td('foreign.visaNone')}` : td('foreign.domestic');
+
   return (
     <PageShell wide>
       <DetailBar plain back={p.active ? '/admin/members' : '/admin/members?f=inactive'} backLabel={tc('back')} title={t('title')} />
       {/* 머리: 누구인지(이름·소속·상태) + 가장 자주 가는 곳(날짜별 기록) — 한 카드 (2026-10-06 의뢰인: 상세 화면이 흩어져 보였다) */}
-      <header className="flex flex-wrap items-center gap-x-4 gap-y-3 rounded-card bg-bg p-5">
+      <header className="flex flex-wrap items-center gap-x-4 gap-y-3 rounded-card border border-border bg-bg p-5 shadow-card lg:p-6">
         <span aria-hidden className="flex size-14 shrink-0 items-center justify-center rounded-chip bg-primary-tint text-xl font-extrabold text-primary">
           {p.name.slice(0, 1)}
         </span>
@@ -156,6 +165,31 @@ export default async function MemberDetailPage({ params, searchParams }: { param
           <CalendarDays aria-hidden size={18} strokeWidth={2} />
           {t('toRecords')}
         </Link>
+        {/* 숫자 네 칸: 상자 없이 여백 + 가는 세로선으로만 나눈다 (2026-10-23 의뢰인: 카드 남발) */}
+        <dl className="grid w-full grid-cols-2 gap-x-6 gap-y-5 border-t border-border pt-5 md:grid-cols-4 md:gap-x-0 md:divide-x md:divide-border [&>*]:md:px-6 [&>*:first-child]:md:pl-0">
+          <div className="flex flex-col gap-1">
+            <dt className="text-xs text-muted">{t('stat.tenure')}</dt>
+            <dd className="num text-2xl leading-tight font-extrabold tracking-tight">{tenure ? <CountUp value={tenure.y > 0 ? t('stat.tenureYm', { y: tenure.y, m: tenure.m }) : t('stat.tenureM', { m: tenure.m })} /> : <span className="text-faint">–</span>}</dd>
+          </div>
+          <Link href={`/admin/leave/emp/${p.id}`} className="flex flex-col gap-1 hover:opacity-80">
+            <dt className="text-xs text-muted">{t('stat.leave')} ›</dt>
+            <dd className="num text-2xl leading-tight font-extrabold tracking-tight text-primary-ink">{lb ? <CountUp value={t('stat.leaveDays', { n: f.number(minutesToDays(lb.remaining), { maximumFractionDigits: 2 }) })} /> : <span className="font-normal text-faint">–</span>}</dd>
+          </Link>
+          <div className="flex flex-col gap-1">
+            <dt className="text-xs text-muted">{t('stat.login')}</dt>
+            <dd className={`flex items-center gap-1.5 text-base font-bold ${joined ? 'text-ok' : 'text-warn'}`}>
+              <KeyRound aria-hidden size={16} />
+              {t(joined ? 'stat.loginOk' : 'stat.loginNo')}
+            </dd>
+          </div>
+          <div className="flex flex-col gap-1">
+            <dt className="text-xs text-muted">{t('stat.device')}</dt>
+            <dd className={`flex items-center gap-1.5 text-base font-bold ${key ? 'text-ok' : 'text-warn'}`}>
+              <Smartphone aria-hidden size={16} />
+              {t(key ? 'stat.deviceOk' : 'stat.deviceNo')}
+            </dd>
+          </div>
+        </dl>
       </header>
 
       {pendingRole && <RoleRequestCard id={pendingRole.id} change={changeLabel} requester={requesterName} reason={pendingRole.reason} mine={pendingRole.requested_by === me.id} />}
@@ -168,43 +202,23 @@ export default async function MemberDetailPage({ params, searchParams }: { param
             <ProfileSection
               employeeId={p.id}
               rows={basicRows}
-              initial={{ name: p.name, employeeNo: p.employee_no ?? '', phone: p.phone ?? '', email: p.email ?? '', groupId: p.group_id ?? '', jobTitle: p.job_title ?? '', joinedOn: p.joined_on ?? '', locale: p.locale }}
+              initial={{ name: p.name, employeeNo: p.employee_no ?? '', phone: p.phone ?? '', email: p.email ?? '', groupId: p.group_id ?? '', jobTitle: p.job_title ?? '', joinedOn: p.joined_on ?? '', locale: p.locale, jobId: p.job_id ?? '' }}
               groups={options}
               today={today}
-            />
-          </Fold>
-
-          {/* 근무 · 급여 (2026-10-19 의뢰인): 근무 방식은 여기서 바로 고르고, 급여 계약은 보기 + 사원별 급여 바로가기 */}
-          <Fold id="workpay" title={tw('title')} summary={workPaySummary} aside={seePay && !contract ? <Chip tone="warn">{tw('payNoneShort')}</Chip> : undefined}>
-            <div className="flex flex-col gap-3">
-              <div className="flex flex-col gap-1.5 lg:flex-row lg:items-start lg:gap-3">
-                <span className="w-24 shrink-0 pt-2 text-sm text-muted">{tw('shift')}</span>
-                <div className="flex min-w-0 flex-1 flex-col gap-1">
-                  {me.role === 'admin' && p.active ? <ShiftPick employeeId={p.id} current={p.shift_template_id ?? ''} options={shiftOptions} /> : <p className="pt-2 text-sm font-semibold">{shiftTpl ? shiftOptions.find((o) => o.id === shiftTpl.id)?.label : tw('shiftNone')}</p>}
-                  <p className="text-xs text-faint">
-                    {tw(shiftTpl?.kind === 'deemed' ? 'deemedHint' : 'normalHint')}{' '}
-                    {me.role === 'admin' && (
-                      <Link href="/admin/shifts" className="font-semibold whitespace-nowrap text-primary">
-                        {tw('toTemplates')} ›
-                      </Link>
-                    )}
-                  </p>
+              cell={
+                // 입사일 오른쪽 빈칸: 국적 · 체류 (2026-10-23 의뢰인: 외국인 정보를 기본 정보로). 체류 기간이 60일 안이면 남은 날
+                <div className="flex min-w-0 gap-3 border-b border-border py-2.5 text-sm">
+                  <dt className="w-24 shrink-0 text-muted">{td('foreign.cell')}</dt>
+                  <dd className="num flex min-w-0 flex-1 flex-wrap items-center gap-x-2 gap-y-1 font-semibold break-words">
+                    {foreignText}
+                    {stayChip}
+                  </dd>
                 </div>
-              </div>
-              <div className="flex flex-col gap-1.5 border-t border-border pt-3 lg:flex-row lg:items-center lg:gap-3">
-                <span className="w-24 shrink-0 text-sm text-muted">{tw('pay')}</span>
-                {seePay ? (
-                  <>
-                    <span className={`num min-w-0 flex-1 text-sm font-semibold ${contract ? '' : 'text-warn'}`}>{payText}</span>
-                    <Link href={`/admin/payroll/staff/${p.id}`} className="inline-flex min-h-11 items-center text-sm font-semibold text-primary lg:min-h-9">
-                      {tw(contract ? 'payEdit' : 'payAdd')} ›
-                    </Link>
-                  </>
-                ) : (
-                  <span className="text-sm text-faint">{tw('payHidden')}</span>
-                )}
-              </div>
-            </div>
+              }
+              jobs={jobList.map((j) => ({ id: j.id, label: j.name }))}
+              foreign={foreign}
+              payHref={`/admin/payroll/staff/${p.id}`}
+            />
           </Fold>
 
           {/* 개인 정보 (묶음 17): 생년월일 · 비상연락처 · 자격증 · 차량 + 부양가족(급여 세무 칸 값) */}
@@ -220,19 +234,21 @@ export default async function MemberDetailPage({ params, searchParams }: { param
             </div>
           </Fold>
 
-          {/* 외국인 정보 (묶음 31, 2026-10-20 의뢰인: 태국 · 베트남 직원) — 관리자만. 체류 기간이 60일 안이면 접힌 줄에 남은 날 */}
-          <Fold id="foreign" title={td('foreign.title')} summary={foreign.nationality ? `${td.has(`foreign.country.${foreign.nationality}`) ? td(`foreign.country.${foreign.nationality}`) : foreign.nationality} · ${foreign.visaType ?? td('foreign.visaNone')}` : td('foreign.domestic')} aside={(() => { const left = daysToStayEnd(foreign.stayUntil, today); return left !== null && left <= 60 ? <Chip tone={left <= 30 ? 'danger' : 'warn'}>{left < 0 ? td('foreign.stayOver', { n: -left }) : td('foreign.stayLeft', { n: left })}</Chip> : undefined; })()}>
-            <p className="pb-3 text-xs text-faint">{td('foreign.adminNote')}</p>
-            <ForeignInfoForm endpoint={`${api}/foreign`} initial={foreign} today={today} payHref={`/admin/payroll/staff/${p.id}`} />
-          </Fold>
-
           {/* 급(상)여 명세서 (2026-10-19 의뢰인): 접힌 채 한 줄(가장 최근 달 · 실지급) — 펴면 6개월씩, 넘으면 쪽 넘김. 폰 · PC 같은 접기 카드 */}
           {seePay && (
-            <Fold id="slips" title={tw('slipTitle')} summary={slipSummary} open={!!slipSp} aside={slips.length > 0 ? <Chip tone="info">{tw('slipCount', { n: slips.length })}</Chip> : undefined}>
+            <Fold id="slips" title={tw('slipTitle')} summary={`${contract ? tpay(contract.pay_type as string) : tw('payNoneShort')} · ${slipSummary}`} open={!!slipSp} aside={!contract ? <Chip tone="warn">{tw('payNoneShort')}</Chip> : slips.length > 0 ? <Chip tone="info">{tw('slipCount', { n: slips.length })}</Chip> : undefined}>
+              {/* 급여 계약은 보이기만 — 고치는 곳은 사원별 급여 */}
+              <div className="flex flex-col gap-1.5 border-b border-border pb-3 lg:flex-row lg:items-center lg:gap-3">
+                <span className="w-24 shrink-0 text-sm text-muted">{tw('pay')}</span>
+                <span className={`num min-w-0 flex-1 text-sm font-semibold ${contract ? '' : 'text-warn'}`}>{payText}</span>
+                <Link href={`/admin/payroll/staff/${p.id}`} className="inline-flex min-h-11 items-center text-sm font-semibold text-primary lg:min-h-9">
+                  {tw(contract ? 'payEdit' : 'payAdd')} ›
+                </Link>
+              </div>
               {slips.length === 0 ? (
-                <p className="text-sm text-faint">{tw('slipEmpty')}</p>
+                <p className="pt-3 text-sm text-faint">{tw('slipEmpty')}</p>
               ) : (
-                <div className="flex flex-col gap-2">
+                <div className="flex flex-col gap-2 pt-1">
                   <ul className="flex flex-col divide-y divide-border">
                     {slipPage.items.map((x) => (
                       <li key={x.id}>
@@ -330,7 +346,7 @@ export default async function MemberDetailPage({ params, searchParams }: { param
               </details>
             )}
             {!pendingRole && p.active && targetTop && !me.top && <p className="px-5 py-3 text-sm text-muted">{tm('owner_only')}</p>}
-            {p.active && p.role === 'manager' && <ManagerScope employeeId={p.id} groups={tree.flatMap((d) => [{ id: d.id, label: d.name }, ...d.teams.map((x) => ({ id: x.id, label: `${d.name} › ${x.name}` }))])} picked={managed} />}
+            {p.active && p.role === 'manager' && <ManagerScope employeeId={p.id} groups={orgOptions(groups)} picked={managed} />}
             {key && (
               <ManageAction title={tm('revokeDevice')} hint={tm('revokeDeviceHint')} confirmLabel={tm('revokeDevice')} endpoint={`${api}/device`} body={{}} presets={[tm('preset.lost'), tm('preset.newPhone')]} notes={[tm('revokeDeviceNote')]} danger />
             )}

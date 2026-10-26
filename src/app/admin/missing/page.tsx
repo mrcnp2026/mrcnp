@@ -7,6 +7,7 @@ import { getFormatter, getTranslations } from 'next-intl/server';
 import Link from 'next/link';
 import { RowList } from '@/components/list';
 import { Chip, PageShell } from '@/components/ui';
+import { CountUp } from '@/components/CountUp';
 import { OFFICE } from '@/config/office';
 import { addDays } from '@/lib/calendar';
 import { loadJobs } from '@/lib/job-data';
@@ -21,7 +22,7 @@ import { RangeForm } from './RangeForm';
 
 type Found = { id: string; name: string; sub: string; color: string; workDate: string; kind: MissingKind; start: string; end: string | null; pending: boolean };
 
-export default async function MissingPage({ searchParams }: { searchParams: Promise<{ from?: string; to?: string; tab?: string; live?: string }> }) {
+export default async function MissingPage({ searchParams }: { searchParams: Promise<{ from?: string; to?: string; tab?: string; live?: string; v?: string }> }) {
   const [t, f, sp] = await Promise.all([getTranslations('admin.missing'), getFormatter(), searchParams]);
   const practice = OFFICE.practiceMode && sp.live !== '1';
   const now = new Date();
@@ -61,7 +62,18 @@ export default async function MissingPage({ searchParams }: { searchParams: Prom
   const tabKind: MissingKind = sp.tab === 'in' || sp.tab === 'out' ? sp.tab : count('out') === 0 && count('in') > 0 ? 'in' : 'out';
   const shown = found.filter((x) => x.kind === tabKind).sort((a, b) => b.workDate.localeCompare(a.workDate) || a.start.localeCompare(b.start) || a.name.localeCompare(b.name));
   const dates = [...new Set(shown.map((x) => x.workDate))];
-  const q = (tab: MissingKind) => ({ pathname: '/admin/missing', query: { from, to, tab, ...(sp.live === '1' ? { live: '1' } : {}) } });
+  const byDate = sp.v === 'date';
+  const q = (tab: MissingKind) => ({ pathname: '/admin/missing', query: { from, to, tab, v: 'date', ...(sp.live === '1' ? { live: '1' } : {}) } });
+  const viewHref = (date: boolean) => ({ pathname: '/admin/missing', query: { from, to, ...(date ? { v: 'date' } : {}), ...(sp.live === '1' ? { live: '1' } : {}) } });
+  // 사람별 (기본, 2026-10-22 의뢰인: 「누락 기록 화면 이상하지 않아?」 — 같은 사람이 날짜마다 반복돼 몇 명이 몇 번 빠졌는지 안 보였다)
+  const people = [...new Set(found.map((x) => x.id))]
+    .map((id) => {
+      const mine = found.filter((x) => x.id === id).sort((a, b) => b.workDate.localeCompare(a.workDate));
+      return { id, name: mine[0].name, sub: mine[0].sub, color: mine[0].color, items: mine };
+    })
+    .sort((a, b) => b.items.length - a.items.length || a.name.localeCompare(b.name));
+  const md = (d: string) => `${Number(d.slice(5, 7))}/${Number(d.slice(8, 10))}`;
+  const viewBtn = (on: boolean) => `inline-flex min-h-9 items-center border px-3.5 text-sm first:rounded-l-button last:rounded-r-button ${on ? 'z-10 border-primary bg-primary-tint font-bold text-primary' : 'border-border bg-bg text-muted hover:text-text'}`;
   const tab = (on: boolean) => `flex min-h-11 flex-1 lg:flex-none lg:px-4 items-center justify-center gap-1 border-b-2 text-sm font-bold ${on ? 'border-text text-text lg:border-primary lg:text-primary' : 'border-transparent text-muted hover:text-text'}`;
 
   return (
@@ -71,6 +83,61 @@ export default async function MissingPage({ searchParams }: { searchParams: Prom
       </div>
       {practice && <p className="rounded-card bg-primary-tint p-3 text-sm text-primary">{t('practiceBanner')}</p>}
       <RangeForm key={`${from}${to}`} from={from} to={to} tab={tabKind} today={today} live={sp.live === '1'} />
+      <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
+        {[
+          { k: 'in', n: count('in'), tone: count('in') ? 'text-warn' : 'text-faint' },
+          { k: 'out', n: count('out'), tone: count('out') ? 'text-danger' : 'text-faint' },
+          { k: 'people', n: people.length, tone: people.length ? 'text-text' : 'text-faint' },
+          { k: 'pending', n: found.filter((x) => x.pending).length, tone: found.some((x) => x.pending) ? 'text-primary' : 'text-faint' },
+        ].map((c) => (
+          <div key={c.k} className="flex flex-col gap-1 rounded-card border border-border bg-bg px-5 py-4">
+            <span className="text-sm font-semibold text-muted">{t(`sum.${c.k}`)}</span>
+            <CountUp value={c.n} className={`num text-3xl font-bold ${c.tone}`} />
+          </div>
+        ))}
+      </div>
+      <div className="flex items-center justify-end">
+        <div className="flex">
+          <Link href={viewHref(false)} aria-current={!byDate ? 'page' : undefined} className={viewBtn(!byDate)}>{t('viewPeople')}</Link>
+          <Link href={viewHref(true)} aria-current={byDate ? 'page' : undefined} className={`-ml-px ${viewBtn(byDate)}`}>{t('viewDate')}</Link>
+        </div>
+      </div>
+      {!byDate && data.rule && (
+        people.length === 0 ? (
+          <p className="rounded-card bg-ok-tint px-5 py-4 text-sm font-semibold text-ok">{t('noneAll')}</p>
+        ) : (
+          <ul className="flex flex-col divide-y divide-border overflow-hidden rounded-card border border-border bg-bg">
+            {people.map((p) => (
+              <li key={p.id}>
+                <Link href={`/admin/records/${p.id}?m=${p.items[0].workDate.slice(0, 7)}`} className="flex flex-col gap-3 px-5 py-4 hover:bg-surface lg:flex-row lg:items-center lg:gap-6">
+                  <span className="flex min-w-0 items-center gap-3 lg:w-64 lg:shrink-0">
+                    <span aria-hidden className={`w-1 shrink-0 self-stretch rounded-chip ${p.color}`} />
+                    <span className="flex min-w-0 flex-col">
+                      <span className="font-bold">{p.name}</span>
+                      <span className="truncate text-xs text-muted">{p.sub}</span>
+                    </span>
+                    <span className="num ml-auto shrink-0 rounded-chip bg-warn-tint px-2.5 py-0.5 text-xs font-bold text-warn lg:ml-2">{t('times', { n: p.items.length })}</span>
+                  </span>
+                  <span className="flex min-w-0 flex-1 flex-wrap gap-1.5">
+                    {p.items.slice(0, 12).map((x) => (
+                      <span key={`${x.workDate}${x.kind}`} className={`num inline-flex items-center gap-1 rounded-chip px-2 py-0.5 text-xs font-semibold ${x.kind === 'in' ? 'bg-warn-tint text-warn' : 'bg-danger-tint text-danger'}`}>
+                        {md(x.workDate)} {t(`short.${x.kind}`)}
+                        {x.pending && <span className="text-primary">· {t('pendingShort')}</span>}
+                      </span>
+                    ))}
+                    {p.items.length > 12 && <span className="text-xs text-faint">{t('moreN', { n: p.items.length - 12 })}</span>}
+                  </span>
+                  <span className="hidden shrink-0 items-center gap-1 text-sm font-bold text-primary lg:flex">
+                    {t('open')}
+                    <ChevronRight aria-hidden size={16} />
+                  </span>
+                </Link>
+              </li>
+            ))}
+          </ul>
+        )
+      )}
+      {byDate && (
       <nav aria-label={t('title')} className="flex rounded-card bg-bg px-2">
         {(['in', 'out'] as const).map((k) => (
           <Link key={k} href={q(k)} aria-current={tabKind === k ? 'page' : undefined} className={tab(tabKind === k)}>
@@ -79,9 +146,10 @@ export default async function MissingPage({ searchParams }: { searchParams: Prom
           </Link>
         ))}
       </nav>
+      )}
       {!data.rule && <p className="rounded-card bg-bg p-5 text-sm text-faint">{t('noRule')}</p>}
-      {data.rule && shown.length === 0 && <p className="rounded-card bg-bg p-5 text-sm text-faint">{t(`empty.${tabKind}`)}</p>}
-      {dates.map((d) => {
+      {byDate && data.rule && shown.length === 0 && <p className="rounded-card bg-bg p-5 text-sm text-faint">{t(`empty.${tabKind}`)}</p>}
+      {byDate && dates.map((d) => {
         const rows = shown.filter((x) => x.workDate === d);
         return (
           <section key={d} className="flex flex-col gap-2">

@@ -1,5 +1,6 @@
 'use client';
 // 직원 등록 2단계: ① 정보 입력 → ② 초대 보내기 (관리자 폰의 공유 창으로 링크 전달 — 의뢰인 2026-10-05: 유료 문자·알림톡 없이).
+import { PayFields, type PayDefaults } from './PayFields';
 import { Check } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 import Link from 'next/link';
@@ -13,13 +14,13 @@ import { EmployeeFields, type OrgOption } from '../EmployeeFields';
 import { InviteView, type Invite } from '../InviteView';
 
 // popup: PC 직원 목록의 가운데 팝업 안 — 두 칸 양식 + [닫기][추가하기] (2026-10-11 의뢰인 스샷 `스샷/관리-직원-직원추가하기.png`)
-export function RegisterWizard({ groups, locales, today, jobs, popup = false }: { groups: OrgOption[]; locales: { code: string; name: string }[]; today: string; jobs?: OrgOption[]; popup?: boolean }) {
+export function RegisterWizard({ groups, locales, today, jobs, popup = false, pay }: { groups: OrgOption[]; locales: { code: string; name: string }[]; today: string; jobs?: OrgOption[]; popup?: boolean; pay?: PayDefaults }) {
   const t = useTranslations('admin.members');
   const tc = useTranslations('common');
   const router = useRouter();
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState<{ code: string; requestId?: string } | null>(null);
-  const [created, setCreated] = useState<{ employeeId: string; name: string; invite: Invite } | null>(null);
+  const [created, setCreated] = useState<{ employeeId: string; name: string; invite: Invite; pay?: 'saved' | 'skipped' | 'failed' } | null>(null);
   const step = created ? 2 : 1;
 
   return (
@@ -38,7 +39,13 @@ export function RegisterWizard({ groups, locales, today, jobs, popup = false }: 
       {created ? (
         <>
           <p role="status" className="rounded-card bg-ok-tint p-3 text-sm font-semibold text-ok">{t('registered', { name: created.name })}</p>
-          <InviteView name={created.name} invite={created.invite} onClose={() => router.push(`/admin/members/${created.employeeId}`)} />
+          {created.pay === 'saved' && <p role="status" className="rounded-card bg-ok-tint p-3 text-sm text-ok">{t('paySaved')}</p>}
+          {created.pay === 'failed' && (
+            <p role="alert" className="rounded-card bg-warn-tint p-3 text-sm text-warn">
+              {t('payFailed')} <Link href={`/admin/payroll/staff/${created.employeeId}`} className="font-bold underline">{t('payFailedLink')}</Link>
+            </p>
+          )}
+          <InviteView employeeId={created.employeeId} name={created.name} invite={created.invite} onClose={() => router.push(`/admin/members/${created.employeeId}`)} />
           <div className="grid grid-cols-2 gap-2">
             <Button variant="outline" onClick={() => { setCreated(null); setErr(null); }}>
               {t('addAnother')}
@@ -57,7 +64,7 @@ export function RegisterWizard({ groups, locales, today, jobs, popup = false }: 
               const fd = new FormData(e.currentTarget);
               setBusy(true);
               setErr(null);
-              const r = await callApi<{ employeeId: string; name: string; invite: Invite }>('/api/admin/employees', Object.fromEntries(fd));
+              const r = await callApi<{ employeeId: string; name: string; invite: Invite; pay?: 'saved' | 'skipped' | 'failed' }>('/api/admin/employees', Object.fromEntries(fd));
               setBusy(false);
               if (!r.ok) return setErr(r);
               setCreated(r.data);
@@ -65,6 +72,7 @@ export function RegisterWizard({ groups, locales, today, jobs, popup = false }: 
             }}
           >
             <EmployeeFields groups={groups} locales={locales} today={today} jobs={jobs} popup={popup} />
+            {pay && <PayFields defaults={pay} />}
             {popup && <p className="rounded-button bg-primary-tint p-3 text-sm text-primary">{t('inviteNote')}</p>}
             {err && <ErrorNote code={err.code} requestId={err.requestId} namespace="admin.members" />}
             {popup ? (

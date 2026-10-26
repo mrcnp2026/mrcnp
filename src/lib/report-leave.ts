@@ -10,7 +10,7 @@ import { calcLeaveBalance } from '@/lib/leave';
 import { loadAllLeaveTypes, loadLeaveGrants, loadLeaveRequests } from '@/lib/leave-data';
 import { entriesFor, ledgerBalance, minutesToDays } from '@/lib/leave-ledger';
 import { loadEntries, loadLots, loadPolicyGroups } from '@/lib/leave-ledger-data';
-import { groupScope, type OrgGroup } from '@/lib/org';
+import { groupScope, topOf, type OrgGroup } from '@/lib/org';
 import { loadOrgGroups } from '@/lib/org-data';
 import { createAdminClient } from '@/lib/supabase/admin';
 
@@ -47,7 +47,7 @@ export async function buildLeaveReport(args: { asOf: string; practice: boolean; 
     const row = { people: 1, started: isStarted ? 1 : 0, granted: isStarted ? d(b.granted) : 0, used: isStarted ? d(b.used) : 0, expired: isStarted ? d(b.expired) : 0, remaining: isStarted ? d(b.remaining) : 0, advance: isStarted ? d(b.advance) : 0, upcoming: isStarted ? d(b.upcoming) : 0 };
     employees.push({ ...row, employeeId: p.id as string, name: p.name as string, employeeNo: p.employee_no as string | null, groupId: p.group_id as string | null, active: p.active as boolean, joinedOn: p.joined_on as string | null, isStarted, rate: isStarted ? rateOf(row) : null, old: old.grant ? old.remaining : null });
   }
-  const top = (g: OrgGroup | undefined): OrgGroup | undefined => (g?.parentId ? groups.find((x) => x.id === g.parentId) : g);
+  const top = (g: OrgGroup | undefined): OrgGroup | undefined => topOf(groups, g?.id); // 맨 위 조직 (3단계여도)
   const by = new Map<string, LeaveSum & { groupId: string | null; name: string }>();
   const total = zero();
   const round = (s: LeaveSum) => { for (const k of KEYS) s[k] = Math.round(s[k] * 10000) / 10000; };

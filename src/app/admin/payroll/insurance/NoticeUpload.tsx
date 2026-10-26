@@ -2,6 +2,7 @@
 // 공단 고지서 엑셀 · CSV 올리기 (2026-10-20 노프로 비교) — 파일을 읽어 열 이름을 보이고, 「이름 · 근로자 고지액」 열을 고르면 직원을 맞춘다.
 // 맞춘 줄만 손으로 넣기와 같은 길(notice.save, fileName)로 저장한다. 공단 양식이 정해지지 않아 열은 담당자가 고른다(처음에는 짐작한 열).
 // 모양은 다른 엑셀 창(components/ExcelImport)과 같게 — 단계 표시 · 끌어다 놓는 칸 · 맞춤/문제 숫자 (2026-10-20 의뢰인).
+import { Select } from '@/components/Select';
 import { FileSpreadsheet, Upload } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 import { useRouter } from 'next/navigation';
@@ -34,14 +35,14 @@ export function NoticeUpload({ people, month, live }: { people: Person[]; month:
   const pick = (k: keyof NoticeMapping, label: string) => (
     <label className="flex min-w-0 flex-col gap-1">
       <span className="font-bold">{label}</span>
-      <select value={map?.[k] ?? ''} onChange={(e) => setMap({ ...map!, [k]: e.target.value === '' ? null : Number(e.target.value) })} className={field}>
+      <Select value={map?.[k] ?? ''} onChange={(e) => setMap({ ...map!, [k]: e.target.value === '' ? null : Number(e.target.value) })} className={field}>
         <option value="">{t('none')}</option>
         {sheet!.headers.map((h, i) => (
           <option key={i} value={i}>
             {h || t('col', { n: i + 1 })}
           </option>
         ))}
-      </select>
+      </Select>
     </label>
   );
   const read = async (f: File) => {
@@ -90,13 +91,13 @@ export function NoticeUpload({ people, month, live }: { people: Person[]; month:
       <div className="grid grid-cols-2 gap-3 sm:flex sm:flex-wrap sm:items-end">
         <label className="flex min-w-0 flex-col gap-1">
           <span className="font-bold">{ti('fInsurer')}</span>
-          <select value={insurer} onChange={(e) => { setInsurer(e.target.value as (typeof KINDS)[number]); setSheet(null); setFileName(''); }} className={field}>
+          <Select value={insurer} onChange={(e) => { setInsurer(e.target.value as (typeof KINDS)[number]); setSheet(null); setFileName(''); }} className={field}>
             {KINDS.map((k) => (
               <option key={k} value={k}>
                 {ti(`insurer.${k}`)}
               </option>
             ))}
-          </select>
+          </Select>
         </label>
         <label className="flex min-w-0 flex-col gap-1">
           <span className="font-bold">{ti('fMonth')}</span>

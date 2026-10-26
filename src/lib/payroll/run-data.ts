@@ -3,6 +3,7 @@
 // ★ 근태는 읽기만 한다(연장 요청을 맞추는 쓰기를 하지 않는다). 마감된 달만 계산에 쓴다 — 마감하지 않은 직원은 「차단」이다.
 // ★ 다시 계산하면 새 계산 세대가 생긴다. 실패한 계산은 앞의 성공한 결과를 덮지 않는다. 확정한 대장은 DB가 바꾸지 못하게 막는다(0037).
 // ★ 검토 · 확정할 때 입력을 다시 읽어, 계산한 뒤에 바뀐 것이 있으면(오래됨) 막는다.
+import { fillState, NO_RELIEFS, synthTax } from './tax-defaults';
 import { applyCompMinutes } from './comp-time';
 import { compMinutesFor } from './overtime-comp';
 import 'server-only';
@@ -18,8 +19,9 @@ import { summarizeMonth } from '@/lib/monthly';
 import { daysFor, leaveDaysFor, loadPeriod, workDaysFor } from '@/lib/period-data';
 import { createAdminClient } from '@/lib/supabase/admin';
 import { toKstDate } from '@/lib/time';
-import { reliefCovers, reliefsForMonth, versionAt } from './contract';
-import { loadItems, loadPolicies, loadReferences, loadSettingHistory, reliefSwitches, sha } from './data';
+import { INSURERS, reliefCovers, reliefsForMonth, versionAt } from './contract';
+import { mergeAssigned } from './common-items';
+import { loadCommonItems, loadItems, loadTaxDefaults, loadPolicies, loadReferences, loadSettingHistory, reliefSwitches, sha } from './data';
 import { canonicalItemCode } from './engine/reserved-items';
 import { leaveDurationMismatch, scheduledMinutes } from './engine/scheduled-attendance';
 import { roundedAttendance } from './engine/rounded-attendance';
@@ -110,7 +112,8 @@ export async function createRun(args: { ym: string; kind?: 'REGULAR' | 'BONUS'; 
     c.from('payroll_contract_versions').select('employee_id, valid_from, valid_to').eq('status', 'active').lt('valid_from', to),
   ]);
   const contracted = new Set((cons ?? []).filter((x) => x.valid_to === null || (x.valid_to as string) > from).map((x) => x.employee_id as string));
-  const members = (people ?? []).filter((p) => contracted.has(p.id as string) || (p.active && !(p.employee_no as string | null)?.startsWith('e2e-'))).map((p) => p.id as string);
+  // 시스템관리자는 직원이 아니라 급여 대상이 아니다 (2026-10-26 의뢰인)
+  const members = (people ?? []).filter((p) => p.employee_no !== OFFICE.ownerEmployeeNo && (contracted.has(p.id as string) || (p.active && !(p.employee_no as string | null)?.startsWith('e2e-')))).map((p) => p.id as string);
   if (members.length === 0) throw new ApiError(409, 'payroll_no_members');
   const kind = args.kind ?? 'REGULAR';
   // 상여는 한 달에 여러 번 줄 수 있다 — 차수를 올린다. 정규 대장은 한 달에 하나(정정은 판 번호로)
@@ -181,7 +184,9 @@ export async function loadCalcBasis(last: string) {
   // 보험마다 따로 고른 기준 (2026-10-20). 비어 있으면 모든 보험이 기본 기준
   const insuranceBasisOf: NonNullable<EngineInput['insuranceBasisOf']> = {};
   for (const [k, v] of Object.entries(l.insuranceBasisOf ?? {})) if (v) insuranceBasisOf[k as InsurerKey] = toEngine(v);
-  return { ledgerRow, policies, refs, premiumTimeBasis: l.premiumTimeBasis ?? 'ACTUAL', items, policy, reference, missing, bundle, withholding, insuranceBasis, insuranceBasisOf, reliefOn, minimumHourly };
+  const taxDefaults = await loadTaxDefaults(last); // 4대보험 · 세무 회사 기본값 (2026-10-25)
+  const defaultRatio = (l.withholdingRatio ?? 100) as 80 | 100 | 120;
+  return { taxDefaults, defaultRatio, ledgerRow, policies, refs, premiumTimeBasis: l.premiumTimeBasis ?? 'ACTUAL', items, policy, reference, missing, bundle, withholding, insuranceBasis, insuranceBasisOf, reliefOn, minimumHourly };
 }
 
 async function buildInputs(run: RunRow): Promise<Built> {
@@ -201,6 +206,7 @@ async function buildInputs(run: RunRow): Promise<Built> {
     loadConfirms(from, last, run.isTest),
   ]);
   const { items, policy, reference, missing, bundle, withholding, insuranceBasis, insuranceBasisOf, reliefOn, minimumHourly } = basis;
+  const common = await loadCommonItems(last); // 회사 공통 고정 수당 · 공제 (2026-10-25)
   const basisOf = (k: InsurerKey) => insuranceBasisOf[k] ?? insuranceBasis;
   const anyNotice = insuranceBasis === 'NOTICE' || INSURER_KEYS.some((k) => basisOf(k) === 'NOTICE');
 
@@ -216,7 +222,8 @@ async function buildInputs(run: RunRow): Promise<Built> {
   const now = new Date();
   const today = toKstDate(now);
   const members: MemberInput[] = [];
-  for (const m of (mem ?? []).filter((x) => x.inclusion_state === 'INCLUDED').sort((a, b) => String(a.employee_id).localeCompare(String(b.employee_id)))) {
+  const ownerId = (people ?? []).find((p) => p.employee_no === OFFICE.ownerEmployeeNo)?.id; // 시스템관리자는 이미 만든 대장에 들어 있어도 계산하지 않는다 (2026-10-26)
+  for (const m of (mem ?? []).filter((x) => x.inclusion_state === 'INCLUDED' && x.employee_id !== ownerId).sort((a, b) => String(a.employee_id).localeCompare(String(b.employee_id)))) {
     const id = m.employee_id as string;
     const pre: Blocker[] = [];
     const notes: Blocker[] = []; // 계산은 되지만 담당자가 알아야 하는 것
@@ -227,12 +234,13 @@ async function buildInputs(run: RunRow): Promise<Built> {
     const inc = ((con?.included ?? {}) as Row) ?? {};
     const contract: EngineInput['contract'] = con ? { payType: con.pay_type as ContractRow['payType'], amount: Number(con.amount), monthlyHours: con.monthly_hours === null ? null : Number(con.monthly_hours), annualDivisor: con.annual_divisor === null ? null : Number(con.annual_divisor), included: { overtimeHours: inc.overtimeHours == null ? null : Number(inc.overtimeHours), holidayHours: inc.holidayHours == null ? null : Number(inc.holidayHours) } } : null;
     const ins = ((taxRow?.insurance ?? {}) as Record<string, { state?: string; reportedWage?: number | null }>) ?? {};
-    const one = (k: string) => ({ state: (ins[k]?.state ?? 'UNKNOWN') as TaxRow['insurance']['pension']['state'], reportedWage: ins[k]?.reportedWage ?? null });
+    const dd = basis.taxDefaults?.defaults ?? null;
+    const one = (k: string) => ({ state: fillState((ins[k]?.state ?? 'UNKNOWN') as TaxRow['insurance']['pension']['state'], k as 'pension' | 'health' | 'employment' | 'accident', dd), reportedWage: ins[k]?.reportedWage ?? null });
     const loan = (taxRow?.student_loan ?? {}) as { state?: string; monthlyAmount?: number | null; from?: string | null; to?: string | null };
     // 감면 · 지원: 회사가 켠 것만, 그 달에 걸치는 기간만. 상여 대장은 소득세 감면만 본다(보험은 상여에서 계산하지 않는다)
-    const rel = taxRow ? reliefsForMonth(taxRow.reliefs, reliefOn, from, last) : null;
+    const rel = taxRow ? reliefsForMonth(taxRow.reliefs, reliefOn, from, last) : dd ? reliefsForMonth(NO_RELIEFS, reliefOn, from, last) : null;
     if (rel) pre.push(...rel.blockers);
-    const tax: EngineInput['tax'] = taxRow ? { withholdingRatio: taxRow.withholding_ratio as 80 | 100 | 120, familyCount: taxRow.family_count as number, childCount: taxRow.child_count as number, insurance: { pension: one('pension'), health: one('health'), employment: one('employment'), accident: one('accident') }, studentLoan: loanForMonth(loan, from, last), reliefs: rel!.reliefs } : null;
+    const tax: EngineInput['tax'] = taxRow ? { withholdingRatio: taxRow.withholding_ratio as 80 | 100 | 120, familyCount: taxRow.family_count as number, childCount: taxRow.child_count as number, insurance: { pension: one('pension'), health: one('health'), employment: one('employment'), accident: one('accident') }, studentLoan: loanForMonth(loan, from, last), reliefs: rel!.reliefs } : dd ? { ...synthTax(dd, basis.defaultRatio), reliefs: rel!.reliefs } : null;
     // 달 중간에 입사 · 퇴사했거나 계약이 달 중간에 시작됐으면 일할 계산이 필요하다 — 자동으로 나누지 않는다
     const joined = (person?.joined_on as string | null) ?? null;
     const left = (emps ?? []).filter((e) => e.employee_id === id && e.ends_on !== null && (e.ends_on as string) >= from && (e.ends_on as string) < last);
@@ -260,6 +268,7 @@ async function buildInputs(run: RunRow): Promise<Built> {
           // 확인 기준(30분) 미만이라 승인 대기에 오르지 않은 연장은 막지 않는다 — 승인할 길이 없어 영영 계산이 막혔다 (2026-10-14 모의 운영 검사에서 발견).
           // 인정하지 않은 시간이라 연장 수당에 넣지 않고, 명세에 「참고」로 남긴다 (결정 사항 개발-31, 임시)
           pendingMinutes: num('pending_overtime_minutes') + num('pending_night_minutes') + num('pending_holiday_minutes'),
+          pendingDates: s.pendingDays.map((d) => d.date.slice(5)),
           unreviewedMinutes: num('unreviewed_overtime_minutes'),
           unpaidLeaveDays: num('unpaid_leave_days'), lateMinutes: num('late_minutes'), paidLeaveDays: s.paidLeaveDays, flags: String(s.row.flags ?? '').split(';').map((x) => x.trim()).filter(Boolean), unconfirmedDays: s.unconfirmedDates.length,
         };
@@ -317,10 +326,11 @@ async function buildInputs(run: RunRow): Promise<Built> {
     // 개인 항목 (그 달 마지막 날에 붙어 있는 것)
     const engineItems: EngineItem[] = [];
     // 상여 대장에는 매달 붙는 개인 항목을 넣지 않는다 — 상여 금액은 조정(직접 넣는 지급)으로만 들어온다
-    for (const a of bonus ? [] : ((assigns ?? []) as Row[]).filter((x) => x.employee_id === id && (x.valid_from as string) <= last && (x.valid_to === null || (x.valid_to as string) > last))) {
-      const it = itemAt(a.item_code as string);
-      if (!it) { pre.push({ code: 'item_missing', detail: a.item_code as string }); continue; }
-      const amount = a.amount === null ? it.defaultAmount : Number(a.amount);
+    const personalNow = ((assigns ?? []) as Row[]).filter((x) => x.employee_id === id && (x.valid_from as string) <= last && (x.valid_to === null || (x.valid_to as string) > last)).map((x) => ({ itemCode: x.item_code as string, amount: x.amount === null ? null : Number(x.amount) }));
+    for (const a of bonus ? [] : mergeAssigned(personalNow, common, id, contract?.payType)) {
+      const it = itemAt(a.itemCode);
+      if (!it) { pre.push({ code: 'item_missing', detail: a.itemCode }); continue; }
+      const amount = a.amount === null ? it.defaultAmount : a.amount;
       if (amount === null) { pre.push({ code: 'item_amount_missing', detail: it.code }); continue; }
       const taxable = it.taxTreatment === 'EXEMPT' ? 'EXEMPT' : it.taxTreatment === 'PARTIAL' ? 'PARTIAL' : 'TAXABLE';
       engineItems.push({ code: it.code, kind: it.kind, label: it.koName, amount, taxable, exemptLimit: it.taxExemptLimit, exemptAnnualLimit: it.taxExemptAnnualLimit ?? null, insurable: taxable !== 'EXEMPT', ordinaryWage: it.ordinaryWage, itemVersionId: it.id });
@@ -339,6 +349,7 @@ async function buildInputs(run: RunRow): Promise<Built> {
   const usedRefs = Object.values(bundle).map((b) => basis.refs.find((r) => r.id === b.id)).filter((r) => !!r);
   const unverified = [
     ...(!basis.ledgerRow || basis.ledgerRow.verification !== 'VERIFIED' ? ['ledger'] : []),
+    ...(basis.taxDefaults && !basis.taxDefaults.verified ? ['employee-defaults'] : []), // 보험 · 세무 회사 기본값이 아직 임시
     ...basis.policies.filter((p) => p.inUse && p.verification !== 'VERIFIED').map((p) => p.kind),
     ...usedItems.filter((i) => i.verification !== 'VERIFIED').map((i) => i.code),
     ...usedRefs.filter((r) => r.verification !== 'VERIFIED').map((r) => r.kind),
@@ -584,10 +595,14 @@ function loanForMonth(loan: { state?: string; monthlyAmount?: number | null; fro
 export async function previewPay(employeeId: string, date: string): Promise<EngineResult> {
   const [pay, basis] = await Promise.all([loadStaffPay(employeeId), loadCalcBasis(date)]);
   const con = versionAt(pay.contracts, date);
-  const tax = versionAt(pay.taxes, date);
+  const taxRaw = versionAt(pay.taxes, date);
+  const dd = basis.taxDefaults?.defaults ?? null;
+  // 회사 기본값 (2026-10-25): 세무 판이 없으면 기본값으로, 보험이 「모름」이면 그 보험만 기본값으로
+  const tax = taxRaw ? (dd ? { ...taxRaw, insurance: Object.fromEntries(INSURERS.map((k) => [k, { ...taxRaw.insurance[k], state: fillState(taxRaw.insurance[k].state, k, dd) }])) as typeof taxRaw.insurance } : taxRaw) : dd ? { ...synthTax(dd, basis.defaultRatio), reliefs: NO_RELIEFS as unknown as TaxRow['reliefs'] } : null;
   const pre: Blocker[] = [];
   const items: EngineItem[] = [];
-  for (const a of pay.items.filter((x) => x.validFrom <= date && (x.validTo === null || x.validTo > date))) {
+  const personalNow = pay.items.filter((x) => x.validFrom <= date && (x.validTo === null || x.validTo > date)).map((x) => ({ itemCode: x.itemCode, amount: x.amount }));
+  for (const a of mergeAssigned(personalNow, await loadCommonItems(date), employeeId, con?.payType)) {
     const it = basis.items.find((x) => x.code === a.itemCode && x.inUse && x.validFrom <= date);
     const amount = a.amount ?? it?.defaultAmount ?? null;
     if (!it) pre.push({ code: 'item_missing', detail: a.itemCode });
@@ -659,7 +674,8 @@ export async function loadRunBoard(run: RunRow): Promise<{ lines: BoardLine[]; s
   ]);
   const n = (v: unknown) => (v === null || v === undefined ? null : Number(v));
   const closed = new Set((closes ?? []).map((x) => x.employee_id as string));
-  const lines = (mem ?? []).map((m) => {
+  const ownerId = (people ?? []).find((p) => p.employee_no === OFFICE.ownerEmployeeNo)?.id;
+  const lines = (mem ?? []).filter((m) => m.employee_id !== ownerId).map((m) => {
     const p = (people ?? []).find((x) => x.id === m.employee_id);
     const s = ((sts ?? []) as Row[]).find((x) => x.employee_id === m.employee_id);
     return {

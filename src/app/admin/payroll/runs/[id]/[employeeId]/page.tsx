@@ -7,6 +7,7 @@ import { Card, CardTitle, Chip, PageShell } from '@/components/ui';
 import { getMe } from '@/lib/auth';
 import { loadItems } from '@/lib/payroll/data';
 import { loadRun, loadStatement } from '@/lib/payroll/run-data';
+import { slipTax } from '@/lib/payroll/slip-pdf-response';
 import { createAdminClient } from '@/lib/supabase/admin';
 import { OverrideForm } from '../../RunForms';
 
@@ -29,6 +30,7 @@ export default async function PayStatementPage({ params }: { params: Promise<{ i
     loadItems(),
   ]);
   if (!p || !mem) notFound();
+  const tps = await getTranslations('payslip');
   const won = (v: number) => t('won', { n: f.number(v) });
   const label = (code: string, fallback: string) => (t.has(`line.${code}`) ? t(`line.${code}`) : (items.find((x) => x.code === code)?.koName ?? fallback));
   const dk = (d: string) => d.replace(/[.-]/g, '_'); // 번역 열쇠에는 점 · 줄표를 쓸 수 없다
@@ -86,6 +88,18 @@ export default async function PayStatementPage({ params }: { params: Promise<{ i
               </div>
             ))}
           </dl>
+          {/* 과세 대상 · 비과세 · 보험 기준 (2026-10-22 의뢰인 ②) */}
+          {(() => {
+            const tx = slipTax(s.snapshot, s.pay);
+            const base = (s.snapshot as { totals?: { insuranceBase?: unknown } | null } | null)?.totals?.insuranceBase;
+            return tx ? (
+              <dl className="num grid grid-cols-3 gap-3 text-sm">
+                <div className="rounded-button bg-surface px-3 py-2"><dt className="text-xs text-muted">{tps('taxableTotal')}</dt><dd className="font-bold">{won(tx.taxable)}</dd></div>
+                <div className="rounded-button bg-ok-tint px-3 py-2"><dt className="text-xs text-ok">{tps('exemptTotal')}</dt><dd className="font-bold text-ok">{won(tx.exempt)}</dd></div>
+                {typeof base === 'number' && <div className="rounded-button bg-surface px-3 py-2"><dt className="text-xs text-muted">{tps('insuranceBase')}</dt><dd className="font-bold">{won(base)}</dd></div>}
+              </dl>
+            ) : null;
+          })()}
           {(['PAYMENT', 'DEDUCTION', 'EMPLOYER'] as const).map((kind) => (
             <Card key={kind}>
               <CardTitle>{t(`section.${kind}`)}</CardTitle>

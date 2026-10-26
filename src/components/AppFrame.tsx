@@ -2,7 +2,10 @@
 // 폰: 상단 바(메뉴 버튼 · 로고 · 공지 종) + 본문 + 하단 탭
 // PC(1024px~): 위 띠 + 앱 띠 + 메뉴 판 + 본문 — 직원 · 관리자가 같은 틀, 공간은 셋(내 화면 / 관리자 화면 / 통합설정). 2026-10-14 결정 사항 개발-20 · 21 · 25, 메뉴는 config/nav.ts
 import { PageEnter } from './PageEnter';
+import { Activity } from 'lucide-react';
 import { getLocale, getTranslations } from 'next-intl/server';
+import { cookies } from 'next/headers';
+import Link from 'next/link';
 import type { ReactNode } from 'react';
 import { CONSENT } from '@/config/consent';
 import { SYSTEM_ADMIN_NO as OFFICE_SYSTEM_NO } from '@/lib/system-admin';
@@ -11,12 +14,14 @@ import type { Me } from '@/lib/auth';
 import { hasConsent } from '@/lib/consent';
 import { visibleNoticesNow } from '@/lib/notices';
 import { pendingCounts } from '@/lib/period-data';
+import { pendingSignupCount } from '@/lib/signup';
 import { switchOn } from '@/lib/switches';
 import { myDecidedCount } from '@/lib/my-decided';
 import { unreadCount } from '@/lib/work-messages';
 import { AlertBell, AlertsProvider } from './Alerts';
 import { PhoneSearchLink } from './DeskTop';
 import { BottomTabs } from './BottomTabs';
+import { SpaceShell } from './ConsoleSheet';
 import { ConsentGate } from './ConsentGate';
 import { DeskNav } from './DeskNav';
 import { AccountMenu, ConsoleGuide, ConsoleLink, Crumb, MenuSearch, SpaceSwitch } from './DeskTop';
@@ -32,11 +37,13 @@ export async function AppFrame({ me, children, overlay }: { me: Me; children: Re
   const branchManager = me.role === 'manager'; // 지점관리자: 관리 화면 틀은 같고 메뉴만 허용한 것으로 줄인다 (manager-rules.ts)
   const isAdmin = me.role === 'admin' || branchManager;
   const ts = await getTranslations('side');
+  const tf = await getTranslations('frame');
+  const ops = me.employeeNo === OFFICE_SYSTEM_NO; // 운영 현황 메뉴는 시스템관리자에게만 (2026-10-24 의뢰인)
   const role = me.role === 'admin' ? 'admin' : branchManager ? 'manager' : 'employee';
   const [consented, inboxCount, notices, unreadMsg, decided] = await Promise.all([
     hasConsent(me.id), // 관리자도 직원이다 — 같은 동의 창
     // 통합설정 › 알림의 「요청 알림」을 끄면 요청 숫자를 보이지 않는다 (2026-10-19)
-    isAdmin && (await switchOn('notify.request')) ? pendingCounts().then((c) => c.total) : 0,
+    isAdmin && (await switchOn('notify.request')) ? Promise.all([pendingCounts().then((c) => c.total), me.role === 'admin' ? pendingSignupCount() : 0]).then(([a, b]) => a + b) : 0,
     visibleNoticesNow(me.id, await getLocale()),
     unreadCount(me.id),
     myDecidedCount(me.id),
@@ -46,7 +53,7 @@ export async function AppFrame({ me, children, overlay }: { me: Me; children: Re
   return (
     <AlertsProvider initial={{ notices: unread, messages: unreadMsg, requests: inboxCount, decided }}>
       {/* PC 위 띠: 로고 · 메뉴 검색 · 공간 전환(내 화면 / 관리자 화면) · 알림 · 통합설정 · 내 메뉴 */}
-      <header className="sticky top-0 z-20 hidden h-14 items-center gap-4 border-b border-border bg-bg px-5 lg:flex">
+      <header className="glass sticky top-0 z-20 hidden h-14 items-center gap-4 border-b px-5 lg:flex">
         <div className="flex w-66 shrink-0 items-center">
           <Logo height={28} priority />
         </div>
@@ -61,19 +68,26 @@ export async function AppFrame({ me, children, overlay }: { me: Me; children: Re
           </span>
           <ConsoleLink role={role} />
           <AccountMenu name={me.name} roleLabel={ts(me.employeeNo === OFFICE_SYSTEM_NO ? 'roleSystem' : branchManager ? 'roleManager' : isAdmin ? 'roleAdmin' : 'roleEmployee')}>
+            {ops && (
+              <Link href="/admin/ops" role="menuitem" className="flex min-h-9 items-center gap-2 rounded-button border border-border px-3 text-sm font-medium text-text hover:bg-surface">
+                <Activity aria-hidden size={16} strokeWidth={1.75} />
+                {tf('account.ops')}
+              </Link>
+            )}
             <LanguageSwitcher options={languages} />
             <SignOutButton />
           </AccountMenu>
         </div>
       </header>
-      <div className="lg:flex">
-        <DeskNav role={role} inboxCount={inboxCount} />
+      {/* 통합설정은 PC에서 보던 화면 위 판으로 (2026-10-22, components/ConsoleSheet) */}
+      <SpaceShell role={role}>
+        <DeskNav role={role} inboxCount={inboxCount} initialWide={(await cookies()).get('nav-wide')?.value === '1'} />
         {/* 폰에서는 하단 탭 바 높이 + 아이폰 하단 여백만큼 비운다 */}
         <div data-page-root className="min-w-0 flex-1 pb-[calc(4rem+env(safe-area-inset-bottom))] lg:min-h-[calc(100dvh-3.5rem)] lg:bg-bg lg:pb-0">
           <FrameHeader>
             <TopBar
               className="lg:hidden"
-              left={<MenuDrawer name={me.name} role={role} languages={languages} />}
+              left={<MenuDrawer name={me.name} role={role} languages={languages} ops={ops} />}
               right={
                 <>
                   <PhoneSearchLink />
@@ -87,7 +101,7 @@ export async function AppFrame({ me, children, overlay }: { me: Me; children: Re
           <PageEnter />
           {children}
         </div>
-      </div>
+      </SpaceShell>
       <BottomTabs role={role} />
       {consented ? overlay : <ConsentGate version={CONSENT.version} languages={languages} />}
     </AlertsProvider>

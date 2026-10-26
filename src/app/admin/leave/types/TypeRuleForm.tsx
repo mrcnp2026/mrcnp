@@ -29,7 +29,7 @@ export function TypeRuleForm({ code, version, rule, groups, people, builtin }: {
         setBusy(true);
         setErr(null);
         setDone(false);
-        const r = await callApi('/api/admin/leave/ledger', { action: 'typeRule', code, expectedVersion: version, rule: { maxDaysPerRequest: num(f.get('max')), minNoticeDays: num(f.get('notice')), reasonRequired: f.get('reason') === 'on', evidenceRequired: f.get('evidence') === 'on', weekdays: f.getAll('wd').length ? f.getAll('wd').map(Number) : null, targets: { groupIds: f.getAll('tg').map(String), employeeIds: f.getAll('te').map(String) }, nameEn: String(f.get('nameEn') ?? '').trim() || null } });
+        const r = await callApi('/api/admin/leave/ledger', { action: 'typeRule', code, expectedVersion: version, rule: { maxDaysPerRequest: num(f.get('max')), minNoticeDays: num(f.get('notice')), reasonRequired: f.get('reason') === 'on', evidenceRequired: false,weekdays: f.getAll('wd').length ? f.getAll('wd').map(Number) : null, targets: { groupIds: f.getAll('tg').map(String), employeeIds: f.getAll('te').map(String) }, nameEn: String(f.get('nameEn') ?? '').trim() || null } });
         setBusy(false);
         if (!r.ok) return setErr(r);
         setDone(true);
@@ -57,10 +57,6 @@ export function TypeRuleForm({ code, version, rule, groups, people, builtin }: {
       <label className="flex min-h-9 items-center gap-2">
         <input name="reason" type="checkbox" defaultChecked={rule.reasonRequired} className="size-5 accent-primary" />
         {t('reason')}
-      </label>
-      <label className="flex min-h-9 items-center gap-2">
-        <input name="evidence" type="checkbox" defaultChecked={rule.evidenceRequired} className="size-5 accent-primary" />
-        {t('evidence')}
       </label>
       <fieldset className="flex flex-col gap-1">
         <legend>{t('weekdays')}</legend>

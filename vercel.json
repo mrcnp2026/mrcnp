@@ -39,6 +39,10 @@
     {
       "path": "/api/cron/anomaly-overdue",
       "schedule": "5 0 * * *"
+    },
+    {
+      "path": "/api/cron/backup-daily",
+      "schedule": "0 17 * * *"
     }
   ]
 }

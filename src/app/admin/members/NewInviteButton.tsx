@@ -16,9 +16,9 @@ export function NewInviteButton({ employeeId, name, compact = false, again = fal
 
   if (invite) {
     return (
-      <div className="fixed inset-0 z-30 flex items-start justify-center overflow-y-auto bg-text/40 p-4">
+      <div className="fixed inset-0 z-30 flex items-start justify-center overflow-y-auto bg-text/40 p-4 text-left">
         <div className="w-full max-w-md">
-          <InviteView name={name} invite={invite} onClose={() => setInvite(null)} />
+          <InviteView employeeId={employeeId} name={name} invite={invite} onClose={() => setInvite(null)} />
         </div>
       </div>
     );
@@ -50,7 +50,7 @@ export function NewInviteButton({ employeeId, name, compact = false, again = fal
   return (
     <>
       {button}
-      <div className="fade-from fixed inset-0 z-30 flex items-end bg-text/40" role="dialog" aria-modal="true" aria-label={t('inviteFor', { name })}>
+      <div className="fade-from fixed inset-0 z-30 flex items-end bg-text/40 text-left" role="dialog" aria-modal="true" aria-label={t('inviteFor', { name })}>
         <div className="sheet-up mx-auto flex w-full max-w-md flex-col gap-4 rounded-t-card bg-bg p-6 pb-[calc(1.5rem+env(safe-area-inset-bottom))]">
           <p className="text-lg font-bold">{t('inviteFor', { name })}</p>
           <p className="text-muted">{t('newInviteConfirm', { name })}</p>

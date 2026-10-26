@@ -15,6 +15,24 @@ export const POST = api<{ params: Promise<{ id: string }> }>('admin.groups.updat
   const { data: g } = await db.from('org_groups').select('id, parent_id, active').eq('id', id).maybeSingle();
   if (!g) throw new ApiError(404, 'not_found');
 
+  // 지우기 (2026-10-25 의뢰인: 숨김이 아니라 삭제). 쓰이지 않는 그룹만 — 직원(숨긴 직원 포함) · 하위 그룹 · 출퇴근 장소 연결 · 지점관리자 범위가 있으면 막는다
+  if (b.delete === true) {
+    const [{ count: members }, { count: kids }, { count: places }, { count: scopes }] = await Promise.all([
+      db.from('profiles').select('id', { count: 'exact', head: true }).eq('group_id', id),
+      db.from('org_groups').select('id', { count: 'exact', head: true }).eq('parent_id', id),
+      db.from('group_locations').select('id', { count: 'exact', head: true }).eq('group_id', id),
+      db.from('staff_manager_scopes').select('id', { count: 'exact', head: true }).eq('group_id', id).eq('active', true),
+    ]);
+    if ((members ?? 0) > 0) throw new ApiError(409, 'group_has_members');
+    if ((kids ?? 0) > 0) throw new ApiError(409, 'group_has_children');
+    if ((places ?? 0) > 0) throw new ApiError(409, 'group_has_places');
+    if ((scopes ?? 0) > 0) throw new ApiError(409, 'group_has_managers');
+    const { error } = await db.from('org_groups').delete().eq('id', id);
+    if (error?.code === '23503') throw new ApiError(409, 'group_in_use_elsewhere'); // 마감 기록 등 다른 곳에서 쓰는 그룹
+    if (error) throw new ApiError(409, 'group_delete_blocked'); // 삭제 금지 장치가 아직 켜져 있을 때(DB 변경 전)
+    return { ok: true };
+  }
+
   const patch: Record<string, unknown> = { updated_by: me.id };
   if (b.name !== undefined) {
     const name = cleanGroupName(b.name);

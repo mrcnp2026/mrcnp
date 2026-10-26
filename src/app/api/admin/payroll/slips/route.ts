@@ -5,11 +5,15 @@
 //   저장하면 직원마다 한 장씩 바로 「내 급여」에 공개된다. 같은 달에 다시 올리면 앞 장은 「바뀜」으로 남고 새 장(판 +1)이 공개된다.
 import { randomUUID } from 'node:crypto';
 import ExcelJS from 'exceljs';
+import { after } from 'next/server';
 import { OFFICE } from '@/config/office';
 import { api, ApiError } from '@/lib/api';
 import type { Me } from '@/lib/auth';
 import { deny } from '@/lib/csv-response';
 import { requirePayroll } from '@/lib/payroll/data';
+import { mailPublished } from '@/lib/payroll/slip-mail';
+import { notifyPayslipPublished } from '@/lib/push-events';
+import { createAdminClient } from '@/lib/supabase/admin';
 import { COL_KINDS, findHeader, readColumns, readSlipRows, TEMPLATE_HEADERS, type ColKind } from '@/lib/payroll/slip-upload';
 import { fileHash, readSheet, saveUpload, uploadPeople } from '@/lib/payroll/slip-upload-data';
 
@@ -71,5 +75,12 @@ export const POST = api('admin.payroll.slips.upload', async (req, ctx) => {
   if (lines.length === 0) throw new ApiError(400, 'slip_empty');
   if (lines.some((l) => l.errors.length > 0)) throw new ApiError(409, 'slip_has_errors');
   const saved = await saveUpload({ me, month, payDate, rows: lines, fileName: file.name, hash: fileHash(buf), practice: OFFICE.practiceMode, requestId: ctx.requestId });
+  // 저장 = 공개이므로 폰 알림과 명세서 메일도 함께 (2026-10-24 의뢰인). 응답을 돌려준 뒤 서버에서만 보낸다
+  after(async () => {
+    const { data } = await createAdminClient().from('payroll_uploaded_slips').select('id, employee_id').eq('batch_id', saved.batchId).eq('state', 'PUBLISHED');
+    const slips = (data ?? []).map((r) => ({ employeeId: r.employee_id as string, slipId: r.id as string }));
+    await notifyPayslipPublished(saved.batchId, month, 'REGULAR', slips.map((x) => x.employeeId));
+    await mailPublished({ me, items: slips, practice: OFFICE.practiceMode, origin: req.nextUrl.origin, requestId: ctx.requestId });
+  });
   return { ...saved, header: header + 1, columns, lines };
 });

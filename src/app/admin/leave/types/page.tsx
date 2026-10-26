@@ -9,7 +9,7 @@ import { RowList } from '@/components/list';
 import { OffToggle } from '@/components/OffToggle';
 import { PcTable } from '@/components/PcTable';
 import { DetailBar } from '@/components/detail';
-import { Card, Chip, PageShell } from '@/components/ui';
+import { Card, Chip, em, Explain, PageShell } from '@/components/ui';
 import { leaveTypeName } from '@/lib/leave';
 import { loadAllLeaveTypes } from '@/lib/leave-data';
 import { LeaveTypeForm } from './TypeForms';
@@ -30,6 +30,8 @@ export default async function LeaveTypesPage({ searchParams }: { searchParams: P
   return (
     <PageShell wide>
       <DetailBar sheet={{ id: 'leave-type', label: t('add'), mobile: tc('addShort') }} back="/admin/console" backLabel={tc('back')} menuLabel={ts('menu')} title={t('title')} extra={<Help>{t('intro')}</Help>} desc={t('intro')} />
+      {/* 법정 휴가 설명 (2026-10-22 디자인) — 회사가 정하는 유형과 법이 정한 유형을 나눠 보이게 */}
+      <Explain>{t.rich('explain', { em })}</Explain>
       <div className="grid grid-cols-1 items-start gap-3">
         {/* PC: 시프티의 목록 — 「비활성화된 … 보기」 토글 + 열마다 검색 · 정렬이 되는 표 (2026-10-11 의뢰인 스샷). 폰은 아래의 탭 + 줄 목록 */}
         <div className="hidden flex-col gap-3 lg:flex">

@@ -257,21 +257,22 @@ export async function addManualLot(args: { employeeId: string; kind: 'manual' | 
 export const AUTO_ACCRUAL_FROM = '2026-10-17';
 /** 자동으로 만들 지급 종류 — 연차 기준이 정해지면 'annual'을 더한다(회계연도면 기준 판도 함께 바꾼다) */
 const AUTO_KINDS = new Set(['monthly', 'annual']); // 2026-10-19 의뢰인: 회계연도(1월 1일) 기준 + 첫해 비례분으로 정하고 연차도 자동 (급여-10)
+// 2026-10-21 의뢰인(휴가-15): 2027-01-01부터 입사일 기준(판 4, convertedOn). 그날 직원마다 「다음 입사 기념일까지 남은 기간」 비례분(전환 연차)이 생기고, 그다음부터 입사 기념일마다
 
 /**
  * 입사일 기준 연차를 매일 자동으로 만들고 바로 지급한다 (2026-10-19 의뢰인: 「자동 생성 + 자동 승인」). 정기 작업 /api/cron/leave-accrual이 부른다.
  * 시프티에서 옮긴 지급 건은 12월까지 미리 잡힌 월차가 있어서, 직원마다 「옮긴 마지막 지급일」 다음 날부터만 만든다 — 같은 기간이 두 번 생기지 않게.
  * 지급한 사람은 시스템관리자로 남는다. 기준은 노무 확인 전 「임시」(검증 대기 기록).
  */
-export async function autoAccrue(asOf: string): Promise<AccrualResult & { approved: number }> {
+export async function autoAccrue(asOf: string, actor?: Me): Promise<AccrualResult & { approved: number }> {
   const c = db();
   const [{ data: sys }, { data: migrated, error }] = await Promise.all([
     c.from('profiles').select('id').eq('employee_no', OFFICE.ownerEmployeeNo).maybeSingle(),
     c.from('leave_grant_lots').select('employee_id, granted_on, quantity_minutes').eq('lot_kind', 'migrated').eq('state', 'APPROVED').limit(20000),
   ]);
   if (error) boom('autoAccrue.migrated', error);
-  if (!sys) throw new Error('autoAccrue: system admin missing');
-  const me = { id: sys.id as string } as Me; // 정기 작업에는 로그인한 사람이 없다 — 지급 기록의 「누가」는 시스템관리자
+  if (!sys && !actor) throw new Error('autoAccrue: system admin missing');
+  const me = actor ?? ({ id: sys!.id as string } as Me); // 정기 작업에는 로그인한 사람이 없다 — 지급 기록의 「누가」는 시스템관리자. 관리자가 [지금 바로 실행]을 누르면 그 관리자
   const lastMigrated = new Map<string, string>();
   const migratedDays = new Map<string, number>(); // 옮긴 1일짜리 지급 건 수 = 시프티에서 이미 받은 월차 개수 (입사 1년 차 직원)
   for (const m of migrated ?? []) {
@@ -366,6 +367,31 @@ export async function runExpiry(args: { asOf: string; me: Me }): Promise<{ expir
   }
   if (run) await c.from('leave_runs').update({ status: locked ? 'partial' : 'done', summary: { expired, locked }, ended_at: new Date().toISOString() }).eq('id', run.id);
   return { expired, locked };
+}
+
+/**
+ * 사용 기간이 끝난 연차를 자동으로 소멸 처리한다 (2026-10-25 의뢰인: 소멸 처리도 자동으로). 정기 작업 /api/cron/leave-accrual이 자동 발생 뒤에 부른다.
+ * 연차 기준에 이월 한도(carryMaxDays)가 있으면 한도까지는 먼저 이월하고 나머지만 소멸한다 — 관리자가 정한 기준을 그대로 따른다(지금은 이월 없음).
+ * 마감된 달에 걸린 건은 못 넣고(locked) 다음 날 다시 시도한다. 소멸한 사람은 시스템관리자(또는 누른 관리자)로 남는다.
+ */
+export async function autoExpire(asOf: string, actor?: Me): Promise<{ expired: number; locked: number; carried: number }> {
+  let me = actor;
+  if (!me) {
+    const { data: sys } = await db().from('profiles').select('id').eq('employee_no', OFFICE.ownerEmployeeNo).maybeSingle();
+    if (!sys) throw new Error('autoExpire: system admin missing');
+    me = { id: sys.id as string } as Me;
+  }
+  const policy = (await loadDefaultPolicies())[0]?.policy;
+  let carried = 0;
+  if (policy && policy.carryMaxDays > 0) {
+    for (const x of await loadExpiring(asOf)) {
+      if (splitCarry(x.minutes, policy).carry <= 0) continue;
+      const r = await carryLot({ lotId: x.lot.id, me });
+      if (r.result === 'carried') carried++;
+    }
+  }
+  const r = await runExpiry({ asOf, me });
+  return { ...r, carried };
 }
 
 // ── 이월 (M5) ──

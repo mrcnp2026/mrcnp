@@ -1,5 +1,7 @@
 'use client';
 // 날짜별 근무일정 양식 (2026-10-10 2단계) — 틀을 고르면 시각·유형이 채워지고, 직원을 여러 명 골라 한 번에 넣는다. + 일정 취소 버튼.
+import { withKindNames, type KindNames } from '@/lib/shift-kind-names';
+import { Select } from '@/components/Select';
 import { X } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 import { useRouter } from 'next/navigation';
@@ -20,7 +22,9 @@ export function ScheduleForm({
   people,
   sheet,
   breaks = [],
+  kindNames,
 }: {
+  kindNames?: KindNames;
   date: string;
   templates: { id: string; name: string; startTime: string; endTime: string; kind: ShiftKind }[];
   people: { id: string; name: string; group: string | null }[];
@@ -28,7 +32,7 @@ export function ScheduleForm({
   breaks?: { start: string; end: string }[]; // 회사 규칙의 휴게시간대 — 이 일정과 겹치는 만큼이 자동 휴게
 }) {
   const t = useTranslations('admin.schedule');
-  const tk = useTranslations('admin.shifts.kinds');
+  const tk = withKindNames(useTranslations('admin.shifts.kinds'), kindNames);
   const router = useRouter();
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState<Err>(null);
@@ -77,7 +81,7 @@ export function ScheduleForm({
       </label>
       <label className="flex flex-col gap-1 text-sm text-muted">
         {t('template')}
-        <select
+        <Select
           value={tpl}
           onChange={(e) => {
             setTpl(e.target.value);
@@ -96,7 +100,7 @@ export function ScheduleForm({
               {x.name} ({x.startTime} - {x.endTime})
             </option>
           ))}
-        </select>
+        </Select>
       </label>
       <div className="grid grid-cols-2 gap-2">
         <label className="flex flex-col gap-1 text-sm text-muted">
@@ -110,13 +114,13 @@ export function ScheduleForm({
       </div>
       <label className="flex flex-col gap-1 text-sm text-muted">
         {t('kind')}
-        <select value={kind} onChange={(e) => setKind(e.target.value as ShiftKind)} className={field}>
+        <Select value={kind} onChange={(e) => setKind(e.target.value as ShiftKind)} className={field}>
           {SHIFT_KINDS.map((k) => (
             <option key={k} value={k}>
               {tk(k)}
             </option>
           ))}
-        </select>
+        </Select>
       </label>
       {kind === 'extra' && <p className="rounded-button bg-primary-tint p-3 text-sm text-primary">{t('extraNote')}</p>}
       <label className="flex flex-col gap-1 text-sm text-muted">

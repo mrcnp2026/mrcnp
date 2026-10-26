@@ -1,6 +1,7 @@
 // 직원 「공지」 목록 — 대상이고 게시 중인 공지 전부 (②-5 7-15). 언어는 메뉴의 언어 버튼을 따른다.
 // PC: 한 칸 — 「전체 · 확인 안 함」 탭 + 표(제목 · 상태 · 내용 · 게시일 · 확인). 제목으로만 찾는다.
 // 2026-10-16 의뢰인: 시프티 「메시지」를 따라 만든 시작일 · 종료일 칸과 칸마다 붙은 검색, 「업무 메시지」 버튼이 공지에는 필요 없다(업무 메시지는 메뉴 · 알림에서 간다).
+import { CountUp } from '@/components/CountUp';
 import { Megaphone } from 'lucide-react';
 import { HelpTip } from '@/components/Help';
 import { getFormatter, getLocale, getTranslations } from 'next-intl/server';
@@ -140,11 +141,11 @@ export default async function EmployeeNoticesPage({ searchParams }: { searchPara
           <dl className="grid grid-cols-2 gap-2">
             <div className="flex flex-col gap-2 rounded-card bg-bg p-4">
               <dt className="text-sm text-muted">{t('countAll')}</dt>
-              <dd className="num text-2xl leading-none font-extrabold">{list.length}</dd>
+              <dd className="num text-2xl leading-none font-extrabold"><CountUp value={list.length} /></dd>
             </div>
             <div className="flex flex-col gap-2 rounded-card bg-bg p-4">
               <dt className="text-sm text-muted">{t('countNew')}</dt>
-              <dd className={`num text-2xl leading-none font-extrabold ${unread ? 'text-warn' : ''}`}>{unread}</dd>
+              <dd className={`num text-2xl leading-none font-extrabold ${unread ? 'text-warn' : ''}`}><CountUp value={unread} /></dd>
             </div>
           </dl>
           {list.length === 0 && <p className="rounded-card bg-bg p-5 text-muted">{t('empty')}</p>}

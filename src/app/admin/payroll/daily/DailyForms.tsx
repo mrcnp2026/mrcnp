@@ -1,5 +1,6 @@
 'use client';
 // 일용직 화면의 조작부 — 대상자 · 고용 기간 넣기, 근무 한 줄 넣기 · 확정 · 무효, 일용 대장 만들기 · 계산 · 검토 · 확정. 처리하면 화면을 새로 읽는다.
+import { Select } from '@/components/Select';
 import { useTranslations } from 'next-intl';
 import { useRouter } from 'next/navigation';
 import { useState } from 'react';
@@ -42,10 +43,10 @@ export function PayeeAdd() {
       onSubmit={async (e) => {
         e.preventDefault();
         const form = e.currentTarget, f = new FormData(form);
-        if (await send({ action: 'payee.add', internalNo: f.get('internalNo'), name: f.get('name'), phone: f.get('phone'), note: f.get('note') })) form.reset();
+        if (await send({ action: 'payee.add', internalNo: f.get('internalNo'), name: f.get('name'), jobTitle: f.get('jobTitle'), phone: f.get('phone'), note: f.get('note') })) form.reset();
       }}
     >
-      {([['internalNo', 30, true], ['name', 60, true], ['phone', 30, false], ['note', 300, false]] as const).map(([k, max, req]) => (
+      {([['internalNo', 30, true], ['name', 60, true], ['jobTitle', 40, false], ['phone', 30, false], ['note', 300, false]] as const).map(([k, max, req]) => (
         <label key={k} className="flex flex-col gap-1">
           <span className="font-bold">{t(`payee.${k}`)}</span>
           <input name={k} required={req} maxLength={max} className={field} autoComplete="off" />
@@ -81,29 +82,38 @@ export function EngagementAdd({ payeeId, today, name }: { payeeId: string; today
       onSubmit={async (e) => {
         e.preventDefault();
         const f = new FormData(e.currentTarget);
-        if (await send({ action: 'engagement.add', payeeId, startsOn: f.get('startsOn'), endsOn: f.get('endsOn'), project: f.get('project'), dayRate: f.get('dayRate'), taxState: f.get('taxState'), ei: f.get('ei'), np: f.get('np'), hi: f.get('hi'), basisNote: f.get('basisNote') })) setOpen(false);
+        if (await send({ action: 'engagement.add', payeeId, startsOn: f.get('startsOn'), endsOn: f.get('endsOn'), project: f.get('project'), dayRate: f.get('dayRate'), payBasis: f.get('payBasis'), taxState: f.get('taxState'), ei: f.get('ei'), np: f.get('np'), hi: f.get('hi'), basisNote: f.get('basisNote') })) setOpen(false);
       }}
     >
       <label className="flex flex-col gap-1"><span className="font-bold">{t('eng.startsOn')}</span><input type="date" name="startsOn" required defaultValue={today} className={field} /></label>
       <label className="flex flex-col gap-1"><span className="font-bold">{t('eng.endsOn')}</span><input type="date" name="endsOn" className={field} /></label>
       <label className="flex flex-col gap-1"><span className="font-bold">{t('eng.project')}</span><input name="project" maxLength={80} className={field} autoComplete="off" /></label>
-      <label className="flex flex-col gap-1"><span className="font-bold">{t('eng.dayRate')}</span><input name="dayRate" inputMode="numeric" onInput={(e) => { e.currentTarget.value = digits(e.currentTarget.value); }} className={`num w-32 ${field}`} autoComplete="off" /></label>
+      {/* 지급 기준 (2026-10-22 프리랜서): 일당 · 시간당 · 월급 · 고정 금액 — 단가는 그 기준의 한 단위 금액 */}
+      <label className="flex flex-col gap-1">
+        <span className="font-bold">{t('eng.payBasis')}</span>
+        <Select name="payBasis" defaultValue="DAY" className={field}>
+          {(['DAY', 'HOUR', 'MONTH', 'FIXED'] as const).map((k) => (
+            <option key={k} value={k}>{t(`basis.${k}`)}</option>
+          ))}
+        </Select>
+      </label>
+      <label className="flex flex-col gap-1"><span className="font-bold">{t('eng.unitRate')}</span><input name="dayRate" inputMode="numeric" onInput={(e) => { e.currentTarget.value = digits(e.currentTarget.value); }} className={`num w-32 ${field}`} autoComplete="off" /></label>
       <label className="flex flex-col gap-1">
         <span className="font-bold">{t('eng.taxState')}</span>
-        <select name="taxState" defaultValue="UNKNOWN" className={field}>
-          {(['UNKNOWN', 'DAILY', 'NONE'] as const).map((k) => (
+        <Select name="taxState" defaultValue="UNKNOWN" className={field}>
+          {(['UNKNOWN', 'DAILY', 'BUSINESS', 'NONE'] as const).map((k) => (
             <option key={k} value={k}>{t(`tax.${k}`)}</option>
           ))}
-        </select>
+        </Select>
       </label>
       {(['ei', 'np', 'hi'] as const).map((k) => (
         <label key={k} className="flex flex-col gap-1">
           <span className="font-bold">{t(`eng.${k}`)}</span>
-          <select name={k} defaultValue="UNKNOWN" className={field}>
+          <Select name={k} defaultValue="UNKNOWN" className={field}>
             {TRI.map((v) => (
               <option key={v} value={v}>{t(`tri.${v}`)}</option>
             ))}
-          </select>
+          </Select>
         </label>
       ))}
       <label className="flex min-w-64 flex-1 flex-col gap-1"><span className="font-bold">{t('eng.basisNote')}</span><input name="basisNote" maxLength={300} className={field} autoComplete="off" /></label>
@@ -125,13 +135,17 @@ export function EngagementOff({ id, label }: { id: string; label: string }) {
   );
 }
 
-type PayeeOpt = { id: string; name: string; internalNo: string; projects: string[] };
+type PayeeOpt = { id: string; name: string; internalNo: string; projects: string[]; bases?: Record<string, 'DAY' | 'HOUR' | 'MONTH' | 'FIXED'> };
+const QTY = { DAY: { max: 3, step: '0.25' }, HOUR: { max: 744, step: '0.25' }, MONTH: { max: 12, step: '1' }, FIXED: { max: 100, step: '1' } } as const;
 /** 근무 한 줄 넣기 — 대상자 · 날짜 · 현장 · 공수 · 일단가(비우면 고용 기간의 일단가) · 그 밖의 항목 하나씩 */
 export function WorkAdd({ payees, day, live }: { payees: PayeeOpt[]; day: string; live?: boolean }) {
   const t = useTranslations('admin.daily');
   const { busy, err, send } = useCall();
   const [payeeId, setPayeeId] = useState('');
-  const projects = payees.find((p) => p.id === payeeId)?.projects ?? [];
+  const picked = payees.find((p) => p.id === payeeId);
+  const projects = picked?.projects ?? [];
+  const [project, setProject] = useState('');
+  const basis = picked?.bases?.[project] ?? picked?.bases?.[projects[0] ?? ''] ?? 'DAY'; // 고른 계약의 지급 기준 — 수량 칸 이름 · 상한이 바뀐다
   return (
     <form
       className="flex flex-wrap items-end gap-3 text-sm"
@@ -144,25 +158,25 @@ export function WorkAdd({ payees, day, live }: { payees: PayeeOpt[]; day: string
     >
       <label className="flex flex-col gap-1">
         <span className="font-bold">{t('work.payee')}</span>
-        <select required value={payeeId} onChange={(e) => setPayeeId(e.target.value)} className={field}>
+        <Select required value={payeeId} onChange={(e) => setPayeeId(e.target.value)} className={field}>
           <option value="">{t('pick')}</option>
           {payees.map((p) => (
             <option key={p.id} value={p.id}>{p.name} ({p.internalNo})</option>
           ))}
-        </select>
+        </Select>
       </label>
       <label className="flex flex-col gap-1"><span className="font-bold">{t('work.date')}</span><input type="date" name="workDate" required defaultValue={day} className={field} /></label>
       <label className="flex flex-col gap-1">
         <span className="font-bold">{t('work.project')}</span>
-        <select name="project" className={field} key={payeeId}>
+        <Select name="project" className={field} key={payeeId} onChange={(e) => setProject(e.target.value)}>
           {projects.length === 0 && <option value="">{t('noProject')}</option>}
           {projects.map((p) => (
             <option key={p} value={p}>{p || t('noProject')}</option>
           ))}
-        </select>
+        </Select>
       </label>
-      <label className="flex flex-col gap-1"><span className="font-bold">{t('work.quantity')}</span><input name="quantity" type="number" step="0.25" min="0.25" max="3" defaultValue="1" required className={`num w-24 ${field}`} /></label>
-      <label className="flex flex-col gap-1"><span className="font-bold">{t('work.dayRate')}</span><input name="dayRate" inputMode="numeric" onInput={(e) => { e.currentTarget.value = digits(e.currentTarget.value); }} className={`num w-32 ${field}`} autoComplete="off" /></label>
+      <label className="flex flex-col gap-1"><span className="font-bold">{t(`qty.${basis}`)}</span><input key={basis} name="quantity" type="number" step={QTY[basis].step} min={QTY[basis].step} max={QTY[basis].max} defaultValue="1" required className={`num w-24 ${field}`} /></label>
+      <label className="flex flex-col gap-1"><span className="font-bold">{t('work.unitRate')}</span><input name="dayRate" inputMode="numeric" onInput={(e) => { e.currentTarget.value = digits(e.currentTarget.value); }} className={`num w-32 ${field}`} autoComplete="off" /></label>
       <label className="flex flex-col gap-1"><span className="font-bold">{t('work.segment')}</span><input name="segmentKey" maxLength={10} defaultValue="A" className={`w-20 ${field}`} autoComplete="off" /></label>
       {(['NONTAX', 'TAXABLE', 'DEDUCTION'] as const).map((k) => (
         <span key={k} className="flex flex-col gap-1">

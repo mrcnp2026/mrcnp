@@ -3,9 +3,12 @@
 //   월간: 위 요약(총 근로 · 휴가 · 소정 · 미승인 초과 · 승인 초과 · 잔여 근무일) → 달력(왼쪽에 주차별 근로시간). 날짜를 누르면 그 주의 주간 보기로
 // 출퇴근기록(/punch/records — 월간이 먼저) 화면. 직원 근무일정 메뉴는 없앴다(/punch/schedule → 주간). 승인된 앞날 휴가도 그 날짜 칸에 보인다. 폰은 7일 칸이 한 줄씩, 달력은 숫자만 작게.
 // 숫자는 관리자 화면과 같은 계산(daysFor)을 쓴다. 보기만 — 고치려면 「근무시간 수정」(정정 요청)으로.
+import { getShiftKindNames } from '@/lib/settings';
+import { withKindNames } from '@/lib/shift-kind-names';
 import { ChevronLeft, ChevronRight, History, Pencil } from 'lucide-react';
 import { getFormatter, getTranslations } from 'next-intl/server';
 import Link from 'next/link';
+import { CountUp } from '@/components/CountUp';
 import type { ReactNode } from 'react';
 import { resolveDayType } from '@/config/labor-rules';
 import { OFFICE } from '@/config/office';
@@ -31,8 +34,9 @@ const isoDow = (d: string) => ((new Date(`${d}T12:00:00Z`).getUTCDay() + 6) % 7)
 const hhmm = (s: string) => s.slice(0, 5);
 
 export async function MyAttendance({ me, sp, base, defaultView, extra }: { me: { id: string }; sp: { v?: string; d?: string; m?: string }; base: string; defaultView: View; extra?: ReactNode }) {
-  const [t, tl, tk, f] = await Promise.all([getTranslations('myAtt'), getTranslations('leave'), getTranslations('admin.shifts.kinds'), getFormatter()]);
+  const [t, tl, tkRaw, f] = await Promise.all([getTranslations('myAtt'), getTranslations('leave'), getTranslations('admin.shifts.kinds'), getFormatter()]);
   const today = toKstDate(new Date());
+  const tk = withKindNames(tkRaw, await getShiftKindNames(today));
   const oldest = `${shiftMonth(today.slice(0, 7), -(MONTHS_BACK - 1))}-01`;
   const newest = addDays(today, AHEAD_DAYS);
   const view: View = sp.v === 'month' ? 'month' : sp.v === 'week' ? 'week' : defaultView;
@@ -77,11 +81,11 @@ export async function MyAttendance({ me, sp, base, defaultView, extra }: { me: {
   // 날짜 칸 안 표시 (주간 칸 · 월간 칸 공용)
   const chips = (x: Info) => (
     <div className="flex flex-col items-start gap-1 text-sm">
-      {x.r && x.firstIn && !x.live && x.r.netMinutes > 0 && <span className="num rounded-chip bg-ok px-1.5 text-xs font-bold text-on-primary">{dur(x.r.netMinutes)}</span>}
+      {x.r && x.firstIn && !x.live && x.r.netMinutes > 0 && <span className="num rounded-chip bg-primary-tint px-1.5 text-xs font-bold text-primary">{dur(x.r.netMinutes)}</span>}
       {x.live && <span className="rounded-chip bg-primary-tint px-1.5 text-xs font-bold text-primary">{t('working')}</span>}
       {x.firstIn && (
         <span className="num flex items-center gap-1.5">
-          <span className="rounded-chip bg-ok-tint px-1 text-xs text-ok">{t('in')}</span>
+          <span className="rounded-chip bg-primary-tint px-1 text-xs text-primary">{t('in')}</span>
           <span className={x.late ? 'font-semibold text-danger' : ''}>{hm(x.firstIn)}</span>
         </span>
       )}
@@ -94,7 +98,7 @@ export async function MyAttendance({ me, sp, base, defaultView, extra }: { me: {
       {x.open && !x.live && <span className="text-xs font-semibold text-warn">{t('noOut')}</span>}
       {x.otMin > 0 && (
         <span className="num flex items-center gap-1 text-xs">
-          <span aria-hidden className={`h-3 w-1 rounded-chip ${x.ot?.status === 'approved' ? 'bg-ok' : x.ot?.status === 'rejected' ? 'bg-border' : 'bg-danger'}`} />
+          <span aria-hidden className={`h-3 w-1 rounded-chip ${x.ot?.status === 'approved' ? 'bg-primary' : x.ot?.status === 'rejected' ? 'bg-border' : 'bg-chart-extra'}`} />
           {t('otLine', { t: dur(x.otMin), state: t(`otState.${x.ot?.status ?? 'pending'}`) })}
         </span>
       )}
@@ -138,7 +142,7 @@ export async function MyAttendance({ me, sp, base, defaultView, extra }: { me: {
     <div className="flex flex-col gap-1">
       <dt className="text-xs text-muted">{label}</dt>
       <dd className={`num text-xl font-semibold lg:text-2xl ${tone}`}>
-        {value}
+        {typeof value === 'string' || typeof value === 'number' ? <CountUp value={value} /> : value}
         {sub && <span className="text-sm font-normal text-faint">{sub}</span>}
       </dd>
     </div>
@@ -179,12 +183,12 @@ export async function MyAttendance({ me, sp, base, defaultView, extra }: { me: {
         <section className="grid gap-4 rounded-card border border-border bg-bg p-4 lg:grid-cols-[minmax(0,5fr)_minmax(0,4fr)_minmax(0,3fr)] lg:divide-x lg:divide-border lg:p-6" data-week-summary>
           <div className="flex flex-col gap-2 lg:pr-6">
             <p className="font-bold">
-              {t('weekSum')} <span className="num text-primary">{dur(s.net)}</span>
+              {t('weekSum')} <CountUp value={dur(s.net)} className="num text-primary" />
             </p>
             <p className="text-xs text-muted">{leftStd > 0 ? t('needMore', { left: dur(leftStd) }) : t('reached')}</p>
             <div className="relative mt-1 h-2 rounded-chip bg-surface">
-              <span className="absolute inset-y-0 left-0 rounded-chip bg-ok" style={{ width: pct(Math.min(s.net, STD_WEEK)) }} />
-              {s.net > STD_WEEK && <span className="absolute inset-y-0 rounded-chip bg-warn" style={{ left: pct(STD_WEEK), width: pct(s.net - STD_WEEK) }} />}
+              <span className="fx-grow-x absolute inset-y-0 left-0 rounded-chip bg-primary" style={{ width: pct(Math.min(s.net, STD_WEEK)) }} />
+              {s.net > STD_WEEK && <span className="fx-grow-x absolute inset-y-0 rounded-chip bg-chart-extra" style={{ left: pct(STD_WEEK), width: pct(s.net - STD_WEEK), animationDelay: '1400ms' }} />}
               <span aria-hidden className="absolute -inset-y-1 border-l-2 border-dotted border-text" style={{ left: pct(STD_WEEK) }} />
             </div>
             <div className="num relative h-4 text-xs text-faint">
@@ -195,8 +199,8 @@ export async function MyAttendance({ me, sp, base, defaultView, extra }: { me: {
             </div>
           </div>
           <dl className="grid grid-cols-2 gap-3 lg:px-6">
-            {stat(t('leftDays'), <span className="text-primary">{t('days', { n: s.left })}</span>, t('ofDays', { n: s.all }))}
-            {stat(t('leftHours'), <span className="text-primary">{dur(leftStd)}</span>, t('ofHours', { n: 40 }))}
+            {stat(t('leftDays'), <CountUp value={t('days', { n: s.left })} className="text-primary" />, t('ofDays', { n: s.all }))}
+            {stat(t('leftHours'), <CountUp value={dur(leftStd)} className="text-primary" />, t('ofHours', { n: 40 }))}
           </dl>
           <dl className="grid grid-cols-2 gap-3 lg:pl-6">
             {stat(t('total'), dur(s.net))}
@@ -277,13 +281,13 @@ export async function MyAttendance({ me, sp, base, defaultView, extra }: { me: {
                 ))}
                 <div className="relative h-2">
                   {plans.map((x, i) => (
-                    <span key={i} className="absolute inset-y-0 rounded-chip bg-primary-tint" style={bar(x)} />
+                    <span key={i} className="fx-grow-x absolute inset-y-0 rounded-chip bg-primary-tint" style={bar(x)} />
                   ))}
                 </div>
                 <div className="relative h-6">
                   {sel.fullLeave && <span className="absolute inset-0 rounded-button bg-primary-tint" />}
                   {work.map((x, i) => (
-                    <span key={i} className={`absolute inset-y-0 ${x.night ? 'bg-danger opacity-60' : 'bg-ok'}`} style={bar(x)} />
+                    <span key={i} className={`fx-grow-x absolute inset-y-0 ${x.night ? 'bg-chart-extra' : 'bg-primary'}`} style={{ ...bar(x), animationDelay: '500ms' }} />
                   ))}
                   {brk.map((x, i) => (
                     <span key={`b${i}`} className="absolute inset-y-0 bg-border" style={bar(x)} />
@@ -293,9 +297,9 @@ export async function MyAttendance({ me, sp, base, defaultView, extra }: { me: {
               <ul className="flex flex-wrap gap-x-4 gap-y-1 pt-3 text-xs text-muted">
                 {(
                   [
-                    ['bg-ok', 'lgWork'],
+                    ['bg-primary', 'lgWork'],
                     ['bg-border', 'lgBreak'],
-                    ['bg-danger opacity-60', 'lgNight'],
+                    ['bg-chart-extra', 'lgNight'],
                     ['bg-primary-tint', 'lgPlan'],
                   ] as const
                 ).map(([c, k]) => (
@@ -335,7 +339,7 @@ export async function MyAttendance({ me, sp, base, defaultView, extra }: { me: {
             {stat(t('regular'), dur(s.regular))}
             {stat(t('otPending'), dur(s.otPending), undefined, s.otPending > 0 ? 'text-danger' : '')}
             {stat(t('otApproved'), dur(s.otApproved))}
-            {stat(t('leftDays'), <span className="text-primary">{t('days', { n: s.left })}</span>, t('ofDays', { n: s.all }))}
+            {stat(t('leftDays'), <CountUp value={t('days', { n: s.left })} className="text-primary" />, t('ofDays', { n: s.all }))}
           </dl>
         </section>
         <section className="overflow-hidden rounded-card border border-border bg-bg" data-month-grid>

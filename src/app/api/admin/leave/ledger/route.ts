@@ -1,11 +1,11 @@
-// 휴가 원장 — 정책 시작/고치기 · 연차 후보 만들기 · 후보 승인/반려/거두기 · 직접 지급 · 소멸 처리 · 이월 · 퇴사 정산 · 종류별 신청 규칙 (PRD v1.3 36 · 38장). 관리자만.
-// ★ 여기서 「발생」으로 만든 후보는 관리자가 승인해야 잔여에 들어간다. 소멸도 관리자가 눌러야 들어간다.
+// 휴가 원장 — 정책 시작/고치기 · 연차 자동 발생(지금 바로 실행) · 확인 전 연차 승인/제외/거두기 · 직접 지급 · 소멸 처리 · 이월 · 퇴사 정산 · 종류별 신청 규칙 (PRD v1.3 36 · 38장). 관리자만.
+// ★ 연차는 매일 새벽 자동으로 만들고 바로 승인한다(2026-10-19 자동 생성 + 자동 승인, 2026-10-25 화면도 그 방식으로). 자동으로 처리되지 않고 남은 「확인 전」 건만 관리자가 승인한다. 소멸은 관리자가 눌러야 들어간다.
 //   2026-10-19부터 매일 새벽 정기 작업(/api/cron/leave-accrual)이 월차 · 연차를 자동으로 만들고 바로 지급한다(급여-10).
 import { api, ApiError, readJson } from '@/lib/api';
 import { requireConsole } from '@/lib/console-pin';
 import { requireAdmin } from '@/lib/auth';
 import { DAY_MINUTES, validateLeavePolicy, validateTypeRule } from '@/lib/leave-ledger';
-import { addManualLot, carryLot, createSettlement, decideLots, decideSettlement, runAccrual, runExpiry, saveLeavePolicy, saveTypeRule, seedLeavePolicy, setPolicyVerification, syncEmployeeLedger, addPolicyGroup, setPolicyGroup, setPolicyMember, startGroupPolicy } from '@/lib/leave-ledger-data';
+import { addManualLot, autoAccrue, autoExpire, carryLot, createSettlement, decideLots, decideSettlement, runExpiry, saveLeavePolicy, saveTypeRule, seedLeavePolicy, setPolicyVerification, syncEmployeeLedger, addPolicyGroup, setPolicyGroup, setPolicyMember, startGroupPolicy } from '@/lib/leave-ledger-data';
 import { cleanText } from '@/lib/text';
 import { toKstDate } from '@/lib/time';
 
@@ -61,7 +61,11 @@ export const POST = api('admin.leave.ledger', async (req) => {
     await setPolicyVerification(b.id, b.state, cleanText(b.note).slice(0, 500) || null);
     return { ok: true };
   }
-  if (b.action === 'accrue') return { accrual: await runAccrual({ asOf: today, me }) };
+  // 「지금 바로 실행」 = 매일 새벽 자동 발생과 같은 일 (2026-10-25 의뢰인: 연차 계산은 자동 승인 방식으로). 시프티에서 옮긴 기간 · 자동 시작 전 기간은 건드리지 않아 중복으로 생기지 않는다
+  if (b.action === 'accrue') {
+    const accrual = await autoAccrue(today, me);
+    return { accrual, expiry: await autoExpire(today, me) }; // 소멸도 함께 (사용 기간이 끝난 연차)
+  }
   if (b.action === 'decide') {
     if (!Array.isArray(b.ids) || b.ids.length === 0 || b.ids.length > 500 || !b.ids.every((x) => typeof x === 'string' && UUID.test(x))) throw new ApiError(400, 'invalid_input');
     if (b.decision !== 'approve' && b.decision !== 'reject' && b.decision !== 'withdraw') throw new ApiError(400, 'invalid_input');
@@ -71,7 +75,7 @@ export const POST = api('admin.leave.ledger', async (req) => {
     const days = typeof b.days === 'number' ? b.days : typeof b.days === 'string' && b.days.trim() !== '' ? Number(b.days) : NaN;
     const note = cleanText(b.note);
     if (typeof b.employeeId !== 'string' || !UUID.test(b.employeeId) || !Number.isFinite(days) || days <= 0 || days > 99 || !Number.isInteger(days * 32)) throw new ApiError(400, 'invalid_days'); // 15분 단위 (묶음 9)
-    if (b.kind !== 'manual' && b.kind !== 'carry' && b.kind !== 'compensatory' && b.kind !== 'migrated') throw new ApiError(400, 'invalid_input');
+    if (b.kind !== 'manual' && b.kind !== 'carry' && b.kind !== 'migrated') throw new ApiError(400, 'invalid_input'); // 보상휴가는 쓰지 않는다 (2026-10-21 의뢰인)
     const to = b.usableTo === '' || b.usableTo === null || b.usableTo === undefined ? null : b.usableTo;
     if (!isDate(b.usableFrom) || (to !== null && (!isDate(to) || to <= b.usableFrom)) || note.length < 2 || note.length > 300) throw new ApiError(400, 'invalid_input');
     const r = await addManualLot({ employeeId: b.employeeId, kind: b.kind, minutes: Math.round(days * DAY_MINUTES), usableFrom: b.usableFrom, usableTo: to as string | null, note, me });

@@ -8,7 +8,7 @@
 //   ⑤ 관리자 · 지점관리자는 그 위에 「폰 알림」 켜기 · 끄기 한 줄 (2026-10-16, components/PushToggle)
 // 이름 · 묶음은 PC 틀과 같은 표(config/nav.ts)에서 읽는다. 통합설정은 관리자 모드 맨 아래 한 줄(전체 메뉴 한 장으로 들어간다).
 // 왼쪽에서 밀려 나오고 닫을 때 밀려 들어간다(2026-10-17 의뢰인, R-10-8을 바꿈). Esc · 바깥 누르기 · 화면 이동으로 닫힌다. body에 직접 붙인다(하단 탭이 가리지 않게).
-import { ChevronDown, Menu, Search, Settings, X } from 'lucide-react';
+import { Activity, ChevronDown, Menu, Search, Settings, X } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 import Link from 'next/link';
 import { usePathname, useSearchParams } from 'next/navigation';
@@ -27,7 +27,7 @@ import { SignOutButton } from './SignOutButton';
 // 거기서 「관리자 모드」를 누르면 오늘 현황부터 관리자 메뉴로 돌아가고 통합설정은 다시 톱니바퀴 한 줄만 남는다.
 type View = 'my' | 'admin' | 'console';
 
-export function MenuDrawer({ name, role, languages }: { name: string; role: NavRole; languages: { code: string; name: string }[] }) {
+export function MenuDrawer({ name, role, languages, ops = false }: { name: string; role: NavRole; languages: { code: string; name: string }[]; ops?: boolean }) {
   const counts = useAlerts(); // 메뉴 옆 숫자 — PC 왼쪽 띠와 같은 숫자 (2026-10-19 의뢰인)
   const pill = (n: number) => (n > 0 ? <span className="num ml-auto min-w-5 shrink-0 rounded-chip bg-danger px-1.5 text-center text-xs leading-5 font-bold text-on-primary">{n}</span> : null);
   const t = useTranslations('side');
@@ -183,8 +183,8 @@ export function MenuDrawer({ name, role, languages }: { name: string; role: NavR
                           </button>
                           {isOpen && (
                             <div className="flex flex-col pb-1 pl-8">
-                              {/* 묶음 이름(준비 · 대장 · 보험 · 퇴직 …)은 폰에서 쓰지 않는다 — 작은 회색 글자가 메뉴인지 구분인지 헷갈렸다 (2026-10-17 의뢰인).
-                                  묶음 사이는 가는 줄로만 나눈다. 다른 묶음과 이름이 겹치는 항목(달력형 · 목록형)만 묶음 이름을 앞에 붙인다 */}
+                              {/* PC 왼쪽 메뉴와 같게 (2026-10-22 의뢰인: 「모바일이 PC 메뉴와 같지 않다」 · 「출퇴근은 어디냐」) — 묶음 이름(근무일정 · 출퇴근기록 · 점검 · 마감)을
+                                  누르지 않는 굵은 제목으로 보이고, 그 아래 메뉴. 메뉴 이름은 「출퇴근 달력」처럼 그것만 봐도 알게 했다. 항목이 하나뿐인 묶음도 묶음 이름으로 줄이지 않는다 */}
                               {a.groups.map((g, gi) => {
                                 const items = g.items.filter((l) => !l.pcOnly);
                                 if (items.length === 0) return null;
@@ -196,15 +196,9 @@ export function MenuDrawer({ name, role, languages }: { name: string; role: NavR
                                     {pill(badgeCount(counts, l.badge))}
                                   </Link>
                                 ));
-                                // 묶음에 항목이 하나만 남으면 묶음 이름 한 줄로
-                                if (items.length === 1)
-                                  return (
-                                    <Link key={g.key} href={items[0].href} onClick={() => setOpen(false)} aria-current={here === items[0].href ? 'page' : undefined} className={`${row(here === items[0].href)} text-base ${gi > 0 ? 'mt-1 rounded-t-none border-t border-border' : ''}`}>
-                                      {tf(`group.${g.key}`)}
-                                    </Link>
-                                  );
                                 return (
                                   <div key={g.key} className={`flex flex-col ${gi > 0 ? 'mt-1 border-t border-border pt-1' : ''}`}>
+                                    <p className="px-3 pt-2 pb-1 text-sm font-bold text-text">{tf(`group.${g.key}`)}</p>
                                     {items.map((l) => (
                                       <Link key={l.href} href={l.href} onClick={() => setOpen(false)} aria-current={here === l.href ? 'page' : undefined} className={`${row(here === l.href)} text-base`}>
                                         {label(l)}
@@ -229,6 +223,12 @@ export function MenuDrawer({ name, role, languages }: { name: string; role: NavR
                 )}
               </div>
               <div className="flex flex-col gap-2 border-t border-border px-3 pt-2 pb-[calc(0.5rem+env(safe-area-inset-bottom))]">
+                {ops && (
+                  <Link href="/admin/ops" onClick={() => setOpen(false)} className="flex min-h-11 items-center gap-3 rounded-button border border-border px-3 text-sm font-semibold text-text">
+                    <Activity aria-hidden size={18} strokeWidth={2} className="shrink-0 text-primary" />
+                    {tf('account.ops')}
+                  </Link>
+                )}
                 <AddToHomeButton compact />
                 <PushToggle audience={staff ? 'staff' : 'employee'} />
                 <div className="flex items-center justify-between gap-2">

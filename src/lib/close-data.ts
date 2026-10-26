@@ -49,11 +49,18 @@ function inputHash(data: PeriodData, employeeId: string, from: string, last: str
  * 그 달의 마감 검토. 대상 = 켜져 있는 직원 + 꺼져 있어도 그 달에 기록 · 휴가가 있는 직원 (퇴사자를 빼먹지 않는다). 검사 전용 계정은 뺀다.
  * 조회만 한다 — 연장 요청 동기화 같은 쓰기를 하지 않는다.
  */
-export async function loadCloseBoard(ym: string, practice: boolean): Promise<{ lines: CloseLine[]; data: PeriodData; from: string; last: string }> {
+export async function loadCloseBoard(ym: string, practice: boolean): Promise<{ lines: CloseLine[]; data: PeriodData; from: string; last: string; syncFailed: boolean }> {
   const { from, to, last } = monthSpan(ym);
   const db = createAdminClient();
   // 마감 판단 전에 그 달의 연장근로 확인을 맞춘다 — 빠진 확인이 있는 채로 마감되지 않게 (2026-10-19: 화면을 열 때 하던 계산을 옮김)
-  await syncOvertimeRange(from, last, practice);
+  let syncFailed = false; // 연장근로 확인을 맞추지 못했으면 마감하지 않는다(빠진 확인이 있는 채로 닫히면 급여 계산이 영영 막힌다 — 2026-10-25)
+  try {
+    await syncOvertimeRange(from, last, practice);
+  } catch (e) {
+    syncFailed = true;
+    // 맞추기가 안 돼도 화면은 열어야 한다(마감 관리를 못 여는 것이 더 나쁘다). 빠진 확인은 아래 검토에서 「확인 필요」로 보인다
+    console.error(JSON.stringify({ route: 'close-board', code: 'sync_failed', detail: String((e as Error)?.message ?? e).slice(0, 200) }));
+  }
   const [data, confirms, closes, { data: pr }, { data: sr }, anomalyPolicy, reviews] = await Promise.all([
     loadPeriod(from, last, practice),
     loadConfirms(from, last, practice),
@@ -88,7 +95,7 @@ export async function loadCloseBoard(ym: string, practice: boolean): Promise<{ l
     const history = closes.filter((c) => c.employeeId === p.id);
     lines.push({ employeeId: p.id, name: p.name, employeeNo: p.employeeNo, groupId: p.groupId, jobId: p.jobId, active: p.active, review, hash: inputHash(data, p.id, from, last, [...confirmed]), close: history.find((c) => c.state === 'CLOSED') ?? null, history });
   }
-  return { lines, data, from, last };
+  return { lines, data, from, last, syncFailed };
 }
 
 export type CloseResult = { employeeId: string; result: 'closed' | 'blocked' | 'changed' | 'already_closed' | 'not_found' | 'future' };
@@ -103,6 +110,7 @@ export async function closeMonth(args: { ym: string; practice: boolean; items: {
   if (last >= args.today) return args.items.map((x) => ({ employeeId: x.employeeId, result: 'future' as const }));
   const db = createAdminClient();
   const board = await loadCloseBoard(args.ym, args.practice);
+  if (board.syncFailed) return args.items.map((x) => ({ employeeId: x.employeeId, result: 'blocked' as const }));
   const out: CloseResult[] = [];
   for (const it of args.items) {
     const line = board.lines.find((l) => l.employeeId === it.employeeId);

@@ -2,7 +2,7 @@
 import { api, ApiError, readJson } from '@/lib/api';
 import { OFFICE } from '@/config/office';
 import { requirePayroll } from '@/lib/payroll/data';
-import { toDailyItems, type DailyTerms } from '@/lib/payroll/daily';
+import { PAY_BASES, toDailyItems, type DailyTerms, type PayBasis } from '@/lib/payroll/daily';
 import { addEngagement, addPayee, addWork, calculateDaily, createDailyRun, finalizeDaily, reviewDaily, setEngagement, setPayeeActive, setWorkStatus, startDailyCorrection } from '@/lib/payroll/daily-data';
 
 export const maxDuration = 60;
@@ -16,7 +16,8 @@ const won = (v: unknown): number | null | undefined => {
   return Number.isInteger(n) && n > 0 && n <= 1e9 ? n : undefined; // undefined = 틀린 값
 };
 const tri = (v: unknown): v is 'UNKNOWN' | 'YES' | 'NO' => v === 'UNKNOWN' || v === 'YES' || v === 'NO';
-const termsOf = (b: Record<string, unknown>): DailyTerms | null => (b.taxState === 'UNKNOWN' || b.taxState === 'DAILY' || b.taxState === 'NONE') && tri(b.ei) && tri(b.np) && tri(b.hi) ? { taxState: b.taxState, ei: b.ei, np: b.np, hi: b.hi } : null;
+const basisOf = (v: unknown): PayBasis | null => (v === undefined || v === null || v === '' ? 'DAY' : (PAY_BASES as readonly unknown[]).includes(v) ? (v as PayBasis) : null);
+const termsOf = (b: Record<string, unknown>): DailyTerms | null => (b.taxState === 'UNKNOWN' || b.taxState === 'DAILY' || b.taxState === 'BUSINESS' || b.taxState === 'NONE') && tri(b.ei) && tri(b.np) && tri(b.hi) ? { taxState: b.taxState, ei: b.ei, np: b.np, hi: b.hi } : null;
 
 export const POST = api('admin.payroll.daily', async (req, ctx) => {
   const me = await requirePayroll();
@@ -27,19 +28,20 @@ export const POST = api('admin.payroll.daily', async (req, ctx) => {
     case 'payee.add': {
       const internalNo = clean(b.internalNo, 30), name = clean(b.name, 60);
       if (!internalNo || !name || (b.profileId !== undefined && b.profileId !== null && b.profileId !== '' && !isId(b.profileId))) throw new ApiError(400, 'invalid_input');
-      return addPayee({ internalNo, name, phone: clean(b.phone, 30) || null, note: clean(b.note, 300) || null, profileId: isId(b.profileId) ? b.profileId : null, me, requestId });
+      return addPayee({ internalNo, name, jobTitle: clean(b.jobTitle, 40) || null, phone: clean(b.phone, 30) || null, note: clean(b.note, 300) || null, profileId: isId(b.profileId) ? b.profileId : null, me, requestId });
     }
     case 'payee.active':
       if (!isId(b.id) || typeof b.active !== 'boolean') throw new ApiError(400, 'invalid_input');
       await setPayeeActive({ id: b.id, active: b.active, me, requestId });
       return { ok: true };
     case 'engagement.add': {
-      const terms = termsOf(b), rate = won(b.dayRate);
+      const terms = termsOf(b), rate = won(b.dayRate), payBasis = basisOf(b.payBasis);
+      if (!payBasis) throw new ApiError(400, 'invalid_input');
       if (!isId(b.payeeId) || !isDate(b.startsOn) || (b.endsOn !== '' && b.endsOn !== null && b.endsOn !== undefined && !isDate(b.endsOn)) || !terms || rate === undefined) throw new ApiError(400, 'invalid_input');
       // 「모름」이 아닌 상태로 정했으면 무엇을 보고 정했는지 적는다
       const basis = clean(b.basisNote, 300);
       if ((terms.taxState !== 'UNKNOWN' || terms.ei !== 'UNKNOWN' || terms.np !== 'UNKNOWN' || terms.hi !== 'UNKNOWN') && basis.length < 2) throw new ApiError(400, 'daily_basis');
-      return addEngagement({ payeeId: b.payeeId, startsOn: b.startsOn, endsOn: isDate(b.endsOn) ? b.endsOn : null, project: clean(b.project, 80), dayRate: rate, terms, basisNote: basis || null, me, requestId });
+      return addEngagement({ payeeId: b.payeeId, startsOn: b.startsOn, endsOn: isDate(b.endsOn) ? b.endsOn : null, project: clean(b.project, 80), dayRate: rate, payBasis, terms, basisNote: basis || null, me, requestId });
     }
     case 'engagement.set': {
       if (!isId(b.id)) throw new ApiError(400, 'invalid_input');
@@ -54,7 +56,7 @@ export const POST = api('admin.payroll.daily', async (req, ctx) => {
     }
     case 'work.add': {
       const items = toDailyItems(b.items ?? []), rate = won(b.dayRate), qty = Number(b.quantity ?? 1);
-      if (!isId(b.payeeId) || !isDate(b.workDate) || !items || rate === undefined || !(qty > 0 && qty <= 3) || Math.round(qty * 100) !== qty * 100) throw new ApiError(400, 'invalid_input');
+      if (!isId(b.payeeId) || !isDate(b.workDate) || !items || rate === undefined || !(qty > 0 && qty <= 744) || Math.round(qty * 100) !== qty * 100) throw new ApiError(400, 'invalid_input'); // 기준별 상한은 addWork가 본다
       return addWork({ payeeId: b.payeeId, workDate: b.workDate, project: clean(b.project, 80), segmentKey: clean(b.segmentKey, 10) || 'A', quantity: qty, dayRate: rate, items, basisNote: clean(b.basisNote, 300) || null, practice, me, requestId });
     }
     case 'work.status':

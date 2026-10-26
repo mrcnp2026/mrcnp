@@ -24,25 +24,25 @@ export async function DailyRate({ daily, mode, hrefOf }: { daily: AttDay[]; mode
           return m.set(k, x);
         }, new Map<string, AttDay>()).values()].map((d) => ({ key: d.date, label: t('weekOf', { date: d.date.slice(5).replace('-', '/') }), long: t('weekOf', { date: d.date }), ...d }));
   const tab = (m: 'day' | 'week') => (
-    <Link href={hrefOf(m)} scroll={false} aria-current={mode === m ? 'page' : undefined} className={`inline-flex h-8 items-center rounded-button px-3 text-sm font-bold ${mode === m ? 'bg-primary text-on-primary' : 'border border-border bg-bg text-muted'}`}>
+    <Link href={hrefOf(m)} scroll={false} aria-current={mode === m ? 'page' : undefined} className={`inline-flex h-8 items-center rounded-button px-3 text-sm font-medium ${mode === m ? 'bg-primary text-on-primary' : 'border border-border bg-bg text-muted hover:bg-surface'}`}>
       {t(m)}
     </Link>
   );
   return (
-    <section className="flex flex-col gap-2 rounded-card border border-border bg-bg p-3" data-daily-rate>
+    <section className="flex flex-col gap-3" data-daily-rate>
       <div className="flex flex-wrap items-center justify-between gap-2">
-        <h3 className="text-sm font-bold">{t('title')}</h3>
+        <h2 className="text-base font-semibold">{t('title')}</h2>
         <span className="flex gap-1.5">
           {tab('day')}
           {tab('week')}
         </span>
       </div>
       {points.length === 0 ? (
-        <p className="text-sm text-faint">{t('empty')}</p>
+        <p className="rounded-card border border-border bg-bg p-5 text-sm text-faint">{t('empty')}</p>
       ) : (
-        <>
+        <div className="flex flex-col gap-2 rounded-card border border-border bg-bg p-5">
           {/* 세로 0 ~ 100%. 막대 사이 틈 · 끝 둥글게. 날마다 막대가 좁아도 누를 곳은 칸 전체 */}
-          <div className="flex h-28 items-stretch gap-px border-b border-border sm:gap-0.5" role="img" aria-label={t('aria', { values: points.map((p) => `${p.long} ${pct(p.present, p.due) ?? '-'}%`).join(', ') })}>
+          <div className="flex h-32 items-stretch gap-px border-b border-border sm:gap-0.5" role="img" aria-label={t('aria', { values: points.map((p) => `${p.long} ${pct(p.present, p.due) ?? '-'}%`).join(', ') })}>
             {points.map((p) => {
               const v = pct(p.present, p.due) ?? 0;
               return (
@@ -58,7 +58,7 @@ export async function DailyRate({ daily, mode, hrefOf }: { daily: AttDay[]; mode
             ))}
           </div>
           <details className="text-sm">
-            <summary className="flex min-h-9 cursor-pointer items-center text-muted">{t('table')}</summary>
+            <summary className="flex min-h-9 cursor-pointer items-center text-sm text-muted">{t('table')}</summary>
             <ul className="num flex flex-col divide-y divide-border">
               {points.map((p) => (
                 <li key={p.key} className="flex flex-wrap justify-between gap-x-3 py-1.5">
@@ -68,9 +68,9 @@ export async function DailyRate({ daily, mode, hrefOf }: { daily: AttDay[]; mode
               ))}
             </ul>
           </details>
-        </>
+        </div>
       )}
-      <p className="text-xs text-faint">{t('note')}</p>
+      <p className="text-xs text-muted">{t('note')}</p>
     </section>
   );
 }

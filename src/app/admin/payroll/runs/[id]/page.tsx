@@ -12,17 +12,15 @@ import { loadRevisions, loadRun, loadRunBoard } from '@/lib/payroll/run-data';
 import { createAdminClient } from '@/lib/supabase/admin';
 import { toKstDate } from '@/lib/time';
 import { loadPublication } from '@/lib/payroll/publish-data';
-import { birthDates, lastMailBySlip, loadSlipMails, mailReady } from '@/lib/payroll/slip-mail';
-import { SlipMailSend } from '../../slips/SlipMail';
-import { MailLog, MailStatus } from '../../slips/SlipMailParts';
 import { CorrectionStart, MemberToggle, PublishAll, PublishToggle, RunActions } from '../RunForms';
 import { BulkAdjust } from '../BulkAdjust';
 import { bulkContext } from '@/lib/payroll/bulk-data';
 
+const INFO = new Set(['overtime_unreviewed', 'employer_rate_missing', 'basis_unverified']); // 참고 안내 — 조치가 필요 없다
 const TONE = { DRAFT: 'neutral', CALCULATED: 'info', REVIEWED: 'warn', FINALIZED: 'ok' } as const;
 
 export default async function PayRunPage({ params, searchParams }: { params: Promise<{ id: string }>; searchParams: Promise<{ existed?: string }> }) {
-  const [t, tm, f, me, { id }] = await Promise.all([getTranslations('admin.payRuns'), getTranslations('admin.slipMail'), getFormatter(), getMe(), params]);
+  const [t, f, me, { id }] = await Promise.all([getTranslations('admin.payRuns'), getFormatter(), getMe(), params]);
   if (!me || me.role !== 'admin' || !me.canViewPayroll) return <PageShell><p className="rounded-card bg-warn-tint p-4 text-sm text-warn">{t('forbidden')}</p></PageShell>;
   if (!/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(id)) notFound();
   const run = await loadRun(id);
@@ -50,17 +48,14 @@ export default async function PayRunPage({ params, searchParams }: { params: Pro
   // 확정한 대장: 직원별 공개 상태 (공개는 확정과 따로 한다)
   const pub: Map<string, { statementId: string; published: boolean; at: string | null }> = final ? await loadPublication(run.id, run.generationId) : new Map();
   const waiting = [...pub.values()].filter((x) => !x.published).length;
-  // 메일 발송 (2026-10-19): 공개 중인 명세서만 보낸다. 발송 여부는 명세서마다 마지막 기록
-  const mails = final ? await loadSlipMails([...pub.values()].map((x) => x.statementId)) : [];
-  const lastMail = lastMailBySlip(mails ?? []);
-  const { data: everyone } = final ? await createAdminClient().from('profiles').select('id, name, email') : { data: [] };
-  const hasEmail = new Set((everyone ?? []).filter((p) => (p.email as string | null)?.trim()).map((p) => p.id as string));
-  const names = new Map((everyone ?? []).map((p) => [p.id as string, p.name as string]));
-  const births = final ? await birthDates([...pub.keys()]) : new Map<string, string>();
-  const unsentMail = [...pub].filter(([, x]) => x.published && lastMail.get(x.statementId)?.result !== 'SENT').map(([employeeId, x]) => ({ employeeId, slipId: x.statementId }));
-  const mailOk = mailReady() && mails !== null;
   const dk = (d: string) => d.replace(/[.-]/g, '_'); // 번역 열쇠에는 점 · 줄표를 쓸 수 없다
   const why = (b: { code: string; detail?: string }) => (t.has(`blocker.${b.code}`) ? t(`blocker.${b.code}`, { detail: b.detail ? (t.has(`detail.${dk(b.detail)}`) ? t(`detail.${dk(b.detail)}`) : b.detail) : '' }) : `${b.code}${b.detail ? ` (${b.detail})` : ''}`);
+
+  // 모든 직원에게 똑같이 붙는 참고 안내(예: 기준값 검증 전)는 한 번만 보여 준다 — 줄마다 되풀이하면 관리자가 읽지 않는다 (2026-10-25 의뢰인)
+  const okLines = lines.filter((l) => l.included && l.state === 'OK');
+  const warnKey = (b: { code: string; detail?: string }) => `${b.code}|${b.detail ?? ''}`;
+  const commonWarn = okLines.length >= 2 ? [...new Map(okLines.flatMap((l) => l.blockers.filter((b) => b.warning)).map((b) => [warnKey(b), b])).values()].filter((b) => okLines.every((l) => l.blockers.some((x) => x.warning && warnKey(x) === warnKey(b)))) : [];
+  const commonKeys = new Set(commonWarn.map(warnKey));
 
   return (
     <PageShell wide>
@@ -86,7 +81,7 @@ export default async function PayRunPage({ params, searchParams }: { params: Pro
         label={t('stepsLabel')}
         steps={(['DRAFT', 'CALCULATED', 'REVIEWED', 'FINALIZED', 'PUBLISHED'] as const).map((k, i) => {
           const at = final ? (waiting === 0 && pub.size > 0 ? 5 : 4) : ['DRAFT', 'CALCULATED', 'REVIEWED'].indexOf(run.status) + 1;
-          return { key: k, label: t(`flowStep.${k}`), note: t(`flowStep.${k}Note`), state: i < at ? 'done' : i === at ? 'now' : 'todo' };
+          return { key: k, label: t(`flowStep.${k}`), state: i < at ? 'done' : i === at ? 'now' : 'todo' };
         })}
       />
 
@@ -111,26 +106,13 @@ export default async function PayRunPage({ params, searchParams }: { params: Pro
       {final ? (
         <Card className="flex flex-col gap-3">
           <p className="text-sm text-muted">{t('finalNote')}</p>
+          <p className="text-xs text-faint">{t('correctWhen')}</p>
           <p className="num text-sm">{t('pubSummary', { on: pub.size - waiting, off: waiting })}</p>
           {!replaced && <PublishAll id={run.id} waiting={waiting} />}
-          {pub.size - waiting > 0 && (
-            <div className="flex flex-col gap-1">
-              <SlipMailSend items={unsentMail} label={tm('sendUnsent', { n: unsentMail.length })} ready={mailOk} />
-              <p className="text-xs text-faint">{mails === null ? tm('dbPending') : !mailReady() ? tm('notReady') : tm('hintRun')}</p>
-            </div>
-          )}
-          <MailLog mails={mails ?? []} names={names} />
           {!newer && <CorrectionStart id={run.id} />}
         </Card>
       ) : (
         <Card className="flex flex-col gap-3">
-          <ol className="flex flex-wrap gap-x-4 gap-y-1 text-sm text-muted">
-            {(['DRAFT', 'CALCULATED', 'REVIEWED', 'FINALIZED'] as const).map((s, i) => (
-              <li key={s} className={run.status === s ? 'font-bold text-text' : ''}>
-                {i + 1}. {t(`step.${s}`)}
-              </li>
-            ))}
-          </ol>
           {stale && <p className="rounded-button border border-warn bg-warn-tint p-2 text-sm text-warn">{t('stale')}</p>}
           {!stale && blocked > 0 && <p className="rounded-button border border-warn bg-warn-tint p-2 text-sm text-warn">{t('hasBlocked', { n: blocked })}</p>}
           {missing.length > 0 && <p className="text-sm text-warn">{t('missingRef', { list: missing.map((k) => (t.has(`detail.${dk(k)}`) ? t(`detail.${dk(k)}`) : k)).join(' · ') })}</p>}
@@ -145,9 +127,6 @@ export default async function PayRunPage({ params, searchParams }: { params: Pro
         <div className="flex flex-wrap gap-2">
           <a href={`/api/admin/payroll/runs/${run.id}/export`} className="inline-flex h-8 items-center gap-1 rounded-button border border-border bg-bg px-3.5 text-sm font-semibold text-text hover:bg-surface">
             {t('exportDo')}
-          </a>
-          <a href={`/admin/payroll/slips?m=${run.periodFrom.slice(0, 7)}`} className="inline-flex h-8 items-center gap-1 rounded-button border border-border bg-bg px-3.5 text-sm font-semibold text-text hover:bg-surface">
-            {t('uploadSlips')}
           </a>
           {okCount > 0 ? (
             <a href={`/api/admin/payroll/runs/${run.id}/pdf-all`} className="inline-flex h-8 items-center gap-1 rounded-button border border-border bg-bg px-3.5 text-sm font-semibold text-text hover:bg-surface">
@@ -218,6 +197,22 @@ export default async function PayRunPage({ params, searchParams }: { params: Pro
         </section>
       )}
 
+      {commonWarn.length > 0 && (
+        <section className="rounded-card border border-border bg-surface p-3 text-sm">
+          <h2 className="font-bold">{t('commonTitle')}</h2>
+          <ul className="flex flex-col gap-0.5 pt-1 text-muted">
+            {commonWarn.map((b, i) => (
+              <li key={i}>· {why(b)}</li>
+            ))}
+          </ul>
+        </section>
+      )}
+      {!final && lines.some((l) => l.included && !l.closed) && (
+        <p className="flex flex-wrap items-center gap-x-3 gap-y-1 rounded-card border border-warn bg-warn-tint p-3 text-sm text-warn">
+          <span className="font-bold">{t('notClosedBanner', { n: lines.filter((l) => l.included && !l.closed).length })}</span>
+          <Link href={`/admin/closing?m=${run.periodFrom.slice(0, 7)}${run.isTest ? '' : '&live=1'}`} className="font-bold underline">{t('toClosing')} ›</Link>
+        </p>
+      )}
       <div className="overflow-x-auto table-ruled">
         <table className="w-full text-sm">
           <thead>
@@ -231,7 +226,7 @@ export default async function PayRunPage({ params, searchParams }: { params: Pro
           </thead>
           <tbody>
             {lines.map((l) => (
-              <tr key={l.employeeId} className={`border-b border-border align-top ${l.included ? '' : 'text-faint'}`}>
+              <tr key={l.employeeId} className={`border-b border-border align-top ${!l.included ? 'text-faint' : l.state === 'BLOCKED' ? 'bg-danger-tint' : ''}`}>
                 <td className="px-3 py-3">
                   <Link href={`/admin/payroll/runs/${run.id}/${l.employeeId}`} className="font-bold text-primary hover:underline">
                     {l.name}
@@ -239,7 +234,7 @@ export default async function PayRunPage({ params, searchParams }: { params: Pro
                   <span className="num block text-xs text-faint">{l.employeeNo}</span>
                 </td>
                 <td className="px-3 py-3 text-muted">{groupPath(groups, l.groupId) ?? ''}</td>
-                <td className="px-3 py-3 whitespace-nowrap">{l.closed ? <Chip tone="ok">{t('closed')}</Chip> : <Chip tone="warn">{t('notClosed')}</Chip>}</td>
+                <td className="px-3 py-3 whitespace-nowrap">{l.closed ? <Chip tone="ok">{t('closed')}</Chip> : <Chip>{t('notClosed')}</Chip>}</td>
                 <td className="px-3 py-3">
                   {!l.included ? (
                     <span>
@@ -251,17 +246,17 @@ export default async function PayRunPage({ params, searchParams }: { params: Pro
                   ) : l.state === 'OK' ? (
                     <span>
                       <Chip tone="ok">{t('resultOk')}</Chip>
-                      {l.blockers.filter((b) => b.warning).map((b, i) => (
-                        <span key={i} className="block pt-1 text-xs text-muted">
+                      {l.blockers.filter((b) => b.warning && !commonKeys.has(warnKey(b))).map((b, i) => (
+                        <span key={i} className={`block pt-1 text-xs ${INFO.has(b.code) ? 'text-muted' : 'text-warn'}`}>
                           {why(b)}
                         </span>
                       ))}
                     </span>
                   ) : (
                     <span className="flex flex-col gap-1">
-                      <Chip tone="warn">{t('resultBlocked', { n: l.blockers.filter((b) => !b.warning).length })}</Chip>
+                      <Chip tone="danger">{t('resultBlocked', { n: l.blockers.filter((b) => !b.warning).length })}</Chip>
                       {l.blockers.filter((b) => !b.warning).map((b, i) => (
-                        <span key={i} className="text-xs text-warn">
+                        <span key={i} className="text-xs font-semibold text-danger">
                           {why(b)}
                         </span>
                       ))}
@@ -277,12 +272,6 @@ export default async function PayRunPage({ params, searchParams }: { params: Pro
                     <span className="flex flex-col gap-1">
                       {pub.get(l.employeeId)!.published ? <Chip tone="ok">{t('pubOn', { date: toKstDate(new Date(pub.get(l.employeeId)!.at ?? 0)) })}</Chip> : <Chip>{t(pub.get(l.employeeId)!.at ? 'pubWithdrawn' : 'pubOff')}</Chip>}
                       {(!replaced || pub.get(l.employeeId)!.published) && <PublishToggle id={run.id} employeeId={l.employeeId} published={pub.get(l.employeeId)!.published} name={l.name} />}
-                      {pub.get(l.employeeId)!.published && (
-                        <>
-                          <MailStatus last={lastMail.get(pub.get(l.employeeId)!.statementId)} hasEmail={hasEmail.has(l.employeeId)} hasBirth={births.has(l.employeeId)} />
-                          <SlipMailSend one items={[{ employeeId: l.employeeId, slipId: pub.get(l.employeeId)!.statementId }]} label={tm(lastMail.has(pub.get(l.employeeId)!.statementId) ? 'resend' : 'send')} ready={mailOk} />
-                        </>
-                      )}
                     </span>
                   )}
                 </td>

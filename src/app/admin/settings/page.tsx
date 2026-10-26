@@ -8,7 +8,7 @@ import { headers } from 'next/headers';
 import Link from 'next/link';
 import type { ReactNode } from 'react';
 import { SettingBox, SettingGroup, SettingRow, UseMark } from '@/components/settings';
-import { Chip, PageShell } from '@/components/ui';
+import { Chip, Explain, PageShell, em } from '@/components/ui';
 import { OFFICE } from '@/config/office';
 import { addDays } from '@/lib/calendar';
 import { createAdminClient } from '@/lib/supabase/admin';
@@ -26,7 +26,8 @@ import { pushAdminRule, receivesStaffPush, savedPushAdmins } from '@/lib/push-re
 import { SwitchToggle } from '@/components/SwitchToggle';
 import { BRAND } from '@/config/brand';
 import { getMe } from '@/lib/auth';
-import { ConfirmButton, HolidayForm, NetworkForm, RuleForm } from './SettingsForms';
+import { isSystemAdminNo } from '@/lib/system-admin';
+import { ConfirmButton, HolidayCalendar, RuleForm } from './SettingsForms';
 
 // 탭 이름 · 순서는 시프티의 회사 설정 (2026-10-11 의뢰인 스샷 `스샷/관리-회사설정*.png`). 일반 · 근무일정 · 출퇴근기록 · 휴게시간은 바꿀 수 있는 설정이고,
 // 나머지 탭은 지금 앱이 동작하는 방식을 같은 줄 모양으로 보여 준다(on = 쓰는 기능인가, href = 관련 관리 화면)
@@ -37,7 +38,7 @@ const INFO: Partial<Record<Tab, { k: string; on: boolean; href?: string }[]>> = 
   access: [{ k: 'admin', on: true }, { k: 'payroll', on: true }, { k: 'employee', on: true }, { k: 'change', on: true }],
   branch: [{ k: 'parent', on: true }, { k: 'places', on: true, href: '/admin/branches' }],
   staff: [{ k: 'number', on: true }, { k: 'invite', on: true }, { k: 'device', on: true, href: '/admin/members' }],
-  leave: [{ k: 'hourly', on: true, href: '/admin/leave/types' }, { k: 'pending', on: true }, { k: 'accrual', on: true, href: '/admin/leave/ledger' }, { k: 'payoutAllowances', on: true, href: '/admin/leave/ledger' }],
+  leave: [{ k: 'hourly', on: true, href: '/admin/leave/types' }, { k: 'pending', on: true }, { k: 'accrual', on: true, href: '/admin/manage/accrual-rule' }, { k: 'payoutAllowances', on: true, href: '/admin/leave/ledger' }],
   request: [{ k: 'punch', on: true }, { k: 'correction', on: true }, { k: 'overtime', on: true }, { k: 'shift', on: true }, { k: 'leave', on: true }, { k: 'leaveDelete', on: true }, { k: 'work', on: true }, { k: 'approver', on: true, href: '/admin/manage/approval-rules' }, { k: 'custom', on: false }],
   message: [{ k: 'notice', on: true, href: '/admin/notices' }, { k: 'translate', on: true }, { k: 'auto', on: false }],
   closing: [{ k: 'day', on: true }, { k: 'month', on: true, href: '/admin/closing' }],
@@ -57,7 +58,7 @@ function SetRow({ label, children, side = false }: { label: string; children: Re
   );
 }
 
-export default async function SettingsPage({ searchParams }: { searchParams: Promise<{ tab?: string; section?: string; v?: string; year?: string; from?: string; edit?: string; add?: string }> }) {
+export default async function SettingsPage({ searchParams }: { searchParams: Promise<{ tab?: string; section?: string; v?: string; year?: string; from?: string; edit?: string; add?: string; adv?: string }> }) {
   // PC: 시프티의 회사 설정 구성 (2026-10-11 의뢰인 스샷 `스샷/관리-회사설정*.png`) — 사이드 메뉴 옆 둘째 메뉴에서 탭을 고르고,
   // 본문은 「굵은 항목 이름 — 값」 줄 + 회색 띠 묶음 제목 + 오른쪽 위 버튼. 폰은 예전처럼 카드 네 장을 한 화면에
   const sp = await searchParams;
@@ -71,8 +72,8 @@ export default async function SettingsPage({ searchParams }: { searchParams: Pro
     return (
       <PageShell wide>
         <h1 className="flex flex-wrap items-center gap-x-1 text-2xl font-bold">
-          {tfp(`item.pay${section.split('-').map((x) => x[0].toUpperCase() + x.slice(1)).join('')}`)}
-          <HelpTip>{tpay(`intro.${section}`)}</HelpTip>
+          <span data-dup-title>{tfp(`item.pay${section.split('-').map((x) => x[0].toUpperCase() + x.slice(1)).join('')}`)}</span>
+          <HelpTip phone>{tpay(`intro.${section}`)}</HelpTip>
         </h1>
         <PaySettings sp={sp} />
       </PageShell>
@@ -87,13 +88,15 @@ export default async function SettingsPage({ searchParams }: { searchParams: Pro
       ? await (async () => {
           const db0 = createAdminClient();
           const [{ data: ppl }, { data: scopes }, groups, { data: pins }] = await Promise.all([
-            db0.from('profiles').select('id, name, employee_no, role, admin_level, can_view_payroll').eq('active', true).order('name'), // 시스템관리자도 여기에는 한 줄 보인다 (2026-10-18 의뢰인)
+            db0.from('profiles').select('id, name, employee_no, role, admin_level, can_view_payroll').eq('active', true).order('name'), // 시스템관리자 줄은 본인에게만 (2026-10-24 의뢰인, 아래에서 거름)
             db0.from('staff_manager_scopes').select('manager_id, group_id').eq('active', true),
             loadOrgGroups(),
             db0.from('console_pins').select('employee_id'),
           ]);
           const hasPin = new Set((pins ?? []).map((x) => x.employee_id as string));
-          const real = (ppl ?? []).filter((x) => !(x.employee_no as string | null)?.startsWith('e2e-'));
+          const viewer = await getMe();
+          const viewerIsSystem = isSystemAdminNo(viewer?.employeeNo); // 시스템관리자 줄은 본인만 본다 (2026-10-24 의뢰인: 최고관리자에게도 숨김)
+          const real = (ppl ?? []).filter((x) => !(x.employee_no as string | null)?.startsWith('e2e-') && (viewerIsSystem || !isSystemAdminNo(x.employee_no as string | null)));
           const gname = new Map(groups.map((g) => [g.id, g.name]));
           return {
             staff: real.filter((x) => x.admin_level !== 'system').length,
@@ -101,7 +104,7 @@ export default async function SettingsPage({ searchParams }: { searchParams: Pro
               .filter((x) => x.role !== 'employee')
               .sort((a, b) => (a.role === b.role ? 0 : a.role === 'admin' ? -1 : 1))
               .map((x) => ({ id: x.id as string, name: x.name as string, no: x.employee_no as string | null, role: x.role as string, level: x.admin_level as string | null, pay: x.role === 'admin', scope: (scopes ?? []).filter((c) => c.manager_id === x.id).map((c) => gname.get(c.group_id as string) ?? '').filter(Boolean), pin: hasPin.has(x.id as string) })),
-            meId: (await getMe())?.id ?? '',
+            meId: viewer?.id ?? '',
           };
         })()
       : null;
@@ -135,8 +138,8 @@ export default async function SettingsPage({ searchParams }: { searchParams: Pro
   const db = createAdminClient();
   const [{ data: rules }, { data: holidays }, { data: networks }] = await Promise.all([
     db.from('work_rules').select('id, start_time, end_time, late_grace_min, break_start, break_end, extra_breaks, round_step_min, workdays, weekly_rest_day, effective_from').eq('active', true).order('effective_from', { ascending: false }),
-    db.from('holidays').select('the_date, label, kind').gte('the_date', monthStart).order('the_date').limit(60),
-    db.from('office_networks').select('id, cidr, label, active').order('created_at'),
+    db.from('holidays').select('the_date, label, kind').gte('the_date', `${Number(today.slice(0, 4)) - 1}-01-01`).order('the_date').limit(1000), // 달력으로 지난해부터 넘겨 본다 (2026-10-22)
+    db.from('office_networks').select('id, cidr, label, active, location_id').order('created_at'),
   ]);
   // 검사 스크립트가 넣었다 끈 위치(메모가 e2e-…)는 목록에 보이지 않게
   const locations = (await loadOfficeLocations(true)).filter((l) => l.active || !l.label?.startsWith('e2e-'));
@@ -179,32 +182,6 @@ export default async function SettingsPage({ searchParams }: { searchParams: Pro
           }}
         />
   );
-  const networkList = (
-        <ul className="divide-y divide-border">
-          {/* 검사 스크립트가 넣었다 끈 주소(메모가 e2e-…)는 목록에 보이지 않게 — 검사 계정·검사 그룹과 같은 규칙 */}
-          {(networks ?? []).filter((n) => n.active || !n.label?.startsWith('e2e-')).map((n) => (
-            <li key={n.id} className={`flex min-h-12 items-center gap-2 ${n.active ? '' : 'opacity-60'}`}>
-              <span className="min-w-0 flex-1">
-                <span className="num block truncate text-sm">{String(n.cidr)}</span>
-                {n.label && <span className="block truncate text-xs text-muted">{n.label}</span>}
-              </span>
-              {!n.active && <Chip>{t('off')}</Chip>}
-              {n.active ? (
-                <ConfirmButton body={{ action: 'network.toggle', id: n.id, active: false }} label={t('turnOff')} confirmLabel={t('turnOffConfirm')} ariaLabel={t('turnOffOf', { what: String(n.cidr) })} />
-              ) : (
-                <ConfirmButton body={{ action: 'network.toggle', id: n.id, active: true }} label={t('turnOn')} confirmLabel={t('turnOn')} ariaLabel={t('turnOnOf', { what: String(n.cidr) })} />
-              )}
-            </li>
-          ))}
-          {OFFICE.allowedCidrs.map((c) => (
-            <li key={c} className="flex min-h-12 items-center gap-2">
-              <span className="num min-w-0 flex-1 truncate text-sm">{c}</span>
-              <Chip>{t('fromEnv')}</Chip>
-            </li>
-          ))}
-        </ul>
-  );
-
   return (
     <PageShell wide>
       {/* PC · 폰 같은 내용 — 고른 탭의 줄만 보인다 (2026-10-18 의뢰인: 폰에서는 어느 탭을 눌러도 근무시간 · 휴일 · 인터넷 · 근무지 카드 넉 장만 보였다).
@@ -212,10 +189,14 @@ export default async function SettingsPage({ searchParams }: { searchParams: Pro
       <div className="flex flex-col gap-3 lg:gap-4">
         <div className="flex flex-wrap items-start gap-3 lg:flex-nowrap lg:gap-4">
           <div className="min-w-0 flex-1">
-            <h1 className="flex flex-wrap items-center gap-x-1 text-2xl font-bold">{tf(`item.set${tab[0].toUpperCase()}${tab.slice(1)}`)}<HelpTip>{tp(tab === 'general' ? 'descGeneral' : tab === 'holidays' ? 'descHolidays' : tab === 'work' ? 'descWork' : tab === 'punch' ? 'descPunch' : tab === 'break' ? 'descBreak' : `desc_${tab}`)}</HelpTip></h1>
+            <h1 className="flex flex-wrap items-center gap-x-1 text-2xl font-bold"><span data-dup-title>{tf(`item.set${tab[0].toUpperCase()}${tab.slice(1)}`)}</span><HelpTip phone>{tp(tab === 'general' ? 'descGeneral' : tab === 'holidays' ? 'descHolidays' : tab === 'work' ? 'descWork' : tab === 'punch' ? 'descPunch' : tab === 'break' ? 'descBreak' : `desc_${tab}`)}</HelpTip></h1>
           </div>
           {(tab === 'work' || tab === 'punch' || tab === 'break') && ruleForm}
         </div>
+        {/* 휴가: 법 설명 상자 (2026-10-22 의뢰인, 다우오피스 「근속연수별 연차설정」 · 「연차촉진 설정」의 제60조 · 제61조 설명처럼) */}
+        {tab === 'leave' && <Explain link={{ href: '/admin/manage/accrual-rule', label: ti('leave.explainLink') }}>{ti.rich('leave.explain', { em })}</Explain>}
+        {/* 근무 · 휴게 · 휴일: 근로기준법 설명 상자 (2026-10-22 디자인 — 다우오피스처럼 기준 화면 위에 법 기준을 먼저) */}
+        {(tab === 'work' || tab === 'break' || tab === 'holidays') && <Explain>{ti.rich(`${tab}.explain`, { em })}</Explain>}
         <SettingBox>
           {info &&
             info.map((r) => (
@@ -299,62 +280,7 @@ export default async function SettingsPage({ searchParams }: { searchParams: Pro
             <>
               <SetRow label={tp('companyHolidays')}>
                 <p className="text-muted">{t('holidayNote')}</p>
-                {/* 폰: 다가오는 5개만 펼쳐 두고 나머지는 접는다 — 1년 치 25개가 화면을 길게 늘였다 (2026-10-17 디자인) */}
-                <div className="lg:hidden">
-                  {(() => {
-                    const li = (h: { the_date: string; label: string; kind: string }) => (
-                      <li key={h.the_date} className="flex min-h-12 items-center gap-2">
-                        <span className="min-w-0 flex-1">
-                          <span className="num block text-sm">{day(h.the_date)}</span>
-                          <span className="block truncate text-xs text-muted">{h.label}</span>
-                        </span>
-                        {h.kind === 'company' && <Chip tone="info">{t('kind.company')}</Chip>}
-                        <ConfirmButton body={{ action: 'holiday.remove', date: h.the_date }} label={t('remove')} confirmLabel={t('removeConfirm')} ariaLabel={t('removeOf', { what: `${h.the_date} ${h.label}` })} />
-                      </li>
-                    );
-                    const all = holidays ?? [];
-                    if (all.length === 0) return <p className="text-sm text-faint">{t('holidayNone')}</p>;
-                    return (
-                      <>
-                        <ul className="divide-y divide-border">{all.slice(0, 5).map(li)}</ul>
-                        {all.length > 5 && (
-                          <details className="group border-t border-border">
-                            <summary className="flex min-h-11 cursor-pointer items-center text-sm font-bold text-primary group-open:hidden">{t('holidayMore', { n: all.length - 5 })}</summary>
-                            <ul className="divide-y divide-border">{all.slice(5).map(li)}</ul>
-                          </details>
-                        )}
-                      </>
-                    );
-                  })()}
-                </div>
-                <table className="num hidden w-full max-w-3xl text-sm lg:table">
-                  <thead>
-                    <tr className="bg-surface">
-                      <th scope="col" className="px-3 py-2 text-left">{tp('colDate')}</th>
-                      <th scope="col" className="px-3 py-2 text-left">{tp('colName')}</th>
-                      <th scope="col" className="px-3 py-2 text-left">{tp('colKind')}</th>
-                      <th scope="col" className="w-32 px-3 py-2" />
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {(holidays ?? []).length === 0 && (
-                      <tr>
-                        <td colSpan={4} className="px-3 py-4 text-faint">{t('holidayNone')}</td>
-                      </tr>
-                    )}
-                    {(holidays ?? []).map((h) => (
-                      <tr key={h.the_date} className="border-t border-border">
-                        <td className="px-3 py-1">{day(h.the_date)}</td>
-                        <td className="px-3 py-1">{h.label}</td>
-                        <td className="px-3 py-1 text-muted">{t(h.kind === 'company' ? 'kind.company' : 'kind.public')}</td>
-                        <td className="px-3 py-1 text-right">
-                          <ConfirmButton body={{ action: 'holiday.remove', date: h.the_date }} label={t('remove')} confirmLabel={t('removeConfirm')} ariaLabel={t('removeOf', { what: `${h.the_date} ${h.label}` })} />
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-                <HolidayForm monthStart={monthStart} />
+                <HolidayCalendar holidays={holidays ?? []} today={today} monthStart={monthStart} />
               </SetRow>
             </>
           )}
@@ -413,14 +339,10 @@ export default async function SettingsPage({ searchParams }: { searchParams: Pro
                 <p className="text-muted">{t('roundHint')}</p>
               </SetRow>
               <SettingGroup>{tp('bandPlace')}</SettingGroup>
-              <SetRow label={t('networkTitle')}>
+              <SetRow label={tp('placeRow')}>
+                <UseMark on={locations.some((l) => l.active)} label={t('placesCount', { n: locations.filter((l) => l.active).length })} />
                 <p className={`font-bold ${here ? 'text-ok' : 'text-warn'}`}>{trace.ip ? t(here ? 'hereYes' : 'hereNo', { ip: trace.ip }) : t('hereUnknown')}</p>
                 <p className="text-muted">{t('networkNote')}</p>
-                <div className="max-w-3xl">{networkList}</div>
-                <NetworkForm currentIp={trace.ip} currentKnown={here} />
-              </SetRow>
-              <SetRow label={t('locationTitle')}>
-                <UseMark on={locations.some((l) => l.active)} label={t('placesCount', { n: locations.filter((l) => l.active).length })} />
                 <p className="text-muted">{t(locations.some((l) => l.active) ? 'gpsOn' : 'gpsOff')}</p>
                 <Link href="/admin/places" className="inline-flex min-h-8 items-center self-start font-bold text-primary">
                   {t('placesLink')} ›

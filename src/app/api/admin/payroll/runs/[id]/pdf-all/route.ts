@@ -6,7 +6,7 @@ import { ApiError } from '@/lib/api';
 import { deny } from '@/lib/csv-response';
 import { requirePayroll } from '@/lib/payroll/data';
 import { loadRun, loadRunBoard, loadStatement } from '@/lib/payroll/run-data';
-import { asSlipTime, slipPdfBytes } from '@/lib/payroll/slip-pdf-response';
+import { asSlipTime, slipPdfBytes, slipTax } from '@/lib/payroll/slip-pdf-response';
 import { payrollAudit } from '@/lib/payroll/staff-data';
 import { createAdminClient } from '@/lib/supabase/admin';
 
@@ -42,7 +42,7 @@ export async function GET(_req: Request, ctx: { params: Promise<{ id: string }> 
     const one = await slipPdfBytes({
       locale: 'ko', no: `${month.replace('-', '')}-${run.kind[0]}${run.sequence}-${(sid.get(l.employeeId) ?? '').slice(0, 8).toUpperCase()}`, name: l.name, employeeNo: l.employeeNo, groupId: l.groupId, month,
       periodFrom: run.periodFrom, periodTo: new Date(Date.parse(`${run.periodTo}T00:00:00Z`) - 86400000).toISOString().slice(0, 10), payDate: run.payDate, revision: run.revision,
-      pay: s.pay, deduction: s.deduction, net: s.net, draft: run.status !== 'FINALIZED', practice: run.isTest, correctionReason: run.correctionReason, requestId, lines: s.lines, time: run.kind === 'REGULAR' ? asSlipTime(s.snapshot.time) : null,
+      pay: s.pay, deduction: s.deduction, net: s.net, draft: run.status !== 'FINALIZED', practice: run.isTest, correctionReason: run.correctionReason, requestId, tax: slipTax(s.snapshot, s.pay), lines: s.lines, time: run.kind === 'REGULAR' ? asSlipTime(s.snapshot.time) : null,
     });
     labels = { draft: one.draftLabel, file: one.fileLabel };
     const doc = await PDFDocument.load(one.bytes);

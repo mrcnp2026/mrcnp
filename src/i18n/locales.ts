@@ -1,7 +1,8 @@
 // 언어 목록과 검수 상태 (4-10, 7-11). 화면 문구는 messages/*.json에만 쓴다.
 import status from '../../messages/_status.json';
 
-export const LOCALES = ['ko', 'en', 'vi', 'th'] as const;
+// 2026-10-22 의뢰인: 외국인 직원은 영어만 쓴다 — 태국어 · 베트남어는 뺐다(번역 초안은 백업/언어-2026-10-22)
+export const LOCALES = ['ko', 'en'] as const;
 export type Locale = (typeof LOCALES)[number];
 
 export const DEFAULT_EMPLOYEE_LOCALE: Locale = 'en'; // 직원 1순위
@@ -12,8 +13,6 @@ export const FALLBACK_LOCALE: Locale = 'en'; // 번역 없는 키는 영어로
 // 언어 이름은 번역하지 않는 고정값이라 번역 파일이 아니라 여기에 둔다.
 export const LOCALE_NAMES: Record<Locale, string> = {
   en: 'English',
-  vi: 'Tiếng Việt',
-  th: 'ภาษาไทย',
   ko: '한국어',
 };
 
@@ -37,7 +36,7 @@ export function languageOptions(): { code: Locale; name: string }[] {
   return selectableLocales().map((code) => ({ code, name: LOCALE_NAMES[code] }));
 }
 
-/** 검수 안 된 언어(vi·th)는 고를 수 없다 (4-10, B-21) */
+/** 검수 안 된 언어는 고를 수 없다 (4-10, B-21) */
 export function selectableLocales(s: Status = status as Status): Locale[] {
   return LOCALES.filter((l) => {
     const v = s[l];

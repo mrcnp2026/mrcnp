@@ -64,6 +64,7 @@ describe('메뉴 구성표', () => {
       .map((p) => `/${p.replace(/\[[^\]]+\]/g, 'x')}`)
       .filter((p) => p !== '/admin/console' && p !== '/admin/console-lock' && !p.startsWith('/admin/manage/')) // 잠금 화면은 다른 주소를 대신 그린다
       .filter((p) => p !== '/admin/search' && p !== '/punch/search') // 통합 검색은 위쪽 검색창에서 연다(메뉴 항목 아님)
+      .filter((p) => p !== '/admin/ops' && !p.startsWith('/admin/ops/')) // 운영 현황과 그 안의 화면(메일 발송 현황 등)은 시스템관리자 한 사람만 — 메뉴 표가 아니라 내 메뉴(AccountMenu) · 운영 현황 안에서만 연다(2026-10-24 의뢰인)
       .filter((p) => !locate(p, q(), 'admin').leaf);
     expect(lost).toEqual([]);
   });
@@ -95,7 +96,7 @@ describe('메뉴 구성표', () => {
 
   it('지점관리자는 허용한 화면만, 직원은 내 화면만 본다', () => {
     const m = appsFor('admin', 'manager').flatMap(appLeaves).map((l) => l.href);
-    expect(m).toEqual(['/admin/schedule', '/admin/schedule?v=list', '/admin/records/calendar', '/admin/records/list', '/admin/records', '/admin/missing', '/admin/leave', '/admin/inbox']);
+    expect(m).toEqual(['/admin/schedule', '/admin/schedule?v=day', '/admin/records/calendar', '/admin/records/list', '/admin/records', '/admin/missing', '/admin/leave', '/admin/inbox']);
     expect(appsFor('console', 'manager')).toEqual([]);
     expect(appsFor('admin', 'employee')).toEqual([]);
     expect(appsFor('console', 'employee')).toEqual([]);

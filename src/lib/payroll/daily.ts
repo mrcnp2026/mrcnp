@@ -10,7 +10,15 @@ export const DAILY_TAX = { dailyDeduction: 150_000, rate: 0.06, credit: 0.55, mi
 
 export type DailyItem = { label: string; kind: 'TAXABLE' | 'NONTAX' | 'DEDUCTION'; amount: number };
 export type DailyWork = { id: string; workDate: string; project: string; quantity: number; dayRate: number; items: DailyItem[]; status: 'DRAFT' | 'CONFIRMED' | 'VOID' };
-export type DailyTerms = { taxState: 'UNKNOWN' | 'DAILY' | 'NONE'; ei: 'UNKNOWN' | 'YES' | 'NO'; np: 'UNKNOWN' | 'YES' | 'NO'; hi: 'UNKNOWN' | 'YES' | 'NO' };
+// 프리랜서(사업소득) — 한 달 지급 합계 × 3%, 10원 미만 버림, 1,000원 미만이면 떼지 않음(소액부징수). 지방소득세 = 소득세의 10%. 4대보험 없음.
+//   임시 값(세무 검증 대기 — 검증 대기 기록). 사업소득에는 근로소득 비과세가 없어 「비과세」로 넣은 항목도 세금 기준에 넣는다(경고) (2026-10-22 의뢰인)
+export const BUSINESS_RULE = 'business-tax-temp-1';
+export const BUSINESS_TAX = { percent: 3, minTax: 1_000 } as const;
+/** 지급 기준 — 수량이 무엇을 뜻하는가: 일당 = 공수(일) · 시간당 = 시간 · 월급 = 개월 · 고정 금액 = 건수 */
+export const PAY_BASES = ['DAY', 'HOUR', 'MONTH', 'FIXED'] as const;
+export type PayBasis = (typeof PAY_BASES)[number];
+export const QTY_MAX: Record<PayBasis, number> = { DAY: 3, HOUR: 744, MONTH: 12, FIXED: 100 };
+export type DailyTerms = { taxState: 'UNKNOWN' | 'DAILY' | 'BUSINESS' | 'NONE'; ei: 'UNKNOWN' | 'YES' | 'NO'; np: 'UNKNOWN' | 'YES' | 'NO'; hi: 'UNKNOWN' | 'YES' | 'NO' };
 export type DailyBlocker = 'tax_unknown' | 'insurance_unknown' | 'unconfirmed_work' | 'no_work';
 export type DailyDay = { workIds: string[]; workDate: string; gross: number; taxable: number; nontax: number; incomeTax: number; localTax: number; deduction: number };
 export type DailyResult =
@@ -27,6 +35,13 @@ export function dailyIncomeTax(taxable: number): number {
   return tax < DAILY_TAX.minTax ? 0 : tax;
 }
 
+/** 사업소득 원천징수 소득세 — 한 달 지급 합계에서 */
+export function businessIncomeTax(amount: number): number {
+  if (amount <= 0) return 0;
+  const tax = floor10(Math.floor((amount * BUSINESS_TAX.percent) / 100));
+  return tax < BUSINESS_TAX.minTax ? 0 : tax;
+}
+
 /** 한 사람 · 한 달의 근무 줄(무효 제외)로 지급명세를 만든다 */
 export function calcDaily(works: readonly DailyWork[], terms: DailyTerms): DailyResult {
   const live = works.filter((w) => w.status !== 'VOID');
@@ -35,9 +50,10 @@ export function calcDaily(works: readonly DailyWork[], terms: DailyTerms): Daily
   if (live.length === 0) blockers.push('no_work');
   if (live.some((w) => w.status === 'DRAFT')) blockers.push('unconfirmed_work'); // 확정하지 않은 근무가 섞여 있으면 계산하지 않는다
   if (terms.taxState === 'UNKNOWN') blockers.push('tax_unknown');
-  if (terms.ei === 'UNKNOWN' || terms.np === 'UNKNOWN' || terms.hi === 'UNKNOWN') blockers.push('insurance_unknown');
+  const business = terms.taxState === 'BUSINESS'; // 프리랜서는 4대보험이 없다 — 보험 「모름」으로 막지 않는다
+  if (!business && (terms.ei === 'UNKNOWN' || terms.np === 'UNKNOWN' || terms.hi === 'UNKNOWN')) blockers.push('insurance_unknown');
   if (blockers.length > 0) return { state: 'BLOCKED', blockers, warnings };
-  if (terms.ei === 'YES' || terms.np === 'YES' || terms.hi === 'YES') warnings.push('insurance_not_calculated'); // 보험료는 프로그램이 계산하지 않는다
+  if (terms.ei === 'YES' || terms.np === 'YES' || terms.hi === 'YES') warnings.push(business ? 'business_insurance' : 'insurance_not_calculated'); // 보험료는 프로그램이 계산하지 않는다
   // 세금은 「하루」 단위다 — 같은 날 여러 줄(구간 · 현장)을 넣었으면 그 날의 과세 지급액을 더한 뒤 한 번 계산한다
   const byDate = new Map<string, DailyWork[]>();
   for (const w of [...live].sort((x, y) => x.workDate.localeCompare(y.workDate) || x.id.localeCompare(y.id))) byDate.set(w.workDate, [...(byDate.get(w.workDate) ?? []), w]);
@@ -50,10 +66,19 @@ export function calcDaily(works: readonly DailyWork[], terms: DailyTerms): Daily
     return { workIds: rows.map((w) => w.id), workDate, gross: taxable + nontax, taxable, nontax, incomeTax, localTax: floor10(Math.floor(incomeTax / 10)), deduction: sum('DEDUCTION') };
   });
   const total = (k: keyof Omit<DailyDay, 'workIds' | 'workDate'>) => days.reduce((a, d) => a + d[k], 0);
-  const gross = total('gross'), incomeTax = total('incomeTax'), localTax = total('localTax'), otherDeduction = total('deduction');
+  const gross = total('gross'), otherDeduction = total('deduction');
+  let incomeTax = total('incomeTax'), localTax = total('localTax'), taxable = total('taxable'), nontax = total('nontax');
+  if (business) {
+    // 사업소득은 한 달 합계로 한 번 — 비과세 없이 지급 전액이 기준
+    if (nontax > 0) warnings.push('business_no_exempt');
+    taxable = gross;
+    nontax = 0;
+    incomeTax = businessIncomeTax(gross);
+    localTax = floor10(Math.floor(incomeTax / 10));
+  }
   return {
-    state: 'OK', blockers: [], warnings, days, workDays: Math.round(live.reduce((a, w) => a + w.quantity, 0) * 100) / 100, gross, taxable: total('taxable'), nontax: total('nontax'), incomeTax, localTax, otherDeduction,
-    net: gross - incomeTax - localTax - otherDeduction, rule: DAILY_RULE,
+    state: 'OK', blockers: [], warnings, days, workDays: Math.round(live.reduce((a, w) => a + w.quantity, 0) * 100) / 100, gross, taxable, nontax, incomeTax, localTax, otherDeduction,
+    net: gross - incomeTax - localTax - otherDeduction, rule: business ? BUSINESS_RULE : DAILY_RULE,
   };
 }
 

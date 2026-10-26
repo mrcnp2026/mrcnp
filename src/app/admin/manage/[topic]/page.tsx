@@ -1,12 +1,12 @@
 // 관리 › 근로정보 · 근무일정 유형 · 휴가 그룹 · 휴가 발생 규칙 · 승인 규칙 · 메시지 템플릿 · 메시지 자동화 규칙 — 시프티의 「관리」 메뉴에 있는 화면들 (2026-10-11 의뢰인 스샷
 // `스샷/관리-근무일정-근무일정유형.png` · `관리-휴가-휴가그룹.png` · `관리-휴가-휴가발생규칙.png` · `관리-승인규칙*.png`).
 // 지금은 앱에 정해져 있는 내용을 표로 보여 주는 화면이다(바꾸는 기능은 없다 — 화면 아래에 그렇게 적는다). 메시지 두 화면은 아직 없는 기능이라 빈 표에 그렇게 적는다.
-import { Check } from 'lucide-react';
 import { HelpTip } from '@/components/Help';
 import { getFormatter, getTranslations } from 'next-intl/server';
 import Link from 'next/link';
 import { notFound, redirect } from 'next/navigation';
 import { PcTable, type PcCol, type PcRow } from '@/components/PcTable';
+import { AccrualGrid } from './AccrualGrid';
 import { PageShell } from '@/components/ui';
 import { OFFICE } from '@/config/office';
 import { loadActiveRule } from '@/lib/attendance-data';
@@ -16,7 +16,9 @@ import { leaveTypeName } from '@/lib/leave';
 import { loadAllLeaveTypes } from '@/lib/leave-data';
 import { groupPath } from '@/lib/org';
 import { loadOrgGroups } from '@/lib/org-data';
-import { SHIFT_KINDS } from '@/lib/shifts';
+import { getShiftKindNames } from '@/lib/settings';
+import { RENAMABLE_KINDS } from '@/lib/shift-kind-names';
+import { KindNamesForm } from './KindNamesForm';
 import { createAdminClient } from '@/lib/supabase/admin';
 import { toKstDate } from '@/lib/time';
 import { NOT_SYSTEM_ADMIN } from '@/lib/system-admin'; // 시스템관리자는 목록에 보이지 않는다 (2026-10-18)
@@ -70,11 +72,15 @@ export default async function ManageInfoPage({ params }: { params: Promise<{ top
   let link: { href: string; label: string } | null = null;
   let caution: string | null = null;
   if (ns === 'shiftKinds') {
-    cols = [{ key: 'name', label: ts('colName') }, { key: 'deemed', label: ts('colDeemed'), align: 'center' }, { key: 'note', label: ts('colNote') }];
-    rows = SHIFT_KINDS.filter((k) => k !== 'none').map((k) => ({
-      id: k,
-      cells: { name: { text: tk(k), node: <b>{tk(k)}</b> }, deemed: { text: ts(k === 'deemed' ? 'yes' : 'no'), node: k === 'deemed' ? <Check aria-label={ts('yes')} size={16} className="inline text-primary" /> : null }, note: { text: ts(`note.${k}`) } },
-    }));
+    // 유형 여섯 개와 계산 방식은 고정, 보이는 이름만 고친다 (2026-10-25 의뢰인)
+    const names = await getShiftKindNames(toKstDate(new Date()));
+    return (
+      <PageShell wide>
+        <h1 className="flex flex-wrap items-center gap-x-1 text-2xl font-bold"><span data-dup-title>{head.title}</span><HelpTip phone>{head.intro}</HelpTip></h1>
+        <p className="mb-3 hidden text-sm text-muted lg:block">{head.intro}</p>
+        <KindNamesForm rows={RENAMABLE_KINDS.map((k) => ({ kind: k, base: tk(k), shown: names[k] ?? '', note: ts(`note.${k}`) }))} />
+      </PageShell>
+    );
   } else if (ns === 'leaveGroups') {
     const types = (await loadAllLeaveTypes()).filter((x) => x.active);
     const names = [...new Set(types.map((x) => x.groupName ?? ''))].sort((a, b) => (a === '' ? 1 : b === '' ? -1 : a.localeCompare(b)));
@@ -85,10 +91,13 @@ export default async function ManageInfoPage({ params }: { params: Promise<{ top
     });
     link = { href: '/admin/leave/types', label: tg('toTypes') };
   } else if (ns === 'accrualRule') {
-    cols = [{ key: 'who', label: ta('colWho'), search: false, sort: false }, { key: 'days', label: ta('colDays'), search: false, sort: false }, { key: 'note', label: ta('colNote'), search: false, sort: false }];
-    rows = (['r1', 'r2', 'r3'] as const).map((r) => ({ id: r, cells: { who: { text: ta(r), node: <b>{ta(r)}</b> }, days: { text: ta(`${r}d`) }, note: { text: ta(`${r}n`) } } }));
-    link = { href: '/admin/leave?v=accrual', label: ta('toAccrual') };
-    caution = ta('caution');
+    // 칸 격자 (2026-10-22, AccrualGrid) — 운영 중인 연차 정책 판에서 읽는다
+    return (
+      <PageShell wide>
+        <h1 className="flex flex-wrap items-center gap-x-1 text-2xl font-bold"><span data-dup-title>{head.title}</span><HelpTip phone>{head.intro}</HelpTip></h1>
+        <AccrualGrid today={toKstDate(new Date())} />
+      </PageShell>
+    );
   } else if (ns === 'workInfo') {
     const rule = await loadActiveRule();
     // 2024-01-01은 월요일 — 요일 이름(월…일)을 화면 언어로
@@ -163,7 +172,7 @@ export default async function ManageInfoPage({ params }: { params: Promise<{ top
     <PageShell wide>
       <div className="flex items-start gap-4">
         <div className="min-w-0 flex-1">
-          <h1 className="flex flex-wrap items-center gap-x-1 text-2xl font-bold">{head.title}<HelpTip>{head.intro}</HelpTip></h1>
+          <h1 className="flex flex-wrap items-center gap-x-1 text-2xl font-bold"><span data-dup-title>{head.title}</span><HelpTip phone>{head.intro}</HelpTip></h1>
         </div>
         {link && (
           <Link href={link.href} className="inline-flex min-h-8 items-center rounded-button border border-border bg-bg px-3.5 text-sm font-semibold whitespace-nowrap text-text hover:bg-surface">

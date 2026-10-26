@@ -5,7 +5,7 @@
 //   console = 통합설정 (기준 — 관리자만) = 회사설정 + App 관리
 // 화면 주소는 바꾸지 않았다 — 어느 주소가 어느 공간 · 앱 · 항목인지는 여기서 정한다(가장 길게 맞는 항목이 이긴다).
 // 이름은 번역 파일 frame.app / frame.group / frame.item 의 열쇠다.
-import { Building2, ChartColumn, Clock, Database, FileBarChart, GraduationCap, House, type LucideIcon, Megaphone, MessagesSquare, Network, Plane, Send, ShieldCheck, SlidersHorizontal, UserRound, Users, Wallet } from 'lucide-react';
+import { Building2, ChartColumn, ClipboardList, Clock, Database, FileBarChart, GraduationCap, House, type LucideIcon, Megaphone, MessagesSquare, Network, Plane, Send, ShieldCheck, SlidersHorizontal, UserRound, Users, Wallet } from 'lucide-react';
 import { managerCanOpen } from '@/lib/manager-rules';
 
 // how: 통합설정 화면 맨 위 「이 화면 쓰는 법」 띠의 종류 (2026-10-14 의뢰인: 이미 적용된 건지 · 저장해야 적용되는지 · 보기만인지 한눈에)
@@ -29,7 +29,7 @@ export const MY_APPS: App[] = [
   { key: 'records', icon: Clock, groups: one([{ href: '/punch/records', key: 'myRecords', also: ['/punch/corrections', '/punch/schedule'] }]) },
   { key: 'leave', icon: Plane, groups: one([{ href: '/punch/leave', key: 'myLeave' }]) },
   { key: 'requests', icon: Send, groups: one([{ href: '/punch/requests', key: 'myRequests', badge: 'decided' }]) },
-  { key: 'pay', icon: Wallet, groups: one([{ href: '/punch/payslips', key: 'payslips' }, { href: '/punch/retirement', key: 'myRetirement' }]) },
+  { key: 'pay', icon: Wallet, groups: one([{ href: '/punch/payslips', key: 'payslips' }]) }, // 예상 퇴직금 조회는 뺐다(2026-10-25 의뢰인): 관리자가 급여 › 퇴직급여에서 직원별로 본다
   // 「업무 메시지」는 2026-10-16 의뢰인 지시로 이름이 「사내게시판」이다(주소 · 코드 이름은 messages 그대로). 따로 만들었던 자유 게시판은 같은 날 지웠다
   { key: 'training', icon: GraduationCap, groups: one([{ href: '/punch/training', key: 'myTraining' }]) }, // 교육 확인 · 서명 (묶음 33)
   { key: 'talk', icon: MessagesSquare, groups: one([{ href: '/punch/notices', key: 'notices', badge: 'notices' }, { href: '/punch/messages', key: 'messages', badge: 'messages' }]) },
@@ -39,13 +39,14 @@ export const MY_APPS: App[] = [
 export const ADMIN_APPS: App[] = [
   { key: 'mHome', icon: House, groups: one([{ href: '/admin', key: 'adminHome', exact: true }]) },
   { key: 'mHr', icon: Users, groups: one([{ href: '/admin/members', key: 'members' }, { href: '/admin/members/groups', key: 'orgGroups' }]) },
+  { key: 'mLog', icon: ClipboardList, groups: one([{ href: '/admin/hr-log', key: 'resignLog', exact: true }, { href: '/admin/hr-log/mail', key: 'slipMailLog' }]) }, // 이력 · 내역 (2026-10-25 의뢰인): 인사 변동 이력 + 급여명세서 메일 발송 내역. 출퇴근 「기록」과 겹치지 않게, 직원 상세의 「인사 기록」과도 다른 이름. 관리자만
   {
     key: 'mAttendance',
     icon: Clock,
     groups: [
-      { key: 'gSchedule', items: [{ href: '/admin/schedule', key: 'scheduleCal', pcOnly: true }, { href: '/admin/schedule?v=list', key: 'scheduleList' }] },
+      { key: 'gSchedule', items: [{ href: '/admin/schedule', key: 'scheduleCal' }, { href: '/admin/schedule?v=day', key: 'scheduleList' }] }, // 2026-10-22: 일정 현황(첫 화면) · 주간 · 월간 달력. 엑셀 같던 목록형은 뺐다
       { key: 'gRecords', items: [{ href: '/admin/records/calendar', key: 'recordsCal' }, { href: '/admin/records/list', key: 'recordsList' }, { href: '/admin/records', key: 'recordsMonthly' }] },
-      { key: 'gCheck', items: [{ href: '/admin/missing', key: 'missing' }, { href: '/admin/anomalies', key: 'anomalies' }, { href: '/admin/closing', key: 'closing' }] },
+      { key: 'gCheck', items: [{ href: '/admin/missing', key: 'missing' }, { href: '/admin/anomalies', key: 'anomalies' }] }, // 근태 마감은 급여 › ① 사전 준비로 옮겼다 (2026-10-26 의뢰인: 급여 순서대로 메뉴에서 찾을 수 있게)
     ],
   },
   { key: 'mLeave', icon: Plane, groups: one([{ href: '/admin/leave', key: 'leaveHistory' }, { href: '/admin/leave?v=accrual', key: 'leaveAccrual' }, { href: '/admin/leave/ledger', key: 'leaveLedger' }, { href: '/admin/leave/promotion', key: 'leavePromotion' }]) },
@@ -54,10 +55,11 @@ export const ADMIN_APPS: App[] = [
     key: 'mPay',
     icon: Wallet,
     groups: [
-      { key: 'gPayPrep', items: [{ href: '/admin/payroll/staff', key: 'payStaff' }, { href: '/admin/payroll', key: 'payHours' }] },
-      { key: 'gPayRun', items: [{ href: '/admin/payroll/runs', key: 'payRuns' }, { href: '/admin/payroll/slips', key: 'paySlips' }, { href: '/admin/payroll/daily', key: 'payDaily' }] },
-      { key: 'gPaySettle', items: [{ href: '/admin/payroll/insurance', key: 'payInsurance' }, { href: '/admin/payroll/retirement', key: 'payRetirement' }, { href: '/admin/payroll/pension', key: 'payPension' }, { href: '/admin/payroll/overtime-comp', key: 'payOvertimeComp' }] },
-      { key: 'gPayView', items: [{ href: '/admin/payroll/labor-cost', key: 'payLabor' }] },
+      { key: 'gPayBasis', items: [{ href: '/admin/payroll/staff', key: 'payStaff' }] }, // 기준 — 입사 · 인상 · 변경 때만 고친다. 매달 하는 일이 아니다 (2026-10-26 의뢰인)
+      { key: 'gPayPrep', items: [{ href: '/admin/closing', key: 'closing' }, { href: '/admin/payroll/check', key: 'payCheck' }] }, // ① 매달: 근태 마감 → 급여 점검
+      { key: 'gPayRun', items: [{ href: '/admin/payroll/runs', key: 'payRuns' }, { href: '/admin/payroll/daily', key: 'payDaily' }] }, // ② 급여대장 생성 → 계산 → 검토 → 확정 → 공개
+      { key: 'gPaySettle', items: [{ href: '/admin/payroll/insurance', key: 'payInsurance' }, { href: '/admin/payroll/retirement', key: 'payRetirement' }, { href: '/admin/payroll/pension', key: 'payPension' }] }, // ③ 연장 → 보상휴가는 뺐다 (2026-10-21 의뢰인: 「보상휴가를 사용하지 않아」)
+      { key: 'gPayView', items: [{ href: '/admin/payroll/labor-cost', key: 'payLabor' }, { href: '/admin/payroll', key: 'payHours' }] }, // ④ 보고 싶을 때 보는 자료
     ],
   },
   { key: 'mTraining', icon: GraduationCap, groups: one([{ href: '/admin/training', key: 'trainingHome' }, { href: '/admin/training/courses', key: 'trainingCourses' }]) }, // 교육 · 안전교육 (묶음 33)
@@ -79,13 +81,13 @@ export const CONSOLE_APPS: App[] = [
     groups: [
       { key: 'gRule', items: [{ href: tab('work'), key: 'setWork', how: 'versioned' }, { href: tab('punch'), key: 'setPunch', how: 'instant' }, { href: tab('break'), key: 'setBreak', how: 'versioned' }, { href: tab('closing'), key: 'setClosing', how: 'view' }] },
       { key: 'gPlace', items: [{ href: '/admin/places', key: 'places', how: 'list' }] },
-      { key: 'gShift', items: [{ href: '/admin/manage/shift-kinds', key: 'shiftKinds', how: 'view' }, { href: '/admin/shifts', key: 'shifts', how: 'list' }, { href: '/admin/manage/schedule-patterns', key: 'schedulePatterns', how: 'view' }] },
+      { key: 'gShift', items: [{ href: '/admin/manage/shift-kinds', key: 'shiftKinds', how: 'view' }, { href: '/admin/shifts', key: 'shifts', how: 'list' }] },
     ],
   },
   { key: 'aLeave', section: 'apps', icon: Plane, groups: one([{ href: tab('leave'), key: 'setLeave', how: 'view' }, { href: '/admin/leave/types', key: 'leaveTypes', how: 'list' }, { href: '/admin/manage/leave-groups', key: 'leaveGroups', how: 'view' }, { href: '/admin/manage/accrual-rule', key: 'accrualRule', how: 'view' }]) },
   { key: 'aRequests', section: 'apps', icon: Send, groups: one([{ href: tab('request'), key: 'setRequest', how: 'view' }, { href: '/admin/manage/approval-rules', key: 'approvalRules', how: 'view' }]) },
-  { key: 'aTalk', section: 'apps', icon: Megaphone, groups: one([{ href: tab('message'), key: 'setMessage', how: 'view' }, { href: '/admin/manage/message-templates', key: 'messageTemplates', how: 'view' }, { href: '/admin/manage/message-rules', key: 'messageRules', how: 'view' }]) },
-  { key: 'aReports', section: 'apps', icon: FileBarChart, groups: one([{ href: tab('report'), key: 'setReport', how: 'view' }, { href: '/admin/manage/report-templates', key: 'reportTemplates', how: 'view' }]) },
+  { key: 'aTalk', section: 'apps', icon: Megaphone, groups: one([{ href: tab('message'), key: 'setMessage', how: 'view' }]) },
+  { key: 'aReports', section: 'apps', icon: FileBarChart, groups: one([{ href: tab('report'), key: 'setReport', how: 'view' }]) },
   {
     key: 'aPay',
     section: 'apps',

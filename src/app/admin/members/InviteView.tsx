@@ -2,30 +2,53 @@
 // 초대 보내기 (2026-10-02 의뢰인: "직원 폰으로 보내는 건 링크다. QR을 받아서는 스캔할 수 없다").
 // 순서: ① 링크 보내기(문자·카톡 공유 창) ② 링크 복사 ③ 등록 코드(주소창 입력용) ④ QR — 직접 만나서 등록할 때만, 접어 둔다.
 // 토큰(=코드) 원문은 이 화면에만 있고 DB에는 지문(해시)만 남는다.
-import { ChevronDown, Copy, QrCode, Send } from 'lucide-react';
+import { ChevronDown, Copy, Mail, QrCode, Send } from 'lucide-react';
 import { useFormatter, useTranslations } from 'next-intl';
 import { useState } from 'react';
+import { callApi } from '@/components/client-api';
+import { ErrorNote } from '@/components/ErrorNote';
 import { Button, Card } from '@/components/ui';
 
 export type Invite = { url: string; code: string; qrDataUrl: string; expiresAt: string };
 
-export function InviteView({ name, invite, onClose }: { name: string; invite: Invite; onClose: () => void }) {
+export function InviteView({ employeeId, name, invite, onClose }: { employeeId: string; name: string; invite: Invite; onClose: () => void }) {
   const t = useTranslations('admin.members');
   const f = useFormatter();
   const [copied, setCopied] = useState(false);
+  const [mailBusy, setMailBusy] = useState(false);
+  const [mailTo, setMailTo] = useState<string | null>(null);
+  const [mailErr, setMailErr] = useState<{ code: string; requestId?: string } | null>(null);
   const localhost = new URL(invite.url).hostname === 'localhost';
   const text = t('shareText', { name, code: invite.code, url: invite.url });
 
   return (
-    <Card className="flex flex-col gap-3 border-primary">
+    <Card className="flex flex-col gap-3 border-primary text-left">
       <h2 className="text-xl font-semibold">{t('inviteFor', { name })}</h2>
       <p className="num text-sm text-faint">
         {t('inviteValidUntil', { time: f.dateTime(new Date(invite.expiresAt), { dateStyle: 'medium', timeStyle: 'short' }) })}
       </p>
       {localhost && <p className="rounded-card bg-warn-tint p-3 text-sm text-warn">{t('localhostWarning')}</p>}
 
+      {/* 지금은 카톡 · 문자 발송 서비스가 없다 — 직원 이메일로 보내는 것이 가장 쉽다 (2026-10-26 의뢰인) */}
       <Button
         className="min-h-14 w-full"
+        disabled={mailBusy || mailTo !== null}
+        onClick={async () => {
+          setMailBusy(true);
+          setMailErr(null);
+          const r = await callApi<{ to: string }>(`/api/admin/employees/${employeeId}/invite-mail`, { code: invite.code });
+          setMailBusy(false);
+          if (!r.ok) setMailErr(r);
+          else setMailTo(r.data.to);
+        }}
+      >
+        <Mail aria-hidden size={20} strokeWidth={1.75} />
+        {mailTo ? t('mailSent', { to: mailTo }) : mailBusy ? t('mailSending') : t('sendMail')}
+      </Button>
+      {mailErr && <ErrorNote code={mailErr.code} requestId={mailErr.requestId} namespace="admin.members" />}
+      <Button
+        variant="outline"
+        className="w-full"
         onClick={async () => {
           // 관리자 폰의 공유 창(문자·카카오톡 등)으로 바로 보낸다. 공유 창이 없는 PC는 복사로
           if (navigator.share) {

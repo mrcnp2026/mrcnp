@@ -15,8 +15,8 @@ export function mailer() {
   const port = Number(process.env.SMTP_PORT ?? 465);
   const transport = nodemailer.createTransport({ host: process.env.SMTP_HOST ?? 'smtp.gmail.com', port, secure: port === 465, auth: { user, pass } });
   return {
-    send: (m: { fromName: string; to: string; subject: string; text: string; attachments?: { filename: string; content: Buffer; contentType: string }[] }) =>
-      transport.sendMail({ from: { name: m.fromName, address: user }, to: m.to, subject: m.subject, text: m.text, attachments: m.attachments }),
+    send: (m: { fromName: string; to: string; subject: string; text: string; html?: string; attachments?: { filename: string; content: Buffer; contentType: string }[] }) =>
+      transport.sendMail({ from: { name: m.fromName, address: user }, to: m.to, subject: m.subject, text: m.text, html: m.html, attachments: m.attachments }),
     close: () => transport.close(),
   };
 }

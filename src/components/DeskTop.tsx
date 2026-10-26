@@ -10,6 +10,7 @@ import { appLeaves, appsFor, CONSOLE_HOME, locate, type NavRole, type Space } fr
 import { MANAGER_HOME } from '@/lib/manager-rules';
 import { SEARCH_KINDS, type SearchKind } from '@/lib/search';
 import { RECENT_KEY } from './DeskNav';
+import { ConsoleClose } from './ConsoleSheet';
 import { HelpTip } from './Help';
 
 function useSpace(role: NavRole) {
@@ -105,7 +106,7 @@ export function MenuSearch({ role }: { role: NavRole }) {
     return () => window.removeEventListener('mousedown', away);
   }, [open]);
   const word = q.trim().toLowerCase();
-  const list = word ? (scope === 'all' || scope === 'menu' ? all.filter((x) => `${x.name} ${x.where}`.toLowerCase().includes(word)).slice(0, 6) : []) : recent.flatMap((h) => all.find((x) => x.href === h) ?? []);
+  const list = word ? (scope === 'all' || scope === 'menu' ? all.filter((x) => `${x.name} ${x.where}`.toLowerCase().includes(word)).sort((x, y) => Number(!x.name.toLowerCase().includes(word)) - Number(!y.name.toLowerCase().includes(word))).slice(0, 8) : []) : recent.flatMap((h) => all.find((x) => x.href === h) ?? []);
   // 통합 검색 (2026-10-14 의뢰인: 다우오피스 위쪽 검색) — 관리자 모드에서는 /admin/search, 그 밖에는 /punch/search
   const searchAll = () => {
     const p = new URLSearchParams({ q: q.trim() });
@@ -268,10 +269,12 @@ export function AccountMenu({ name, roleLabel, children }: { name: string; roleL
 export function Crumb({ role }: { role: NavRole }) {
   const t = useTranslations('frame');
   const at = useSpace(role);
-  if (at.space === 'my' || !at.app || !at.leaf) return null;
-  const parts = [t(`space.${at.space}`), ...(at.app.section ? [t(`console.${at.app.section}`)] : []), t(at.space === 'console' ? `app.${at.app.key}` : `appFull.${at.app.key}`), t(`item.${at.leaf.key}`)];
+  // 통합설정은 판 머리(ConsoleGuide)에 큰 경로로 보인다 (2026-10-22)
+  if (at.space === 'my' || at.space === 'console' || !at.app || !at.leaf) return null;
+  const parts = [t(`space.${at.space}`), ...(at.app.section ? [t(`console.${at.app.section}`)] : []), t(`appFull.${at.app.key}`), t(`item.${at.leaf.key}`)];
   // 앱 이름과 항목 이름이 같으면(홈 · 요청함) 한 번만
   const shown = parts.filter((p, i) => i === 0 || p !== parts[i - 1]);
+  const siblings = at.app ? appLeaves(at.app) : [];
   return (
     <p data-noprint className="hidden items-center gap-1 px-8 pt-5 text-xs text-faint lg:flex">
       {shown.map((p, i) => (
@@ -285,7 +288,7 @@ export function Crumb({ role }: { role: NavRole }) {
 }
 
 /** 통합설정에서 나갈 때 다시 잠근다 (2026-10-14 DB 묶음 7) — 기다리지 않고 보낸다 */
-const relock = () => {
+export const relock = () => {
   void fetch('/api/console/pin', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ action: 'lock' }), keepalive: true });
 };
 
@@ -293,7 +296,7 @@ const HOW_TONE = { view: 'bg-surface text-muted', instant: 'bg-ok-tint text-ok',
 
 /**
  * 통합설정 표시 (2026-10-14 의뢰인: 통합설정은 관리자 화면과 엄격히 구분, 들어간 화면이 이미 적용된 건지 · 저장해야 적용되는지 한눈에)
- * ① 짙은 띠: 지금 통합설정(특별관리자 모드)에 있다 + 관리자 모드로 나가기
+ * ① 짙은 띠: 지금 통합설정(최고관리자 모드)에 있다 + 관리자 모드로 나가기
  * ② 「이 화면 쓰는 법」: 보기 전용 · 바로 적용 · 저장해야 적용 · 목록 · 확인 후 적용 가운데 하나 (config/nav.ts의 how)
  */
 export function ConsoleGuide({ role }: { role: NavRole }) {
@@ -301,23 +304,69 @@ export function ConsoleGuide({ role }: { role: NavRole }) {
   const at = useSpace(role);
   if (at.space !== 'console') return null;
   const how = at.leaf?.how;
+  const howChip = how && (
+    <p className={`flex items-center gap-1 self-start rounded-button py-0.5 pr-1 pl-3 text-sm ${HOW_TONE[how]}`}>
+      <span className="font-bold whitespace-nowrap">
+        {t('howTitle')} · {t(`how.${how}.tag`)}
+      </span>
+      <HelpTip label={t('howTitle')}>{t(`how.${how}.text`)}</HelpTip>
+    </p>
+  );
+  // PC 판 머리 (2026-10-22, 다우오피스 통합설정처럼): 경로가 곧 제목 — 「App 관리 › 근태 설정 › 근무」 크게 + 쓰는 법 + ✕
+  const parts = at.app ? [t(`console.${at.app.section ?? 'apps'}`), t(`app.${at.app.key}`), ...(at.leaf ? [t(`item.${at.leaf.key}`)] : [])] : [t('console.all')];
+  const shown = parts.filter((p, i) => i === 0 || p !== parts[i - 1]);
+  const siblings = at.app ? appLeaves(at.app) : [];
   return (
-    <div data-noprint className="flex flex-col gap-3 px-4 pt-4 lg:px-8">
-      <div className="flex flex-wrap items-center gap-x-3 gap-y-1 rounded-card bg-text px-4 py-2.5 text-sm text-on-primary">
-        <span className="font-bold">{t('console.band')}</span>
-        <span className="opacity-80">{t('console.bandShort')}</span>
-        <Link href="/admin" onClick={relock} className="ml-auto inline-flex min-h-11 items-center font-bold underline-offset-2 hover:underline lg:min-h-0">
-          {t('console.exit')} ›
-        </Link>
-      </div>
-      {how && (
-        <p className={`flex items-center gap-1 self-start rounded-button py-0.5 pr-1 pl-3 text-sm ${HOW_TONE[how]}`}>
-          <span className="font-bold whitespace-nowrap">
-            {t('howTitle')} · {t(`how.${how}.tag`)}
-          </span>
-          <HelpTip label={t('howTitle')}>{t(`how.${how}.text`)}</HelpTip>
+    <>
+      <div data-noprint className="glass sticky top-0 z-10 hidden items-center gap-4 border-b px-8 py-4 lg:flex">
+        <p className="flex min-w-0 flex-1 items-center gap-x-2 overflow-hidden text-xl font-medium tracking-tight whitespace-nowrap xl:text-2xl">
+          {shown.map((p, i) => (
+            <span key={i} className={`flex items-center gap-2 ${i === shown.length - 1 ? 'min-w-0' : 'shrink-0'}`}>
+              {i > 0 && <ChevronRight aria-hidden size={20} strokeWidth={1.75} className="shrink-0 text-faint" />}
+              <span className={i === shown.length - 1 ? 'truncate font-bold text-text' : 'text-muted'}>{p}</span>
+            </span>
+          ))}
         </p>
-      )}
-    </div>
+        {howChip}
+        <span className="hidden rounded-chip bg-primary-tint px-3 py-1 text-xs font-bold whitespace-nowrap text-primary xl:inline">{t('console.band')}</span>
+        <ConsoleClose onLeave={relock} />
+      </div>
+      {/* 폰: PC 판 머리와 같은 구성 (2026-10-22 의뢰인: 「모바일이랑 PC랑 틀린 부분이 많다」) — 짙은 띠를 빼고
+          작은 경로 + 지금 화면 이름(누르면 같은 묶음의 메뉴 — PC 가운데 칸) + ✕(관리자 모드로) · 아래 쓰는 법 */}
+      <div data-noprint data-console-phone className="relative z-20 flex flex-col gap-2 border-b border-border bg-bg px-4 pt-3 pb-3 lg:hidden">
+        <div className="flex items-start gap-2">
+          <div className="min-w-0 flex-1">
+            <p className="flex items-center gap-1 truncate text-xs text-muted">
+              <span className="shrink-0 rounded-chip bg-primary-tint px-2 py-0.5 font-bold text-primary">{t('console.title')}</span>
+              {shown.length > 1 && <span className="truncate">{shown.slice(0, -1).join(' › ')}</span>}
+            </p>
+            {siblings.length > 1 ? (
+              <details className="group/sib relative mt-1">
+                <summary className="flex min-h-9 cursor-pointer list-none items-center gap-1 text-xl font-bold tracking-tight [&::-webkit-details-marker]:hidden">
+                  <span className="truncate">{shown[shown.length - 1]}</span>
+                  <ChevronDown aria-hidden size={20} className="shrink-0 text-muted transition-transform group-open/sib:rotate-180" />
+                </summary>
+                <nav aria-label={shown[shown.length - 1]} className="absolute top-full left-0 z-30 mt-1 flex max-h-96 w-80 max-w-[calc(100vw-2rem)] flex-col overflow-y-auto rounded-card border border-border bg-bg p-2 shadow-sheet">
+                  {at.app!.groups.map((g, gi) => (
+                    <div key={g.key ?? gi} className="pb-1">
+                      {g.key && <p className="px-2 pt-2 pb-1 text-xs font-bold text-faint">{t(`group.${g.key}`)}</p>}
+                      {g.items.map((x) => (
+                        <Link key={x.href} href={x.href} onClick={(e) => e.currentTarget.closest("details")?.removeAttribute("open")} aria-current={x.href === at.leaf?.href ? "page" : undefined} className={`flex min-h-11 items-center rounded-button px-3 text-base ${x.href === at.leaf?.href ? 'bg-primary-tint font-bold text-primary' : 'text-text active:bg-surface'}`}>
+                          {t(`item.${x.key}`)}
+                        </Link>
+                      ))}
+                    </div>
+                  ))}
+                </nav>
+              </details>
+            ) : (
+              <p className="mt-1 truncate text-xl font-bold tracking-tight">{shown[shown.length - 1]}</p>
+            )}
+          </div>
+          <ConsoleClose onLeave={relock} />
+        </div>
+        {howChip}
+      </div>
+    </>
   );
 }

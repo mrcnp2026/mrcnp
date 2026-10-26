@@ -62,7 +62,7 @@ export function ImportPanel({ tomorrow, labels }: { tomorrow: string; labels: Re
           <Download aria-hidden size={16} />
           {t('imp.template')}
         </a>
-        <button type="button" disabled={busy} onClick={() => input.current?.click()} className="inline-flex h-9 items-center gap-1 rounded-button bg-primary px-3.5 text-sm font-bold text-on-primary disabled:opacity-50">
+        <button type="button" disabled={busy} onClick={() => input.current?.click()} className="inline-flex h-9 items-center gap-1.5 rounded-button bg-primary px-3.5 text-sm font-semibold text-on-primary disabled:opacity-50">
           <Upload aria-hidden size={16} />
           {t('imp.upload')}
         </button>

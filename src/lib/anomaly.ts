@@ -34,6 +34,30 @@ export function anomalyPolicyOf(v: unknown): AnomalyPolicy {
   return out;
 }
 
+// ── 화면에서 보는 묶음 (2026-10-23 의뢰인: 항목 10가지가 과하다 → 5가지로). 저장하는 기준은 그대로 유형별이고, 묶음 하나를 고르면 안의 유형이 함께 바뀐다.
+export const ANOMALY_GROUPS = [
+  { key: 'g_missing', types: ['missing_in', 'missing_out'] },
+  { key: 'g_record', types: ['orphan_out', 'overlap', 'duplicate'] },
+  { key: 'g_plan', types: ['no_plan_work', 'leave_day_punch'] },
+  { key: 'g_late', types: ['late', 'early'] },
+  { key: 'g_place', types: ['unverified_place'] },
+] as const satisfies readonly { key: string; types: readonly AnomalyType[] }[];
+export type AnomalyGroup = (typeof ANOMALY_GROUPS)[number]['key'];
+export const isAnomalyGroup = (v: unknown): v is AnomalyGroup => ANOMALY_GROUPS.some((g) => g.key === v);
+export const groupOfType = (t: AnomalyType): AnomalyGroup => ANOMALY_GROUPS.find((g) => (g.types as readonly string[]).includes(t))!.key;
+const RANK: Record<AnomalyLevel, number> = { off: 0, check: 1, block: 2 };
+/** 묶음의 기준 = 안의 유형 중 가장 엄한 것 */
+export function groupLevel(policy: AnomalyPolicy, key: AnomalyGroup): AnomalyLevel {
+  const g = ANOMALY_GROUPS.find((x) => x.key === key)!;
+  return g.types.reduce<AnomalyLevel>((a, t) => (RANK[policy[t]] > RANK[a] ? policy[t] : a), 'off');
+}
+/** 묶음 기준을 안의 유형에 적용한다. 출퇴근 누락을 「마감 차단」으로 하면 퇴근 누락만 막고 출근 누락(결근일 수 있다)은 확인만 한다 */
+export function applyGroupLevel(policy: AnomalyPolicy, key: AnomalyGroup, level: AnomalyLevel): AnomalyPolicy {
+  const out = { ...policy };
+  for (const t of ANOMALY_GROUPS.find((x) => x.key === key)!.types) out[t] = key === 'g_missing' && t === 'missing_in' && level === 'block' ? 'check' : level;
+  return out;
+}
+
 export function dayAnomalies(args: {
   workDate: string;
   pairs: readonly PunchPair[];

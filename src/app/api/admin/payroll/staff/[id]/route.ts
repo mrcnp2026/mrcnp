@@ -5,7 +5,8 @@ import { assertStaffTarget } from '@/lib/staff-data';
 import { validateContract, validateItemAssign, validateTax } from '@/lib/payroll/contract';
 import { requirePayroll } from '@/lib/payroll/data';
 import { cleanText, isDate } from '@/lib/payroll/settings';
-import { addStaffItem, endStaffItem, saveContract, saveTax } from '@/lib/payroll/staff-data';
+import { addStaffItem, cancelScheduledVersion, endStaffItem, saveContract, saveTax } from '@/lib/payroll/staff-data';
+import { toKstDate } from '@/lib/time';
 import { createAdminClient } from '@/lib/supabase/admin';
 
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
@@ -31,6 +32,12 @@ export const POST = api<{ params: Promise<{ id: string }> }>('admin.payroll.staf
     const v = validateTax(b);
     if (!v.ok) throw new ApiError(400, v.code);
     return { version: (await saveTax({ ...common, input: v.value })).version };
+  }
+  if (b.action === 'contract.cancel' || b.action === 'tax.cancel') {
+    // 아직 시작하지 않은 변경 취소 (2026-10-25)
+    if (typeof b.versionId !== 'string' || !UUID.test(b.versionId)) throw new ApiError(400, 'invalid_input');
+    await cancelScheduledVersion({ kind: b.action === 'contract.cancel' ? 'contract' : 'tax', id: b.versionId, employeeId: id, today: toKstDate(new Date()), me, requestId: ctx.requestId });
+    return { ok: true };
   }
   if (b.action === 'item.add') {
     const v = validateItemAssign(b);

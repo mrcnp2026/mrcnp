@@ -40,7 +40,7 @@ export async function GET(req: Request): Promise<Response> {
     conditions,
     sum: t('sum'),
     sheets: { summary: t('xSummary'), month: t('cMonth'), group: t('cGroup'), job: t('cJob'), employee: t('cEmployee'), pay: t('byPayItem'), deduction: t('byDeductionItem') },
-    cols: { name: t('cEmployee'), statements: t('cStatements'), pay: t('cPay'), deduction: t('cDeduction'), net: t('cNet'), employer: t('cEmployer'), total: t('cTotal'), people: t('sPeople'), average: t('sAverage'), item: t('cItem'), amount: t('cAmount'), code: t('cCode') },
+    cols: { name: t('cEmployee'), statements: t('cStatements'), pay: t('cPay'), taxable: t('cTaxable'), exempt: t('cExempt'), deduction: t('cDeduction'), net: t('cNet'), employer: t('cEmployer'), total: t('cTotal'), people: t('sPeople'), average: t('sAverage'), item: t('cItem'), amount: t('cAmount'), code: t('cCode') },
   });
   return new Response((await wb.xlsx.writeBuffer()) as ArrayBuffer, {
     headers: {

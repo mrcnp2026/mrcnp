@@ -9,7 +9,7 @@ import { readAll } from '@/lib/read-all';
 import { ApiError } from '@/lib/api';
 import type { Me } from '@/lib/auth';
 import { createAdminClient } from '@/lib/supabase/admin';
-import { calcDaily, DAILY_RULE, toDailyItems, type DailyItem, type DailyResult, type DailyTerms, type DailyWork } from './daily';
+import { calcDaily, DAILY_RULE, QTY_MAX, toDailyItems, type DailyItem, type DailyResult, type DailyTerms, type DailyWork, type PayBasis } from './daily';
 import { sha } from './data';
 import { loadRun, type RunRow } from './run-data';
 import { payrollAudit } from './staff-data';
@@ -27,10 +27,10 @@ const boom = (where: string, e: { code?: string; message?: string } | null): nev
 };
 
 // ── 대상자 · 고용 기간 ──
-export type Payee = { id: string; internalNo: string; name: string; profileId: string | null; phone: string | null; note: string | null; active: boolean; isTest: boolean };
-export type Engagement = DailyTerms & { id: string; payeeId: string; startsOn: string; endsOn: string | null; project: string; dayRate: number | null; basisNote: string | null; active: boolean };
-const toPayee = (r: Row): Payee => ({ id: r.id as string, internalNo: r.internal_no as string, name: r.name as string, profileId: r.profile_id as string | null, phone: r.phone as string | null, note: r.note as string | null, active: r.active as boolean, isTest: r.is_test as boolean });
-const toEngagement = (r: Row): Engagement => ({ id: r.id as string, payeeId: r.payee_id as string, startsOn: r.starts_on as string, endsOn: r.ends_on as string | null, project: r.project as string, dayRate: r.day_rate === null ? null : Number(r.day_rate), taxState: r.tax_state as DailyTerms['taxState'], ei: r.ei_state as DailyTerms['ei'], np: r.np_state as DailyTerms['np'], hi: r.hi_state as DailyTerms['hi'], basisNote: r.basis_note as string | null, active: r.active as boolean });
+export type Payee = { id: string; internalNo: string; name: string; jobTitle: string | null; profileId: string | null; phone: string | null; note: string | null; active: boolean; isTest: boolean };
+export type Engagement = DailyTerms & { id: string; payeeId: string; startsOn: string; endsOn: string | null; project: string; dayRate: number | null; payBasis: PayBasis; basisNote: string | null; active: boolean };
+const toPayee = (r: Row): Payee => ({ id: r.id as string, internalNo: r.internal_no as string, name: r.name as string, jobTitle: (r.job_title as string | null) ?? null, profileId: r.profile_id as string | null, phone: r.phone as string | null, note: r.note as string | null, active: r.active as boolean, isTest: r.is_test as boolean });
+const toEngagement = (r: Row): Engagement => ({ id: r.id as string, payeeId: r.payee_id as string, startsOn: r.starts_on as string, endsOn: r.ends_on as string | null, project: r.project as string, dayRate: r.day_rate === null ? null : Number(r.day_rate), payBasis: ((r.pay_basis as PayBasis | undefined) ?? 'DAY'), taxState: r.tax_state as DailyTerms['taxState'], ei: r.ei_state as DailyTerms['ei'], np: r.np_state as DailyTerms['np'], hi: r.hi_state as DailyTerms['hi'], basisNote: r.basis_note as string | null, active: r.active as boolean });
 
 /** 검사 계정이 만든 대상자(is_test)는 검사 계정에게만, 실제 대상자는 실제 관리자에게만 보인다 */
 export async function loadPayees(testViewer: boolean): Promise<{ payees: Payee[]; engagements: Engagement[] }> {
@@ -48,10 +48,10 @@ const myPayee = async (id: string, me: Me): Promise<Payee> => {
   return toPayee(data as Row);
 };
 
-export async function addPayee(args: { internalNo: string; name: string; phone: string | null; note: string | null; profileId: string | null; me: Me; requestId?: string }): Promise<{ id: string }> {
+export async function addPayee(args: { internalNo: string; name: string; jobTitle?: string | null; phone: string | null; note: string | null; profileId: string | null; me: Me; requestId?: string }): Promise<{ id: string }> {
   const test = isTestNo(args.me.employeeNo);
   if (args.internalNo.toLowerCase().startsWith('e2e-') !== test) throw new ApiError(400, 'daily_internal_no'); // e2e- 로 시작하는 번호는 검사용으로 남겨 둔다
-  const { data, error } = await db().from('payroll_payees').insert({ internal_no: args.internalNo, name: args.name, phone: args.phone, note: args.note, profile_id: args.profileId, is_test: test, created_by: args.me.id }).select('id').single();
+  const { data, error } = await db().from('payroll_payees').insert({ internal_no: args.internalNo, name: args.name, job_title: args.jobTitle ?? null, phone: args.phone, note: args.note, profile_id: args.profileId, is_test: test, created_by: args.me.id }).select('id').single();
   if (error?.code === '23505') throw new ApiError(409, 'daily_payee_exists'); // 내부번호가 겹치거나, 그 직원에 이미 이어진 대상자가 있다
   if (error || !data) boom('addPayee', error);
   await payrollAudit({ actorId: args.me.id, action: 'daily.payee.add', table: 'payroll_payees', subjectId: data!.id as string, requestId: args.requestId });
@@ -64,10 +64,10 @@ export async function setPayeeActive(args: { id: string; active: boolean; me: Me
   await payrollAudit({ actorId: args.me.id, action: 'daily.payee.active', table: 'payroll_payees', subjectId: p.id, requestId: args.requestId, detail: { active: args.active } });
 }
 
-export async function addEngagement(args: { payeeId: string; startsOn: string; endsOn: string | null; project: string; dayRate: number | null; terms: DailyTerms; basisNote: string | null; me: Me; requestId?: string }): Promise<{ id: string }> {
+export async function addEngagement(args: { payeeId: string; startsOn: string; endsOn: string | null; project: string; dayRate: number | null; payBasis?: PayBasis; terms: DailyTerms; basisNote: string | null; me: Me; requestId?: string }): Promise<{ id: string }> {
   const p = await myPayee(args.payeeId, args.me);
   if (args.endsOn && args.endsOn < args.startsOn) throw new ApiError(400, 'daily_period');
-  const { data, error } = await db().from('payroll_payee_engagements').insert({ payee_id: p.id, starts_on: args.startsOn, ends_on: args.endsOn, project: args.project, day_rate: args.dayRate, tax_state: args.terms.taxState, ei_state: args.terms.ei, np_state: args.terms.np, hi_state: args.terms.hi, basis_note: args.basisNote, created_by: args.me.id }).select('id').single();
+  const { data, error } = await db().from('payroll_payee_engagements').insert({ payee_id: p.id, starts_on: args.startsOn, ends_on: args.endsOn, project: args.project, day_rate: args.dayRate, ...(args.payBasis && args.payBasis !== 'DAY' ? { pay_basis: args.payBasis } : {}), tax_state: args.terms.taxState, ei_state: args.terms.ei, np_state: args.terms.np, hi_state: args.terms.hi, basis_note: args.basisNote, created_by: args.me.id }).select('id').single();
   if (error?.code === '23P01') throw new ApiError(409, 'daily_engagement_overlap'); // 같은 현장의 기간이 겹친다
   if (error || !data) boom('addEngagement', error);
   await payrollAudit({ actorId: args.me.id, action: 'daily.engagement.add', table: 'payroll_payee_engagements', subjectId: data!.id as string, requestId: args.requestId });
@@ -115,6 +115,7 @@ export async function addWork(args: { payeeId: string; workDate: string; project
   const { data: es } = await c.from('payroll_payee_engagements').select('*').eq('payee_id', p.id).eq('active', true).eq('project', args.project).lte('starts_on', args.workDate);
   const e = ((es ?? []) as Row[]).map(toEngagement).find((x) => x.endsOn === null || x.endsOn >= args.workDate);
   if (!e) throw new ApiError(409, 'daily_no_engagement'); // 그 날짜 · 현장의 고용 기간이 없다
+  if (args.quantity > QTY_MAX[e.payBasis]) throw new ApiError(400, 'daily_quantity'); // 지급 기준마다 수량 상한(일당 3 · 시간 744 · 월 12 · 건 100)
   const rate = args.dayRate ?? e.dayRate;
   if (!rate) throw new ApiError(400, 'daily_no_rate');
   const { data, error } = await c.from('payroll_daily_work').insert({ payee_id: p.id, engagement_id: e.id, work_date: args.workDate, project: args.project, segment_key: args.segmentKey, quantity: args.quantity, day_rate: rate, items: args.items, basis_note: args.basisNote, is_test: args.practice, created_by: args.me.id }).select('id').single();

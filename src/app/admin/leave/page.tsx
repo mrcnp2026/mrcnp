@@ -2,6 +2,7 @@
 // 위 줄(2026-10-11 의뢰인: 시프티의 휴가 「전체」처럼): 이름 검색 · 부서로 거르기 · 기준일 · [내 휴가]. 폰 목록은 권한(관리자 · 직원)별 묶음.
 // 기준일을 바꾸면 그날 적용되는 부여 기준의 받은 · 사용 · 잔여를 본다. 입력 칸의 계산값은 언제나 오늘 기준이다.
 // ★ 4-7: 발생일수는 관리자가 직접 입력. 참고 계산값은 옆에 "참고용"으로만 보여 주고 입력 칸에 미리 채우지 않는다.
+import { Select } from '@/components/Select';
 import { getMe } from '@/lib/auth';
 import { scopeFilter } from '@/lib/scope';
 import { ChevronRight, Download } from 'lucide-react';
@@ -11,13 +12,14 @@ import { Help, HelpTip } from '@/components/Help';
 import { ListBar } from '@/components/ListBar';
 import { PcTable } from '@/components/PcTable';
 import { Pager, pageOf } from '@/components/Pager';
-import { Card, Chip, PageShell } from '@/components/ui';
+import { Card, Chip, Empty, PageShell } from '@/components/ui';
+import { CountUp } from '@/components/CountUp';
 import { OFFICE } from '@/config/office';
 import { addDays } from '@/lib/calendar';
 import { leaveTypeName, suggestGrant } from '@/lib/leave';
 import { leaveBalancesFor } from '@/lib/leave-balance-data';
 import { loadAllLeaveTypes, loadLeaveGrants, loadLeaveRequests } from '@/lib/leave-data';
-import { buildOrgTree, groupScope } from '@/lib/org';
+import { groupScope, orgOptions } from '@/lib/org';
 import { loadOrgGroups } from '@/lib/org-data';
 import { createAdminClient } from '@/lib/supabase/admin';
 import { toKstDate } from '@/lib/time';
@@ -46,7 +48,7 @@ export default async function AdminLeavePage({ searchParams }: { searchParams: P
   ]);
   // 기준일 (없거나 잘못되면 오늘)
   const asOf = sp.to && /^\d{4}-\d{2}-\d{2}$/.test(sp.to) && !Number.isNaN(Date.parse(`${sp.to}T00:00:00Z`)) ? sp.to : today;
-  const groupOptions = buildOrgTree(groups).flatMap((d) => [{ id: d.id, label: d.name }, ...d.teams.map((x) => ({ id: x.id, label: `${d.name} › ${x.name}` }))]);
+  const groupOptions = orgOptions(groups);
   const g = groupOptions.some((o) => o.id === sp.g) ? sp.g! : '';
   const scope = g ? groupScope(groups, g) : null;
   const q = (sp.q ?? '').trim().slice(0, 40);
@@ -80,9 +82,38 @@ export default async function AdminLeavePage({ searchParams }: { searchParams: P
     const qs = u.toString();
     return `/admin/leave${qs ? `?${qs}` : ''}`;
   };
+  // 직권 [고치기] — 그 직원의 휴가 화면에서 이 휴가의 고치기 양식이 열린 채로 간다 (2026-10-23 의뢰인)
+  const editHref = (empId: string, leaveId: string) => `/admin/leave/emp/${empId}?edit=${leaveId}#leave-${leaveId}`;
   const viewBtn = (on: boolean) => `inline-flex h-8 items-center border px-3 text-sm first:rounded-l-button last:rounded-r-button ${on ? 'z-10 border-primary bg-primary-tint font-bold text-primary' : 'border-border bg-bg text-muted'}`;
   const approved = requests.filter((r) => r.status === 'approved' && r.endDate >= addDays(today, -31)).sort((a, b) => (a.startDate > b.startDate ? -1 : 1)); // 다가오는 · 최근 휴가가 위로 (2026-10-17 디자인)
   const approvedPage = pageOf(approved, sp.ap, 10); // 폰 목록은 10건씩 (2026-10-15)
+
+  // 올해 한눈에 — PC 목록 위 · 폰 목록 위 둘 다 (2026-10-22 의뢰인: 「휴가내역도 시프티를 그냥 베꼈다」, 「모바일에 PC 디자인이 안 들어갔다」)
+  const summaryEl = (() => {
+            const ym = today.slice(0, 7);
+            const deducted = inYear.reduce((a, r) => a + (typeOf.get(r.typeCode)?.deductsBalance ? r.days : 0), 0);
+            const people = new Set(inYear.map((r) => r.employeeId)).size;
+            const thisMonth = inYear.filter((r) => r.startDate.slice(0, 7) <= ym && r.endDate.slice(0, 7) >= ym).length;
+            const waiting = requests.filter((r) => r.status === 'pending' && name.has(r.employeeId)).length;
+            return (
+              <div className="grid grid-cols-2 gap-2 lg:grid-cols-4 lg:gap-3">
+                {([['sumCount', String(inYear.length), 'text-text'], ['sumDays', n(deducted), 'text-primary'], ['sumPeople', String(people), 'text-text'], [year === today.slice(0, 4) ? 'sumMonth' : 'sumWaiting', String(year === today.slice(0, 4) ? thisMonth : waiting), 'text-text']] as const).map(([k, v, tone]) => (
+                  <div key={k} className="flex flex-col gap-1 rounded-card border border-border bg-bg px-4 py-3 lg:px-5 lg:py-4">
+                    <span className="text-sm font-semibold text-muted">{t(`pcSum.${k}`, { y: year })}</span>
+                    <span className={`num text-2xl font-bold lg:text-3xl ${v === '0' ? 'text-faint' : tone}`}>
+                      <CountUp value={v} />
+                    </span>
+                  </div>
+                ))}
+                {waiting > 0 && year === today.slice(0, 4) && (
+                  <Link href="/admin/inbox" className="col-span-2 flex lg:col-span-4 items-center justify-between rounded-card bg-warn-tint px-5 py-3 text-sm font-semibold text-warn">
+                    {t('pcSum.waitingLine', { n: waiting })}
+                    <ChevronRight aria-hidden size={16} />
+                  </Link>
+                )}
+              </div>
+            );
+  })();
 
   return (
     <PageShell wide flush>
@@ -111,13 +142,13 @@ export default async function AdminLeavePage({ searchParams }: { searchParams: P
             <form action="/admin/leave" className="flex items-center gap-2">
               {view === 'month' && <input type="hidden" name="v" value="month" />}
               {sp.live === '1' && <input type="hidden" name="live" value="1" />}
-              <select name="y" defaultValue={year} aria-label={t('yearOf', { y: year })} className="num h-8 rounded-button border border-border bg-bg px-2">
+              <Select name="y" defaultValue={year} aria-label={t('yearOf', { y: year })} className="num h-8 rounded-button border border-border bg-bg px-2">
                 {years.map((y) => (
                   <option key={y} value={y}>
                     {t('yearOf', { y })}
                   </option>
                 ))}
-              </select>
+              </Select>
               <button type="submit" className="inline-flex h-8 items-center rounded-button border border-border bg-bg px-3 text-sm text-muted">
                 {t('show')}
               </button>
@@ -131,6 +162,7 @@ export default async function AdminLeavePage({ searchParams }: { searchParams: P
               </Link>
             </div>
           </div>
+          {summaryEl}
           {view === 'list' ? (
             <PcTable
               total
@@ -159,38 +191,48 @@ export default async function AdminLeavePage({ searchParams }: { searchParams: P
                     hours: { text: ty?.isPaid ? t('hoursValue', { h: n((ty.hours ?? 8) * units) }) : t('hoursValue', { h: 0 }) },
                     deduct: { text: t('daysValue', { d: n(ty?.deductsBalance ? r.days : 0) }) },
                     reason: { text: r.reason ?? '' },
-                    act: { text: '', node: admin ? <span className="inline-flex flex-col items-end"><LeaveCancel id={r.id} name={name.get(r.employeeId) ?? ''} compact /></span> : null },
+                    act: { text: '', node: admin ? <span className="inline-flex items-center justify-end gap-2">{top && <Link href={editHref(r.employeeId, r.id)} className="inline-flex min-h-9 items-center rounded-button border border-border bg-bg px-3 text-sm font-bold text-primary hover:bg-primary-tint">{tl('directEditOpen')}</Link>}<LeaveCancel id={r.id} name={name.get(r.employeeId) ?? ''} compact /></span> : null },
                   },
                 };
               })}
             />
           ) : (
-            <div className="overflow-x-auto border-t border-l border-border bg-bg">
+            <div className="overflow-x-auto rounded-card border border-border bg-bg shadow-card">
               <table className="num w-full border-separate border-spacing-0 text-sm">
                 <thead>
                   <tr>
-                    <th scope="col" className="w-40 border-r border-b border-border px-3 py-2 text-left">{t('colName')}</th>
+                    <th scope="col" className="w-48 border-b border-border px-4 py-3 text-left text-xs font-semibold text-muted">{t('colName')}</th>
                     {[...Array(12)].map((_, i) => (
-                      <th key={i} scope="col" className="border-r border-b border-border px-2 py-2 text-center">{t('monthOf', { m: i + 1 })}</th>
+                      <th key={i} scope="col" className={`border-b border-border px-1 py-3 text-center text-xs font-semibold ${year === today.slice(0, 4) && i + 1 === Number(today.slice(5, 7)) ? 'text-primary' : 'text-muted'}`}>{t('monthOf', { m: i + 1 })}</th>
                     ))}
-                    <th scope="col" className="border-r border-b border-border px-3 py-2 text-center">{t('totalCount')}</th>
+                    <th scope="col" className="border-b border-border px-4 py-3 text-right text-xs font-semibold text-muted">{t('totalCount')}</th>
                   </tr>
                 </thead>
                 <tbody>
                   {shown.map((p) => {
                     const mine = inYear.filter((r) => r.employeeId === p.id);
                     return (
-                      <tr key={p.id}>
-                        <th scope="row" className="border-r border-b border-border px-3 py-2 text-left font-bold">{p.name}</th>
+                      <tr key={p.id} className="group">
+                        <th scope="row" className="border-b border-border px-4 py-2 text-left font-normal group-hover:bg-surface">
+                          <span className="flex items-center gap-2.5">
+                            <span aria-hidden className="flex size-7 shrink-0 items-center justify-center rounded-chip bg-primary-tint text-xs font-bold text-primary">{p.name.slice(0, 1)}</span>
+                            <span className="truncate font-bold">{p.name}</span>
+                          </span>
+                        </th>
                         {[...Array(12)].map((_, i) => {
-                          const c = mine.filter((r) => Number(r.startDate.slice(5, 7)) === i + 1).length;
+                          const list = mine.filter((r) => Number(r.startDate.slice(5, 7)) === i + 1);
+                          const c = list.length;
                           return (
-                            <td key={i} className="border-r border-b border-border px-2 py-2 text-center">
-                              {c > 0 ? <span className="inline-flex h-6 min-w-6 items-center justify-center rounded-button bg-primary-tint px-1 font-bold text-primary">{c}</span> : <span className="text-border">+</span>}
+                            <td key={i} className="border-b border-border px-1 py-2 text-center group-hover:bg-surface">
+                              {c > 0 && (
+                                <span title={list.map((r) => `${day(r.startDate)} ${leaveName(r.typeCode)}`).join('\n')} className={`fx-pop inline-flex h-7 min-w-8 items-center justify-center rounded-button px-1.5 font-bold ${c >= 3 ? 'bg-primary text-on-primary' : c === 2 ? 'bg-primary/40 text-primary' : 'bg-primary-tint text-primary'}`}>
+                                  {c}
+                                </span>
+                              )}
                             </td>
                           );
                         })}
-                        <td className="border-r border-b border-border px-3 py-2 text-center font-bold">{mine.length}</td>
+                        <td className={`border-b border-border px-4 py-2 text-right font-bold group-hover:bg-surface ${mine.length ? '' : 'text-faint'}`}>{mine.length || '–'}</td>
                       </tr>
                     );
                   })}
@@ -220,6 +262,15 @@ export default async function AdminLeavePage({ searchParams }: { searchParams: P
       </div>
       {/* PC: 직원 한 명 = 표 한 줄 (2026-10-06 의뢰인: 직원이 20명이면 카드 20장이 쌓인다). 「입력·수정」을 누른 직원의 입력 칸만 표 아래에 열린다 · 폰: 직원별 카드 */}
       <Card className={`hidden overflow-x-auto p-0 ${view === 'accrual' ? 'lg:block' : ''}`}>
+        {/* 칸 설명 (2026-10-25 의뢰인: 「대기는 뭐야? 산정 기간은?」) */}
+        <details className="m-3 rounded-card bg-surface px-4 py-2 text-sm">
+          <summary className="min-h-9 cursor-pointer py-1.5 font-bold text-muted">{t('legendTitle')}</summary>
+          <ul className="flex flex-col gap-1.5 pt-1 pb-2 text-muted">
+            {(['span', 'granted', 'used', 'pending', 'remaining'] as const).map((k) => (
+              <li key={k}>{t(`legend.${k}`)}</li>
+            ))}
+          </ul>
+        </details>
         <table className="w-full text-sm">
           <thead>
             <tr className="border-b border-border">
@@ -245,7 +296,15 @@ export default async function AdminLeavePage({ searchParams }: { searchParams: P
                   <td className="px-4 py-3 num text-muted">{bal.grant?.periodLabel ?? '–'}</td>
                   {bal.grant || bal.ledger ? (
                     ([bal.granted, bal.used, bal.pending, bal.remaining] as const).map((v, i) => (
-                      <td key={i} className={`px-4 py-3 num text-right ${i === 3 ? 'font-bold text-primary' : ''}`}>{n(v)}</td>
+                      <td key={i} className={`px-4 py-3 num text-right ${i === 3 ? 'font-bold text-primary' : i === 2 && v === 0 ? 'text-faint' : ''}`}>
+                        {i === 2 && v === 0 ? '–' : n(v)}
+                        {/* 받은 연차 중 쓴 만큼 (2026-10-22 의뢰인: 그래프가 채워지는 모습) */}
+                        {i === 3 && (
+                          <span aria-hidden className="mt-1 ml-auto block h-1.5 w-20 overflow-hidden rounded-chip bg-surface">
+                            <span className="fx-grow-x block h-full rounded-chip bg-primary" style={{ width: `${bal.granted > 0 ? Math.min(100, (bal.used / bal.granted) * 100) : 0}%` }} />
+                          </span>
+                        )}
+                      </td>
                     ))
                   ) : (
                     <td colSpan={4} className="px-4 py-3 text-right">
@@ -265,7 +324,8 @@ export default async function AdminLeavePage({ searchParams }: { searchParams: P
       </Card>
 
       {/* 폰: 직원 한 명 = 한 줄 (받은 · 사용 · 잔여). 누르면 그 직원의 입력 칸이 아래에 열린다 (2026-10-10 의뢰인: 시프티의 휴가 「전체」처럼) */}
-      {shown.length === 0 && <p className="mt-3 rounded-card bg-bg p-5 text-sm text-faint">{t('emptyPeople')}</p>}
+      {view !== 'accrual' && <div className="mt-3 lg:hidden">{summaryEl}</div>}
+      {shown.length === 0 && <div className="mt-3 lg:mt-0"><Empty title={t('emptyPeople')} /></div>}
       <div className="-mx-4 flex flex-col lg:hidden">
         {byRole.map(({ role, list }, gi) => (
           <section key={role}>
@@ -375,7 +435,12 @@ export default async function AdminLeavePage({ searchParams }: { searchParams: P
               <div key={r.id} className="flex flex-col gap-1 py-2.5">
                 <div className="flex items-center justify-between gap-2">
                   <Link href={`/admin/leave/req/${r.id}`} className="font-semibold">{name.get(r.employeeId)} ›</Link>
-                  {admin && <LeaveCancel id={r.id} name={name.get(r.employeeId) ?? ''} compact />}
+                  {admin && (
+                    <span className="flex items-center gap-2">
+                      {top && <Link href={editHref(r.employeeId, r.id)} className="inline-flex min-h-9 items-center rounded-button border border-border bg-bg px-3 text-sm font-bold text-primary">{tl('directEditOpen')}</Link>}
+                      <LeaveCancel id={r.id} name={name.get(r.employeeId) ?? ''} compact />
+                    </span>
+                  )}
                 </div>
                 <p className="num text-sm text-muted">
                   {r.startDate === r.endDate ? day(r.startDate) : `${day(r.startDate)} ~ ${day(r.endDate)}`} · {leaveName(r.typeCode)} · {tl('days', { n: n(r.days) })}{r.startTime && ` · ${r.startTime}-${r.endTime}`}

@@ -86,3 +86,36 @@ describe('같은 날 다른 현장 (2026-10-20)', () => {
     expect(r.warnings).not.toContain('same_day_projects');
   });
 });
+
+// 프리랜서(사업소득 3.3%) — 2026-10-22 의뢰인
+describe('사업소득 3.3%', () => {
+  const biz: DailyTerms = { taxState: 'BUSINESS', ei: 'UNKNOWN', np: 'UNKNOWN', hi: 'UNKNOWN' };
+  const row = (id: string, workDate: string, quantity: number, dayRate: number, items: DailyWork['items'] = []): DailyWork => ({ id, workDate, project: '', quantity, dayRate, items, status: 'CONFIRMED' });
+  it('월 합계 × 3%, 10원 미만 버림, 지방소득세 10% — 보험 「모름」이어도 막지 않는다', () => {
+    const r = calcDaily([row('a', '2026-11-30', 1, 2_000_000)], biz);
+    expect(r.state).toBe('OK');
+    if (r.state !== 'OK') return;
+    expect(r).toMatchObject({ gross: 2_000_000, incomeTax: 60_000, localTax: 6_000, net: 1_934_000, rule: 'business-tax-temp-1' });
+  });
+  it('시간당: 수량(시간) × 단가, 한 달 합계로 한 번 계산', () => {
+    const r = calcDaily([row('a', '2026-11-03', 8, 12_345), row('b', '2026-11-04', 7.5, 12_345)], biz);
+    if (r.state !== 'OK') throw new Error('blocked');
+    const gross = Math.round(8 * 12_345) + Math.round(7.5 * 12_345);
+    expect(r.gross).toBe(gross);
+    expect(r.incomeTax).toBe(Math.floor(Math.floor((gross * 3) / 100) / 10) * 10);
+  });
+  it('소득세 1,000원 미만이면 떼지 않는다', () => {
+    const r = calcDaily([row('a', '2026-11-03', 1, 30_000)], biz);
+    if (r.state !== 'OK') throw new Error('blocked');
+    expect(r.incomeTax).toBe(0);
+    expect(r.localTax).toBe(0);
+  });
+  it('비과세로 넣은 금액도 기준에 넣고 경고', () => {
+    const r = calcDaily([row('a', '2026-11-03', 1, 100_000, [{ label: '교통비', kind: 'NONTAX', amount: 50_000 }])], biz);
+    if (r.state !== 'OK') throw new Error('blocked');
+    expect(r.taxable).toBe(150_000);
+    expect(r.nontax).toBe(0);
+    expect(r.incomeTax).toBe(4_500);
+    expect(r.warnings).toContain('business_no_exempt');
+  });
+});

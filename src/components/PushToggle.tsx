@@ -33,7 +33,7 @@ const DISMISS = 'push-prompt-dismissed'; // 홈 안내를 닫은 때(ms) — 14�
 
 // mode='prompt': 직원 폰 홈의 한 줄 안내(2026-10-16) — 알림이 꺼져 있을 때만 보이고, 닫으면 14일 동안 안 보인다
 // audience: 직원은 「출근 · 퇴근을 잊으면」, 관리자는 「휴가 · 정정 · 미출근」 안내
-export function PushToggle({ mode = 'menu', audience = 'staff' }: { mode?: 'menu' | 'prompt'; audience?: 'staff' | 'employee' } = {}) {
+export function PushToggle({ mode = 'menu', audience = 'staff', bare = false }: { mode?: 'menu' | 'prompt'; audience?: 'staff' | 'employee'; bare?: boolean } = {}) {
   const t = useTranslations('push');
   const [hidden, setHidden] = useState(() => {
     if (mode !== 'prompt' || typeof window === 'undefined') return false;
@@ -110,7 +110,7 @@ export function PushToggle({ mode = 'menu', audience = 'staff' }: { mode?: 'menu
   if (mode === 'prompt') {
     if (hidden || (state !== 'off' && state !== 'ios-home')) return null;
     return (
-      <div className="flex items-center gap-2 rounded-card border border-primary bg-primary-tint py-2 pr-1 pl-3" data-push-prompt={state}>
+      <div className={bare ? 'flex items-center gap-2 py-2 pr-1 pl-3' : 'flex items-center gap-2 rounded-card border border-primary bg-primary-tint py-2 pr-1 pl-3'} data-push-prompt={state}>
         <Bell aria-hidden size={18} className="shrink-0 text-primary" />
         <p className="min-w-0 flex-1 text-sm text-text">{note ?? (state === 'ios-home' ? t('iosHome') : t('promptEmployee'))}</p>
         {state === 'off' && (

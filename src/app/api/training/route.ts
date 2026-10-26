@@ -13,6 +13,7 @@ export const POST = api('training.sign', async (req) => {
   if (!me) throw new ApiError(401, 'not_signed_in');
   const b = await readJson(req);
   if (typeof b.sessionId !== 'string' || !UUID.test(b.sessionId)) throw new ApiError(400, 'invalid_input');
+  if (b.agreed !== true) throw new ApiError(400, 'training_consent_required'); // 4가지 확인 체크 (2026-10-22)
   const signature = cleanSignature(b.signature);
   if (signature === undefined) throw new ApiError(400, 'training_signature_bad');
   await sign({ sessionId: b.sessionId, employeeId: me.id, method: 'APP', signature, note: null });

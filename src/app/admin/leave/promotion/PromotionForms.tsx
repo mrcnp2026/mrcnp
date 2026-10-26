@@ -1,5 +1,6 @@
 'use client';
 // 연차 사용 촉진의 조작부 — 만들기 · 대상 빼기/넣기 · 안내 보내기 · 처리 · 닫기(관리자), 사용 계획 내기(직원). 처리하면 화면을 새로 읽는다.
+import { Select } from '@/components/Select';
 import { useTranslations } from 'next-intl';
 import { useRouter } from 'next/navigation';
 import { useState } from 'react';
@@ -63,10 +64,10 @@ export function CampaignCreate({ today, sample }: { today: string; sample: strin
       </label>
       <label className="flex flex-col gap-1">
         <span className="font-bold">{t('fKind')}</span>
-        <select value={kind} onChange={(e) => { setKind(e.target.value as PromotionKind); setBasis(null); setDue(null); }} className={field}>
+        <Select value={kind} onChange={(e) => { setKind(e.target.value as PromotionKind); setBasis(null); setDue(null); }} className={field}>
           <option value="ANNUAL">{t('kind.ANNUAL')}</option>
           <option value="UNDER_ONE_YEAR">{t('kind.UNDER_ONE_YEAR')}</option>
-        </select>
+        </Select>
       </label>
       {s && <p className="num rounded-button bg-surface p-2 text-sm md:col-span-2">{t('schedule', { from: s.firstFrom, to: s.firstTo, second: s.secondBy })}</p>}
       <label className="flex flex-col gap-1">

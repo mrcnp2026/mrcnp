@@ -68,6 +68,11 @@ export default async function LeaveLedgerPage({ searchParams }: { searchParams: 
     const p = payouts.get(b.employeeId);
     if (p) { b.payout = p.amount; b.payoutState = p.state; }
   }
+  // 마지막 자동 발생 실행 (매일 새벽 정기 작업 또는 [지금 바로 실행])
+  const { data: runRow } = await createAdminClient().from('leave_runs').select('started_at, summary').eq('kind', 'accrual').eq('status', 'done').order('started_at', { ascending: false }).limit(1).maybeSingle();
+  const lastRun = runRow ? { at: new Date(runRow.started_at as string).toLocaleString('ko-KR', { timeZone: 'Asia/Seoul', month: 'numeric', day: 'numeric', hour: '2-digit', minute: '2-digit' }), created: Number((runRow.summary as { created?: number } | null)?.created ?? 0) } : null;
+  const { data: expRow } = await createAdminClient().from('leave_runs').select('started_at, summary').eq('kind', 'expiry').in('status', ['done', 'partial']).order('started_at', { ascending: false }).limit(1).maybeSingle();
+  const lastExpiry = expRow ? { at: new Date(expRow.started_at as string).toLocaleString('ko-KR', { timeZone: 'Asia/Seoul', month: 'numeric', day: 'numeric', hour: '2-digit', minute: '2-digit' }), expired: Number((expRow.summary as { expired?: number } | null)?.expired ?? 0) } : null;
   const emp = sp.emp && nameOf.has(sp.emp) ? sp.emp : null;
   const empLots = emp ? lots.filter((l) => l.employeeId === emp).map((l) => toLine(l, remAll)) : [];
   const lotLabel = new Map(lots.map((l) => [l.id, `${l.grantedOn}`]));
@@ -81,6 +86,8 @@ export default async function LeaveLedgerPage({ searchParams }: { searchParams: 
     <PageShell wide>
       <ListHead title={t('title')} desc={t('intro')} settingsHref="/admin/settings?tab=leave" settingsLabel={tGear('item.setLeave')} />
       <LedgerBoard
+        lastRun={lastRun}
+        lastExpiry={lastExpiry}
         group={pg ? { id: pg.id, name: pg.name } : null}
         today={today}
         live={sp.live === '1'}

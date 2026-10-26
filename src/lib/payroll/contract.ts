@@ -177,15 +177,18 @@ export function validateItemAssign(b: Record<string, unknown>): Result<ItemAssig
 
 /** 급여 계산을 하려면 더 필요한 것. 비어 있으면 준비됨 */
 export type SetupGap = 'no_contract' | 'no_monthly_hours' | 'no_annual_divisor' | 'no_tax' | 'insurance_unknown' | 'no_joined_on';
-export function setupGaps(args: { contract: Pick<ContractInput, 'payType' | 'monthlyHours' | 'annualDivisor'> | null; tax: Pick<TaxInput, 'insurance'> | null; joinedOn: string | null }): SetupGap[] {
+export function setupGaps(args: { contract: Pick<ContractInput, 'payType' | 'monthlyHours' | 'annualDivisor'> | null; tax: Pick<TaxInput, 'insurance'> | null; joinedOn: string | null; taxDefaults?: boolean }): SetupGap[] {
   const out: SetupGap[] = [];
   if (!args.contract) out.push('no_contract');
   else {
     if (args.contract.payType !== 'HOURLY' && args.contract.monthlyHours === null) out.push('no_monthly_hours'); // 시급을 낼 수 없어 연장 · 야간 · 휴일 수당을 계산하지 못한다
     if (args.contract.payType === 'ANNUAL' && args.contract.annualDivisor === null) out.push('no_annual_divisor');
   }
-  if (!args.tax) out.push('no_tax');
-  else if (INSURERS.some((k) => args.tax!.insurance[k].state === 'UNKNOWN')) out.push('insurance_unknown');
+  // 회사 기본값(4대보험)을 정해 두었으면 세무 판이 없거나 보험이 「모름」이어도 막히지 않는다 (2026-10-25)
+  if (!args.taxDefaults) {
+    if (!args.tax) out.push('no_tax');
+    else if (INSURERS.some((k) => args.tax!.insurance[k].state === 'UNKNOWN')) out.push('insurance_unknown');
+  }
   if (!args.joinedOn) out.push('no_joined_on');
   return out;
 }

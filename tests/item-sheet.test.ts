@@ -23,7 +23,7 @@ describe('readItemSheet', () => {
   });
   it('문제 줄: 종류 바꾸기 · 모르는 낱말 · 같은 코드 두 번 · 잘못된 코드', () => {
     const r = readItemSheet(
-      [row({ kind: '공제' }, 2), row({ calcKind: '아무거나' , code: 'X1' }, 3), row({ code: 'DUP', koName: 'a' }, 4), row({ code: 'DUP', koName: 'b' }, 5), row({ defaultAmount: 1, validFrom: '2025-12-01' }, 6), row({ code: '한글' }, 7)],
+      [row({ kind: '공제', taxExemptLimit: '' }, 2), row({ calcKind: '아무거나' , code: 'X1' }, 3), row({ code: 'DUP', koName: 'a' }, 4), row({ code: 'DUP', koName: 'b' }, 5), row({ defaultAmount: 1, validFrom: '2025-12-01' }, 6), row({ code: '한글' }, 7)],
       current, '2026-10-20',
     );
     expect(r.map((l) => l.problem)).toEqual(['kind_locked', 'bad_value', undefined, 'duplicate', 'duplicate', 'bad_code']);

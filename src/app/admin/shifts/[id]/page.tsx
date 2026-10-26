@@ -1,4 +1,7 @@
 // 근무일정 틀 상세 (의뢰인 2026-10-10: 시프티의 「근무일정 템플릿」 화면처럼) — 틀 이름 · 시간 · 유형 · 색 · 메모 + 이 틀을 적용할 직원.
+import { getShiftKindNames } from '@/lib/settings';
+import { withKindNames } from '@/lib/shift-kind-names';
+import { toKstDate } from '@/lib/time';
 import { getTranslations } from 'next-intl/server';
 import { notFound } from 'next/navigation';
 import { AddSheet } from '@/components/AddSheet';
@@ -17,6 +20,8 @@ import { NOT_SYSTEM_ADMIN } from '@/lib/system-admin'; // 시스템관리자는 
 
 export default async function ShiftPage({ params }: { params: Promise<{ id: string }> }) {
   const t = await getTranslations('admin.shifts');
+  const kindNames = await getShiftKindNames(toKstDate(new Date()));
+  const kn = withKindNames((k: string) => t(`kinds.${k}`), kindNames);
   const tc = await getTranslations('common');
   const { id } = await params;
   const [all, groups, { data: ppl }] = await Promise.all([
@@ -36,8 +41,8 @@ export default async function ShiftPage({ params }: { params: Promise<{ id: stri
   const tf = await getTranslations('frame');
   return (
     <PageShell wide>
-      <TwoPane title={tf('item.shifts')} current={`/admin/shifts/${id}`} items={all.map((s) => ({ href: `/admin/shifts/${s.id}`, label: s.name, off: !s.active }))}>
-      <DetailBar plain back={x.active ? '/admin/shifts' : '/admin/shifts?tab=off'} backLabel={tc('back')} title={t('title')} extra={<OpenSheetButton sheet="shift-edit">{t('edit')}</OpenSheetButton>} />
+      <TwoPane title={tf('item.shifts')} current={`/admin/shifts/${id}`} items={all.map((s) => ({ href: `/admin/shifts/${s.id}`, label: s.name, sub: `${s.startTime} - ${s.endTime}`, off: !s.active }))}>
+      <DetailBar plain back="/admin/shifts" backLabel={tc('back')} title={t('title')} extra={<OpenSheetButton sheet="shift-edit">{t('edit')}</OpenSheetButton>} />
       <div className="flex flex-wrap items-center gap-2 px-1">
         <span aria-hidden className={`size-7 shrink-0 rounded-button ${SHIFT_COLOR_CLASS[x.color]}`} />
         <h1 className="text-2xl font-extrabold tracking-tight">{x.name}</h1>
@@ -55,7 +60,7 @@ export default async function ShiftPage({ params }: { params: Promise<{ id: stri
             <Field label={t('span')}>
               <span className="num">{t('spanHm', { h: Math.floor(span / 60), m: span % 60 })}</span>
             </Field>
-            <Field label={t('kind')}>{t(`kinds.${x.kind}`)}</Field>
+            <Field label={t('kind')}>{kn(x.kind)}</Field>
             <Field label={t('memo')}>{x.memo ?? t('memoNone')}</Field>
           </FieldList>
           {x.kind === 'deemed' && <p className="rounded-card bg-primary-tint p-5 text-sm text-primary">{t('deemedNote')}</p>}
@@ -69,7 +74,7 @@ export default async function ShiftPage({ params }: { params: Promise<{ id: stri
         </div>
         <AddSheet id="shift-edit" title={t('edit')} modal>
           <Card className="flex flex-col gap-3">
-            <ShiftForm key={`${x.name}|${x.startTime}|${x.endTime}|${x.kind}|${x.color}|${x.memo}`} sheet="shift-edit" initial={{ id: x.id, name: x.name, startTime: x.startTime, endTime: x.endTime, kind: x.kind, color: x.color, memo: x.memo ?? '' }} />
+            <ShiftForm kindNames={kindNames} key={`${x.name}|${x.startTime}|${x.endTime}|${x.kind}|${x.color}|${x.memo}`} sheet="shift-edit" initial={{ id: x.id, name: x.name, startTime: x.startTime, endTime: x.endTime, kind: x.kind, color: x.color, memo: x.memo ?? '' }} />
           </Card>
         </AddSheet>
       </div>

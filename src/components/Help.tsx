@@ -28,7 +28,8 @@ export function Help({ children }: { children: ReactNode }) {
  * 제목 옆 ? — 누르면 작은 말풍선으로 설명이 뜬다 (2026-10-14 의뢰인: 「상세 설명은 ? 아이콘을 눌러야 나오게, 텍스트를 장황하게 바로 노출하지 말 것」).
  * 화면 제목(h1) · 설정 줄 이름 옆에 둔다. 바깥을 누르거나 Esc로 닫힌다. 해야 할 행동 · 경고는 여기 넣지 않고 그대로 보인다.
  */
-export function HelpTip({ children, label }: { children: ReactNode; label?: string }) {
+// phone: 폰 통합설정에서 제목이 숨겨질 때(위 머리가 제목을 맡음) ? 옆에 보이는 글자 — 홀로 남은 ? 가 무엇인지 알게 (2026-10-22)
+export function HelpTip({ children, label, phone = false }: { children: ReactNode; label?: string; phone?: boolean }) {
   const t = useTranslations('common');
   const [open, setOpen] = useState(false);
   const id = useId();
@@ -48,6 +49,7 @@ export function HelpTip({ children, label }: { children: ReactNode; label?: stri
     <span ref={box} className="relative inline-flex align-middle">
       <button type="button" aria-label={label ?? t('help')} aria-expanded={open} aria-controls={id} onClick={() => setOpen(!open)} className={`inline-flex size-11 shrink-0 items-center justify-center rounded-button lg:size-8 ${open ? 'text-primary' : 'text-faint hover:text-primary'}`}>
         <CircleHelp aria-hidden size={18} strokeWidth={1.75} />
+        {phone && <span data-help-text className="hidden pl-1 text-sm font-semibold whitespace-nowrap">{t('screenHelp')}</span>}
       </button>
       {open && (
         <span id={id} role="note" className="absolute top-full left-0 z-30 mt-1 block w-72 lg:w-96 rounded-card border border-border bg-bg p-3.5 text-sm leading-relaxed font-normal tracking-normal whitespace-normal text-text shadow-pop">

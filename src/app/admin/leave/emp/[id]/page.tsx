@@ -20,7 +20,7 @@ import { leaveTypeName } from '@/lib/leave';
 import { DirectLeaveRow } from './DirectLeaveRow';
 import { loadLots } from '@/lib/leave-ledger-data';
 
-export default async function LeaveAccrualPage({ params, searchParams }: { params: Promise<{ id: string }>; searchParams: Promise<{ to?: string; live?: string }> }) {
+export default async function LeaveAccrualPage({ params, searchParams }: { params: Promise<{ id: string }>; searchParams: Promise<{ to?: string; live?: string; edit?: string }> }) {
   const [t, tl, tv, f, { id }, sp] = await Promise.all([getTranslations('admin.leaveAccrual'), getTranslations('admin.leave'), getTranslations('leave'), getFormatter(), params, searchParams]);
   if (!/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(id)) notFound();
   const today = toKstDate(new Date());
@@ -140,7 +140,7 @@ export default async function LeaveAccrualPage({ params, searchParams }: { param
           {live.length > 0 && (
             <ul className="-mx-4 divide-y divide-border border-y border-border bg-bg lg:mx-0 lg:rounded-card lg:border">
               {live.map((r) => (
-                <li key={r.id} className="flex flex-wrap items-center gap-2 px-5 py-2.5">
+                <li key={r.id} id={`leave-${r.id}`} className={`flex scroll-mt-20 flex-wrap items-center gap-2 px-5 py-2.5 ${sp.edit === r.id ? 'bg-primary-tint' : ''}`}>
                   <span className="flex min-w-0 flex-col">
                     <span className="num font-bold">
                       {dot(r.startDate)}
@@ -152,7 +152,7 @@ export default async function LeaveAccrualPage({ params, searchParams }: { param
                       {r.status === 'pending' && <Chip tone="warn">{tv('status.pending')}</Chip>}
                     </span>
                   </span>
-                  <DirectLeaveRow today={today} types={typeOptions} name={p.name as string} approved={r.status === 'approved'} direct={{ employeeId: id, replaceId: r.id, initial: { typeCode: r.typeCode, startDate: r.startDate, endDate: r.endDate, startTime: r.startTime ?? null } }} />
+                  <DirectLeaveRow defaultOpen={sp.edit === r.id} today={today} types={typeOptions} name={p.name as string} approved={r.status === 'approved'} direct={{ employeeId: id, replaceId: r.id, initial: { typeCode: r.typeCode, startDate: r.startDate, endDate: r.endDate, startTime: r.startTime ?? null } }} />
                 </li>
               ))}
             </ul>

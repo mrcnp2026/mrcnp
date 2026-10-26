@@ -9,7 +9,7 @@ export default async function ConsolePage() {
   const t = await getTranslations('frame');
   return (
     <PageShell wide>
-      <div>
+      <div data-dup-title>
         <h1 className="text-2xl font-bold">{t('space.console')}</h1>
         <p className="pt-1 text-sm text-muted">{t('console.lead')}</p>
       </div>

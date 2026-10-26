@@ -11,7 +11,8 @@ import { currentPosition, geoOkBefore, rememberGeoOk } from './current-position'
 
 type State = 'unknown' | 'granted' | 'prompt' | 'denied';
 
-export function LocationPrompt() {
+/** bare: 상자 없이 한 줄만 (여러 안내를 한 상자에 묶을 때) */
+export function LocationPrompt({ bare = false }: { bare?: boolean } = {}) {
   const t = useTranslations('locationPrompt');
   const [state, setState] = useState<State>('unknown');
   const [busy, setBusy] = useState(false);
@@ -34,7 +35,7 @@ export function LocationPrompt() {
   }, []);
   if (state === 'unknown' || state === 'granted') return null;
   return (
-    <div className="flex items-center gap-2 rounded-card border border-warn bg-warn-tint py-2 pr-2 pl-3" data-location-prompt={state}>
+    <div className={bare ? 'flex items-center gap-2 py-2 pr-2 pl-3' : 'flex items-center gap-2 rounded-card border border-warn bg-warn-tint py-2 pr-2 pl-3'} data-location-prompt={state}>
       <MapPin aria-hidden size={18} className="shrink-0 text-warn" />
       <p className="min-w-0 flex-1 text-sm text-text">{t(state === 'denied' ? 'denied' : 'ask')}</p>
       {state === 'prompt' && (

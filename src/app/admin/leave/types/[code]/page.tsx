@@ -31,7 +31,7 @@ export default async function LeaveTypePage({ params }: { params: Promise<{ code
   const tf = await getTranslations('frame');
   return (
     <PageShell wide>
-      <TwoPane title={tf('item.leaveTypes')} current={`/admin/leave/types/${code}`} items={all.map((v) => ({ href: `/admin/leave/types/${v.code}`, label: leaveTypeName(all, v.code, tl), off: !v.active }))}>
+      <TwoPane title={tf('item.leaveTypes')} current={`/admin/leave/types/${code}`} items={all.map((v) => ({ href: `/admin/leave/types/${v.code}`, label: leaveTypeName(all, v.code, tl), sub: v.groupName, off: !v.active }))}>
       <DetailBar plain back={x.active ? '/admin/leave/types' : '/admin/leave/types?tab=off'} backLabel={tc('back')} title={t('title')} />
       <div className="flex flex-wrap items-center gap-2 px-1">
         <h1 className="text-2xl font-extrabold tracking-tight">{name}</h1>

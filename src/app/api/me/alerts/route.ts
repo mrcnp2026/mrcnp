@@ -4,6 +4,7 @@ import { getLocale } from 'next-intl/server';
 import { getMe } from '@/lib/auth';
 import { visibleNoticesNow } from '@/lib/notices';
 import { pendingCounts } from '@/lib/period-data';
+import { pendingSignupCount } from '@/lib/signup';
 import { switchOn } from '@/lib/switches';
 import { myDecidedCount } from '@/lib/my-decided';
 import { unreadCount } from '@/lib/work-messages';
@@ -15,7 +16,8 @@ export async function GET(): Promise<Response> {
   const [notices, messages, requests, decided] = await Promise.all([
     visibleNoticesNow(me.id, await getLocale()).then((n) => n.filter((x) => !x.confirmed).length),
     unreadCount(me.id),
-    approver ? pendingCounts().then((c) => c.total) : Promise.resolve(0),
+    // 직원 가입 신청은 최고관리자만 승인한다 — 종 숫자에 같이 센다 (2026-10-26)
+    approver ? Promise.all([pendingCounts().then((c) => c.total), me.role === 'admin' ? pendingSignupCount() : 0]).then(([a, b]) => a + b) : Promise.resolve(0),
     myDecidedCount(me.id), // 내 요청 중 처리된 것 — 「요청」 메뉴 숫자 (2026-10-19)
   ]);
   return Response.json({ notices, messages, requests, decided }, { headers: { 'cache-control': 'no-store' } });

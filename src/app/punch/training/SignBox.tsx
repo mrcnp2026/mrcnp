@@ -17,6 +17,8 @@ export function SignBox({ sessionId, needDrawing }: { sessionId: string; needDra
   const [path, setPath] = useState('');
   const [drawing, setDrawing] = useState(false);
   const [busy, setBusy] = useState(false);
+  const [checked, setChecked] = useState([false, false, false, false]);
+  const all = checked.every(Boolean);
   const [err, setErr] = useState<{ code: string; requestId?: string } | null>(null);
   const point = (e: React.PointerEvent) => {
     const r = svg.current!.getBoundingClientRect();
@@ -42,13 +44,23 @@ export function SignBox({ sessionId, needDrawing }: { sessionId: string; needDra
           <button type="button" className="self-end text-sm text-muted" onClick={() => setPath('')}>{t('clear')}</button>
         </div>
       )}
+      <fieldset className="flex flex-col gap-2 rounded-card bg-surface p-3">
+        <legend className="px-1 text-sm font-bold">{t('consentTitle')}</legend>
+        {(['c1', 'c2', 'c3', 'c4'] as const).map((k, i) => (
+          <label key={k} className="flex min-h-11 items-start gap-3 py-1 text-sm">
+            <input type="checkbox" checked={checked[i]} onChange={(e) => setChecked((c) => c.map((v, j) => (j === i ? e.target.checked : v)))} className="mt-0.5 size-5 shrink-0 accent-primary" />
+            <span>{t(`consent.${k}`)}</span>
+          </label>
+        ))}
+        <p className="num text-xs text-muted">{t('consentCount', { n: checked.filter(Boolean).length })}</p>
+      </fieldset>
       <Button
         type="button"
-        disabled={busy || (needDrawing && strokes < 5)}
+        disabled={busy || !all || (needDrawing && strokes < 5)}
         onClick={async () => {
           setBusy(true);
           setErr(null);
-          const r = await callApi('/api/training', { sessionId, signature: needDrawing ? path : null });
+          const r = await callApi('/api/training', { sessionId, signature: needDrawing ? path : null, agreed: true });
           setBusy(false);
           if (!r.ok) return setErr(r);
           router.refresh();

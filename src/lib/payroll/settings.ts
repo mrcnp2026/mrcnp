@@ -1,13 +1,15 @@
 // 급여 설정의 형식과 검사 — 순수 함수 (PRD v1.3 17장). DB · 화면과 떨어져 있어 단위 검사로 확인한다.
 // 금액은 원 단위 정수, 비율은 소수 문자열, 날짜는 YYYY-MM-DD. 빈 칸(null)과 0은 다르다.
 
+import { cleanTaxDefaults, type TaxDefaults } from './tax-defaults';
+import { cleanCommonItems, type CommonItem } from './common-items';
 export const SETTING_SECTIONS = ['employee-defaults', 'ledger', 'masking', 'working-time'] as const;
 export type SettingSection = (typeof SETTING_SECTIONS)[number];
 /** 회사 설정 › 급여의 9개 화면 (주소의 ?section=) */
 export const PAY_SECTIONS = ['employee-defaults', 'ledger', 'payment-items', 'deduction-items', 'insurance-rates', 'income-tax', 'allowances', 'masking', 'working-time'] as const;
 export type PaySection = (typeof PAY_SECTIONS)[number];
 
-export type EmployeeDefaults = { payType: 'MONTHLY' | 'HOURLY' | 'ANNUAL' | null; durunuri: boolean; smeTaxCut: boolean };
+export type EmployeeDefaults = { payType: 'MONTHLY' | 'HOURLY' | 'ANNUAL' | null; durunuri: boolean; smeTaxCut: boolean; commonItems?: CommonItem[]; taxDefaults?: TaxDefaults };
 export type Ledger = {
   payMonth: 'CURRENT' | 'NEXT';
   payDayMode: 'FIXED_DAY' | 'MONTH_END';
@@ -22,7 +24,7 @@ export type Ledger = {
 };
 export const INSURER_KEYS = ['pension', 'health', 'employment'] as const;
 export type InsurerKey = (typeof INSURER_KEYS)[number];
-export type Masking = { unmaskMinutes: number };
+export type Masking = { enabled?: boolean; unmaskMinutes: number }; // enabled 없으면 켜짐(가림) — 2026-10-22 켜고 끌 수 있게
 export type WorkingTime = { weeklyHours: number; weeklyOvertimeLimit: number; monthlyHours: number | null };
 export type SettingPayload = EmployeeDefaults | Ledger | Masking | WorkingTime;
 
@@ -36,9 +38,14 @@ const int = (v: unknown, min: number, max: number): number | undefined => {
 
 export function validateSetting(section: SettingSection, b: Record<string, unknown>): Result<SettingPayload> {
   if (section === 'employee-defaults') {
-    const payType = b.payType === null || b.payType === '' ? null : one(b.payType, ['MONTHLY', 'HOURLY', 'ANNUAL'] as const);
-    if (payType === undefined || typeof b.durunuri !== 'boolean' || typeof b.smeTaxCut !== 'boolean') return bad;
-    return { ok: true, value: { payType, durunuri: b.durunuri, smeTaxCut: b.smeTaxCut } };
+    const payType = b.payType === undefined || b.payType === null || b.payType === '' ? null : one(b.payType, ['MONTHLY', 'HOURLY', 'ANNUAL'] as const);
+    // 두루누리 칸은 화면에서 뺐다(2026-10-22) — 오지 않으면 꺼짐으로 남긴다
+    if (payType === undefined || (b.durunuri !== undefined && typeof b.durunuri !== 'boolean') || typeof b.smeTaxCut !== 'boolean') return bad;
+    const commonItems = cleanCommonItems(b.commonItems); // 회사 공통 고정 수당 · 공제 (2026-10-25)
+    if (!commonItems) return bad;
+    const taxDefaults = cleanTaxDefaults(b.taxDefaults); // 4대보험 · 세무 회사 기본값 (2026-10-25)
+    if (taxDefaults === undefined) return bad;
+    return { ok: true, value: { payType, durunuri: false, smeTaxCut: b.smeTaxCut, ...(commonItems.length ? { commonItems } : {}), ...(taxDefaults ? { taxDefaults } : {}) } };
   }
   if (section === 'ledger') {
     const payMonth = one(b.payMonth, ['CURRENT', 'NEXT'] as const);
@@ -68,7 +75,9 @@ export function validateSetting(section: SettingSection, b: Record<string, unkno
   }
   if (section === 'masking') {
     const unmaskMinutes = int(b.unmaskMinutes, 1, 60);
-    return unmaskMinutes === undefined ? bad : { ok: true, value: { unmaskMinutes } };
+    const enabled = b.enabled ?? true;
+    if (typeof enabled !== 'boolean') return bad;
+    return unmaskMinutes === undefined ? bad : { ok: true, value: { enabled, unmaskMinutes } };
   }
   const weeklyHours = int(b.weeklyHours, 1, 52);
   const weeklyOvertimeLimit = int(b.weeklyOvertimeLimit, 0, 40);
@@ -107,11 +116,13 @@ export function payDateFor(ym: string, l: Pick<Ledger, 'payMonth' | 'payDayMode'
 export const CALC_KINDS = ['FIXED', 'MANUAL', 'TIME', 'RULE', 'NOTICE'] as const;
 export const TAX_TREATMENTS = ['TAXABLE', 'EXEMPT', 'PARTIAL', 'NOT_APPLICABLE'] as const;
 export const ORDINARY = ['INCLUDED', 'EXCLUDED', 'UNKNOWN'] as const;
+export const AVERAGE_KINDS = ['MONTHLY', 'BONUS', 'EXCLUDED'] as const; // 퇴직금 평균임금에서: 월 임금 / 연 상여 / 뺌 (묶음 36, 2026-10-26). 비어 있으면 아직 안 정함
 export type ItemInput = {
   code: string; kind: 'PAYMENT' | 'DEDUCTION'; koName: string; enName: string; calcKind: (typeof CALC_KINDS)[number];
   defaultAmount: number | null; fixedAllowance: boolean; taxTreatment: (typeof TAX_TREATMENTS)[number]; taxExemptLimit: number | null;
   taxExemptAnnualLimit?: number | null; // 연간 비과세 한도(원) — 묶음 28 (2026-10-19). 없으면 연간 한도 없음
   ordinaryWage: (typeof ORDINARY)[number]; sort: number;
+  averageWageKind?: (typeof AVERAGE_KINDS)[number] | null; // 지급 항목만. 없으면 null(정하지 않음)
 };
 const won = (v: unknown): number | null | undefined => {
   if (v === null || v === undefined || v === '') return null;
@@ -129,12 +140,15 @@ export function validateItem(b: Record<string, unknown>): Result<ItemInput> {
   const taxExemptLimit = won(b.taxExemptLimit);
   const taxExemptAnnualLimit = won(b.taxExemptAnnualLimit);
   const ordinaryWage = one(b.ordinaryWage ?? 'UNKNOWN', ORDINARY);
+  const averageRaw = b.averageWageKind === undefined || b.averageWageKind === null || b.averageWageKind === '' ? null : one(b.averageWageKind, AVERAGE_KINDS);
+  if (averageRaw === undefined) return bad;
+  const averageWageKind = kind === 'DEDUCTION' ? null : averageRaw;
   // 공제 항목에는 과세 구분이 없다. 지급 항목은 꼭 골라야 한다
   const taxTreatment = kind === 'DEDUCTION' ? 'NOT_APPLICABLE' : one(b.taxTreatment, ['TAXABLE', 'EXEMPT', 'PARTIAL'] as const);
   const sort = b.sort === undefined || b.sort === '' ? 0 : int(b.sort, 0, 9999);
   if (!code || !kind || !koName || !enName || !calcKind || defaultAmount === undefined || taxExemptLimit === undefined || taxExemptAnnualLimit === undefined || !ordinaryWage || !taxTreatment || sort === undefined) return bad;
   if (taxTreatment !== 'PARTIAL' && taxTreatment !== 'EXEMPT' && (taxExemptLimit !== null || taxExemptAnnualLimit !== null)) return bad; // 한도는 비과세 · 일부 비과세에만
-  return { ok: true, value: { code, kind, koName, enName, calcKind, defaultAmount, fixedAllowance: b.fixedAllowance === true, taxTreatment, taxExemptLimit, taxExemptAnnualLimit, ordinaryWage, sort } };
+  return { ok: true, value: { code, kind, koName, enName, calcKind, defaultAmount, fixedAllowance: b.fixedAllowance === true, taxTreatment, taxExemptLimit, taxExemptAnnualLimit, ordinaryWage, averageWageKind, sort } };
 }
 
 /**
@@ -148,7 +162,10 @@ export const STANDARD_ITEMS: ItemInput[] = [
   { code: 'HOLIDAY_PAY', kind: 'PAYMENT', koName: '휴일근로수당', enName: 'Holiday work pay', calcKind: 'TIME', taxTreatment: 'TAXABLE', ordinaryWage: 'EXCLUDED', fixedAllowance: false },
   { code: 'ANNUAL_LEAVE_PAY', kind: 'PAYMENT', koName: '연차수당', enName: 'Unused annual leave pay', calcKind: 'RULE', taxTreatment: 'TAXABLE', ordinaryWage: 'EXCLUDED', fixedAllowance: false },
   { code: 'BONUS', kind: 'PAYMENT', koName: '상여금', enName: 'Bonus', calcKind: 'MANUAL', taxTreatment: 'TAXABLE', ordinaryWage: 'UNKNOWN', fixedAllowance: false },
-  { code: 'MEAL_ALLOWANCE', kind: 'PAYMENT', koName: '식대', enName: 'Meal allowance', calcKind: 'FIXED', taxTreatment: 'PARTIAL', ordinaryWage: 'INCLUDED', fixedAllowance: true },
+  { code: 'MEAL_ALLOWANCE', kind: 'PAYMENT', koName: '식대', enName: 'Meal allowance', calcKind: 'FIXED', taxTreatment: 'PARTIAL', ordinaryWage: 'INCLUDED', fixedAllowance: true, taxExemptLimit: 200000 },
+  // 자주 쓰는 비과세 (2026-10-22 의뢰인 ④) — 한도는 소득세법 시행령 기준 임시 값(검증 대기 기록). 조건(본인 차량 · 6세 이하 자녀)은 담당자가 확인하고 직원 계약에 넣는다
+  { code: 'CAR_ALLOWANCE', kind: 'PAYMENT', koName: '자가운전보조금', enName: 'Own-car allowance', calcKind: 'FIXED', taxTreatment: 'PARTIAL', ordinaryWage: 'UNKNOWN', fixedAllowance: true, taxExemptLimit: 200000 },
+  { code: 'CHILDCARE_ALLOWANCE', kind: 'PAYMENT', koName: '출산·보육수당', enName: 'Childbirth & childcare allowance', calcKind: 'FIXED', taxTreatment: 'PARTIAL', ordinaryWage: 'UNKNOWN', fixedAllowance: true, taxExemptLimit: 200000 },
   { code: 'ABSENCE_CUT', kind: 'PAYMENT', koName: '결근차감', enName: 'Absence deduction', calcKind: 'MANUAL', taxTreatment: 'TAXABLE', ordinaryWage: 'EXCLUDED', fixedAllowance: false },
   { code: 'INCOME_TAX', kind: 'DEDUCTION', koName: '근로소득세', enName: 'Income tax', calcKind: 'RULE', taxTreatment: 'NOT_APPLICABLE', ordinaryWage: 'EXCLUDED', fixedAllowance: false },
   { code: 'LOCAL_INCOME_TAX', kind: 'DEDUCTION', koName: '근로지방소득세', enName: 'Local income tax', calcKind: 'RULE', taxTreatment: 'NOT_APPLICABLE', ordinaryWage: 'EXCLUDED', fixedAllowance: false },
@@ -158,7 +175,7 @@ export const STANDARD_ITEMS: ItemInput[] = [
   { code: 'EMPLOYMENT_INSURANCE', kind: 'DEDUCTION', koName: '고용보험', enName: 'Employment insurance', calcKind: 'RULE', taxTreatment: 'NOT_APPLICABLE', ordinaryWage: 'EXCLUDED', fixedAllowance: false },
   { code: 'STUDENT_LOAN', kind: 'DEDUCTION', koName: '학자금상환', enName: 'Student loan repayment', calcKind: 'MANUAL', taxTreatment: 'NOT_APPLICABLE', ordinaryWage: 'EXCLUDED', fixedAllowance: false },
   { code: 'YEAR_END_TAX', kind: 'DEDUCTION', koName: '연말정산소득세', enName: 'Year-end tax settlement', calcKind: 'MANUAL', taxTreatment: 'NOT_APPLICABLE', ordinaryWage: 'EXCLUDED', fixedAllowance: false },
-].map((x, i) => ({ ...x, defaultAmount: null, taxExemptLimit: null, sort: (i + 1) * 10 }) as ItemInput);
+].map((x, i) => ({ ...x, defaultAmount: null, taxExemptLimit: ('taxExemptLimit' in x ? x.taxExemptLimit : null) ?? null, sort: (i + 1) * 10 }) as ItemInput);
 
 // ── 회사 정책 (법정수당의 회사 기준 · 연차 산정) ──
 export const ALLOWANCE_KINDS = ['overtime', 'night', 'holiday', 'annual-leave', 'menstrual', 'maternity', 'shutdown'] as const;

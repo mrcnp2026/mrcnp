@@ -10,7 +10,7 @@ export type Me = {
   name: string;
   employeeNo: string | null;
   role: 'admin' | 'manager' | 'employee'; // manager = 지점관리자 (맡은 지점만 보고 요청을 승인한다 — scope.ts)
-  locale: 'ko' | 'en' | 'vi' | 'th';
+  locale: 'ko' | 'en';
   active: boolean;
   // 권한 (2026-10-16 의뢰인 권한-10): 관리자 = 최고관리자(대표자 포함 최대 3명) — 전부 보고 · 고치고 · 모든 요청을 받는다(급여 포함).
   //   급여 담당 · 총괄관리자 구분은 없앴다. 그 밖은 지점관리자(만들어만 둠) · 일반직원

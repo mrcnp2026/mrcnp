@@ -54,6 +54,32 @@ describe('발생 계획 — 입사일 기준', () => {
   });
 });
 
+describe('발생 계획 — 회계연도에서 입사일 기준으로 바꾼 날 (2026-10-21 휴가-15)', () => {
+  const P = { ...STANDARD_LEAVE_POLICY, convertedOn: '2027-01-01' };
+  const annual = (hiredOn: string, asOf: string) => planAccrual({ hiredOn, asOf, policy: P }).filter((l) => l.kind === 'annual');
+  it('바꾸기 전 기념일 연차는 바꾼 날 남은 기간 비례(올림) — 8/2 입사 근속 7년 18일 × 213/365 → 11일, 다음 기념일 전날까지', () => {
+    const [t, next] = annual('2019-08-02', '2027-08-02');
+    expect(t).toMatchObject({ grantedOn: '2027-01-01', usableTo: '2027-08-02', minutes: 11 * 480, basis: { rule: 'hire_transition', years: 7 } });
+    expect(next).toMatchObject({ grantedOn: '2027-08-02', minutes: 18 * 480, basis: { rule: 'annual', years: 8 } });
+  });
+  it('바꾼 날 전에는 전환 연차가 생기지 않는다', () => {
+    expect(annual('2019-08-02', '2026-12-31')).toEqual([]);
+  });
+  it('기념일이 바꾼 날과 같으면 통째로 (1/1 입사)', () => {
+    expect(annual('2025-01-01', '2027-01-01')).toMatchObject([{ grantedOn: '2027-01-01', minutes: 15 * 480, basis: { rule: 'annual' } }]);
+  });
+  it('입사 1년이 안 된 직원은 전환 연차 없이 월 연차 → 첫 기념일 15일', () => {
+    const l = planAccrual({ hiredOn: '2026-06-01', asOf: '2027-06-01', policy: P });
+    expect(l.filter((x) => x.kind === 'annual')).toMatchObject([{ grantedOn: '2027-06-01', minutes: 15 * 480 }]);
+    expect(l.filter((x) => x.kind === 'monthly')).toHaveLength(11);
+  });
+  it('바꾼 날 칸은 날짜만 받고, 없으면 판에 남기지 않는다', () => {
+    expect(validateLeavePolicy(P)?.convertedOn).toBe('2027-01-01');
+    expect(validateLeavePolicy({ ...P, convertedOn: '2027/01/01' })).toBeNull();
+    expect(validateLeavePolicy(STANDARD_LEAVE_POLICY)).not.toHaveProperty('convertedOn');
+  });
+});
+
 describe('발생 계획 — 회계연도 기준', () => {
   const F = { ...P, basis: 'fiscal_year' as const };
   it('첫 회계연도는 재직일수만큼 비례하고 끝수를 올린다', () => {

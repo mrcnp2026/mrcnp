@@ -19,6 +19,9 @@ export type LeavePolicy = {
   carryMaxDays: number; // 사용 기간이 끝난 연차를 다음으로 넘길 수 있는 최대 일수. 0 = 이월 없음(전부 소멸)
   carryValidMonths: number; // 이월한 연차를 쓸 수 있는 개월 수
   advanceMaxDays: number; // 지급 건 없이 미리 쓸 수 있는 최대 일수. 0 = 선사용을 허용하지 않음(생기면 「한도 초과」로 표시)
+  // 회계연도 → 입사일 기준으로 바꾼 날 (2026-10-21 의뢰인, 휴가-15). 이 날 전 입사 기념일에 생겼어야 할 연차는 통째로 주지 않고,
+  // 이 날 「다음 입사 기념일까지 남은 기간」 비례분(전환 연차)만 준다. 없으면 null — 처음부터 입사일 기준
+  convertedOn?: string | null;
 };
 /** 통상 방식 — 임시 입력(검증 대기 기록.md). 경영지원실의 노무 확인 뒤 「검증됨」으로 바꾼다 */
 export const STANDARD_LEAVE_POLICY: LeavePolicy = { basis: 'hire_date', fiscalStart: '01-01', dayMinutes: DAY_MINUTES, monthlyMax: 11, baseDays: 15, extraEveryYears: 2, maxDays: 25, rounding: 'ceil_day', carryMaxDays: 0, carryValidMonths: 12, advanceMaxDays: 0 };
@@ -37,7 +40,8 @@ export function validateLeavePolicy(b: unknown): LeavePolicy | null {
   const carryMaxDays = p.carryMaxDays ?? 0, carryValidMonths = p.carryValidMonths ?? 12, advanceMaxDays = p.advanceMaxDays ?? 0;
   const half = (v: unknown, hi: number) => typeof v === 'number' && v >= 0 && v <= hi && Number.isInteger(v * 2);
   if (!half(carryMaxDays, 60) || !int(carryValidMonths, 1, 36) || !half(advanceMaxDays, 60)) return null;
-  return { basis: p.basis, fiscalStart: p.fiscalStart, dayMinutes: p.dayMinutes as number, monthlyMax: p.monthlyMax as number, baseDays: p.baseDays as number, extraEveryYears: p.extraEveryYears as number, maxDays: p.maxDays as number, rounding: p.rounding, carryMaxDays: carryMaxDays as number, carryValidMonths: carryValidMonths as number, advanceMaxDays: advanceMaxDays as number };
+  if (p.convertedOn != null && (typeof p.convertedOn !== 'string' || !DATE.test(p.convertedOn))) return null;
+  return { ...(p.convertedOn ? { convertedOn: p.convertedOn as string } : {}), basis: p.basis, fiscalStart: p.fiscalStart, dayMinutes: p.dayMinutes as number, monthlyMax: p.monthlyMax as number, baseDays: p.baseDays as number, extraEveryYears: p.extraEveryYears as number, maxDays: p.maxDays as number, rounding: p.rounding, carryMaxDays: carryMaxDays as number, carryValidMonths: carryValidMonths as number, advanceMaxDays: advanceMaxDays as number };
 }
 
 const pad = (n: number) => String(n).padStart(2, '0');
@@ -65,7 +69,7 @@ export type PlannedLot = {
   usableTo: string; // 이 날 전날까지
   minutes: number;
   dayMinutes: number;
-  basis: { rule: 'monthly' | 'annual' | 'fiscal_prorate' | 'fiscal_annual'; hiredOn: string; years?: number; month?: number; days: number; serviceDays?: number; yearDays?: number };
+  basis: { rule: 'monthly' | 'annual' | 'hire_transition' | 'fiscal_prorate' | 'fiscal_annual'; hiredOn: string; years?: number; month?: number; days: number; serviceDays?: number; yearDays?: number };
   key: string; // 중복 방지 열쇠의 뒷부분 (종류:산정 시작일)
 };
 
@@ -78,7 +82,7 @@ function roundDaysBy(p: LeavePolicy, days: number): number {
 /**
  * 입사일 → asOf까지 발생한 지급 건 계획. liveOnly면 asOf에 아직 쓸 수 있는 건만(지난 건은 만들지 않는다).
  *   · 1년 미만: 1개월이 찰 때마다 1일(최대 monthlyMax). 입사 1년이 되는 날 전날까지 쓴다.
- *   · 입사일 기준: 입사 n주년마다 annualDays(n). 다음 주년 전날까지.
+ *   · 입사일 기준: 입사 n주년마다 annualDays(n). 다음 주년 전날까지. convertedOn이 있으면 그 전 주년분은 그 날 남은 기간 비례(전환 연차)로.
  *   · 회계연도 기준: 입사 뒤 첫 회계연도 시작일에 기본 일수 × (그때까지 재직일수 ÷ 그 한 해의 날수), 그다음부터 회계연도마다 annualDays(n). 그 회계연도 끝까지.
  */
 export function planAccrual(args: { hiredOn: string; asOf: string; policy: LeavePolicy; liveOnly?: boolean }): PlannedLot[] {
@@ -99,8 +103,21 @@ export function planAccrual(args: { hiredOn: string; asOf: string; policy: Leave
       const on = addMonths(hiredOn, 12 * n);
       if (on > asOf) break;
       const days = annualDays(p, n);
+      const usableTo = addMonths(hiredOn, 12 * (n + 1));
+      const conv = p.convertedOn ?? null;
+      if (conv && on < conv) {
+        // 바꾸기 전 기념일의 연차 → 바꾼 날에 남은 사용 기간만큼 비례(전환 연차). 열쇠가 같아 통째 연차와 겹쳐 생기지 않는다
+        if (usableTo <= conv || conv > asOf) continue;
+        const left = roundDaysBy(p, (days * daysBetween(conv, usableTo)) / daysBetween(on, usableTo));
+        if (left <= 0) continue;
+        out.push({
+          kind: 'annual', accrualFrom: addMonths(hiredOn, 12 * (n - 1)), accrualTo: addDays(on, -1), grantedOn: conv, usableFrom: conv, usableTo,
+          minutes: Math.round(left * p.dayMinutes), dayMinutes: p.dayMinutes, basis: { rule: 'hire_transition', hiredOn, years: n, days: left, serviceDays: daysBetween(conv, usableTo), yearDays: daysBetween(on, usableTo) }, key: `annual:${addMonths(hiredOn, 12 * (n - 1))}`,
+        });
+        continue;
+      }
       out.push({
-        kind: 'annual', accrualFrom: addMonths(hiredOn, 12 * (n - 1)), accrualTo: addDays(on, -1), grantedOn: on, usableFrom: on, usableTo: addMonths(hiredOn, 12 * (n + 1)),
+        kind: 'annual', accrualFrom: addMonths(hiredOn, 12 * (n - 1)), accrualTo: addDays(on, -1), grantedOn: on, usableFrom: on, usableTo,
         minutes: days * p.dayMinutes, dayMinutes: p.dayMinutes, basis: { rule: 'annual', hiredOn, years: n, days }, key: `annual:${addMonths(hiredOn, 12 * (n - 1))}`,
       });
     }

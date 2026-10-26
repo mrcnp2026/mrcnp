@@ -64,30 +64,30 @@ describe('다국어', () => {
     expect(bad).not.toMatch(/[가-힣]/);
   });
 
-  it('검수 안 된 언어(vi·th)는 언어 선택 목록에 나오지 않는다 ← B-21', () => {
+  it('검수 안 된 언어는 언어 선택 목록에 나오지 않는다 ← B-21', () => {
     expect(selectableLocales()).toEqual(['ko', 'en']);
-    expect(selectableLocales({ vi: { reviewed: true }, th: { reviewed: false }, en: { reviewed: true } })).toEqual(['en', 'vi']);
+    expect(selectableLocales({ ko: { reviewed: false }, en: { reviewed: true } })).toEqual(['en']);
   });
 
   it('로그인 전에는 브라우저 언어를 따른다 (고를 수 있는 언어만, 없으면 null → 영어)', () => {
     expect(localeFromAcceptLanguage('ko-KR,ko;q=0.9,en-US;q=0.8,en;q=0.7', ['ko', 'en'])).toBe('ko');
     expect(localeFromAcceptLanguage('en-US,en;q=0.9,ko;q=0.8', ['ko', 'en'])).toBe('en');
-    expect(localeFromAcceptLanguage('vi-VN,vi;q=0.9,en;q=0.8', ['ko', 'en'])).toBe('en'); // 검수 전 언어는 건너뛴다
+    expect(localeFromAcceptLanguage('vi-VN,vi;q=0.9,en;q=0.8', ['ko', 'en'])).toBe('en'); // 없는 언어는 건너뛴다
     expect(localeFromAcceptLanguage('th-TH,th;q=0.9', ['ko', 'en'])).toBeNull();
     expect(localeFromAcceptLanguage(null, ['ko', 'en'])).toBeNull();
   });
 
   it('언어 이름은 각 언어의 자기 이름이다', () => {
-    expect(LOCALE_NAMES).toEqual({ en: 'English', vi: 'Tiếng Việt', th: 'ภาษาไทย', ko: '한국어' });
+    expect(LOCALE_NAMES).toEqual({ en: 'English', ko: '한국어' });
   });
 
   it('번역 키가 없으면 영어로 대체된다 (개발 모드에서는 [missing] 표시)', () => {
     const fb = { a: 'Hello', g: { b: 'Bye' } };
     expect(withFallback({ g: {} }, fb, false)).toEqual({ a: 'Hello', g: { b: 'Bye' } });
     expect(withFallback({ a: '안녕' }, fb, true)).toEqual({ a: '안녕', g: { b: '[missing] Bye' } });
-    // 실제 파일: 베트남어 초안에 관리자 문구가 없으므로 영어로 채워진다
-    const vi = messagesFor('vi', false) as { admin: { nav: { home: string } } };
-    expect(vi.admin.nav.home).toBe('Home');
+    // 실제 파일: 한국어도 영어 틀 위에 채워진다
+    const ko2 = messagesFor('ko', false) as { admin: { nav: { home: string } } };
+    expect(typeof ko2.admin.nav.home).toBe('string');
   });
 
   it('영어·한국어 번역 파일의 키가 같다 (어느 쪽도 빠진 문구가 없다)', () => {

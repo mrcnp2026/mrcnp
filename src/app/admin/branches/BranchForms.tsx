@@ -1,5 +1,6 @@
 'use client';
 // 지점 만들기·고치기 양식 (2026-10-10). 지점 = 조직도의 그룹(부서 › 팀)과 같은 표다 — 이름만 시프티에 맞췄다.
+import { Select } from '@/components/Select';
 import { useTranslations } from 'next-intl';
 import { useRouter } from 'next/navigation';
 import { useState } from 'react';
@@ -40,14 +41,14 @@ export function BranchAddForm({ parents, sheet }: { parents: { id: string; name:
       </label>
       <label className="flex flex-col gap-1 text-sm text-muted">
         {t('parent')}
-        <select name="parentId" defaultValue="" className={field}>
+        <Select name="parentId" defaultValue="" className={field}>
           <option value="">{t('parentNone')}</option>
           {parents.map((p) => (
             <option key={p.id} value={p.id}>
               {p.name}
             </option>
           ))}
-        </select>
+        </Select>
       </label>
       {err && <ErrorNote code={err.code} requestId={err.requestId} namespace="admin.branches" />}
       <Button type="submit" disabled={busy}>
@@ -79,6 +80,7 @@ export function BranchEditForm({
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState<Err>(null);
   const [ask, setAsk] = useState(false);
+  const [del, setDel] = useState(false);
   const send = async (body: Record<string, unknown>) => {
     setBusy(true);
     setErr(null);
@@ -139,6 +141,25 @@ export function BranchEditForm({
               {t('hideConfirm')}
             </Button>
             <button type="button" onClick={() => setAsk(false)} className="min-h-11 px-2 text-sm text-muted">
+              {t('cancel')}
+            </button>
+          </div>
+        </div>
+      )}
+      {/* 지우기 (2026-10-25 의뢰인: 만든 지점을 지울 수 있어야 한다) — 직원 · 하위 지점 · 출퇴근 장소 · 지점관리자 범위가 없을 때만 서버가 허락한다 */}
+      {!del && (
+        <button type="button" onClick={() => setDel(true)} className="min-h-11 self-start text-sm font-medium text-danger">
+          {t('delete')}
+        </button>
+      )}
+      {del && (
+        <div className="flex flex-col gap-2">
+          <p className="text-sm text-muted">{t('deleteNote', { name })}</p>
+          <div className="flex items-center gap-2">
+            <Button type="button" variant="danger" disabled={busy} onClick={async () => { if (await send({ delete: true })) router.push('/admin/branches'); else setDel(false); }}>
+              {t('deleteConfirm')}
+            </Button>
+            <button type="button" onClick={() => setDel(false)} className="min-h-11 px-2 text-sm text-muted">
               {t('cancel')}
             </button>
           </div>

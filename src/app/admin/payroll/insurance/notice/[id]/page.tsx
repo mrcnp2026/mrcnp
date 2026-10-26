@@ -1,5 +1,6 @@
 // 고지 보험료 한 묶음 — 직원마다 고지액 · 고른 대장에서 이미 뗀 금액 · 차액, 대장에 넣기/빼기 (PRD v1.3 18.4 W06). 급여 담당 관리자만.
 // 차액 = 근로자 고지액 − 이미 뗀 금액. 추가 공제는 양수, 환급은 음수. 넣으면 그 대장을 다시 계산해야 한다.
+import { Select } from '@/components/Select';
 import { getFormatter, getTranslations } from 'next-intl/server';
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
@@ -40,12 +41,12 @@ export default async function NoticePage({ params, searchParams }: { params: Pro
         {live && <input type="hidden" name="live" value="1" />}
         <label className="flex flex-col gap-1">
           <span className="font-bold">{t('fRun')}</span>
-          <select name="run" defaultValue={v.run?.id ?? ''} className={field}>
+          <Select name="run" defaultValue={v.run?.id ?? ''} className={field}>
             <option value="">{t('pickRun')}</option>
             {v.runs.map((r) => (
               <option key={r.id} value={r.id}>{t('runOption', { month: r.periodFrom.slice(0, 7), status: t(`runStatus.${r.status}`), rev: r.revision })}</option>
             ))}
-          </select>
+          </Select>
         </label>
         <button type="submit" className="inline-flex min-h-9 items-center rounded-button border border-border bg-bg px-4 text-sm font-bold text-primary">{t('compare')}</button>
       </form>

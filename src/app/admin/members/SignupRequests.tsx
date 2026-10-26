@@ -2,6 +2,7 @@
 // 이메일 가입 신청 — 직원 화면 맨 위 (2026-10-16 의뢰인 권한-6). 신청이 있을 때만 보인다.
 // [승인]을 누르면 그 줄 아래에 사번(다음 번호를 미리 채움) · 소속 · 입사일 칸이 열리고, 승인하면 바로 직원이 된다(비밀번호는 신청 때 정함).
 // [거절]은 사유(선택)를 받는다. 폰: 한 신청이 한 덩어리, 칸은 세로로 — 가로 넘침 없음.
+import { Select } from '@/components/Select';
 import { Check, MailPlus, X } from 'lucide-react';
 import { useFormatter, useTranslations } from 'next-intl';
 import { useRouter } from 'next/navigation';
@@ -81,14 +82,14 @@ export function SignupRequests({ items, groups, suggestNo, today }: { items: Sig
                     </label>
                     <label className="col-span-2 flex flex-col gap-1 text-sm font-bold lg:col-span-1">
                       {t('group')}
-                      <select name="groupId" defaultValue="" className={input}>
+                      <Select name="groupId" defaultValue="" className={input}>
                         <option value="">{t('noGroup')}</option>
                         {groups.map((g) => (
                           <option key={g.id} value={g.id}>
                             {g.label}
                           </option>
                         ))}
-                      </select>
+                      </Select>
                     </label>
                   </div>
                   {err && <ErrorNote code={err.code} requestId={err.requestId} namespace="admin.members" />}

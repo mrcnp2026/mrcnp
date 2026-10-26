@@ -8,6 +8,7 @@
 import { ChevronDown, Settings, TriangleAlert } from 'lucide-react';
 import { HelpTip } from './Help';
 import Link from 'next/link';
+import { CountUp } from './CountUp';
 import { Children, cloneElement, isValidElement, type CSSProperties, type ReactElement, type ReactNode } from 'react';
 
 export function ListHead({ title, desc, settingsHref, settingsLabel, actions }: { title: string; desc?: ReactNode; settingsHref?: string; settingsLabel?: string; actions?: ReactNode }) {
@@ -15,8 +16,8 @@ export function ListHead({ title, desc, settingsHref, settingsLabel, actions }: 
     <div className="flex flex-wrap items-start gap-3">
       <div className="min-w-0 flex-1">
         <h1 className="flex flex-wrap items-center gap-x-1 text-2xl font-bold">
-          {title}
-          {desc && <HelpTip>{desc}</HelpTip>}
+          <span data-dup-title>{title}</span>
+          {desc && <HelpTip phone>{desc}</HelpTip>}
           {settingsHref && (
             <Link href={settingsHref} aria-label={settingsLabel} title={settingsLabel} className="flex size-8 items-center justify-center rounded-button text-faint hover:bg-surface hover:text-primary">
               <Settings aria-hidden size={18} strokeWidth={1.75} />
@@ -33,8 +34,8 @@ export function FilterBar({ children }: { children: ReactNode }) {
   return <div className="flex flex-wrap items-center gap-2">{children}</div>;
 }
 
-export type StatusCard = { key: string; label: string; n: number; unit?: string; href: string; on: boolean; tone?: 'warn' | 'ok' | 'muted' };
-const TONE = { warn: 'text-warn', ok: 'text-ok', muted: 'text-muted' } as const;
+export type StatusCard = { key: string; label: string; n: number; unit?: string; href: string; on: boolean; tone?: 'warn' | 'ok' | 'muted' | 'info' };
+const TONE = { warn: 'text-warn', ok: 'text-ok', muted: 'text-muted', info: 'text-primary-ink' } as const;
 
 /** 상태 카드 묶음들 — 묶음마다 옅은 회색 상자 안에 흰 카드 */
 export function StatusCards({ groups }: { groups: { title: string; cards: StatusCard[] }[] }) {
@@ -56,7 +57,7 @@ export function StatusCards({ groups }: { groups: { title: string; cards: Status
               >
                 <span className="truncate text-xs text-muted lg:text-sm">{c.label}</span>
                 <span className={`num text-xl leading-none font-bold lg:text-2xl ${c.n > 0 && c.tone ? TONE[c.tone] : c.n === 0 ? 'text-faint' : 'text-text'}`}>
-                  {c.n}
+                  <CountUp value={c.n} />
                   {c.unit && <small className="pl-0.5 text-sm font-medium text-muted">{c.unit}</small>}
                 </span>
               </Link>
@@ -79,12 +80,12 @@ export function ListTable({ head, children, empty, count }: { head: { label: str
   return (
     <div className="flex flex-col gap-1.5">
       {count && <p className="text-sm text-muted">{count}</p>}
-      <div className="overflow-x-auto">
+      <div className="overflow-x-auto lg:rounded-card lg:border lg:border-border lg:bg-bg lg:shadow-card">
         <table className="w-full text-sm max-lg:[&_thead]:hidden">
           <thead>
-            <tr className="border-t border-text">
+            <tr className="border-b border-border lg:bg-surface/60">
               {head.map((h, i) => (
-                <th key={i} scope="col" className={`px-3 py-2.5 text-xs font-semibold whitespace-nowrap text-faint ${h.right ? 'text-right' : 'text-left'}`}>
+                <th key={i} scope="col" className={`px-3 py-2.5 text-xs font-semibold whitespace-nowrap text-muted ${h.right ? 'text-right' : 'text-left'}`}>
                   {h.label}
                 </th>
               ))}

@@ -4,11 +4,12 @@
 import { getTranslations } from 'next-intl/server';
 import { Steps, type Step } from './listframe';
 
-export async function PayFlow({ now }: { now: 'staff' | 'close' | 'runs' | 'publish' | 'after' }) {
+export async function PayFlow({ now }: { now: 'staff' | 'close' | 'check' | 'runs' | 'publish' | 'insurance' | 'labor' | 'after' }) {
   const t = await getTranslations('payFlow');
-  const order = ['staff', 'close', 'runs', 'publish', 'after'] as const;
-  const at = order.indexOf(now);
-  const href = { staff: '/admin/payroll/staff', close: '/admin/closing', runs: '/admin/payroll/runs', publish: '/admin/payroll/runs', after: '/admin/payroll/insurance' };
+  const order = ['staff', 'close', 'check', 'runs', 'publish', 'insurance', 'labor'] as const;
+  const at = order.indexOf(now === 'after' ? 'insurance' : now);
+  // 2026-10-25 의뢰인: 「명세서 공개 · 보험 대조를 어디서 어떻게 보는지 모르겠다」 → 단계를 6개로 나누고, 각 단계가 가는 곳을 정확히 가리킨다
+  const href = { staff: '/admin/payroll/staff', close: '/admin/closing', check: '/admin/payroll/check', runs: '/admin/payroll/runs', publish: '/admin/payroll/runs?st=FINALIZED', insurance: '/admin/payroll/insurance?v=notice', labor: '/admin/payroll/labor-cost' };
   const steps: Step[] = order.map((k, i) => ({ key: k, label: t(`regular.${k}`), note: t(`regular.${k}Note`), href: href[k], state: i === at ? 'now' : 'todo' }));
   return <Steps label={t('regularLabel')} steps={steps} />;
 }

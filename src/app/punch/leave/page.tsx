@@ -1,7 +1,9 @@
 // 직원 「연차」 탭 (②-2 게이트 5, 시프티 대조 우선 반영 ①). 잔여 · 신청 · 내 신청.
 // 대기 일수는 잔여에서 빼지 않고 따로 보여 준다 (7-3 요점 5). 사유는 선택 (4-7).
 import { SheetOpener } from '@/components/SheetOpener';
-import { CalendarDays, ChevronLeft, ChevronRight } from 'lucide-react';
+import { CalendarDays, ChevronLeft, ChevronRight, MapPin } from 'lucide-react';
+import { CountUp } from '@/components/CountUp';
+import { HelpTip } from '@/components/Help';
 import { getFormatter, getTranslations } from 'next-intl/server';
 import Link from 'next/link';
 import { redirect } from 'next/navigation';
@@ -11,7 +13,7 @@ import { createAdminClient } from '@/lib/supabase/admin';
 import { MineBar } from '@/components/MineBar';
 import { Row, RowList } from '@/components/list';
 import { Pager, pageOf } from '@/components/Pager';
-import { Card, CardTitle, Chip, PageShell } from '@/components/ui';
+import { Chip, Empty, PageShell } from '@/components/ui';
 import { getMe } from '@/lib/auth';
 import { switchOn } from '@/lib/switches';
 import { calcLeaveBalance, leaveTypeName, monthlyLeaveUse } from '@/lib/leave';
@@ -27,8 +29,6 @@ import { loadRejectReasons } from '@/lib/reject-reason';
 import { CancelLeave, DeleteLeaveRequest, LeaveForm } from './LeaveForm';
 import { CancelWork, WorkForm } from './WorkForm';
 import { loadMyOpenTargets } from '@/lib/leave-promotion';
-import { LeaveFiles } from '@/components/LeaveFiles';
-import { loadLeaveFiles } from '@/lib/leave-evidence';
 
 export default async function LeavePage({ searchParams }: { searchParams: Promise<{ workDate?: string; new?: string; y?: string; lp?: string; wp?: string }> }) {
   const me = await getMe();
@@ -49,7 +49,7 @@ export default async function LeavePage({ searchParams }: { searchParams: Promis
   const why = await loadRejectReasons([...reqPage.items.filter((r) => r.status === 'rejected').map((r) => ({ table: 'leave_requests', id: r.id })), ...workPage.items.filter((w) => w.status === 'rejected').map((w) => ({ table: 'work_requests', id: w.id }))]);
   const trq = await getTranslations('requests');
   // 적용 대상이 아닌 종류는 신청 양식에 내놓지 않는다 (L13 — 서버도 다시 막는다)
-  const [rules, orgGroups, { data: prof }, files] = await Promise.all([loadTypeRules(), loadOrgGroups(), createAdminClient().from('profiles').select('group_id').eq('id', me.id).maybeSingle(), loadLeaveFiles(reqPage.items.filter((r) => r.status === 'pending' || r.status === 'approved').map((r) => r.id))]); // 증빙 파일 (묶음 9)
+  const [rules, orgGroups, { data: prof }] = await Promise.all([loadTypeRules(), loadOrgGroups(), createAdminClient().from('profiles').select('group_id').eq('id', me.id).maybeSingle()]);
   const mayUse = (code: string) => {
     const r = rules.get(code)?.rule;
     return !r || isTypeTarget(r, { id: me.id, groupId: (prof?.group_id as string | null) ?? null }, new Map(r.targets.groupIds.map((g) => [g, groupScope(orgGroups, g)])));
@@ -76,12 +76,13 @@ export default async function LeavePage({ searchParams }: { searchParams: Promis
   const cell = (v: number) => (v === 0 ? <span className="text-faint">–</span> : n(v));
 
   // 대기 중인 내 휴가 삭제 요청 (휴가 id → 요청 id)
-  const { data: changes } = await createAdminClient().from('leave_change_requests').select('id, leave_id').eq('employee_id', me.id).eq('status', 'pending');
-  const deleteOf = new Map((changes ?? []).map((c) => [c.leave_id as string, c.id as string]));
+  const { data: changes } = await createAdminClient().from('leave_change_requests').select('id, leave_id, kind').eq('employee_id', me.id).eq('status', 'pending');
+  const deleteOf = new Map((changes ?? []).map((c) => [c.leave_id as string, { id: c.id as string, kind: c.kind as string }]));
   // 회사가 보낸 연차 사용 촉진 가운데 내가 계획을 내야 하는 것
   const promos = await loadMyOpenTargets(me.id);
 
-  const hourlyOn = await switchOn('leave.hourly'); // 통합설정 › 휴가 「시간 단위 휴가」를 끄면 하루 미만 종류를 고를 수 없다 (2026-10-19)
+  const hourlyOn = await switchOn('leave.hourly');
+  const formTypes = types.filter((x) => x.active && mayUse(x.code) && (hourlyOn || x.dayUnit >= 1)).map((x) => ({ code: x.code, name: nameOf(x.code), unit: x.dayUnit, deducts: x.deductsBalance, hours: x.hours ?? x.dayUnit * 8, startTime: x.startTime ?? null, endTime: x.endTime ?? null, group: x.groupName ?? null })); // 통합설정 › 휴가 「시간 단위 휴가」를 끄면 하루 미만 종류를 고를 수 없다 (2026-10-19)
   return (
     <PageShell wide>
       {promos.map((p) => (
@@ -103,28 +104,54 @@ export default async function LeavePage({ searchParams }: { searchParams: Promis
       </MineBar>
       <div className="flex items-center gap-2">
         <h1 className="sr-only lg:not-sr-only lg:text-2xl lg:font-semibold lg:text-primary-deep">{t('title')}</h1>
-        <SheetOpener id="leave" label={t('request')} className="ml-auto hidden lg:inline-flex" />
-        <SheetOpener id="work" label={tw('title')} className="hidden lg:inline-flex" />
+        <SheetOpener id="leave" label={t('request')} outline className="ml-auto hidden lg:inline-flex" />
+        <SheetOpener id="work" label={tw('title')} outline className="hidden lg:inline-flex" />
       </div>
 
-      {lb && (
-        <Card className="flex flex-col gap-2 p-6">
-          <CardTitle icon={CalendarDays}>{t('usageTitle')}</CardTitle>
-          <dl className="num grid grid-cols-2 gap-x-6 gap-y-1 text-sm md:grid-cols-4">
-            {([['usageGranted', minutesToDays(lb.granted)], ['usageUsed', minutesToDays(lb.used)], ['usageRemaining', minutesToDays(lb.remaining)], ['usageExpired', minutesToDays(lb.expired)]] as const).map(([k, v]) => (
-              <div key={k} className="flex justify-between gap-3">
-                <dt className="text-muted">{t(k)}</dt>
-                <dd className="font-bold">{t('days', { n: n(v) })}</dd>
-              </div>
-            ))}
-          </dl>
-          <p className="num text-sm">
-            {lb.granted > 0 ? t('usageRate', { pct: n(Math.round((lb.used / lb.granted) * 1000) / 10) }) : t('usageRateNone')}
-            {lb.advance > 0 && ` · ${t('usageAdvance', { n: n(minutesToDays(lb.advance)) })}`}
-          </p>
-          {ending && <p className="num text-sm text-warn">{t('usageEnding', { n: n(minutesToDays(rem.get(ending.id) ?? 0)), date: day(ending.usableTo!) })}</p>}
-          <p className="text-xs text-faint">{t('usageNote')}</p>
-        </Card>
+      {/* 맨 위 한 장: 남은 연차를 크게 + 사용 막대 (2026-10-22 의뢰인: 「시프티 잔재 · 고급지지 않다」 — 「연차 사용 현황」과 「남은 연차」 두 카드가 같은 숫자를 두 번 보였다) */}
+      {card ? (
+        <section className="flex flex-col gap-5 rounded-card border border-border bg-bg p-5 shadow-card lg:flex-row lg:items-center lg:gap-10 lg:p-7">
+          <div className="flex min-w-0 flex-col gap-1 lg:w-64 lg:shrink-0">
+            <p className="flex items-center gap-1.5 text-sm font-semibold text-muted">
+              <CalendarDays aria-hidden size={16} />
+              {t('balanceTitle')}
+              {card.label && <span className="font-normal text-faint">· {card.label}</span>}
+            </p>
+            <p className="flex items-baseline gap-1">
+              <CountUp value={n(card.remaining)} className="num text-5xl font-extrabold tracking-tight text-primary" />
+              <span className="text-lg font-bold text-muted">{t('dayUnit')}</span>
+            </p>
+            {ending && <p className="num text-sm font-semibold text-warn">{t('usageEnding', { n: n(minutesToDays(rem.get(ending.id) ?? 0)), date: day(ending.usableTo!) })}</p>}
+          </div>
+          <div className="flex min-w-0 flex-1 flex-col gap-3">
+            {/* 받은 연차 대비 쓴 만큼 차오르는 막대 · 승인 대기는 옅은 노랑으로 이어 붙인다 */}
+            <div className="flex items-center justify-between gap-3 text-sm">
+              <span className="font-semibold">{t('usageTitle')}</span>
+              <span className="num text-muted">{card.granted > 0 ? t('usageRate', { pct: n(Math.round((card.used / card.granted) * 1000) / 10) }) : t('usageRateNone')}</span>
+            </div>
+            <div aria-hidden className="flex h-3 overflow-hidden rounded-chip bg-surface">
+              <span className="fx-grow-x h-full bg-primary" style={{ width: `${card.granted > 0 ? Math.min(100, (card.used / card.granted) * 100) : 0}%` }} />
+              {card.pending > 0 && <span className="fx-grow-x h-full bg-warn" style={{ width: `${card.granted > 0 ? Math.min(100, (card.pending / card.granted) * 100) : 0}%`, animationDelay: '500ms' }} />}
+            </div>
+            <dl className={`num grid grid-cols-2 gap-2 ${lb ? 'md:grid-cols-4' : 'md:grid-cols-3'}`}>
+              {([['granted', card.granted, 'text-text'], ['used', card.used, 'text-primary'], ['pending', card.pending, card.pending > 0 ? 'text-warn' : 'text-faint'], ...(lb ? [['usageExpired', minutesToDays(lb.expired), lb.expired > 0 ? 'text-muted' : 'text-faint'] as const] : [])] as const).map(([k, v, tone]) => (
+                <div key={k} className="flex flex-col gap-0.5 rounded-button bg-surface px-4 py-3">
+                  <dt className="text-xs text-muted">{t(k)}</dt>
+                  <dd className={`text-xl font-bold ${tone}`}>{v ? <CountUp value={n(v)} /> : '–'}</dd>
+                </div>
+              ))}
+            </dl>
+            {(card.pending > 0 || (lb && lb.advance > 0)) && (
+              <p className="num text-xs text-muted">
+                {card.pending > 0 && t('pendingHint')}
+                {lb && lb.advance > 0 && ` ${t('usageAdvance', { n: n(minutesToDays(lb.advance)) })}`}
+              </p>
+            )}
+            {lb && <p className="text-xs text-faint">{t('usageNote')}</p>}
+          </div>
+        </section>
+      ) : (
+        <Empty icon={CalendarDays} title={t('balanceTitle')} desc={t('noGrant')} />
       )}
 
       <section className="flex flex-col gap-2 rounded-card border border-border bg-bg p-4 lg:p-6 lg:shadow-card">
@@ -159,72 +186,53 @@ export default async function LeavePage({ searchParams }: { searchParams: Promis
             {total.pending > 0 && <span className="text-warn">{t('monthly.pending')} <b>{cell(total.pending)}</b></span>}
           </p>
         </div>
-        <div className="hidden overflow-x-auto lg:block">
-          <table className="num w-full text-sm">
-            <thead>
-              <tr className="border-b border-border">
-                <th scope="col" className="px-2 py-2 text-left text-xs font-semibold whitespace-nowrap text-muted">{t('monthlyKind')}</th>
-                {monthly.map((m) => (
-                  <th key={m.month} scope="col" className="px-2 py-2 text-right text-xs font-semibold whitespace-nowrap text-muted">{t('monthN', { n: m.month })}</th>
-                ))}
-                <th scope="col" className="px-2 py-2 text-right text-xs font-semibold whitespace-nowrap text-muted">{t('monthlyTotal')}</th>
-              </tr>
-            </thead>
-            <tbody>
-              {(['deducted', 'other', 'pending'] as const).map((k) => (
-                <tr key={k} className="border-b border-border last:border-b-0">
-                  <th scope="row" className="px-2 py-2.5 text-left font-semibold whitespace-nowrap">{t(`monthly.${k}`)}</th>
-                  {monthly.map((m) => (
-                    <td key={m.month} className={`px-2 py-2.5 text-right ${k === 'pending' && m[k] > 0 ? 'text-warn' : ''}`}>{cell(m[k])}</td>
-                  ))}
-                  <td className="px-2 py-2.5 text-right font-bold">{cell(total[k])}</td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
+        {/* PC: 12달 막대 (2026-10-22 의뢰인: 「그래프가 채워지는 모습」 — 숫자만 깔린 표였다). 정확한 숫자는 막대 위와 아래 합계에 */}
+        {total.deducted + total.other + total.pending === 0 && <p className="hidden rounded-button bg-surface px-4 py-6 text-center text-sm text-faint lg:block">{t('monthlyNone', { y: year })}</p>}
+        <div className={`hidden lg:flex-col lg:gap-3 ${total.deducted + total.other + total.pending === 0 ? '' : 'lg:flex'}`}>
+          <ul className="flex h-40 items-stretch gap-3 border-b border-border">
+            {monthly.map((m, i) => {
+              const sum = m.deducted + m.other + m.pending;
+              const top = Math.max(1, ...monthly.map((x) => x.deducted + x.other + x.pending));
+              return (
+                <li key={m.month} title={`${t('monthN', { n: m.month })} · ${t('monthly.deducted')} ${n(m.deducted)} · ${t('monthly.other')} ${n(m.other)} · ${t('monthly.pending')} ${n(m.pending)}`} className="flex min-w-0 flex-1 flex-col items-center justify-end gap-1">
+                  {sum > 0 && <CountUp value={n(sum)} className="num text-xs font-bold" />}
+                  <span className="fx-grow flex w-full max-w-10 flex-col-reverse overflow-hidden rounded-t" style={{ height: `${(sum / top) * 80}%`, animationDelay: `${i * 80}ms` }}>
+                    <span className="bg-primary" style={{ flexGrow: m.deducted }} />
+                    <span className="bg-primary-tint" style={{ flexGrow: m.other }} />
+                    <span className="bg-warn" style={{ flexGrow: m.pending }} />
+                  </span>
+                </li>
+              );
+            })}
+          </ul>
+          <ul className="num -mt-2 flex gap-3">
+            {monthly.map((m) => (
+              <li key={m.month} className={`flex-1 text-center text-xs ${year === today.slice(0, 4) && m.month === Number(today.slice(5, 7)) ? 'font-bold text-primary' : 'text-muted'}`}>{t('monthN', { n: m.month })}</li>
+            ))}
+          </ul>
+          <p className="num flex flex-wrap gap-x-5 gap-y-1 text-sm text-muted">
+            <span className="flex items-center gap-1.5"><span aria-hidden className="size-2.5 rounded-sm bg-primary" />{t('monthly.deducted')} <b className="text-text">{cell(total.deducted)}</b></span>
+            <span className="flex items-center gap-1.5"><span aria-hidden className="size-2.5 rounded-sm bg-primary-tint" />{t('monthly.other')} <b className="text-text">{cell(total.other)}</b></span>
+            <span className="flex items-center gap-1.5"><span aria-hidden className="size-2.5 rounded-sm bg-warn" />{t('monthly.pending')} <b className="text-text">{cell(total.pending)}</b></span>
+          </p>
         </div>
         <p className="text-xs text-faint">{t('monthlyNote')}</p>
       </section>
 
       {/* PC: 왼쪽 = 휴가, 오른쪽 = 외근·출장·재택. 줄마다 좌우 높이를 맞춘다 — ① 요약 ② 신청 ③ 내 신청 (2026-10-06 의뢰인: 위쪽이 어긋났다) · 폰: 휴가 3칸 뒤에 외근 3칸 (order) */}
-      <div className="flex flex-col gap-3 lg:grid lg:grid-cols-2 lg:items-start lg:gap-4">
-
-      <Card className="order-1 flex flex-col gap-3 p-6">
-        <CardTitle icon={CalendarDays} aside={card?.label && <span className="text-sm text-faint">{card.label}</span>}>
-          {t('balanceTitle')}
-        </CardTitle>
-        {card ? (
-          <>
-            <p className="num text-3xl font-extrabold tracking-tight">{t('days', { n: n(card.remaining) })}</p>
-            <dl className="num grid grid-cols-3 gap-2 text-center">
-              {(
-                [
-                  ['granted', card.granted],
-                  ['used', card.used],
-                  ['pending', card.pending],
-                ] as const
-              ).map(([k, v]) => (
-                <div key={k} className="rounded-button bg-surface p-2">
-                  <dt className="text-xs text-muted">{t(k)}</dt>
-                  <dd className={`text-lg font-bold ${k === 'pending' && v > 0 ? 'text-warn' : ''}`}>{n(v)}</dd>
-                </div>
-              ))}
-            </dl>
-            {card.pending > 0 && <p className="text-sm text-muted">{t('pendingHint')}</p>}
-          </>
-        ) : (
-          <p className="text-sm text-muted">{t('noGrant')}</p>
-        )}
-      </Card>
+      <div className="flex flex-col gap-5 lg:grid lg:grid-cols-2 lg:items-start lg:gap-6">
 
       {/* 폰: 양식은 + 버튼을 누르면 올라온다 (2026-10-10 의뢰인) · PC: 제자리에 펼쳐 둔다 */}
       <AddSheet id="leave" title={t('request')} defaultOpen={sp.new === 'leave'} modal>
-        <LeaveForm today={today} types={types.filter((x) => x.active && mayUse(x.code) && (hourlyOn || x.dayUnit >= 1)).map((x) => ({ code: x.code, name: nameOf(x.code), unit: x.dayUnit, deducts: x.deductsBalance, hours: x.hours ?? x.dayUnit * 8, startTime: x.startTime ?? null, endTime: x.endTime ?? null, group: x.groupName ?? null }))} />
+        <LeaveForm today={today} types={formTypes} />
       </AddSheet>
 
-      <section id="mine" className="order-3 flex scroll-mt-16 flex-col gap-2 lg:order-5">
-        <h2 className="font-semibold lg:pt-2 lg:text-base lg:font-bold">{t('mine')}</h2>
-        {requests.length === 0 && <p className="text-sm text-faint">{t('none')}</p>}
+      <section id="mine" className="order-1 flex scroll-mt-16 flex-col gap-2">
+        <h2 className="flex items-center gap-2 font-bold">
+          {t('mine')}
+          {requests.length > 0 && <span className="num rounded-chip bg-surface px-2 text-xs font-semibold text-muted">{requests.length}</span>}
+        </h2>
+        {requests.length === 0 && <Empty icon={CalendarDays} title={t('none')} />}
         <RowList>
         {reqPage.items.map((r) => (
           <Row key={r.id} aside={<Chip tone={r.status === 'approved' ? 'ok' : r.status === 'pending' ? 'warn' : 'neutral'}>{t(`status.${r.status}`)}</Chip>}>
@@ -237,39 +245,29 @@ export default async function LeavePage({ searchParams }: { searchParams: Promis
             </span>
             {r.reason && <span className="text-sm text-muted">{r.reason}</span>}
             {why.get(`leave_requests:${r.id}`) && <span className="text-sm break-words text-danger">{trq('rejectReason', { why: why.get(`leave_requests:${r.id}`)! })}</span>}
-            {(r.status === 'pending' || r.status === 'approved') && <LeaveFiles requestId={r.id} files={files.get(r.id) ?? []} canEdit={r.status === 'pending'} required={r.status === 'pending' && !!rules.get(r.typeCode)?.rule.evidenceRequired} />}
             {r.status === 'pending' && <CancelLeave id={r.id} />}
-            {r.status === 'approved' && r.endDate >= today && <DeleteLeaveRequest leaveId={r.id} pendingId={deleteOf.get(r.id) ?? null} />}
+            {r.status === 'approved' && r.endDate >= today && <DeleteLeaveRequest leaveId={r.id} pendingId={deleteOf.get(r.id)?.id ?? null} pendingKind={deleteOf.get(r.id)?.kind} today={today} types={formTypes} initial={{ typeCode: r.typeCode, startDate: r.startDate, endDate: r.endDate, startTime: r.startTime ?? null }} />}
           </Row>
         ))}
         </RowList>
         <Pager page={reqPage.page} pages={reqPage.pages} param="lp" params={sp} anchor="mine" label={tc('pages')} />
       </section>
 
-      {/* 외근·출장·재택 (②-3 7-11) — 연차와 같은 화면. 요약 칸은 왼쪽 「남은 연차」와 같은 줄·같은 높이 */}
-      <div id="work" className="order-4 grid scroll-mt-16 lg:order-2">
-        <div className="flex flex-col gap-3 px-1 pt-2 lg:rounded-card lg:border lg:border-border lg:bg-bg lg:p-6 lg:shadow-card">
-          <CardTitle help={tw('intro')}>{tw('title')}</CardTitle>
-          <dl className="num hidden flex-1 grid-cols-2 content-center gap-2 text-center lg:grid">
-            {(['pending', 'approved'] as const).map((k) => {
-              const v = works.filter((w) => w.status === k).length;
-              return (
-                <div key={k} className="rounded-button bg-surface p-2">
-                  <dt className="text-xs text-muted">{tw(`status.${k}`)}</dt>
-                  <dd className={`text-lg font-bold ${k === 'pending' && v > 0 ? 'text-warn' : ''}`}>{v}</dd>
-                </div>
-              );
-            })}
-          </dl>
-        </div>
-      </div>
       {/* 홈의 "사무실 밖" 안내에서 날짜를 채워 넘어오면 열린 채로 시작한다 */}
       <AddSheet id="work" title={tw('title')} defaultOpen={!!sp.workDate || sp.new === 'work'} modal>
         <WorkForm today={today} initialDate={sp.workDate && /^\d{4}-\d{2}-\d{2}$/.test(sp.workDate) ? sp.workDate : null} />
       </AddSheet>
-      <section id="work-mine" className="order-6 flex scroll-mt-16 flex-col gap-2">
-        <h3 className="font-semibold lg:pt-2 lg:text-base lg:font-bold">{tw('mine')}</h3>
-        {works.length === 0 && <p className="text-sm text-faint">{tw('none')}</p>}
+      <section id="work" className="order-2 flex scroll-mt-16 flex-col gap-2">
+        <span id="work-mine" aria-hidden />
+        <h2 className="flex flex-wrap items-center gap-2 font-bold">
+          {tw('mine')}
+          <HelpTip>{tw('intro')}</HelpTip>
+          {(['pending', 'approved'] as const).map((k) => {
+            const v = works.filter((w) => w.status === k).length;
+            return v > 0 ? <Chip key={k} tone={k === 'pending' ? 'warn' : 'ok'}>{tw(`status.${k}`)} {v}</Chip> : null;
+          })}
+        </h2>
+        {works.length === 0 && <Empty icon={MapPin} title={tw('none')} />}
         <RowList>
         {workPage.items.map((w) => (
           <Row key={w.id} aside={<Chip tone={w.status === 'approved' ? 'ok' : w.status === 'pending' ? 'warn' : 'neutral'}>{tw(`status.${w.status}`)}</Chip>}>
@@ -289,7 +287,7 @@ export default async function LeavePage({ searchParams }: { searchParams: Promis
         <Pager page={workPage.page} pages={workPage.pages} param="wp" params={sp} anchor="work-mine" label={tc('pages')} />
       </section>
       </div>
-      <Fab label={tc('add')} items={[{ id: 'leave', label: t('request') }, { id: 'work', label: tw('title') }]} />
+      <Fab label={trq('new')} items={[{ id: 'leave', label: t('request') }, { id: 'work', label: tw('title') }]} />
     </PageShell>
   );
 }

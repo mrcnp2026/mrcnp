@@ -4,7 +4,7 @@
 import 'server-only';
 import { getLocale, getTranslations } from 'next-intl/server';
 import { OFFICE } from '@/config/office';
-import { appLeaves, appsFor, type NavRole } from '@/config/nav';
+import { appsFor, type NavRole } from '@/config/nav';
 import type { Me } from '@/lib/auth';
 import { leaveTypeName } from '@/lib/leave';
 import { loadAllLeaveTypes } from '@/lib/leave-data';
@@ -44,9 +44,16 @@ export async function runSearch(me: Me, rawQ: string): Promise<SearchResult> {
   // ── 메뉴 (내가 열 수 있는 공간만) ──
   for (const space of (['my', 'admin', 'console'] as const).filter((s) => s === 'my' || (s === 'admin' && staff) || (s === 'console' && role === 'admin'))) {
     for (const app of appsFor(space, role)) {
-      for (const leaf of appLeaves(app)) {
-        const title = tf(`item.${leaf.key}`);
-        add('menu', [title], { title, where: `${tf(`space.${space}`)} › ${tf(space === 'console' ? `app.${app.key}` : `appFull.${app.key}`)}`, href: leaf.href });
+      const appName = tf(space === 'console' ? `app.${app.key}` : `appFull.${app.key}`);
+      for (const g of app.groups) {
+        const groupName = g.key ? tf(`group.${g.key}`) : '';
+        for (const leaf of g.items) {
+          const title = tf(`item.${leaf.key}`);
+          // 화면 이름에 들어 있으면 정확히 일치, 화면 이름엔 없어도 묶음 · 앱 이름에 들어 있으면 관련 결과
+          // (2026-10-22 의뢰인: 「조직」으로 찾아도 조직도 · 「직원 · 조직」 안의 화면이 다 나오게)
+          const level = matchLevel(q, [title]) ?? (matchLevel(q, [appName, groupName]) ? 'related' : null);
+          if (level) hits.push({ kind: 'menu', level, title, where: `${tf(`space.${space}`)} › ${appName}${groupName ? ` › ${groupName}` : ''}`, href: leaf.href });
+        }
       }
     }
   }

@@ -6,7 +6,7 @@ import { redirect } from 'next/navigation';
 import { Card, CardTitle, Chip, PageShell } from '@/components/ui';
 import { getMe } from '@/lib/auth';
 import { loadJobs } from '@/lib/job-data';
-import { buildOrgTree } from '@/lib/org';
+import { orgOptions } from '@/lib/org';
 import { loadOrgGroups } from '@/lib/org-data';
 import { loadCourses, trainingPeople } from '@/lib/training-data';
 import { CourseForm } from '../TrainingForms';
@@ -17,7 +17,7 @@ export default async function TrainingCoursesPage() {
   const t = await getTranslations('admin.training');
   const [courses, jobsRaw, groupsRaw, people] = await Promise.all([loadCourses(), loadJobs(), loadOrgGroups(), trainingPeople()]);
   const jobs = jobsRaw.filter((j) => j.active).map((j) => ({ id: j.id, label: j.name }));
-  const groups = buildOrgTree(groupsRaw.filter((g) => g.active)).flatMap((d) => [{ id: d.id, label: d.name }, ...d.teams.map((x) => ({ id: x.id, label: `${d.name} › ${x.name}` }))]);
+  const groups = orgOptions(groupsRaw.filter((g) => g.active));
   const ppl = people.filter((p) => p.active).map((p) => ({ id: p.id, label: p.name }));
   const targetText = (c: (typeof courses)[number]) => {
     const n = (c.targets.jobIds?.length ?? 0) + (c.targets.groupIds?.length ?? 0) + (c.targets.employeeIds?.length ?? 0);

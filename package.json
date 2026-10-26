@@ -4,6 +4,7 @@
   "private": true,
   "scripts": {
     "dev": "next dev -p 4123",
+    "dev:devdb": "node scripts/dev-on-devdb.mjs",
     "build": "next build",
     "start": "next start -p 4123",
     "lint": "eslint",

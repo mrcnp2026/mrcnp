@@ -67,7 +67,7 @@ export default async function OrgPage({ searchParams }: { searchParams: Promise<
           {s.direct.length > 0 && <ul className="grid grid-cols-2 gap-x-4 pt-1 lg:grid-cols-3">{s.direct.map(person)}</ul>}
           {s.teams.filter((x) => x.people.length > 0).map((x) => (
             <div key={x.team.id} className="pt-3">
-              <h3 className="truncate text-sm font-bold text-muted">{x.team.name}</h3>
+              <h3 className="truncate text-sm font-bold text-muted">{x.team.label}</h3>
               <ul className="grid grid-cols-2 gap-x-4 lg:grid-cols-3">{x.people.map(person)}</ul>
             </div>
           ))}

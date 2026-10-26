@@ -1,11 +1,12 @@
 'use client';
 // 고르면 주소의 값 하나(?name=)가 바뀌는 고르기 칸 — [적용] 단추 없이 바로 바뀐다. 주소에 남아서 뒤로 가기 · 새로 고침에도 같은 화면.
+import { Select } from '@/components/Select';
 import { useRouter } from 'next/navigation';
 
 export function ParamSelect({ name, value, options, label, params, className = '' }: { name: string; value: string; options: { value: string; label: string }[]; label: string; params: Record<string, string | undefined>; className?: string }) {
   const router = useRouter();
   return (
-    <select
+    <Select
       aria-label={label}
       value={value}
       onChange={(e) => {
@@ -21,6 +22,6 @@ export function ParamSelect({ name, value, options, label, params, className = '
           {o.label}
         </option>
       ))}
-    </select>
+    </Select>
   );
 }

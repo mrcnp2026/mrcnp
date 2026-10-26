@@ -1,5 +1,7 @@
 // 급여 설정 읽기 · 쓰기. 서버 전용 — 부르는 쪽이 먼저 급여 담당자인지 확인한다(requirePayroll).
 // 판 닫기와 새 판 삽입은 DB 함수의 같은 트랜잭션에서 처리한다.
+import { cleanTaxDefaults, type TaxDefaults } from './tax-defaults';
+import { cleanCommonItems, type CommonItem } from './common-items';
 import 'server-only';
 import { readAll } from '@/lib/read-all';
 import { atomicRpc } from '@/lib/atomic-rpc';
@@ -8,7 +10,7 @@ import { ApiError } from '@/lib/api';
 import { getMe, type Me } from '@/lib/auth';
 import { createAdminClient } from '@/lib/supabase/admin';
 import { canonical, type Candidate, type Json, type ReferenceKind } from './reference';
-import type { AllowancePolicy, ItemInput, SettingPayload, SettingSection } from './settings';
+import type { AllowancePolicy, ItemInput, Ledger, SettingPayload, SettingSection } from './settings';
 
 /** 급여 담당 관리자만 (관리자 + 급여 열람 권한). 일반 관리자는 급여 설정을 보지도 바꾸지도 못한다 */
 export async function requirePayroll(): Promise<Me> {
@@ -37,11 +39,48 @@ export async function loadSettingHistory(section: SettingSection): Promise<Setti
   return (data ?? []).map(toSetting);
 }
 
-/** 사원급여 기본 설정의 「두루누리 · 중소기업 감면 사용」 — 그 날 적용되는 판. 꺼져 있으면 직원별 감면을 보지도 쓰지도 않는다 */
+/** 그 날 적용되는 급여대장 설정(보험 기준 · 원천징수 비율 등) — 없으면 null */
+export async function ledgerAt(day: string): Promise<Ledger | null> {
+  const row = (await loadSettingHistory('ledger')).find((x) => x.validFrom <= day && (x.validTo === null || day < x.validTo));
+  return (row?.payload as Ledger | undefined) ?? null;
+}
+
+/** 사원급여 기본 설정의 「중소기업 감면 사용」 — 그 날 적용되는 판. 꺼져 있으면 직원별 감면을 보지도 쓰지도 않는다.
+ *  ★ 두루누리는 쓰지 않는다 (2026-10-22 의뢰인: 「두루누리는 사용 안 할 거니까 없애도 돼 — 직원 · 관리자 · 통합설정 전부」).
+ *    저장된 설정 값과 상관없이 늘 꺼짐 → 계산 · 직원 급여 · 명세서 · 소득세 표 어디에도 나오지 않는다. 다시 쓰려면 여기만 되살린다 */
 export async function reliefSwitches(date: string): Promise<{ sme: boolean; durunuri: boolean }> {
   const row = (await loadSettingHistory('employee-defaults')).find((x) => x.validFrom <= date && (x.validTo === null || date < x.validTo));
-  const p = row?.payload as { durunuri?: boolean; smeTaxCut?: boolean } | undefined;
-  return { sme: !!p?.smeTaxCut, durunuri: !!p?.durunuri };
+  const p = row?.payload as { smeTaxCut?: boolean } | undefined;
+  return { sme: !!p?.smeTaxCut, durunuri: false };
+}
+
+/** 그 날 적용되는 회사 공통 고정 수당 · 공제 (사원급여 기본값 판의 commonItems) — 없으면 빈 목록 */
+export async function loadCommonItems(date: string): Promise<CommonItem[]> {
+  const row = (await loadSettingHistory('employee-defaults')).find((x) => x.validFrom <= date && (x.validTo === null || date < x.validTo));
+  return cleanCommonItems((row?.payload as { commonItems?: unknown } | undefined)?.commonItems) ?? [];
+}
+
+/** 신규 직원 등록 양식의 급여 칸 기본값 — 회사 기본 급여 유형, 근로시간설정의 월 환산 시간(없으면 209) */
+export async function loadNewStaffPayDefaults(date: string): Promise<{ payType: 'MONTHLY' | 'HOURLY' | 'ANNUAL' | null; monthlyHours: number | null }> {
+  const at = (rows: SettingRow[]) => rows.find((x) => x.validFrom <= date && (x.validTo === null || date < x.validTo));
+  const [emp, wt] = await Promise.all([loadSettingHistory('employee-defaults'), loadSettingHistory('working-time')]);
+  const payType = (at(emp)?.payload as { payType?: 'MONTHLY' | 'HOURLY' | 'ANNUAL' | null } | undefined)?.payType ?? null;
+  const hours = (at(wt)?.payload as { monthlyHours?: number | null } | undefined)?.monthlyHours;
+  return { payType, monthlyHours: typeof hours === 'number' ? hours : 209 };
+}
+
+/** 급여대장 기본값의 소득세 선택 비율 — 세무 판이 없는 직원에게 쓴다. 대장 기본값을 안 정했으면 100 */
+export async function loadDefaultWithholdingRatio(date: string): Promise<80 | 100 | 120> {
+  const row = (await loadSettingHistory('ledger')).find((x) => x.validFrom <= date && (x.validTo === null || date < x.validTo));
+  const r = (row?.payload as { withholdingRatio?: number } | undefined)?.withholdingRatio;
+  return r === 80 || r === 120 ? r : 100;
+}
+
+/** 그 날 적용되는 4대보험 · 세무 회사 기본값과 그 판 (임시/검증 표시용) — 정해 두지 않았으면 null */
+export async function loadTaxDefaults(date: string): Promise<{ defaults: TaxDefaults; verified: boolean } | null> {
+  const row = (await loadSettingHistory('employee-defaults')).find((x) => x.validFrom <= date && (x.validTo === null || date < x.validTo));
+  const d = cleanTaxDefaults((row?.payload as { taxDefaults?: unknown } | undefined)?.taxDefaults);
+  return d ? { defaults: d, verified: row!.verification === 'VERIFIED' } : null;
 }
 
 /**
@@ -58,13 +97,19 @@ export type ItemRow = ItemInput & { id: string; inUse: boolean; validFrom: strin
 const toItem = (r: Record<string, unknown>): ItemRow => ({
   id: r.id as string, code: r.code as string, kind: r.kind as ItemRow['kind'], koName: r.ko_name as string, enName: r.en_name as string, calcKind: r.calc_kind as ItemRow['calcKind'],
   defaultAmount: r.default_amount === null ? null : Number(r.default_amount), fixedAllowance: r.fixed_allowance as boolean, taxTreatment: r.tax_treatment as ItemRow['taxTreatment'],
-  taxExemptLimit: r.tax_exempt_limit === null ? null : Number(r.tax_exempt_limit), taxExemptAnnualLimit: r.tax_exempt_annual_limit === null || r.tax_exempt_annual_limit === undefined ? null : Number(r.tax_exempt_annual_limit), ordinaryWage: r.ordinary_wage as ItemRow['ordinaryWage'], sort: r.sort as number, inUse: r.in_use as boolean,
+  taxExemptLimit: r.tax_exempt_limit === null ? null : Number(r.tax_exempt_limit), taxExemptAnnualLimit: r.tax_exempt_annual_limit === null || r.tax_exempt_annual_limit === undefined ? null : Number(r.tax_exempt_annual_limit), ordinaryWage: r.ordinary_wage as ItemRow['ordinaryWage'], averageWageKind: (r.average_wage_kind ?? null) as ItemRow['averageWageKind'], sort: r.sort as number, inUse: r.in_use as boolean,
   validFrom: r.valid_from as string, validTo: r.valid_to as string | null, version: r.version as number, verification: r.verification_state as Verify, verificationNote: r.verification_note as string | null,
 });
 
 /** 연간 비과세 한도 칸(DB 0062, 묶음 28)이 있는가 */
 export async function annualLimitReady(): Promise<boolean> {
   const { error } = await db().from('payroll_item_versions').select('tax_exempt_annual_limit').limit(1);
+  return !error;
+}
+
+/** 퇴직금 평균임금 구분 칸(DB 묶음 36)이 있는가 */
+export async function averageKindReady(): Promise<boolean> {
+  const { error } = await db().from('payroll_item_versions').select('average_wage_kind').limit(1);
   return !error;
 }
 
@@ -84,9 +129,11 @@ export async function saveItem(args: { input: ItemInput; validFrom: string; reas
   // 연간 한도는 칸(묶음 28)이 있을 때만 보낸다 — 비우면 보내지 않는다(새 판에서 빈 값)
   const annual = i.taxExemptAnnualLimit ?? null;
   if (annual !== null && !(await annualLimitReady())) throw new ApiError(503, 'db_update_required');
+  const avg = i.averageWageKind ?? null; // 평균임금 구분도 칸(묶음 36)이 있을 때만 보낸다
+  if (avg !== null && !(await averageKindReady())) throw new ApiError(503, 'db_update_required');
   const row = await atomicRpc<Record<string, unknown>>('append_payroll_version_atomic', {
     p_table: 'payroll_item_versions', p_identity: i.code, p_valid_from: args.validFrom, p_reason: args.reason, p_expected_version: args.expectedVersion, p_actor: args.me.id,
-    p_values: { kind: i.kind, ko_name: i.koName, en_name: i.enName, calc_kind: i.calcKind, default_amount: i.defaultAmount, fixed_allowance: i.fixedAllowance, tax_treatment: i.taxTreatment, tax_exempt_limit: i.taxExemptLimit, ...(annual !== null ? { tax_exempt_annual_limit: annual } : {}), ordinary_wage: i.ordinaryWage, sort: i.sort },
+    p_values: { kind: i.kind, ko_name: i.koName, en_name: i.enName, calc_kind: i.calcKind, default_amount: i.defaultAmount, fixed_allowance: i.fixedAllowance, tax_treatment: i.taxTreatment, tax_exempt_limit: i.taxExemptLimit, ...(annual !== null ? { tax_exempt_annual_limit: annual } : {}), ordinary_wage: i.ordinaryWage, ...(avg !== null ? { average_wage_kind: avg } : {}), sort: i.sort },
   });
   return toItem(row);
 }

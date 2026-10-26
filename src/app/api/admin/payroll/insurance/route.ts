@@ -2,7 +2,8 @@
 import { api, ApiError, readJson } from '@/lib/api';
 import { OFFICE } from '@/config/office';
 import { requirePayroll } from '@/lib/payroll/data';
-import { addEnrollments, allocateNotice, INSURERS, saveManualNotice, setEnrollment, unallocateNotice, withdrawNoticeFile, type Insurer, type ManualRow } from '@/lib/payroll/insurance-data';
+import { toKstDate } from '@/lib/time';
+import { addEnrollments, allocateNotice, confirmOldEnrollments, INSURERS, saveManualNotice, setEnrollment, unallocateNotice, withdrawNoticeFile, type Insurer, type ManualRow } from '@/lib/payroll/insurance-data';
 
 export const maxDuration = 60;
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
@@ -25,6 +26,7 @@ export const POST = api('admin.payroll.insurance', async (req, ctx) => {
     if (typeof b.employeeId !== 'string' || !UUID.test(b.employeeId) || insurers.length === 0 || (b.event !== 'ACQUIRE' && b.event !== 'LOSE') || !isDate(b.qualifyOn)) throw new ApiError(400, 'invalid_input');
     return addEnrollments({ employeeId: b.employeeId, insurers, event: b.event, qualifyOn: b.qualifyOn, me, requestId });
   }
+  if (b.action === 'enroll.confirmOld') return confirmOldEnrollments({ me, today: toKstDate(new Date()), requestId });
   if (b.action === 'enroll.set' || b.action === 'enroll.disable') {
     if (typeof b.id !== 'string' || !UUID.test(b.id) || !Number.isInteger(b.expectedVersion)) throw new ApiError(400, 'invalid_input');
     if (b.action === 'enroll.disable') await setEnrollment({ id: b.id, expectedVersion: b.expectedVersion as number, disable: true, me, requestId });

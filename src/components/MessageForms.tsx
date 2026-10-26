@@ -1,6 +1,8 @@
 'use client';
 // 사내게시판 글쓰기(관리자만, 2026-10-16 의뢰인 알림-8: 직원 글쓰기 · 답글 없음). 보내면 화면을 새로 읽는다.
+import { Select } from '@/components/Select';
 import { useTranslations } from 'next-intl';
+import { CLOSE_SHEET_EVENT } from './AddSheet';
 import { useRouter } from 'next/navigation';
 import { useState } from 'react';
 import { callApi } from '@/components/client-api';
@@ -31,7 +33,8 @@ function useSend() {
 }
 
 /** 관리자: 전체 · 부서 · 개인에게 통지 */
-export function NoticeCompose({ groups, people }: { groups: { id: string; label: string }[]; people: { id: string; label: string }[] }) {
+// sheet: 팝업(AddSheet) 안이면 그 창 이름 — 보내면 닫는다 (2026-10-22: 게시판은 목록이 먼저, 글쓰기는 「+ 새 글」 팝업)
+export function NoticeCompose({ groups, people, sheet }: { groups: { id: string; label: string }[]; people: { id: string; label: string }[]; sheet?: string }) {
   const t = useTranslations('messages');
   const { busy, err, send } = useSend();
   const [to, setTo] = useState<'all' | 'groups' | 'people'>('all');
@@ -50,6 +53,7 @@ export function NoticeCompose({ groups, people }: { groups: { id: string; label:
           setDone(t('sentTo', { n: r.recipients }));
           el.reset();
           setFormKey((k) => k + 1);
+          if (sheet) window.dispatchEvent(new CustomEvent(CLOSE_SHEET_EVENT, { detail: sheet }));
         }
       }}
     >
@@ -62,22 +66,22 @@ export function NoticeCompose({ groups, people }: { groups: { id: string; label:
         ))}
       </div>
       {to === 'groups' && (
-        <select name="groupIds" multiple required size={Math.min(6, Math.max(2, groups.length))} aria-label={t('to.groups')} className={`${field} py-2`}>
+        <Select name="groupIds" multiple required size={Math.min(6, Math.max(2, groups.length))} aria-label={t('to.groups')} className={`${field} py-2`}>
           {groups.map((g) => (
             <option key={g.id} value={g.id}>
               {g.label}
             </option>
           ))}
-        </select>
+        </Select>
       )}
       {to === 'people' && (
-        <select name="employeeIds" multiple required size={Math.min(8, Math.max(2, people.length))} aria-label={t('to.people')} className={`${field} py-2`}>
+        <Select name="employeeIds" multiple required size={Math.min(8, Math.max(2, people.length))} aria-label={t('to.people')} className={`${field} py-2`}>
           {people.map((p) => (
             <option key={p.id} value={p.id}>
               {p.label}
             </option>
           ))}
-        </select>
+        </Select>
       )}
       <input name="title" required maxLength={120} placeholder={t('fTitle')} aria-label={t('fTitle')} className={field} autoComplete="off" />
       {/* 2026-10-16: 사진 · 간단한 서식 — 숨은 칸 bodyHtml로 보낸다(서버가 거른다) */}

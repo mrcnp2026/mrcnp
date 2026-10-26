@@ -1,4 +1,4 @@
-// 조직도 그룹 만들기 (부서 또는 부서 밑의 팀). 관리자만. 2단계 제한·같은 이름 중복은 DB가 막는다 (0013).
+// 조직도 그룹 만들기 (맨 위 조직 또는 어느 조직의 하위 조직). 관리자만. 3단계 제한·같은 이름 중복은 DB가 막는다 (0013 · 0076).
 import { api, ApiError, readJson } from '@/lib/api';
 import { requireAdmin } from '@/lib/auth';
 import { cleanGroupName } from '@/lib/org';
@@ -14,8 +14,13 @@ export const POST = api('admin.groups.create', async (req) => {
   if (parentId !== null && (typeof parentId !== 'string' || !/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(parentId))) throw new ApiError(400, 'invalid_input');
   const db = createAdminClient();
   if (parentId) {
+    // 최대 3단계: 맨 위(1) › 그 밑(2) › 그 밑(3). 3단계 조직 밑에는 더 만들 수 없다 (DB 트리거 org_groups_max_depth도 같은 규칙)
     const { data: parent } = await db.from('org_groups').select('id, parent_id, active').eq('id', parentId).maybeSingle();
-    if (!parent || !parent.active || parent.parent_id) throw new ApiError(400, 'invalid_group');
+    if (!parent || !parent.active) throw new ApiError(400, 'invalid_group');
+    if (parent.parent_id) {
+      const { data: up } = await db.from('org_groups').select('parent_id').eq('id', parent.parent_id).maybeSingle();
+      if (up?.parent_id) throw new ApiError(400, 'too_deep');
+    }
   }
   let q = db.from('org_groups').select('sort_order').order('sort_order', { ascending: false }).limit(1);
   q = parentId ? q.eq('parent_id', parentId) : q.is('parent_id', null);

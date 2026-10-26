@@ -51,7 +51,7 @@ export function DateTimeInput({
         }}
         onClick={() => {
           try {
-            ref.current?.showPicker?.(); // PC에서도 칸 어디를 눌러도 고르는 창이 열리게
+            if (!window.matchMedia('(min-width: 1024px) and (pointer: fine)').matches) ref.current?.showPicker?.(); // 폰: 칸 어디를 눌러도 기본 창이 열리게 · PC는 우리 달력(PickerHost)
           } catch {
             // 지원하지 않는 브라우저는 기본 동작
           }

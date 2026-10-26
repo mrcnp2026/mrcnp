@@ -57,7 +57,7 @@ export default async function TrainingPage() {
                   <>
                     <div className="flex items-center gap-3">
                       <div className="h-2 min-w-0 flex-1 overflow-hidden rounded-full bg-surface" role="progressbar" aria-valuenow={pct} aria-valuemin={0} aria-valuemax={100} aria-label={c.name}>
-                        <div className={`h-full rounded-full ${pct === 100 ? 'bg-ok' : 'bg-primary'}`} style={{ width: `${pct}%` }} />
+                        <div className={`h-full rounded-full bg-primary`} style={{ width: `${pct}%` }} />
                       </div>
                       <span className="num w-28 shrink-0 text-right font-semibold">{t('doneValue', { done, all, pct })}</span>
                     </div>

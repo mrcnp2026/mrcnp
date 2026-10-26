@@ -25,7 +25,7 @@ export async function WeekLimitCard({ rows, limitMin, colored }: { rows: WeekLim
         </span>
       </div>
       <div className="h-1.5 overflow-hidden rounded-chip bg-border" role="img" aria-label={hm(r.minutes)}>
-        <div className={`h-full ${bar(r)}`} style={{ width: `${Math.min(r.minutes / limitMin, 1) * 100}%` }} />
+        <div className={`fx-grow-x h-full ${bar(r)}`} style={{ width: `${Math.min(r.minutes / limitMin, 1) * 100}%` }} />
       </div>
       <p className={`num text-xs ${tone(r) || 'text-muted'}`}>{r.leftMinutes >= 0 ? t('left', { hm: hm(r.leftMinutes) }) : t('over', { hm: hm(r.leftMinutes) })}</p>
     </li>

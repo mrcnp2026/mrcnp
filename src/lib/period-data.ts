@@ -224,6 +224,12 @@ export function daysFor(data: PeriodData, employeeId: string, from = data.from, 
   });
 }
 
+/** 마감 중인(되열리지 않은) 기간들 — 그 직원의 그 기간 안 날짜는 근태를 바꿀 수 없다 */
+export async function closedSpans(db: ReturnType<typeof createAdminClient>, from: string, to: string, practice: boolean): Promise<{ employeeId: string; from: string; to: string }[]> {
+  const { data } = await db.from('attendance_closes').select('employee_id, period_from, period_to').eq('state', 'CLOSED').eq('is_test', practice).lte('period_from', to).gte('period_to', from);
+  return (data ?? []).map((c) => ({ employeeId: c.employee_id as string, from: c.period_from as string, to: c.period_to as string }));
+}
+
 /**
  * 연장 확인 대상 만들기 (7-7, "집계는 자동, 승인은 사람").
  * - 끝난 근무(열린 출근 없음)만 대상. 근무 중인 날은 아직 사실이 확정되지 않았다
@@ -235,6 +241,9 @@ export async function syncOvertimeRequests(data: PeriodData, upTo: string, only?
   if (!data.rule) return 0;
   const db = createAdminClient();
   const existing = new Map(data.overtime.map((o) => [`${o.employeeId}|${o.workDate}`, o]));
+  // 이미 마감한 직원의 기간은 건드리지 않는다 — DB가 마감된 달의 변경을 막아서, 건드리면 오류가 나 화면이 열리지 않는다 (2026-10-25)
+  const closed = await closedSpans(db, data.from, data.to, data.practice);
+  const isClosed = (emp: string, day: string) => closed.some((c) => c.employeeId === emp && c.from <= day && day <= c.to);
   const inserts: Record<string, unknown>[] = [];
   const reviews: { id: string; o: number; n: number; h: number }[] = [];
 
@@ -242,6 +251,7 @@ export async function syncOvertimeRequests(data: PeriodData, upTo: string, only?
     if (only && !only.has(p.id)) continue; // 한 사람만 맞출 때 (기록이 바뀐 직후, syncOvertimeFor)
     for (const d of daysFor(data, p.id, data.from, upTo < data.to ? upTo : data.to)) {
       if (d.pairs.some((x) => x.in && !x.out)) continue; // 근무 중
+      if (isClosed(p.id, d.workDate)) continue; // 마감된 날
       const draft = buildOvertimeRequest({ employeeId: p.id, workDate: d.workDate, work: d, thresholdMinutes: OFFICE.overtimeReviewThresholdMin });
       const cur = existing.get(`${p.id}|${d.workDate}`);
       if (!cur) {

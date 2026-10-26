@@ -1,6 +1,7 @@
 // 출퇴근기록 달력형 (PC) — 줄 = 직원, 칸 = 그 달의 날짜 (2026-10-11 의뢰인: PC는 시프티 수준으로. `pc용/시프티 PC 화면 기록.md` 3장 「출퇴근기록 달력형」).
 // 칸: 윗줄 출근 · 아랫줄 퇴근. 하루 전부 휴가면 「휴가」, 간주 근무일은 일정 시각 + 「간주」. 오른쪽 끝은 기록이 있는 날 수와 급여용 시간 합.
 // 폰(2026-10-15 의뢰인 · 결정 사항 개발-38): 31칸 표를 밀어 보지 않고 월 달력 — 날짜마다 출근 · 지각 · 퇴근 미기록 · 휴가 인원, 날짜를 누르면 아래에 그날 직원 목록(?pd=날짜).
+import { Select } from '@/components/Select';
 import { getMe } from '@/lib/auth';
 import { HelpTip } from '@/components/Help';
 import { loadJobs } from '@/lib/job-data';
@@ -19,7 +20,7 @@ import { resolveDayType } from '@/config/labor-rules';
 import { OFFICE } from '@/config/office';
 import { addDays, isoWeekday } from '@/lib/calendar';
 import { isFullDayLeave } from '@/lib/leave';
-import { buildOrgTree, groupPath, groupScope } from '@/lib/org';
+import { groupPath, groupScope, orgOptions } from '@/lib/org';
 import { loadOrgGroups } from '@/lib/org-data';
 import { daysFor, leaveDaysFor, loadPeriod } from '@/lib/period-data';
 import { kstDateTime, toKstDate } from '@/lib/time';
@@ -39,7 +40,7 @@ export default async function RecordCalendarPage({ searchParams }: { searchParam
   const prevYm = addDays(from, -1).slice(0, 7);
   const [data, groups, jobs, tl] = await Promise.all([loadPeriod(from, to, practice), loadOrgGroups(), loadJobs(), getTranslations('leave')]);
   const jobColor = new Map(jobs.map((j) => [j.id, j.color]));
-  const groupOptions = buildOrgTree(groups).flatMap((d) => [{ id: d.id, label: d.name }, ...d.teams.map((x) => ({ id: x.id, label: `${d.name} › ${x.name}` }))]);
+  const groupOptions = orgOptions(groups);
   const g = groupOptions.some((o) => o.id === sp.g) ? sp.g! : '';
   const scope = g ? groupScope(groups, g) : null;
   const q = (sp.q ?? '').trim().slice(0, 40);
@@ -115,14 +116,14 @@ export default async function RecordCalendarPage({ searchParams }: { searchParam
             <input type="hidden" name="ym" value={ym} />
             {sp.live === '1' && <input type="hidden" name="live" value="1" />}
             <input type="search" name="q" defaultValue={q} placeholder={t('search')} aria-label={t('search')} maxLength={40} className="h-10 min-w-0 flex-1 rounded-button border border-border bg-bg px-3 text-sm" />
-            <select name="g" defaultValue={g} aria-label={t('filter')} className="h-10 max-w-32 rounded-button border border-border bg-surface px-2 text-sm text-muted">
+            <Select name="g" defaultValue={g} aria-label={t('filter')} className="h-10 max-w-32 rounded-button border border-border bg-surface px-2 text-sm text-muted">
               <option value="">{t('groupAll')}</option>
               {groupOptions.map((o) => (
                 <option key={o.id} value={o.id}>
                   {o.label}
                 </option>
               ))}
-            </select>
+            </Select>
             <button type="submit" className="h-10 shrink-0 rounded-button border border-border bg-bg px-3 text-sm text-muted">
               {t('find')}
             </button>
@@ -265,14 +266,14 @@ export default async function RecordCalendarPage({ searchParams }: { searchParam
           <input type="hidden" name="ym" value={ym} />
           {sp.live === '1' && <input type="hidden" name="live" value="1" />}
           <input type="search" name="q" defaultValue={q} placeholder={t('search')} aria-label={t('search')} maxLength={40} className="min-h-8 w-44 rounded-button border border-border bg-bg px-3" />
-          <select name="g" defaultValue={g} aria-label={t('filter')} className="min-h-8 rounded-button border border-border bg-surface px-2 text-muted">
+          <Select name="g" defaultValue={g} aria-label={t('filter')} className="min-h-8 rounded-button border border-border bg-surface px-2 text-muted">
             <option value="">{t('groupAll')}</option>
             {groupOptions.map((o) => (
               <option key={o.id} value={o.id}>
                 {o.label}
               </option>
             ))}
-          </select>
+          </Select>
           <button type="submit" className="inline-flex min-h-8 items-center rounded-button border border-border bg-bg px-3 text-sm text-muted">
             {t('apply')}
           </button>
@@ -298,22 +299,24 @@ export default async function RecordCalendarPage({ searchParams }: { searchParam
           ))}
         </ul>
       </div>
+      {/* 2026-10-22 의뢰인: 「한눈에 볼 필요는 있는데 디자인적으로 별로」 — 칸마다 세로 선 · 분홍 주말을 빼고, 정상은 차분하게 · 문제만 딱지로 */}
       <div className="overflow-x-auto rounded-card border border-border bg-bg shadow-card">
         <table className="w-full border-separate border-spacing-0 text-xs">
           <thead>
             <tr>
-              <th scope="col" className="sticky left-0 z-10 w-36 min-w-36 border-r border-border px-3 py-2 text-left">
+              <th scope="col" className="sticky left-0 z-10 w-44 min-w-44 border-b border-border bg-bg px-4 py-3 text-left">
                 {t('colEmployee')}
               </th>
               {days.map((d) => {
                 const red = redDay(d);
                 return (
-                  <th key={d} scope="col" className={`num min-w-11 border-r border-border px-0.5 py-2 text-center text-xs! whitespace-nowrap ${d === today ? 'bg-primary-tint!' : red ? 'bg-danger-tint!' : ''} ${red ? 'text-danger!' : ''}`}>
-                    {Number(d.slice(8))}/{f.dateTime(kstDateTime(d, '12:00'), { weekday: 'narrow' })}
+                  <th key={d} scope="col" className={`num min-w-12 border-b border-border px-0.5 py-2 text-center whitespace-nowrap ${d === today ? 'bg-primary-tint!' : red ? 'bg-surface!' : ''}`}>
+                    <span className={`block text-sm font-bold ${d === today ? 'text-primary' : red ? 'text-danger' : 'text-text'}`}>{Number(d.slice(8))}</span>
+                    <span className={`block text-xs! font-normal ${red ? 'text-danger' : 'text-faint'}`}>{f.dateTime(kstDateTime(d, '12:00'), { weekday: 'narrow' })}</span>
                   </th>
                 );
               })}
-              <th scope="col" className="min-w-24 px-2 py-2 text-right">
+              <th scope="col" className="min-w-24 border-b border-border px-3 py-2 text-right">
                 {t('colTotal')}
               </th>
             </tr>
@@ -327,34 +330,35 @@ export default async function RecordCalendarPage({ searchParams }: { searchParam
               </tr>
             )}
             {rows.map(({ p, cells, worked, payable }) => (
-              <tr key={p.id}>
-                <th scope="row" className="sticky left-0 z-10 border-r border-b border-border bg-bg px-3 py-1.5 text-left font-normal">
-                  <Link href={`/admin/records/${p.id}?ym=${ym}${sp.live === '1' ? '&live=1' : ''}`} className="text-sm font-bold hover:text-primary">
-                    {p.name}
+              <tr key={p.id} className="group">
+                <th scope="row" className="sticky left-0 z-10 border-b border-border bg-bg px-4 py-2 text-left font-normal group-hover:bg-surface">
+                  <Link href={`/admin/records/${p.id}?ym=${ym}${sp.live === '1' ? '&live=1' : ''}`} className="flex items-center gap-2.5 hover:text-primary">
+                    <span aria-hidden className="flex size-7 shrink-0 items-center justify-center rounded-chip bg-primary-tint text-xs font-bold text-primary">{p.name.slice(0, 1)}</span>
+                    <span className="flex min-w-0 flex-col">
+                      <span className="truncate text-sm font-bold">{p.name}</span>
+                      <span className="truncate text-xs text-faint">{groupPath(groups, p.groupId)}</span>
+                    </span>
                   </Link>
-                  <span className="block truncate text-faint">{groupPath(groups, p.groupId)}</span>
                 </th>
                 {cells.map((c) => {
                   // 칸 아래 띠는 상태 색 (2026-10-19 의뢰인: 파란 띠만 있어 지각 · 퇴근 미기록 · 휴가를 구분할 수 없었다 — 폰 달력의 점과 같은 색)
                   //   지각 빨강 · 퇴근 미기록 주황 · 휴가 파랑 · 정상은 띠 없음. 글자는 정상이면 보통 굵기, 문제가 있는 값만 굵게
-                  const band = c.late ? 'bg-danger' : c.open ? 'bg-warn' : c.anyLeave ? 'bg-primary' : 'bg-transparent';
                   return (
-                    <td key={c.d} className={`num border-r border-b border-border p-0 text-center align-middle ${c.d === today ? 'bg-primary-tint' : redDay(c.d) ? 'bg-danger-tint' : ''}`}>
+                    <td key={c.d} className={`num border-b border-border p-0.5 text-center align-middle ${c.d === today ? 'bg-primary-tint/60' : redDay(c.d) ? 'bg-surface/70' : 'group-hover:bg-surface/50'}`}>
                       {c.in || c.out ? (
-                        <Link href={`/admin/records/${p.id}/${c.d}${sp.live === '1' ? '?live=1' : ''}`} title={[c.late ? t('dotLate') : '', c.open ? t('noOut') : '', c.leaveNames].filter(Boolean).join(' · ') || undefined} className={`flex flex-col px-1 py-1.5 leading-tight hover:bg-primary-tint ${c.deemed ? 'text-muted' : ''}`}>
-                          <span className={c.late ? 'font-bold text-danger' : ''}>{c.in ?? '–'}</span>
-                          <span className={c.open ? 'font-bold text-warn' : ''}>{c.out ?? (c.open ? t('noOutShort') : '–')}</span>
+                        <Link href={`/admin/records/${p.id}/${c.d}${sp.live === '1' ? '?live=1' : ''}`} title={[c.late ? t('dotLate') : '', c.open ? t('noOut') : '', c.leaveNames].filter(Boolean).join(' · ') || undefined} className={`flex flex-col items-center gap-0.5 rounded-button px-0.5 py-1.5 leading-tight hover:bg-bg hover:shadow-card ${c.deemed ? 'text-muted' : ''}`}>
+                          <span className={c.late ? 'rounded-chip bg-danger-tint px-1 font-bold text-danger' : 'font-medium text-text'}>{c.in ?? '–'}</span>
+                          <span className={c.open ? 'rounded-chip bg-warn-tint px-1 font-bold text-warn' : 'text-faint'}>{c.out ?? (c.open ? t('noOutShort') : '–')}</span>
                           {c.deemed && <span className="text-faint">{t('deemed')}</span>}
-                          {!c.leave && c.leaveNames && <span className="truncate font-semibold text-primary">{c.leaveNames}</span>}
-                          <span aria-hidden className={`mt-1 h-1 rounded-chip ${band}`} />
+                          {!c.leave && c.leaveNames && <span className="max-w-full truncate rounded-chip bg-primary-tint px-1 font-semibold text-primary">{c.leaveNames}</span>}
                         </Link>
                       ) : c.leave ? (
-                        <span className="block bg-primary-tint px-0.5 py-2 font-semibold text-primary">{c.leaveNames || t('leave')}</span>
+                        <span className="mx-0.5 block rounded-button bg-primary-tint px-0.5 py-2 font-semibold text-primary">{c.leaveNames || t('leave')}</span>
                       ) : null}
                     </td>
                   );
                 })}
-                <td className="num border-b border-border px-2 py-1.5 text-right">
+                <td className="num border-b border-border px-3 py-1.5 text-right group-hover:bg-surface/50">
                   <span className="block text-sm font-bold">{t('days', { n: worked })}</span>
                   <span className="text-muted">{hm(payable)}</span>
                 </td>

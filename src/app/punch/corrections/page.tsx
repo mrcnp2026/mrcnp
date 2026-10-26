@@ -83,7 +83,7 @@ export default async function CorrectionsPage({ searchParams }: { searchParams: 
         </RowList>
       </section>
       </div>
-      <Fab label={tc('add')} items={[{ id: 'correction', label: t('title') }]} />
+      <Fab label={trq('new')} items={[{ id: 'correction', label: t('title') }]} />
     </PageShell>
   );
 }

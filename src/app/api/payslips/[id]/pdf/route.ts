@@ -24,6 +24,6 @@ export async function GET(_req: Request, ctx: { params: Promise<{ id: string }> 
   await payrollAudit({ actorId: me.id, action: 'statement.pdf.self', table: 'payroll_statements', subjectId: slip.id, employeeId: me.id, requestId, detail: { revision: slip.revision } });
   return slipPdfResponse({
     locale, no: slip.no, name: me.name, employeeNo: me.employeeNo, groupId: (mine?.group_id as string | null) ?? null, month: slip.month, periodFrom: slip.periodFrom, periodTo: slip.periodTo, payDate: slip.payDate, revision: slip.revision,
-    pay: slip.pay, deduction: slip.deduction, net: slip.net, draft: false, practice: slip.isTest, correctionReason: slip.correctionReason, requestId, lines, time: asSlipTime(time),
+    pay: slip.pay, deduction: slip.deduction, net: slip.net, draft: false, practice: slip.isTest, correctionReason: slip.correctionReason, requestId, tax: found.tax ?? null, lines, time: asSlipTime(time),
   });
 }

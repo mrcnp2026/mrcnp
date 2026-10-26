@@ -61,6 +61,7 @@ export function NoticeEditor({ people, initial, translate: canTranslate = true }
   const [err, setErr] = useState<{ code: string; requestId?: string } | null>(null);
   const [confirm, setConfirm] = useState<'publish' | 'archive' | null>(null);
   const published = initial?.status === 'published';
+  const [pick, setPick] = useState(!(initial?.targets.length)); // 직원 명부: 이미 고른 사람이 있으면 접어서 시작 (2026-10-23 의뢰인: 고른 뒤에도 명부가 넓게 펴져 있다)
 
   async function save() {
     setBusy(true);
@@ -162,8 +163,29 @@ export function NoticeEditor({ people, initial, translate: canTranslate = true }
               {t(a === 'all' ? 'audienceAll' : 'audienceSelected')}
             </label>
           ))}
-          {f.audience === 'selected' && (
+          {f.audience === 'selected' && !pick && (
+            <div className="flex flex-wrap items-center gap-2 rounded-button border border-border p-3">
+              <span className="min-w-0 flex-1 text-sm">
+                <b className="num">{t('pickCount', { n: f.targets.length })}</b>
+                <span className="text-muted"> · {people.filter((p) => f.targets.includes(p.id)).map((p) => p.name).join(', ')}</span>
+              </span>
+              <Button type="button" variant="outline" onClick={() => setPick(true)}>
+                {t('pickEdit')}
+              </Button>
+            </div>
+          )}
+          {f.audience === 'selected' && pick && (
             <div className="flex flex-col rounded-button border border-border p-2">
+              <div className="flex items-center gap-2 pb-1">
+                <span className="num flex-1 text-sm text-muted">{t('pickCount', { n: f.targets.length })}</span>
+                <button type="button" onClick={() => upd({ targets: people.map((p) => p.id) })} className="min-h-9 rounded-button px-2 text-sm font-semibold text-primary hover:bg-primary-tint">
+                  {t('pickAll')}
+                </button>
+                <button type="button" onClick={() => upd({ targets: [] })} className="min-h-9 rounded-button px-2 text-sm text-muted hover:bg-surface">
+                  {t('pickClear')}
+                </button>
+              </div>
+              <div className="flex max-h-80 flex-col overflow-y-auto">
               {people.map((p) => (
                 <label key={p.id} className="flex min-h-11 items-center gap-2">
                   <input
@@ -175,6 +197,10 @@ export function NoticeEditor({ people, initial, translate: canTranslate = true }
                   {p.name}
                 </label>
               ))}
+              </div>
+              <Button type="button" disabled={f.targets.length === 0} onClick={() => setPick(false)} className="mt-2 w-full">
+                {t('pickDone')}
+              </Button>
             </div>
           )}
         </fieldset>

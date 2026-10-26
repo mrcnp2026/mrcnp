@@ -38,10 +38,10 @@ export async function TrendCharts({ month, practice, groupId, basis }: { month: 
           // 막대 위 숫자는 짧게: 100 이상은 정수, 그 아래는 소수 한 자리
           const short = (v: number | null) => (v == null ? '–' : Math.abs(v) >= 100 ? Math.round(v).toLocaleString('ko-KR') : String(Math.round(v * 10) / 10));
           return (
-            <section key={mt.key} className="min-w-0 overflow-hidden rounded-card border border-border bg-bg p-3">
-              <h3 className="flex items-baseline justify-between gap-2 text-sm font-bold">
+            <section key={mt.key} className="min-w-0 overflow-hidden rounded-card border border-border bg-bg p-4">
+              <h3 className="flex items-baseline justify-between gap-2 text-sm font-medium">
                 {t(mt.key)}
-                <span className="text-xs font-normal text-faint">{t(mt.unit)}</span>
+                <span className="text-xs font-normal text-muted">{t(mt.unit)}</span>
               </h3>
               <div className="mt-2 flex h-24 items-stretch gap-1.5" role="img" aria-label={t('trendAria', { name: t(mt.key), values: trend.map((x, i) => `${x.m} ${vals[i] ?? '-'}`).join(', ') })}>
                 {trend.map((x, i) => (
@@ -62,7 +62,7 @@ export async function TrendCharts({ month, practice, groupId, basis }: { month: 
           );
         })}
       </div>
-      <p className="text-xs text-faint">{t('trendNote')}</p>
+      <p className="text-xs text-muted">{t('trendNote')}</p>
     </>
   );
 }

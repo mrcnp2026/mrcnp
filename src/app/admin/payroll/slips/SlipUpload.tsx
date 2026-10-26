@@ -1,6 +1,7 @@
 'use client';
 // 급여명세서 엑셀 올리기 — 파일을 고르면 바로 미리보기 → 칸 종류가 틀렸으면 고른다(다시 미리보기) → 막힌 줄이 없으면 [n명 공개]
 // 저장 전에는 아무것도 남지 않는다. 서버: api/admin/payroll/slips
+import { Select } from '@/components/Select';
 import { Download, Upload } from 'lucide-react';
 import { useFormatter, useTranslations } from 'next-intl';
 import { useRouter } from 'next/navigation';
@@ -99,7 +100,7 @@ export function SlipUpload({ month, payDate: defaultPayDate }: { month: string; 
                 <li key={c.index} className="flex items-center gap-2 rounded-button border border-border px-3 py-2">
                   <span className="min-w-0 flex-1 truncate text-sm font-semibold">{c.header || t('noHeader', { n: c.index + 1 })}</span>
                   {c.guessed && <Chip tone="warn">{t('guessed')}</Chip>}
-                  <select
+                  <Select
                     value={c.kind}
                     aria-label={t('kindOf', { col: c.header || String(c.index + 1) })}
                     disabled={busy}
@@ -115,7 +116,7 @@ export function SlipUpload({ month, payDate: defaultPayDate }: { month: string; 
                         {t(`kind.${k}`)}
                       </option>
                     ))}
-                  </select>
+                  </Select>
                 </li>
               ))}
             </ul>

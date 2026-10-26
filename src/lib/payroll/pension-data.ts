@@ -9,7 +9,7 @@ import { contributionOf, inDcPlan, type MemberInput, type PensionContribution, t
 type Row = Record<string, unknown>;
 const db = () => createAdminClient();
 const num = (v: unknown) => (v === null || v === undefined ? null : Number(v));
-const toMember = (r: Row): PensionMember => ({ id: r.id as string, employeeId: r.employee_id as string, planKind: r.plan_kind as 'DC' | 'DB', joinedOn: r.joined_on as string, endedOn: (r.ended_on as string | null) ?? null, institution: (r.institution as string | null) ?? null, openingBalance: num(r.opening_balance), openingAsOf: (r.opening_as_of as string | null) ?? null, note: (r.note as string | null) ?? null, active: r.active as boolean });
+const toMember = (r: Row): PensionMember => ({ id: r.id as string, employeeId: r.employee_id as string, planKind: r.plan_kind as 'DC' | 'DB', joinedOn: r.joined_on as string, endedOn: (r.ended_on as string | null) ?? null, institution: (r.institution as string | null) ?? null, openingBalance: num(r.opening_balance), openingAsOf: (r.opening_as_of as string | null) ?? null, marketValue: num(r.market_value), marketValueAsOf: (r.market_value_as_of as string | null) ?? null, note: (r.note as string | null) ?? null, active: r.active as boolean });
 const toContribution = (r: Row): PensionContribution => ({ id: r.id as string, employeeId: r.employee_id as string, month: r.month as string, wageTotal: Number(r.wage_total), amount: Number(r.amount), source: r.source as 'PAYROLL' | 'MANUAL', runId: (r.run_id as string | null) ?? null, paidOn: (r.paid_on as string | null) ?? null, note: (r.note as string | null) ?? null });
 
 export async function loadPension(isTest: boolean): Promise<{ members: PensionMember[]; contributions: PensionContribution[] }> {
@@ -24,7 +24,10 @@ export async function loadPension(isTest: boolean): Promise<{ members: PensionMe
 /** 가입 넣기 · 고치기 (직원마다 켜진 가입은 하나) */
 export async function saveMember(args: { employeeId: string; input: MemberInput; isTest: boolean; me: Me }): Promise<void> {
   const c = db();
-  const row = { plan_kind: args.input.planKind, joined_on: args.input.joinedOn, ended_on: args.input.endedOn, institution: args.input.institution, opening_balance: args.input.openingBalance, opening_as_of: args.input.openingAsOf, note: args.input.note, updated_by: args.me.id, updated_at: new Date().toISOString() };
+  // 평가금액 칸(DB 묶음 36)이 아직 없는 DB에서는 값이 있을 때만 막고, 비어 있으면 예전처럼 저장한다
+  const valueReady = !(await c.from('payroll_pension_members').select('market_value').limit(1)).error;
+  if (!valueReady && args.input.marketValue !== null) throw new Error('saveMember: db_update_required');
+  const row = { ...(valueReady ? { market_value: args.input.marketValue, market_value_as_of: args.input.marketValueAsOf } : {}), plan_kind: args.input.planKind, joined_on: args.input.joinedOn, ended_on: args.input.endedOn, institution: args.input.institution, opening_balance: args.input.openingBalance, opening_as_of: args.input.openingAsOf, note: args.input.note, updated_by: args.me.id, updated_at: new Date().toISOString() };
   const { data: cur } = await c.from('payroll_pension_members').select('id').eq('employee_id', args.employeeId).eq('is_test', args.isTest).eq('active', true).maybeSingle();
   const { error } = cur
     ? await c.from('payroll_pension_members').update(row).eq('id', cur.id)

@@ -1,6 +1,7 @@
 // ④ 직원 탭 — 조직도(부서 › 팀)로 묶어 본다 (2026-10-05 의뢰인: 샤플 대조). 누가 가입(비밀번호를 만듦)했고 누가 아직인지도 한눈에.
 // 위: 전체·가입·미가입 걸러보기 / 가운데: 부서별 묶음 → 팀 → 직원 한 줄 (이름·직급·사번·가입 상태·초대 링크).
 // 이름을 누르면 직원 상세(정보 수정·로그인·기록). 직원 추가와 조직도 관리는 각각 따로 화면이 있다.
+import { loadNewStaffPayDefaults } from '@/lib/payroll/data';
 import { CalendarCheck, Check, ChevronRight, Download, Network } from 'lucide-react';
 import { getTranslations } from 'next-intl/server';
 import Link from 'next/link';
@@ -10,7 +11,7 @@ import { PcTable } from '@/components/PcTable';
 import { Card, Chip, PageShell } from '@/components/ui';
 import { LOCALE_NAMES, LOCALES } from '@/i18n/locales';
 import { loadJobs } from '@/lib/job-data';
-import { buildOrgTree, groupPath, groupPeople } from '@/lib/org';
+import { groupPath, groupPeople, orgOptions } from '@/lib/org';
 import { loadOrgGroups } from '@/lib/org-data';
 import { getMe } from '@/lib/auth';
 import { createAdminClient } from '@/lib/supabase/admin';
@@ -19,6 +20,8 @@ import { RegisterWizard } from './new/RegisterWizard';
 import { NewInviteButton } from './NewInviteButton';
 import { RoleCell } from './RoleCell';
 import { QuickFind } from '@/components/QuickFind';
+import { BulkInviteMail } from './BulkInviteMail';
+import { smtpReady } from '@/lib/mail';
 import { SignupRequests } from './SignupRequests';
 import { StaffAddTabs } from './StaffImport';
 import { suggestEmployeeNo } from '@/lib/email-rules';
@@ -51,6 +54,7 @@ export default async function MembersPage({ searchParams }: { searchParams: Prom
     // 가입 링크를 보냈는지 · 만료됐는지 (2026-10-17 운영 전환 준비: 23명에게 링크를 돌릴 때 누가 남았는지 보이게)
     db.from('invites').select('employee_id, expires_at, created_at').is('used_at', null).is('revoked_at', null),
   ]);
+  const payDefaults = me.canViewPayroll ? await loadNewStaffPayDefaults(toKstDate(new Date())) : undefined; // 등록 팝업의 급여 칸 (2026-10-25)
   const jobName = new Map(jobs.map((j) => [j.id, j.name]));
   const nowIso = new Date().toISOString();
   const lastInvite = new Map<string, { sentOn: string; live: boolean }>();
@@ -75,6 +79,7 @@ export default async function MembersPage({ searchParams }: { searchParams: Prom
   const inactive = all.filter((p) => !p.active);
   const pending = active.filter((p) => !withPhone.has(p.id));
   const list = filter === 'pending' ? pending : filter === 'inactive' ? inactive : active;
+  const pendingMailable = pending.filter((p) => p.email).length; // 이메일로 보낼 수 있는 미가입 직원 (이메일 없는 사람은 못 보낸다)
   const sections = groupPeople(groups, list).filter((s) => s.count > 0 || (filter === 'current' && s.dept));
   const tabs: { key: Filter; n: number }[] = [
     { key: 'current', n: active.length },
@@ -149,16 +154,17 @@ export default async function MembersPage({ searchParams }: { searchParams: Prom
       <AddSheet id="member" title={t('addTitle')} modal wide className="hidden">
         <div className="flex flex-col gap-4">
           {/* 탭: 한 명씩 · 엑셀로 여러 명 (2026-10-20 의뢰인) */}
-          <StaffAddTabs one={<RegisterWizard popup groups={buildOrgTree(groups).flatMap((d) => [{ id: d.id, label: d.name }, ...d.teams.map((x) => ({ id: x.id, label: `${d.name} › ${x.name}` }))])} jobs={jobs.filter((j) => j.active).map((j) => ({ id: j.id, label: j.name }))} locales={LOCALES.map((code) => ({ code, name: LOCALE_NAMES[code] }))} today={toKstDate(new Date())} />} />
+          <StaffAddTabs one={<RegisterWizard popup pay={payDefaults} groups={orgOptions(groups)} jobs={jobs.filter((j) => j.active).map((j) => ({ id: j.id, label: j.name }))} locales={LOCALES.map((code) => ({ code, name: LOCALE_NAMES[code] }))} today={toKstDate(new Date())} />} />
         </div>
       </AddSheet>
       {/* 이메일 가입 신청 — 있을 때만 맨 위에 (2026-10-16 의뢰인 권한-6) */}
       <SignupRequests
         items={signups}
-        groups={buildOrgTree(groups).flatMap((d) => [{ id: d.id, label: d.name }, ...d.teams.map((x) => ({ id: x.id, label: `${d.name} › ${x.name}` }))])}
+        groups={orgOptions(groups)}
         suggestNo={suggestEmployeeNo((people ?? []).map((p) => p.employee_no))}
         today={toKstDate(new Date())}
       />
+      {filter === 'pending' && pending.length > 0 && me.role === 'admin' && <BulkInviteMail sendable={pendingMailable} noEmail={pending.length - pendingMailable} ready={smtpReady()} />}
       {/* 걸러보기 — 숫자가 곧 현황 (가입 9 · 미가입 2). 시프티의 「현재직원 / 미합류 / 비활성」 탭 줄 모양 */}
       <nav className="-mx-4 -mt-3 flex border-b border-border bg-bg px-2 lg:mx-0 lg:mt-0 lg:rounded-card lg:border-0" aria-label={t('filter')}>
         {tabs.map((x) => (
@@ -251,7 +257,7 @@ export default async function MembersPage({ searchParams }: { searchParams: Prom
             .map((x) => (
               <section key={x.team.id}>
                 <h3 className="flex min-h-9 items-center gap-2 bg-surface px-5 text-xs font-bold text-muted">
-                  {x.team.name}
+                  {x.team.label}
                   <span className="num font-medium text-faint">{x.people.length}</span>
                 </h3>
                 <ul>{x.people.map(row)}</ul>

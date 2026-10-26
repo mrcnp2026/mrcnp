@@ -58,13 +58,19 @@ export async function requestSignup(b: Record<string, unknown>): Promise<void> {
   // 관리자에게 폰 알림 (켜 둔 사람만, 통합설정 「폰 알림」 스위치가 켜져 있을 때)
   if (!(await switchOn('notify.push'))) return;
   const { data: admins } = await db.from('profiles').select('id, employee_no').eq('role', 'admin').eq('active', true);
-  await sendStaffPush((admins ?? []).filter((a) => !a.employee_no?.startsWith('e2e-')).map((a) => a.id as string), { title: `${name} 님이 가입을 신청했습니다`, body: `${email} — 승인하면 직원으로 등록됩니다`, url: '/admin/members#signups', tag: `signup-${id}` }).catch(() => 0);
+  await sendStaffPush((admins ?? []).filter((a) => !a.employee_no?.startsWith('e2e-')).map((a) => a.id as string), { title: `${name} 님이 가입을 신청했습니다`, body: `${email} — 승인하면 직원으로 등록됩니다`, url: '/admin/inbox#signups', tag: `signup-${id}` }).catch(() => 0);
 }
 
 /** 로그인이 안 될 때: 승인 대기 중인 신청인지(비밀번호까지 맞을 때만 알려 준다 — 남의 이메일로 신청 여부를 떠보지 못하게) */
 export async function pendingSignupFor(email: string): Promise<string | null> {
   const { data } = await createAdminClient().from('signup_requests').select('id').eq('email', email).eq('status', 'pending').maybeSingle();
   return (data?.id as string | undefined) ?? null;
+}
+
+/** 승인 대기 중인 가입 신청 수 — 종 · 요청 숫자에 더한다 (2026-10-26 의뢰인) */
+export async function pendingSignupCount(): Promise<number> {
+  const { count, error } = await createAdminClient().from('signup_requests').select('id', { count: 'exact', head: true }).eq('status', 'pending');
+  return error ? 0 : (count ?? 0);
 }
 
 export async function loadPendingSignups(): Promise<SignupRequest[]> {

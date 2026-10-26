@@ -1,12 +1,13 @@
 'use client';
 // 부서·팀으로 걸러 보기 — 고르면 주소(?g=)가 바뀐다 (뒤로 가기·새로 고침에도 같은 묶음). 그룹이 없으면 그리지 않는다.
+import { Select } from '@/components/Select';
 import { useRouter } from 'next/navigation';
 
 export function GroupFilter({ value, options, allLabel, label, params }: { value: string; options: { id: string; label: string }[]; allLabel: string; label: string; params: Record<string, string | undefined> }) {
   const router = useRouter();
   if (options.length === 0) return null;
   return (
-    <select
+    <Select
       aria-label={label}
       value={value}
       onChange={(e) => {
@@ -23,6 +24,6 @@ export function GroupFilter({ value, options, allLabel, label, params }: { value
           {o.label}
         </option>
       ))}
-    </select>
+    </Select>
   );
 }

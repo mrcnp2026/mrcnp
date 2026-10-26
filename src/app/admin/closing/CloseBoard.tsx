@@ -39,6 +39,10 @@ export function CloseBoard({ month, live, lines, canClose }: { month: string; li
   const [reopen, setReopen] = useState<string | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
   const ready = lines.filter((l) => l.ready && !l.close);
+  // 확인이 필요한 직원을 맨 위로, 마감 가능한 직원 다음, 이미 마감한 직원은 접어 둔다 (2026-10-26 의뢰인: 이슈만 먼저, 나머지는 더보기)
+  const open = lines.filter((l) => !l.close).sort((a, b) => Number(a.ready) - Number(b.ready));
+  const done = lines.filter((l) => !!l.close);
+  const allClosed = lines.length > 0 && done.length === lines.length;
   const toggle = (id: string) =>
     setPicked((s) => {
       const n = new Set(s);
@@ -154,27 +158,104 @@ export function CloseBoard({ month, live, lines, canClose }: { month: string; li
     ),
   ].filter(Boolean);
 
+  const pcRow = (l: Line) => {
+              const res = resultOf(l.employeeId);
+              return (
+                <tr key={l.employeeId} className="border-b border-border align-top">
+                  <td className="px-3 py-3">{canClose && l.ready && !l.close && <input type="checkbox" checked={picked.has(l.employeeId)} onChange={() => toggle(l.employeeId)} aria-label={t('pick', { name: l.name })} className="size-5 accent-primary" />}</td>
+                  <td data-label={t('colName')} className="px-3 py-3">
+                    <Link href={`/admin/members/${l.employeeId}`} className="font-bold hover:text-primary">
+                      {l.name}
+                    </Link>
+                    {!l.active && <span className="ml-2 text-xs text-faint">{t('inactive')}</span>}
+                  </td>
+                  <td data-label={t('colGroup')} className="px-3 py-3 text-muted">{l.group}</td>
+                  <td data-label={t('colDays')} className="num px-3 py-3">
+                    {l.recordDays || <span className="text-faint">–</span>}
+                    {l.deemedDays > 0 && <span className="block text-xs text-faint">{t('deemed', { n: l.deemedDays })}</span>}
+                  </td>
+                  <td data-label={t('colUnconfirmed')} className="num px-3 py-3">
+                    {l.unconfirmed > 0 ? (
+                      <Link href={`/admin/records/list?from=${month}-01&q=${encodeURIComponent(l.name)}${q}`} className="font-bold text-warn underline">
+                        {l.unconfirmed}
+                      </Link>
+                    ) : (
+                      <span className="text-faint">–</span>
+                    )}
+                  </td>
+                  <td data-label={t('colPending')} className="px-3 py-3">
+                    {l.pending.length === 0 ? (
+                      <span className="num text-faint">–</span>
+                    ) : (
+                      <Link href={`/admin/inbox${live ? '?live=1' : ''}`} className="flex flex-col font-bold text-warn underline">
+                        {l.pending.map((p) => (
+                          <span key={p.key} className="num">
+                            {t(`pendingOf.${p.key}`, { n: p.n })}
+                          </span>
+                        ))}
+                      </Link>
+                    )}
+                  </td>
+                  <td data-label={t('colAnomaly')} className="num px-3 py-3">
+                    {l.anomalyBlocks + l.anomalyChecks === 0 ? (
+                      <span className="text-faint">–</span>
+                    ) : (
+                      <Link href={`/admin/anomalies?m=${month}${q}`} className="flex flex-col underline">
+                        {l.anomalyBlocks > 0 && <span className="font-bold text-warn">{t('anomalyBlock', { n: l.anomalyBlocks })}</span>}
+                        {l.anomalyChecks > 0 && <span className="text-muted">{t('anomalyCheck', { n: l.anomalyChecks })}</span>}
+                      </Link>
+                    )}
+                  </td>
+                  <td data-label={t('colHours')} className="num px-3 py-3 whitespace-nowrap">{l.hours}</td>
+                  <td data-label={t('colState')} className="px-3 py-3">
+                    {stateOf(l, res)}
+                  </td>
+                  <td data-label={t('colManage')} className="px-3 py-3">
+                    {manage(l)}
+                  </td>
+                </tr>
+              );
+  };
+
   return (
     <div className="flex flex-col gap-3">
       {canClose && (
-        <div className="flex flex-wrap items-center justify-between gap-2">
-          <button type="button" onClick={() => setPicked(new Set(picked.size === ready.length ? [] : ready.map((l) => l.employeeId)))} disabled={ready.length === 0} className="inline-flex min-h-9 items-center rounded-button border border-border bg-bg px-3 text-sm font-bold text-muted disabled:opacity-50">
-            {t('pickAll')}
-          </button>
+        <div className="flex flex-col gap-2 lg:flex-row lg:items-center lg:justify-end">
           {ask ? (
-            <span className="flex flex-wrap items-center gap-2">
-              <span className="text-sm text-warn">{t('closeConfirm', { n: picked.size, month })}</span>
-              <Button type="button" size="sm" disabled={busy} onClick={() => run({ action: 'close', month, live, items: lines.filter((l) => picked.has(l.employeeId)).map((l) => ({ employeeId: l.employeeId, hash: l.hash })) })}>
-                {busy ? t('closing') : t('yes')}
-              </Button>
-              <Button type="button" size="sm" variant="outline" disabled={busy} onClick={() => setAsk(false)}>
-                {t('no')}
-              </Button>
-            </span>
+            <div className="flex flex-col gap-2 rounded-card border border-warn bg-warn-tint p-3 lg:flex-row lg:items-center">
+              <span className="text-sm font-bold text-warn">{t('closeConfirm', { n: picked.size, month })}</span>
+              <span className="flex gap-2">
+                <Button type="button" className="flex-1" disabled={busy} onClick={() => run({ action: 'close', month, live, items: lines.filter((l) => picked.has(l.employeeId)).map((l) => ({ employeeId: l.employeeId, hash: l.hash })) })}>
+                  {busy ? t('closing') : t('yes')}
+                </Button>
+                <Button type="button" variant="outline" className="flex-1" disabled={busy} onClick={() => setAsk(false)}>
+                  {t('no')}
+                </Button>
+              </span>
+            </div>
+          ) : allClosed ? (
+            <Link href={`/admin/payroll/check?m=${month}${q}`} className="inline-flex min-h-12 items-center justify-center rounded-button bg-primary px-5 text-base font-bold text-on-primary">
+              {t('nextCheck')} ›
+            </Link>
           ) : (
-            <Button type="button" size="sm" disabled={picked.size === 0} onClick={() => setAsk(true)}>
-              {t('close', { n: picked.size })}
-            </Button>
+            <>
+              {picked.size > 0 && (
+                <button type="button" onClick={() => setPicked(new Set())} className="min-h-9 px-2 text-sm font-bold text-muted underline-offset-2 hover:underline">
+                  {t('clearPick')}
+                </button>
+              )}
+              <Button
+                type="button"
+                className="lg:min-w-56"
+                disabled={picked.size === 0 && ready.length === 0}
+                onClick={() => {
+                  if (picked.size === 0) setPicked(new Set(ready.map((l) => l.employeeId)));
+                  setAsk(true);
+                }}
+              >
+                {picked.size > 0 ? t('closeSelected', { n: picked.size }) : t('closeAll', { n: ready.length })}
+              </Button>
+            </>
           )}
         </div>
       )}
@@ -213,8 +294,6 @@ export function CloseBoard({ month, live, lines, canClose }: { month: string; li
             </li>
           );
         };
-        const open = lines.filter((l) => !l.close);
-        const done = lines.filter((l) => !!l.close);
         return (
           <div className="flex flex-col gap-2 lg:hidden">
             {open.length > 0 && <ul className="divide-y divide-border rounded-card border border-border bg-bg">{open.map(row)}</ul>}
@@ -230,9 +309,11 @@ export function CloseBoard({ month, live, lines, canClose }: { month: string; li
           </div>
         );
       })()}
-      <div className="overflow-x-auto table-ruled max-lg:hidden">
-        <table className="w-full text-sm">
-          <thead>
+      {open.length === 0 && done.length > 0 && <p className="rounded-card bg-bg p-4 text-center text-sm font-bold text-ok max-lg:hidden">{t('allClosed')}</p>}
+      {open.length > 0 && (
+        <div className="overflow-x-auto table-ruled max-lg:hidden">
+          <table className="w-full text-sm">
+            <thead>
             <tr className="border-b border-border bg-surface text-left">
               <th scope="col" className="w-10 px-3 py-2" />
               {['colName', 'colGroup', 'colDays', 'colUnconfirmed', 'colPending', 'colAnomaly', 'colHours', 'colState', 'colManage'].map((k) => (
@@ -241,69 +322,34 @@ export function CloseBoard({ month, live, lines, canClose }: { month: string; li
                 </th>
               ))}
             </tr>
-          </thead>
-          <tbody>
-            {lines.map((l) => {
-              const res = resultOf(l.employeeId);
-              return (
-                <tr key={l.employeeId} className="border-b border-border align-top">
-                  <td className="px-3 py-3">{canClose && l.ready && !l.close && <input type="checkbox" checked={picked.has(l.employeeId)} onChange={() => toggle(l.employeeId)} aria-label={t('pick', { name: l.name })} className="size-5 accent-primary" />}</td>
-                  <td data-label={t('colName')} className="px-3 py-3">
-                    <Link href={`/admin/members/${l.employeeId}`} className="font-bold hover:text-primary">
-                      {l.name}
-                    </Link>
-                    {!l.active && <span className="ml-2 text-xs text-faint">{t('inactive')}</span>}
-                  </td>
-                  <td data-label={t('colGroup')} className="px-3 py-3 text-muted">{l.group}</td>
-                  <td data-label={t('colDays')} className="num px-3 py-3">
-                    {l.recordDays}
-                    {l.deemedDays > 0 && <span className="block text-xs text-faint">{t('deemed', { n: l.deemedDays })}</span>}
-                  </td>
-                  <td data-label={t('colUnconfirmed')} className="num px-3 py-3">
-                    {l.unconfirmed > 0 ? (
-                      <Link href={`/admin/records/list?from=${month}-01&q=${encodeURIComponent(l.name)}${q}`} className="font-bold text-warn underline">
-                        {l.unconfirmed}
-                      </Link>
-                    ) : (
-                      0
-                    )}
-                  </td>
-                  <td data-label={t('colPending')} className="px-3 py-3">
-                    {l.pending.length === 0 ? (
-                      <span className="num">0</span>
-                    ) : (
-                      <Link href={`/admin/inbox${live ? '?live=1' : ''}`} className="flex flex-col font-bold text-warn underline">
-                        {l.pending.map((p) => (
-                          <span key={p.key} className="num">
-                            {t(`pendingOf.${p.key}`, { n: p.n })}
-                          </span>
-                        ))}
-                      </Link>
-                    )}
-                  </td>
-                  <td data-label={t('colAnomaly')} className="num px-3 py-3">
-                    {l.anomalyBlocks + l.anomalyChecks === 0 ? (
-                      0
-                    ) : (
-                      <Link href={`/admin/anomalies?m=${month}${q}`} className="flex flex-col underline">
-                        {l.anomalyBlocks > 0 && <span className="font-bold text-warn">{t('anomalyBlock', { n: l.anomalyBlocks })}</span>}
-                        {l.anomalyChecks > 0 && <span className="text-muted">{t('anomalyCheck', { n: l.anomalyChecks })}</span>}
-                      </Link>
-                    )}
-                  </td>
-                  <td data-label={t('colHours')} className="num px-3 py-3 whitespace-nowrap">{l.hours}</td>
-                  <td data-label={t('colState')} className="px-3 py-3">
-                    {stateOf(l, res)}
-                  </td>
-                  <td data-label={t('colManage')} className="px-3 py-3">
-                    {manage(l)}
-                  </td>
-                </tr>
-              );
-            })}
-          </tbody>
-        </table>
-      </div>
+            </thead>
+            <tbody>{open.map(pcRow)}</tbody>
+          </table>
+        </div>
+      )}
+      {done.length > 0 && (
+        <details className="group rounded-card border border-border bg-bg max-lg:hidden">
+          <summary className="flex min-h-11 cursor-pointer items-center justify-between px-4 text-sm font-bold">
+            {t('closedGroup', { n: done.length })}
+            <span className="text-xs font-normal text-muted group-open:hidden">{t('showAll')}</span>
+          </summary>
+          <div className="overflow-x-auto table-ruled border-t border-border">
+            <table className="w-full text-sm">
+              <thead>
+            <tr className="border-b border-border bg-surface text-left">
+              <th scope="col" className="w-10 px-3 py-2" />
+              {['colName', 'colGroup', 'colDays', 'colUnconfirmed', 'colPending', 'colAnomaly', 'colHours', 'colState', 'colManage'].map((k) => (
+                <th key={k} scope="col" className="px-3 py-2.5 text-xs font-semibold whitespace-nowrap text-muted">
+                  {t(k)}
+                </th>
+              ))}
+            </tr>
+              </thead>
+              <tbody>{done.map(pcRow)}</tbody>
+            </table>
+          </div>
+        </details>
+      )}
     </div>
   );
 }

@@ -3,7 +3,7 @@
 // ★ 빈 칸을 0으로 바꾸지 않는다(기본 금액 빈 칸 = 「설정 필요」). 모르는 글자는 문제 줄이다. 종류(지급/공제)는 바꿀 수 없다.
 import { CALC_KINDS, ORDINARY, TAX_TREATMENTS, validateItem, type ItemInput } from './settings';
 
-export const ITEM_COLUMNS = ['code', 'kind', 'koName', 'enName', 'calcKind', 'defaultAmount', 'fixedAllowance', 'taxTreatment', 'taxExemptLimit', 'taxExemptAnnualLimit', 'ordinaryWage', 'sort', 'validFrom', 'reason'] as const;
+export const ITEM_COLUMNS = ['code', 'kind', 'koName', 'enName', 'calcKind', 'defaultAmount', 'fixedAllowance', 'taxTreatment', 'taxExemptLimit', 'taxExemptAnnualLimit', 'ordinaryWage', 'averageWageKind', 'sort', 'validFrom', 'reason'] as const;
 export type ItemColumn = (typeof ITEM_COLUMNS)[number];
 
 /** 칸에 쓰는 글자 — 코드 그대로도, 한국어 이름으로도 받는다 */
@@ -12,6 +12,7 @@ export const ITEM_WORDS = {
   calcKind: { FIXED: '고정 금액', MANUAL: '직접 입력', TIME: '시간 × 단가', RULE: '기준표로 계산', NOTICE: '고지 금액' },
   taxTreatment: { TAXABLE: '과세', EXEMPT: '비과세', PARTIAL: '일부 비과세', NOT_APPLICABLE: '해당 없음' },
   ordinaryWage: { INCLUDED: '포함', EXCLUDED: '제외', UNKNOWN: '모름' },
+  averageWageKind: { MONTHLY: '월 임금', BONUS: '연 상여', EXCLUDED: '뺌' },
   yesNo: { YES: '예', NO: '아니오' },
 } as const;
 
@@ -41,11 +42,11 @@ export function itemToRow(i: ItemInput): Record<ItemColumn, string | number | nu
   return {
     code: i.code, kind: ITEM_WORDS.kind[i.kind], koName: i.koName, enName: i.enName, calcKind: ITEM_WORDS.calcKind[i.calcKind], defaultAmount: i.defaultAmount,
     fixedAllowance: i.fixedAllowance ? ITEM_WORDS.yesNo.YES : ITEM_WORDS.yesNo.NO, taxTreatment: ITEM_WORDS.taxTreatment[i.taxTreatment], taxExemptLimit: i.taxExemptLimit, taxExemptAnnualLimit: i.taxExemptAnnualLimit ?? null,
-    ordinaryWage: ITEM_WORDS.ordinaryWage[i.ordinaryWage], sort: i.sort, validFrom: null, reason: null,
+    ordinaryWage: ITEM_WORDS.ordinaryWage[i.ordinaryWage], averageWageKind: i.averageWageKind ? ITEM_WORDS.averageWageKind[i.averageWageKind] : null, sort: i.sort, validFrom: null, reason: null,
   };
 }
 
-const SAME: (keyof ItemInput)[] = ['koName', 'enName', 'calcKind', 'defaultAmount', 'fixedAllowance', 'taxTreatment', 'taxExemptLimit', 'taxExemptAnnualLimit', 'ordinaryWage', 'sort'];
+const SAME: (keyof ItemInput)[] = ['koName', 'enName', 'calcKind', 'defaultAmount', 'fixedAllowance', 'taxTreatment', 'taxExemptLimit', 'taxExemptAnnualLimit', 'ordinaryWage', 'averageWageKind', 'sort'];
 
 /** 올린 줄들을 지금 항목과 견준다. rowNo는 엑셀 줄 번호(머리 줄 다음부터) */
 export function readItemSheet(rows: { rowNo: number; cells: SheetRow }[], current: Current[], today: string): ItemLine[] {
@@ -60,10 +61,12 @@ export function readItemSheet(rows: { rowNo: number; cells: SheetRow }[], curren
     seen.add(code);
     const kind = word(cells.kind, ITEM_WORDS.kind), calcKind = word(cells.calcKind, ITEM_WORDS.calcKind);
     const taxTreatment = word(cells.taxTreatment, ITEM_WORDS.taxTreatment), ordinaryWage = word(cells.ordinaryWage, ITEM_WORDS.ordinaryWage), fixed = word(cells.fixedAllowance, ITEM_WORDS.yesNo);
-    if (kind === undefined || calcKind === undefined || taxTreatment === undefined || ordinaryWage === undefined || fixed === undefined) return no('bad_value');
+    // 「평균임금 구분」 칸이 아예 없는 예전 엑셀은 지금 값을 그대로 둔다(빈 칸으로 지우지 않는다). 칸이 있는데 비어 있으면 「정하지 않음」
+    const averageCell = cells.averageWageKind === undefined ? (have.get(code)?.averageWageKind ?? null) : word(cells.averageWageKind, ITEM_WORDS.averageWageKind);
+    if (kind === undefined || calcKind === undefined || taxTreatment === undefined || ordinaryWage === undefined || fixed === undefined || averageCell === undefined) return no('bad_value');
     const v = validateItem({
       code, kind, koName: str(cells.koName), enName: str(cells.enName), calcKind, defaultAmount: str(cells.defaultAmount), taxTreatment: kind === 'DEDUCTION' ? 'NOT_APPLICABLE' : taxTreatment,
-      taxExemptLimit: str(cells.taxExemptLimit), taxExemptAnnualLimit: str(cells.taxExemptAnnualLimit), ordinaryWage: ordinaryWage ?? 'UNKNOWN', sort: str(cells.sort), fixedAllowance: fixed === 'YES',
+      taxExemptLimit: str(cells.taxExemptLimit), taxExemptAnnualLimit: str(cells.taxExemptAnnualLimit), ordinaryWage: ordinaryWage ?? 'UNKNOWN', averageWageKind: kind === 'DEDUCTION' ? null : averageCell, sort: str(cells.sort), fixedAllowance: fixed === 'YES',
     });
     if (!v.ok) return no('bad_value');
     if (!(CALC_KINDS as readonly string[]).includes(v.value.calcKind) || !(TAX_TREATMENTS as readonly string[]).includes(v.value.taxTreatment) || !(ORDINARY as readonly string[]).includes(v.value.ordinaryWage)) return no('bad_value');

@@ -9,6 +9,7 @@ import { useEffect, useRef, useState } from 'react';
 import { Help } from '@/components/Help';
 import { MiniPager, PER_CARD } from '@/components/PagedList';
 import { Card } from '@/components/ui';
+import { CountUp } from '@/components/CountUp';
 import type { BoardRow, DayStatus } from '@/lib/today';
 import { BOARD_FILTER_EVENT } from './KpiRow';
 
@@ -158,7 +159,7 @@ export function BoardView({
                 onClick={() => pick(k)}
                 className={`flex min-h-16 flex-col items-center justify-center gap-0.5 rounded-button ${on ? 'bg-primary-tint' : ''}`}
               >
-                <span className={`num text-2xl leading-none font-extrabold ${attention ? 'text-warn' : on ? 'text-primary' : 'text-text'}`}>{n}</span>
+                <CountUp value={n} className={`num text-2xl leading-none font-extrabold ${attention ? "text-warn" : on ? "text-primary" : "text-text"}`} />
                 <span className={`text-xs ${on ? 'font-bold text-primary' : 'text-muted'}`}>{th(`status.${k}`)}</span>
               </button>
             );

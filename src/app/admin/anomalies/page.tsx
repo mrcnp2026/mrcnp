@@ -8,7 +8,7 @@ import { FilterBar, ListHead, ListTable, StatusCards } from '@/components/listfr
 import { Card, CardTitle, Chip, PageShell } from '@/components/ui';
 import { Pager, pageOf } from '@/components/Pager';
 import { OFFICE } from '@/config/office';
-import { ANOMALY_TYPES, anomalyKey, summarizeAnomalies, type AnomalyType } from '@/lib/anomaly';
+import { ANOMALY_GROUPS, anomalyKey, groupLevel, groupOfType, isAnomalyGroup, summarizeAnomalies } from '@/lib/anomaly';
 import { approverMap, loadOverrides, loadTaskPolicy, tasksFor } from '@/lib/anomaly-tasks';
 import { createAdminClient } from '@/lib/supabase/admin';
 import { collectAnomalies, loadAnomalyPolicy, loadAnomalyReviews } from '@/lib/anomaly-data';
@@ -39,8 +39,10 @@ export default async function AnomaliesPage({ searchParams }: { searchParams: Pr
   const me = (await getMe())!;
   const sentAt = new Map<string, string>();
   for (const x of await loadSentFor('anomaly', month, me)) for (const id of x.recipients) if (!sentAt.has(id)) sentAt.set(id, x.at);
-  const sum = summarizeAnomalies(collectAnomalies(data, from, last), saved.policy, new Set(reviews.keys()));
-  const only = (ANOMALY_TYPES as readonly string[]).includes(sp.k ?? '') ? (sp.k as AnomalyType) : null;
+  const found = collectAnomalies(data, from, last);
+  const sum = summarizeAnomalies(found, saved.policy, new Set(reviews.keys()));
+  const only = isAnomalyGroup(sp.k) ? sp.k : null; // 묶음 하나로 걸러 보기
+  const byGroup = Object.fromEntries(ANOMALY_GROUPS.map((g) => [g.key, found.filter((x) => x.types.some((ty) => groupOfType(ty) === g.key)).length])) as Record<string, number>; // 날 수 (한 날에 같은 묶음이 둘이어도 한 번)
   // 처리 상태 거르기: block = 마감 차단, check = 확인 필요, done = 확인함, overdue = 기한 지남, mine = 내 담당(처리 안 한 것)
   const st = sp.st === 'block' || sp.st === 'check' || sp.st === 'done' || sp.st === 'overdue' || sp.st === 'mine' ? sp.st : null;
   const stateOf = (x: (typeof sum.shown)[number]) => (x.block ? 'block' : x.reviewed ? 'done' : 'check');
@@ -73,7 +75,7 @@ export default async function AnomaliesPage({ searchParams }: { searchParams: Pr
   };
   const nameOf = new Map(data.people.map((p) => [p.id, p]));
   const rows = sum.shown
-    .filter((x) => (!only || x.types.includes(only)) && (!st || match(x, st)))
+    .filter((x) => (!only || x.types.some((ty) => groupOfType(ty) === only)) && (!st || match(x, st)))
     .sort((a, b) => Number(b.block) - Number(a.block) || b.workDate.localeCompare(a.workDate) || (nameOf.get(a.employeeId)?.name ?? '').localeCompare(nameOf.get(b.employeeId)?.name ?? ''));
   // 한 쪽에 20일씩 (2026-10-16 디자인: 실제 기록을 넣고 보니 폰에서 249일이 한 줄로 이어져 6만 px가 넘었다)
   const paged = pageOf(rows, sp.p, 20);
@@ -83,7 +85,7 @@ export default async function AnomaliesPage({ searchParams }: { searchParams: Pr
   // 유형 카드는 이 달에 한 건이라도 있었던 유형 + 마감을 막는 유형만 (꺼 둔 유형은 아래 기준표에서 본다)
   // 아직 처리하지 않은 이상 기록이 있는 사람(통보 대상)
   const openPeople = [...new Set(sum.shown.filter((x) => x.block || !x.reviewed).map((x) => x.employeeId))];
-  const typeCards = ANOMALY_TYPES.filter((k) => saved.policy[k] !== 'off' && (sum.byType[k] > 0 || saved.policy[k] === 'block'));
+  const typeCards = ANOMALY_GROUPS.map((g) => g.key).filter((k) => groupLevel(saved.policy, k) !== 'off' && (byGroup[k] > 0 || groupLevel(saved.policy, k) === 'block'));
 
   return (
     <PageShell wide>
@@ -115,11 +117,11 @@ export default async function AnomaliesPage({ searchParams }: { searchParams: Pr
         groups={[
           {
             title: t('cardsState'),
-            cards: (['block', 'check', 'done', 'overdue', 'mine'] as const).map((s) => ({ key: s, label: t(`state.${s}`), n: count(s), unit: t('unitDay'), href: link(month, only, st === s ? null : s), on: st === s, tone: s === 'block' || s === 'overdue' ? ('warn' as const) : s === 'done' ? ('ok' as const) : undefined })),
+            cards: (['block', 'check', 'done', 'overdue', 'mine'] as const).map((s) => ({ key: s, label: t(`state.${s}`), n: count(s), unit: t('unitDay'), href: link(month, only, st === s ? null : s), on: st === s, tone: s === 'block' || s === 'overdue' ? ('warn' as const) : s === 'done' ? ('ok' as const) : s === 'check' || s === 'mine' ? ('info' as const) : undefined })),
           },
           {
             title: t('cardsType'),
-            cards: typeCards.map((k) => ({ key: k, label: t(`type.${k}`), n: sum.byType[k], unit: t('unitCase'), href: link(month, only === k ? null : k, st), on: only === k, tone: saved.policy[k] === 'block' ? ('warn' as const) : undefined })),
+            cards: typeCards.map((k) => ({ key: k, label: t(`type.${k}`), n: byGroup[k], unit: t('unitDay'), href: link(month, only === k ? null : k, st), on: only === k, tone: groupLevel(saved.policy, k) === 'block' ? ('warn' as const) : undefined })),
           },
         ]}
       />
@@ -226,12 +228,12 @@ export default async function AnomaliesPage({ searchParams }: { searchParams: Pr
             <ChevronDown aria-hidden size={18} className="shrink-0 text-muted transition-transform group-open:rotate-180" />
           </summary>
           <p className="pt-1 pb-3 text-sm text-faint">{t(saved.saved ? 'policyIntro' : 'policyDefault')}</p>
-          <PolicyForm policy={saved.policy} version={saved.version} counts={sum.byType} />
+          <PolicyForm policy={saved.policy} version={saved.version} counts={byGroup} />
         </details>
         <div className="hidden lg:block">
           <CardTitle>{t('policyTitle')}</CardTitle>
           <p className="pt-1 pb-3 text-sm text-faint">{t(saved.saved ? 'policyIntro' : 'policyDefault')}</p>
-          <PolicyForm policy={saved.policy} version={saved.version} counts={sum.byType} />
+          <PolicyForm policy={saved.policy} version={saved.version} counts={byGroup} />
         </div>
       </Card>
     </PageShell>

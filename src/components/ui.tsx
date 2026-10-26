@@ -1,6 +1,7 @@
 // 공통 화면 조각. 색·모서리·글자 크기는 theme.ts 토큰 이름(bg-primary, rounded-card …)만 쓴다 (R-10-8).
 // 문장은 여기 쓰지 않는다 — 부르는 쪽이 번역 파일에서 읽어 넘긴다 (4-10).
-import { AlertTriangle, Check, type LucideIcon } from 'lucide-react';
+import { AlertTriangle, Check, Inbox, type LucideIcon } from 'lucide-react';
+import Link from 'next/link';
 import type { ButtonHTMLAttributes, ReactNode } from 'react';
 import { Help } from './Help';
 
@@ -81,4 +82,45 @@ export function PageShell({ children, wide = false, flush = false }: { children:
   //   기본(좁은 쪽)은 상세·입력 화면용으로 왼쪽에 붙인 읽기 좋은 폭이다(가운데로 모으지 않는다)
   // flush: 폰에서 위 여백·사이 여백 없이 — 목록 위 줄(ListBar)이 화면 맨 위에 붙고 목록이 바로 이어진다 (2026-10-11)
   return <main className={`mx-auto flex w-full flex-col px-4 lg:gap-4 lg:px-8 lg:py-6 ${flush ? 'gap-0 pb-4' : 'gap-3 py-4'} ${wide ? 'max-w-md md:max-w-3xl lg:mx-0 lg:max-w-none' : 'max-w-md lg:mx-0 lg:max-w-5xl'}`}>{children}</main>;
+}
+
+/**
+ * 항목 바로 밑 설명 상자 (2026-10-22 의뢰인: 다우오피스 통합설정 「사원급여」처럼 설명이 들어가 있는 것이 좋다 — 결정 사항 개발-52).
+ * 설명을 화면 위에 몰아 두지 않고 그 항목 밑에 붙인다. 숫자 · 조건만 강조색(em)으로 — 훑어 읽어도 대상인지 알게.
+ * 줄바꿈(
+)은 그대로 보인다. link: 공식 안내 한 곳
+ */
+const linkCls = 'mt-2 flex w-fit min-h-9 items-center gap-1 rounded-button border border-border bg-bg px-3 text-sm font-medium whitespace-normal text-text hover:bg-surface';
+export function Explain({ children, link }: { children: ReactNode; link?: { href: string; label: string } }) {
+  return (
+    <div className="rounded-button border border-primary/25 bg-bg/70 px-4 py-3 text-sm leading-6 whitespace-pre-line text-muted">
+      {children}
+      {link &&
+        (link.href.startsWith('/') ? (
+          <Link href={link.href} className={linkCls}>
+            {link.label} →
+          </Link>
+        ) : (
+          <a href={link.href} target="_blank" rel="noreferrer" className={linkCls}>
+            {link.label} →
+          </a>
+        ))}
+    </div>
+  );
+}
+/** Explain 안의 강조 — t.rich(key, { em }) */
+export const em = (chunks: ReactNode) => <strong className="font-semibold text-primary">{chunks}</strong>;
+
+/** 빈 화면 — 글자 한 줄 대신 아이콘 + 제목 + 한 줄 설명 (2026-10-22 디자인: 「요청이 없습니다」 한 줄만 덩그러니 있었다) */
+export function Empty({ title, desc, icon: Icon = Inbox, children }: { title: string; desc?: string; icon?: LucideIcon; children?: ReactNode }) {
+  return (
+    <div className="flex flex-col items-center gap-2 rounded-card border border-dashed border-border bg-bg px-6 py-12 text-center">
+      <span className="flex size-12 items-center justify-center rounded-chip bg-primary-tint text-primary">
+        <Icon aria-hidden size={24} strokeWidth={1.75} />
+      </span>
+      <p className="text-base font-bold text-text">{title}</p>
+      {desc && <p className="max-w-md text-sm text-muted">{desc}</p>}
+      {children}
+    </div>
+  );
 }

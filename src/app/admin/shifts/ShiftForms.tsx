@@ -1,5 +1,7 @@
 'use client';
 // 근무일정 틀 양식 (2026-10-10) — 만들기·고치기 / 적용할 직원 고르기 / 끄기·켜기.
+import { withKindNames, type KindNames } from '@/lib/shift-kind-names';
+import { Select } from '@/components/Select';
 import { useTranslations } from 'next-intl';
 import { useRouter } from 'next/navigation';
 import { useState } from 'react';
@@ -14,8 +16,9 @@ const field = 'min-h-11 w-full rounded-button border border-border bg-bg px-3 te
 type Err = { code: string; requestId?: string } | null;
 export type ShiftValues = { id: string; name: string; startTime: string; endTime: string; kind: ShiftKind; color: ShiftColor; memo: string };
 
-export function ShiftForm({ initial, sheet }: { initial?: ShiftValues; sheet: string }) {
+export function ShiftForm({ initial, sheet, kindNames }: { initial?: ShiftValues; sheet: string; kindNames?: KindNames }) {
   const t = useTranslations('admin.shifts');
+  const kn = withKindNames((k: string) => t(`kinds.${k}`), kindNames);
   const router = useRouter();
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState<Err>(null);
@@ -57,13 +60,13 @@ export function ShiftForm({ initial, sheet }: { initial?: ShiftValues; sheet: st
       </div>
       <label className="flex flex-col gap-1 text-sm text-muted">
         {t('kind')}
-        <select value={kind} onChange={(e) => setKind(e.target.value as ShiftKind)} className={field}>
+        <Select value={kind} onChange={(e) => setKind(e.target.value as ShiftKind)} className={field}>
           {SHIFT_KINDS.map((k) => (
             <option key={k} value={k}>
-              {t(`kinds.${k}`)}
+              {kn(k)}
             </option>
           ))}
-        </select>
+        </Select>
       </label>
       {kind === 'deemed' && <p className="rounded-button bg-primary-tint p-3 text-sm text-primary">{t('deemedNote')}</p>}
       <fieldset className="flex flex-col gap-1">
@@ -97,6 +100,9 @@ export function ShiftAssignForm({ id, people }: { id: string; people: { id: stri
   const [err, setErr] = useState<Err>(null);
   const [saved, setSaved] = useState(false);
   const [picked, setPicked] = useState(() => new Set(people.filter((p) => p.on).map((p) => p.id)));
+  // 적용 인원이 이미 있으면 목록은 접어 두고, 저장하면 다시 접는다 (2026-10-25 의뢰인: 저장했는데 직원 목록이 계속 펼쳐져 있다). 아직 아무도 없으면(새 템플릿) 바로 펼쳐 고르게 한다
+  const [open, setOpen] = useState(() => !people.some((p) => p.on));
+  const assigned = people.filter((p) => p.on);
   const toggle = (pid: string) => {
     setSaved(false);
     setPicked((s) => {
@@ -106,6 +112,20 @@ export function ShiftAssignForm({ id, people }: { id: string; people: { id: stri
       return n;
     });
   };
+  if (!open) {
+    return (
+      <div className="flex flex-col gap-3">
+        <p className="num text-sm font-medium">{t('assignedCount', { n: assigned.length })}</p>
+        {assigned.length > 0 ? <p className="text-sm text-muted">{assigned.map((p) => p.name).join(' · ')}</p> : <p className="text-sm text-faint">{t('assignedNone')}</p>}
+        {saved && <p role="status" className="rounded-button bg-ok-tint p-3 text-sm text-ok">{t('assignSaved')}</p>}
+        <div>
+          <Button type="button" variant="outline" onClick={() => { setSaved(false); setOpen(true); }}>
+            {t('assignChange')}
+          </Button>
+        </div>
+      </div>
+    );
+  }
   return (
     <form
       className="flex flex-col gap-3"
@@ -117,6 +137,7 @@ export function ShiftAssignForm({ id, people }: { id: string; people: { id: stri
         setBusy(false);
         if (!res.ok) return setErr(res);
         setSaved(true);
+        setOpen(false);
         router.refresh();
       }}
     >
@@ -148,9 +169,16 @@ export function ShiftAssignForm({ id, people }: { id: string; people: { id: stri
       </ul>
       {err && <ErrorNote code={err.code} requestId={err.requestId} namespace="admin.shifts" />}
       {saved && <p className="rounded-button bg-ok-tint p-3 text-sm text-ok">{t('assignSaved')}</p>}
-      <Button type="submit" disabled={busy}>
-        {t('assignSave')}
-      </Button>
+      <div className="flex gap-2">
+        <Button type="submit" disabled={busy}>
+          {t('assignSave')}
+        </Button>
+        {assigned.length > 0 && (
+          <Button type="button" variant="outline" disabled={busy} onClick={() => { setPicked(new Set(assigned.map((p) => p.id))); setOpen(false); }}>
+            {t('cancel')}
+          </Button>
+        )}
+      </div>
     </form>
   );
 }
@@ -190,5 +218,38 @@ export function ShiftToggle({ id, active }: { id: string; active: boolean }) {
       )}
       {err && <ErrorNote code={err.code} requestId={err.requestId} namespace="admin.shifts" />}
     </div>
+  );
+}
+
+/** 목록 줄의 켜기/끄기 스위치 (2026-10-25 의뢰인: 「비활성화 보기」 대신 템플릿마다 토글). 직원이 쓰고 있는 템플릿은 끌 수 없다 — 이유를 줄 아래에 보인다 */
+export function ShiftSwitch({ id, name, active }: { id: string; name: string; active: boolean }) {
+  const t = useTranslations('admin.shifts');
+  const router = useRouter();
+  const [busy, setBusy] = useState(false);
+  const [on, setOn] = useState(active);
+  const [err, setErr] = useState<Err>(null);
+  return (
+    <span className="flex flex-col items-end gap-1">
+      <button
+        type="button"
+        role="switch"
+        aria-checked={on}
+        aria-label={t(on ? 'turnOffOf' : 'turnOnOf', { what: name })}
+        disabled={busy}
+        onClick={async () => {
+          setBusy(true);
+          setErr(null);
+          const res = await callApi(`/api/admin/shifts/${id}`, { active: !on });
+          setBusy(false);
+          if (!res.ok) return setErr(res);
+          setOn(!on);
+          router.refresh();
+        }}
+        className={`relative inline-flex h-7 w-12 shrink-0 items-center rounded-chip transition-colors disabled:opacity-60 ${on ? 'bg-primary' : 'bg-border'}`}
+      >
+        <span aria-hidden className={`absolute left-0.5 size-6 rounded-full bg-bg shadow transition-transform ${on ? 'translate-x-5' : ''}`} />
+      </button>
+      {err && <ErrorNote code={err.code} requestId={err.requestId} namespace="admin.shifts" />}
+    </span>
   );
 }

@@ -2,7 +2,7 @@
 // PC(1024px~) 왼쪽 틀 — 앱 띠(아이콘 + 짧은 이름) + 메뉴 판(앱 이름 → 묶음 제목 → 항목). 직원 · 관리자가 같은 틀을 쓴다 (2026-10-14 결정 사항 개발-21).
 // 통합설정에서는 앱 띠 자리에 「회사설정 / App 관리」 묶음 목록이 놓인다 (개발-20, 문서 07 6장).
 // 무엇이 어디에 있는지는 config/nav.ts 한곳에서 정한다. 폰에서는 보이지 않는다(하단 탭 + 서랍 메뉴).
-import { LayoutGrid, PanelLeftClose, PanelLeftOpen } from 'lucide-react';
+import { History, LayoutGrid, PanelLeftClose, PanelLeftOpen } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 import Link, { useLinkStatus } from 'next/link';
 import { useSearchParams } from 'next/navigation';
@@ -25,11 +25,12 @@ function Count({ n }: { n: number }) {
 
 function Panel({ app, title, active, counts, onPick, t }: { app: App; title: string; active?: string; counts: AlertCounts; onPick: (href: string) => void; t: (k: string) => string }) {
   return (
-    <nav aria-label={title} className="sticky top-14 hidden h-[calc(100dvh-3.5rem)] w-58 shrink-0 overflow-y-auto border-r border-border bg-bg px-3.5 py-5 lg:block">
+    <nav aria-label={title} className="sticky top-14 hidden h-[calc(100dvh-3.5rem)] w-58 shrink-0 overflow-y-auto border-r glass px-3.5 py-5 lg:block">
       <h2 className="px-1.5 pb-3 text-xl font-bold tracking-tight">{title}</h2>
       {app.groups.map((g, gi) => (
-        <div key={g.key ?? gi} className="pb-2">
-          {g.key && <p className="px-2 pt-3 pb-1 text-xs font-bold text-faint">{t(`group.${g.key}`)}</p>}
+        // 묶음 이름을 또렷하게 + 묶음 사이 줄 (2026-10-22 의뢰인: 「근무일정 밑에 달력형 · 목록형 · 월 집계 — 출퇴근은 어디냐」 — 옅은 작은 글씨라 묶음이 안 보였다)
+        <div key={g.key ?? gi} className={`pb-2 ${gi > 0 && g.key ? 'mt-2 border-t border-border pt-1' : ''}`}>
+          {g.key && <p className="px-2 pt-3 pb-1.5 text-sm font-bold text-text">{t(`group.${g.key}`)}</p>}
           {g.items.map((s) => {
             const on = active === s.href;
             return (
@@ -46,7 +47,7 @@ function Panel({ app, title, active, counts, onPick, t }: { app: App; title: str
   );
 }
 
-export function DeskNav({ role }: { role: NavRole; inboxCount?: number }) {
+export function DeskNav({ role, initialWide = false }: { role: NavRole; inboxCount?: number; initialWide?: boolean }) {
   const t = useTranslations('frame');
   const counts = useAlerts(); // 화면을 옮길 때마다 다시 센 숫자 (components/Alerts) — 메뉴마다 badge로 고른다 (2026-10-19)
   const { path, pressed, setPressed } = usePressedTab();
@@ -69,13 +70,28 @@ export function DeskNav({ role }: { role: NavRole; inboxCount?: number }) {
 
   const apps = appsFor(at.space, role);
 
+  // 통합설정 왼쪽 판의 「최근 사용한 메뉴」 (2026-10-22, 다우오피스 통합설정의 My) — 위에서 기억한 최근 화면 가운데 통합설정 것만 넷까지
+  const [recent, setRecent] = useState<string[]>([]);
+  useEffect(() => {
+    if (at.space !== 'console') return;
+    try {
+      const old: string[] = JSON.parse(localStorage.getItem(RECENT_KEY) ?? '[]');
+      setRecent(old.filter((h) => h !== hereHref && locateHref(h, role)?.space === 'console').slice(0, 4));
+    } catch {
+      setRecent([]);
+    }
+  }, [at.space, hereHref, role]);
+
   // 와이드 메뉴 (2026-10-13 의뢰인 결정 사항 개발-18을 새 틀에 다시 살림, 2026-10-14):
   // 앱 띠 맨 아래 단추로 좁게(아이콘 + 짧은 이름) ↔ 넓게(아이콘 옆 온전한 이름). 서랍처럼 0.35초 ease-in-out. 고른 모양은 이 브라우저에 기억한다
-  const [wide, setWide] = useState(false);
+  const [wide, setWide] = useState(initialWide); // 서버가 쿠키로 처음부터 고른 폭을 그린다 — 예전에는 좁게 그렸다가 넓게 바뀌며 화면이 흔들렸다 (2026-10-26)
   const [ready, setReady] = useState(false);
   useEffect(() => {
     try {
-      if (localStorage.getItem('nav-wide') === '1') setWide(true);
+      if (localStorage.getItem('nav-wide') === '1' && !initialWide) {
+        setWide(true);
+        document.cookie = 'nav-wide=1; path=/; max-age=31536000; samesite=lax';
+      }
     } catch {
       // 저장이 막혀 있으면 기억하지 못할 뿐이다
     }
@@ -86,6 +102,7 @@ export function DeskNav({ role }: { role: NavRole; inboxCount?: number }) {
     setWide((w) => {
       try {
         localStorage.setItem('nav-wide', w ? '0' : '1');
+        document.cookie = `nav-wide=${w ? '0' : '1'}; path=/; max-age=31536000; samesite=lax`;
       } catch {
         // 위와 같음
       }
@@ -100,13 +117,30 @@ export function DeskNav({ role }: { role: NavRole; inboxCount?: number }) {
     const allOn = !at.app;
     return (
       <>
-        <nav aria-label={t('space.console')} className="sticky top-14 hidden h-[calc(100dvh-3.5rem)] w-58 shrink-0 overflow-y-auto border-r border-border bg-bg px-3.5 py-6 lg:block">
+        <nav aria-label={t('space.console')} className="sticky top-14 hidden h-[calc(100dvh-3.5rem)] w-58 shrink-0 overflow-y-auto border-r glass px-3.5 py-6 lg:block">
           <h2 className="px-2 pb-4 text-2xl font-extrabold tracking-tight">{t('space.console')}</h2>
           <Link href={CONSOLE_HOME} aria-current={allOn ? 'page' : undefined} onClick={() => setPressed(CONSOLE_HOME)} className={`flex min-h-10 items-center gap-2.5 rounded-button px-2.5 text-sm font-bold ${allOn ? 'bg-primary-tint text-primary' : 'text-text hover:bg-surface'}`}>
             <LayoutGrid aria-hidden size={18} strokeWidth={1.75} />
             <span className="flex-1">{t('console.all')}</span>
             <Loading />
           </Link>
+          {recent.length > 0 && (
+            <div className="pt-5">
+              <p className="flex items-center gap-1.5 px-2 pb-1 text-xs font-bold text-faint">
+                <History aria-hidden size={14} strokeWidth={1.75} />
+                {t('console.recent')}
+              </p>
+              {recent.map((h) => {
+                const leaf = locateHref(h, role)?.leaf;
+                return leaf ? (
+                  <Link key={h} href={h} onClick={() => setPressed(h)} className="flex min-h-9 items-center gap-2 rounded-button px-2.5 text-sm text-muted hover:bg-surface hover:text-text">
+                    <span className="flex-1 truncate">{t(`item.${leaf.key}`)}</span>
+                    <Loading />
+                  </Link>
+                ) : null;
+              })}
+            </div>
+          )}
           {sections.map(({ s, apps: list }) => (
             <div key={s} className="pt-5">
               <p className="px-2 pb-1 text-xs font-bold text-faint">{t(`console.${s}`)}</p>

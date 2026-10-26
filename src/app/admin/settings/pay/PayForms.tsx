@@ -1,22 +1,25 @@
 'use client';
 // 회사 설정 › 급여의 입력 양식들 (PRD v1.3 17장). 저장은 명시적 버튼으로만 하고, 저장하면 화면을 새로 읽는다.
 // 다른 담당자가 먼저 저장했으면(409) 입력을 지우지 않고 안내만 보인다.
+import { CommonItemsEditor } from './CommonItemsEditor';
+import { Select } from '@/components/Select';
 import { useTranslations } from 'next-intl';
 import { useRouter } from 'next/navigation';
 import { useState, type ReactNode } from 'react';
 import { callApi } from '@/components/client-api';
 import { ErrorNote } from '@/components/ErrorNote';
 import { useSaveRule } from '@/components/useSaveRule';
-import { Button } from '@/components/ui';
+import { Button, Explain, em } from '@/components/ui';
 import type { ItemRow } from '@/lib/payroll/data';
+import { guessAverageKind, guessTax } from '@/lib/payroll/item-picks';
 import { MANUAL_FIELDS, RATE_KINDS, type ReferenceKind } from '@/lib/payroll/reference';
-import { CALC_KINDS, INSURER_KEYS, ORDINARY, type AllowanceKind, type AllowancePolicy, type EmployeeDefaults, type Ledger, type Masking, type SettingPayload, type SettingSection, type WorkingTime } from '@/lib/payroll/settings';
+import { AVERAGE_KINDS, CALC_KINDS, INSURER_KEYS, ORDINARY, type AllowanceKind, type AllowancePolicy, type EmployeeDefaults, type Ledger, type Masking, type SettingPayload, type SettingSection, type WorkingTime } from '@/lib/payroll/settings';
 
-const field = 'min-h-9 w-full rounded-button border border-border bg-bg px-3 text-sm text-text';
-const NS = 'admin.paySettings';
+export const field = 'min-h-9 w-full rounded-button border border-border bg-bg px-3 text-sm text-text';
+export const NS = 'admin.paySettings';
 type Err = { code: string; requestId?: string } | null;
 
-function usePost() {
+export function usePost() {
   const router = useRouter();
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState<Err>(null);
@@ -38,15 +41,23 @@ function usePost() {
   return { busy, err, done, post };
 }
 
-function Row({ label, hint, children }: { label: string; hint?: string; children: ReactNode }) {
-  return (
+// explain: 항목 밑 설명 상자(components/ui Explain) — 있으면 짧은 hint 대신. 누르면 칸이 바뀌지 않게 label 밖에 둔다
+function Row({ label, hint, explain, children }: { label: string; hint?: string; explain?: ReactNode; children: ReactNode }) {
+  const row = (
     <label className="flex flex-col gap-1 text-sm lg:grid lg:grid-cols-[14rem_minmax(0,1fr)] lg:items-start lg:gap-4">
       <span className="pt-2 font-bold">{label}</span>
       <span className="flex min-w-0 flex-col gap-1">
         {children}
-        {hint && <span className="text-xs text-faint">{hint}</span>}
+        {hint && !explain && <span className="text-xs text-faint">{hint}</span>}
       </span>
     </label>
+  );
+  if (!explain) return row;
+  return (
+    <div className="flex flex-col gap-2">
+      {row}
+      <div className="lg:pl-[calc(14rem+1rem)]">{explain}</div>
+    </div>
   );
 }
 
@@ -90,7 +101,7 @@ const opts = (list: readonly (string | number)[], label: (k: string) => string) 
   ));
 
 /** S01 · S02 · S08 · S09 — 회사 설정 한 화면 */
-export function SettingForm({ section, current, version, today }: { section: SettingSection; current: SettingPayload | null; version: number; today: string }) {
+export function SettingForm({ section, current, version, today, common }: { section: SettingSection; current: SettingPayload | null; version: number; today: string; common?: { options: { code: string; label: string; defaultAmount: number | null }[]; people: { id: string; name: string }[] } }) {
   const t = useTranslations('admin.paySettings');
   const { busy, err, done, post } = usePost();
   const [mode, setMode] = useState((current as Ledger | null)?.payDayMode ?? 'MONTH_END');
@@ -107,7 +118,13 @@ export function SettingForm({ section, current, version, today }: { section: Set
         ev.preventDefault();
         const fd = new FormData(ev.currentTarget);
         const b: Record<string, unknown> = Object.fromEntries(fd);
-        if (section === 'employee-defaults') Object.assign(b, { durunuri: fd.get('durunuri') === 'on', smeTaxCut: fd.get('smeTaxCut') === 'on' });
+        if (section === 'employee-defaults') {
+          Object.assign(b, { smeTaxCut: fd.get('smeTaxCut') === 'on' }); // 두루누리는 쓰지 않는다 (2026-10-22)
+          // 4대보험 회사 기본 (2026-10-25) — 넷 다 고르면 쓰고, 모두 비워 두면 쓰지 않는다
+          b.taxDefaults = { insurance: Object.fromEntries(['pension', 'health', 'employment', 'accident'].map((k) => [k, fd.get(`ins.${k}`) || null])) };
+          for (const k of ['pension', 'health', 'employment', 'accident']) delete b[`ins.${k}`];
+        }
+        if (section === 'masking') b.enabled = fd.get('enabled') === 'on';
         if (section === 'ledger') {
           Object.assign(b, { deductUnpaidLeave: fd.get('deductUnpaidLeave') === 'on', deductLateness: fd.get('deductLateness') === 'on', insuranceBasisOf: Object.fromEntries(INSURER_KEYS.map((k) => [k, fd.get(`basis.${k}`) || null])) });
           for (const k of INSURER_KEYS) delete b[`basis.${k}`];
@@ -117,19 +134,27 @@ export function SettingForm({ section, current, version, today }: { section: Set
     >
       {section === 'employee-defaults' && (
         <>
-          <Row label={t('s01.payType')} hint={t('s01.payTypeHint')}>
-            <select name="payType" defaultValue={e?.payType ?? ''} className={`${field} lg:max-w-56`}>
-              <option value="">{t('notChosen')}</option>
-              {opts(['MONTHLY', 'HOURLY', 'ANNUAL'], (k) => t(`payType.${k}`))}
-            </select>
+          <Row label={t('s01.insTitle')} hint={t('s01.insHint')}>
+            <div className="grid gap-2 sm:grid-cols-2">
+              {(['pension', 'health', 'employment', 'accident'] as const).map((k) => (
+                <label key={k} className="flex flex-col gap-1 text-sm text-muted">
+                  {t(`s01.insurer.${k}`)}
+                  <Select name={`ins.${k}`} defaultValue={e?.taxDefaults?.insurance[k] ?? ''} className={field}>
+                    <option value="">{t('s01.insNotSet')}</option>
+                    <option value="YES">{t('s01.insYes')}</option>
+                    <option value="NO">{t('s01.insNo')}</option>
+                  </Select>
+                </label>
+              ))}
+            </div>
+            <p className="pt-2 text-xs text-faint">{t('s01.insNote')}</p>
           </Row>
-          <Row label={t('s01.durunuri')} hint={t('s01.durunuriHint')}>
-            <span className="flex min-h-9 items-center gap-2">
-              <input type="checkbox" name="durunuri" defaultChecked={e?.durunuri ?? false} className="size-5 accent-primary" />
-              {t('use')}
-            </span>
-          </Row>
-          <Row label={t('s01.smeTaxCut')} hint={t('s01.smeTaxCutHint')}>
+          {common && (
+            <Row label={t('s01.commonTitle')} hint={t('s01.commonHint')}>
+              <CommonItemsEditor initial={e?.commonItems ?? []} options={common.options} people={common.people} />
+            </Row>
+          )}
+          <Row label={t('s01.smeTaxCut')} explain={<Explain link={{ href: 'https://www.nts.go.kr', label: t('s01.smeTaxCutLink') }}>{t.rich('s01.smeTaxCutExplain', { em })}</Explain>}>
             <span className="flex min-h-9 items-center gap-2">
               <input type="checkbox" name="smeTaxCut" defaultChecked={e?.smeTaxCut ?? false} className="size-5 accent-primary" />
               {t('use')}
@@ -140,36 +165,36 @@ export function SettingForm({ section, current, version, today }: { section: Set
       {section === 'ledger' && (
         <>
           <Row label={t('s02.payMonth')}>
-            <select name="payMonth" defaultValue={l?.payMonth ?? 'CURRENT'} className={`${field} lg:max-w-56`}>
+            <Select name="payMonth" defaultValue={l?.payMonth ?? 'CURRENT'} className={`${field} lg:max-w-56`}>
               {opts(['CURRENT', 'NEXT'], (k) => t(`s02.payMonthOf.${k}`))}
-            </select>
+            </Select>
           </Row>
           <Row label={t('s02.payDay')} hint={t('s02.payDayHint')}>
             <span className="flex flex-wrap items-center gap-2">
-              <select name="payDayMode" value={mode} onChange={(ev) => setMode(ev.target.value as Ledger['payDayMode'])} className={`${field} lg:max-w-40`}>
+              <Select name="payDayMode" value={mode} onChange={(ev) => setMode(ev.target.value as Ledger['payDayMode'])} className={`${field} lg:max-w-40`}>
                 {opts(['MONTH_END', 'FIXED_DAY'], (k) => t(`s02.payDayModeOf.${k}`))}
-              </select>
+              </Select>
               {mode === 'FIXED_DAY' && <input name="payDay" type="number" min={1} max={31} required defaultValue={l?.payDay ?? ''} aria-label={t('s02.payDay')} className={`num ${field} max-w-24`} />}
             </span>
           </Row>
           <Row label={t('s02.holidayShift')} hint={t('s02.holidayShiftHint')}>
-            <select name="holidayShift" defaultValue={l?.holidayShift ?? ''} className={`${field} lg:max-w-72`}>
+            <Select name="holidayShift" defaultValue={l?.holidayShift ?? ''} className={`${field} lg:max-w-72`}>
               <option value="">{t('notChosen')}</option>
               {opts(['KEEP', 'PREV_BUSINESS_DAY', 'NEXT_BUSINESS_DAY'], (k) => t(`s02.holidayShiftOf.${k}`))}
-            </select>
+            </Select>
           </Row>
-          <Row label={t('s02.insuranceBasis')} hint={t('s02.insuranceBasisHint')}>
-            <select name="insuranceBasis" defaultValue={l?.insuranceBasis ?? 'PAYROLL_BASE'} className={`${field} lg:max-w-md`}>
+          <Row label={t('s02.insuranceBasis')} explain={<Explain>{t.rich('s02.insuranceBasisExplain', { em })}</Explain>}>
+            <Select name="insuranceBasis" defaultValue={l?.insuranceBasis ?? 'PAYROLL_BASE'} className={`${field} lg:max-w-md`}>
               {opts(['NOTICE', 'PAYROLL_BASE', 'REPORTED_BASE'], (k) => t(`s02.insuranceBasisOf.${k}`))}
-            </select>
+            </Select>
           </Row>
           {/* 보험마다 따로 (2026-10-20) — 비우면 위 기준. 예: 연금 · 건강은 신고 보수, 고용은 그 달 급여 */}
           {INSURER_KEYS.map((k) => (
             <Row key={k} label={t(`s02.insurerOf.${k}`)} hint={k === 'pension' ? t('s02.insuranceEachHint') : undefined}>
-              <select name={`basis.${k}`} defaultValue={l?.insuranceBasisOf?.[k] ?? ''} className={`${field} lg:max-w-md`}>
+              <Select name={`basis.${k}`} defaultValue={l?.insuranceBasisOf?.[k] ?? ''} className={`${field} lg:max-w-md`}>
                 <option value="">{t('s02.insuranceSame')}</option>
                 {opts(['NOTICE', 'PAYROLL_BASE', 'REPORTED_BASE'], (v) => t(`s02.insuranceBasisOf.${v}`))}
-              </select>
+              </Select>
             </Row>
           ))}
           <Row label={t('s02.deductUnpaidLeave')} hint={t('s02.deductionHint')}>
@@ -179,29 +204,34 @@ export function SettingForm({ section, current, version, today }: { section: Set
             <span className="flex min-h-9 items-center gap-2"><input type="checkbox" name="deductLateness" defaultChecked={l?.deductLateness ?? false} className="size-5 accent-primary" />{t('use')}</span>
           </Row>
           <Row label={t('s02.premiumTimeBasis')} hint={t('s02.premiumTimeHint')}>
-            <select name="premiumTimeBasis" defaultValue={l?.premiumTimeBasis ?? 'ACTUAL'} className={field}>{opts(['ACTUAL', 'ROUNDED'], (k) => t(`s02.premiumTimeOf.${k}`))}</select>
+            <Select name="premiumTimeBasis" defaultValue={l?.premiumTimeBasis ?? 'ACTUAL'} className={field}>{opts(['ACTUAL', 'ROUNDED'], (k) => t(`s02.premiumTimeOf.${k}`))}</Select>
           </Row>
-          <Row label={t('s02.withholding')} hint={t('s02.withholdingHint')}>
-            <select name="withholdingRatio" defaultValue={l?.withholdingRatio ?? 100} className={`num ${field} lg:max-w-32`}>
+          <Row label={t('s02.withholding')} explain={<Explain>{t.rich('s02.withholdingExplain', { em })}</Explain>}>
+            <Select name="withholdingRatio" defaultValue={l?.withholdingRatio ?? 100} className={`num ${field} lg:max-w-32`}>
               {opts([80, 100, 120], (k) => `${k}%`)}
-            </select>
+            </Select>
           </Row>
         </>
       )}
       {section === 'masking' && (
-        <Row label={t('s08.minutes')} hint={t('s08.minutesHint')}>
-          <input name="unmaskMinutes" type="number" min={1} max={60} required defaultValue={m?.unmaskMinutes ?? 5} className={`num ${field} lg:max-w-32`} />
-        </Row>
+        <>
+          <Row label={t('s08.enabled')} hint={t('s08.enabledHint')}>
+            <span className="flex min-h-9 items-center gap-2"><input type="checkbox" name="enabled" defaultChecked={m?.enabled ?? true} className="size-5 accent-primary" />{t('use')}</span>
+          </Row>
+          <Row label={t('s08.minutes')} hint={t('s08.minutesHint')}>
+            <input name="unmaskMinutes" type="number" min={1} max={60} required defaultValue={m?.unmaskMinutes ?? 5} className={`num ${field} lg:max-w-32`} />
+          </Row>
+        </>
       )}
       {section === 'working-time' && (
         <>
           <Row label={t('s09.weekly')}>
             <input name="weeklyHours" type="number" min={1} max={52} required defaultValue={w?.weeklyHours ?? 40} className={`num ${field} lg:max-w-32`} />
           </Row>
-          <Row label={t('s09.overtime')} hint={t('s09.overtimeHint')}>
+          <Row label={t('s09.overtime')} explain={<Explain>{t.rich('s09.overtimeExplain', { em })}</Explain>}>
             <input name="weeklyOvertimeLimit" type="number" min={0} max={40} required defaultValue={w?.weeklyOvertimeLimit ?? 12} className={`num ${field} lg:max-w-32`} />
           </Row>
-          <Row label={t('s09.monthly')} hint={t('s09.monthlyHint')}>
+          <Row label={t('s09.monthly')} explain={<Explain>{t.rich('s09.monthlyExplain', { em })}</Explain>}>
             <input name="monthlyHours" type="number" min={1} max={400} defaultValue={w?.monthlyHours ?? ''} className={`num ${field} lg:max-w-32`} />
           </Row>
         </>
@@ -215,6 +245,9 @@ export function SettingForm({ section, current, version, today }: { section: Set
 /** S03 · S04 — 항목 등록 · 고침 (고치면 새 판) */
 export function ItemForm({ kind, item, today }: { kind: 'PAYMENT' | 'DEDUCTION'; item?: ItemRow; today: string }) {
   const t = useTranslations('admin.paySettings');
+  const [name, setName] = useState(item?.koName ?? '');
+  const guess = kind === 'PAYMENT' ? guessTax(name) : null; // 이름으로 짐작한 과세 구분 — 알려 주기만 한다 (2026-10-26)
+  const avgGuess = kind === 'PAYMENT' ? guessAverageKind(name) : null; // 퇴직금 평균임금 구분도 이름으로 추천만 한다 (묶음 36)
   const { busy, err, done, post } = usePost();
   const rule = useSaveRule();
   return (
@@ -233,15 +266,15 @@ export function ItemForm({ kind, item, today }: { kind: 'PAYMENT' | 'DEDUCTION';
         </Row>
       )}
       <Row label={t('item.koName')}>
-        <input name="koName" required maxLength={60} defaultValue={item?.koName ?? ''} className={field} autoComplete="off" />
+        <input name="koName" required maxLength={60} value={name} onChange={(e) => setName(e.target.value)} className={field} autoComplete="off" />
       </Row>
       <Row label={t('item.enName')}>
         <input name="enName" required maxLength={60} defaultValue={item?.enName ?? ''} className={field} autoComplete="off" />
       </Row>
       <Row label={t('item.calcKind')} hint={t('item.calcKindHint')}>
-        <select name="calcKind" defaultValue={item?.calcKind ?? 'FIXED'} className={`${field} lg:max-w-72`}>
+        <Select name="calcKind" defaultValue={item?.calcKind ?? 'FIXED'} className={`${field} lg:max-w-72`}>
           {opts(CALC_KINDS, (k) => t(`calcKind.${k}`))}
-        </select>
+        </Select>
       </Row>
       <Row label={t('item.amount')} hint={t('item.amountHint')}>
         <input name="defaultAmount" inputMode="numeric" pattern="[0-9,]*" defaultValue={item?.defaultAmount ?? ''} className={`num ${field} lg:max-w-56`} autoComplete="off" />
@@ -254,10 +287,10 @@ export function ItemForm({ kind, item, today }: { kind: 'PAYMENT' | 'DEDUCTION';
               {t('item.fixedYes')}
             </span>
           </Row>
-          <Row label={t('item.tax')} hint={t('item.taxHint')}>
-            <select name="taxTreatment" defaultValue={item?.taxTreatment ?? 'TAXABLE'} className={`${field} lg:max-w-72`}>
+          <Row label={t('item.tax')} hint={guess ? t('item.taxRec', { tax: t(`tax.${guess.tax}`) }) : t('item.taxHint')}>
+            <Select name="taxTreatment" defaultValue={item?.taxTreatment ?? 'TAXABLE'} className={`${field} lg:max-w-72`}>
               {opts(['TAXABLE', 'EXEMPT', 'PARTIAL'], (k) => t(`tax.${k}`))}
-            </select>
+            </Select>
           </Row>
           <Row label={t('item.limit')} hint={t('item.limitHint')}>
             <input name="taxExemptLimit" inputMode="numeric" pattern="[0-9,]*" defaultValue={item?.taxExemptLimit ?? ''} className={`num ${field} lg:max-w-56`} autoComplete="off" />
@@ -266,9 +299,15 @@ export function ItemForm({ kind, item, today }: { kind: 'PAYMENT' | 'DEDUCTION';
             <input name="taxExemptAnnualLimit" inputMode="numeric" pattern="[0-9,]*" defaultValue={item?.taxExemptAnnualLimit ?? ''} className={`num ${field} lg:max-w-56`} autoComplete="off" />
           </Row>
           <Row label={t('item.ordinary')} hint={t('item.ordinaryHint')}>
-            <select name="ordinaryWage" defaultValue={item?.ordinaryWage ?? 'UNKNOWN'} className={`${field} lg:max-w-72`}>
+            <Select name="ordinaryWage" defaultValue={item?.ordinaryWage ?? 'UNKNOWN'} className={`${field} lg:max-w-72`}>
               {opts(ORDINARY, (k) => t(`ordinary.${k}`))}
-            </select>
+            </Select>
+          </Row>
+          <Row label={t('item.average')} hint={avgGuess ? t('item.averageRec', { kind: t(`averageShort.${avgGuess}`) }) : t('item.averageHint')}>
+            <Select name="averageWageKind" defaultValue={item?.averageWageKind ?? ''} className={`${field} lg:max-w-72`}>
+              <option value="">{t('average.NONE')}</option>
+              {opts(AVERAGE_KINDS, (k) => t(`average.${k}`))}
+            </Select>
           </Row>
         </>
       )}
@@ -474,9 +513,9 @@ export function ManualForm({ kinds }: { kinds: ReferenceKind[] }) {
       }}
     >
       <Row label={t('manual.kind')}>
-        <select value={kind} onChange={(ev) => setKind(ev.target.value as ReferenceKind)} className={`${field} lg:max-w-72`}>
+        <Select value={kind} onChange={(ev) => setKind(ev.target.value as ReferenceKind)} className={`${field} lg:max-w-72`}>
           {opts(list, (k) => t(`ref.${k.replace('.', '_')}`))}
-        </select>
+        </Select>
       </Row>
       {(MANUAL_FIELDS[kind] ?? []).map((f) => (
         <Row key={`${kind}.${f.key}`} label={t(`refField.${f.key}`)} hint={t(`unit.${f.type}`)}>
@@ -565,21 +604,21 @@ export function TaxCalc({ today }: { today: string }) {
         </label>
         <label className="flex flex-col gap-1 text-sm font-bold">
           {t('calc.family')}
-          <select name="family" defaultValue={1} className={`num font-normal ${field}`}>
+          <Select name="family" defaultValue={1} className={`num font-normal ${field}`}>
             {opts([1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11], (k) => k)}
-          </select>
+          </Select>
         </label>
         <label className="flex flex-col gap-1 text-sm font-bold">
           {t('calc.children')}
-          <select name="children" defaultValue={0} className={`num font-normal ${field}`}>
+          <Select name="children" defaultValue={0} className={`num font-normal ${field}`}>
             {opts([0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10], (k) => k)}
-          </select>
+          </Select>
         </label>
         <label className="flex flex-col gap-1 text-sm font-bold">
           {t('calc.ratio')}
-          <select name="ratio" defaultValue={100} className={`num font-normal ${field}`}>
+          <Select name="ratio" defaultValue={100} className={`num font-normal ${field}`}>
             {opts([80, 100, 120], (k) => `${k}%`)}
-          </select>
+          </Select>
         </label>
       </div>
       {err && <ErrorNote code={err.code} requestId={err.requestId} namespace={NS} />}

@@ -3,10 +3,9 @@
 //   사무실 WiFi에서 찍는 사람에게는 위치를 묻지 않는다 (필요할 때만 수집한다).
 import { OFFICE } from '@/config/office';
 import { api, ApiError } from '@/lib/api';
-import { officeCidrs } from '@/lib/attendance-data';
 import { getMe } from '@/lib/auth';
 import { hasConsent } from '@/lib/consent';
-import { loadOfficeLocations } from '@/lib/geo-data';
+import { officeCidrsFor } from '@/lib/geo-data';
 import { passkeyService } from '@/lib/passkey-store';
 import { isOfficeIp, traceClientIp } from '@/lib/verify-location';
 
@@ -14,8 +13,8 @@ export const POST = api('punch.options', async (req) => {
   const me = await getMe();
   if (!me) throw new ApiError(401, 'not_signed_in');
   const options = await passkeyService().beginPunchAssertion(me.id);
-  const [cidrs, locations] = await Promise.all([officeCidrs(), loadOfficeLocations()]);
+  const cidrs = await officeCidrsFor(me.id);
   // 위치는 수집 동의를 한 사람에게만 묻는다 (동의 창을 지나야 이 화면에 오지만, 서버에서도 한 번 더 본다)
-  const needLocation = (await hasConsent(me.id)) && locations.length > 0 && !isOfficeIp(traceClientIp(req.headers, OFFICE.ipHeaderOrder).ip, cidrs.map((c) => c.cidr));
+  const needLocation = me.role !== 'admin' && (await hasConsent(me.id)) && !isOfficeIp(traceClientIp(req.headers, OFFICE.ipHeaderOrder).ip, cidrs);
   return { options, needLocation };
 });

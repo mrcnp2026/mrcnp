@@ -2,9 +2,9 @@
 // 화면 내용은 MyAttendance.tsx. 직원 모드의 근무일정 메뉴는 없앴고(개발-37) 일정 요청 단추가 여기 있다. /punch/schedule은 주간 보기로 보낸다.
 import { CalendarPlus } from 'lucide-react';
 import { getTranslations } from 'next-intl/server';
-import Link from 'next/link';
 import { redirect } from 'next/navigation';
-import { Fab } from '@/components/Fab';
+import { Fab, SheetButton } from '@/components/Fab';
+import { ShiftRequestSheet } from '../schedule/request/ShiftRequestSheet';
 import { MineBar } from '@/components/MineBar';
 import { PageShell } from '@/components/ui';
 import { getMe } from '@/lib/auth';
@@ -41,14 +41,15 @@ export default async function MyRecordsPage({ searchParams }: { searchParams: Pr
         base="/punch/records"
         defaultView="week"
         extra={
-          <Link href="/punch/schedule/request" className="inline-flex min-h-9 items-center gap-1 font-semibold text-primary">
+          <SheetButton sheet="shift" className="inline-flex min-h-9 items-center gap-1 font-semibold text-primary">
             <CalendarPlus aria-hidden size={16} />
             {ts('request')}
-          </Link>
+          </SheetButton>
         }
       />
       <NoteBox initial={(notes?.[0]?.body as string | undefined) ?? null} />
       <Fab label={tc('title')} href="/punch/corrections?new=1" />
+      <ShiftRequestSheet />
     </PageShell>
   );
 }

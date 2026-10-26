@@ -1,6 +1,7 @@
 'use client';
 // 연차 부여 입력 (4-7 → 2026-10-02 의뢰인 결정: 입사일 기준 계산값을 칸에 미리 채우고, 관리자가 확인해 저장).
 // 저장은 언제나 관리자가 누른다 — 자동 저장 없음. 같은 기간 이름으로 다시 저장하면 고친다 (변경 기록에 남음).
+import { Select } from '@/components/Select';
 import { useTranslations } from 'next-intl';
 import { useRouter } from 'next/navigation';
 import { useState } from 'react';
@@ -83,10 +84,10 @@ export function GrantForm({
       </div>
       <label className="flex flex-col gap-1 text-sm text-muted">
         {t('basis')}
-        <select value={v.basis} onChange={set('basis')} className={field}>
+        <Select value={v.basis} onChange={set('basis')} className={field}>
           <option value="hire_date">{t('basisHire')}</option>
           <option value="fiscal_year">{t('basisFiscal')}</option>
-        </select>
+        </Select>
       </label>
       <p className="text-xs text-faint">{t('manualHint')}</p>
       {err && <ErrorNote code={err.code} requestId={err.requestId} namespace="admin.leave" />}

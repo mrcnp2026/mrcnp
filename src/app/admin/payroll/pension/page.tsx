@@ -7,7 +7,7 @@ import { HelpTip } from '@/components/Help';
 import { Card, CardTitle, Chip, PageShell } from '@/components/ui';
 import { OFFICE } from '@/config/office';
 import { getMe } from '@/lib/auth';
-import { balanceOf, inDcPlan } from '@/lib/payroll/pension';
+import { balanceOf, inDcPlan, returnOf } from '@/lib/payroll/pension';
 import { loadPension } from '@/lib/payroll/pension-data';
 import { createAdminClient } from '@/lib/supabase/admin';
 import { NOT_SYSTEM_ADMIN } from '@/lib/system-admin';
@@ -90,9 +90,10 @@ export default async function PensionPage({ searchParams }: { searchParams: Prom
                     <span className="font-bold">{nameOf.get(m.employeeId)}</span>
                     <Chip tone={m.planKind === 'DC' ? 'info' : 'neutral'}>{t(`plan.${m.planKind}`)}</Chip>
                     <span className="num text-muted">{t('joinedLine', { d: m.joinedOn })}{m.institution ? ` · ${m.institution}` : ''}{m.openingBalance !== null ? ` · ${t('openingLine', { n: f.number(m.openingBalance), d: m.openingAsOf ?? '' })}` : ''}{m.endedOn ? ` · ${t('endedLine', { d: m.endedOn })}` : ''}</span>
+                    {m.marketValue !== null && m.marketValueAsOf && (() => { const gain = returnOf(m, contributions.filter((x) => x.employeeId === m.employeeId)); return <span className="num text-muted">{t('marketLine', { n: f.number(m.marketValue!), d: m.marketValueAsOf! })}{gain !== null ? ` · ${t('returnLine', { n: f.number(gain) })}` : ''}</span>; })()}
                   </summary>
                   <div className="flex flex-col gap-2 pt-3">
-                    <MemberForm people={people} initial={{ employeeId: m.employeeId, planKind: m.planKind, joinedOn: m.joinedOn, endedOn: m.endedOn, institution: m.institution, openingBalance: m.openingBalance, openingAsOf: m.openingAsOf, note: m.note }} />
+                    <MemberForm people={people} initial={{ employeeId: m.employeeId, planKind: m.planKind, joinedOn: m.joinedOn, endedOn: m.endedOn, institution: m.institution, openingBalance: m.openingBalance, openingAsOf: m.openingAsOf, marketValue: m.marketValue, marketValueAsOf: m.marketValueAsOf, note: m.note }} />
                     <RemoveMember employeeId={m.employeeId} />
                   </div>
                 </details>

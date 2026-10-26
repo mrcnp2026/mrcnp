@@ -1,5 +1,6 @@
 // 근무일정 생성 요청 (의뢰인 2026-10-11: 시프티의 「근무일정 요청」처럼) — 직원이 특근·잔업·하루만 다른 시각을 요청하고 관리자가 승인하면 일정이 된다.
 // 위: 양식. 아래: 대기 중인 내 요청(취소할 수 있다). 처리된 것은 「요청」 탭의 목록에 나온다.
+import { getShiftKindNames } from '@/lib/settings';
 import { getFormatter, getTranslations } from 'next-intl/server';
 import { redirect } from 'next/navigation';
 import { DetailBar } from '@/components/detail';
@@ -25,7 +26,7 @@ export default async function ShiftRequestPage() {
       <DetailBar back="/punch/requests" backLabel={t('back')} title={t('title')} />
       <Card className="flex flex-col gap-3">
         <p className="text-sm text-muted">{t('intro')}</p>
-        <ShiftRequestForm today={toKstDate(new Date())} templates={templates} />
+        <ShiftRequestForm today={toKstDate(new Date())} templates={templates} kindNames={await getShiftKindNames(toKstDate(new Date()))} />
       </Card>
       {(mine ?? []).length > 0 && (
         <section className="flex flex-col gap-2">

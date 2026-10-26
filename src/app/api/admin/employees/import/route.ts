@@ -9,7 +9,7 @@ import { requireAdmin } from '@/lib/auth';
 import { deny } from '@/lib/csv-response';
 import { createEmployee, DuplicateEmployeeNo } from '@/lib/invite';
 import { loadJobs } from '@/lib/job-data';
-import { buildOrgTree } from '@/lib/org';
+import { orgOptions } from '@/lib/org';
 import { loadOrgGroups } from '@/lib/org-data';
 import { readStaff, staffTemplate, STAFF_COLS, type StaffLabels } from '@/lib/staff-bulk';
 import { saveForeignInfo } from '@/lib/staff-details';
@@ -27,7 +27,7 @@ async function labels(): Promise<StaffLabels> {
 async function lists() {
   const [groups, jobs] = await Promise.all([loadOrgGroups(), loadJobs()]);
   return {
-    groups: buildOrgTree(groups.filter((g) => g.active)).flatMap((d) => [{ id: d.id, label: d.name }, ...d.teams.map((x) => ({ id: x.id, label: `${d.name} › ${x.name}` }))]),
+    groups: orgOptions(groups.filter((g) => g.active)),
     jobs: jobs.filter((j) => j.active).map((j) => ({ id: j.id, label: j.name })),
   };
 }

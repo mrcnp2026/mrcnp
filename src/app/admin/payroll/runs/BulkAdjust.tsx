@@ -1,7 +1,8 @@
 'use client';
 // 급여대장 「조정 한꺼번에 넣기」 (2026-10-20 노프로 비교 · 같은 날 의뢰인: 화면이 별로 → 단추 하나 + 가운데 창, 탭 두 개).
 // ① 엑셀로: 여러 사람 · 여러 항목(가불 · 정산 · 상여 등) ② 같은 금액 여러 명: 상여 · 성과급. 한 칸 = 한 조정이고, 넣은 뒤 「다시 계산」해야 금액에 반영된다.
-// ★ 「명세서 올리기」(급여 › 명세서)와 다르다 — 그쪽은 다른 프로그램이 계산을 끝낸 결과를 그대로 공개하고, 여기는 우리 계산에 넣을 조정 값이다.
+// ★ 「급여 명세서」(급여 › 급여 명세서)와 다르다 — 그쪽은 다른 프로그램이 계산을 끝낸 결과를 그대로 공개하고, 여기는 우리 계산에 넣을 조정 값이다.
+import { Select } from '@/components/Select';
 import { FileSpreadsheet } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 import { useRouter } from 'next/navigation';
@@ -94,13 +95,13 @@ function SamePart({ id, columns, members }: { id: string; columns: BulkColumn[];
       <div className="grid grid-cols-1 gap-2 sm:grid-cols-3">
         <label className="flex min-w-0 flex-col gap-1">
           <span className="text-muted">{t('item')}</span>
-          <select name="item" required className={field} defaultValue={columns.find((c) => c.code === 'BONUS')?.code ?? ''}>
+          <Select name="item" required className={field} defaultValue={columns.find((c) => c.code === 'BONUS')?.code ?? ''}>
             {columns.map((c) => (
               <option key={c.code} value={c.code}>
                 {t(c.kind === 'PAYMENT' ? 'kindPay' : 'kindDed')} · {c.label}
               </option>
             ))}
-          </select>
+          </Select>
         </label>
         <label className="flex min-w-0 flex-col gap-1">
           <span className="text-muted">{t('amount')}</span>

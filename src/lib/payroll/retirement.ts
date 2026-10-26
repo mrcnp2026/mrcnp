@@ -72,6 +72,21 @@ export function calcRetirement(i: RetirementInput): RetirementResult {
   return { ...base, missing, averageDaily: text(average), dailyUsed: text(daily), usedOrdinary, amount, ...(companyPays === undefined ? {} : { companyPays }) };
 }
 
+export type AverageKind = 'MONTHLY' | 'BONUS' | 'EXCLUDED' | null;
+export type StatementPayLine = { code: string; label: string; amount: number };
+/**
+ * 지급 항목의 「퇴직금 평균임금에서」 구분(월 임금 / 연 상여 / 뺌, 묶음 36)으로 3개월 임금과 직전 1년 상여를 바로잡는다 — 순수 계산.
+ *  · 연 상여로 정한 항목은 3개월 임금에서 빼고, 직전 1년 상여에 더한다(1년치 정규 급여의 그 항목 합계).
+ *  · 뺌으로 정한 항목은 3개월 임금에서 뺀다.
+ *  · 구분을 정하지 않은 항목은 지금까지처럼 월 임금으로 두고, 이름을 알려 담당자가 정하게 한다(skip: 기본급 · 연장수당처럼 자동으로 만드는 항목은 알리지 않는다).
+ */
+export function applyAverageKinds(a: { wage3m: number | null; bonus1y: number; lines3m: StatementPayLine[]; lines1y: StatementPayLine[]; kindOf: (code: string) => AverageKind; skip?: (code: string) => boolean }): { wage3m: number | null; bonus1y: number; moved: number; left: number; undecided: string[] } {
+  const sum = (lines: StatementPayLine[], kind: AverageKind) => lines.filter((l) => a.kindOf(l.code) === kind).reduce((s, l) => s + l.amount, 0);
+  const moved = sum(a.lines3m, 'BONUS'), left = sum(a.lines3m, 'EXCLUDED');
+  const undecided = [...new Set(a.lines3m.filter((l) => l.amount > 0 && a.kindOf(l.code) === null && !a.skip?.(l.code)).map((l) => l.label))];
+  return { wage3m: a.wage3m === null ? null : a.wage3m - moved - left, bonus1y: a.bonus1y + sum(a.lines1y, 'BONUS'), moved, left, undecided };
+}
+
 /** 저장 · 요청에서 온 값을 입력 모양으로 맞춘다 (모르는 값은 버린다) */
 export function toRetirementInput(v: unknown): RetirementInput {
   const o = (v && typeof v === 'object' ? v : {}) as Record<string, unknown>;

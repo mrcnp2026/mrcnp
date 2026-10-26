@@ -1,6 +1,6 @@
 'use client';
 // "오늘 근무" 카드 + 주 버튼 1개 (부록 R-10-1).
-// - 버튼은 상태에 따라 출근하기(파랑·LogIn 아이콘) ↔ 퇴근하기(검정·LogOut 아이콘). 색 + 글자 + 아이콘 셋으로 구분 (색만 X)
+// - 버튼은 상태에 따라 출근하기(파랑) ↔ 퇴근하기(진한 남색). 색 + 글자로 구분 (색만 X) — 아이콘은 뺐다 (2026-10-23 의뢰인)
 // - 폭 100%·높이 56px (2026-10-02 의뢰인: 96px은 너무 큼), 화면 하단 고정 금지 (12장 5번)
 // - 누르면 기기 확인(지문·얼굴·PIN) → 서버가 정한 시각을 큰 숫자로 확인시킨다 (R-10-8 신뢰 장치)
 // - ★ 출퇴근은 등록한 기기 1대에서만 (2026-10-05 의뢰인): 로그인은 아이디 + 비밀번호로 어디서나 되지만,
@@ -9,10 +9,10 @@
 //   · 다른 기기에서 열었으면: 버튼 대신 안내 (등록하지 않은 기기에서 지문 창을 띄우면 브라우저가 "보안 키(USB)"를 찾으라고 해서 혼란스럽다)
 // - 기록 중에는 버튼을 막고 "기록하는 중" — 두 번 눌러도 한 번만 (7-4 요점 1)
 import { browserSupportsWebAuthn, startAuthentication, startRegistration } from '@simplewebauthn/browser';
-import { Check, Clock, Fingerprint, LogIn, LogOut, ShieldCheck, Smartphone } from 'lucide-react';
+import { Check, Clock, Fingerprint, ShieldCheck, Smartphone } from 'lucide-react';
 import { useFormatter, useTranslations } from 'next-intl';
 import { useRouter } from 'next/navigation';
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { PUNCHED_EVENT, PUNCHING_EVENT } from '@/components/NoticeSheet';
 import { callApi, passkeyBrowserError } from '@/components/client-api';
 import { ErrorNote } from '@/components/ErrorNote';
@@ -69,6 +69,7 @@ export function TodayCard(props: {
   // 이 브라우저가 등록한 그 기기인가: null=아직 모름(첫 그리기), true/false
   const [thisDevice, setThisDevice] = useState<boolean | null>(null);
   const [justRegistered, setJustRegistered] = useState(false);
+  const cancels = useRef(0); // 본인 확인을 연달아 취소한 횟수 — 한 번 취소했다고 「다른 기기」로 단정하지 않는다
   useEffect(() => setDevice(props.device), [props.device]);
   useEffect(() => setThisDevice(device ? readMark() === device.credentialId : null), [device]);
 
@@ -124,14 +125,18 @@ export function TodayCard(props: {
       try {
         response = await startAuthentication({ optionsJSON: options }); // 출퇴근마다 기기 확인 (4-11)
       } catch (e) {
-        setThisDevice(false); // 취소했거나 등록한 기기가 아니다 — 브라우저가 둘을 구분해 주지 않는다
-        return setErr({ code: passkeyBrowserError(e) });
+        // 취소했거나 등록한 기기가 아니다 — 브라우저가 둘을 구분해 주지 않는다. 첫 취소는 버튼을 그대로 두고, 연달아 두 번이면 「다른 기기」 안내
+        const code = passkeyBrowserError(e);
+        cancels.current = code === 'cancelled' ? cancels.current + 1 : 2;
+        if (cancels.current >= 2) setThisDevice(false);
+        return setErr({ code });
       }
       // 본문에는 kind와 기기의 서명(+ 필요할 때만 위치)만 보낸다. 누구인지·시각·IP·연습 여부·사무실 판정은 서버가 정한다 (7-4 요점 4)
       const r = await callApi<Result>('/api/punch', { kind, response, ...(geo ? { geo } : {}) });
       if (!r.ok) return setErr(r);
       if (device) writeMark(device.credentialId);
       setThisDevice(true);
+      cancels.current = 0;
       setJustRegistered(false);
       setResult(r.data);
       if (r.data.requested && r.data.kind === 'in') setSentIn(true);
@@ -149,7 +154,6 @@ export function TodayCard(props: {
   // 토스풍 (2026-10-02 의뢰인 선택 시안): 카드에서 가장 먼저 읽힐 숫자 하나를 아주 크게.
   //  출근 전 → 지금 시각 · 근무 중 → 지금까지 일한 시간 · 퇴근 후 → 퇴근 시각
   const state: 'before' | 'working' | 'done' = props.isOpen ? 'working' : props.lastOut ? 'done' : 'before';
-  const Icon = kind === 'in' ? LogIn : LogOut;
   return (
     <Card className="flex flex-col gap-3 p-4">
       {/* 제목과 날짜를 한 줄로 — 홈이 한 화면에 들어오게 (2026-10-18 의뢰인) */}
@@ -164,30 +168,34 @@ export function TodayCard(props: {
           {props.practice && <Chip tone="info">{tc('practiceBadge')}</Chip>}
         </div>
       </div>
-      {/* 날짜 · 오늘 일정 (없으면 「무일정」) · 찍은 시각 — 왼쪽 색 막대: 근무 중이면 파랑, 아니면 초록 */}
-      <div className={`flex flex-col gap-1 border-l-4 pl-3 ${state === 'working' ? 'border-primary' : 'border-ok'}`}>
-        <p className="num flex flex-wrap items-center gap-2 text-base text-muted">
-          {props.planLine ?? t('noSchedule')}
-          {!props.planLine && <Chip>{t('noScheduleChip')}</Chip>}
-        </p>
-        {state !== 'before' && (
-          <p className="num flex flex-wrap items-center gap-x-3 gap-y-1 text-base font-bold">
-            <span>{t('inAt', { time: props.firstIn ? time(props.firstIn) : '--:--' })}</span>
-            {state === 'done' && props.lastOut && <span>{t('outAt', { time: time(props.lastOut) })}</span>}
-            {state === 'working' && props.firstIn && (
-              <span className="text-primary">
-                <Elapsed since={props.firstIn} />
-              </span>
-            )}
-            {props.firstInVerified === true && (
-              <span className="flex items-center gap-1 text-xs font-medium text-ok">
-                <Check aria-hidden size={14} strokeWidth={2.5} />
-                {t('office')}
-              </span>
-            )}
-            {props.firstInVerified === false && <span className="text-xs font-medium text-warn">{t('outside')}</span>}
+      {/* 가장 먼저 읽힐 숫자 하나를 크게 (2026-10-23 의뢰인: 「고급지고 세련되게」): 출근 전 = 지금 시각 · 근무 중 = 지금까지 일한 시간 · 퇴근 후 = 퇴근 시각.
+          그 아래에 오늘 일정과 출근 시각을 조용한 한 줄로. 상자 · 막대 없이 여백으로만 나눈다 */}
+      <div className="flex flex-col gap-3 pt-1 pb-1">
+        <div className="hero-rise flex flex-col gap-1" key={state}>
+          <p className="text-sm font-medium text-muted">{t(state === 'before' ? 'heroBefore' : state === 'working' ? 'heroWorking' : 'heroDone')}</p>
+          <p className="num text-5xl leading-none font-extrabold tracking-tight">
+            {state === 'before' && <Now />}
+            {state === 'working' && props.firstIn && <Elapsed since={props.firstIn} />}
+            {state === 'done' && props.lastOut && time(props.lastOut)}
           </p>
-        )}
+        </div>
+        <p className="num flex flex-wrap items-center gap-x-2 gap-y-1 text-sm text-muted">
+          <span>{props.planLine ?? t('noSchedule')}</span>
+          {!props.planLine && <Chip>{t('noScheduleChip')}</Chip>}
+          {state !== 'before' && props.firstIn && (
+            <>
+              <span aria-hidden className="text-faint">·</span>
+              <span>{t('inAt', { time: time(props.firstIn) })}</span>
+            </>
+          )}
+          {props.firstInVerified === true && (
+            <span className="flex items-center gap-1 text-xs font-medium text-ok">
+              <Check aria-hidden size={14} strokeWidth={2.5} />
+              {t('office')}
+            </span>
+          )}
+          {props.firstInVerified === false && <span className="text-xs font-medium text-warn">{t('outside')}</span>}
+        </p>
         {props.pendingPunch && !result && (
           <p className="num flex flex-wrap items-center gap-2 text-sm font-bold text-warn">
             <Clock aria-hidden size={16} strokeWidth={2} />
@@ -262,21 +270,18 @@ export function TodayCard(props: {
           </button>
         </div>
       ) : (
-        // 출근은 파랑, 퇴근은 거의 검정 — 색 + 글자 + 아이콘 셋으로 구분 (색만 X).
         // 옆의 「요청」 단추는 뺐다 — 요청은 다른 화면처럼 오른쪽 아래 + 단추에서 (2026-10-18 의뢰인)
-        <div className="flex">
+        // 알약 모양 (2026-10-23 의뢰인: 동그라미·아이콘은 별로 → 글자만 있는 알약). 출근은 파랑, 퇴근은 진한 남색 + 글자로 구분
         <button
           type="button"
           onClick={punch}
           disabled={busy || thisDevice === null}
-          className={`flex min-h-14 flex-1 items-center justify-center gap-2 rounded-punch px-4 text-lg font-bold text-on-primary disabled:opacity-60 ${
+          className={`flex min-h-16 w-full items-center justify-center rounded-full px-6 text-xl font-bold text-on-primary shadow-card transition-transform active:scale-[0.98] disabled:opacity-60 ${
             kind === 'in' ? 'bg-primary' : 'bg-primary-deep'
           }`}
         >
-          {busy ? <Clock aria-hidden size={22} strokeWidth={2} /> : <Icon aria-hidden size={22} strokeWidth={2} />}
           {busy ? t('recording') : t(kind === 'in' ? 'clockIn' : 'clockOut')}
         </button>
-        </div>
       )}
 
       {ask && props.reason && <ReasonSheet ask={ask} today={props.reason.today} note={props.reason.note} canAskWork={props.reason.canAskWork} onClose={() => setAsk(null)} />}
@@ -284,6 +289,17 @@ export function TodayCard(props: {
       {err && !device && ['register_failed', 'unsupported', 'verification_failed', 'user_verification_missing'].includes(err.code) && <RegisterTroubleshoot />}
     </Card>
   );
+}
+
+/** 출근 전 — 지금 시각 (30초마다 갱신). 표시만 한다 */
+function Now() {
+  const f = useFormatter();
+  const [now, setNow] = useState(() => Date.now());
+  useEffect(() => {
+    const id = setInterval(() => setNow(Date.now()), 15_000);
+    return () => clearInterval(id);
+  }, []);
+  return <span suppressHydrationWarning>{f.dateTime(new Date(now), { hour: '2-digit', minute: '2-digit', hourCycle: 'h23' })}</span>;
 }
 
 /** 근무 중 — 출근부터 지금까지 (1분마다 갱신). 표시만 하고 계산·기록에는 쓰지 않는다 */

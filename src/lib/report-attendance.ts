@@ -10,7 +10,7 @@ import { summarizeAnomalies } from '@/lib/anomaly';
 import { collectAnomalies, loadAnomalyPolicy, loadAnomalyReviews } from '@/lib/anomaly-data';
 import { loadCloseBoard } from '@/lib/close-data';
 import { summarizeMonth } from '@/lib/monthly';
-import { groupScope, type OrgGroup } from '@/lib/org';
+import { groupScope, topOf, type OrgGroup } from '@/lib/org';
 import { loadOrgGroups } from '@/lib/org-data';
 import { daysFor, leaveDaysFor, workDaysFor } from '@/lib/period-data';
 import { createAdminClient } from '@/lib/supabase/admin';
@@ -87,7 +87,7 @@ export async function buildAttendanceDeptReport(args: { ym: string; practice: bo
   }
   employees.sort((a, b) => a.name.localeCompare(b.name));
   // 부서(맨 위 그룹)로 묶는다. 팀 소속은 그 부서에 더한다
-  const top = (g: OrgGroup | undefined): OrgGroup | undefined => (g?.parentId ? groups.find((x) => x.id === g.parentId) : g);
+  const top = (g: OrgGroup | undefined): OrgGroup | undefined => topOf(groups, g?.id); // 맨 위 조직 (3단계여도)
   const by = new Map<string, AttGroup>();
   const total = zero();
   for (const e of employees) {

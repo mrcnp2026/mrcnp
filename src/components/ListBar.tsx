@@ -1,6 +1,7 @@
 'use client';
 // 목록 위 줄 (2026-10-10 의뢰인: 시프티처럼) — 첫 줄: 검색 칸 + 거르기 단추 · 둘째 줄: 기간 「09.01 - 09.30 ▾」 + 오른쪽 [내 기록] 같은 단추.
 // 값은 전부 주소(?q · ?g · ?from · ?to)에 둔다 — 뒤로 가기·새로 고침에도 그대로다. 기간·거르기 칸은 눌렀을 때만 펼친다.
+import { Select } from '@/components/Select';
 import { CalendarDays, ChevronDown, Funnel, Search, Settings } from 'lucide-react';
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
@@ -86,14 +87,14 @@ export function ListBar({
         </nav>
       )}
       {open === 'filter' && (
-        <select aria-label={labels.filter} value={group} onChange={(e) => go({ g: e.target.value })} className={field}>
+        <Select aria-label={labels.filter} value={group} onChange={(e) => go({ g: e.target.value })} className={field}>
           <option value="">{labels.groupAll}</option>
           {groups.map((o) => (
             <option key={o.id} value={o.id}>
               {o.label}
             </option>
           ))}
-        </select>
+        </Select>
       )}
       <div className="flex items-center justify-between gap-2">
         <button type="button" aria-label={labels.period} aria-expanded={open === 'period'} onClick={() => setOpen(open === 'period' ? null : 'period')} className="num flex min-h-11 items-center gap-2 text-base font-medium text-muted">

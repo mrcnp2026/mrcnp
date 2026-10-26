@@ -1,7 +1,7 @@
 // 회사 급여 설정 저장 — 새 판을 쌓는다 (PRD v1.3 17.1 · 17.2 · 17.7 · 17.8). 급여 담당 관리자만.
 import { api, ApiError, readJson } from '@/lib/api';
 import { requireConsole } from '@/lib/console-pin';
-import { requirePayroll, saveSetting } from '@/lib/payroll/data';
+import { loadItems, requirePayroll, saveSetting } from '@/lib/payroll/data';
 import { cleanText, DEFAULT_LEDGER, isDate, SETTING_SECTIONS, validateSetting, type SettingSection } from '@/lib/payroll/settings';
 import { toKstDate } from '@/lib/time';
 
@@ -20,6 +20,14 @@ export const POST = api<{ params: Promise<{ section: string }> }>('admin.payroll
   const v = validateSetting(section as SettingSection, b);
   const reason = cleanText(b.reason, 500);
   if (!v.ok || !isDate(b.validFrom) || reason === undefined || !Number.isInteger(b.expectedVersion)) throw new ApiError(400, 'invalid_input');
+  if (section === 'employee-defaults') {
+    // 공통 항목은 사람이 정하는 고정 항목(고정 · 직접 입력)만 — 쓰지 않는 항목이나 모르는 코드는 거절 (2026-10-25)
+    const known = new Map((await loadItems(undefined, b.validFrom as string)).filter((x) => x.inUse).map((x) => [x.code, x]));
+    for (const c of (v.value as { commonItems?: { code: string }[] }).commonItems ?? []) {
+      const it = known.get(c.code);
+      if (!it || (it.calcKind !== 'FIXED' && it.calcKind !== 'MANUAL')) throw new ApiError(400, 'common_item_invalid');
+    }
+  }
   const row = await saveSetting({ section: section as SettingSection, payload: v.value, validFrom: b.validFrom, reason, expectedVersion: b.expectedVersion as number, me });
   return { version: row.version, validFrom: row.validFrom };
 });

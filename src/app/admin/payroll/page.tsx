@@ -5,7 +5,7 @@ import { getTranslations } from 'next-intl/server';
 import Link from 'next/link';
 import { Help } from '@/components/Help';
 import { QuickFind } from '@/components/QuickFind';
-import { Card, PageShell } from '@/components/ui';
+import { Card, Chip, PageShell } from '@/components/ui';
 import { OFFICE } from '@/config/office';
 import { getMe } from '@/lib/auth';
 import { buildMonth, isYearMonth, monthRange } from '@/lib/month-data';
@@ -33,6 +33,7 @@ export default async function PayrollPage({ searchParams }: { searchParams: Prom
   const lastDay = monthRange(ym).to;
   const monthEnd = lastDay < today ? lastDay : today;
   const hm = (min: number) => tr('hm', { h: Math.floor(min / 60), m: String(min % 60).padStart(2, '0') });
+  const hmOrDash = (min: number) => (min > 0 ? hm(min) : <span className="text-faint">–</span>); // 0은 흐린 줄표 — 값이 있는 칸이 눈에 띄게 (2026-10-26)
 
   if (!me.canViewPayroll) {
     // 누가 급여 담당인지 알려 준다 (2026-10-06 의뢰인: 급여 담당이 있다는데 왜 못 보는지 알 수 없었다)
@@ -57,12 +58,22 @@ export default async function PayrollPage({ searchParams }: { searchParams: Prom
   // 이 달 합계 (숫자 칸) — 표와 같은 값의 합
   const sum = (pick: (r: (typeof rows)[number]) => number) => rows.reduce((a, r) => a + pick(r), 0);
   const holidayOf = (r: (typeof rows)[number]) => Number(r.summary.row.approved_holiday_within8_minutes) + Number(r.summary.row.approved_holiday_over8_minutes);
-  const tiles = [
-    { k: 'people', v: t('peopleN', { n: rows.length }) },
-    { k: 'totalWorked', v: hm(sum((r) => r.summary.netMinutes)) },
-    { k: 'totalOvertime', v: hm(sum((r) => Number(r.summary.row.approved_overtime_minutes))) },
-    { k: 'totalNightHoliday', v: hm(sum((r) => Number(r.summary.row.approved_night_minutes) + holidayOf(r))) },
+  const nightOf = (r: (typeof rows)[number]) => Number(r.summary.row.approved_night_minutes);
+  const overtimeOf = (r: (typeof rows)[number]) => Number(r.summary.row.approved_overtime_minutes);
+  // 급여에 영향을 주는 날 수 · 횟수 — 결근 · 무급휴가는 공제, 지각은 참고 (2026-10-26 의뢰인: 시간 4가지만으로는 부족)
+  const absentOf = (r: (typeof rows)[number]) => Number(r.summary.row.absent_days ?? 0);
+  const unpaidOf = (r: (typeof rows)[number]) => Number(r.summary.row.unpaid_leave_days ?? 0);
+  const lateOf = (r: (typeof rows)[number]) => Number(r.summary.row.late_count ?? 0);
+  const totals = [
+    ['worked', sum((r) => r.summary.netMinutes)],
+    ['overtime', sum(overtimeOf)],
+    ['night', sum(nightOf)],
+    ['holiday', sum(holidayOf)],
   ] as const;
+  // 확정하지 않은 기록이 있는 직원을 맨 위로
+  const ordered = [...rows].sort((a, b) => Number(b.summary.unconfirmedDates.length > 0) - Number(a.summary.unconfirmedDates.length > 0));
+  const days = (n: number) => (n > 0 ? t('unitDays', { n }) : <span className="text-faint">–</span>);
+  const times = (n: number) => (n > 0 ? t('unitTimes', { n }) : <span className="text-faint">–</span>);
 
   return (
     <PageShell wide>
@@ -84,8 +95,8 @@ export default async function PayrollPage({ searchParams }: { searchParams: Prom
             </Link>
           </nav>
           {/* 내려받기: 폰은 달 옆의 아이콘 버튼(목록 맨 아래까지 내리지 않게, 2026-10-17 디자인) · PC는 글자 버튼 */}
-          <a href={`/api/admin/export/payroll${q(ym)}`} aria-label={t('download')} title={t('download')} className="inline-flex min-h-11 min-w-11 items-center justify-center gap-2 rounded-button bg-primary text-sm font-bold text-on-primary lg:px-4">
-            <Download aria-hidden size={18} strokeWidth={2} />
+          <a href={`/api/admin/export/payroll${q(ym)}`} aria-label={t('download')} title={t('download')} className="inline-flex min-h-11 min-w-11 items-center justify-center gap-2 rounded-button bg-primary text-sm font-bold text-on-primary lg:h-9 lg:min-h-0 lg:gap-1.5 lg:px-3.5 lg:font-semibold">
+            <Download aria-hidden size={16} />
             <span className="hidden lg:inline">{t('download')}</span>
           </a>
         </div>
@@ -106,18 +117,16 @@ export default async function PayrollPage({ searchParams }: { searchParams: Prom
             {t('toConfirm')} ›
           </Link>
         </p>
-      ) : (
-        <p className="px-1 text-sm text-muted">{t('confirmedOnly')}</p>
-      )}
+      ) : null}
 
-      <dl className="grid grid-cols-2 gap-2 lg:grid-cols-4 lg:gap-4">
-        {tiles.map((x) => (
-          <div key={x.k} className="flex flex-col gap-2 rounded-card border border-border bg-bg p-4 lg:p-5 lg:shadow-card">
-            <dt className="text-sm text-muted">{t(x.k)}</dt>
-            <dd className="num text-2xl leading-none font-extrabold lg:text-3xl">{x.v}</dd>
-          </div>
+      <p className="flex flex-wrap items-baseline gap-x-5 gap-y-1 px-1 text-sm text-muted">
+        <b className="text-base text-text">{t('peopleN', { n: rows.length })}</b>
+        {totals.map(([k, v]) => (
+          <span key={k}>
+            {t(k)} <b className="num text-base text-text">{hmOrDash(v)}</b>
+          </span>
         ))}
-      </dl>
+      </p>
 
       {rows.length === 0 && <p className="rounded-card border border-border bg-bg px-5 py-4 text-sm text-faint">{t('empty')}</p>}
       {/* PC: 직원 한 명 = 표 한 줄 */}
@@ -126,19 +135,27 @@ export default async function PayrollPage({ searchParams }: { searchParams: Prom
           <table className="num w-full text-sm">
             <thead>
               <tr className="border-b border-border">
-                {[t('staff'), t('worked'), t('overtime'), t('night'), t('holiday')].map((x, i) => (
-                  <th key={x} scope="col" className={`px-5 py-3 text-xs font-medium whitespace-nowrap text-faint ${i === 0 ? 'text-left' : 'text-right'}`}>{x}</th>
+                {[t('staff'), t('worked'), t('overtime'), t('night'), t('holiday'), t('absent'), t('unpaid'), t('late')].map((x, i) => (
+                  <th key={x} scope="col" className={`px-5 py-3 text-xs font-medium whitespace-nowrap text-faint ${i === 0 ? 'text-left' : 'text-right'} ${i === 5 ? 'border-l border-border' : ''}`}>{x}</th>
                 ))}
               </tr>
             </thead>
             <tbody className="divide-y divide-border">
-              {rows.map((x) => (
+              {ordered.map((x) => (
                 <tr key={x.person.id}>
-                  <td className="px-5 py-3 text-left font-semibold">{x.person.name}</td>
-                  <td className="px-5 py-3 text-right font-bold">{hm(x.summary.netMinutes)}</td>
-                  <td className="px-5 py-3 text-right">{hm(Number(x.summary.row.approved_overtime_minutes))}</td>
-                  <td className="px-5 py-3 text-right">{hm(Number(x.summary.row.approved_night_minutes))}</td>
-                  <td className="px-5 py-3 text-right">{hm(holidayOf(x))}</td>
+                  <td className="px-5 py-3 text-left font-semibold">
+                    {x.person.name}
+                    {x.summary.unconfirmedDates.length > 0 && (
+                      <Link href={`/admin/records/list?from=${ym}-01&to=${monthEnd}&q=${encodeURIComponent(x.person.name)}`} className="ml-2 align-middle"><Chip tone="warn">{t('unconfirmedOf', { n: x.summary.unconfirmedDates.length })}</Chip></Link>
+                    )}
+                  </td>
+                  <td className="px-5 py-3 text-right font-bold">{hmOrDash(x.summary.netMinutes)}</td>
+                  <td className="px-5 py-3 text-right">{hmOrDash(overtimeOf(x))}</td>
+                  <td className="px-5 py-3 text-right">{hmOrDash(nightOf(x))}</td>
+                  <td className="px-5 py-3 text-right">{hmOrDash(holidayOf(x))}</td>
+                  <td className="px-5 py-3 text-right border-l border-border">{days(absentOf(x))}</td>
+                  <td className="px-5 py-3 text-right">{days(unpaidOf(x))}</td>
+                  <td className="px-5 py-3 text-right">{times(lateOf(x))}</td>
                 </tr>
               ))}
             </tbody>
@@ -156,13 +173,15 @@ export default async function PayrollPage({ searchParams }: { searchParams: Prom
               <span>{t('worked')}</span>
             </p>
             <ul id="pay-hours" className="divide-y divide-border">
-              {rows.map(({ person, summary: s }) => {
+              {ordered.map(({ person, summary: s }) => {
                 const r = s.row;
                 const extra = [
                   [t('overtime'), Number(r.approved_overtime_minutes)],
                   [t('night'), Number(r.approved_night_minutes)],
                   [t('holiday'), Number(r.approved_holiday_within8_minutes) + Number(r.approved_holiday_over8_minutes)],
-                ].filter(([, v]) => Number(v) > 0).map(([k, v]) => `${k} ${hm(Number(v))}`).join(' · ');
+                ].filter(([, v]) => Number(v) > 0).map(([k, v]) => `${k} ${hm(Number(v))}`).concat(
+                  [[t('absent'), t('unitDays', { n: Number(r.absent_days ?? 0) }), Number(r.absent_days ?? 0)], [t('unpaid'), t('unitDays', { n: Number(r.unpaid_leave_days ?? 0) }), Number(r.unpaid_leave_days ?? 0)], [t('late'), t('unitTimes', { n: Number(r.late_count ?? 0) }), Number(r.late_count ?? 0)]].filter((x) => Number(x[2]) > 0).map((x) => `${x[0]} ${x[1]}`),
+                ).join(' · ');
                 return (
                   <li key={person.id} data-find={person.name} className="flex min-h-12 items-center gap-3 px-5 py-1.5">
                     <span className="min-w-0 flex-1">

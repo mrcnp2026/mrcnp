@@ -6,6 +6,7 @@ import { ChevronDown, ChevronLeft, ChevronRight, Download, ShieldAlert } from 'l
 import { HelpTip } from '@/components/Help';
 import { getFormatter, getTranslations } from 'next-intl/server';
 import Link from 'next/link';
+import { CountUp } from '@/components/CountUp';
 import { GroupFilter } from '@/components/GroupFilter';
 import { Pager, pageOf } from '@/components/Pager';
 import { ScopeSwitch } from '@/components/ScopeSwitch';
@@ -14,7 +15,7 @@ import { OFFICE } from '@/config/office';
 import { getMe } from '@/lib/auth';
 import { FLAG } from '@/lib/flags';
 import { buildMonth, isYearMonth } from '@/lib/month-data';
-import { buildOrgTree, groupScope } from '@/lib/org';
+import { groupScope, orgOptions } from '@/lib/org';
 import { loadOrgGroups } from '@/lib/org-data';
 import { kstDateTime, toKstDate } from '@/lib/time';
 import { groupPath } from '@/lib/org';
@@ -34,7 +35,7 @@ export default async function RecordsPage({ searchParams }: { searchParams: Prom
   const practice = OFFICE.practiceMode && sp.live !== '1';
   // 부서·팀으로 걸러 보기 (조직도, 2026-10-05). 부서를 고르면 그 밑의 팀 직원도 함께 나온다. 엑셀 내려받기는 걸러지지 않는다(전체)
   const groups = await loadOrgGroups();
-  const groupOptions = buildOrgTree(groups).flatMap((d) => [{ id: d.id, label: d.name }, ...d.teams.map((x) => ({ id: x.id, label: `${d.name} › ${x.name}` }))]);
+  const groupOptions = orgOptions(groups);
   const g = groupOptions.some((o) => o.id === sp.g) ? sp.g! : '';
   const q = (m: string) => `?m=${m}${OFFICE.practiceMode && !practice ? '&live=1' : ''}${g ? `&g=${g}` : ''}`;
   const month = await buildMonth(ym, practice);
@@ -60,6 +61,9 @@ export default async function RecordsPage({ searchParams }: { searchParams: Prom
   const md = (d: string) => f.dateTime(kstDateTime(d, '12:00'), { month: 'numeric', day: 'numeric', weekday: 'short' });
   const clock = (iso: string) => f.dateTime(new Date(iso), { hour: '2-digit', minute: '2-digit', hourCycle: 'h23' });
   const hm = (min: number) => t('hm', { h: Math.floor(min / 60), m: String(min % 60).padStart(2, '0') });
+  // 표에서 0은 옅은 「–」로 (2026-10-22 의뢰인: 「엑셀을 붙인 것 같다」 — 0:00이 표를 덮어 중요한 숫자가 묻혔다)
+  const z = (min: number) => (min ? hm(min) : <span className="text-faint">–</span>);
+  const zn = (n: number) => (n ? n : <span className="text-faint">–</span>);
 
   return (
     <PageShell wide>
@@ -107,12 +111,12 @@ export default async function RecordsPage({ searchParams }: { searchParams: Prom
             x.n > 0 ? (
               // 누르면 그 사람만, 다시 누르면 전체 (숫자가 0이면 누를 것이 없다)
               <Link key={x.k} href={`${q(ym)}${pick === x.f ? '' : `&f=${x.f}`}`} scroll={false} aria-pressed={pick === x.f} className={`flex min-h-16 flex-col items-center justify-center rounded-button transition-colors duration-150 ${pick === x.f ? 'bg-warn-tint ring-2 ring-warn' : 'hover:bg-surface'}`}>
-                <span className="num text-2xl leading-none font-extrabold text-warn underline decoration-warn/40 underline-offset-4">{x.n}</span>
+                <CountUp value={x.n} className="num text-2xl leading-none font-extrabold text-warn underline decoration-warn/40 underline-offset-4" />
                 <span className="mt-1 text-xs text-muted">{t(x.k)}</span>
               </Link>
             ) : (
               <div key={x.k} className="flex min-h-16 flex-col items-center justify-center">
-                <span className="num text-2xl leading-none font-extrabold">{x.n}</span>
+                <CountUp value={x.n} className="num text-2xl leading-none font-extrabold" />
                 <span className="mt-1 text-xs text-muted">{t(x.k)}</span>
               </div>
             ),
@@ -257,14 +261,14 @@ export default async function RecordsPage({ searchParams }: { searchParams: Prom
                     </td>
                     <td className="px-2 py-2 text-right whitespace-nowrap">{hm(s.netMinutes)}</td>
                     <td className="px-2 py-2 text-right font-bold whitespace-nowrap">{hm(s.payableMinutes)}</td>
-                    <td className="px-2 py-2 text-right whitespace-nowrap">{hm(Number(r.overtime_minutes))}</td>
-                    <td className="px-2 py-2 text-right whitespace-nowrap">{hm(Number(r.approved_overtime_minutes))}</td>
-                    <td className={`px-2 py-2 text-right whitespace-nowrap ${Number(r.pending_overtime_minutes) > 0 ? 'text-warn' : ''}`}>{hm(Number(r.pending_overtime_minutes))}</td>
-                    <td className="px-2 py-2 text-right whitespace-nowrap">{hm(Number(r.unreviewed_overtime_minutes))}</td>
-                    <td className="px-2 py-2 text-right whitespace-nowrap">{hm(Number(r.night_minutes))}</td>
-                    <td className="px-2 py-2 text-right whitespace-nowrap">{hm(Number(r.holiday_within8_minutes) + Number(r.holiday_over8_minutes))}</td>
-                    <td className={`px-2 py-2 text-right whitespace-nowrap ${Number(r.late_count) > 0 ? 'text-warn' : ''} ${pick === 'late' ? 'bg-warn-tint font-bold' : ''}`}>{r.late_count}</td>
-                    <td className={`px-2 py-2 text-right whitespace-nowrap ${Number(r.absent_days) > 0 ? 'text-warn' : ''} ${pick === 'absent' ? 'bg-warn-tint font-bold' : ''}`}>{r.absent_days}</td>
+                    <td className="px-2 py-2 text-right whitespace-nowrap">{z(Number(r.overtime_minutes))}</td>
+                    <td className="px-2 py-2 text-right whitespace-nowrap">{z(Number(r.approved_overtime_minutes))}</td>
+                    <td className={`px-2 py-2 text-right whitespace-nowrap ${Number(r.pending_overtime_minutes) > 0 ? 'text-warn' : ''}`}>{z(Number(r.pending_overtime_minutes))}</td>
+                    <td className="px-2 py-2 text-right whitespace-nowrap">{z(Number(r.unreviewed_overtime_minutes))}</td>
+                    <td className="px-2 py-2 text-right whitespace-nowrap">{z(Number(r.night_minutes))}</td>
+                    <td className="px-2 py-2 text-right whitespace-nowrap">{z(Number(r.holiday_within8_minutes) + Number(r.holiday_over8_minutes))}</td>
+                    <td className={`px-2 py-2 text-right whitespace-nowrap ${Number(r.late_count) > 0 ? 'text-warn' : ''} ${pick === 'late' ? 'bg-warn-tint font-bold' : ''}`}>{zn(Number(r.late_count))}</td>
+                    <td className={`px-2 py-2 text-right whitespace-nowrap ${Number(r.absent_days) > 0 ? 'text-warn' : ''} ${pick === 'absent' ? 'bg-warn-tint font-bold' : ''}`}>{zn(Number(r.absent_days))}</td>
                   </tr>
                 );
               })}
@@ -289,8 +293,8 @@ export default async function RecordsPage({ searchParams }: { searchParams: Prom
             <p className="num text-sm text-muted">{ym} · Excel</p>
             <p className="text-xs text-faint">{t('reportXlsxHint')}</p>
           </div>
-          <a href={`/api/admin/export/report${q(ym)}`} className="inline-flex min-h-11 shrink-0 items-center gap-2 rounded-button bg-primary px-4 font-semibold text-on-primary">
-            <Download aria-hidden size={18} strokeWidth={1.75} />
+          <a href={`/api/admin/export/report${q(ym)}`} className="inline-flex min-h-11 shrink-0 items-center gap-2 rounded-button bg-primary px-4 font-semibold text-on-primary lg:h-9 lg:min-h-0 lg:gap-1.5 lg:px-3.5 lg:text-sm lg:font-semibold">
+            <Download aria-hidden size={16} />
             {t('download')}
           </a>
         </Card>

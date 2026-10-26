@@ -47,9 +47,13 @@ export function BottomTabs({ role }: { role: NavRole; inboxCount?: number }) {
   useEffect(() => setGrid(false), [path]);
   useEffect(() => {
     if (!grid) return;
+    document.body.dataset.allApps = '1'; // 전체 격자 위로 + 버튼이 겹치지 않게 (globals.css)
     const onKey = (e: KeyboardEvent) => e.key === 'Escape' && setGrid(false);
     window.addEventListener('keydown', onKey);
-    return () => window.removeEventListener('keydown', onKey);
+    return () => {
+      window.removeEventListener('keydown', onKey);
+      delete document.body.dataset.allApps;
+    };
   }, [grid]);
 
   const at = locate(path, query, role);
@@ -67,7 +71,7 @@ export function BottomTabs({ role }: { role: NavRole; inboxCount?: number }) {
 
   return (
     <>
-      <nav className="fixed inset-x-0 bottom-0 z-20 bg-nav pb-[env(safe-area-inset-bottom)] lg:hidden" data-tabs={consoleMode ? 'console' : adminMode ? 'admin' : 'my'}>
+      <nav className="glass-dark fixed inset-x-0 bottom-0 z-20 pb-[env(safe-area-inset-bottom)] lg:hidden" data-tabs={consoleMode ? 'console' : adminMode ? 'admin' : 'my'}>
         <ul className="mx-auto flex max-w-md">
           {tabs.map(({ key, icon, href }) => {
             const here = key === activeKey;
@@ -108,7 +112,7 @@ export function BottomTabs({ role }: { role: NavRole; inboxCount?: number }) {
         createPortal(
           <div className="fixed inset-0 z-10 flex flex-col justify-end lg:hidden">
             <button type="button" tabIndex={-1} aria-label={t('tab.close')} onClick={() => setGrid(false)} className="fade-from flex-1 bg-text opacity-40" />
-            <div role="dialog" aria-modal="true" aria-label={t('tab.allTitle')} className="sheet-up rounded-t-card bg-surface px-4 pt-4 pb-[calc(5rem+env(safe-area-inset-bottom))]" data-all-apps>
+            <div role="dialog" aria-modal="true" aria-label={t('tab.allTitle')} className="sheet-up relative rounded-t-card bg-surface px-4 pt-4 pb-[calc(5rem+env(safe-area-inset-bottom))]" data-all-apps>
               <div className="mb-3 flex items-center justify-between">
                 <p className="text-base font-bold">{t('tab.allTitle')}</p>
                 <button type="button" aria-label={t('tab.close')} onClick={() => setGrid(false)} className="-mr-2 flex size-11 items-center justify-center rounded-button text-muted">

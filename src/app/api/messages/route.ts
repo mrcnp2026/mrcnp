@@ -1,7 +1,9 @@
 // 사내게시판 — 관리자만 글을 올린다. 직원 글쓰기 · 답글은 없다(2026-10-16 의뢰인, 결정 알림-8). 로그인한 사람만.
 // 누가 볼 수 있는지는 work-messages.ts가 메시지마다 다시 확인한다(받는 사람 본인 · 보낸 사람 · 관리자).
+import { after } from 'next/server';
 import { api, ApiError, readJson } from '@/lib/api';
 import { getMe } from '@/lib/auth';
+import { notifyBoardPost } from '@/lib/push-events';
 import { sendNotice, type Audience } from '@/lib/work-messages';
 
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
@@ -18,7 +20,9 @@ export const POST = api('messages', async (req) => {
     else if (b.to === 'groups') { const g = ids(b.groupIds); if (g) audience = { groupIds: g }; }
     else if (b.to === 'people') { const e = ids(b.employeeIds); if (e) audience = { employeeIds: e }; }
     if (!audience) throw new ApiError(400, 'message_no_recipients');
-    return sendNotice({ me, title: b.title, body: b.body, bodyHtml: b.bodyHtml, needsReply: false, audience });
+    const sent = await sendNotice({ me, title: b.title, body: b.body, bodyHtml: b.bodyHtml, needsReply: false, audience });
+    after(() => notifyBoardPost(sent.id)); // 받는 직원 폰에 제목만 (2026-10-21 의뢰인)
+    return sent;
   }
   // 예전의 직원 문의 · 회신 · 답하기는 막는다(옛 화면이 열려 있어도 서버에서 거절)
   if (b.action === 'inquiry' || b.action === 'reply' || b.action === 'answer') throw new ApiError(403, 'board_admin_only');

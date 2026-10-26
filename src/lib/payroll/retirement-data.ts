@@ -7,10 +7,11 @@ import 'server-only';
 import { ApiError } from '@/lib/api';
 import type { Me } from '@/lib/auth';
 import { createAdminClient } from '@/lib/supabase/admin';
-import { sha } from './data';
+import { loadItems, sha } from './data';
+import { AUTO_PAYMENT_CODES } from './engine/reserved-items';
 import { pickRevisions } from './labor-cost';
 import { loadMySlips } from './publish-data';
-import { calcRetirement, daysBetween, last3Months, RETIREMENT_RULE, toRetirementInput, type RetirementInput, type RetirementResult } from './retirement';
+import { applyAverageKinds, calcRetirement, daysBetween, last3Months, RETIREMENT_RULE, toRetirementInput, type RetirementInput, type RetirementResult } from './retirement';
 import { payrollAudit } from './staff-data';
 
 const db = () => createAdminClient();
@@ -24,7 +25,7 @@ const boom = (where: string, e: { code?: string; message?: string } | null): nev
 };
 
 export type CaseKind = 'ESTIMATE' | 'FINAL' | 'INTERIM';
-export type Sources = { joinedFrom: 'employment' | 'profile' | 'after_interim' | null; wageMonths: string[]; wageComplete: boolean; bonusCount: number };
+export type Sources = { joinedFrom: 'employment' | 'profile' | 'after_interim' | null; wageMonths: string[]; wageComplete: boolean; bonusCount: number; kindMoved?: number; kindLeft?: number; undecided?: string[] }; // kind* · undecided: 항목 구분(묶음 36)을 적용한 결과
 export type RetirementCase = {
   id: string; employeeId: string; kind: CaseKind; periodFrom: string; periodTo: string; baseOn: string; input: RetirementInput; result: RetirementResult; sources: Sources | null;
   amount: number | null; taxAmount: number | null; taxBasis: string | null; state: 'DRAFT' | 'FINALIZED' | 'WITHDRAWN'; revision: number; supersedesId: string | null; reason: string | null; isTest: boolean;
@@ -65,7 +66,7 @@ export async function suggestInput(args: { employeeId: string; lastDay: string; 
     joinedFrom = 'after_interim';
   }
   const picked = pickRevisions((runs ?? []).map((r) => ({ kind: r.run_kind as string, periodFrom: r.period_from as string, periodTo: r.period_to as string, sequence: r.sequence as number, revision: r.revision as number, generationId: r.current_generation_id as string | null }))).filter((r) => r.generationId);
-  const { data: sts } = picked.length ? await c.from('payroll_statements').select('generation_id, pay_total, state').eq('employee_id', args.employeeId).in('generation_id', picked.map((r) => r.generationId as string)) : { data: [] as Row[] };
+  const { data: sts } = picked.length ? await c.from('payroll_statements').select('id, generation_id, pay_total, state').eq('employee_id', args.employeeId).in('generation_id', picked.map((r) => r.generationId as string)) : { data: [] as Row[] };
   const payOf = (g: string | null) => {
     const s = (sts ?? []).find((x) => x.generation_id === g && x.state === 'OK');
     return s ? Number(s.pay_total) : null;
@@ -75,10 +76,20 @@ export async function suggestInput(args: { employeeId: string; lastDay: string; 
   const months = monthEnd ? [0, 1, 2].map((i) => new Date(Date.UTC(Number(win.from.slice(0, 4)), Number(win.from.slice(5, 7)) - 1 + i, 1)).toISOString().slice(0, 7)) : [];
   const wages = months.map((m) => payOf(picked.find((r) => r.kind === 'REGULAR' && r.periodFrom.slice(0, 7) === m)?.generationId ?? null));
   const wageComplete = months.length === 3 && wages.every((v) => v !== null);
+  // 항목 구분(월 임금 / 연 상여 / 뺌)으로 바로잡는다 — 정규 급여 명세서의 지급 줄을 항목별로 읽는다
+  const kinds = new Map((await loadItems('PAYMENT', args.lastDay)).map((i) => [i.code, i.averageWageKind ?? null]));
+  const regMonth = new Map(picked.filter((r) => r.kind === 'REGULAR').map((r) => [r.generationId as string, r.periodFrom.slice(0, 7)]));
+  const regStatements = (sts ?? []).filter((x) => x.state === 'OK' && regMonth.has(x.generation_id as string));
+  const { data: its } = regStatements.length ? await c.from('payroll_statement_items').select('statement_id, item_code, label_ko, amount').in('statement_id', regStatements.map((x) => x.id as string)).eq('kind', 'PAYMENT') : { data: [] as Row[] };
+  const monthOfStatement = new Map(regStatements.map((x) => [x.id as string, regMonth.get(x.generation_id as string)!]));
+  const asLine = (x: Row) => ({ code: x.item_code as string, label: x.label_ko as string, amount: Number(x.amount) });
+  const lines1y = (its ?? []).map(asLine);
+  const lines3m = (its ?? []).filter((x) => months.includes(monthOfStatement.get(x.statement_id as string) ?? '')).map(asLine);
   const bonus = picked.filter((r) => r.kind === 'BONUS' && r.periodFrom >= yearAgo.slice(0, 8) + '01').map((r) => payOf(r.generationId)).filter((v): v is number => v !== null);
+  const adj = applyAverageKinds({ wage3m: wageComplete ? wages.reduce<number>((a, v) => a + (v ?? 0), 0) : null, bonus1y: bonus.reduce((a, v) => a + v, 0), lines3m: wageComplete ? lines3m : [], lines1y, kindOf: (code) => kinds.get(code) ?? null, skip: (code) => AUTO_PAYMENT_CODES.has(code) });
   return {
-    input: { periodFrom, periodTo: args.lastDay, excludedDays: 0, wage3m: wageComplete ? wages.reduce<number>((a, v) => a + (v ?? 0), 0) : null, days3m: win.days, bonus1y: bonus.reduce((a, v) => a + v, 0), leavePay1y: 0, ordinaryDaily: null },
-    sources: { joinedFrom, wageMonths: months.filter((_, i) => wages[i] !== null), wageComplete, bonusCount: bonus.length },
+    input: { periodFrom, periodTo: args.lastDay, excludedDays: 0, wage3m: adj.wage3m, days3m: win.days, bonus1y: adj.bonus1y, leavePay1y: 0, ordinaryDaily: null },
+    sources: { joinedFrom, wageMonths: months.filter((_, i) => wages[i] !== null), wageComplete, bonusCount: bonus.length, kindMoved: adj.moved, kindLeft: adj.left, undecided: adj.undecided },
   };
 }
 
@@ -167,7 +178,7 @@ export async function reviseCase(args: { id: string; me: Me; requestId?: string 
 
 export type MyEstimate = { asOf: string; periodFrom: string | null; months: string[]; wageComplete: boolean; result: RetirementResult; input: RetirementInput };
 /**
- * 직원 본인의 예상 퇴직금 (E02) — 「오늘 그만둔다면」의 어림값. 저장하지 않는다.
+ * 직원 본인의 예상 퇴직금 (E02) — 「오늘 그만둔다면」의 참고값. 저장하지 않는다.
  * 자료: 입사일(재직 기간), 나에게 공개된 최근 석 달의 급여 명세서 지급 합계(공개되지 않은 금액은 쓰지 않는다), 직전 1년 공개된 상여.
  * 연차수당 · 통상임금 비교 · 제외 기간 · 세금은 들어 있지 않다 — 화면에 그렇게 적는다.
  */

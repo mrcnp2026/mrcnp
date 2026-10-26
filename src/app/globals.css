@@ -17,6 +17,8 @@
   --color-ok-tint: var(--t-color-ok-tint);
   --color-danger: var(--t-color-danger);
   --color-danger-tint: var(--t-color-danger-tint);
+  --color-chart-extra: var(--t-color-chart-extra);
+  --color-chart-idle: var(--t-color-chart-idle);
   --color-on-primary: var(--t-color-on-primary);
   --color-nav: var(--t-color-nav);
   --color-rail: var(--t-color-rail);
@@ -37,7 +39,9 @@
 
   --shadow-card: var(--t-shadow-card);
   --shadow-pop: var(--t-shadow-pop);
-  --font-sans: "Pretendard Variable", var(--font-latin), var(--font-thai), var(--font-kr), system-ui, sans-serif; /* 2026-10-14 견본: Pretendard. 없는 글자(태국 문자)는 Noto가 받는다 */
+  --shadow-glass: var(--t-shadow-glass);
+  --shadow-sheet: var(--t-shadow-sheet);
+  --font-sans: "Pretendard Variable", var(--font-latin), var(--font-kr), system-ui, sans-serif; /* 2026-10-14 견본: Pretendard. 없는 글자(태국 문자)는 Noto가 받는다 */
 }
 
 html {
@@ -48,10 +52,68 @@ html {
 body {
   font-size: var(--t-text-base); /* 본문 16px 이상 — iOS 입력 확대도 막는다 (5장) */
 }
+/* 폰에서 화면이 좌우로 밀리지 않게 (2026-10-22 의뢰인: 검색창에 입력하면 화면이 넓어지고 좌우로 끌린다).
+   ① 입력 칸 글자가 16px보다 작으면 아이폰이 입력할 때 화면을 확대한다 → 폰에서는 모든 입력 칸을 16px 이상으로.
+   ② 화면 폭을 넘는 것이 있어도 옆으로 끌리지 않게 가로는 잘라 둔다(clip은 sticky를 깨지 않는다) */
+body { overflow-x: clip; }
+@media (max-width: 1023px) {
+  input:not([type='checkbox']):not([type='radio']):not([type='range']),
+  select,
+  textarea {
+    font-size: max(16px, 1em);
+  }
+}
+
+/* 하단 「전체」 격자가 열려 있으면 오른쪽 아래 + 버튼을 숨긴다 (2026-10-22 의뢰인 확인: 격자 위로 + 버튼이 겹쳐 보였다) */
+body[data-all-apps] .fab-root {
+  display: none;
+}
+
+/* ───────── 판 · 줄 바탕 (2026-10-22) ─────────
+   글래스 효과(옅은 빛 바탕 + 반투명 · 흐림)는 같은 날 뺐다 — 의뢰인: 「글래스 효과는 빼야겠다, 너무 심한 거 같아」(되살릴 때 `백업/globals-글래스-2026-10-22.css`).
+   이름(glass · glass-strong · glass-sheet · glass-dark)은 부르는 쪽을 그대로 두려고 남기고, 지금은 흐림 없는 꽉 찬 바탕이다 */
+@utility glass {
+  background-color: var(--t-color-bg);
+  border-color: var(--t-color-border);
+}
+@utility glass-strong {
+  background-color: var(--t-color-bg);
+  border-color: var(--t-color-border);
+}
+@utility glass-sheet {
+  background-color: var(--t-color-bg);
+}
+@utility glass-dark {
+  background-color: var(--t-color-nav);
+}
+
+/* 강조 글자는 한 단계 깊은 파랑(theme.ts primary-ink) — 채운 단추 · 고른 표시의 바탕은 bg-primary */
+/* 2026-10-22 고침(의뢰인: 「통합설정 파란 단추 글씨가 안 보인다」): 이 규칙은 층(layer) 밖이라 lg:text-on-primary · hover:text-… 같은 바뀜까지 눌러
+   파란 바탕 위 파란 글씨가 됐다 → 크기 · 상태에 따라 글자색이 바뀌는 칸(class에 「:text-」가 있는 것)은 빼고 덮는다 */
+.text-primary:not([class*=":text-"]) { color: var(--t-color-primary-ink); }
+
+/* 통합설정 판 안 (PC) — 왼쪽 판은 화면에 붙지 않고 판 높이를 채우며, 본문은 판 안에서만 내려간다 (components/ConsoleSheet) */
+@media (min-width: 1024px) {
+  [data-console-sheet] > nav {
+    position: relative;
+    top: auto;
+    height: auto;
+  }
+  [data-console-sheet] > [data-page-root] {
+    min-height: 0;
+    overflow-y: auto;
+  }
+}
 
 /* 7-11 요점 4, B-20: keep-all은 한국어 화면에만. 태국어는 단어 사이 띄어쓰기가 없어 깨진다 */
-html[lang="ko"] body { word-break: keep-all; }
+html[lang="ko"] body { word-break: keep-all; overflow-wrap: break-word; } /* 낱말은 지키되, 칸보다 긴 낱말(주소 · 영문 · 숫자)은 칸 안에서 끊는다 */
+/* 자연스러운 줄바꿈 (2026-10-22 의뢰인: 「텍스트가 길어질 경우 자연스러운 줄바꿈」) — 마지막 줄에 한두 글자만 남지 않게, 제목은 줄 길이를 고르게 */
+p, li, dd, dt, td, label, figcaption, blockquote { text-wrap: pretty; }
+h1, h2, h3, th { text-wrap: balance; }
 html[lang="en"] body, html[lang="vi"] body { overflow-wrap: anywhere; }
+
+/* 세로 스크롤바가 생겼다 사라져도 본문이 옆으로 밀리지 않게 자리를 항상 비워 둔다 (2026-10-26 의뢰인: 급여 화면 이동 때 흔들린다) */
+html { scrollbar-gutter: stable; }
 
 /* 숫자가 나오는 곳은 자리가 흔들리지 않게 (R-10-8) */
 .num { font-variant-numeric: tabular-nums; }
@@ -186,6 +248,34 @@ button:not(:disabled):active, a:active, summary:active, [role='button']:active {
 @media (min-width: 1024px) {
   .sheet-up { animation: from-above 260ms ease-out; }
 }
+/* 그래프 움직임 (2026-10-22 의뢰인: 「그래프가 채워지는 모습 · 숫자가 올라가는 모습」 → 같은 날 「너무 빨라, 천천히 진행되는 느낌으로」 약 2배 느리게) — 처음 그릴 때 한 번. 움직임 줄이기 설정이면 맨 위 규칙이 끈다.
+   막대는 아래에서 자라고(fx-grow), 선은 왼쪽부터 그려지고(fx-draw — pathLength=1인 선에), 면 · 점은 뒤따라 나타난다(fx-fade · fx-pop) */
+@keyframes hero-rise { from { opacity: 0; transform: translateY(0.5rem); } }
+.hero-rise { animation: hero-rise 700ms cubic-bezier(.22,1,.36,1) both; }
+@media (prefers-reduced-motion: reduce) { .hero-rise { animation: none; } }
+@keyframes fx-grow { from { transform: scaleY(0); } }
+.fx-grow { transform-origin: bottom; animation: fx-grow 900ms cubic-bezier(.22,1,.36,1) both; }
+@keyframes fx-grow-x { from { transform: scaleX(0); } }
+.fx-grow-x { transform-box: fill-box; transform-origin: left; animation: fx-grow-x 900ms cubic-bezier(.22,1,.36,1) both; }
+@keyframes fx-draw { from { stroke-dashoffset: 1; } to { stroke-dashoffset: 0; } }
+.fx-draw { stroke-dasharray: 1; animation: fx-draw 1200ms cubic-bezier(.45,0,.2,1) both; }
+@keyframes fx-reveal { from { clip-path: inset(-20% 100% -20% 0); } to { clip-path: inset(-20% 0 -20% 0); } }
+.fx-reveal { animation: fx-reveal 1200ms cubic-bezier(.45,0,.2,1) both; }
+@property --sweep { syntax: '<angle>'; inherits: false; initial-value: 362deg; }
+@keyframes fx-sweep { from { --sweep: 0deg; } to { --sweep: 362deg; } }
+.fx-sweep { -webkit-mask-image: conic-gradient(from 90deg, #000 var(--sweep), transparent calc(var(--sweep) + 1deg)); mask-image: conic-gradient(from 90deg, #000 var(--sweep), transparent calc(var(--sweep) + 1deg)); animation: fx-sweep 1200ms cubic-bezier(.45,0,.2,1) both; }
+@keyframes fx-fade { from { opacity: 0; } }
+.fx-fade { animation: fx-fade 900ms ease-out 300ms both; }
+@keyframes fx-pop { from { opacity: 0; transform: scale(0.3); } }
+.fx-pop { animation: fx-pop 400ms cubic-bezier(.22,1,.36,1) both; }
+/* 보일 때 시작 (FxObserver.tsx): 스크립트가 켜져 있으면(html.fx-js) 처음 모양으로 멈춰 있다가, 화면에 들어오면 data-fx="run"이 붙어 움직인다.
+   스크립트가 없으면 예전처럼 바로 움직인다 */
+.fx-js :is(.fx-grow, .fx-grow-x, .fx-draw, .fx-sweep, .fx-reveal, .fx-fade, .fx-pop):not([data-fx]) { animation-play-state: paused; }
+
+/* 화면 위 진행 줄: 왼쪽에서 천천히 차오르다 7할쯤에서 기다린다 */
+@keyframes nav-progress { from { transform: scaleX(0); } to { transform: scaleX(0.75); } }
+.nav-progress { transform-origin: left; animation: nav-progress 3s cubic-bezier(.1,.7,.2,1) both; }
+
 /* 「불러오는 중」 자리는 0.25초 뒤에야 보인다 — 금방 열리는 화면에서 깜빡이지 않게 */
 .late-in { animation: from-clear 200ms ease-out 250ms both; }
 
@@ -198,6 +288,12 @@ button:not(:disabled):active, a:active, summary:active, [role='button']:active {
   }
   body {
     background: white !important;
+  }
+  /* 본문 좌우 여백은 종이 여백이 대신한다 — 화면용 여백이 남으면 인쇄물이 한쪽으로 쏠린다 */
+  main {
+    padding-left: 0 !important;
+    padding-right: 0 !important;
+    max-width: none !important;
   }
 }
 
@@ -234,6 +330,51 @@ button:not(:disabled):active, a:active, summary:active, [role='button']:active {
 
 /* 목록 표의 틀 (2026-10-19 디자인 손보기: 표 전반의 톤) — 견본 「나 · 파랑」처럼 바깥 상자 · 그림자 없이, 위에 진한 가로선 하나 · 머리줄은 바탕 없이 옅은 글자.
    ListTable(components/listframe)과 같은 모양을 손으로 짠 표에도 쓴다. 달력 모양(출퇴근 달력 · 근무일정)은 칸이라 쓰지 않는다. */
-.table-ruled { border-width: 0; border-top: 1px solid var(--color-text); border-radius: 0; box-shadow: none; background: transparent; }
-.table-ruled thead tr { background: transparent; }
-.table-ruled thead th { color: var(--color-faint); }
+/* 2026-10-22 바꿈 (의뢰인: 「엑셀 붙인 것 같다」 · 「고급지지 않다」): 위 진한 선 대신 둥근 카드 + 옅은 머리줄 — 다른 카드 · 공통 표(PcTable)와 같은 모양 */
+.table-ruled { border: 1px solid var(--color-border); border-radius: var(--radius-card); box-shadow: var(--shadow-card); background: var(--color-bg); }
+.table-ruled thead tr { background: color-mix(in srgb, var(--color-surface) 60%, transparent); }
+.table-ruled thead th { color: var(--color-muted); }
+
+/* 폰 통합설정: 맨 위 머리(ConsoleGuide — 경로 · 화면 이름 · ✕)가 제목을 맡는다 → 화면 안에서 같은 제목이 또 나오지 않게 (2026-10-22 의뢰인: 「모바일이랑 PC랑 틀린 부분이 많다」)
+   제목 글자 · ☰만 숨기고, ? 설명 · ← 뒤로 · [+ 추가] 같은 단추는 그대로 둔다 */
+@media (width < 64rem) {
+  [data-page-root]:has([data-console-phone]) :is([data-dup-title], [data-dup-menu]) { display: none; }
+  [data-page-root]:has([data-console-phone]) [data-dup-bar] { visibility: hidden; }
+}
+@media (width < 64rem) {
+  /* 제목이 숨겨진 자리의 ? 옆에 「이 화면 설명」 (Help.tsx phone) */
+  [data-page-root]:has([data-console-phone]) [data-help-text] { display: inline; }
+  [data-page-root]:has([data-console-phone]) button:has(> [data-help-text]) { width: auto; padding-inline: 0.5rem; }
+}
+
+/* 고르기 칸 (components/Select.tsx, 2026-10-23): 폰은 기본 고르기, PC는 우리 모양의 목록 — 진짜 <select>는 PC에서 보이지 않게 남겨 폼 전송 · 필수 확인을 맡긴다 */
+.sel-custom { display: none; }
+@media (min-width: 1024px) {
+  .sel-custom { display: flex; }
+  .sel-native {
+    position: absolute !important;
+    width: 1px !important;
+    height: 1px !important;
+    min-height: 0 !important;
+    padding: 0 !important;
+    border: 0 !important;
+    opacity: 0;
+    pointer-events: none;
+  }
+}
+
+/* PC의 날짜 · 시각 칸: 브라우저 기본 창 대신 우리 달력 · 시각 목록(components/PickerHost.tsx) — 기본 달력 · 시계 아이콘은 숨기고 칸 전체를 눌러 연다 */
+@media (min-width: 1024px) and (pointer: fine) {
+  input[type='date']::-webkit-calendar-picker-indicator,
+  input[type='time']::-webkit-calendar-picker-indicator,
+  input[type='datetime-local']::-webkit-calendar-picker-indicator,
+  input[type='month']::-webkit-calendar-picker-indicator {
+    display: none;
+  }
+  input[type='date'],
+  input[type='time'],
+  input[type='datetime-local'],
+  input[type='month'] {
+    cursor: pointer;
+  }
+}

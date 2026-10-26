@@ -28,7 +28,7 @@ export function PageEnter() {
       m.style.position = 'relative';
       const a = board
         ? m.animate([{ opacity: 0.4, top: '45vh' }, { opacity: 1, top: '0px' }], { duration: 460, easing: 'cubic-bezier(.2,.8,.2,1)' })
-        : m.animate([{ opacity: 0, top: '10px' }, { opacity: 1, top: '0px' }], { duration: 240, easing: 'cubic-bezier(.2,.8,.2,1)' });
+        : m.animate([{ opacity: 0.6 }, { opacity: 1 }], { duration: 140, easing: 'ease-out' }); // 위로 떠오르지 않고 살짝 밝아지기만 한다 — 급여처럼 화면을 자주 옮길 때 덜컹여 보였다 (2026-10-26)
       a.onfinish = a.oncancel = () => (m.style.position = was);
       return true;
     };

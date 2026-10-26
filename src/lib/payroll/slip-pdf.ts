@@ -12,12 +12,12 @@ import { PDFDocument, rgb as ink, type PDFFont, type PDFPage } from 'pdf-lib'; /
 export type SlipPdfLine = { kind: 'PAYMENT' | 'DEDUCTION'; label: string; how: string | null; amount: number };
 export type SlipPdfLabels = {
   title: string; company: string; no: string; name: string; group: string; period: string; payDate: string; revision: string;
-  pay: string; deduction: string; item: string; how: string; amount: string; payTotal: string; deductionTotal: string; net: string; none: string;
+  pay: string; deduction: string; item: string; how: string; amount: string; payTotal: string; deductionTotal: string; net: string; none: string; taxable?: string; exempt?: string;
   draft: string | null; practice: string | null; correction: string | null; note: string; page: (n: number, all: number) => string; money: (n: number) => string;
 };
 // 근로 내역 (임금명세서의 근로일수 · 총 근로시간 · 연장 · 야간 · 휴일 시간, 2026-10-16) — 칸 이름과 값을 이미 글자로 만들어 넘긴다. 없으면 이 칸을 그리지 않는다
 export type SlipPdfWork = { title: string; rows: [string, string][] };
-export type SlipPdfData = { company: string; no: string; name: string; employeeNo: string; group: string; periodFrom: string; periodTo: string; payDate: string; revision: number; pay: number; deduction: number; net: number; lines: SlipPdfLine[]; labels: SlipPdfLabels; work?: SlipPdfWork | null };
+export type SlipPdfData = { company: string; no: string; name: string; employeeNo: string; group: string; periodFrom: string; periodTo: string; payDate: string; revision: number; pay: number; deduction: number; net: number; lines: SlipPdfLine[]; labels: SlipPdfLabels; work?: SlipPdfWork | null; tax?: { taxable: number; exempt: number } | null };
 
 const W = 595.28, H = 841.89, M = 42;
 const INK = ink(0.1, 0.12, 0.16), MUTED = ink(0.4, 0.44, 0.5), LINE = ink(0.78, 0.8, 0.84), FILL = ink(0.94, 0.95, 0.97), WARN = ink(0.72, 0.3, 0.05);
@@ -161,9 +161,11 @@ export async function buildSlipPdf(d: SlipPdfData): Promise<Uint8Array> {
     y -= 16;
   }
   need(64);
-  for (const [k, v, strong] of [[L.payTotal, d.pay, false], [L.deductionTotal, d.deduction, false], [L.net, d.net, true]] as const) {
-    text(k, W - M - 220, y, { f: strong ? bold : font, size: strong ? 11 : 9.5 });
-    text(L.money(v), 0, y, { f: strong ? bold : font, size: strong ? 11 : 9.5, right: W - M });
+  // 과세 대상 · 비과세 (2026-10-22 의뢰인 ②) — 지급 합계 바로 아래 옅은 글자
+  const taxRows: [string, number, boolean, boolean][] = d.tax && L.taxable && L.exempt ? [[L.taxable, d.tax.taxable, false, true], [L.exempt, d.tax.exempt, false, true]] : [];
+  for (const [k, v, strong, sub] of [[L.payTotal, d.pay, false, false], ...taxRows, [L.deductionTotal, d.deduction, false, false], [L.net, d.net, true, false]] as [string, number, boolean, boolean][]) {
+    text(k, W - M - 220 + (sub ? 10 : 0), y, { f: strong ? bold : font, size: strong ? 11 : sub ? 8.5 : 9.5, color: sub ? MUTED : undefined });
+    text(L.money(v), 0, y, { f: strong ? bold : font, size: strong ? 11 : sub ? 8.5 : 9.5, right: W - M, color: sub ? MUTED : undefined });
     y -= strong ? 18 : 15;
   }
   y -= 6;

@@ -1,12 +1,15 @@
 'use client';
 // 설정 화면의 입력 양식들 — 전부 /api/admin/settings 한 곳으로 보낸다. 저장하면 화면을 새로 읽는다.
+import { Select } from '@/components/Select';
 import { ROUND_STEPS } from '@/lib/settings-rules';
-import { useTranslations } from 'next-intl';
+import { useFormatter, useTranslations } from 'next-intl';
+import { CalendarPlus, Check, ChevronLeft, ChevronRight, ListPlus, Wifi, type LucideIcon } from 'lucide-react';
 import { useRouter } from 'next/navigation';
-import { useState, type ReactNode } from 'react';
+import { useRef, useState, type ReactNode } from 'react';
 import { callApi } from '@/components/client-api';
 import { DateTimeInput } from '@/components/DateTimeInput';
 import { ErrorNote } from '@/components/ErrorNote';
+import { HelpTip } from '@/components/Help';
 import { useSaveRule } from '@/components/useSaveRule';
 import { Button } from '@/components/ui';
 
@@ -57,12 +60,13 @@ export function ConfirmButton({ body, label, confirmLabel, ariaLabel }: { body: 
   );
 }
 
-function Fold({ label, children }: { label: string; children: (close: () => void) => ReactNode }) {
+function Fold({ label, icon: Icon, children }: { label: string; icon: LucideIcon; children: (close: () => void) => ReactNode }) {
   const [open, setOpen] = useState(false);
   if (!open) {
     return (
-      <button type="button" onClick={() => setOpen(true)} className="min-h-11 self-start text-sm font-bold whitespace-nowrap text-primary lg:h-8 lg:min-h-0 lg:rounded-button lg:bg-primary lg:px-3 lg:text-on-primary">
-        + {label}
+      <button type="button" onClick={() => setOpen(true)} className="inline-flex min-h-11 items-center gap-1.5 self-start text-sm font-bold whitespace-nowrap text-primary lg:h-9 lg:min-h-0 lg:rounded-button lg:bg-primary lg:px-3.5 lg:font-semibold lg:text-on-primary">
+        <Icon aria-hidden size={16} />
+        {label}
       </button>
     );
   }
@@ -85,7 +89,7 @@ export function RuleForm({ initial, tomorrow, weekdays }: { initial: RuleValues;
   const [days, setDays] = useState<number[]>(initial.workdays);
   const [rest, setRest] = useState(initial.weeklyRestDay);
   return (
-    <Fold label={t('ruleAdd')}>
+    <Fold label={t('ruleAdd')} icon={ListPlus}>
       {(close) => <RuleFields t={t} close={close} post={post} busy={busy} err={err} initial={initial} tomorrow={tomorrow} weekdays={weekdays} days={days} setDays={setDays} rest={rest} setRest={setRest} />}
     </Fold>
   );
@@ -140,13 +144,13 @@ function RuleFields({ t, close, post, busy, err, initial, tomorrow, weekdays, da
           </div>
           <label className="flex flex-col gap-1 text-sm text-muted">
             {t('roundStep')}
-            <select name="roundStepMin" defaultValue={initial.roundStepMin} className={`num ${field}`}>
+            <Select name="roundStepMin" defaultValue={initial.roundStepMin} className={`num ${field}`}>
               {ROUND_STEPS.map((n) => (
                 <option key={n} value={n}>
                   {n === 0 ? t('roundOff') : t('roundValue', { n })}
                 </option>
               ))}
-            </select>
+            </Select>
             <span className="text-xs text-faint">{t('roundHint')}</span>
           </label>
           <label className="flex flex-col gap-1 text-sm text-muted">
@@ -176,7 +180,7 @@ function RuleFields({ t, close, post, busy, err, initial, tomorrow, weekdays, da
           </fieldset>
           <label className="flex flex-col gap-1 text-sm text-muted">
             {t('restDay')}
-            <select
+            <Select
               value={rest}
               onChange={(e) => {
                 const v = Number(e.target.value);
@@ -190,7 +194,7 @@ function RuleFields({ t, close, post, busy, err, initial, tomorrow, weekdays, da
                   {w}
                 </option>
               ))}
-            </select>
+            </Select>
           </label>
           {err && <ErrorNote code={err.code} requestId={err.requestId} namespace="admin.settings" />}
           <div className="flex gap-2">
@@ -209,7 +213,7 @@ export function HolidayForm({ monthStart }: { monthStart: string }) {
   const t = useTranslations('admin.settings');
   const { busy, err, post } = useSettingsPost();
   return (
-    <Fold label={t('holidayAdd')}>
+    <Fold label={t('holidayAdd')} icon={CalendarPlus}>
       {(close) => (
         <form
           className="flex flex-col gap-3"
@@ -229,10 +233,10 @@ export function HolidayForm({ monthStart }: { monthStart: string }) {
           </label>
           <label className="flex flex-col gap-1 text-sm text-muted">
             {t('holidayKind')}
-            <select name="kind" defaultValue="company" className={field}>
+            <Select name="kind" defaultValue="company" className={field}>
               <option value="company">{t('kind.company')}</option>
               <option value="public">{t('kind.public')}</option>
-            </select>
+            </Select>
           </label>
           {err && <ErrorNote code={err.code} requestId={err.requestId} namespace="admin.settings" />}
           <div className="flex gap-2">
@@ -249,30 +253,74 @@ export function HolidayForm({ monthStart }: { monthStart: string }) {
   );
 }
 
-export function NetworkForm({ currentIp, currentKnown }: { currentIp: string | null; currentKnown: boolean }) {
+export function NetworkForm({ currentIp, currentKnown, locationId }: { currentIp: string | null; currentKnown: boolean; locationId: string }) {
   const t = useTranslations('admin.settings');
   const { busy, err, post } = useSettingsPost();
   const [cidr, setCidr] = useState('');
+  const [filled, setFilled] = useState(false); // 「이 기기 주소 넣기」를 눌러 칸에 들어갔다
+  const input = useRef<HTMLInputElement>(null);
   return (
-    <Fold label={t('networkAdd')}>
+    <Fold label={t('networkAdd')} icon={Wifi}>
       {(close) => (
         <form
           className="flex flex-col gap-3"
           onSubmit={async (e) => {
             e.preventDefault();
-            if (await post({ action: 'network.add', cidr, label: new FormData(e.currentTarget).get('label') })) close();
+            if (await post({ action: 'network.add', locationId, cidr, label: new FormData(e.currentTarget).get('label') })) close();
           }}
         >
           <p className="text-sm text-muted">{t('networkAddHint')}</p>
-          {currentIp && !currentKnown && (
-            <button type="button" onClick={() => setCidr(currentIp)} className="min-h-11 self-start rounded-chip bg-bg px-3 text-sm font-medium text-primary">
-              {t('networkUseCurrent', { ip: currentIp })}
-            </button>
-          )}
-          <label className="flex flex-col gap-1 text-sm text-muted">
-            {t('networkCidr')}
-            <input value={cidr} onChange={(e) => setCidr(e.target.value)} required maxLength={50} className={`num ${field}`} autoComplete="off" />
-          </label>
+          {/* 지금 접속한 주소 — 누르면 아래 칸에 들어가고, 들어간 것이 눈에 보인다 (2026-10-25 의뢰인: 눌러도 반응이 없어 보인다 → 버튼 모양 + 확인 표시) */}
+          <div className="flex flex-col gap-2 rounded-card border border-border bg-bg p-3">
+            {currentIp ? (
+              <>
+                <p className="text-sm text-muted">
+                  {t('networkNow')} <b className="num text-text">{currentIp}</b>
+                </p>
+                {currentKnown ? (
+                  <p className="inline-flex items-center gap-1 text-sm text-ok">
+                    <Check aria-hidden size={16} />
+                    {t('networkKnown')}
+                  </p>
+                ) : (
+                  <div className="flex flex-wrap items-center gap-2">
+                    <Button
+                      type="button"
+                      variant={filled ? 'outline' : 'primary'}
+                      className="min-h-11"
+                      onClick={() => {
+                        setCidr(currentIp);
+                        setFilled(true);
+                        input.current?.focus();
+                      }}
+                    >
+                      {filled ? <Check aria-hidden size={16} /> : <Wifi aria-hidden size={16} />}
+                      {filled ? t('networkFilledBtn') : t('networkUseBtn')}
+                    </Button>
+                    {filled && <span role="status" className="text-sm text-ok">{t('networkFilled')}</span>}
+                  </div>
+                )}
+              </>
+            ) : (
+              <p className="text-sm text-muted">{t('networkNoIp')}</p>
+            )}
+          </div>
+          {/* 고정 IP를 직접 넣는 사람을 위한 확인 방법 — ? 를 눌러야 나온다 (2026-10-22 의뢰인) */}
+          <div className="flex flex-col gap-1 text-sm text-muted">
+            <span className="flex items-center gap-1">
+              {t('networkCidr')}
+              <HelpTip>
+                <span className="flex flex-col gap-2">
+                  <span>{t('networkHelp.what')}</span>
+                  <span>{t('networkHelp.way1')}</span>
+                  <span>{t('networkHelp.way2')}</span>
+                  <span>{t('networkHelp.way3')}</span>
+                  <span>{t('networkHelp.format')}</span>
+                </span>
+              </HelpTip>
+            </span>
+            <input ref={input} value={cidr} onChange={(e) => { setCidr(e.target.value); setFilled(false); }} required maxLength={50} aria-label={t('networkCidr')} placeholder="211.234.10.5" className={`num ${field} ${filled ? 'border-ok' : ''}`} autoComplete="off" />
+          </div>
           <label className="flex flex-col gap-1 text-sm text-muted">
             {t('networkLabel')}
             <input name="label" maxLength={40} className={field} autoComplete="off" />
@@ -289,5 +337,148 @@ export function NetworkForm({ currentIp, currentKnown }: { currentIp: string | n
         </form>
       )}
     </Fold>
+  );
+}
+
+/**
+ * 회사 지정 휴일 달력 (2026-10-22 의뢰인: 「글자 목록 + 넣기 · 빼기 대신 달력으로 — 달을 넘기며 날짜를 눌러 넣거나 빼게」).
+ * 날짜를 누르면 옆 칸(폰은 아래)에: 휴일이면 이름 · 종류 + [이 휴일 빼기], 아니면 이름 · 종류 + [휴일로 넣기].
+ * 이번 달 1일보다 앞선 날은 바꿀 수 없다(서버 규칙 그대로 — 지난 기록의 휴일 근로 계산이 바뀌지 않게).
+ */
+export function HolidayCalendar({ holidays, today, monthStart }: { holidays: { the_date: string; label: string; kind: string }[]; today: string; monthStart: string }) {
+  const t = useTranslations('admin.settings');
+  const f = useFormatter();
+  const { busy, err, post } = useSettingsPost();
+  const [ym, setYm] = useState(today.slice(0, 7));
+  const [pick, setPick] = useState<string | null>(null);
+  const [ask, setAsk] = useState(false);
+  const byDate = new Map(holidays.map((h) => [h.the_date, h]));
+  const [y, m] = ym.split('-').map(Number);
+  const first = new Date(Date.UTC(y, m - 1, 1));
+  const days = new Date(Date.UTC(y, m, 0)).getUTCDate();
+  const lead = first.getUTCDay(); // 일요일 = 0
+  const iso = (d: number) => `${ym}-${String(d).padStart(2, '0')}`;
+  const move = (n: number) => {
+    const d = new Date(Date.UTC(y, m - 1 + n, 1));
+    setYm(`${d.getUTCFullYear()}-${String(d.getUTCMonth() + 1).padStart(2, '0')}`);
+    setPick(null);
+    setAsk(false);
+  };
+  const weekdays = [...Array(7)].map((_, i) => f.dateTime(new Date(Date.UTC(2024, 0, 7 + i, 3)), { weekday: 'short' })); // 2024-01-07 = 일요일
+  const inMonth = holidays.filter((h) => h.the_date.startsWith(ym));
+  const picked = pick ? byDate.get(pick) : undefined;
+  const locked = pick !== null && pick < monthStart;
+  const longDay = (d: string) => f.dateTime(new Date(`${d}T12:00:00+09:00`), { year: 'numeric', month: 'long', day: 'numeric', weekday: 'short' });
+  const tone = (kind: string) => (kind === 'public' ? 'bg-danger-tint text-danger' : 'bg-primary-tint text-primary');
+  return (
+    <div className="flex flex-col gap-4 lg:flex-row lg:items-start">
+      <div className="flex min-w-0 flex-1 flex-col gap-3 lg:max-w-3xl">
+        <div className="flex flex-wrap items-center gap-2">
+          <button type="button" onClick={() => move(-1)} aria-label={t('cal.prev')} className="flex size-10 items-center justify-center rounded-button border border-border bg-bg text-muted hover:text-text lg:size-9">
+            <ChevronLeft aria-hidden size={18} />
+          </button>
+          <span className="num min-w-32 text-center text-lg font-bold">{f.dateTime(new Date(Date.UTC(y, m - 1, 15)), { year: 'numeric', month: 'long' })}</span>
+          <button type="button" onClick={() => move(1)} aria-label={t('cal.next')} className="flex size-10 items-center justify-center rounded-button border border-border bg-bg text-muted hover:text-text lg:size-9">
+            <ChevronRight aria-hidden size={18} />
+          </button>
+          {ym !== today.slice(0, 7) && (
+            <button type="button" onClick={() => { setYm(today.slice(0, 7)); setPick(null); }} className="inline-flex min-h-10 items-center rounded-button border border-border bg-bg px-3 text-sm text-muted hover:text-text lg:min-h-9">
+              {t('cal.today')}
+            </button>
+          )}
+          <span className="ml-auto flex items-center gap-3 text-xs text-muted">
+            <span className="flex items-center gap-1"><span aria-hidden className="size-2.5 rounded-sm bg-danger" />{t('kind.public')}</span>
+            <span className="flex items-center gap-1"><span aria-hidden className="size-2.5 rounded-sm bg-primary" />{t('kind.company')}</span>
+          </span>
+        </div>
+        <div className="overflow-hidden rounded-card border border-border bg-bg">
+          <div className="grid grid-cols-7 border-b border-border bg-surface/60 text-center text-xs font-semibold">
+            {weekdays.map((w, i) => (
+              <span key={w} className={`py-2 ${i === 0 ? 'text-danger' : i === 6 ? 'text-primary' : 'text-muted'}`}>{w}</span>
+            ))}
+          </div>
+          <div className="grid grid-cols-7">
+            {[...Array(lead)].map((_, i) => (
+              <span key={`b${i}`} className="min-h-16 border-b border-border bg-surface/30 lg:min-h-20" />
+            ))}
+            {[...Array(days)].map((_, i) => {
+              const d = iso(i + 1);
+              const h = byDate.get(d);
+              const wd = (lead + i) % 7;
+              const past = d < monthStart;
+              const on = pick === d;
+              return (
+                <button
+                  key={d}
+                  type="button"
+                  onClick={() => { setPick(on ? null : d); setAsk(false); }}
+                  aria-pressed={on}
+                  aria-label={`${longDay(d)}${h ? ` · ${h.label}` : ''}`}
+                  className={`flex min-h-16 flex-col items-stretch gap-1 border-b border-border p-1 text-left transition-colors lg:min-h-20 lg:p-1.5 ${(lead + i) % 7 !== 6 ? 'border-r' : ''} ${on ? 'bg-primary-tint ring-2 ring-primary ring-inset' : past ? 'bg-surface/40' : 'hover:bg-surface'}`}
+                >
+                  <span className={`num flex size-6 items-center justify-center rounded-chip text-sm ${d === today ? 'bg-primary font-bold text-on-primary' : h || wd === 0 ? 'font-semibold text-danger' : wd === 6 ? 'text-primary' : past ? 'text-faint' : 'text-text'}`}>{i + 1}</span>
+                  {h && <span className={`truncate rounded-button px-1 py-0.5 text-xs font-semibold ${tone(h.kind)}`}>{h.label}</span>}
+                </button>
+              );
+            })}
+          </div>
+        </div>
+        <p className="num text-sm text-muted">{inMonth.length ? t('cal.monthCount', { n: inMonth.length }) : t('cal.monthNone')}</p>
+      </div>
+
+      {/* 고른 날짜 칸 */}
+      <aside className="flex flex-col gap-3 rounded-card border border-border bg-bg p-4 lg:sticky lg:top-4 lg:w-80 lg:shrink-0">
+        {!pick ? (
+          <p className="text-sm text-muted">{t('cal.pickHint')}</p>
+        ) : (
+          <>
+            <p className="num font-bold">{longDay(pick)}</p>
+            {locked ? (
+              <p className="text-sm text-faint">{t('cal.past')}</p>
+            ) : picked ? (
+              <>
+                <p className="flex items-center gap-2">
+                  <span className={`rounded-button px-2 py-0.5 text-sm font-semibold ${tone(picked.kind)}`}>{picked.label}</span>
+                  <span className="text-sm text-muted">{t(picked.kind === 'company' ? 'kind.company' : 'kind.public')}</span>
+                </p>
+                {ask ? (
+                  <div className="flex gap-2">
+                    <Button type="button" variant="outline" className="flex-1" onClick={() => setAsk(false)}>{t('cancel')}</Button>
+                    <button type="button" disabled={busy} onClick={async () => { if (await post({ action: 'holiday.remove', date: pick })) { setAsk(false); setPick(null); } }} className="min-h-11 flex-1 rounded-button bg-danger px-3 text-sm font-bold text-on-primary disabled:opacity-60">
+                      {t('cal.removeConfirm')}
+                    </button>
+                  </div>
+                ) : (
+                  <Button type="button" variant="outline" onClick={() => setAsk(true)}>{t('cal.remove')}</Button>
+                )}
+              </>
+            ) : (
+              <form
+                key={pick}
+                className="flex flex-col gap-3"
+                onSubmit={async (e) => {
+                  e.preventDefault();
+                  if (await post({ action: 'holiday.add', date: pick, ...Object.fromEntries(new FormData(e.currentTarget)) })) setPick(null);
+                }}
+              >
+                <label className="flex flex-col gap-1 text-sm text-muted">
+                  {t('holidayLabel')}
+                  <input name="label" required maxLength={40} autoFocus placeholder={t('cal.namePh')} className={field} autoComplete="off" />
+                </label>
+                <label className="flex flex-col gap-1 text-sm text-muted">
+                  {t('holidayKind')}
+                  <Select name="kind" defaultValue="company" className={field}>
+                    <option value="company">{t('kind.company')}</option>
+                    <option value="public">{t('kind.public')}</option>
+                  </Select>
+                </label>
+                <Button type="submit" disabled={busy}>{t('cal.add')}</Button>
+              </form>
+            )}
+          </>
+        )}
+        {err && <ErrorNote code={err.code} requestId={err.requestId} namespace="admin.settings" />}
+      </aside>
+    </div>
   );
 }

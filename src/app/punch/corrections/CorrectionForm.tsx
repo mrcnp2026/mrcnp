@@ -6,6 +6,7 @@
 // 빠진 기록이 있으면 먼저 안내부터 (2026-10-21 의뢰인): 「10/20 퇴근 기록이 없습니다」(여러 건이면 「n건」) → [확인] → 날짜 · 종류가 채워진 줄에
 // 시각만 고르고 바로 보낸다(검토 단계 없음, 여러 건이면 한 번에). 연차 · 휴일 · 이미 요청한 날은 처음부터 목록에 없다(lib/employee-data).
 // 그 밖의 요청(시각 수정 · 잘못 찍은 기록 취소 · 목록에 없는 기록)은 「다른 정정 요청」으로 — 아래의 원래 양식.
+import { Select } from '@/components/Select';
 import { DateTimeInput } from '@/components/DateTimeInput';
 import { CalendarDays, CalendarX, Clock, Megaphone, Pencil } from 'lucide-react';
 import { useTranslations } from 'next-intl';
@@ -286,22 +287,22 @@ export function CorrectionForm(props: {
               </label>
               <label className="flex flex-col gap-1 text-sm text-muted">
                 {t('which')}
-                <select name="kind" defaultValue={preset.kind ?? 'out'} className={field}>
+                <Select name="kind" defaultValue={preset.kind ?? 'out'} className={field}>
                   <option value="in">{t('kind.in')}</option>
                   <option value="out">{t('kind.out')}</option>
-                </select>
+                </Select>
               </label>
             </>
           ) : (
             <label className="flex flex-col gap-1 text-sm text-muted">
               {t('record')}
-              <select name="targetId" required defaultValue={preset.eventId ?? undefined} className={field}>
+              <Select name="targetId" required defaultValue={preset.eventId ?? undefined} className={field}>
                 {props.events.map((e) => (
                   <option key={e.id} value={e.id}>
                     {e.label}
                   </option>
                 ))}
-              </select>
+              </Select>
             </label>
           )}
 

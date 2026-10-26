@@ -45,7 +45,7 @@ export async function loadPublication(runId: string, generationId: string | null
 }
 
 /** 공개 — 확정한 대장만. employeeIds를 주지 않으면 아직 공개하지 않은 전원. 이미 공개 중인 사람은 건너뛴다 */
-export async function publishRun(args: { runId: string; employeeIds?: string[]; me: Me; requestId?: string }): Promise<{ published: number; skipped: number }> {
+export async function publishRun(args: { runId: string; employeeIds?: string[]; me: Me; requestId?: string }): Promise<{ published: number; skipped: number; employeeIds: string[]; slips: { employeeId: string; slipId: string }[]; month: string; kind: string }> {
   const run = await loadRun(args.runId);
   if (!run) throw new ApiError(404, 'not_found');
   if (run.status !== 'FINALIZED') throw new ApiError(409, 'payroll_not_finalized');
@@ -54,7 +54,8 @@ export async function publishRun(args: { runId: string; employeeIds?: string[]; 
   const pub = await loadPublication(run.id, run.generationId);
   const targets = [...pub].filter(([id, s]) => !s.published && (!args.employeeIds || args.employeeIds.includes(id)));
   const skipped = (args.employeeIds?.length ?? pub.size) - targets.length;
-  if (targets.length === 0) return { published: 0, skipped };
+  const month = run.periodFrom.slice(0, 7);
+  if (targets.length === 0) return { published: 0, skipped, employeeIds: [], slips: [], month, kind: run.kind };
   // 정정본을 공개하면, 앞 판들에서 그 직원에게 공개 중이던 명세서는 「정정본으로 바뀜」으로 적는다(숨기지 않고 이전본으로 남는다)
   const replaced: Row[] = [];
   for (const prev of revs.filter((r) => r.revision < run.revision && r.status === 'FINALIZED')) {
@@ -71,7 +72,7 @@ export async function publishRun(args: { runId: string; employeeIds?: string[]; 
   const { error } = await db().from('payroll_publication_events').insert(targets.map(([employeeId, s]) => ({ statement_id: s.statementId, run_id: run.id, employee_id: employeeId, kind: 'PUBLISHED', actor_id: args.me.id })));
   if (error) boom('publishRun', error);
   await payrollAudit({ actorId: args.me.id, action: 'run.publish', table: 'payroll_publication_events', runId: run.id, requestId: args.requestId, detail: { count: targets.length } });
-  return { published: targets.length, skipped };
+  return { published: targets.length, skipped, employeeIds: targets.map(([id]) => id), slips: targets.map(([employeeId, s]) => ({ employeeId, slipId: s.statementId })), month, kind: run.kind };
 }
 
 /** 공개 회수 — 사유 필수. 기록은 남는다(조용히 숨기지 않는다) */
@@ -125,7 +126,7 @@ async function calculatedSlips(employeeId: string, practice: boolean): Promise<M
 }
 
 /** 내 명세서 한 장. 내 것이 아니거나 공개 중이 아니면 null (있는지 없는지도 알려 주지 않는다) */
-export async function loadMySlip(employeeId: string, statementId: string, practice: boolean): Promise<{ slip: MySlip; lines: MySlipLine[]; previous: MySlip | null; replacedBy: MySlip | null; time?: unknown } | null> {
+export async function loadMySlip(employeeId: string, statementId: string, practice: boolean): Promise<{ slip: MySlip; lines: MySlipLine[]; previous: MySlip | null; replacedBy: MySlip | null; time?: unknown; tax?: { taxable: number; exempt: number } | null } | null> {
   const all = await mySlips(employeeId, practice);
   const slip = all.find((x) => x.id === statementId);
   if (!slip) return null;
@@ -137,9 +138,12 @@ export async function loadMySlip(employeeId: string, statementId: string, practi
   const [{ data, error }, { data: st }] = await Promise.all([
     db().from('payroll_statement_items').select('item_code, kind, label_ko, quantity, unit_price, factor, amount, line_no, created_at').eq('statement_id', statementId).in('kind', ['PAYMENT', 'DEDUCTION']).order('created_at').order('line_no'),
     // 근로 내역(근로일수 · 시간)은 계산 때 저장한 시간 입력에서 읽는다 — 상여에는 없다
-    db().from('payroll_statements').select('time:snapshot->time').eq('id', statementId).maybeSingle(),
+    db().from('payroll_statements').select('time:snapshot->time, totals:snapshot->totals').eq('id', statementId).maybeSingle(),
   ]);
   if (error) boom('loadMySlip', error);
   const t = (v: unknown) => (v === null || v === undefined ? null : String(Number(v)));
-  return { slip, previous, replacedBy, time: slip.kind === 'REGULAR' ? ((st as { time?: unknown } | null)?.time ?? null) : null, lines: (data ?? []).map((i) => ({ code: i.item_code as string, kind: i.kind as 'PAYMENT' | 'DEDUCTION', label: i.label_ko as string, quantity: t(i.quantity), unitPrice: t(i.unit_price), factor: t(i.factor), amount: Number(i.amount) })) };
+  // 과세 대상 · 비과세 (2026-10-22 의뢰인 ②) — 계산 때 저장한 과세 합계에서
+  const taxable = (st as { totals?: { taxable?: unknown } | null } | null)?.totals?.taxable;
+  const tax = typeof taxable === 'number' ? { taxable, exempt: Math.max(0, slip.pay - taxable) } : null;
+  return { slip, previous, replacedBy, tax, time: slip.kind === 'REGULAR' ? ((st as { time?: unknown } | null)?.time ?? null) : null, lines: (data ?? []).map((i) => ({ code: i.item_code as string, kind: i.kind as 'PAYMENT' | 'DEDUCTION', label: i.label_ko as string, quantity: t(i.quantity), unitPrice: t(i.unit_price), factor: t(i.factor), amount: Number(i.amount) })) };
 }

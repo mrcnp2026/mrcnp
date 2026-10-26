@@ -17,7 +17,7 @@ export function managerCanOpen(pathname: string): boolean {
 /** 맡은 지점 → 그 밑의 팀까지 (부서를 맡기면 소속 팀도 포함) */
 export function expandGroups(groups: readonly { id: string; parentId: string | null }[], ids: readonly string[]): Set<string> {
   const out = new Set(ids);
-  for (const g of groups) if (g.parentId && out.has(g.parentId)) out.add(g.id);
+  for (let n = 0; n < 3; n++) for (const g of groups) if (g.parentId && out.has(g.parentId)) out.add(g.id); // 조직은 최대 3단계 — 맡은 조직 밑의 모든 하위 조직
   return out;
 }
 

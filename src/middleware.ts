@@ -47,7 +47,7 @@ export async function middleware(request: NextRequest) {
       return redirect;
     }
   }
-  // 통합설정(특별관리자 모드) — 숫자 4자리로 연 표가 없으면 잠금 화면을 보여 준다(주소는 그대로). 화면을 옮길 때마다 여기서 본다 (2026-10-14 결정 사항 개발-29)
+  // 통합설정(최고관리자 모드) — 숫자 4자리로 연 표가 없으면 잠금 화면을 보여 준다(주소는 그대로). 화면을 옮길 때마다 여기서 본다 (2026-10-14 결정 사항 개발-29)
   if (uid && isConsolePath(pathname)) {
     const secret = process.env.SUPABASE_SERVICE_ROLE_KEY;
     const pin = secret ? await createClient(process.env.NEXT_PUBLIC_SUPABASE_URL!, secret, { auth: { persistSession: false, autoRefreshToken: false } })

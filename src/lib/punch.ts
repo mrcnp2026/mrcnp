@@ -26,8 +26,8 @@ export async function recordPunch(input: {
   isTest: boolean;
   passkeyId: string | null;
   verifiedBy: 'ip' | 'gps' | null; // 무엇으로 사무실을 확인했는가 (ipVerified가 true면 반드시 있다)
-  geo: { lat: number; lng: number } | null; // GPS로 확인됐을 때만 (사무실 밖 좌표는 저장하지 않는다)
-  locationId?: string | null; // 확인된 출퇴근 장소 (GPS로 확인됐을 때만)
+  geo: { lat: number; lng: number } | null; // GPS로 확인됐거나, 사무실 밖에서 한 출근의 찍은 자리 (2026-10-23 · 퇴근은 위치를 남기지 않는다). 인터넷 주소로 확인된 기록에는 두지 않는다
+  locationId?: string | null; // 확인된 출퇴근 장소 (GPS 반경 안 · 그 장소의 인터넷 주소)
 }): Promise<{ event: RecordedPunch; deduped: boolean }> {
   const db = createAdminClient();
   // 직원 단위 잠금 + 60초 중복 방지 + 근무일 결정은 DB 함수가 한 트랜잭션으로 한다 (부록 R-4)

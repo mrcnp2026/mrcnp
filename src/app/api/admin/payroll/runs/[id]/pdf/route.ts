@@ -5,7 +5,7 @@ import { ApiError } from '@/lib/api';
 import { deny } from '@/lib/csv-response';
 import { requirePayroll } from '@/lib/payroll/data';
 import { loadRun, loadStatement } from '@/lib/payroll/run-data';
-import { asSlipTime, slipPdfResponse } from '@/lib/payroll/slip-pdf-response';
+import { asSlipTime, slipPdfResponse, slipTax } from '@/lib/payroll/slip-pdf-response';
 import { payrollAudit } from '@/lib/payroll/staff-data';
 import { createAdminClient } from '@/lib/supabase/admin';
 
@@ -38,6 +38,6 @@ export async function GET(req: Request, ctx: { params: Promise<{ id: string }> }
   return slipPdfResponse({
     locale: 'ko', no: `${month.replace('-', '')}-${run.kind[0]}${run.sequence}-${(row.id as string).slice(0, 8).toUpperCase()}`, name: p.name as string, employeeNo: p.employee_no as string | null, groupId: p.group_id as string | null, month,
     periodFrom: run.periodFrom, periodTo: new Date(Date.parse(`${run.periodTo}T00:00:00Z`) - 86400000).toISOString().slice(0, 10), payDate: run.payDate, revision: run.revision,
-    pay: s.pay, deduction: s.deduction, net: s.net, draft: run.status !== 'FINALIZED', practice: run.isTest, correctionReason: run.correctionReason, requestId, lines: s.lines, time: run.kind === 'REGULAR' ? asSlipTime(s.snapshot.time) : null,
+    pay: s.pay, deduction: s.deduction, net: s.net, draft: run.status !== 'FINALIZED', practice: run.isTest, correctionReason: run.correctionReason, requestId, tax: slipTax(s.snapshot, s.pay), lines: s.lines, time: run.kind === 'REGULAR' ? asSlipTime(s.snapshot.time) : null,
   });
 }

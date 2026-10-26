@@ -54,6 +54,16 @@ export const POST = api<{ params: Promise<{ id: string }> }>('admin.employees.pr
   if (joinedOn === undefined) throw new ApiError(400, 'invalid_input');
   if (joinedOn && (joinedOn > toKstDate(new Date()) || joinedOn < '1970-01-01')) throw new ApiError(400, 'invalid_date');
 
+  // 직무(선택) — 안 보내면 그대로, 빈 값이면 비운다
+  let jobId: string | null | undefined;
+  if (typeof b.jobId === 'string') {
+    jobId = b.jobId || null;
+    if (jobId) {
+      const { data: job } = await db.from('jobs').select('id').eq('id', jobId).maybeSingle();
+      if (!job) throw new ApiError(400, 'invalid_input');
+    }
+  }
+
   // 사번이 바뀌면 로그인 계정의 주소({사번}@staff.invalid)도 함께 바꾼다 — 안 바꾸면 옛 사번을 새 직원에게 줄 수 없다
   if (employeeNo !== cur.employee_no) {
     const { data: dup } = await db.from('profiles').select('id').eq('employee_no', employeeNo).neq('id', id).maybeSingle();
@@ -66,7 +76,7 @@ export const POST = api<{ params: Promise<{ id: string }> }>('admin.employees.pr
   }
   const { error } = await db
     .from('profiles')
-    .update({ name, employee_no: employeeNo, phone, email, job_title: jobTitle, group_id: groupId, locale: b.locale, joined_on: joinedOn, updated_by: me.id })
+    .update({ name, employee_no: employeeNo, phone, email, job_title: jobTitle, group_id: groupId, locale: b.locale, joined_on: joinedOn, ...(jobId !== undefined ? { job_id: jobId } : {}), updated_by: me.id })
     .eq('id', id);
   if (error?.code === '23505') throw new ApiError(409, 'duplicate_no');
   if (error) throw new Error(`profile.update: ${error.code}`);

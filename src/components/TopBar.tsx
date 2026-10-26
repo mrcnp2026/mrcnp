@@ -7,7 +7,7 @@ import { Logo } from './Logo';
 
 export function TopBar({ left, right, variant = 'full', className = '' }: { left?: ReactNode; right?: ReactNode; variant?: 'full' | 'mark'; className?: string }) {
   return (
-    <header className={`sticky top-0 z-10 border-b border-border bg-bg pt-[env(safe-area-inset-top)] ${className}`}>
+    <header className={`glass sticky top-0 z-10 border-b pt-[env(safe-area-inset-top)] ${className}`}>
       <div className="mx-auto flex min-h-14 w-full max-w-md items-center gap-1 px-4 md:max-w-none">
         {left}
         <Logo variant={variant} height={28} priority className="h-auto min-w-0 shrink" />

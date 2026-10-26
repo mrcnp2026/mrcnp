@@ -1,6 +1,7 @@
 'use client';
 // 휴가 정책 그룹 (PRD 34.2 L06 · L07, 36.2 — 2026-10-15). 부서와 다른 묶음이다: 연차를 어떤 기준으로 만들지 · 만들지 않을지를 정한다.
 // 기본 그룹(모두) · 그룹만의 기준을 쓰는 그룹 · 생성 제외 그룹. 직원은 한 번에 한 그룹에만 든다(날짜부터). 고르지 않은 직원은 기본 그룹 기준.
+import { Select } from '@/components/Select';
 import { useTranslations } from 'next-intl';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
@@ -113,7 +114,7 @@ export function PolicyGroups({ groups, people, today, current }: { groups: Group
           }}
         >
           <b>{t('moveTitle')}</b>
-          <select name="employee" required aria-label={t('employee')} className={field} defaultValue="">
+          <Select name="employee" required aria-label={t('employee')} className={field} defaultValue="">
             <option value="" disabled>
               {t('employee')}
             </option>
@@ -122,14 +123,14 @@ export function PolicyGroups({ groups, people, today, current }: { groups: Group
                 {p.name}
               </option>
             ))}
-          </select>
-          <select name="group" required aria-label={t('group')} className={field} defaultValue={def?.id ?? ''}>
+          </Select>
+          <Select name="group" required aria-label={t('group')} className={field} defaultValue={def?.id ?? ''}>
             {groups.map((g) => (
               <option key={g.id} value={g.id}>
                 {g.name}
               </option>
             ))}
-          </select>
+          </Select>
           <label className="flex flex-col gap-1">
             <span className="text-xs text-muted">{t('validFrom')}</span>
             <input name="validFrom" type="date" required defaultValue={today} className={field} />

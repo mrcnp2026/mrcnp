@@ -1,25 +1,32 @@
 // 사원별 급여 「세액감면 · 공제등록」 탭 (PRD v1.3 4.2 · 다우오피스 사원별 급여관리 셋째 탭, 2026-10-20 의뢰인: 만들어 줘).
 // 전 직원의 소득세 비율 · 가족 · 감면(중소기업 · 두루누리 · 외국인 19%) · 학자금 · 개인 공제 항목을 한 표로 본다. 고치는 것은 직원 화면에서 한다(같은 판 관리 · 사유).
 // 감면 칸은 회사 설정(사원급여 기본)에서 켠 것만 보인다 — 직원 화면 · 계산과 같다.
+// 회사 기본값(4대보험 · 세무)을 정해 두었으면, 세무 판이 없는 직원은 「회사 기본」으로 보인다(소득세 비율은 대장 기본값, 가족 1명 · 자녀 0명, 학자금 · 감면 없음) — 계산과 같다 (2026-10-25).
 import { getFormatter, getTranslations } from 'next-intl/server';
 import { ChevronRight } from 'lucide-react';
 import Link from 'next/link';
 import { Chip } from '@/components/ui';
 import type { TaxInput } from '@/lib/payroll/contract';
-import { loadItems, reliefSwitches } from '@/lib/payroll/data';
+import { loadDefaultWithholdingRatio, loadItems, loadTaxDefaults, reliefSwitches } from '@/lib/payroll/data';
+import { NO_RELIEFS, synthTax } from '@/lib/payroll/tax-defaults';
 import type { StaffPayLine } from '@/lib/payroll/staff-data';
 import { createAdminClient } from '@/lib/supabase/admin';
 
 type Ded = { name: string; amount: number | null };
 
 export async function TaxBoard({ lines, today }: { lines: StaffPayLine[]; today: string }) {
-  const [t, f, on, items, { data: assigned }] = await Promise.all([
+  const [t, f, on, items, { data: assigned }, taxDefaults, defaultRatio] = await Promise.all([
     getTranslations('admin.staffPay'),
     getFormatter(),
     reliefSwitches(today),
     loadItems('DEDUCTION'),
     createAdminClient().from('payroll_employee_items').select('employee_id, item_code, amount, valid_from, valid_to').eq('active', true),
+    loadTaxDefaults(today),
+    loadDefaultWithholdingRatio(today),
   ]);
+  // 세무 판이 없는 직원: 회사 기본값이 있으면 그 값으로 보인다
+  const fallback = taxDefaults ? ({ ...synthTax(taxDefaults.defaults, defaultRatio), reliefs: NO_RELIEFS } as unknown as TaxInput) : null;
+  const eff = (l: StaffPayLine): TaxInput | null => l.tax ?? fallback;
   const won = (v: number) => t('won', { n: f.number(v) });
   const itemOf = new Map(items.map((i) => [i.code, i]));
   const deds = new Map<string, Ded[]>();
@@ -44,8 +51,8 @@ export async function TaxBoard({ lines, today }: { lines: StaffPayLine[]; today:
     { key: 'flat19', label: t('board.flat19Col'), cell: flat },
     { key: 'loan', label: t('fLoan'), cell: loan },
   ];
-  const count = (fn: (x: TaxInput) => Cell, warn = false) => lines.filter((l) => l.tax && fn(l.tax) && !!fn(l.tax)?.warn === warn).length;
-  const unknown = lines.filter((l) => !l.tax || cols.some((c) => c.cell(l.tax!)?.warn)).length;
+  const count = (fn: (x: TaxInput) => Cell, warn = false) => lines.filter((l) => { const x = eff(l); return x && fn(x) && !!fn(x)?.warn === warn; }).length;
+  const unknown = lines.filter((l) => { const x = eff(l); return !x || cols.some((c) => c.cell(x)?.warn); }).length;
 
   return (
     <>
@@ -57,12 +64,13 @@ export async function TaxBoard({ lines, today }: { lines: StaffPayLine[]; today:
         <Chip tone="info">{t('board.sumDed', { n: lines.filter((l) => deds.has(l.employeeId)).length })}</Chip>
         <Chip tone={unknown ? 'warn' : 'neutral'}>{t('board.sumUnknown', { n: unknown })}</Chip>
       </div>
-      {!on.sme || !on.durunuri ? <p className="text-xs text-faint">{t('board.offNote')}</p> : null}
+      {!on.sme ? <p className="text-xs text-faint">{t('board.offNote')}</p> : null}
 
       {/* 폰: 사람마다 짧은 줄 — 적용 중인 것만 글로 */}
       <ul className="flex flex-col divide-y divide-border rounded-card border border-border bg-bg lg:hidden" data-phone-tax>
         {lines.map((l) => {
-          const x = l.tax;
+          const x = eff(l);
+          const byDefault = !l.tax && !!x;
           const bits = x ? cols.slice(2).flatMap((c) => { const v = c.cell(x); return v ? [`${c.label} ${v.text}`] : []; }) : [];
           return (
             <li key={l.employeeId}>
@@ -70,7 +78,7 @@ export async function TaxBoard({ lines, today }: { lines: StaffPayLine[]; today:
                 <span className="flex min-w-0 flex-1 flex-col">
                   <b className="truncate">{l.name}</b>
                   <span className="num truncate text-xs text-muted">
-                    {x ? [t('pct', { n: x.withholdingRatio }), t('board.familyValue', { n: x.familyCount, c: x.childCount }), ...bits, ...(deds.get(l.employeeId) ?? []).map(ded)].join(' · ') : t('gap.no_tax')}
+                    {x ? [...(byDefault ? [t('taxDefaultTag')] : []), t('pct', { n: x.withholdingRatio }), t('board.familyValue', { n: x.familyCount, c: x.childCount }), ...bits, ...(deds.get(l.employeeId) ?? []).map(ded)].join(' · ') : t('gap.no_tax')}
                   </span>
                 </span>
                 {!x || cols.some((c) => c.cell(x)?.warn) ? <Chip tone="warn">{t('board.check')}</Chip> : null}
@@ -96,10 +104,11 @@ export async function TaxBoard({ lines, today }: { lines: StaffPayLine[]; today:
                 <td className="px-3 py-3 whitespace-nowrap">
                   <Link href={`/admin/payroll/staff/${l.employeeId}`} className="font-bold text-primary hover:underline">{l.name}</Link>
                   {!l.active && <span className="ml-2 text-xs text-faint">{t('inactive')}</span>}
+                  {!l.tax && fallback && <span className="ml-2 text-xs text-faint">{t('taxDefaultTag')}</span>}
                 </td>
-                {l.tax ? (
+                {eff(l) ? (
                   cols.map((c) => {
-                    const v = c.cell(l.tax!);
+                    const v = c.cell(eff(l)!);
                     return <td key={c.key} className={`num px-3 py-3 whitespace-nowrap ${v?.warn ? 'text-warn' : ''}`}>{v?.text ?? ''}</td>;
                   })
                 ) : (

@@ -1,19 +1,18 @@
-// 급여대장 목록 — 달마다 정규 대장을 만들고 상태(초안 → 계산됨 → 검토됨 → 확정)를 본다 (PRD v1.3 18.3 W04). 급여 담당 관리자만.
+// 급여대장 목록 — 달마다 정규 대장을 생성하고 상태(초안 → 계산됨 → 검토됨 → 확정)를 본다 (PRD v1.3 18.3 W04). 급여 담당 관리자만.
+// 2026-10-26 의뢰인: 설명 카드·순서 안내를 걷어냈다 — 순서는 왼쪽 메뉴(① 사전 준비 → ② 급여대장 …)가 보여 준다.
 import { getFormatter, getTranslations } from 'next-intl/server';
-import { PayFlow } from '@/components/PayFlow';
-import { Upload } from 'lucide-react';
 import Link from 'next/link';
-import { ListHead, ListTable, StatusCards } from '@/components/listframe';
-import { Card, CardTitle, Chip, PageShell } from '@/components/ui';
+import { ListHead, ListTable } from '@/components/listframe';
+import { Chip, PageShell } from '@/components/ui';
 import { OFFICE } from '@/config/office';
 import { getMe } from '@/lib/auth';
 import { loadRuns } from '@/lib/payroll/run-data';
 import { toKstDate } from '@/lib/time';
-import { RunCreate } from './RunForms';
+import { RunCreateButton } from './RunForms';
 
 const TONE = { DRAFT: 'neutral', CALCULATED: 'info', REVIEWED: 'warn', FINALIZED: 'ok' } as const;
 
-export default async function PayRunsPage({ searchParams }: { searchParams: Promise<{ live?: string; st?: string }> }) {
+export default async function PayRunsPage({ searchParams }: { searchParams: Promise<{ live?: string; st?: string; new?: string }> }) {
   const [t, tf, f, me, sp] = await Promise.all([getTranslations('admin.payRuns'), getTranslations('frame'), getFormatter(), getMe(), searchParams]);
   if (!me || me.role !== 'admin' || !me.canViewPayroll) return <PageShell><p className="rounded-card bg-warn-tint p-4 text-sm text-warn">{t('forbidden')}</p></PageShell>;
   const practice = OFFICE.practiceMode && sp.live !== '1';
@@ -33,35 +32,35 @@ export default async function PayRunsPage({ searchParams }: { searchParams: Prom
 
   return (
     <PageShell wide>
-      {/* 명세서를 회사 엑셀로 올리는 길 (2026-10-16 의뢰인: 다운로드 외 업로드 버튼) */}
-      <ListHead title={t('title')} desc={t('intro')} settingsHref="/admin/settings?tab=pay&section=ledger" settingsLabel={tf('item.payLedger')} actions={<Link href="/admin/payroll/slips" className="inline-flex min-h-11 items-center gap-2 rounded-button bg-primary px-4 text-sm font-bold text-on-primary" data-slip-entry><Upload aria-hidden size={18} strokeWidth={2} />{t('uploadSlips')}</Link>} />
-      <PayFlow now="runs" />
+      <ListHead title={t('title')} settingsHref="/admin/settings?tab=pay&section=ledger" settingsLabel={tf('item.payLedger')} actions={<RunCreateButton months={months} bonusMonths={recent} today={today} live={sp.live === '1'} defaultOpen={sp.new === '1'} />} />
       {practice && <p className="rounded-card border border-border bg-surface p-3 text-sm text-muted">{t('practice')}</p>}
-      <Card>
-        <CardTitle>{t('createTitle')}</CardTitle>
-        <p className="pt-1 pb-3 text-sm text-faint">{t('createIntro')}</p>
-        <RunCreate months={months} bonusMonths={recent} today={today} live={sp.live === '1'} />
-      </Card>
-      <StatusCards groups={[{ title: t('cardsTitle'), cards: STATES.map((k) => ({ key: k, label: t(`status.${k}`), n: runs.filter((r) => r.status === k).length, unit: t('unit'), href: stLink(st === k ? null : k), on: st === k, tone: k === 'FINALIZED' ? ('ok' as const) : k === 'REVIEWED' ? ('warn' as const) : undefined })) }]} />
+      {runs.length === 0 ? (
+        <p className="rounded-card border border-border bg-bg px-5 py-10 text-center text-sm text-muted">{t('emptyHint')}</p>
+      ) : (
+        <>
+      {/* 상태별 거르기 — 카드 넷 대신 한 줄 탭 (2026-10-26 의뢰인: 카드 박스 배치가 어색하다) */}
+      <nav aria-label={t('cardsTitle')} className="flex flex-wrap gap-1.5">
+        {[{ k: null, label: t('all'), n: runs.length }, ...STATES.map((k) => ({ k, label: t(`status.${k}`), n: runs.filter((r) => r.status === k).length }))].map((x) => (
+          <Link key={x.k ?? 'all'} href={stLink(x.k)} scroll={false} aria-current={st === x.k ? 'page' : undefined} className={`inline-flex min-h-9 items-center gap-1.5 rounded-chip px-3.5 text-sm font-semibold ${st === x.k ? 'bg-primary text-on-primary' : 'bg-surface text-muted hover:text-text'}`}>
+            {x.label}
+            <span className="num text-xs font-bold opacity-80">{x.n}</span>
+          </Link>
+        ))}
+      </nav>
       <ListTable
         count={
           <>
             {t('count', { n: shown.length })}
-            {st && (
-              <Link href={stLink(null)} className="pl-3 font-bold text-primary">
-                {t('showAll')}
-              </Link>
-            )}
           </>
         }
         head={['colMonth', 'colPayDate', 'colStatus', 'colMembers', 'colPay', 'colDeduction', 'colNet', 'colEmployer'].map((k, i) => ({ label: t(k), right: i >= 4 }))}
         empty={shown.length === 0 ? t('empty') : undefined}
       >
         {shown.map((r) => (
-          <tr key={r.id}>
+          <tr key={r.id} className="relative cursor-pointer hover:bg-primary-tint/50">
             <td className="num whitespace-nowrap">
-              <Link href={`/admin/payroll/runs/${r.id}`} className="font-bold text-primary hover:underline">
-                {r.periodFrom.slice(0, 7)}
+              <Link href={`/admin/payroll/runs/${r.id}`} className="inline-flex items-center gap-1 rounded-button bg-primary-tint px-2.5 py-1 font-bold text-primary after:absolute after:inset-0 after:content-[''] hover:underline">
+                {r.periodFrom.slice(0, 7)} ›
               </Link>
               {r.kind !== 'REGULAR' && <span className="ml-2 text-xs font-bold text-muted">{t('kindSeq', { kind: t(`kind.${r.kind}`), n: r.sequence })}{r.title ? ` · ${r.title}` : ''}</span>}
               {r.revision > 1 && <span className="ml-2 text-xs text-faint">{t('revision', { n: r.revision })}</span>}
@@ -73,13 +72,15 @@ export default async function PayRunsPage({ searchParams }: { searchParams: Prom
             </td>
             <td className="num">{r.generationId ? t('membersValue', { ok: Number(r.totals.ok ?? 0), blocked: Number(r.totals.blocked ?? 0) }) : ''}</td>
             {/* 폰 카드는 달 · 지급일 · 상태 · 대상 · 실지급만 — 지급 · 공제 · 사업주 부담은 대장을 열면 (2026-10-19 디자인: 대장마다 8줄) */}
-            <td className="num text-right whitespace-nowrap max-lg:hidden!">{r.generationId ? won(r.totals.pay) : ''}</td>
-            <td className="num text-right whitespace-nowrap max-lg:hidden!">{r.generationId ? won(r.totals.deduction) : ''}</td>
-            <td className="num text-right font-bold whitespace-nowrap">{r.generationId ? won(r.totals.net) : ''}</td>
-            <td className="num text-right whitespace-nowrap max-lg:hidden!">{r.generationId ? won(r.totals.employer) : ''}</td>
+            <td className="num text-right whitespace-nowrap max-lg:hidden!">{r.generationId && r.totals.pay ? won(r.totals.pay) : <span className="text-faint">–</span>}</td>
+            <td className="num text-right whitespace-nowrap max-lg:hidden!">{r.generationId && r.totals.deduction ? won(r.totals.deduction) : <span className="text-faint">–</span>}</td>
+            <td className="num text-right font-bold whitespace-nowrap">{r.generationId && r.totals.net ? won(r.totals.net) : <span className="text-faint">–</span>}</td>
+            <td className="num text-right whitespace-nowrap max-lg:hidden!">{r.generationId && r.totals.employer ? won(r.totals.employer) : <span className="text-faint">–</span>}</td>
           </tr>
         ))}
       </ListTable>
+        </>
+      )}
     </PageShell>
   );
 }

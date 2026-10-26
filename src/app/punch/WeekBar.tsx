@@ -5,7 +5,8 @@
 import { AlertTriangle, CalendarDays, ChevronLeft, ChevronRight } from 'lucide-react';
 import { getTranslations } from 'next-intl/server';
 import Link from 'next/link';
-import { Card } from '@/components/ui';
+import { CountUp } from '@/components/CountUp';
+import { Card, Chip } from '@/components/ui';
 import type { weeklyHours } from '@/lib/weekly-hours';
 
 export type WeekCell = { date: string; label: string; red: boolean; today: boolean; start: string | null; end: string | null; leave: boolean; inAt?: string | null; outAt?: string | null; working?: boolean };
@@ -19,6 +20,7 @@ export async function WeekBar({
   range,
   nav,
   limitNotice = true,
+  extra,
 }: {
   week: ReturnType<typeof weeklyHours> | null;
   regularHours: number;
@@ -27,6 +29,7 @@ export async function WeekBar({
   planMinutes: number;
   range: string;
   nav?: { prev: string | null; next: string | null; thisWeek: boolean }; // 주 고르기 (지난 주 · 다음 주). 이번 주가 아니면 제목이 「주간 근무」
+  extra?: { nightMinutes: number; lateCount: number; lateMinutes: number }; // 야간 · 지각 (2026-10-22 의뢰인: 이번주 근로 카드와 겹쳐 하나로)
   limitNotice?: boolean; // 통합설정 › 리포트 「주 52시간 관리」 스위치 — 끄면 주의 · 한도 초과 표시를 하지 않는다 (2026-10-19)
 }) {
   const t = await getTranslations('home.week');
@@ -44,7 +47,7 @@ export async function WeekBar({
   const planPct = pct(planMinutes);
   const hm = (min: number) => (min % 60 === 0 ? t('hours', { h: min / 60 }) : t('total', { h: Math.floor(min / 60), m: min % 60 }));
   const warn = limitNotice && week.colored && week.level !== 'normal';
-  const tone = !warn ? 'text-ok' : week.level === 'over' ? 'text-danger' : 'text-warn';
+  const tone = !warn ? 'text-primary' : week.level === 'over' ? 'text-danger' : 'text-warn';
 
   return (
     <Card className="flex flex-col gap-2 p-4 lg:gap-3 lg:p-5">
@@ -73,9 +76,56 @@ export async function WeekBar({
             ))}
         </span>
       </div>
+      {/* 이슈 먼저 (2026-10-26 의뢰인: 시간 숫자보다 지각 · 연장 같은 이슈와 막대가 잘 보이게) — 있는 것만 칩으로, 없으면 한 줄로 조용히 */}
+      {(() => {
+        const chips: { key: string; tone: 'warn' | 'danger' | 'info'; text: string }[] = [];
+        if (warn) chips.push({ key: 'level', tone: week.level === 'over' ? 'danger' : 'warn', text: `⚠ ${t(week.level)}` });
+        if (extra && extra.lateCount > 0) chips.push({ key: 'late', tone: 'warn', text: `⚠ ${t('late')} ${t('lateValue', { n: extra.lateCount, m: extra.lateMinutes })}` });
+        if (week.overtimeMinutes > 0) chips.push({ key: 'ot', tone: 'info', text: `${t('overtime')} ${hm(week.overtimeMinutes)}` });
+        if (extra && extra.nightMinutes > 0) chips.push({ key: 'night', tone: 'info', text: `${t('night')} ${hm(extra.nightMinutes)}` });
+        return chips.length > 0 ? (
+          <p className="flex flex-wrap gap-1.5 pt-1">
+            {chips.map((c) => (
+              <Chip key={c.key} tone={c.tone}>{c.text}</Chip>
+            ))}
+          </p>
+        ) : (
+          <p className="pt-1 text-sm text-ok">✓ {t('clean')}</p>
+        );
+      })()}
+      {/* 일한 시간 숫자는 한 줄로 작게 — 오늘 근무 카드의 큰 시각과 겹쳐 보이지 않게 */}
+      <div className="flex flex-wrap items-baseline gap-x-2 gap-y-1">
+        <CountUp value={limitNotice && week.totalMinutes > limitMin ? t('over52') : hm(week.totalMinutes)} className={`num text-2xl leading-none font-extrabold tracking-tight ${warn ? tone : ''}`} />
+        <span className="num text-sm text-muted">/ {hm(planMinutes)}</span>
+      </div>
+      <div className="flex flex-col gap-1.5">
+        {/* 계획 눈금: 이번 주 일정의 합 (휴게 제외) */}
+        <div className="relative h-6" aria-hidden>
+          {planMinutes > 0 && (
+            <span className="absolute bottom-0 flex -translate-x-1/2 flex-col items-center text-xs leading-none text-muted" style={{ left: `${planPct}%` }}>
+              <span className="whitespace-nowrap">{t('plan')}</span>
+              <span>▼</span>
+            </span>
+          )}
+        </div>
+        <div className="relative" role="img" aria-label={`${t('regular')} ${hm(week.regularMinutes)}, ${t('overtime')} ${hm(week.overtimeMinutes)}, ${t('plan')} ${hm(planMinutes)}`}>
+          {/* 막대 색은 상태로 바꾸지 않는다 — 둥근 막대, 두 조각 사이 2px 틈 */}
+          <div className="flex h-4 gap-0.5 overflow-hidden rounded-full bg-surface">
+            <div className="fx-grow-x h-full rounded-full bg-primary" style={{ width: `${regPct}%` }} />
+            <div className="fx-grow-x h-full rounded-full bg-chart-extra" style={{ width: `${otPct}%`, animationDelay: '1400ms' }} />
+          </div>
+          <div className="absolute -inset-y-1 border-l-2 border-text/70" style={{ left: `${(regularHours / limitHours) * 100}%` }} />
+        </div>
+        <div className="num relative h-5 text-xs text-muted">
+          <span className="absolute -translate-x-1/2" style={{ left: `${(regularHours / limitHours) * 100}%` }}>
+            {regularHours}
+          </span>
+          <span className="absolute right-0">{limitHours}</span>
+        </div>
+      </div>
       <ol className="-mx-2 grid grid-cols-7 gap-1">
         {cells.map((c) => (
-          <li key={c.date} className={`flex min-h-16 flex-col items-center gap-0.5 rounded-button px-0.5 py-1.5 text-center ${c.today ? 'bg-primary-tint' : 'bg-surface'}`}>
+          <li key={c.date} className={`flex min-h-16 flex-col items-center gap-0.5 rounded-card px-0.5 py-2 text-center ${c.today ? 'bg-primary-tint' : ''}`}>
             <span className={`text-sm font-bold ${c.today ? 'text-primary' : c.red ? 'text-danger' : ''}`}>{c.today ? t('today') : c.label}</span>
             {c.inAt ? (
               <span className="num flex flex-col text-xs leading-snug">
@@ -96,39 +146,6 @@ export async function WeekBar({
         ))}
       </ol>
       <p className="-mt-1 text-xs text-faint">{t('legend')}</p>
-      <div className="flex flex-col gap-1">
-        {/* 계획 눈금: 이번 주 일정의 합 (휴게 제외) */}
-        <div className="relative h-7" aria-hidden>
-          {planMinutes > 0 && (
-            <span className="absolute bottom-0 flex -translate-x-1/2 flex-col items-center text-xs leading-none" style={{ left: `${planPct}%` }}>
-              <span className="whitespace-nowrap">{t('plan')}</span>
-              <span>▼</span>
-            </span>
-          )}
-        </div>
-        <div className="relative flex h-3 bg-surface" role="img" aria-label={`${t('regular')} ${hm(week.regularMinutes)}, ${t('overtime')} ${hm(week.overtimeMinutes)}, ${t('plan')} ${hm(planMinutes)}`}>
-          <div className={`h-full ${warn ? (week.level === 'over' ? 'bg-danger' : 'bg-warn') : 'bg-ok'}`} style={{ width: `${regPct}%` }} />
-          <div className="h-full bg-danger" style={{ width: `${otPct}%` }} />
-          <div className="absolute -inset-y-1 border-l-2 border-text" style={{ left: `${(regularHours / limitHours) * 100}%` }} />
-        </div>
-        <div className="num relative h-6 text-sm">
-          <span className="absolute left-0 flex items-center gap-1">
-            {warn && <AlertTriangle aria-hidden size={16} strokeWidth={2} className={tone} />}
-            <span className={`font-bold ${tone}`}>{limitNotice && week.totalMinutes > limitMin ? t('over52') : hm(week.totalMinutes)}</span>
-            <span className="text-muted">/ {hm(planMinutes)}</span>
-          </span>
-          <span className="absolute -translate-x-1/2 text-muted" style={{ left: `${(regularHours / limitHours) * 100}%` }}>
-            {regularHours}
-          </span>
-          <span className="absolute right-0 text-muted">{limitHours}</span>
-        </div>
-      </div>
-      {week.overtimeMinutes > 0 && (
-        <p className="num text-sm text-muted">
-          {t('overtime')} <span className="font-bold text-danger">{hm(week.overtimeMinutes)}</span>
-        </p>
-      )}
-      {warn && <p className={`text-sm ${tone}`}>{t(week.level)}</p>}
     </Card>
   );
 }

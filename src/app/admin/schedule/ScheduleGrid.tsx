@@ -22,13 +22,25 @@ export function ScheduleGrid({ days, rows, dense, labels }: { days: GridDay[]; r
       <table className={`w-full border-separate border-spacing-0 text-sm ${dense ? '' : 'table-fixed'}`} style={dense ? undefined : { minWidth: `${11 + days.length * 8}rem` }}>
         <thead>
           <tr>
-            <th scope="col" className="sticky left-0 z-10 w-44 min-w-44 border-r border-border px-3 py-2 text-left">
+            <th scope="col" className="sticky left-0 z-10 w-44 min-w-44 border-b border-border bg-bg px-4 py-3 text-left text-xs font-semibold text-muted">
               {labels.employee}
             </th>
             {days.map((d) => (
-              <th key={d.date} scope="col" className={`${colW} border-r border-border px-2 py-2 text-center last:border-r-0 ${d.today ? 'bg-primary-tint!' : d.red ? 'bg-danger-tint!' : ''} ${d.red ? 'text-danger!' : ''}`}>
-                <span className="num">{d.label}</span>
-                {d.holiday && !dense && <span className="block truncate text-xs font-medium">{d.holiday}</span>}
+              <th key={d.date} scope="col" className={`${colW} border-b border-border px-1.5 py-2 text-center font-normal`}>
+                <span className={`num inline-flex flex-col items-center rounded-card px-2.5 py-1 leading-tight ${d.today ? 'bg-primary text-on-primary' : d.red ? 'text-danger' : 'text-muted'}`}>
+                  {(() => {
+                    const m = /^(.*?)\s*\((.+)\)\s*$/.exec(d.label);
+                    return m ? (
+                      <>
+                        <span className="text-xs">{m[2]}</span>
+                        <span className="text-base font-bold">{m[1]}</span>
+                      </>
+                    ) : (
+                      <span className="font-bold">{d.label}</span>
+                    );
+                  })()}
+                </span>
+                {d.holiday && !dense && <span className="mt-0.5 block truncate text-xs font-medium text-danger">{d.holiday}</span>}
               </th>
             ))}
           </tr>
@@ -43,13 +55,13 @@ export function ScheduleGrid({ days, rows, dense, labels }: { days: GridDay[]; r
           )}
           {rows.map((r) => (
             <tr key={r.id}>
-              <th scope="row" className="sticky left-0 z-10 border-r border-b border-border bg-bg px-3 py-2 text-left align-top font-normal">
+              <th scope="row" className="sticky left-0 z-10 border-b border-border bg-bg px-4 py-3 text-left align-top font-normal">
                 <span className="font-bold">{r.name}</span>
                 <span className="num ml-1.5 text-xs text-faint">{r.total}</span>
                 {r.sub && <span className="block truncate text-xs text-faint">{r.sub}</span>}
               </th>
               {r.cells.map((c, i) => (
-                <td key={days[i].date} className={`border-r border-b border-border p-1 align-top last:border-r-0 ${days[i].today ? 'bg-primary-tint' : days[i].red ? 'bg-danger-tint' : ''}`}>
+                <td key={days[i].date} className={`border-b border-border p-1.5 align-top ${days[i].today ? 'bg-primary-tint/50' : days[i].red ? 'bg-danger-tint/50' : ''}`}>
                   <div className="flex flex-col gap-1">
                     {c.leave && (
                       <div className="flex items-center gap-1.5 rounded-button bg-surface px-2 py-1.5 text-muted">
@@ -87,11 +99,11 @@ export function ScheduleGrid({ days, rows, dense, labels }: { days: GridDay[]; r
         {rows.length > 0 && (
           <tfoot>
             <tr>
-              <th scope="row" className="sticky left-0 z-10 border-r border-border bg-bg px-3 py-2 text-left text-muted">
+              <th scope="row" className="sticky left-0 z-10 bg-bg px-4 py-3 text-left text-xs font-semibold text-muted">
                 {labels.people}
               </th>
               {days.map((d) => (
-                <td key={d.date} className={`num border-r border-border px-2 py-2 text-center text-muted last:border-r-0 ${d.today ? 'bg-primary-tint' : d.red ? 'bg-danger-tint' : ''}`}>
+                <td key={d.date} className={`num px-2 py-3 text-center text-sm font-semibold text-muted ${d.today ? 'bg-primary-tint/50' : d.red ? 'bg-danger-tint/50' : ''}`}>
                   {d.count}
                 </td>
               ))}

@@ -70,3 +70,23 @@ describe('직무별 · 항목별 (2026-10-14 인건비 표 확장)', async () =>
     expect(items.map((x) => [x.kind, x.code, x.amount, x.people])).toEqual([['PAYMENT', 'BASE', 300, 2], ['PAYMENT', 'OT', 50, 1], ['DEDUCTION', 'NP', 10, 1]]);
   });
 });
+
+describe('과세 · 비과세 금액 (2026-10-26 의뢰인)', async () => {
+  const { sumItems: sumItems2, sumLabor: sumLabor2 } = await import('@/lib/payroll/labor-cost');
+  it('지급 합계 = 과세 + 비과세 — 합계에 비과세를 더하고, 값이 없으면 0(과세)으로 본다', () => {
+    const rows = [row({ employeeId: 'a', pay: 3_000_000, exempt: 200_000 }), row({ employeeId: 'b', pay: 2_000_000 }), row({ employeeId: 'a', month: '2026-10', pay: 500_000, exempt: 50_000 })];
+    const r = sumLabor2(rows, people, groupName);
+    expect(r.total.pay).toBe(5_500_000);
+    expect(r.total.exempt).toBe(250_000);
+    expect(r.total.pay - r.total.exempt).toBe(5_250_000);
+    expect(r.months.map((m) => [m.month, m.pay - m.exempt])).toEqual([['2026-09', 4_800_000], ['2026-10', 450_000]]);
+  });
+  it('항목별 비과세도 같은 코드끼리 더한다', () => {
+    const items = sumItems2([
+      { kind: 'PAYMENT', code: 'MEAL', label: '식대', amount: 300_000, employeeId: 'a', exempt: 200_000 },
+      { kind: 'PAYMENT', code: 'MEAL', label: '식대', amount: 300_000, employeeId: 'b', exempt: 200_000 },
+      { kind: 'PAYMENT', code: 'BASE', label: '기본급', amount: 100, employeeId: 'a' },
+    ]);
+    expect(items.map((x) => [x.code, x.amount, x.exempt])).toEqual([['MEAL', 600_000, 400_000], ['BASE', 100, 0]]);
+  });
+});

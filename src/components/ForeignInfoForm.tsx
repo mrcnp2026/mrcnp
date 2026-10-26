@@ -2,6 +2,7 @@
 // 외국인 정보 (묶음 31, 2026-10-20 의뢰인: 태국 · 베트남 직원) — 관리자만. 국적 · 체류 자격 · 체류 기간 끝 · 국내 첫 근로일.
 // 평소에는 한 줄 요약 + 보험 · 세금 「제안」, [고치기]를 누르면 입력 칸. 제안은 바꾸지 않고 보여 주기만 한다(정하는 곳은 사원별 급여).
 // 폰: 칸은 세로로 쌓고 짧은 칸만 두 개씩 — 가로 넘침 없음.
+import { Select } from '@/components/Select';
 import { Pencil } from 'lucide-react';
 import Link from 'next/link';
 import { useTranslations } from 'next-intl';
@@ -106,7 +107,7 @@ export function ForeignInfoForm({ endpoint, initial, today, payHref }: { endpoin
       <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
         <label className="flex min-w-0 flex-col gap-1">
           <span className="text-muted">{t('nationality')}</span>
-          <select value={nationality && !(COUNTRIES as readonly string[]).includes(nationality) && nationality !== 'OTHER' ? 'OTHER' : nationality} onChange={(e) => setNationality(e.target.value)} className={input}>
+          <Select value={nationality && !(COUNTRIES as readonly string[]).includes(nationality) && nationality !== 'OTHER' ? 'OTHER' : nationality} onChange={(e) => setNationality(e.target.value)} className={input}>
             <option value="">{t('domestic')}</option>
             {COUNTRIES.map((c) => (
               <option key={c} value={c}>
@@ -114,7 +115,7 @@ export function ForeignInfoForm({ endpoint, initial, today, payHref }: { endpoin
               </option>
             ))}
             <option value="OTHER">{t('otherCountry')}</option>
-          </select>
+          </Select>
         </label>
         {(nationality === 'OTHER' || (nationality && !(COUNTRIES as readonly string[]).includes(nationality))) && (
           <label className="flex min-w-0 flex-col gap-1">

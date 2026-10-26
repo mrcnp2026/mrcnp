@@ -5,6 +5,7 @@ import { leaveBalancesFor } from '@/lib/leave-balance-data';
 import { ChevronRight, Inbox, NotebookPen, TriangleAlert } from 'lucide-react';
 import { getFormatter, getTranslations } from 'next-intl/server';
 import Link from 'next/link';
+import { CountUp } from '@/components/CountUp';
 import { Pager, pageOf } from '@/components/Pager';
 import { PagedList } from '@/components/PagedList';
 import { Card, CardTitle, PageShell } from '@/components/ui';
@@ -38,13 +39,23 @@ export default async function AdminHome({ searchParams }: { searchParams: Promis
   const practiceView = OFFICE.practiceMode && sp.live !== '1';
   const now = new Date();
   const today = toKstDate(now);
-  const data = await loadPeriod(addDays(today, -13), today, practiceView);
-  // 연장근로 확인은 여기서 만들지 않는다 — 기록이 바뀔 때 바로(syncOvertimeFor) + 새벽 정기 작업이 맞춘다 (2026-10-19 속도)
-  const counts = await pendingCounts(practiceView);
-  // 오늘 근무노트 — 같은 직원·같은 날은 가장 최근 것만 (고친 노트는 새 행, 이전은 기록으로 남음 — R-10-2)
-  const { data: noteRows } = await createAdminClient()
-    .from('work_notes').select('employee_id, body, created_at')
-    .eq('work_date', today).eq('is_test', practiceView).order('created_at', { ascending: false });
+  // 서로 상관없는 조회는 한꺼번에 시작한다 (2026-10-23 의뢰인: 화면 이동이 느리다 — 예전에는 아홉 개를 하나씩 기다렸다)
+  const db = createAdminClient();
+  const later = {
+    roleReqs: getMe().then((m) => db.from('role_change_requests').select('target_id').eq('status', 'pending').neq('requested_by', m!.id).order('created_at')),
+    latestNotices: Promise.resolve(db.from('notices').select('id, title, created_at').eq('status', 'published').order('created_at', { ascending: false }).limit(30)),
+    keys: Promise.resolve(db.from('user_passkeys').select('employee_id').is('revoked_at', null)),
+    grants: loadLeaveGrants(),
+    leaveReqs: loadLeaveRequests({ practice: practiceView }),
+    leaveTypes: loadAllLeaveTypes(),
+  };
+  const [data, counts, { data: noteRows }] = await Promise.all([
+    loadPeriod(addDays(today, -13), today, practiceView),
+    // 연장근로 확인은 여기서 만들지 않는다 — 기록이 바뀔 때 바로(syncOvertimeFor) + 새벽 정기 작업이 맞춘다 (2026-10-19 속도)
+    pendingCounts(practiceView),
+    // 오늘 근무노트 — 같은 직원·같은 날은 가장 최근 것만 (고친 노트는 새 행, 이전은 기록으로 남음 — R-10-2)
+    Promise.resolve(db.from('work_notes').select('employee_id, body, created_at').eq('work_date', today).eq('is_test', practiceView).order('created_at', { ascending: false })),
+  ]);
   const seenNote = new Set<string>();
   const notes = (noteRows ?? []).filter((n) => (seenNote.has(n.employee_id) ? false : (seenNote.add(n.employee_id), true)));
   const notePage = pageOf(notes, sp.np);
@@ -130,8 +141,7 @@ export default async function AdminHome({ searchParams }: { searchParams: Promis
   const prev = workdays.filter((x) => today > x.d).at(-1);
   const delta = rate !== null && prev ? rate - pct(prev.n) : null;
   // 내가 확인해 줘야 하는 권한 변경 (다른 관리자가 요청한 것, R-2의 8)
-  const meId = (await getMe())!.id;
-  const { data: roleReqs } = await createAdminClient().from('role_change_requests').select('target_id').eq('status', 'pending').neq('requested_by', meId).order('created_at');
+  const { data: roleReqs } = await later.roleReqs;
   const todo = [
     { key: 'pendingOvertime', n: counts.overtime, href: '/admin/inbox#overtime' },
     { key: 'pendingCorrections', n: counts.corrections, href: '/admin/inbox#corrections' },
@@ -144,13 +154,7 @@ export default async function AdminHome({ searchParams }: { searchParams: Promis
   // PC 홈 카드 (2026-10-11 의뢰인 스샷 `스샷/홈.png`): 출퇴근 누락 · 공지사항 · 관리가 필요한 직원 · 휴가 현황
   // 카드 목록은 6개씩, 넘으면 쪽 넘김 (2026-10-14 의뢰인 — components/PagedList)
   const real = active.filter((p) => !p.employeeNo?.startsWith('e2e-'));
-  const [{ data: latestNotices }, { data: keys }, grants, leaveReqs, leaveTypes] = await Promise.all([
-    createAdminClient().from('notices').select('id, title, created_at').eq('status', 'published').order('created_at', { ascending: false }).limit(30),
-    createAdminClient().from('user_passkeys').select('employee_id').is('revoked_at', null),
-    loadLeaveGrants(),
-    loadLeaveRequests({ practice: practiceView }),
-    loadAllLeaveTypes(),
-  ]);
+  const [{ data: latestNotices }, { data: keys }, grants, leaveReqs, leaveTypes] = await Promise.all([later.latestNotices, later.keys, later.grants, later.leaveReqs, later.leaveTypes]);
   const withPhone = new Set((keys ?? []).map((k) => k.employee_id as string));
   const care = [
     { key: 'careNoPhone', n: real.filter((p) => !withPhone.has(p.id)).length },
@@ -177,7 +181,7 @@ export default async function AdminHome({ searchParams }: { searchParams: Promis
             {t('myPunch')} ›
           </Link>
         </div>
-        <h1 className="num text-2xl font-extrabold tracking-tight">{t('headline', { total: active.length, n: inCount })}</h1>
+        <h1 className="num text-2xl font-extrabold tracking-tight"><CountUp value={t('headline', { total: active.length, n: inCount })} /></h1>
         {rate !== null && <p className="num text-sm text-muted">{t('rate', { target, p: rate })}</p>}
         {OFFICE.practiceMode && (
           <Link href={practiceView ? '/admin?live=1' : '/admin'} className="inline-flex min-h-11 items-center self-start text-sm text-primary">
@@ -202,17 +206,8 @@ export default async function AdminHome({ searchParams }: { searchParams: Promis
         ]}
       />
 
-      {/* PC 카드 줄: 출퇴근 누락 · 공지사항 · 관리가 필요한 직원 · 휴가 현황 (시프티 홈의 카드 구성) */}
+      {/* PC 카드 줄: 공지사항 · 출퇴근 누락 · 관리가 필요한 직원 · 휴가 현황 (2026-10-23 의뢰인: 공지사항과 출퇴근 누락 자리 바꿈) */}
       <div className="hidden gap-4 lg:grid lg:grid-cols-4">
-        <Card className="flex flex-col gap-2">
-          <CardTitle aside={<span className={`num text-lg font-bold ${missingPeople > 0 ? 'text-warn' : 'text-faint'}`}>{missingPeople}</span>}>{t('cardMissing')}</CardTitle>
-          {missingNames.length === 0 ? (
-            <p className="flex-1 py-4 text-center text-sm text-faint">{t('cardMissingNone')}</p>
-          ) : (
-            <PagedList className="flex-1 divide-y divide-border text-sm" items={missingNames.map((x) => <li key={x} className="py-1.5 font-bold">{x}</li>)} />
-          )}
-          <Link href="/admin/missing" className={cardLink}>{t('cardMissingMore')} ›</Link>
-        </Card>
         <Card className="flex flex-col gap-2">
           <CardTitle>{t('cardNotices')}</CardTitle>
           {(latestNotices ?? []).length === 0 ? (
@@ -231,6 +226,15 @@ export default async function AdminHome({ searchParams }: { searchParams: Promis
             />
           )}
           <Link href="/admin/notices" className={cardLink}>{t('cardNoticesAll')} ›</Link>
+        </Card>
+        <Card className="flex flex-col gap-2">
+          <CardTitle aside={<span className={`num text-lg font-bold ${missingPeople > 0 ? 'text-warn' : 'text-faint'}`}>{missingPeople}</span>}>{t('cardMissing')}</CardTitle>
+          {missingNames.length === 0 ? (
+            <p className="flex-1 py-4 text-center text-sm text-faint">{t('cardMissingNone')}</p>
+          ) : (
+            <PagedList className="flex-1 divide-y divide-border text-sm" items={missingNames.map((x) => <li key={x} className="py-1.5 font-bold">{x}</li>)} />
+          )}
+          <Link href="/admin/missing" className={cardLink}>{t('cardMissingMore')} ›</Link>
         </Card>
         <Card className="flex flex-col gap-2">
           <CardTitle aside={<span className="num text-sm text-muted">{t('totalStaff')} <b className="text-text">{real.length}</b></span>}>{t('cardCare')}</CardTitle>
@@ -261,9 +265,9 @@ export default async function AdminHome({ searchParams }: { searchParams: Promis
                   <li key={p.id} className="flex items-center gap-2 py-1">
                     <span className="w-20 shrink-0 truncate font-bold">{p.name}</span>
                     <svg aria-hidden viewBox="0 0 100 6" preserveAspectRatio="none" className="h-1.5 min-w-0 flex-1 rounded-chip bg-border">
-                      <rect width={w} height="6" className={over ? 'fill-danger' : 'fill-ok'} />
+                      <rect width={w} height="6" className={`fx-grow-x ${over ? 'fill-chart-extra' : 'fill-primary'}`} />
                     </svg>
-                    <span className={`num w-20 shrink-0 text-right text-xs ${over ? 'text-danger' : 'text-muted'}`}>{num(bal.used)} / {num(bal.granted)}</span>
+                    <CountUp value={`${num(bal.used)} / ${num(bal.granted)}`} className={`num w-20 shrink-0 text-right text-xs ${over ? 'text-danger' : 'text-muted'}`} />
                   </li>
                 );
               })}
@@ -336,6 +340,7 @@ export default async function AdminHome({ searchParams }: { searchParams: Promis
         dense
         title={t('lateTitle')}
         unit={t('chartUnit')}
+        empty={t('lateNone')}
         bars={daily.map((x) => ({ key: x.d, label: md(x.d), n: x.late, tip: t('lateTip', { date: longDay(x.d), n: x.late }) }))}
       />
       <div className="flex flex-col gap-3 lg:col-span-3 lg:grid lg:grid-cols-2 lg:gap-4">

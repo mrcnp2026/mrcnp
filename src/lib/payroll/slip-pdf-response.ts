@@ -8,7 +8,7 @@ import { buildSlipPdf } from './slip-pdf';
 
 export type SlipPdfInput = {
   locale: string; no: string; name: string; employeeNo: string | null; groupId: string | null; month: string; periodFrom: string; periodTo: string; payDate: string; revision: number;
-  pay: number; deduction: number; net: number; draft: boolean; practice: boolean; correctionReason: string | null; requestId: string;
+  pay: number; deduction: number; net: number; draft: boolean; practice: boolean; correctionReason: string | null; requestId: string; tax?: { taxable: number; exempt: number } | null;
   lines: { code: string; kind: 'PAYMENT' | 'DEDUCTION' | 'EMPLOYER'; label: string; quantity: string | null; unitPrice: string | null; factor: string | null; amount: number }[];
   time?: SlipTime | null; // 저장된 명세의 시간 입력(snapshot.time). 올린 명세서 · 상여에는 없다
 };
@@ -50,12 +50,13 @@ export async function slipPdfBytes(a: SlipPdfInput): Promise<{ bytes: Uint8Array
     : null;
   const bytes = await buildSlipPdf({
     work,
+    tax: a.tax ?? null,
     company: await companyName(), no: a.no, name: a.name, employeeNo: a.employeeNo ?? '', group: groupPath(groups, a.groupId) ?? '', periodFrom: a.periodFrom, periodTo: a.periodTo, payDate: a.payDate, revision: a.revision, pay: a.pay, deduction: a.deduction, net: a.net,
     // 사업주 부담은 직원용 면에 넣지 않는다
     lines: a.lines.flatMap((l) => (l.kind === 'EMPLOYER' ? [] : [{ kind: l.kind, label: t.has(`line.${l.code}`) ? t(`line.${l.code}`) : l.label, how: how(l), amount: l.amount }])),
     labels: {
       title: t('pdfTitle', { month: a.month }), company: t('hCompany'), no: t('hNo'), name: t('hName'), group: t('hGroup'), period: t('hPeriod'), payDate: t('hPayDate'), revision: t('hRevision'),
-      pay: t('pay'), deduction: t('deduction'), item: t('pdfItem'), how: t('pdfHow'), amount: t('pdfAmount'), payTotal: t('pdfPayTotal'), deductionTotal: t('pdfDeductionTotal'), net: t('net'), none: t('none'),
+      pay: t('pay'), deduction: t('deduction'), item: t('pdfItem'), how: t('pdfHow'), amount: t('pdfAmount'), payTotal: t('pdfPayTotal'), deductionTotal: t('pdfDeductionTotal'), net: t('net'), none: t('none'), taxable: t('taxableTotal'), exempt: t('exemptTotal'),
       draft: a.draft ? t('pdfDraft') : null, practice: a.practice ? t('practice') : null, correction: a.revision > 1 ? t('correctedNote', { reason: a.correctionReason ?? '' }) : null,
       note: t('pdfNote'), page: (n, all) => t('pdfPage', { n, all }), money: (n) => t('won', { n: nf.format(n) }),
     },
@@ -76,4 +77,11 @@ export async function slipPdfResponse(a: SlipPdfInput): Promise<Response> {
       'x-request-id': a.requestId,
     },
   });
+}
+
+/** 저장된 계산 결과(snapshot.totals.taxable)로 과세 대상 · 비과세 (2026-10-22). 예전 명세서처럼 값이 없으면 null — 칸을 그리지 않는다 */
+export function slipTax(snapshot: unknown, pay: number | null): { taxable: number; exempt: number } | null {
+  const t = (snapshot as { totals?: { taxable?: unknown } | null } | null)?.totals;
+  if (!t || typeof t.taxable !== 'number' || pay === null) return null;
+  return { taxable: t.taxable, exempt: Math.max(0, pay - t.taxable) };
 }

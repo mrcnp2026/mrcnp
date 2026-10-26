@@ -10,6 +10,8 @@ export type MonthEntry = { key: string; name: string; time: string | null; href:
 export type MonthCell = { date: string; day: string; inMonth: boolean; red: boolean; today: boolean; holiday: string | null; entries: MonthEntry[] };
 
 const SHOW = 4;
+// 일정 카드 바탕: 직무 색을 옅게 (선 대신 색 면으로 구분 — 2026-10-23 의뢰인: 격자가 엑셀 같다)
+const TINT: Record<ShiftColor, string> = { primary: 'bg-primary/10', ok: 'bg-ok/10', warn: 'bg-warn/15', danger: 'bg-danger/10', text: 'bg-text/10', muted: 'bg-muted/10' };
 
 function EntryCard({ e }: { e: MonthEntry }) {
   const body = (
@@ -31,26 +33,26 @@ function EntryCard({ e }: { e: MonthEntry }) {
       </span>
     </>
   );
-  const cls = 'flex overflow-hidden rounded-button border border-border bg-bg text-xs';
+  const cls = `flex overflow-hidden rounded-button text-xs ${e.time && e.color ? TINT[e.color] : 'bg-surface'}`;
   return e.href ? (
-    <Link href={e.href} className={`${cls} hover:bg-primary-tint`}>
+    <Link href={e.href} className={`${cls} hover:brightness-95`}>
       {body}
     </Link>
   ) : (
-    <p className={`${cls} bg-surface!`}>{body}</p>
+    <p className={cls}>{body}</p>
   );
 }
 
 export function ScheduleMonth({ weekdays, cells, labels }: { weekdays: string[]; cells: MonthCell[]; labels: { more: (n: number) => string } }) {
   return (
-    <div className="grid grid-cols-7 border-t border-l border-border bg-bg">
+    <div className="grid grid-cols-7 gap-2">
       {weekdays.map((w, i) => (
-        <div key={w} className={`border-r border-b border-border bg-surface py-2 text-center text-sm font-semibold ${i === 0 || i === 6 ? 'text-danger' : 'text-muted'}`}>
+        <div key={w} className={`px-2 pb-1 text-xs font-semibold ${i === 0 || i === 6 ? 'text-danger' : 'text-muted'}`}>
           {w}
         </div>
       ))}
       {cells.map((c) => (
-        <div key={c.date} className={`flex min-h-32 min-w-0 flex-col gap-1 border-r border-b border-border p-1.5 ${c.red ? 'bg-danger-tint' : c.inMonth ? '' : 'bg-surface'} ${c.inMonth ? '' : 'opacity-60'}`}>
+        <div key={c.date} className={`flex min-h-32 min-w-0 flex-col gap-1 rounded-card border p-2 ${c.today ? 'border-primary bg-primary-tint/50' : c.red ? 'border-transparent bg-danger-tint/60' : c.inMonth ? 'border-border bg-bg' : 'border-transparent bg-surface/70'} ${c.inMonth ? '' : 'opacity-50'}`}>
           <div className="flex items-center gap-1.5">
             <span className={`num flex h-6 min-w-6 items-center justify-center rounded-chip px-1 text-sm font-bold ${c.today ? 'bg-primary text-on-primary' : c.red ? 'text-danger' : ''}`}>{c.day}</span>
             {c.holiday && <span className="truncate text-xs text-danger">{c.holiday}</span>}

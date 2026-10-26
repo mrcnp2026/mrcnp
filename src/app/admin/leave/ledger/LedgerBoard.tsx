@@ -1,5 +1,6 @@
 'use client';
 // 휴가 원장 화면의 조작부 — 정책 시작/고치기 · 후보 만들기 · 승인/반려 · 소멸 처리 · 직접 지급. 처리하면 화면을 새로 읽는다.
+import { Select } from '@/components/Select';
 import { useTranslations } from 'next-intl';
 import { ChevronRight } from 'lucide-react';
 import Link from 'next/link';
@@ -45,7 +46,7 @@ function Table({ heads, children }: { heads: string[]; children: ReactNode }) {
   );
 }
 
-export function LedgerBoard(props: { group?: { id: string; name: string } | null; today: string; live: boolean; practice: boolean; policy: Policy | null; history: History[]; candidates: LotLine[]; expiring: { id: string; name: string; usableTo: string; days: number; carry: number }[]; balances: BalanceLine[]; emp: { id: string; name: string; lots: LotLine[]; entries: EntryLine[]; settlements: SettleLine[] } | null }) {
+export function LedgerBoard(props: { lastRun: { at: string; created: number } | null; lastExpiry: { at: string; expired: number } | null; group?: { id: string; name: string } | null; today: string; live: boolean; practice: boolean; policy: Policy | null; history: History[]; candidates: LotLine[]; expiring: { id: string; name: string; usableTo: string; days: number; carry: number }[]; balances: BalanceLine[]; emp: { id: string; name: string; lots: LotLine[]; entries: EntryLine[]; settlements: SettleLine[] } | null }) {
   const t = useTranslations('admin.leaveLedger');
   const router = useRouter();
   const [busy, setBusy] = useState(false);
@@ -67,7 +68,8 @@ export function LedgerBoard(props: { group?: { id: string; name: string } | null
       return false;
     }
     const d = r.data;
-    if (d.accrual) setMsg(t('accrualDone', { created: d.accrual.created, existing: d.accrual.existing, noHire: d.accrual.noHireDate }));
+    if (d.accrual && d.expiry) setMsg(t('autoDone', { created: d.accrual.created, expired: d.expiry.expired, locked: d.expiry.locked }));
+    else if (d.accrual) setMsg(t('accrualDone', { created: d.accrual.created, existing: d.accrual.existing, noHire: d.accrual.noHireDate }));
     else if (d.expiry) setMsg(t('expiryDone', { n: d.expiry.expired, locked: d.expiry.locked }));
     else if (d.carry) setMsg(t(`carryResult.${d.carry.result}`, { carried: d.carry.carried / 480, expired: d.carry.expired / 480 }));
     else if (d.settle) setMsg(t(`settleResult.${d.settle}`));
@@ -88,7 +90,7 @@ export function LedgerBoard(props: { group?: { id: string; name: string } | null
       else n.add(id);
       return n;
     });
-  const why = (l: LotLine) => (l.rule === 'monthly' ? t('rule.monthly', { n: l.month ?? 0 }) : l.rule === 'annual' || l.rule === 'fiscal_annual' ? t(`rule.${l.rule}`, { n: l.years ?? 0 }) : t.has(`rule.${l.rule}`) ? t(`rule.${l.rule}`, { n: 0 }) : t('rule.manual', { n: 0 }));
+  const why = (l: LotLine) => (l.rule === 'monthly' ? t('rule.monthly', { n: l.month ?? 0 }) : l.rule === 'annual' || l.rule === 'fiscal_annual' || l.rule === 'hire_transition' ? t(`rule.${l.rule}`, { n: l.years ?? 0 }) : t.has(`rule.${l.rule}`) ? t(`rule.${l.rule}`, { n: 0 }) : t('rule.manual', { n: 0 }));
   const range = (l: LotLine) => (l.usableTo ? t('range', { from: l.usableFrom, to: l.usableTo }) : t('rangeOpen', { from: l.usableFrom }));
   const r2 = (n: number) => Math.round(n * 100) / 100; // 화면은 소수 둘째 자리까지 (2026-10-19 의뢰인) // 비례 발생(10.9896)은 소수 둘째 자리까지
   const day = (n: number) => t('days', { n: r2(n) });
@@ -100,47 +102,54 @@ export function LedgerBoard(props: { group?: { id: string; name: string } | null
       {msg && <p role="status" className="rounded-card border border-border bg-bg p-3 text-sm text-ok">{msg}</p>}
 
 
+      {/* 자동 발생 (2026-10-25 의뢰인: 연차 계산은 자동 승인 방식으로) — 매일 새벽 알아서 계산해 바로 승인한다. 여기서는 상태만 보이고, 급하면 [지금 바로 실행] */}
       {policy && (
         <Card>
           <CardTitle
             aside={
-              <Button type="button" size="sm" disabled={busy} onClick={() => run({ action: 'accrue' })}>
-                {t('accrue')}
+              <Button type="button" size="sm" variant="outline" disabled={busy} onClick={() => run({ action: 'accrue' })}>
+                {t('accrueNow')}
               </Button>
             }
           >
-            {t('candTitle', { n: candidates.length })}
+            {t('autoTitle')}
           </CardTitle>
+          <p className="pt-1 text-sm text-muted">{t('autoIntro')}</p>
+          <p className="num pt-2 text-sm text-faint">{props.lastRun ? t('autoLast', { at: props.lastRun.at, n: props.lastRun.created }) : t('autoNever')}</p>
+          <p className="num text-sm text-faint">{props.lastExpiry ? t('autoLastExpiry', { at: props.lastExpiry.at, n: props.lastExpiry.expired }) : t('autoNoExpiry')}</p>
+        </Card>
+      )}
+
+      {/* 자동으로 처리되지 않고 남은 연차 — 평소에는 비어 있어서 보이지 않는다 */}
+      {policy && candidates.length > 0 && (
+        <Card>
+          <CardTitle>{t('candTitle', { n: candidates.length })}</CardTitle>
           <p className="pt-1 pb-3 text-sm text-faint">{t('candIntro')}</p>
-          {candidates.length > 0 && (
-            <>
-              <div className="flex flex-wrap items-center gap-2 pb-3">
-                <button type="button" onClick={() => setPicked(new Set(picked.size === candidates.length ? [] : candidates.map((c) => c.id)))} className="inline-flex min-h-9 items-center rounded-button border border-border bg-bg px-3 text-sm font-bold text-muted">
-                  {t('pickAll')}
-                </button>
-                <Button type="button" size="sm" disabled={busy || picked.size === 0} onClick={() => run({ action: 'decide', decision: 'approve', ids: [...picked] })}>
-                  {t('approve', { n: picked.size })}
-                </Button>
-                <Button type="button" size="sm" variant="outline" disabled={busy || picked.size === 0} onClick={() => run({ action: 'decide', decision: 'reject', ids: [...picked] })}>
-                  {t('reject', { n: picked.size })}
-                </Button>
-              </div>
-              <Table heads={['', t('colName'), t('colWhy'), t('colDays'), t('colGranted'), t('colUsable')]}>
-                {candidates.map((c) => (
-                  <tr key={c.id} className="border-b border-border last:border-b-0">
-                    <td className="w-10 px-3 py-2">
-                      <input type="checkbox" checked={picked.has(c.id)} onChange={() => toggle(c.id)} aria-label={t('pick', { name: c.name })} className="size-5 accent-primary" />
-                    </td>
-                    <td className="px-3 py-2 font-bold">{c.name}</td>
-                    <td className="px-3 py-2 text-muted">{why(c)}</td>
-                    <td className="num px-3 py-2">{day(c.days)}</td>
-                    <td className="num px-3 py-2 whitespace-nowrap">{c.grantedOn}</td>
-                    <td className="num px-3 py-2 whitespace-nowrap">{range(c)}</td>
-                  </tr>
-                ))}
-              </Table>
-            </>
-          )}
+          <div className="flex flex-wrap items-center gap-2 pb-3">
+            <button type="button" onClick={() => setPicked(new Set(picked.size === candidates.length ? [] : candidates.map((c) => c.id)))} className="inline-flex min-h-9 items-center rounded-button border border-border bg-bg px-3 text-sm font-bold text-muted">
+              {t('pickAll')}
+            </button>
+            <Button type="button" size="sm" disabled={busy || picked.size === 0} onClick={() => run({ action: 'decide', decision: 'approve', ids: [...picked] })}>
+              {t('approve', { n: picked.size })}
+            </Button>
+            <Button type="button" size="sm" variant="outline" disabled={busy || picked.size === 0} onClick={() => run({ action: 'decide', decision: 'reject', ids: [...picked] })}>
+              {t('reject', { n: picked.size })}
+            </Button>
+          </div>
+          <Table heads={['', t('colName'), t('colWhy'), t('colDays'), t('colGranted'), t('colUsable')]}>
+            {candidates.map((c) => (
+              <tr key={c.id} className="border-b border-border last:border-b-0">
+                <td className="w-10 px-3 py-2">
+                  <input type="checkbox" checked={picked.has(c.id)} onChange={() => toggle(c.id)} aria-label={t('pick', { name: c.name })} className="size-5 accent-primary" />
+                </td>
+                <td className="px-3 py-2 font-bold">{c.name}</td>
+                <td className="px-3 py-2 text-muted">{why(c)}</td>
+                <td className="num px-3 py-2">{day(c.days)}</td>
+                <td className="num px-3 py-2 whitespace-nowrap">{c.grantedOn}</td>
+                <td className="num px-3 py-2 whitespace-nowrap">{range(c)}</td>
+              </tr>
+            ))}
+          </Table>
         </Card>
       )}
 
@@ -184,6 +193,15 @@ export function LedgerBoard(props: { group?: { id: string; name: string } | null
             {t('payoutTotal', { n: props.balances.reduce((a, b) => a + (b.payout ?? 0), 0).toLocaleString('ko-KR'), missing: props.balances.filter((b) => b.started && b.remainingMinutes > 0 && b.payout === null).length })}
           </p>
         )}
+        {/* 칸 설명 (2026-10-25 의뢰인: 「사용 · 소멸 · 예전 계산 · 대조가 뭔지 모르겠다」) — 폰 · PC 모두 접어 둔 채로 */}
+        <details className="mb-3 rounded-card bg-surface px-4 py-2 text-sm">
+          <summary className="min-h-9 cursor-pointer py-1.5 font-bold text-muted">{t('legendTitle')}</summary>
+          <ul className="flex flex-col gap-1.5 pt-1 pb-2 text-muted">
+            {(['granted', 'remaining', 'used', 'expired', 'payout', 'old'] as const).map((k) => (
+              <li key={k}>{t(`legend.${k}`)}</li>
+            ))}
+          </ul>
+        </details>
         {/* 폰: 한 사람 = 한 줄(이름 · 발생/사용 · 남은 연차 크게) — 누르면 그 사람 원장 (2026-10-16 디자인: 25명 카드로 7천 px였다) */}
         <ul className="-mx-1 flex flex-col divide-y divide-border lg:hidden">
           {props.balances.map((b) => (
@@ -208,7 +226,8 @@ export function LedgerBoard(props: { group?: { id: string; name: string } | null
           ))}
         </ul>
         <div className="hidden lg:block">
-        <Table heads={[t('colName'), t('colJoined'), t('colGrantedSum'), t('colUsed'), t('colExpired'), t('colRemaining'), t('colPayout'), t('colOld'), t('colCompare'), '']}>
+        {/* 칸 순서 (2026-10-25 의뢰인): 입사일 › 발생연차 › 원장 잔여 › 사용 › 소멸 › 남은 연차 수당. 「예전 계산 잔여 · 대조」 칸은 뺐다 — 예전 입력값과 다를 때만 잔여 옆에 표시한다 */}
+        <Table heads={[t('colName'), t('colJoined'), t('colGrantedSum'), t('colRemaining'), t('colUsed'), t('colExpired'), t('colPayoutNow'), '']}>
           {props.balances.map((b) => (
             <tr key={b.employeeId} className="border-b border-border last:border-b-0">
               <td className="px-3 py-2 font-bold">
@@ -216,17 +235,16 @@ export function LedgerBoard(props: { group?: { id: string; name: string } | null
                 {!b.active && <span className="ml-2 text-xs text-faint">{t('inactive')}</span>}
               </td>
               <td className="num px-3 py-2 whitespace-nowrap">{b.joinedOn ?? <span className="text-warn">{t('noJoined')}</span>}</td>
-              <td className="num px-3 py-2">{b.started ? day(b.granted) : ''}</td>
-              <td className="num px-3 py-2">{b.started ? day(b.used) : ''}</td>
-              <td className="num px-3 py-2">{b.started ? day(b.expired) : ''}</td>
+              <td className="num px-3 py-2">{b.started ? day(b.granted) : <Chip tone="neutral">{t('cmpNotStarted')}</Chip>}</td>
               <td className="num px-3 py-2 font-bold">
                 {b.started ? day(b.remaining) : ''}
+                {b.started && b.old !== null && b.old !== b.remaining && <span className="mt-1 block"><Chip tone="warn">{t('cmpDiff')}</Chip></span>}
                 {b.advance > 0 && <span className="block text-xs font-normal text-warn">{t(b.advanceOver ? 'advanceOver' : 'advance', { n: r2(b.advance) })}</span>}
                 {b.upcoming > 0 && <span className="block text-xs font-normal text-faint">{t('upcoming', { n: b.upcoming })}</span>}
               </td>
+              <td className="num px-3 py-2">{b.started ? day(b.used) : ''}</td>
+              <td className="num px-3 py-2">{b.started ? day(b.expired) : ''}</td>
               <td className="num px-3 py-2">{b.payout !== null ? t('won', { n: b.payout.toLocaleString('ko-KR') }) : b.payoutState && b.payoutState !== 'OK' ? <span className="text-xs text-faint">{t('payoutNoContract')}</span> : ''}</td>
-              <td className="num px-3 py-2">{b.old === null ? '' : day(b.old)}</td>
-              <td className="px-3 py-2">{!b.started ? <Chip tone="neutral">{t('cmpNotStarted')}</Chip> : b.old === null ? <Chip tone="info">{t('cmpLedgerOnly')}</Chip> : b.old === b.remaining ? <Chip tone="ok">{t('cmpSame')}</Chip> : <Chip tone="warn">{t('cmpDiff')}</Chip>}</td>
               <td className="px-3 py-2">
                 <Link href={`/admin/leave/ledger?emp=${b.employeeId}${q}#detail`} className="font-bold text-primary hover:underline">
                   {t('detail')}
@@ -369,13 +387,13 @@ export function LedgerBoard(props: { group?: { id: string; name: string } | null
               <p className="font-bold md:col-span-4">{t('manualTitle')}</p>
               <label className="flex flex-col gap-1">
                 <span>{t('fKind')}</span>
-                <select name="kind" className={field}>
-                  {['manual', 'carry', 'compensatory', 'migrated'].map((k) => (
+                <Select name="kind" className={field}>
+                  {['manual', 'carry', 'migrated'].map((k) => ( // 보상휴가는 쓰지 않는다 (2026-10-21 의뢰인)
                     <option key={k} value={k}>
                       {t(`kind.${k}`)}
                     </option>
                   ))}
-                </select>
+                </Select>
               </label>
               <label className="flex flex-col gap-1">
                 <span>{t('fDays')}</span>
@@ -421,6 +439,7 @@ export function LedgerBoard(props: { group?: { id: string; name: string } | null
               <li>{t('ruleDay', { hours: policy.value.dayMinutes / 60 })}</li>
               <li>{policy.value.carryMaxDays > 0 ? t('ruleCarry', { max: policy.value.carryMaxDays, months: policy.value.carryValidMonths }) : t('ruleCarryNone')}</li>
               <li>{policy.value.advanceMaxDays > 0 ? t('ruleAdvance', { max: policy.value.advanceMaxDays }) : t('ruleAdvanceNone')}</li>
+              {policy.value.basis === 'hire_date' && policy.value.convertedOn && <li>{t('ruleConverted', { date: policy.value.convertedOn })}</li>}
               <li className="num text-faint">{t('policyVersion', { n: policy.version, from: policy.validFrom })}</li>
             </ul>
             <p className="text-xs text-faint">{t('policyCaveat')}</p>
@@ -443,10 +462,10 @@ export function LedgerBoard(props: { group?: { id: string; name: string } | null
               >
                 <label className="flex flex-col gap-1">
                   <span className="font-bold">{t('fBasis')}</span>
-                  <select name="basis" defaultValue={policy.value.basis} className={field}>
+                  <Select name="basis" defaultValue={policy.value.basis} className={field}>
                     <option value="hire_date">{t('optHire')}</option>
                     <option value="fiscal_year">{t('optFiscal')}</option>
-                  </select>
+                  </Select>
                 </label>
                 <label className="flex flex-col gap-1">
                   <span className="font-bold">{t('fFiscalStart')}</span>
@@ -454,11 +473,11 @@ export function LedgerBoard(props: { group?: { id: string; name: string } | null
                 </label>
                 <label className="flex flex-col gap-1">
                   <span className="font-bold">{t('fRounding')}</span>
-                  <select name="rounding" defaultValue={policy.value.rounding} className={field}>
+                  <Select name="rounding" defaultValue={policy.value.rounding} className={field}>
                     <option value="ceil_day">{t('optCeilDay')}</option>
                     <option value="ceil_half">{t('optCeilHalf')}</option>
                     <option value="none">{t('optNone')}</option>
-                  </select>
+                  </Select>
                 </label>
                 <label className="flex flex-col gap-1">
                   <span className="font-bold">{t('fCarryMax')}</span>

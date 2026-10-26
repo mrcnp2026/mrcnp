@@ -5,7 +5,8 @@
 // - 사무실 위치(GPS)는 좌표+반경. 하나라도 켜져 있으면, 사무실 인터넷이 아닌 곳에서 찍을 때 폰이 위치를 함께 보낸다 (0017)
 // 누가 바꿨는지는 변경 기록에 남는다 (표에 *_by 칸이 없어 따로 한 줄 적는다).
 import { api, ApiError, readJson } from '@/lib/api';
-import { putSetting } from '@/lib/settings';
+import { putSetting, putShiftKindNames } from '@/lib/settings';
+import { cleanKindNames } from '@/lib/shift-kind-names';
 import { requireConsole } from '@/lib/console-pin';
 import { requireAdmin } from '@/lib/auth';
 import { validateLocation } from '@/lib/geo';
@@ -32,6 +33,15 @@ export const POST = api('admin.settings', async (req, ctx) => {
       const r = await putSetting('schedule.request_mode', b.mode, today, me.id);
       if (r === 'duplicate') throw new ApiError(409, 'setting_same_day'); // 같은 날 두 번 바꾸지 않는다(이력 한 줄)
       await note('app_settings', me.id, 'schedule.mode', { mode: b.mode });
+      return { ok: true };
+    }
+    case 'shift.kind_names': {
+      // 근무일정 유형의 보이는 이름 — 유형 여섯 개와 계산 방식은 그대로, 이름만 (2026-10-25 의뢰인)
+      const names = cleanKindNames(b.names);
+      if (!names) throw new ApiError(400, 'invalid_kind_name');
+      const r = await putShiftKindNames(names, today, me.id);
+      if (r === 'duplicate') throw new ApiError(409, 'setting_same_day');
+      await note('app_settings', me.id, 'shift.kind_names', { names });
       return { ok: true };
     }
     case 'rule.add': {
@@ -85,7 +95,12 @@ export const POST = api('admin.settings', async (req, ctx) => {
       const cidr = normalizeCidr(b.cidr);
       if (!cidr) throw new ApiError(400, 'invalid_cidr');
       const label = cleanLabel(b.label);
-      const { data: same } = await db.from('office_networks').select('id, active').eq('cidr', cidr);
+      // 인터넷 주소는 출퇴근 장소에 묶는다 (2026-10-23 의뢰인: 지점마다 와이파이 · IP가 다르다)
+      if (typeof b.locationId !== 'string' || !UUID.test(b.locationId)) throw new ApiError(400, 'invalid_input');
+      const locationId = b.locationId;
+      const { data: place } = await db.from('office_locations').select('id').eq('id', locationId).maybeSingle();
+      if (!place) throw new ApiError(404, 'not_found');
+      const { data: same } = await db.from('office_networks').select('id, active').eq('cidr', cidr).eq('location_id', locationId);
       if (same?.some((x) => x.active)) throw new ApiError(409, 'duplicate_network');
       // 꺼 둔 같은 주소가 있으면 새로 만들지 않고 다시 켠다
       if (same?.length) {
@@ -94,7 +109,7 @@ export const POST = api('admin.settings', async (req, ctx) => {
         await note('office_networks', same[0].id, 'network.on', { cidr });
         return { id: same[0].id, cidr };
       }
-      const { data, error } = await db.from('office_networks').insert({ cidr, label }).select('id').single();
+      const { data, error } = await db.from('office_networks').insert({ cidr, label, location_id: locationId }).select('id').single();
       if (error) throw new Error(`settings.network.add: ${error.code}`);
       await note('office_networks', data.id, 'network.add', { cidr });
       return { id: data.id, cidr };

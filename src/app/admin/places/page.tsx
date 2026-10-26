@@ -3,9 +3,12 @@
 import { ChevronRight, MapPin, Search } from 'lucide-react';
 import { getTranslations } from 'next-intl/server';
 import Link from 'next/link';
+import { headers } from 'next/headers';
+import { redirect } from 'next/navigation';
 import { AddSheet } from '@/components/AddSheet';
 import { OffToggle } from '@/components/OffToggle';
-import { PcTable } from '@/components/PcTable';
+import { TwoPane } from '@/components/settings';
+import { isPhoneUserAgent } from '@/lib/passkey';
 import { DetailBar } from '@/components/detail';
 import { Help } from '@/components/Help';
 import { RowList } from '@/components/list';
@@ -26,28 +29,25 @@ export default async function PlacesPage({ searchParams }: { searchParams: Promi
     .filter((l) => l.active !== off && (l.active || !l.label?.startsWith('e2e-')))
     .filter((l) => !q || `${l.label ?? ''} ${l.address ?? ''}`.toLowerCase().includes(q));
   const used = (id: string) => links.filter((k) => k.locationId === id).length;
+  // PC (2026-10-22): 목록 + 바로 고치기 한 화면 — 장소가 있으면 첫 장소로 들어간다. 「+ 추가」(?new=1)면 오른쪽 칸에 새 장소 양식
+  const phone = isPhoneUserAgent((await headers()).get('user-agent'));
+  if (!phone && sp.new !== '1' && !q && shown[0]) redirect(`/admin/places/${shown[0].id}`);
+  const tf = await getTranslations('frame');
 
   return (
     <PageShell wide>
+      <div className="lg:hidden">
       <DetailBar sheet={{ id: 'place', label: t('add'), mobile: tc('addShort') }} back="/admin/console" backLabel={tc('back')} menuLabel={ts('menu')} title={t('title')} extra={<Help>{t('intro')}</Help>} desc={t('intro')} />
+      </div>
       <div className="grid grid-cols-1 items-start gap-3">
         {/* PC: 시프티의 목록 — 「비활성화된 … 보기」 토글 + 열마다 검색 · 정렬이 되는 표 (2026-10-11 의뢰인 스샷). 폰은 아래의 탭 + 줄 목록 */}
-        <div className="hidden flex-col gap-3 lg:flex">
-          <OffToggle href={off ? '/admin/places' : '/admin/places?tab=off'} on={off} label={t('showOff')} />
-          <PcTable
-            labels={{ search: tc('colSearch'), empty: t(off ? 'emptyOff' : 'empty') }}
-            cols={[{ key: 'name', label: t('colName') }, { key: 'address', label: t('colAddress') }, { key: 'radius', label: t('colRadius'), align: 'right' }, { key: 'used', label: t('colUsed'), align: 'right' }]}
-            rows={shown.map((l) => ({
-              id: l.id,
-              cells: {
-                name: { text: l.label ?? t('unnamed'), node: <Link href={`/admin/places/${l.id}`} className="font-bold hover:text-primary">{l.label ?? t('unnamed')}</Link> },
-                // 주소는 한 줄로 줄여 「…」 — 전체 주소는 마우스를 올리면 보인다 (2026-10-17 의뢰인)
-                address: { text: l.address ?? '', node: <span title={l.address ?? ''} className="block max-w-88 truncate">{l.address ?? ''}</span> },
-                radius: { text: l.anywhere ? t('radiusAny') : t('radiusM', { n: l.radiusM }) },
-                used: { text: String(used(l.id)) },
-              },
-            }))}
-          />
+        <div className="hidden lg:block">
+          <TwoPane showOff title={tf('item.places')} current="" action={{ id: 'place', href: '/admin/places?new=1', label: t('add') }} items={all.filter((l) => l.active || !l.label?.startsWith('e2e-')).map((l) => ({ href: `/admin/places/${l.id}`, label: l.label ?? t('unnamed'), sub: l.address, off: !l.active }))}>
+            <h1 className="text-2xl font-bold tracking-tight">{t('add')}</h1>
+            <Card className="p-6">
+              <PlaceForm />
+            </Card>
+          </TwoPane>
         </div>
         <div className="flex flex-col gap-3 lg:hidden">
           {/* 폰도 PC와 같은 「꺼 둔 것 보기」 토글 (2026-10-17 의뢰인: PC · 폰 작동 방식을 같게) */}
@@ -78,7 +78,7 @@ export default async function PlacesPage({ searchParams }: { searchParams: Promi
             ))}
           </RowList>
         </div>
-        <AddSheet id="place" title={t('add')} defaultOpen={sp.new === '1'} modal>
+        <AddSheet id="place" title={t('add')} defaultOpen={phone && sp.new === '1'} modal>
           <Card className="flex flex-col gap-3">
             <PlaceForm sheet="place" />
           </Card>

@@ -1,12 +1,13 @@
 'use client';
 // 이상 유형마다 마감을 막을지 · 확인만 할지 · 보지 않을지 고른다. 저장하면 새 판이 쌓이고 마감 관리가 바로 이 기준을 쓴다.
+import { Select } from '@/components/Select';
 import { useTranslations } from 'next-intl';
 import { useRouter } from 'next/navigation';
 import { useState } from 'react';
 import { callApi } from '@/components/client-api';
 import { ErrorNote } from '@/components/ErrorNote';
 import { Button } from '@/components/ui';
-import { ANOMALY_TYPES, type AnomalyLevel, type AnomalyPolicy } from '@/lib/anomaly';
+import { ANOMALY_GROUPS, applyGroupLevel, groupLevel, type AnomalyGroup, type AnomalyLevel, type AnomalyPolicy } from '@/lib/anomaly';
 
 export function PolicyForm({ policy, version, counts }: { policy: AnomalyPolicy; version: number; counts: Record<string, number> }) {
   const t = useTranslations('admin.anomalies');
@@ -15,31 +16,33 @@ export function PolicyForm({ policy, version, counts }: { policy: AnomalyPolicy;
   const [busy, setBusy] = useState(false);
   const [done, setDone] = useState(false);
   const [err, setErr] = useState<{ code: string; requestId?: string } | null>(null);
-  const dirty = ANOMALY_TYPES.some((k) => value[k] !== policy[k]);
+  const dirty = (Object.keys(value) as (keyof AnomalyPolicy)[]).some((k) => value[k] !== policy[k]);
+  const keys = ANOMALY_GROUPS.map((g) => g.key);
+  const set = (k: AnomalyGroup, level: AnomalyLevel) => {
+    setDone(false);
+    setValue(applyGroupLevel(value, k, level));
+  };
   return (
     <div className="flex flex-col gap-3">
       {/* 폰: 유형마다 한 묶음 — 표의 좁은 첫 칸에서 설명이 한두 글자씩 줄을 바꿔 화면이 아주 길어졌다 (2026-10-18 디자인) */}
       <ul className="divide-y divide-border rounded-card border border-border bg-bg lg:hidden">
-        {ANOMALY_TYPES.map((k) => (
+        {keys.map((k) => (
           <li key={k} className="flex flex-col gap-1.5 px-3 py-2.5">
             <div className="flex items-center gap-2">
               <span className="min-w-0 flex-1 font-bold">{t(`type.${k}`)}</span>
               <span className="num text-sm text-muted">{t('colCount')} {counts[k] ?? 0}</span>
             </div>
             <p className="text-xs text-faint">{t(`why.${k}`)}</p>
-            <select
-              value={value[k]}
+            <Select
+              value={groupLevel(value, k)}
               aria-label={t(`type.${k}`)}
-              onChange={(e) => {
-                setDone(false);
-                setValue({ ...value, [k]: e.target.value as AnomalyLevel });
-              }}
+              onChange={(e) => set(k, e.target.value as AnomalyLevel)}
               className="min-h-11 w-full rounded-button border border-border bg-bg px-3 text-sm"
             >
               <option value="block">{t('level.block')}</option>
               <option value="check">{t('level.check')}</option>
               <option value="off">{t('level.off')}</option>
-            </select>
+            </Select>
           </li>
         ))}
       </ul>
@@ -55,7 +58,7 @@ export function PolicyForm({ policy, version, counts }: { policy: AnomalyPolicy;
             </tr>
           </thead>
           <tbody>
-            {ANOMALY_TYPES.map((k) => (
+            {keys.map((k) => (
               <tr key={k} className="border-b border-border last:border-b-0">
                 <td className="px-3 py-2">
                   <span className="font-bold">{t(`type.${k}`)}</span>
@@ -63,19 +66,16 @@ export function PolicyForm({ policy, version, counts }: { policy: AnomalyPolicy;
                 </td>
                 <td className="num px-3 py-2">{counts[k] ?? 0}</td>
                 <td className="px-3 py-2">
-                  <select
-                    value={value[k]}
+                  <Select
+                    value={groupLevel(value, k)}
                     aria-label={t(`type.${k}`)}
-                    onChange={(e) => {
-                      setDone(false);
-                      setValue({ ...value, [k]: e.target.value as AnomalyLevel });
-                    }}
+                    onChange={(e) => set(k, e.target.value as AnomalyLevel)}
                     className="min-h-9 rounded-button border border-border bg-bg px-3 text-sm"
                   >
                     <option value="block">{t('level.block')}</option>
                     <option value="check">{t('level.check')}</option>
                     <option value="off">{t('level.off')}</option>
-                  </select>
+                  </Select>
                 </td>
               </tr>
             ))}

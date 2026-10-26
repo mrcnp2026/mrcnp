@@ -1,10 +1,12 @@
 // 통합 검색 결과 화면 — 관리자 모드(/admin/search) · 직원 모드(/punch/search)가 같이 쓴다 (2026-10-14 의뢰인: 다우오피스 위쪽 검색, `스샷/스샷2/검색.png`).
 // 위: 찾을 곳 고르기 + 찾을 말 · 종류별 탭(건수) · 「'말' 정확히 일치 n건」 + [관련결과 더보기]. 전체 탭은 종류마다 5건씩 카드로, 종류 탭은 전부.
+import { Select } from '@/components/Select';
 import { Banknote, Bell, ClipboardList, LayoutGrid, MessageSquare, Plane, Search, Users } from 'lucide-react';
 import { getTranslations } from 'next-intl/server';
 import Link from 'next/link';
 import { redirect } from 'next/navigation';
 import { HelpTip } from '@/components/Help';
+import { LiveSearchInput } from '@/components/LiveSearchInput';
 import { Button, PageShell } from '@/components/ui';
 import { getMe } from '@/lib/auth';
 import { SEARCH_KINDS, type SearchHit, type SearchKind } from '@/lib/search';
@@ -20,7 +22,8 @@ export async function SearchPage({ base, searchParams }: { base: '/admin' | '/pu
   const [t, sp] = await Promise.all([getTranslations('search'), searchParams]);
   const q = (sp.q ?? '').trim();
   const scope = isKind(sp.s) ? sp.s : 'all';
-  const more = sp.more === '1';
+  // 비슷한 결과(낱말 일부 · 초성)도 처음부터 함께 — 정확히 맞는 것 다음에 (2026-10-22 의뢰인). 「정확히 일치만」을 고르면 more=0
+  const more = sp.more !== '0';
   const r = await runSearch(me, q);
   const shown = (k: SearchKind) => r.counts[k].exact + (more ? r.counts[k].related : 0);
   const hits = r.hits.filter((h) => (more || h.level === 'exact') && (scope === 'all' || h.kind === scope));
@@ -31,7 +34,7 @@ export async function SearchPage({ base, searchParams }: { base: '/admin' | '/pu
     const p = new URLSearchParams({ q });
     const s = over.s ?? scope;
     if (s !== 'all') p.set('s', s);
-    if (over.more ?? more) p.set('more', '1');
+    if (!(over.more ?? more)) p.set('more', '0');
     return `${base}/search?${p.toString()}`;
   };
   const field = 'h-10 rounded-button border border-border bg-bg px-3 text-sm';
@@ -59,19 +62,16 @@ export async function SearchPage({ base, searchParams }: { base: '/admin' | '/pu
         <HelpTip>{t('intro')}</HelpTip>
       </h1>
       <form action={`${base}/search`} role="search" className="flex flex-wrap items-center gap-2">
-        <select name="s" defaultValue={scope} aria-label={t('scope')} className={field}>
+        <Select name="s" defaultValue={scope} aria-label={t('scope')} className={field}>
           <option value="all">{t('all')}</option>
           {SEARCH_KINDS.map((k) => (
             <option key={k} value={k}>
               {t(`kind.${k}`)}
             </option>
           ))}
-        </select>
-        <label className="flex h-10 min-w-0 flex-1 items-center gap-2 rounded-button border border-border bg-bg px-3 focus-within:border-primary sm:max-w-md">
-          <Search aria-hidden size={16} className="text-faint" />
-          <input type="search" name="q" defaultValue={q} placeholder={t('placeholder')} aria-label={t('placeholder')} maxLength={50} className="min-w-0 flex-1 bg-transparent text-sm outline-none" />
-        </label>
-        {more && <input type="hidden" name="more" value="1" />}
+        </Select>
+        <LiveSearchInput key={scope} initial={q} placeholder={t('placeholder')} />
+        {!more && <input type="hidden" name="more" value="0" />}
         <Button type="submit" size="md">
           {t('submit')}
         </Button>

@@ -1,11 +1,11 @@
 'use client';
-// PC 공통 표 — 시프티 PC의 목록 표 모양 (2026-10-11 의뢰인 스샷 `스샷/관리-직원.png` 등):
-//   머리줄 위에 열마다 검색 칸 · 머리 글자를 누르면 정렬(고른 열은 파란 글자 + 화살표) · 가는 줄 · 위에 「총 N」.
+// PC 공통 표 (2026-10-11 시프티 모양에서 출발 → 2026-10-22 의뢰인: 「칸마다 검색이 붙은 건 다 수정해」 「시프티 것을 그냥 베낀 것 아니냐」):
+//   표 위에 검색 한 칸(모든 열에서 찾는다) + 건수 · 머리 글자를 누르면 정렬(고른 열은 강조 + 화살표) · 가는 줄.
 // 줄 자료는 서버가 만들어 넘긴다 — 칸마다 글자(text: 검색·정렬에 쓴다)와 보일 모양(node: 없으면 글자 그대로).
 // 폰(lg 아래)에서는 표 대신 카드 목록으로 보인다 — 첫 열이 제목, 나머지 열은 「이름 값」 줄 (2026-10-18 의뢰인: 모바일 가로 스크롤 금지, 통합설정 관리 화면).
 // 폰용 목록을 따로 둔 화면은 부르는 쪽이 표를 lg에서만 보이게 감싼다 — 그때 이 카드도 같이 숨는다.
 // 2026-10-16 디자인: 한 쪽에 50줄 — 실제 휴가 260건을 넣고 보니 표가 1만 9천 px까지 길어졌다. 검색 · 정렬을 바꾸면 첫 쪽으로.
-import { ArrowDown, ArrowUp } from 'lucide-react';
+import { ArrowDown, ArrowUp, Inbox, Search } from 'lucide-react';
 import { useMemo, useState, type ReactNode } from 'react';
 import { MiniPager } from './PagedList';
 
@@ -13,43 +13,53 @@ export type PcCol = { key: string; label: string; align?: 'left' | 'right' | 'ce
 export type PcRow = { id: string; dim?: boolean; cells: Record<string, { text: string; node?: ReactNode }> };
 
 export function PcTable({ cols, rows, labels, total, pageSize = 50 }: { cols: PcCol[]; rows: PcRow[]; labels: { search: string; empty: string; total?: string }; total?: boolean; pageSize?: number }) {
-  const [find, setFind] = useState<Record<string, string>>({});
   const [sort, setSort] = useState<{ key: string; dir: 1 | -1 } | null>(null);
   const [page, setPage] = useState(1);
-  const [any, setAny] = useState(''); // 폰 카드의 검색 한 칸 — 모든 열에서 찾는다
+  const [any, setAny] = useState(''); // 검색 한 칸 — 모든 열에서 찾는다 (PC · 폰 같은 칸)
+  const searchable = cols.filter((c) => c.search !== false);
   const shown = useMemo(() => {
-    const active = Object.entries(find).filter(([, v]) => v.trim());
-    const q = any.trim().toLowerCase();
-    let out = rows.filter((r) => active.every(([k, v]) => (r.cells[k]?.text ?? '').toLowerCase().includes(v.trim().toLowerCase())) && (!q || cols.some((c) => (r.cells[c.key]?.text ?? '').toLowerCase().includes(q))));
+    const q = any.trim().toLowerCase().replace(/\s+/g, '');
+    let out = rows.filter((r) => !q || searchable.some((c) => (r.cells[c.key]?.text ?? '').toLowerCase().replace(/\s+/g, '').includes(q)));
     if (sort) out = [...out].sort((a, b) => sort.dir * (a.cells[sort.key]?.text ?? '').localeCompare(b.cells[sort.key]?.text ?? '', undefined, { numeric: true }));
     return out;
-  }, [rows, cols, find, any, sort]);
+  }, [rows, searchable, any, sort]);
   const pages = Math.max(1, Math.ceil(shown.length / pageSize));
   const at = Math.min(page, pages);
   const slice = shown.slice((at - 1) * pageSize, at * pageSize);
   const al = (c: PcCol) => (c.align === 'right' ? 'text-right' : c.align === 'center' ? 'text-center' : 'text-left');
   return (
     <div className="flex flex-col gap-2">
-      {total && labels.total && (
-        <p className="num text-muted">
-          {labels.total} <b className="text-lg text-text">{shown.length}</b>
-        </p>
+      {/* 위 줄: 건수 + 검색 한 칸 */}
+      {(rows.length > 5 || (total && labels.total)) && (
+        <div className="flex flex-wrap items-center gap-3">
+          {total && labels.total && (
+            <p className="num text-sm text-muted">
+              {labels.total} <b className="text-base text-text">{shown.length}</b>
+            </p>
+          )}
+          {rows.length > 5 && (
+            <label className="ml-auto flex h-11 w-full items-center gap-2 rounded-button border border-border bg-bg px-3 focus-within:border-primary lg:h-9 lg:w-72">
+              <Search aria-hidden size={16} className="shrink-0 text-faint" />
+              <input
+                type="search"
+                value={any}
+                onChange={(e) => { setAny(e.target.value); setPage(1); }}
+                placeholder={labels.search}
+                aria-label={labels.search}
+                className="min-w-0 flex-1 bg-transparent text-base outline-none placeholder:text-faint lg:text-sm"
+              />
+            </label>
+          )}
+        </div>
       )}
       {/* 화면의 주 목록 표 — 견본 「나 · 파랑」처럼 위에 진한 선 한 줄(공통 목록 틀 ListTable과 같은 모양, 2026-10-16) */}
       {/* 폰: 카드 목록 */}
       <div className="flex flex-col gap-2 lg:hidden">
-        {rows.length > 5 && (
-          <input
-            type="search"
-            value={any}
-            onChange={(e) => { setAny(e.target.value); setPage(1); }}
-            placeholder={labels.search}
-            aria-label={labels.search}
-            className="h-11 w-full rounded-button border border-border bg-bg px-3 text-base outline-none placeholder:text-faint focus:border-primary"
-          />
-        )}
         {shown.length === 0 ? (
-          <p className="rounded-card bg-bg p-5 text-center text-sm text-faint">{labels.empty}</p>
+          <p className="flex flex-col items-center gap-2 rounded-card border border-dashed border-border bg-bg px-5 py-10 text-center text-sm text-muted">
+            <Inbox aria-hidden size={22} strokeWidth={1.75} className="text-primary" />
+            {labels.empty}
+          </p>
         ) : (
           <ul className="divide-y divide-border overflow-hidden rounded-card border border-border bg-bg">
             {slice.map((r) => (
@@ -68,30 +78,15 @@ export function PcTable({ cols, rows, labels, total, pageSize = 50 }: { cols: Pc
           </ul>
         )}
       </div>
-      <div className="hidden overflow-x-auto border-t border-text bg-bg lg:block">
+      {/* PC: 카드 안의 표 (2026-10-22 의뢰인: 「엑셀 붙인 것 같다」 — 위 굵은 검은 줄 · 바탕 없는 표였다). 처음부터 빈 표면 머리줄 없이 안내만 */}
+      <div className="hidden overflow-x-auto rounded-card border border-border bg-bg shadow-card lg:block">
         <table className="w-full text-sm">
-          <thead>
-            <tr>
-              {cols.map((c) => (
-                <td key={c.key} className="px-3 pt-3 pb-1">
-                  {c.search !== false && (
-                    <input
-                      type="search"
-                      value={find[c.key] ?? ''}
-                      onChange={(e) => { setFind({ ...find, [c.key]: e.target.value }); setPage(1); }}
-                      placeholder={labels.search}
-                      aria-label={`${c.label} ${labels.search}`}
-                      className="h-8 w-full max-w-32 min-w-16 rounded-button border border-border bg-surface px-2 text-xs! outline-none placeholder:text-faint focus:border-primary focus:bg-bg"
-                    />
-                  )}
-                </td>
-              ))}
-            </tr>
-            <tr>
+          <thead className={rows.length === 0 ? 'sr-only' : undefined}>
+            <tr className="border-b border-border bg-surface/60">
               {cols.map((c) => {
                 const on = sort?.key === c.key;
                 return (
-                  <th key={c.key} scope="col" aria-sort={on ? (sort!.dir === 1 ? 'ascending' : 'descending') : undefined} className={`px-3 py-2 ${al(c)} ${c.className ?? ''}`}>
+                  <th key={c.key} scope="col" aria-sort={on ? (sort!.dir === 1 ? 'ascending' : 'descending') : undefined} className={`px-3 py-2.5 text-xs font-semibold whitespace-nowrap text-muted ${al(c)} ${c.className ?? ''}`}>
                     {c.sort === false ? (
                       c.label
                     ) : (
@@ -108,13 +103,19 @@ export function PcTable({ cols, rows, labels, total, pageSize = 50 }: { cols: Pc
           <tbody>
             {shown.length === 0 && (
               <tr>
-                <td colSpan={cols.length} className="px-3 py-8 text-center text-faint">
-                  {labels.empty}
+                <td colSpan={cols.length} className="px-3 py-14 text-center">
+                  {/* 빈 표 (2026-10-22): 글자 한 줄 대신 아이콘 + 안내 */}
+                  <span className="flex flex-col items-center gap-2 text-sm text-muted">
+                    <span className="flex size-11 items-center justify-center rounded-chip bg-primary-tint text-primary">
+                      <Inbox aria-hidden size={22} strokeWidth={1.75} />
+                    </span>
+                    {labels.empty}
+                  </span>
                 </td>
               </tr>
             )}
             {slice.map((r) => (
-              <tr key={r.id} className={r.dim ? 'opacity-60' : ''}>
+              <tr key={r.id} className={`border-b border-border last:border-b-0 hover:bg-surface/50 ${r.dim ? 'opacity-60' : ''}`}>
                 {cols.map((c) => (
                   <td key={c.key} className={`px-4 py-2.5 ${al(c)}`}>
                     {r.cells[c.key]?.node ?? r.cells[c.key]?.text ?? ''}

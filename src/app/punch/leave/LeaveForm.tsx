@@ -1,6 +1,7 @@
 'use client';
 // 휴가 신청 양식. 일수는 서버가 근무일만 세어 정한다 — 화면은 보내기만 한다.
 // direct: 최고관리자 직권 추가 · 고치기(2026-10-15 의뢰인) — 같은 양식으로 api/admin/leave/direct에 보낸다. 사유는 필수(결정 기록에 남는다).
+import { Select } from '@/components/Select';
 import { useTranslations } from 'next-intl';
 import { useRouter } from 'next/navigation';
 import { useState } from 'react';
@@ -11,12 +12,13 @@ import { Button, Card } from '@/components/ui';
 
 const field = 'min-h-11 w-full rounded-button border border-border bg-bg px-3 text-base text-text';
 
+export type ChangeLeave = { leaveId: string; initial: { typeCode: string; startDate: string; endDate: string; startTime: string | null }; onDone?: () => void };
 export type DirectLeave = { employeeId: string; replaceId?: string; initial?: { typeCode: string; startDate: string; endDate: string; startTime: string | null } };
 
-export function LeaveForm({ today, types, direct }: { today: string; types: { code: string; name: string; unit: number; deducts: boolean; hours: number; startTime: string | null; endTime: string | null; group: string | null }[]; direct?: DirectLeave }) {
+export function LeaveForm({ today, types, direct, change }: { today: string; types: { code: string; name: string; unit: number; deducts: boolean; hours: number; startTime: string | null; endTime: string | null; group: string | null }[]; direct?: DirectLeave; change?: ChangeLeave }) {
   const t = useTranslations('leave');
   const router = useRouter();
-  const init = direct?.initial;
+  const init = (direct ?? change)?.initial;
   const [code, setCode] = useState(init && types.some((x) => x.code === init.typeCode) ? init.typeCode : (types[0]?.code ?? 'annual'));
   const [busy, setBusy] = useState(false);
   const [sent, setSent] = useState<number | null>(null);
@@ -41,7 +43,8 @@ export function LeaveForm({ today, types, direct }: { today: string; types: { co
           setBusy(true);
           setErr(null);
           setSent(null);
-          const r = await callApi<{ days: number }>(direct ? '/api/admin/leave/direct' : '/api/leave', {
+          const r = await callApi<{ days: number }>(direct ? '/api/admin/leave/direct' : change ? '/api/leave/change' : '/api/leave', {
+            ...(change ? { kind: 'change', leaveId: change.leaveId } : {}),
             ...(direct ? { employeeId: direct.employeeId, replaceId: direct.replaceId ?? null, adminReason: fd.get('reason') } : {}),
             typeCode: code,
             startDate: fd.get('startDate'),
@@ -52,15 +55,17 @@ export function LeaveForm({ today, types, direct }: { today: string; types: { co
           setBusy(false);
           if (!r.ok) return setErr(r);
           setSent(r.data.days);
-          if (!direct?.replaceId) form.reset();
+          if (!direct?.replaceId && !change) form.reset();
           router.refresh();
+          change?.onDone?.();
         }}
       >
-        <h2 className="font-semibold">{t(direct ? (direct.replaceId ? 'directEdit' : 'directAdd') : 'request')}</h2>
+        <h2 className="font-semibold">{t(direct ? (direct.replaceId ? 'directEdit' : 'directAdd') : change ? 'changeTitle' : 'request')}</h2>
+        {change && <p className="text-sm text-muted">{t('changeHint')}</p>}
         {direct && <p className="text-sm text-muted">{t('directHint')}</p>}
         <label className="flex flex-col gap-1 text-sm text-muted">
           {t('typeLabel')}
-          <select value={code} onChange={(e) => setCode(e.target.value)} className={field}>
+          <Select value={code} onChange={(e) => setCode(e.target.value)} className={field}>
             {groups.length <= 1
               ? types.map(option)
               : groups.map((g) =>
@@ -72,7 +77,7 @@ export function LeaveForm({ today, types, direct }: { today: string; types: { co
                     types.filter((x) => !x.group).map(option)
                   ),
                 )}
-          </select>
+          </Select>
         </label>
         {cur && (
           <p className="num rounded-button bg-surface p-3 text-sm text-muted">
@@ -103,14 +108,14 @@ export function LeaveForm({ today, types, direct }: { today: string; types: { co
         )}
         <p className="text-xs text-faint">{t('workdaysOnly')}</p>
         <label className="flex flex-col gap-1 text-sm text-muted">
-          {t(direct ? 'directReason' : 'reason')}
-          <textarea name="reason" maxLength={200} rows={2} required={!!direct} minLength={direct ? 2 : undefined} className="w-full rounded-button border border-border bg-bg p-3 text-base text-text" />
-          <span className="text-xs text-faint">{t(direct ? 'directReasonHint' : 'reasonHint')}</span>
+          {t(direct ? 'directReason' : change ? 'changeReason' : 'reason')}
+          <textarea name="reason" maxLength={200} rows={2} required={!!direct || !!change} minLength={direct ? 2 : undefined} className="w-full rounded-button border border-border bg-bg p-3 text-base text-text" />
+          <span className="text-xs text-faint">{t(direct ? 'directReasonHint' : change ? 'changeReasonHint' : 'reasonHint')}</span>
         </label>
         {err && <ErrorNote code={err.code} requestId={err.requestId} namespace="leave" />}
-        {sent !== null && <p className="text-sm font-semibold text-ok">{t(direct ? 'directDone' : 'sent', { n: sent })}</p>}
+        {sent !== null && <p className="text-sm font-semibold text-ok">{t(direct ? 'directDone' : change ? 'changeSent' : 'sent', { n: sent })}</p>}
         <Button type="submit" disabled={busy} className="w-full">
-          {t(direct ? (direct.replaceId ? 'directEditSave' : 'directAddSave') : 'submit')}
+          {t(direct ? (direct.replaceId ? 'directEditSave' : 'directAddSave') : change ? 'changeSend' : 'submit')}
         </Button>
       </form>
     </Card>
@@ -156,17 +161,18 @@ export function CancelLeave({ id }: { id: string }) {
 }
 
 /** 승인된 휴가의 「삭제 요청」 (2026-10-11) — 사유를 적어 보내면 관리자가 승인해야 휴가가 취소된다. 대기 중이면 요청을 거둘 수 있다 */
-export function DeleteLeaveRequest({ leaveId, pendingId }: { leaveId: string; pendingId: string | null }) {
+export function DeleteLeaveRequest({ leaveId, pendingId, pendingKind, today, types, initial }: { leaveId: string; pendingId: string | null; pendingKind?: string; today: string; types: Parameters<typeof LeaveForm>[0]['types']; initial: ChangeLeave['initial'] }) {
   const t = useTranslations('leave');
   const router = useRouter();
   const [ask, setAsk] = useState(false);
+  const [changing, setChanging] = useState(false);
   const [reason, setReason] = useState('');
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState<{ code: string; requestId?: string } | null>(null);
   if (pendingId)
     return (
       <div className="mt-1 flex flex-wrap items-center gap-2">
-        <span className="rounded-button bg-warn-tint px-2 py-1 text-sm font-bold text-warn">{t('deletePending')}</span>
+        <span className="rounded-button bg-warn-tint px-2 py-1 text-sm font-bold text-warn">{t(pendingKind === 'change' ? 'changePending' : 'deletePending')}</span>
         <button
           type="button"
           disabled={busy}
@@ -182,11 +188,17 @@ export function DeleteLeaveRequest({ leaveId, pendingId }: { leaveId: string; pe
         </button>
       </div>
     );
+  if (changing) return <LeaveForm today={today} types={types} change={{ leaveId, initial, onDone: () => setChanging(false) }} />;
   if (!ask)
     return (
-      <Button variant="outline" className="mt-1 self-start" onClick={() => setAsk(true)}>
-        {t('deleteRequest')}
-      </Button>
+      <div className="mt-1 flex flex-wrap gap-2">
+        <Button variant="outline" className="self-start" onClick={() => setChanging(true)}>
+          {t('changeRequest')}
+        </Button>
+        <Button variant="outline" className="self-start" onClick={() => setAsk(true)}>
+          {t('deleteRequest')}
+        </Button>
+      </div>
     );
   return (
     <form

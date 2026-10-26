@@ -5,6 +5,7 @@ import 'server-only';
 import { cache } from 'react';
 import { SETTINGS, type SettingKey, type SettingValue } from '@/config/settings-catalog';
 import { pickAt } from '@/lib/settings-pick';
+import type { KindNames } from '@/lib/shift-kind-names';
 import { createAdminClient } from '@/lib/supabase/admin';
 
 type Row = { key: string; value: unknown; effective_from: string };
@@ -42,3 +43,17 @@ export async function putSetting(key: SettingKey, value: unknown, effectiveFrom:
   return 'ok';
 }
 
+
+// ── 근무일정 유형의 보이는 이름 (2026-10-25 의뢰인) — 카탈로그의 숫자 · 선택 칸과 모양이 달라 한 줄짜리 묶음 값으로 둔다 ──
+const KIND_NAMES_KEY = 'shift.kind_names';
+
+export async function getShiftKindNames(onDate: string): Promise<KindNames> {
+  return pickAt(await loadAll(), KIND_NAMES_KEY, onDate, {} as KindNames);
+}
+
+export async function putShiftKindNames(value: KindNames, effectiveFrom: string, actorId: string): Promise<'ok' | 'duplicate'> {
+  const { error } = await createAdminClient().from('app_settings').insert({ key: KIND_NAMES_KEY, value, effective_from: effectiveFrom, updated_by: actorId });
+  if (error?.code === '23505') return 'duplicate';
+  if (error) throw new Error(`settings.putKindNames: ${error.code}`);
+  return 'ok';
+}

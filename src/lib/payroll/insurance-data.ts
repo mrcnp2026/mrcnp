@@ -8,6 +8,7 @@ import { OFFICE } from '@/config/office';
 import 'server-only';
 import { ApiError } from '@/lib/api';
 import type { Me } from '@/lib/auth';
+import { addDays } from '@/lib/calendar';
 import { createAdminClient } from '@/lib/supabase/admin';
 import { addOverride, loadRun, withdrawOverride, type RunRow } from './run-data';
 import { payrollAudit } from './staff-data';
@@ -62,6 +63,26 @@ export async function loadEnrollments(testViewer: boolean): Promise<{ rows: Enro
     }
   }
   return { rows, gaps, people };
+}
+
+/** 「확인할 사람」은 최근에 입사 · 퇴사한 사람만 — 오래전 입사자는 이미 신고했을 가능성이 커서 따로 접어 둔다 (2026-10-26 의뢰인) */
+export const GAP_RECENT_DAYS = 90;
+export const isRecentGap = (g: EnrollGap, today: string): boolean => g.qualifyOn >= addDays(today, -GAP_RECENT_DAYS);
+
+/** 오래된 건을 한꺼번에 「확인 완료」로 — 이미 신고했다고 담당자가 확인한 직원들. 4대보험 4줄을 확인 완료로 만든다(해당하지 않는 보험은 나중에 줄에서 끈다) */
+export async function confirmOldEnrollments(args: { me: Me; today: string; requestId?: string }): Promise<{ people: number; lines: number }> {
+  const { gaps } = await loadEnrollments(isTestNo(args.me.employeeNo));
+  const old = gaps.filter((g) => !isRecentGap(g, args.today));
+  let lines = 0;
+  for (const g of old) {
+    for (const insurer of INSURERS) {
+      const { error } = await db().from('payroll_insurance_enrollments').insert({ employee_id: g.employeeId, insurer, event: g.event, qualify_on: g.qualifyOn, state: 'CONFIRMED', confirmed_on: args.today, evidence: '기존 직원 일괄 확인(이미 신고됨)', created_by: args.me.id });
+      if (error && error.code !== '23505') boom('confirmOldEnrollments', error);
+      if (!error) lines++;
+    }
+  }
+  await payrollAudit({ actorId: args.me.id, action: 'insurance.enroll.confirmOld', table: 'payroll_insurance_enrollments', requestId: args.requestId, detail: { people: old.length, lines } });
+  return { people: old.length, lines };
 }
 
 const sameSide = async (employeeId: string, me: Me) => {

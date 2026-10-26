@@ -4,6 +4,7 @@
 // 보일 때는 display: contents — 상단 바가 본문 옆에 직접 놓여야 화면에 붙는다(sticky).
 import { usePathname } from 'next/navigation';
 import type { ReactNode } from 'react';
+import { isConsolePath } from '@/config/console-paths';
 
 export const BARE_PATHS = ['/admin/records/list', '/admin/records/calendar', '/admin/schedule', '/admin/leave', '/admin/inbox', '/punch/requests', '/punch/records', '/punch/schedule', '/punch/leave', '/admin/jobs', '/admin/branches', '/admin/places', '/admin/shifts', '/admin/members', '/punch/schedule/request', '/punch/home-settings'];
 
@@ -12,5 +13,6 @@ const BARE_PATTERNS = [/^\/admin\/(jobs|branches|places|shifts|members)\/[0-9a-f
 
 export function FrameHeader({ children }: { children: ReactNode }) {
   const path = usePathname();
-  return <div className={BARE_PATHS.includes(path) || BARE_PATTERNS.some((r) => r.test(path)) ? 'hidden' : 'contents'}>{children}</div>;
+  // 통합설정 안은 PC처럼 경로 머리(ConsoleGuide)가 맨 위 — 로고 줄은 숨긴다 (2026-10-22)
+  return <div className={BARE_PATHS.includes(path) || BARE_PATTERNS.some((r) => r.test(path)) || isConsolePath(path) ? 'hidden' : 'contents'}>{children}</div>;
 }

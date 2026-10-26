@@ -10,6 +10,7 @@ export type AttendanceFacts = {
   payableMinutes: number; // 끊는 단위를 적용한 급여용 시간 합계
   approved: { overtime: number; night: number; holidayWithin8: number; holidayOver8: number };
   pendingMinutes: number; // 승인 대기 연장 · 야간 · 휴일 (확인 기준 미만이라 대기에 오르지 않은 분은 넣지 않는다)
+  pendingDates?: string[]; // 위 대기가 어느 날인지 (월-일) — 막힘 안내에 날짜를 보인다
   unreviewedMinutes?: number; // 확인 기준 미만의 연장 — 인정하지 않은 시간이라 지급하지 않고 참고로만 남긴다
   paidLeaveDays: number;
   unpaidLeaveDays?: number;
@@ -22,7 +23,7 @@ export type AttendanceFacts = {
 
 export function timeFromAttendance(a: AttendanceFacts, basis: 'ACTUAL' | 'ROUNDED' | 'SCHEDULE', payType: 'MONTHLY' | 'HOURLY' | 'ANNUAL', dayMinutes = 480, premiumBasis: 'ACTUAL' | 'ROUNDED' | 'LEGACY' = 'LEGACY'): { time: EngineTime | null; blockers: Blocker[] } {
   const blockers: Blocker[] = [];
-  if (a.pendingMinutes > 0) blockers.push({ code: 'overtime_pending' });
+  if (a.pendingMinutes > 0) blockers.push({ code: 'overtime_pending', ...(a.pendingDates?.length ? { detail: a.pendingDates.join(', ') } : {}) });
   if (a.unconfirmedDays > 0) blockers.push({ code: 'attendance_unconfirmed' });
   for (const f of a.flags.filter((x) => x.startsWith('block:'))) blockers.push({ code: 'attendance_flag', detail: f.slice(6) });
   const approved = premiumBasis === 'ROUNDED' ? a.rounded?.approved : a.approved;

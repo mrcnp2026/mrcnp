@@ -1,5 +1,6 @@
 'use client';
 // 휴가 종류 양식 (2026-10-10) — 만들기·고치기 / 끄기·켜기. 기본 종류(연차·반차 등)는 이름과 시간을 바꿀 수 없다.
+import { Select } from '@/components/Select';
 import { useTranslations } from 'next-intl';
 import { useRouter } from 'next/navigation';
 import { useState } from 'react';
@@ -67,13 +68,13 @@ export function LeaveTypeForm({ initial, sheet, groups }: { initial?: TypeValues
       </label>
       <label className="flex flex-col gap-1 text-sm text-muted">
         {t('hours')}
-        <select value={hours} onChange={(e) => setHours(Number(e.target.value))} disabled={initial?.builtin} className={`num ${field}`}>
+        <Select value={hours} onChange={(e) => setHours(Number(e.target.value))} disabled={initial?.builtin} className={`num ${field}`}>
           {HOURS.map((h) => (
             <option key={h} value={h}>
               {t('hoursOption', { h, d: Math.round(unitOfHours(h) * 100) / 100 })}
             </option>
           ))}
-        </select>
+        </Select>
       </label>
       {initial?.builtin && <p className="text-sm text-faint">{t('builtinNote')}</p>}
       <label className={check}>

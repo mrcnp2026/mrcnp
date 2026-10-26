@@ -1,5 +1,5 @@
 // 지점 관리 (의뢰인 2026-10-10: 시프티 화면 기준) — 공장·부서를 한 줄씩. 누르면 지점 상세(출퇴근 장소·메모·직원 수).
-// 지점은 조직도와 같은 표(org_groups, 지점 › 하위 지점 2단계)다. 그림으로 보는 조직도는 아래 링크로 남겼다.
+// 지점은 조직도와 같은 표(org_groups, 지점 › 하위 지점, 최대 3단계)다. 그림으로 보는 조직도는 아래 링크로 남겼다.
 import { ChevronRight, MapPin, Search } from 'lucide-react';
 import { getTranslations } from 'next-intl/server';
 import Link from 'next/link';
@@ -11,7 +11,7 @@ import { Help } from '@/components/Help';
 import { RowList } from '@/components/list';
 import { Card, PageShell } from '@/components/ui';
 import { loadGroupLocationLinks } from '@/lib/geo-data';
-import { buildOrgTree } from '@/lib/org';
+import { buildOrgTree, groupPath, MAX_DEPTH } from '@/lib/org';
 import { loadOrgGroups } from '@/lib/org-data';
 import { createAdminClient } from '@/lib/supabase/admin';
 import { BranchAddForm } from './BranchForms';
@@ -35,7 +35,7 @@ export default async function BranchesPage({ searchParams }: { searchParams: Pro
   const tree = buildOrgTree(groups, true);
   // 화면 순서: 지점, 그 밑의 하위 지점. 꺼 둔 탭에서는 숨긴 것만 (검사 스크립트가 만든 e2e-… 는 빼고)
   const rows = tree
-    .flatMap((d) => [{ g: d, parent: null as string | null }, ...d.teams.map((x) => ({ g: x, parent: d.name }))])
+    .flatMap((d) => [{ g: d, parent: null as string | null }, ...d.teams.map((x) => ({ g: x, parent: groupPath(groups, x.parentId) }))])
     .filter(({ g }) => g.active !== off && (g.active || !g.name.startsWith('e2e-')))
     .filter(({ g, parent }) => !q || `${parent ?? ''} ${g.name}`.toLowerCase().includes(q));
 
@@ -90,7 +90,7 @@ export default async function BranchesPage({ searchParams }: { searchParams: Pro
         </div>
         <AddSheet id="branch" title={t('add')} modal>
           <Card className="flex flex-col gap-3">
-            <BranchAddForm sheet="branch" parents={tree.filter((d) => d.active).map((d) => ({ id: d.id, name: d.name }))} />
+            <BranchAddForm sheet="branch" parents={tree.filter((d) => d.active).flatMap((d) => [{ id: d.id, name: d.name }, ...d.teams.filter((x) => x.active && x.depth < MAX_DEPTH).map((x) => ({ id: x.id, name: `${d.name} › ${x.label}` }))])} />
           </Card>
         </AddSheet>
       </div>

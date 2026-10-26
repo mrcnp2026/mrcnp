@@ -12,7 +12,7 @@ import { Help, HelpTip } from '@/components/Help';
 import { PlaceMap } from '@/components/PlaceMap';
 import { StatusCards } from '@/components/listframe';
 import { RequestTabs } from '@/components/RequestTabs';
-import { Card, Chip, PageShell } from '@/components/ui';
+import { Card, Chip, PageShell, Empty } from '@/components/ui';
 import { leaveBalanceFor } from '@/lib/leave-balance-data';
 import { OFFICE } from '@/config/office';
 import { resolveDayType } from '@/config/labor-rules';
@@ -28,6 +28,11 @@ import Link from 'next/link';
 import { leaveTypeName } from '@/lib/leave';
 import { loadAllLeaveTypes, loadLeaveGrants, loadLeaveRequests } from '@/lib/leave-data';
 import { loadRequests, REQUEST_WINDOW_DAYS } from '@/lib/request-data';
+import { SignupRequests } from '@/app/admin/members/SignupRequests';
+import { suggestEmployeeNo } from '@/lib/email-rules';
+import { orgOptions } from '@/lib/org';
+import { loadOrgGroups } from '@/lib/org-data';
+import { loadPendingSignups } from '@/lib/signup';
 import { fromOvertime, splitRequests } from '@/lib/requests';
 import { RequestRows } from '@/components/RequestRows';
 import { HideRequests } from '@/components/HideRequests';
@@ -35,9 +40,6 @@ import { loadHidden, withoutHidden } from '@/lib/request-hides';
 import { loadWorkRequests } from '@/lib/work-data';
 import { ApproveDay, CorrectionDecision, LeaveDecision, OvertimeDecision, WorkDecision } from './Decisions';
 import { BulkBar } from './BulkApprove';
-import { LeaveFiles } from '@/components/LeaveFiles';
-import { loadLeaveFiles } from '@/lib/leave-evidence';
-import { loadTypeRules } from '@/lib/leave-ledger-data';
 
 // 요청은 종류마다 한 쪽에 5건까지 — 넘으면 아래에 쪽 번호 (2026-10-06 의뢰인)
 const REQUEST_PAGE = 5;
@@ -153,6 +155,11 @@ export default async function InboxPage({ searchParams }: { searchParams: Promis
 
   const { data: punchRows } = await db.from('punch_requests').select(OFFICE.requestLocation ? 'id, employee_id, kind, requested_at, work_date, nearest_m, geo_reason, lat, lng' : 'id, employee_id, kind, requested_at, work_date, nearest_m, geo_reason').eq('is_test', practice).eq('status', 'pending').order('requested_at');
   const punchPending = ((punchRows ?? []) as unknown as { id: string; employee_id: string; kind: 'in' | 'out'; requested_at: string; work_date: string; nearest_m: number | null; geo_reason: string; lat?: number | null; lng?: number | null }[]).filter((r) => hit(r.employee_id) && only('punch', r.id, { e: r.employee_id, d: r.work_date }));
+  // 직원이 출근 · 퇴근 요청 때 남긴 사유(근무노트) — 없으면 카드에 「사유 없음」 (2026-10-23 의뢰인)
+  const punchNoteRows = punchPending.length
+    ? ((await db.from('work_notes').select('employee_id, work_date, body, created_at').in('employee_id', [...new Set(punchPending.map((r) => r.employee_id))]).in('work_date', [...new Set(punchPending.map((r) => r.work_date))]).eq('is_test', practice).order('created_at', { ascending: false })).data ?? [])
+    : [];
+  const punchNoteOf = (e: string, d: string) => (punchNoteRows.find((n) => n.employee_id === e && n.work_date === d)?.body as string | undefined) ?? null;
   // 요청한 사람에게 적용되는 출퇴근 장소(우측 패널 지도용) — 한 건 보기에서만 읽는다
   const baseOf = new Map<string, Awaited<ReturnType<typeof loadLocationsFor>>[number]>();
   if (focus) for (const id of new Set(punchPending.map((r) => r.employee_id))) {
@@ -161,8 +168,8 @@ export default async function InboxPage({ searchParams }: { searchParams: Promis
   }
   const { data: shiftRows } = await db.from('shift_requests').select('id, employee_id, work_date, start_time, end_time, kind, reason').eq('is_test', practice).eq('status', 'pending').order('work_date');
   const shiftPending = ((shiftRows ?? []) as { id: string; employee_id: string; work_date: string; start_time: string; end_time: string; kind: string; reason: string | null }[]).filter((r) => hit(r.employee_id) && only('shift', r.id));
-  const { data: delRows } = await db.from('leave_change_requests').select('id, employee_id, reason, leave_requests(type_code, start_date, end_date, days, start_time, end_time)').eq('is_test', practice).eq('status', 'pending').order('created_at');
-  const delPending = ((delRows ?? []) as unknown as { id: string; employee_id: string; reason: string | null; leave_requests: { type_code: string; start_date: string; end_date: string; days: number; start_time: string | null; end_time: string | null } | null }[]).filter((r) => hit(r.employee_id) && r.leave_requests && only('leaveDelete', r.id));
+  const { data: delRows } = await db.from('leave_change_requests').select('id, employee_id, kind, reason, new_type_code, new_start_date, new_end_date, new_start_time, leave_requests(type_code, start_date, end_date, days, start_time, end_time)').eq('is_test', practice).eq('status', 'pending').order('created_at');
+  const delPending = ((delRows ?? []) as unknown as { id: string; employee_id: string; kind: string; reason: string | null; new_type_code: string | null; new_start_date: string | null; new_end_date: string | null; new_start_time: string | null; leave_requests: { type_code: string; start_date: string; end_date: string; days: number; start_time: string | null; end_time: string | null } | null }[]).filter((r) => hit(r.employee_id) && r.leave_requests && only('leaveDelete', r.id));
   const tc = await getTranslations('common');
   const otPage = pageOf(ot ?? [], sp.op, REQUEST_PAGE);
   const coPage = pageOf(co ?? [], sp.cp, REQUEST_PAGE);
@@ -183,7 +190,6 @@ export default async function InboxPage({ searchParams }: { searchParams: Promis
   const leaveName = (code: string) => leaveTypeName(leaveTypes, code, tl);
   const nDays = (v: number) => f.number(v, { maximumFractionDigits: 2 }); // 일수는 화면에 소수 둘째 자리까지 (2026-10-19 의뢰인: 15분 = 0.03125일까지 저장하지만 폰에서 칸을 넘지 않게. 저장 · 계산은 다섯째 자리 그대로)
   const lvPage = pageOf(leavePending, sp.lp, REQUEST_PAGE);
-  const [lvFiles, typeRules] = await Promise.all([loadLeaveFiles(lvPage.items.map((r) => r.id)), loadTypeRules()]); // 증빙 파일 · 「증빙 필수」 (묶음 9)
   const workPending = (await loadWorkRequests({ practice })).filter((w) => w.status === 'pending' && hit(w.employeeId) && only('work', w.id)).sort((a, b) => (a.startDate < b.startDate ? -1 : 1));
   const wkPage = pageOf(workPending, sp.wp, REQUEST_PAGE);
 
@@ -250,7 +256,11 @@ export default async function InboxPage({ searchParams }: { searchParams: Promis
     return t(off ? 'dayPreviewOff' : 'dayPreview', { from: pin ? hm(pin.requested_at) : '—', to: pout ? hm(pout.requested_at) : '—', min: span ?? 0, known: span === null ? 'no' : 'yes' });
   })();
   const focusCount = focus ? ot.length + co.length + leavePending.length + workPending.length + punchPending.length + shiftPending.length + delPending.length : 0;
-  const empty = <p className="rounded-card bg-bg p-5 text-sm text-faint">{t('empty')}</p>;
+  // 직원 가입 신청 — 최고관리자에게만, 요청 처리 맨 위에 (2026-10-26 의뢰인: 가입 신청도 요청 처리에서 승인)
+  const signups = me.role === 'admin' ? await loadPendingSignups() : [];
+  const signupGroups = signups.length > 0 ? orgOptions(await loadOrgGroups()) : [];
+  const signupNo = signups.length > 0 ? suggestEmployeeNo(((await createAdminClient().from('profiles').select('employee_no')).data ?? []).map((p) => p.employee_no as string | null)) : null;
+  const empty = <Empty title={t('empty')} desc={t('emptyDesc')} />;
   const hint = (text: string) => (
     <div className="flex flex-wrap items-center gap-x-1 text-sm text-muted">
       {t('tabHelp')}
@@ -362,7 +372,6 @@ export default async function InboxPage({ searchParams }: { searchParams: Promis
             {clash.length > 0 && (
               <p className="rounded-button border border-warn bg-warn-tint p-2 text-sm text-warn">{t('leaveClash', { dates: clash.map(dayLabel).join(', ') })}</p>
             )}
-            <LeaveFiles requestId={r.id} files={lvFiles.get(r.id) ?? []} canEdit={!cannot(r.employeeId)} required={!!typeRules.get(r.typeCode)?.rule.evidenceRequired} />
             {cannot(r.employeeId) ? (r.employeeId === me.id ? ownNote : rankNote) : <LeaveDecision id={r.id} name={name.get(r.employeeId) ?? ''} summary={summary} />}
           </Card>
         ))}
@@ -429,17 +438,18 @@ export default async function InboxPage({ searchParams }: { searchParams: Promis
             <h1 className="flex flex-wrap items-center gap-x-1 text-2xl font-bold">{t('pcTitle')}<HelpTip>{t('pcIntro')}</HelpTip></h1>
           </div>
           <p className="num pt-2 text-sm text-muted">
-            {t('totalCount')} <b className="text-lg text-text">{listed.length}</b>
+            {t('totalCount')} <b className="text-lg text-text">{listed.length + signups.length}</b>
           </p>
         </div>
-        <RequestTabs admin active="pending" live={sp.live === '1'} q={q} counts={{ pending: listed.length }} />
+        <SignupRequests items={signups} groups={signupGroups} suggestNo={signupNo} today={toKstDate(new Date())} />
+        <RequestTabs admin active="pending" live={sp.live === '1'} q={q} counts={{ pending: listed.length + signups.length }} />
         {practice && <p className="rounded-card bg-primary-tint p-3 text-sm text-primary">{t('practiceBanner')}</p>}
         {listed.length > 0 && (
           <div className="hidden lg:block">
             <StatusCards groups={[{ title: t('cardsKind'), cards: RKINDS.map((k) => ({ key: k, label: tr(`kinds.${k}`), n: listed.filter((x) => x.kind === k).length, unit: t('unit'), href: rkLink(rk === k ? null : k), on: rk === k, tone: 'warn' as const })) }]} />
           </div>
         )}
-        {listed.length === 0 && empty}
+        {listed.length === 0 && signups.length === 0 && empty}
         <div className="flex flex-col gap-3 lg:hidden">
           <RequestRows items={listPage.items} leaveTypes={leaveTypes} names={names} showName hrefOf={focusHref} />
         </div>
@@ -494,6 +504,14 @@ export default async function InboxPage({ searchParams }: { searchParams: Promis
                     <span className="num text-sm">{dayLabel(r.work_date)} {hm(r.requested_at)}</span>
                   </div>
                   <p className="num text-sm text-muted">{r.geo_reason === 'outside' && r.nearest_m !== null ? t('punchFar', { m: distanceText(r.nearest_m) }) : t(`punchWhy.${r.geo_reason}`)}</p>
+                  {punchNoteOf(r.employee_id, r.work_date) ? (
+                    <p className="rounded-button bg-surface p-2 text-sm">
+                      <span className="block text-xs text-muted">{t('reasonLabel')}</span>
+                      <span className="whitespace-pre-wrap break-words">{punchNoteOf(r.employee_id, r.work_date)}</span>
+                    </p>
+                  ) : (
+                    <p className="text-sm font-semibold text-warn">{t('reasonNone')}</p>
+                  )}
                   {/* 요청한 위치 지도 — 한 건 보기(상세)에서만, 위치를 남기는 설정이 켜져 있을 때만 */}
                   {focus && OFFICE.requestLocation &&
                     (typeof r.lat === 'number' && typeof r.lng === 'number' ? (
@@ -561,14 +579,17 @@ export default async function InboxPage({ searchParams }: { searchParams: Promis
               const lv = r.leave_requests!;
               const who = name.get(r.employee_id) ?? '';
               const what = `${leaveName(lv.type_code)} ${tl('days', { n: nDays(Number(lv.days)) })} (${lv.start_date === lv.end_date ? dayLabel(lv.start_date) : `${dayLabel(lv.start_date)} ~ ${dayLabel(lv.end_date)}`})`;
+              const range = (a: string, b: string) => (a === b ? dayLabel(a) : `${dayLabel(a)} ~ ${dayLabel(b)}`);
+              const after = r.kind === 'change' && r.new_type_code && r.new_start_date && r.new_end_date ? `${leaveName(r.new_type_code)} (${range(r.new_start_date, r.new_end_date)}${r.new_start_time ? ` ${r.new_start_time.slice(0, 5)}~` : ''})` : null;
               return (
                 <li key={r.id} className="flex flex-col gap-2 px-5 py-3">
                   <span className="font-bold">
-                    {t('leaveDeleteOne')} · {who}
+                    {t(after ? 'leaveChangeOne' : 'leaveDeleteOne')} · {who}
                   </span>
                   <p className="num text-sm">{what}</p>
+                  {after && <p className="num text-sm font-semibold text-primary-ink">→ {after}</p>}
                   {r.reason && <p className="text-sm text-muted">{r.reason}</p>}
-                  {cannot(r.employee_id) ? (r.employee_id === me.id ? ownNote : rankNote) : <LeaveDecision id={r.id} name={who} summary={what} url={`/api/admin/leave-changes/${r.id}/decide`} keys={['confirmLeaveDelete', 'confirmLeaveDeleteReject']} />}
+                  {cannot(r.employee_id) ? (r.employee_id === me.id ? ownNote : rankNote) : <LeaveDecision id={r.id} name={who} summary={after ? `${what} → ${after}` : what} url={`/api/admin/leave-changes/${r.id}/decide`} keys={after ? ['confirmLeaveChange', 'confirmLeaveChangeReject'] : ['confirmLeaveDelete', 'confirmLeaveDeleteReject']} />}
                 </li>
               );
             })}

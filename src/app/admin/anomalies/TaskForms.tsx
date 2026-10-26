@@ -1,5 +1,6 @@
 'use client';
 // 이상 기록의 담당자 · 처리 기한 (2026-10-19 의뢰인). TaskEdit = 한 건만 바꾸기(접힌 채 「바꾸기」), TaskPolicyForm = 기본 담당 · 기한 일수 · 켜기.
+import { Select } from '@/components/Select';
 import { useTranslations } from 'next-intl';
 import { useRouter } from 'next/navigation';
 import { useState } from 'react';
@@ -41,14 +42,14 @@ export function TaskEdit({ employeeId, workDate, assigneeId, dueOn, note, people
       {!ready && <p className="text-warn">{t('dbPending')}</p>}
       <label className="flex flex-col gap-1">
         <span className="text-muted">{t('assignee')}</span>
-        <select name="assignee" defaultValue={assigneeId ?? ''} className={field}>
+        <Select name="assignee" defaultValue={assigneeId ?? ''} className={field}>
           <option value="">{t('assigneeDefault')}</option>
           {people.map((p) => (
             <option key={p.id} value={p.id}>
               {p.name}
             </option>
           ))}
-        </select>
+        </Select>
       </label>
       <label className="flex flex-col gap-1">
         <span className="text-muted">{t('due')}</span>
@@ -101,14 +102,14 @@ export function TaskPolicyForm({ policy, version, people }: { policy: AnomalyTas
       <div className="grid gap-3 lg:grid-cols-2">
         <label className="flex flex-col gap-1">
           <span>{t('defaultAssignee')}</span>
-          <select name="assignee" defaultValue={policy.assignee} className={field}>
+          <Select name="assignee" defaultValue={policy.assignee} className={field}>
             <option value="approvers">{t('approvers')}</option>
             {people.map((p) => (
               <option key={p.id} value={p.id}>
                 {p.name}
               </option>
             ))}
-          </select>
+          </Select>
         </label>
         <label className="flex flex-col gap-1">
           <span>{t('dueDays')}</span>

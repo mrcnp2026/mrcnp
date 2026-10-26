@@ -2,6 +2,7 @@
 //   사원급여 · 급여대장 · 지급항목 · 공제항목 · 사회보험 요율표 · 근로소득 간이세액표 · 법정수당 산정 · 주민등록번호 마스킹 · 근로시간설정
 // 급여 담당 관리자(관리자 + 급여 열람 권한)만 본다. 값은 「임시」로 들어가고 경영지원실의 검증을 받으면 「검증됨」으로 바꾼다.
 // 공식 기준 자료는 「검토 대기」를 거쳐 관리자가 「확인 후 반영」한 것만 쓰인다 — 자동으로 반영되지 않는다.
+import { AUTO_PAYMENT_CODES } from '@/lib/payroll/engine/reserved-items';
 import { CircleMinus, CirclePlus, ClipboardList, Clock, EyeOff, Scale, ShieldCheck, TableProperties, Users, type LucideIcon } from 'lucide-react';
 import { getFormatter, getTranslations } from 'next-intl/server';
 import Link from 'next/link';
@@ -9,20 +10,22 @@ import type { ReactNode } from 'react';
 import { Chip } from '@/components/ui';
 import { loadActiveRule } from '@/lib/attendance-data';
 import { getMe } from '@/lib/auth';
-import { loadItems, loadPolicies, loadReferences, loadRuns, loadSettingHistory, loadTaxPage, type ReferenceRow } from '@/lib/payroll/data';
+import { loadItems, loadPolicies, loadReferences, loadRuns, loadSettingHistory, type ReferenceRow } from '@/lib/payroll/data';
 import { pickAt, RATE_KINDS, rateToPct, type ReferenceKind } from '@/lib/payroll/reference';
 import { ALLOWANCE_KINDS, PAY_SECTIONS, payDateFor, type AllowancePolicy, type AnnualLeavePolicy, type Ledger, type PaySection, type SettingSection } from '@/lib/payroll/settings';
 import { createAdminClient } from '@/lib/supabase/admin';
 import { toKstDate } from '@/lib/time';
 import { Download } from 'lucide-react';
 import { ItemExcel } from './ItemExcel';
+import { ItemAdd } from './ItemWizard';
+import { Explain, em } from '@/components/ui';
 import { AllowanceForm, ImportForm, ItemForm, ManualForm, RefreshButton, ReviewForm, SeedButton, SettingForm, TaxCalc, UseToggle, VerifyButton } from './PayForms';
 
 const ICONS: Record<PaySection, LucideIcon> = { 'employee-defaults': Users, ledger: ClipboardList, 'payment-items': CirclePlus, 'deduction-items': CircleMinus, 'insurance-rates': ShieldCheck, 'income-tax': TableProperties, allowances: Scale, masking: EyeOff, 'working-time': Clock };
 const TAX_KINDS: ReferenceKind[] = ['income-tax.table', 'income-tax.child-adjust'];
 const PCT_FIELDS = new Set(['employeeRate', 'employerRate', 'totalRate', 'incomeRate', 'healthRate', 'rate', 'stabilityUnder150', 'stabilityPriority150', 'stability150to1000', 'stabilityOver1000']);
 const KRW_FIELDS = new Set(['lower', 'upper', 'hourly', 'monthly209', 'monthlyLimit', 'child1', 'child2', 'perExtraChild', 'wageMin', 'wageMaxExclusive', 'premiumUpper', 'premiumUpperEmployee', 'premiumLower', 'incomePremiumUpper']);
-type SP = { section?: string; v?: string; year?: string; from?: string; edit?: string; add?: string };
+type SP = { section?: string; v?: string; year?: string; from?: string; edit?: string; add?: string; adv?: string };
 
 function Band({ children, aside }: { children: ReactNode; aside?: ReactNode }) {
   return (
@@ -66,6 +69,13 @@ export async function PaySettings({ sp }: { sp: SP }) {
   let body: ReactNode;
 
   if (section === 'employee-defaults' || section === 'ledger' || section === 'masking' || section === 'working-time') {
+    // 회사 공통 고정 수당 · 공제를 고를 항목(사람이 정하는 고정 · 직접 입력 항목만)과 제외할 직원 (2026-10-25)
+    const common = section === 'employee-defaults'
+      ? {
+          options: (await loadItems(undefined, today)).filter((x) => x.inUse && !AUTO_PAYMENT_CODES.has(x.code) && (x.calcKind === 'FIXED' || x.calcKind === 'MANUAL')).map((x) => ({ code: x.code, label: `${x.koName} (${t(x.kind === 'PAYMENT' ? 'kindPay' : 'kindDeduct')})`, defaultAmount: x.defaultAmount })),
+          people: ((await createAdminClient().from('profiles').select('id, name, employee_no').eq('active', true).order('name')).data ?? []).filter((p) => !(p.employee_no as string | null)?.startsWith('e2e-')).map((p) => ({ id: p.id as string, name: p.name as string })),
+        }
+      : undefined;
     const history = await loadSettingHistory(section as SettingSection);
     const cur = history[0] ?? null;
     const who = await names(history.map((h) => h.createdBy));
@@ -93,7 +103,7 @@ export async function PaySettings({ sp }: { sp: SP }) {
           </div>
         )}
         <div className="px-4 py-4 lg:px-6">
-          <SettingForm key={cur?.version ?? 0} section={section as SettingSection} current={cur?.payload ?? null} version={cur?.version ?? 0} today={today} />
+          <SettingForm key={cur?.version ?? 0} section={section as SettingSection} current={cur?.payload ?? null} version={cur?.version ?? 0} today={today} common={common} />
         </div>
         <Band>{t('history')}</Band>
         {history.length === 0 ? (
@@ -123,18 +133,17 @@ export async function PaySettings({ sp }: { sp: SP }) {
     const editing = items.find((x) => x.code === sp.edit);
     body = (
       <>
-        <div className="flex flex-wrap items-center justify-end gap-2 border-b border-border px-4 py-3 lg:px-6">
+        {/* 새로 등록은 팝업(질문에 답하는 안내가 기본, 자세한 칸은 「직접 입력」) · 고치기는 그 줄 아래 (2026-10-22) */}
+        <div className="flex flex-wrap items-center gap-2 border-b border-border px-4 py-3 lg:justify-end lg:px-6">
           <SeedButton path="/api/admin/payroll/items" label={t('item.seed')} />
           <ItemExcel />
-          <Link href={href({ add: '1' })} className="inline-flex h-8 items-center rounded-button bg-primary px-4 text-sm font-bold text-on-primary">
-            + {t('add')}
-          </Link>
+          <ItemAdd kind={kind} today={today} defaultOpen={sp.add === '1' && !editing} />
         </div>
-        {(sp.add === '1' || editing) && (
+        {editing && (
           <div className="border-b border-border bg-surface px-4 py-4 lg:px-6">
-            <p className="pb-3 font-bold">{editing ? t('item.editTitle', { name: editing.koName }) : t('item.addTitle')}</p>
-            <ItemForm key={editing?.id ?? 'new'} kind={kind} item={editing} today={today} />
-            <Link href={href({})} className="inline-flex min-h-9 items-center text-sm text-muted">
+            <p className="pb-3 font-bold">{t('item.editTitle', { name: editing.koName })}</p>
+            <ItemForm key={editing.id} kind={kind} item={editing} today={today} />
+            <Link href={href({})} className="mt-2 inline-flex min-h-9 items-center text-sm text-muted">
               {t('cancel')}
             </Link>
           </div>
@@ -176,7 +185,7 @@ export async function PaySettings({ sp }: { sp: SP }) {
                         {it.taxExemptAnnualLimit != null && <span className="num text-xs text-faint"> · {t('item.annualLimitOf', { amount: won(it.taxExemptAnnualLimit) })}</span>}
                       </dd>
                       <dt className="text-muted">{t('item.colOrdinary')}</dt>
-                      <dd>{t(`ordinary.${it.ordinaryWage}`)}</dd>
+                      <dd>{t(`ordinary.${it.ordinaryWage}`)}{it.averageWageKind && <span className="block text-xs text-faint">{t('item.averageTag', { kind: t(`averageShort.${it.averageWageKind}`) })}</span>}</dd>
                     </>
                   )}
                   <dt className="text-muted">{t('item.colAmount')}</dt>
@@ -220,7 +229,7 @@ export async function PaySettings({ sp }: { sp: SP }) {
                           {it.taxExemptLimit !== null && <span className="num block text-xs text-faint">{t('item.limitOf', { amount: won(it.taxExemptLimit) })}</span>}
                           {it.taxExemptAnnualLimit != null && <span className="num block text-xs text-faint">{t('item.annualLimitOf', { amount: won(it.taxExemptAnnualLimit) })}</span>}
                         </td>
-                        <td className="px-4 py-2 whitespace-nowrap">{t(`ordinary.${it.ordinaryWage}`)}</td>
+                        <td className="px-4 py-2 whitespace-nowrap">{t(`ordinary.${it.ordinaryWage}`)}{it.averageWageKind && <span className="block text-xs text-faint">{t('item.averageTag', { kind: t(`averageShort.${it.averageWageKind}`) })}</span>}</td>
                       </>
                     )}
                     <td className="num px-4 py-2 text-right whitespace-nowrap">{won(it.defaultAmount)}</td>
@@ -262,9 +271,6 @@ export async function PaySettings({ sp }: { sp: SP }) {
     if (view === 'current') {
       // 그 해에 걸쳐 있는 승인본만 — 없는 해에 다른 해의 표를 대신 보이지 않는다
       const inYear = approved.filter((r) => (r.validFrom ?? '') <= `${year}-12-31` && (r.validTo === null || r.validTo > `${year}-01-01`));
-      const table = section === 'income-tax' ? pickAt(approved.filter((r) => r.kind === 'income-tax.table'), year === today.slice(0, 4) ? today : `${year}-12-31`) : null;
-      const from = sp.from && /^\d{1,12}$/.test(sp.from) ? Number(sp.from) : 0;
-      const page = table ? await loadTaxPage(table.id, from, 25) : [];
       inner = (
         <>
           <form action="/admin/settings" className="flex flex-wrap items-center gap-2 border-b border-border px-4 py-3 lg:px-6">
@@ -274,12 +280,6 @@ export async function PaySettings({ sp }: { sp: SP }) {
               {t('ref.year')}
               <input type="number" name="year" min={2000} max={2100} defaultValue={year} className="num h-9 w-24 rounded-button border border-border bg-bg px-2 text-sm" />
             </label>
-            {section === 'income-tax' && (
-              <label className="flex items-center gap-2 text-sm font-bold">
-                {t('tax.searchWage')}
-                <input type="number" name="from" min={0} step={1000} defaultValue={from || ''} className="num h-9 w-36 rounded-button border border-border bg-bg px-2 text-sm" />
-              </label>
-            )}
             <button type="submit" className="inline-flex h-9 items-center rounded-button border border-border bg-bg px-3.5 text-sm font-semibold text-text hover:bg-surface">
               {t('ref.lookup')}
             </button>
@@ -367,67 +367,7 @@ export async function PaySettings({ sp }: { sp: SP }) {
                 <TaxCalc today={today} />
                 <p className="pt-2 text-xs text-faint">{t('calc.note')}</p>
               </div>
-              <Band>{t('tax.tableTitle')}</Band>
-              {!table ? (
-                <p className="px-4 py-8 text-center text-sm text-faint lg:px-6">{t('ref.notAcquired', { year })}</p>
-              ) : (
-                <div>
-                  {/* 폰: 월급 구간마다 카드 — 부양가족 1~11명 세액을 4칸씩 줄 바꿈 (2026-10-18 의뢰인: 모바일 가로 스크롤 금지) */}
-                  <ul className="num divide-y divide-border lg:hidden">
-                    {page.map((b) => (
-                      <li key={b.wageFrom} className="flex flex-col gap-1.5 px-4 py-2.5 text-sm">
-                        <b>
-                          {f.number(b.wageFrom)} ~ {b.wageTo === null ? '' : f.number(b.wageTo)}
-                        </b>
-                        <dl className="grid grid-cols-4 gap-1 text-xs">
-                          {b.taxes.map((x, i) => (
-                            <div key={i} className="rounded-button bg-surface px-1.5 py-1">
-                              <dt className="text-faint">{t('tax.family', { n: i + 1 })}</dt>
-                              <dd className="text-right">{x === 0 ? '-' : f.number(x)}</dd>
-                            </div>
-                          ))}
-                        </dl>
-                      </li>
-                    ))}
-                  </ul>
-                  <div className="hidden overflow-x-auto lg:block">
-                  <table className="num w-full text-right text-sm">
-                    <thead>
-                      <tr className="border-b border-border">
-                        <th scope="col" className="sticky left-0 bg-bg px-3 py-2 text-left whitespace-nowrap">
-                          {t('tax.colWage')}
-                        </th>
-                        {[...Array(11)].map((_, i) => (
-                          <th key={i} scope="col" className="px-3 py-2">
-                            {i + 1}
-                          </th>
-                        ))}
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {page.map((b) => (
-                        <tr key={b.wageFrom} className="border-b border-border last:border-b-0">
-                          <th scope="row" className="sticky left-0 bg-bg px-3 py-1.5 text-left font-normal whitespace-nowrap">
-                            {f.number(b.wageFrom)} ~ {b.wageTo === null ? '' : f.number(b.wageTo)}
-                          </th>
-                          {b.taxes.map((x, i) => (
-                            <td key={i} className="px-3 py-1.5">
-                              {x === 0 ? '-' : f.number(x)}
-                            </td>
-                          ))}
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                  </div>
-                  {page.length === 25 && (
-                    <Link href={href({ year, from: String(page.at(-1)!.wageTo ?? '') })} className="inline-flex min-h-9 items-center px-4 text-sm font-bold text-primary">
-                      {t('tax.next')} ›
-                    </Link>
-                  )}
-                  {page.length === 0 && <p className="px-4 py-6 text-center text-sm text-faint">{t('tax.outOfTable')}</p>}
-                </div>
-              )}
+              {/* 세액표 전체(월급 구간 × 가족 수)는 화면에서 뺐다 (2026-10-22 의뢰인: 「저건 왜 넣었니, 의미 없으면 빼」) — 위 계산기로 확인하고, 자료는 위 목록에서 승인 상태만 본다 */}
             </>
           )}
         </>
@@ -567,9 +507,10 @@ export async function PaySettings({ sp }: { sp: SP }) {
     const a = annual?.payload as AnnualLeavePolicy | undefined;
     body = (
       <>
-        <div className="flex flex-wrap items-center justify-between gap-2 border-b border-border px-4 py-3 lg:px-6">
-          <p className="text-sm text-muted">{t('s07.intro')}</p>
-          <span className="flex flex-wrap items-center gap-2">
+        {/* 「법정수당이란?」 설명 상자 + 수당마다 한 줄 표 (2026-10-22 의뢰인, 다우오피스 통합설정 「법정수당 산정」처럼) */}
+        <div className="flex flex-col gap-3 border-b border-border px-4 py-4 lg:px-6">
+          <Explain>{t.rich('s07.explain', { em })}</Explain>
+          <span className="flex flex-wrap items-center justify-end gap-2">
             <a href="/api/admin/payroll/confirm-sheet" className="inline-flex h-9 items-center gap-1 rounded-button border border-border bg-bg px-3.5 text-sm font-semibold whitespace-nowrap text-text hover:bg-surface">
               <Download aria-hidden size={16} />
               {t('confirm.download')}
@@ -577,39 +518,42 @@ export async function PaySettings({ sp }: { sp: SP }) {
             <SeedButton path="/api/admin/payroll/policies" label={t('s07.seed')} />
           </span>
         </div>
+        {/* 수당마다 넉넉한 한 줄 (2026-10-22 의뢰인: 표가 글자가 많아 빽빽하다 — 다우오피스보다 읽기 쉽게).
+            왼쪽 이름 · 언제 / 가운데 법정 기준 · 회사 기준 두 칸 / 오른쪽 사용 · 확인. 폰에서는 위에서 아래로 쌓인다 */}
         <ul className="divide-y divide-border">
           {ALLOWANCE_KINDS.map((k) => {
             const p = policies.find((x) => x.kind === `allowance.${k}`);
             const v = (p?.payload ?? null) as AllowancePolicy | null;
+            const company = !p ? t('unset') : v?.premium ? t(k === 'shutdown' ? 's07.shareOf' : 's07.premiumOf', { pct: rateToPct(v.premium) }) + (v.premiumOver8h ? ` · ${t('s07.over8hOf', { pct: rateToPct(v.premiumOver8h) })}` : '') : t('s07.noPremium');
             return (
-              <li key={k} className="flex flex-col gap-2 px-4 py-4 text-sm lg:px-6">
-                <div className="flex flex-wrap items-center gap-2">
-                  <b className="text-base">{t(`s07.kind.${k}`)}</b>
-                  {p && tempChip(p.verification)}
-                  {p && (
-                    <span className="ml-auto">
-                      <UseToggle path="/api/admin/payroll/policies" id={p.id} on={p.inUse} label={t(`s07.kind.${k}`)} />
-                    </span>
-                  )}
+              <li key={k} className="flex flex-col gap-4 px-4 py-5 lg:flex-row lg:flex-wrap lg:items-start lg:gap-x-8 lg:px-6">
+                <div className="flex flex-col gap-1.5 lg:w-60 lg:shrink-0">
+                  <div className="flex flex-wrap items-center gap-2">
+                    <b className="text-base">{t(`s07.kind.${k}`)}</b>
+                    {p && tempChip(p.verification)}
+                  </div>
+                  <p className="text-sm leading-6 text-faint">{t(`s07.when.${k}`)}</p>
                 </div>
-                <p className="text-muted">{t(`s07.when.${k}`)}</p>
-                <p>
-                  <span className="font-bold">{t('s07.legal')}</span> {t(`s07.legalOf.${k}`)}
-                </p>
-                <p className="num">
-                  <span className="font-bold">{t('s07.company')}</span>{' '}
-                  {!p ? t('unset') : v?.premium ? t(k === 'shutdown' ? 's07.shareOf' : 's07.premiumOf', { pct: rateToPct(v.premium) }) + (v.premiumOver8h ? ` · ${t('s07.over8hOf', { pct: rateToPct(v.premiumOver8h) })}` : '') : t('s07.noPremium')}
-                  {v?.note ? ` · ${v.note}` : ''}
-                </p>
-                {p?.verificationNote && <p className="text-xs text-ok">{p.verificationNote}</p>}
-                <div className="flex flex-wrap items-center gap-3">
-                  <Link href={href({ edit: k })} className="text-sm font-bold text-primary hover:underline">
-                    {t('s07.edit')}
-                  </Link>
+                <div className="grid min-w-0 flex-1 gap-3 sm:grid-cols-2 lg:gap-6">
+                  <div className="flex flex-col gap-1">
+                    <p className="text-xs font-bold text-faint">{t('s07.colLegal')}</p>
+                    <p className="text-sm leading-6">{t(`s07.legalOf.${k}`)}</p>
+                  </div>
+                  <div className="flex flex-col items-start gap-1.5">
+                    <p className="text-xs font-bold text-faint">{t('s07.colCompany')}</p>
+                    <span className="num rounded-chip bg-primary-tint px-3 py-1 text-sm font-semibold text-primary">{company}</span>
+                    {v?.note && <p className="text-xs leading-5 text-muted">{v.note}</p>}
+                    <Link href={href({ edit: k })} className="text-xs font-bold text-primary hover:underline">
+                      {t('s07.edit')} ›
+                    </Link>
+                  </div>
+                </div>
+                <div className="flex shrink-0 flex-row items-center gap-3 whitespace-nowrap lg:flex-col lg:items-end lg:gap-2">
+                  {p && <UseToggle path="/api/admin/payroll/policies" id={p.id} on={p.inUse} label={t(`s07.kind.${k}`)} />}
                   {p && <VerifyButton target="policy" id={p.id} verified={p.verification === 'VERIFIED'} />}
                 </div>
                 {sp.edit === k && (
-                  <div className="rounded-card bg-surface p-4">
+                  <div className="rounded-card bg-surface p-4 lg:basis-full">
                     <AllowanceForm key={p?.version ?? 0} kind={k} current={v} version={p?.version ?? 0} today={today} />
                     <Link href={href({})} className="inline-flex min-h-9 items-center text-sm text-muted">
                       {t('cancel')}
@@ -639,19 +583,7 @@ export async function PaySettings({ sp }: { sp: SP }) {
 
   return (
     <div className="grid gap-4">
-      {/* PC에서는 통합설정의 메뉴 판(App 관리 › 급여)이 같은 목록을 보여 준다 — 폰에서만 이 줄을 쓴다 (2026-10-14) */}
-      <nav aria-label={t('menu')} className="flex gap-1 overflow-x-auto border border-border bg-bg p-1 lg:hidden">
-        {PAY_SECTIONS.map((s) => {
-          const Icon = ICONS[s];
-          const on = s === section;
-          return (
-            <Link key={s} href={`/admin/settings?tab=pay&section=${s}`} aria-current={on ? 'page' : undefined} className={`flex min-h-11 shrink-0 items-center gap-2 rounded-button px-3 text-sm whitespace-nowrap lg:min-h-9 ${on ? 'bg-primary-tint font-bold text-primary' : 'text-muted hover:bg-surface hover:text-text'}`}>
-              <Icon aria-hidden size={18} strokeWidth={1.75} className="shrink-0" />
-              {t(`section.${s}`)}
-            </Link>
-          );
-        })}
-      </nav>
+      {/* 메뉴 줄은 뺐다 — PC는 통합설정 메뉴 판, 폰은 맨 위 화면 이름을 누르면 같은 목록이 펼쳐진다 (2026-10-22: 폰에서 옆으로 밀어야 보이던 줄) */}
       <section className="min-w-0 overflow-hidden border border-border bg-bg lg:rounded-card">
         {body}
       </section>

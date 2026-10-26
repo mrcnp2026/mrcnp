@@ -1,5 +1,6 @@
 'use client';
 // 퇴직연금 DC 화면의 조작부 (묶음 32, 2026-10-20) — 가입 넣기 · 고치기 · 빼기, 그 달 부담금 다시 만들기, 손으로 넣기, 은행에 낸 날 표시.
+import { Select } from '@/components/Select';
 import { useTranslations } from 'next-intl';
 import { useRouter } from 'next/navigation';
 import { useState } from 'react';
@@ -31,7 +32,7 @@ function useCall() {
   return { busy, err, msg, setMsg, send };
 }
 
-export function MemberForm({ people, initial }: { people: Person[]; initial?: { employeeId: string; planKind: 'DC' | 'DB'; joinedOn: string; endedOn: string | null; institution: string | null; openingBalance: number | null; openingAsOf: string | null; note: string | null } }) {
+export function MemberForm({ people, initial }: { people: Person[]; initial?: { employeeId: string; planKind: 'DC' | 'DB'; joinedOn: string; endedOn: string | null; institution: string | null; openingBalance: number | null; openingAsOf: string | null; marketValue?: number | null; marketValueAsOf?: string | null; note: string | null } }) {
   const t = useTranslations('admin.pension');
   const { busy, err, send } = useCall();
   return (
@@ -45,22 +46,22 @@ export function MemberForm({ people, initial }: { people: Person[]; initial?: { 
     >
       <label className="flex min-w-0 flex-col gap-1">
         <span className="text-muted">{t('fEmployee')}</span>
-        <select name="employeeId" required defaultValue={initial?.employeeId ?? ''} disabled={!!initial} className={field}>
+        <Select name="employeeId" required defaultValue={initial?.employeeId ?? ''} disabled={!!initial} className={field}>
           <option value="">{t('pick')}</option>
           {people.map((p) => (
             <option key={p.id} value={p.id}>
               {p.name} {p.employeeNo ? `(${p.employeeNo})` : ''}
             </option>
           ))}
-        </select>
+        </Select>
         {initial && <input type="hidden" name="employeeId" value={initial.employeeId} />}
       </label>
       <label className="flex min-w-0 flex-col gap-1">
         <span className="text-muted">{t('fPlan')}</span>
-        <select name="planKind" defaultValue={initial?.planKind ?? 'DC'} className={field}>
+        <Select name="planKind" defaultValue={initial?.planKind ?? 'DC'} className={field}>
           <option value="DC">{t('plan.DC')}</option>
           <option value="DB">{t('plan.DB')}</option>
-        </select>
+        </Select>
       </label>
       <label className="flex min-w-0 flex-col gap-1">
         <span className="text-muted">{t('fJoined')}</span>
@@ -77,6 +78,14 @@ export function MemberForm({ people, initial }: { people: Person[]; initial?: { 
       <label className="flex min-w-0 flex-col gap-1">
         <span className="text-muted">{t('fOpeningAsOf')}</span>
         <input type="date" name="openingAsOf" defaultValue={initial?.openingAsOf ?? ''} className={field} />
+      </label>
+      <label className="flex min-w-0 flex-col gap-1">
+        <span className="text-muted">{t('fMarket')}</span>
+        <input name="marketValue" inputMode="numeric" defaultValue={initial?.marketValue ?? ''} className={`num ${field}`} autoComplete="off" />
+      </label>
+      <label className="flex min-w-0 flex-col gap-1">
+        <span className="text-muted">{t('fMarketAsOf')}</span>
+        <input type="date" name="marketValueAsOf" defaultValue={initial?.marketValueAsOf ?? ''} className={field} />
       </label>
       <label className="flex min-w-0 flex-col gap-1">
         <span className="text-muted">{t('fEnded')}</span>
@@ -161,14 +170,14 @@ export function ManualForm({ people, month }: { people: Person[]; month: string 
         if (await send({ action: 'manual', ...Object.fromEntries(f) })) e.currentTarget?.reset();
       }}
     >
-      <select name="employeeId" required defaultValue="" className={field} aria-label={t('fEmployee')}>
+      <Select name="employeeId" required defaultValue="" className={field} aria-label={t('fEmployee')}>
         <option value="">{t('pick')}</option>
         {people.map((p) => (
           <option key={p.id} value={p.id}>
             {p.name}
           </option>
         ))}
-      </select>
+      </Select>
       <input type="month" name="month" required defaultValue={month} className={field} aria-label={t('fMonth')} />
       <input name="wageTotal" required inputMode="numeric" placeholder={t('fWage')} className={`num ${field}`} autoComplete="off" />
       <input name="note" maxLength={300} placeholder={t('fNote')} className={field} autoComplete="off" />

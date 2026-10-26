@@ -144,3 +144,8 @@ export function cleanReason(v: unknown): string | null {
   const s = v.replace(/[\u0000-\u0009\u000B-\u001F\u007F]/g, '').trim();
   return s.length >= REASON_MIN && s.length <= REASON_MAX ? s : null;
 }
+
+/** 퇴사 · 복직 때 직원 비고에 자동으로 남기는 한 줄 (2026-10-25 의뢰인: 아이디 · 날짜 · 사유). 비고는 500자까지라 사유는 200자 제한 안에서 그대로 들어간다 */
+export function statusNote(kind: 'resign' | 'reinstate', employeeNo: string, on: string, reason: string): string {
+  return `[${kind === 'resign' ? '퇴사 처리' : '복직 처리'}] 아이디 ${employeeNo} · ${on} · 사유: ${reason}`;
+}

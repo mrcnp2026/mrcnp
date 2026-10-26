@@ -4,12 +4,13 @@
 //   ① 칸 모양: 왼쪽 이름표(오른쪽 맞춤) + 옅은 파란 칸. 값이 없으면 칸만 비워 둔다 ② 안내 문장 · 「○일부터 적용」 · 환산 설명 · 원천징수 비율은 뺐다
 //   ③ 명세서: [달 고르기(달력)] [조회] → 그해 목록 + 고른 달의 지급 · 공제 항목(PC는 나란히 2칸, 폰은 목록 → 한 장 화면). 계산 방법은 한 장 화면 · PDF에 있다(임금명세서 기재 사항).
 // 계좌 · 주민등록번호는 민감정보 결정(급여-36 · 37) 전이라 칸만 둔다(비어 있음). 관리자가 공개한 명세서만 보인다 (PRD v1.3 E01).
-import { ChevronDown, Printer, Search, UserRound } from 'lucide-react';
+import { ChevronDown, FileText, Printer, Search, Wallet } from 'lucide-react';
 import { getFormatter, getTranslations } from 'next-intl/server';
 import Link from 'next/link';
 import { redirect } from 'next/navigation';
 import type { ReactNode } from 'react';
-import { Chip, PageShell } from '@/components/ui';
+import { Chip, Empty, PageShell } from '@/components/ui';
+import { CountUp } from '@/components/CountUp';
 import { OFFICE } from '@/config/office';
 import { getMe } from '@/lib/auth';
 import { loadJobs } from '@/lib/job-data';
@@ -25,34 +26,21 @@ import { toKstDate } from '@/lib/time';
 
 type V = ReactNode | null | undefined;
 
-/** 이름표 + 옅은 파란 칸. num이면 오른쪽 맞춤, 값이 없으면 빈 칸 */
-function Field({ label, value, num = false, unit, range, fill = false }: { label: string; value?: V; num?: boolean; unit?: string; range?: [V, V]; fill?: boolean }) {
-  const box = (v: V, k?: string) => (
-    // 칸: 채운 상자 대신 글자 + 가는 밑줄 (2026-10-16 디자인: 견본 「나 · 파랑」 — 빈 회색 상자가 화면을 무겁게 했다). PC는 정해진 폭
-    <span key={k} className={`flex h-8 min-w-0 flex-1 items-center border-b border-border px-1 text-sm font-medium ${fill ? '' : `lg:flex-none ${range ? 'lg:w-24' : 'lg:w-44'}`} ${num ? 'num justify-end' : ''}`}>
-      {v ?? ''}
-    </span>
-  );
+/** 작은 회색 이름 + 굵은 값 (2026-10-22 의뢰인: 「서류 양식 같다, 고급지지 않다」 — 밑줄 친 빈칸을 늘어놓던 모양을 바꿈). 값이 없으면 옅은 「–」 */
+function Field({ label, value, num = false, unit, range }: { label: string; value?: V; num?: boolean; unit?: string; range?: [V, V]; fill?: boolean }) {
+  const has = range ? range[0] != null || range[1] != null : value != null && value !== '';
   return (
-    <div className="flex items-center gap-3">
-      <dt className="w-28 shrink-0 text-right text-sm text-muted lg:w-36">{label}</dt>
-      <dd className="flex min-w-0 flex-1 items-center gap-1.5">
-        {range ? (
-          <>
-            {box(range[0], 'a')}
-            <span className="text-faint">~</span>
-            {box(range[1], 'b')}
-          </>
-        ) : (
-          box(value)
-        )}
-        {unit && <span className="w-4 shrink-0 text-sm text-muted">{unit}</span>}
+    <div className="flex min-w-0 flex-col gap-0.5 rounded-button px-3 py-2">
+      <dt className="text-xs text-faint">{label}</dt>
+      <dd className={`min-h-6 text-sm font-semibold break-words text-text ${num ? 'num' : ''}`}>
+        {!has ? <span className="font-normal text-faint">–</span> : range ? `${range[0] ?? ''} ~ ${range[1] ?? ''}` : value}
+        {has && unit && <span className="ml-0.5 text-xs font-normal text-muted">{unit}</span>}
       </dd>
     </div>
   );
 }
 
-const grid = 'grid gap-x-8 gap-y-2.5 md:grid-cols-2 xl:grid-cols-3';
+const grid = 'grid gap-x-2 gap-y-1 grid-cols-2 md:grid-cols-3 xl:grid-cols-4';
 
 export default async function MyPayPage({ searchParams }: { searchParams: Promise<{ y?: string; s?: string; m?: string }> }) {
   const me = await getMe();
@@ -79,7 +67,6 @@ export default async function MyPayPage({ searchParams }: { searchParams: Promis
   const itemName = new Map(items.map((i) => [i.code, i.koName]));
   const fixed = pay.items.filter((i) => i.validFrom.localeCompare(today) !== 1 && (i.validTo === null || today.localeCompare(i.validTo) === -1));
   const sme = reliefOn.sme && tax?.reliefs.sme.state === 'YES' ? tax.reliefs.sme : null;
-  const duru = reliefOn.durunuri && tax?.reliefs.durunuri.state === 'YES' ? tax.reliefs.durunuri : null;
   const loan = tax?.studentLoan.state === 'YES' ? tax.studentLoan : null;
 
   // 명세서: 달을 고르면(?m=YYYY-MM) 그해 목록 + 그 달 명세서. 고른 것이 없으면 가장 최근 명세서의 해
@@ -99,6 +86,47 @@ export default async function MyPayPage({ searchParams }: { searchParams: Promis
         <p className="text-sm text-muted">{tm('intro')}</p>
       </div>
 
+      {/* 맨 위: 고른 달의 실지급액 (2026-10-22 — 가장 궁금한 「이번 달 얼마 받나」가 아래 표 안에 묻혀 있었다) */}
+      {picked ? (
+        <section className="flex flex-col gap-4 rounded-card border border-border bg-bg p-5 shadow-card max-lg:order-0 lg:flex-row lg:items-center lg:gap-8 lg:p-6" data-pay-hero>
+          <span aria-hidden className="hidden size-14 shrink-0 items-center justify-center rounded-chip bg-primary-tint text-primary lg:flex">
+            <Wallet size={28} strokeWidth={1.75} />
+          </span>
+          <div className="flex min-w-0 flex-1 flex-col gap-1">
+            <p className="text-sm text-muted">{tm('heroTitle', { month: picked.slip.month.slice(0, 7) })}</p>
+            <p className="flex items-baseline gap-1">
+              <CountUp value={n(picked.slip.net)} className="num text-4xl font-extrabold tracking-tight text-text" />
+              <span className="text-lg font-bold text-muted">{tm('won')}</span>
+            </p>
+            {picked.slip.payDate && <p className="num text-xs text-faint">{tm('heroPayDate', { date: picked.slip.payDate })}</p>}
+          </div>
+          <dl className="grid grid-cols-2 gap-3 lg:w-80">
+            <div className="rounded-button bg-surface px-4 py-3">
+              <dt className="text-xs text-faint">{tm('payTotal')}</dt>
+              <dd className="num text-base font-bold"><CountUp value={n(picked.slip.pay)} /></dd>
+            </div>
+            <div className="rounded-button bg-surface px-4 py-3">
+              <dt className="text-xs text-faint">{tm('dedTotal')}</dt>
+              <dd className="num text-base font-bold text-muted"><CountUp value={n(picked.slip.deduction)} /></dd>
+            </div>
+          </dl>
+          <div className="flex gap-2 lg:flex-col">
+            <Link href={`/punch/payslips/${picked.slip.id}`} className="inline-flex h-9 items-center justify-center gap-1.5 rounded-button bg-primary px-3.5 text-sm font-semibold text-on-primary">
+              <FileText aria-hidden size={16} />
+              {tm('heroOpen')}
+            </Link>
+            <a href={`/api/payslips/${picked.slip.id}/pdf`} className="inline-flex h-9 items-center justify-center gap-1.5 rounded-button border border-border bg-bg px-3.5 text-sm font-semibold hover:bg-surface">
+              <Printer aria-hidden size={16} />
+              {tm('printSlip')}
+            </a>
+          </div>
+        </section>
+      ) : (
+        <div className="max-lg:order-0">
+          <Empty icon={Wallet} title={tm('heroEmpty')} desc={tm('heroEmptyDesc')} />
+        </div>
+      )}
+
       {/* 내 정보 — 폰에서는 명세서 아래로(가장 자주 보는 것이 명세서, 2026-10-17 디자인) */}
       <details open className="group rounded-card border border-border bg-bg max-lg:order-2 lg:shadow-card">
         <summary className="flex cursor-pointer list-none items-center justify-between px-4 pt-3 text-sm font-bold lg:hidden [&::-webkit-details-marker]:hidden">
@@ -106,8 +134,8 @@ export default async function MyPayPage({ searchParams }: { searchParams: Promis
           <ChevronDown aria-hidden size={16} className="transition-transform duration-[350ms] group-open:rotate-180" />
         </summary>
         <div className="flex gap-6 p-4 lg:p-6">
-          <span className="hidden size-24 shrink-0 items-center justify-center rounded-card bg-surface text-faint lg:flex">
-            <UserRound aria-hidden size={48} strokeWidth={1.25} />
+          <span aria-hidden className="hidden size-20 shrink-0 items-center justify-center rounded-chip bg-primary-tint text-3xl font-bold text-primary lg:flex">
+            {me.name.slice(0, 1)}
           </span>
           <dl className={`${grid} flex-1`} data-pay-profile>
             <Field label={tm('name')} value={me.name} />
@@ -146,18 +174,9 @@ export default async function MyPayPage({ searchParams }: { searchParams: Promis
               <Field label={tm('sme')} value={reliefOn.sme ? yn(tax?.reliefs.sme.state) : tm('noV')} />
               <Field label={tm('smePeriod')} num range={[sme?.from, sme?.to]} />
               <Field label={tm('smeRate')} num unit="%" value={sme?.rate ?? null} />
-              <Field label={tm('duru')} value={reliefOn.durunuri ? yn(tax?.reliefs.durunuri.state) : tm('noV')} />
-              <Field label={tm('duruPension')} num unit="%" value={duru?.pensionRate ?? null} />
-              <Field label={tm('duruEmployment')} num unit="%" value={duru?.employmentRate ?? null} />
               {(['pension', 'health', 'employment'] as const).map((k) => (
                 <Field key={k} label={ts(`insurer.${k}`)} value={tax && tax.insurance[k].state !== 'UNKNOWN' ? ts(`tri.${tax.insurance[k].state}`) : null} />
               ))}
-            </dl>
-            <dl className={`${grid} px-4 py-4 lg:px-6`}>
-              <Field label={tm('bankName')} />
-              <Field label={tm('bankAccount')} />
-              <Field label={tm('pensionBankName')} />
-              <Field label={tm('pensionAccount')} />
             </dl>
           </div>
         </details>
@@ -179,9 +198,6 @@ export default async function MyPayPage({ searchParams }: { searchParams: Promis
             </button>
           </form>
           <span className="ml-auto flex items-center gap-2">
-            <Link href="/punch/retirement" className="inline-flex min-h-9 items-center text-sm text-primary">
-              {t('toRetirement')} ›
-            </Link>
             {picked && (
               <a href={`/api/payslips/${picked.slip.id}/pdf`} className="inline-flex h-9 items-center gap-1.5 rounded-button border border-border bg-bg px-3 text-sm font-semibold hover:bg-surface">
                 <Printer aria-hidden size={14} />
@@ -191,7 +207,7 @@ export default async function MyPayPage({ searchParams }: { searchParams: Promis
           </span>
         </div>
         <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_minmax(0,1fr)] lg:items-start">
-          <div className="overflow-hidden border-t border-text bg-bg">
+          <div className="overflow-hidden rounded-card border border-border bg-bg">
             <table className="w-full text-sm">
               <thead>
                 <tr className="border-b border-border">
@@ -284,7 +300,7 @@ export default async function MyPayPage({ searchParams }: { searchParams: Promis
       {daily.length > 0 && (
         <section className="flex flex-col gap-2 max-lg:order-2" data-daily-slips>
           <h2 className="text-lg font-bold">{tm('dailyTitle')}</h2>
-          <ul className="flex flex-col divide-y divide-border border-t border-text bg-bg text-sm">
+          <ul className="flex flex-col divide-y divide-border overflow-hidden rounded-card border border-border bg-bg text-sm">
             {daily.map(({ run, line }) => (
               <li key={run.id} className="flex flex-wrap items-center gap-x-3 gap-y-1 px-3 py-2.5">
                 <span className="num min-w-0 flex-1 font-semibold">{tm('dailyLine', { month: run.periodFrom.slice(0, 7), n: run.sequence })}</span>

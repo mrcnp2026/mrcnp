@@ -9,15 +9,14 @@
 //    위치는 폰이 보낸 값이라 인터넷 주소보다 약한 증거다 — 확인 수단(verified_by)을 기록에 남긴다. 사무실 밖 좌표는 저장하지 않는다.
 import { after } from 'next/server';
 import { syncOvertimeFor } from '@/lib/period-data';
-import { notifyLateEarly } from '@/lib/push-events';
+import { notifyLateEarly, notifyPunchRequest } from '@/lib/push-events';
 import { OFFICE } from '@/config/office';
 import { api, ApiError, readJson } from '@/lib/api';
-import { officeCidrs } from '@/lib/attendance-data';
 import { getMe } from '@/lib/auth';
 import { hasConsent } from '@/lib/consent';
 import { parseCoords, roundCoord, verifyGeo } from '@/lib/geo';
 import { passkeyService } from '@/lib/passkey-store';
-import { loadLocationsFor } from '@/lib/geo-data';
+import { loadLocationsFor, loadOfficeLocations, mayPunchAnywhere, officeNetworksFor } from '@/lib/geo-data';
 import { isPeriodLocked, recordPunch } from '@/lib/punch';
 import { geoReasonOf, punchRoute, type GeoReason } from '@/lib/punch-requests';
 import { createAdminClient } from '@/lib/supabase/admin';
@@ -42,11 +41,18 @@ export const POST = api('punch', async (req) => {
   if (await isPeriodLocked(who.employeeId, toKstDate(now))) throw new ApiError(409, 'period_locked');
 
   const trace = traceClientIp(req.headers, OFFICE.ipHeaderOrder);
-  const cidrs = (await officeCidrs()).map((c) => c.cidr);
-  const byIp = isOfficeIp(trace.ip, cidrs);
+  // 일반 출근은 자기 지점에 연결된 장소(와이파이 · GPS 반경)에서 누른 것만 — 1지점 직원이 2지점에서 눌러도 1지점 출근으로 기록되지 않는다.
+  // 다른 지점 장소나 외근지에서 누른 출근은 시간과 GPS를 붙인 「출근 요청」이 되어 관리자 승인을 거친다 (2026-10-23 의뢰인)
+  const nets = await officeNetworksFor(who.employeeId);
+  const mine = nets.filter((n) => n.own);
+  const cidrs = mine.map((n) => n.cidr);
+  const ipHits = mine.filter((n) => isOfficeIp(trace.ip, [n.cidr]));
+  const byIp = ipHits.length > 0;
+  const otherIp = !byIp && nets.some((n) => !n.own && isOfficeIp(trace.ip, [n.cidr])); // 다른 지점 와이파이
   let verifiedBy: 'ip' | 'gps' | null = byIp ? 'ip' : null;
   let geo: { lat: number; lng: number } | null = null;
-  let locationId: string | null = null; // 어느 출퇴근 장소로 확인됐는가 (2026-10-10)
+  let outsideGeo: { lat: number; lng: number } | null = null; // 사무실 밖에서 출근한 자리 (확인된 곳이 아님) — 2026-10-23 의뢰인
+  let locationId: string | null = byIp ? (ipHits.find((n) => n.locationId)?.locationId ?? null) : null; // 어느 출퇴근 장소로 확인됐는가 (2026-10-10 · 인터넷 주소도 2026-10-23)
   let geoReason: GeoReason = 'no_fix';
   let nearestM: number | null = null;
   let places = 0;
@@ -58,20 +64,26 @@ export const POST = api('punch', async (req) => {
     const locations = await loadLocationsFor(who.employeeId);
     places = locations.filter((l) => l.active).length;
     const verdict = coords ? verifyGeo(coords, locations) : null;
+    // 자기 지점 반경 밖인데 회사의 다른 장소 반경 안(또는 다른 지점 와이파이)이면 사유를 「다른 지점 장소」로 남긴다
+    const inOtherPlace = !verdict?.verified && (otherIp || (!!coords && verifyGeo(coords, await loadOfficeLocations()).verified));
     if (coords && verdict?.verified) {
       verifiedBy = 'gps';
       locationId = verdict.locationId;
       geo = { lat: roundCoord(coords.lat), lng: roundCoord(coords.lng) };
+    } else if (coords && kind === 'in' && me.role !== 'admin') {
+      outsideGeo = { lat: roundCoord(coords.lat), lng: roundCoord(coords.lng) };
     }
-    geoReason = geoReasonOf({ consent, hasCoords: !!coords, verdict: verdict?.reason ?? null });
+    geoReason = inOtherPlace ? 'other_place' : geoReasonOf({ consent, hasCoords: !!coords, verdict: verdict?.reason ?? null });
     nearestM = verdict?.nearestM ?? null;
-    if (OFFICE.requestLocation && coords && !verdict?.verified) askedAt = { lat: roundCoord(coords.lat), lng: roundCoord(coords.lng) };
+    if (OFFICE.requestLocation && kind === 'in' && coords && !verdict?.verified) askedAt = { lat: roundCoord(coords.lat), lng: roundCoord(coords.lng) };
   }
 
   // 반경 밖: 기록 대신 요청 (2026-10-10 의뢰인 확정)
+  // 출근 · 퇴근 모두 시간 · 사유를 보내 승인을 받는다. 찍은 위치(GPS)는 출근 요청 · 출근 기록에만 붙는다 (2026-10-23 의뢰인: 퇴근은 GPS만 빠진다).
+  // 최고관리자 · 영업부 · 간주근무 · 승인된 외근이 있는 날은 바로 기록
   if (verifiedBy === null) {
     const today = toKstDate(now);
-    const approvedAway = workStatusOn(today, who.employeeId, await loadWorkRequests({ employeeId: who.employeeId, from: today, to: today })) !== null;
+    const approvedAway = workStatusOn(today, who.employeeId, await loadWorkRequests({ employeeId: who.employeeId, from: today, to: today })) !== null || (await mayPunchAnywhere(me));
     if (punchRoute({ verified: false, hasOfficeSetup: cidrs.length > 0 || places > 0, approvedAway }) === 'request') {
       // 통합설정 › 요청의 「출근 · 퇴근 요청」을 끄면 장소 밖에서는 요청도 기록도 만들지 않는다 (2026-10-19)
       if (!(await switchOn('request.punch'))) throw new ApiError(403, 'outside_punch_off');
@@ -82,9 +94,10 @@ export const POST = api('punch', async (req) => {
       const { data: made, error } = await db
         .from('punch_requests')
         .insert({ employee_id: who.employeeId, kind, requested_at: now.toISOString(), work_date: today, client_ip: trace.ip, nearest_m: nearestM, geo_reason: geoReason, passkey_id: passkeyId, is_test: OFFICE.practiceMode, ...(askedAt ?? {}) })
-        .select('requested_at')
+        .select('id, requested_at')
         .single();
       if (error) throw new Error(`punch.request: ${error.code}`);
+      after(() => notifyPunchRequest(made.id as string)); // 승인할 관리자 폰으로 (2026-10-23)
       return { requested: true, kind, punchedAt: made.requested_at, ipVerified: false, verifiedBy: null, isTest: OFFICE.practiceMode, deduped: false, note: null, nearestM };
     }
   }
@@ -96,7 +109,7 @@ export const POST = api('punch', async (req) => {
     clientIp: trace.ip,
     ipVerified: verifiedBy !== null,
     verifiedBy,
-    geo,
+    geo: geo ?? outsideGeo,
     locationId,
     source: 'web',
     isTest: OFFICE.practiceMode,

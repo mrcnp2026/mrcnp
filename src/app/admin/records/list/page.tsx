@@ -2,6 +2,7 @@
 // 위: 검색 · 거르기 · 기간 · [내 기록]. 아래: 날짜 머리줄(그날 합계) + 기록 한 건이 한 줄 = 출근/퇴근 시각 · 직무 색 막대 · 이름 · 지점/직무 · 배지.
 // 합계는 그날 보이는 사람들의 근무 시간(휴게 제외) 합이다. 줄을 누르면 그 기록의 상세(큰 시각 + 항목—값), 거기서 [수정]으로 그 직원의 그 달 기록(정정·대리 입력).
 // 월 집계·엑셀 내려받기는 「월 집계」 화면(/admin/records)에 그대로 있다.
+import { Select } from '@/components/Select';
 import { loadOfficeLocations } from '@/lib/geo-data';
 import { HelpTip } from '@/components/Help';
 import { SheetOpener } from '@/components/SheetOpener';
@@ -22,7 +23,7 @@ import { addDays } from '@/lib/calendar';
 import { confirmKey, loadConfirms } from '@/lib/confirm-data';
 import { loadJobs } from '@/lib/job-data';
 import { missingRange } from '@/lib/missing-list';
-import { buildOrgTree, groupPath, groupScope } from '@/lib/org';
+import { groupPath, groupScope, orgOptions } from '@/lib/org';
 import { loadOrgGroups } from '@/lib/org-data';
 import { daysFor, leaveDaysFor, loadPeriod } from '@/lib/period-data';
 import { judgeLateness } from '@/lib/lateness';
@@ -47,7 +48,7 @@ export default async function RecordListPage({ searchParams }: { searchParams: P
   const { from, to } = missingRange(sp.from ?? `${today.slice(0, 8)}01`, sp.to, today, addDays);
   const [data, groups, jobs, confirms] = await Promise.all([loadPeriod(from, to, practice), loadOrgGroups(), loadJobs(), loadConfirms(from, to, practice)]);
   const jobOf = new Map(jobs.map((j) => [j.id, j]));
-  const groupOptions = buildOrgTree(groups).flatMap((d) => [{ id: d.id, label: d.name }, ...d.teams.map((x) => ({ id: x.id, label: `${d.name} › ${x.name}` }))]);
+  const groupOptions = orgOptions(groups);
   const g = groupOptions.some((o) => o.id === sp.g) ? sp.g! : '';
   const scope = g ? groupScope(groups, g) : null;
   const q = (sp.q ?? '').trim().slice(0, 40);
@@ -157,14 +158,14 @@ export default async function RecordListPage({ searchParams }: { searchParams: P
           <span className="text-muted">-</span>
           <input type="date" name="to" defaultValue={to} max={today} aria-label={t('to')} className="num min-h-8 rounded-button border border-border bg-bg px-2" />
           <input type="search" name="q" defaultValue={q} placeholder={t('search')} aria-label={t('search')} maxLength={40} className="min-h-8 w-44 rounded-button border border-border bg-bg px-3" />
-          <select name="g" defaultValue={g} aria-label={t('filter')} className="min-h-8 rounded-button border border-border bg-surface px-2 text-muted">
+          <Select name="g" defaultValue={g} aria-label={t('filter')} className="min-h-8 rounded-button border border-border bg-surface px-2 text-muted">
             <option value="">{t('groupAll')}</option>
             {groupOptions.map((o) => (
               <option key={o.id} value={o.id}>
                 {o.label}
               </option>
             ))}
-          </select>
+          </Select>
           <button type="submit" className="inline-flex min-h-8 items-center rounded-button border border-border bg-bg px-3 text-sm text-muted">
             {t('apply')}
           </button>
@@ -226,14 +227,21 @@ export default async function RecordListPage({ searchParams }: { searchParams: P
                     {/* 굵은 글씨는 문제가 있는 값에만 — 모든 줄이 굵으면 눈에 띄는 것이 없다 (2026-10-19 의뢰인) */}
                     <td className="num px-2.5 py-2.5 text-right whitespace-nowrap">{hm(r.payable)}</td>
                     {/* 일정과의 차이 — 출근 · 퇴근을 한 칸에 두 줄로. 늦은 출근 · 이른 퇴근은 주황 */}
-                    <td className="num px-2.5 py-2.5 text-right text-xs leading-snug whitespace-nowrap">
-                      {[r.diffIn, r.diffOut].map((v, i) =>
-                        v === null || v === 0 ? null : (
-                          <span key={i} className={`block ${(i === 0 && v > 0) || (i === 1 && v < 0) ? 'text-warn' : 'text-muted'}`}>
-                            {t(i === 0 ? 'diffInShort' : 'diffOutShort')} {t(v > 0 ? 'diffPlus' : 'diffMinus', { n: Math.abs(v) < 60 ? t('min', { n: Math.abs(v) }) : hm(Math.abs(v)) })}
-                          </span>
-                        ),
-                      )}
+                    {/* 일정과의 차이 (2026-10-22: 「출근 − 36분」 부호 대신 말로) — 늦은 출근 · 이른 퇴근만 주황 딱지, 나머지는 옅게 */}
+                    <td className="num px-2.5 py-2.5 text-right whitespace-nowrap">
+                      <span className="inline-flex flex-col items-end gap-1">
+                        {[r.diffIn, r.diffOut].map((v, i) => {
+                          if (v === null || v === 0) return null;
+                          const bad = (i === 0 && v > 0) || (i === 1 && v < 0);
+                          const n = Math.abs(v) < 60 ? t('min', { n: Math.abs(v) }) : hm(Math.abs(v));
+                          const key = i === 0 ? (v > 0 ? 'diffLateIn' : 'diffEarlyIn') : v > 0 ? 'diffLateOut' : 'diffEarlyOut';
+                          return (
+                            <span key={i} className={`rounded-chip px-2 py-0.5 text-xs ${bad ? 'bg-warn-tint font-bold text-warn' : 'text-faint'}`}>
+                              {t(key, { n })}
+                            </span>
+                          );
+                        })}
+                      </span>
                     </td>
                     <td className="px-2.5 py-2.5">
                       <span className="flex flex-wrap gap-1">

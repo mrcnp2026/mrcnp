@@ -30,12 +30,14 @@ import { LocationPrompt } from '@/components/LocationPrompt';
 import { PushToggle } from '@/components/PushToggle';
 import { Fab } from '@/components/Fab';
 import { SituationCard } from './SituationCard';
+import { judgeLateness } from '@/lib/lateness';
 import { StaffDesk } from './StaffDesk';
+import { ShiftRequestSheet } from './schedule/request/ShiftRequestSheet';
 import { TodayCard } from './TodayCard';
 import { WeekBar, type WeekCell } from './WeekBar';
 import { switchOn } from '@/lib/switches';
 
-export default async function PunchPage({ searchParams }: { searchParams: Promise<{ w?: string; m?: string }> }) {
+export default async function PunchPage({ searchParams }: { searchParams: Promise<{ w?: string; m?: string; new?: string }> }) {
   const me = await getMe();
   if (!me) redirect('/login');
   const t = await getTranslations('home');
@@ -49,15 +51,25 @@ export default async function PunchPage({ searchParams }: { searchParams: Promis
     // 출퇴근 기기 (등록한 1대). 없으면 홈의 버튼 자리에 등록 안내가 나온다
     createAdminClient().from('user_passkeys').select('credential_id, device_label').eq('employee_id', me.id).is('revoked_at', null).maybeSingle(),
   ]);
-  // 승인을 기다리는 반경 밖 출근/퇴근 요청 (오늘 것)
-  const { data: pr } = await createAdminClient().from('punch_requests').select('kind, requested_at').eq('employee_id', me.id).eq('work_date', today.workDate).eq('status', 'pending').eq('is_test', today.practice).order('requested_at', { ascending: false }).limit(1);
-  const pendingPunch = pr?.length ? { kind: pr[0].kind as 'in' | 'out', at: pr[0].requested_at as string } : null;
   // 이번 주 요일 칸: 그날 일정(날짜별 일정 → 평소 틀 → 회사 규칙, 반차 반영). 하루 전부 휴가면 「휴가」
   // 주 고르기(?w=날짜): 지난 주 · 다음 주의 일정과 근무 시간을 본다. 기본은 이번 주
   const thisWeek = weekStartOf(today.workDate);
   const weekStart = pickWeek((await searchParams).w, thisWeek, weekStartOf, addDays);
   const isThisWeek = weekStart === thisWeek;
-  const period = await loadPeriod(weekStart, addDays(weekStart, 6));
+  // 서로 상관없는 조회는 한꺼번에 시작한다 (2026-10-23 의뢰인: 화면 이동이 느리다 — 예전에는 다섯 단계를 하나씩 기다렸고 요청 목록은 두 번 읽었다)
+  // 통합설정 › 고급 옵션 「홈 카드」를 끄면 각자 끈 카드를 무시하고 기본 카드를 모두 보인다 (2026-10-19)
+  const cardsP = switchOn('advanced.homeCards').then(async (on) => homeCardsOn(on ? (await cookies()).get(HOME_COOKIE)?.value : undefined));
+  // 새 소식: 공지 + 사내게시판 글 (안 읽은 것 먼저 3줄 — NewsCard)
+  const newsP = cardsP.then(async (c) => (c.has('news') ? Promise.all([visibleNoticesNow(me.id, await getLocale()), loadInbox(me, 10)]) : [[], []]));
+  const [{ data: pr }, period, cards, [notices, inbox], workReqs] = await Promise.all([
+    // 승인을 기다리는 반경 밖 출근/퇴근 요청 (오늘 것)
+    Promise.resolve(createAdminClient().from('punch_requests').select('kind, requested_at').eq('employee_id', me.id).eq('work_date', today.workDate).eq('status', 'pending').eq('is_test', today.practice).order('requested_at', { ascending: false }).limit(1)),
+    loadPeriod(weekStart, addDays(weekStart, 6)),
+    cardsP,
+    newsP,
+    loadWorkRequests({ employeeId: me.id, from: today.workDate, to: today.workDate }),
+  ]);
+  const pendingPunch = pr?.length ? { kind: pr[0].kind as 'in' | 'out', at: pr[0].requested_at as string } : null;
   // 주 근무 시간 = 실제 근로시간(휴게를 빼고, 일정 전 일찍 온 시간은 빼고) — 「내 근태현황」 · 관리자 「주 52시간 관리」와 같은 숫자.
   // 2026-10-17: 예전에는 출근~퇴근을 그대로 더해(점심 포함) 52시간이 안 된 사람에게 「한도 초과」가 떴다(내 근태현황은 48시간 40분)
   const week = !period.rule
@@ -71,8 +83,6 @@ export default async function PunchPage({ searchParams }: { searchParams: Promis
         })),
         is5OrMore: today.week?.colored ?? true,
       });
-  // 통합설정 › 고급 옵션 「홈 카드」를 끄면 각자 끈 카드를 무시하고 기본 카드를 모두 보인다 (2026-10-19)
-  const cards = homeCardsOn((await switchOn('advanced.homeCards')) ? (await cookies()).get(HOME_COOKIE)?.value : undefined);
   const weekHref = (n: number) => {
     const w = addDays(weekStart, 7 * n);
     return w < addDays(thisWeek, -7 * WEEKS_BACK) || w > addDays(thisWeek, 7 * WEEKS_AHEAD) ? null : w === thisWeek ? '/punch' : `/punch?w=${w}`;
@@ -80,6 +90,7 @@ export default async function PunchPage({ searchParams }: { searchParams: Promis
   const fullLeave = fullLeaveSet(leaveDaysFor(period, me.id));
   const md = (d: string) => `${d.slice(5, 7)}.${d.slice(8, 10)}`;
   let planTotal = 0;
+  let nightTotal = 0, lateCount = 0, lateTotal = 0; // 이번주 근무 카드의 야간 · 지각 (간주 근무일은 찍은 기록이 아니라 지각을 세지 않는다)
   // 요일 칸에 실제 출근 · 퇴근 시각 (2026-10-18 의뢰인: 일정보다 실제로 일한 것을) — 아직 안 찍은 날은 일정을 흐리게
   const worked = new Map(daysFor(period, me.id).map((d) => [d.workDate, d]));
   const hm = (x: Date | null | undefined) => (x ? f.dateTime(x, { hour: '2-digit', minute: '2-digit', hourCycle: 'h23', timeZone: 'Asia/Seoul' }) : null);
@@ -93,6 +104,12 @@ export default async function PunchPage({ searchParams }: { searchParams: Promis
     const w = worked.get(d);
     const pairs = (w?.deemed ? w.punchedPairs : w?.pairs) ?? [];
     const firstIn = pairs.find((p) => p.in)?.in ?? null;
+    nightTotal += w?.nightMinutes ?? 0;
+    const lateRule = period.ruleFor(me.id, d) ?? period.rule;
+    if (w && !w.deemed && firstIn && w.dayType === 'workday' && lateRule) {
+      const j = judgeLateness({ punchedAt: firstIn, workDate: d, rule: lateRule, isHoliday: false });
+      if (j.verdict === 'late') { lateCount += 1; lateTotal += j.lateMinutes; }
+    }
     const lastOut = [...pairs].reverse().find((p) => p.out)?.out ?? null;
     return {
       date: d, label: f.dateTime(kstDateTime(d, '12:00'), { weekday: 'short' }), red: holiday, today: isThisWeek && d === today.workDate,
@@ -102,20 +119,20 @@ export default async function PunchPage({ searchParams }: { searchParams: Promis
   });
   const todayCell = cells.find((c) => c.today && !c.leave);
 
-  // 새 소식: 공지 + 사내게시판 글 (안 읽은 것 먼저 3줄 — NewsCard)
-  const [notices, inbox] = cards.has('news') ? await Promise.all([visibleNoticesNow(me.id, await getLocale()), loadInbox(me, 10)]) : [[], []];
   const news: NewsItem[] = [
     ...notices.map((n) => ({ id: n.id, kind: 'notice' as const, title: n.display.title, at: n.startsAt.toISOString(), unread: !n.confirmed, href: `/punch/notices?open=${n.id}` })),
     ...inbox.map((m) => ({ id: m.id, kind: 'board' as const, title: m.title, at: m.createdAt, unread: !m.readAt, href: `/punch/messages/${m.id}` })),
   ];
 
-  const approvedAwayToday = workStatusOn(today.workDate, me.id, await loadWorkRequests({ employeeId: me.id, from: today.workDate, to: today.workDate })) !== null;
+  const approvedAwayToday = workStatusOn(today.workDate, me.id, workReqs) !== null;
   // PC에서는 시프티 직원 모드처럼 「스케줄」(통계 + 월 달력)을 보인다 — 폰 브라우저에는 만들지 않는다(자료를 두 번 읽지 않게)
   const phone = isPhoneUserAgent((await headers()).get('user-agent'));
 
   return (
       <PageShell wide>
         {!phone && <StaffDesk meId={me.id} today={today.workDate} month={(await searchParams).m} />}
+        {/* 근무일정 생성 요청 팝업 — 폰 + 단추 · PC 「근무일정 요청」 단추가 같이 연다 (폰 전용 칸 밖에 둔다) */}
+        <ShiftRequestSheet defaultOpen={(await searchParams).new === 'shift'} />
         <div className="flex flex-col gap-3 lg:hidden">
         {/* 2026-10-15 의뢰인: 직원 홈은 본인 업무만 — 리포트 · 누락 기록 바로가기와 회사 「현재 근무 상황」은 관리자 모드 「오늘 현황」에 있다(중복 제거) */}
         {/* PC: 왼쪽 = 오늘 근무, 오른쪽 = 이번 주·근무노트 (2026-10-06 의뢰인) · 폰: 한 칸 */}
@@ -152,7 +169,7 @@ export default async function PunchPage({ searchParams }: { searchParams: Promis
         />
 
         {/* 사무실 밖에서 찍혔는데 승인된 외근이 없으면 신청 안내 (②-3 7-11) */}
-        {today.firstInVerified === false && !workStatusOn(today.workDate, me.id, await loadWorkRequests({ employeeId: me.id, from: today.workDate, to: today.workDate })) && (
+        {today.firstInVerified === false && !approvedAwayToday && (
           <Link href={`/punch/leave?workDate=${today.workDate}#work`} className="flex min-h-11 items-center justify-between gap-2 rounded-card border border-warn bg-warn-tint px-4 py-3 text-sm text-warn">
             <span>{tw('outsideHint')}</span>
             <span className="shrink-0 font-semibold">{tw('outsideLink')} ›</span>
@@ -160,15 +177,17 @@ export default async function PunchPage({ searchParams }: { searchParams: Promis
         )}
 
         <MissingBanner items={recent.missing} />
-        {/* 위치가 허용돼 있지 않으면 허용 안내 한 줄 (2026-10-18 의뢰인) */}
-        <LocationPrompt />
-        {/* 폰 알림이 꺼져 있으면 켜기 안내 한 줄 (2026-10-16: 출근 · 퇴근을 잊으면 본인에게 알림) */}
-        <PushToggle mode="prompt" audience="employee" />
+        {/* 설정 안내는 한 상자에 한 줄씩 묶는다 (2026-10-23 의뢰인: 카드가 겹겹이 쌓여 보였다). 둘 다 없으면 상자도 안 보인다(empty:hidden).
+            위치 허용(2026-10-18 의뢰인) · 폰 알림 켜기(2026-10-16: 출근 · 퇴근을 잊으면 본인에게 알림) */}
+        <div className="flex flex-col divide-y divide-border overflow-hidden rounded-card bg-surface empty:hidden">
+          <LocationPrompt bare />
+          <PushToggle mode="prompt" audience="employee" bare />
+        </div>
         {/* 요청은 오른쪽 아래 + 단추에서 (2026-10-18 의뢰인: 출근 단추 옆 「요청」을 빼고 다른 화면처럼) — 요청 화면의 + 와 같은 목록 */}
         <Fab
           label={tr('new')}
           items={[
-            { id: 'shift', label: tr('newShift'), href: '/punch/schedule/request' },
+            { id: 'shift', label: tr('newShift') }, // 이 화면 위 팝업 (ShiftRequestSheet)
             { id: 'correction', label: tr('newCorrection'), href: '/punch/corrections?new=1' },
             { id: 'leave', label: tr('newLeave'), href: '/punch/leave?new=leave' },
             { id: 'work', label: tr('newWork'), href: '/punch/leave?new=work' },
@@ -177,7 +196,7 @@ export default async function PunchPage({ searchParams }: { searchParams: Promis
         </div>
         <div className="flex flex-col gap-3 lg:gap-4">
         {cards.has('week') && (
-          <WeekBar week={week} regularHours={LABOR.weeklyRegularLimitMin / 60} limitHours={OFFICE.weeklyLimitHours} cells={cells} planMinutes={planTotal} range={`${md(weekStart)} - ${md(addDays(weekStart, 6))}`} nav={{ prev: weekHref(-1), next: weekHref(1), thisWeek: isThisWeek }} limitNotice={await switchOn('report.week52')} />
+          <WeekBar week={week} regularHours={LABOR.weeklyRegularLimitMin / 60} limitHours={OFFICE.weeklyLimitHours} cells={cells} planMinutes={planTotal} range={`${md(weekStart)} - ${md(addDays(weekStart, 6))}`} nav={{ prev: weekHref(-1), next: weekHref(1), thisWeek: isThisWeek }} limitNotice={await switchOn('report.week52')} extra={{ nightMinutes: nightTotal, lateCount, lateMinutes: lateTotal }} />
         )}
         {cards.has('news') && <NewsCard items={news} />}
         </div>

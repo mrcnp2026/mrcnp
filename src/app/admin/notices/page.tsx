@@ -1,9 +1,9 @@
 // 더보기 › 공지 — 목록 (상태는 계산: 임시·예약·게시 중·종료·보관, 요점 13) + 확인 현황 (요점 17). 삭제 버튼은 없다.
-import { ChevronDown, ChevronRight, Plus } from 'lucide-react';
+import { ChevronDown, ChevronRight, Megaphone } from 'lucide-react';
 import { HelpTip } from '@/components/Help';
 import { getFormatter, getTranslations } from 'next-intl/server';
 import Link from 'next/link';
-import { Card, Chip, PageShell } from '@/components/ui';
+import { Card, Chip, PageShell, Empty } from '@/components/ui';
 import { listNoticesForAdmin } from '@/lib/notices';
 
 export default async function NoticesPage() {
@@ -40,8 +40,8 @@ export default async function NoticesPage() {
         <div className="min-w-0">
           <h1 className="flex flex-wrap items-center gap-x-1 text-2xl font-bold">{t('title')}<HelpTip>{t('intro')}</HelpTip></h1>
         </div>
-        <Link href="/admin/notices/new" className="inline-flex min-h-11 items-center gap-1 rounded-button bg-primary px-4 font-semibold text-on-primary">
-          <Plus aria-hidden size={18} strokeWidth={1.75} />
+        <Link href="/admin/notices/new" className="inline-flex min-h-11 items-center gap-1 rounded-button bg-primary px-4 font-semibold text-on-primary lg:h-9 lg:min-h-0 lg:gap-1.5 lg:px-3.5 lg:text-sm lg:font-semibold">
+          <Megaphone aria-hidden size={16} />
           {t('new')}
         </Link>
       </header>
@@ -57,7 +57,7 @@ export default async function NoticesPage() {
           <dd className="num text-xl leading-none font-extrabold text-faint lg:text-3xl">{archived.length}</dd>
         </div>
       </dl>
-      {current.length === 0 && <p className="rounded-card bg-bg p-5 text-muted">{t('empty')}</p>}
+      {current.length === 0 && <Empty icon={Megaphone} title={t('empty')} />}
       {/* PC: 공지 한 건 = 표 한 줄 (2026-10-06 의뢰인) · 폰: 카드 */}
       {current.length > 0 && (
         <Card className="hidden overflow-x-auto p-0 lg:block">

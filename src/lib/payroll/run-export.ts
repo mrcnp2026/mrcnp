@@ -59,12 +59,23 @@ export async function buildRunWorkbook(args: { run: RunRow; company: string; by:
   ]);
   const list = ((sts ?? []) as Row[]).map((s) => ({ s, p: (people ?? []).find((x) => x.id === s.employee_id) })).sort((a, b) => String(a.p?.name ?? '').localeCompare(String(b.p?.name ?? '')));
   const groupName = (id: unknown) => {
-    const g = (groups ?? []).find((x) => x.id === id);
-    const parent = g?.parent_id ? (groups ?? []).find((x) => x.id === g.parent_id) : null;
-    return g ? (parent ? `${parent.name} › ${g.name}` : (g.name as string)) : '';
+    // 본부 › 부서 › 팀 (3단계까지) — 위로 올라가며 이름을 모은다
+    const names: string[] = [];
+    for (let g = (groups ?? []).find((x) => x.id === id), n = 0; g && n < 4; n++) {
+      names.unshift(g.name as string);
+      g = g.parent_id ? (groups ?? []).find((x) => x.id === g!.parent_id) : undefined;
+    }
+    return names.join(' › ');
   };
   const no = (s: Row) => `${month.replace('-', '')}-${run.kind[0]}${run.sequence}-${String((s.id as string).slice(0, 8)).toUpperCase()}`; // 사람이 읽는 표시 번호 (내부 번호와 따로)
   const n = (v: unknown) => (v === null || v === undefined ? null : Number(v));
+  // 과세 대상 · 비과세 · 보험 기준 (2026-10-22 의뢰인 ②: 「비과세가 얼마였는지 보여야 한다」) — 계산 때 저장한 과세 합계에서. 비과세 = 지급 합계 − 과세 대상
+  const taxCols = (s: Row): Cell[] => {
+    const t = ((s.snapshot as Row | null)?.totals ?? null) as { taxable?: number; insuranceBase?: number } | null;
+    const pay = n(s.pay_total);
+    if (!t || typeof t.taxable !== 'number' || pay === null) return [null, null, null];
+    return [t.taxable, Math.max(0, pay - t.taxable), typeof t.insuranceBase === 'number' ? t.insuranceBase : null];
+  };
   const ids = list.map((x) => x.s.id as string);
   const items: Row[] = [];
   for (let i = 0; i < ids.length; i += 200) {
@@ -72,8 +83,8 @@ export async function buildRunWorkbook(args: { run: RunRow; company: string; by:
     items.push(...((data ?? []) as Row[]));
   }
 
-  sheet(wb, '대장요약', banner, [{ h: '명세번호', w: 24 }, { h: '판', w: 6 }, { h: '사번', w: 14 }, { h: '이름', w: 14 }, { h: '소속', w: 20 }, { h: '귀속 시작', w: 12 }, { h: '귀속 끝', w: 12 }, { h: '지급일', w: 12 }, { h: '유형', w: 8 }, { h: '상태', w: 10 }, { h: '계산', w: 8 }, { h: '지급 합계', w: 14, money: true }, { h: '공제 합계', w: 14, money: true }, { h: '실지급', w: 14, money: true }, { h: '사업주 부담', w: 14, money: true }],
-    list.map(({ s, p }) => [no(s), run.revision, (p?.employee_no as string) ?? '', (p?.name as string) ?? '', groupName(p?.group_id), run.periodFrom, new Date(Date.parse(`${run.periodTo}T00:00:00Z`) - 86400000).toISOString().slice(0, 10), run.payDate, L.kind, L.status, s.state === 'OK' ? L.ok : L.blocked, n(s.pay_total), n(s.deduction_total), n(s.net_total), n(s.employer_total)]));
+  sheet(wb, '대장요약', banner, [{ h: '명세번호', w: 24 }, { h: '판', w: 6 }, { h: '사번', w: 14 }, { h: '이름', w: 14 }, { h: '소속', w: 20 }, { h: '귀속 시작', w: 12 }, { h: '귀속 끝', w: 12 }, { h: '지급일', w: 12 }, { h: '유형', w: 8 }, { h: '상태', w: 10 }, { h: '계산', w: 8 }, { h: '지급 합계', w: 14, money: true }, { h: '과세 대상', w: 14, money: true }, { h: '비과세', w: 12, money: true }, { h: '보험 기준', w: 14, money: true }, { h: '공제 합계', w: 14, money: true }, { h: '실지급', w: 14, money: true }, { h: '사업주 부담', w: 14, money: true }],
+    list.map(({ s, p }) => [no(s), run.revision, (p?.employee_no as string) ?? '', (p?.name as string) ?? '', groupName(p?.group_id), run.periodFrom, new Date(Date.parse(`${run.periodTo}T00:00:00Z`) - 86400000).toISOString().slice(0, 10), run.payDate, L.kind, L.status, s.state === 'OK' ? L.ok : L.blocked, n(s.pay_total), ...taxCols(s), n(s.deduction_total), n(s.net_total), n(s.employer_total)]));
   const stOf = new Map(list.map((x) => [x.s.id as string, x]));
   sheet(wb, '지급공제항목', banner, [{ h: '명세번호', w: 24 }, { h: '사번', w: 14 }, { h: '이름', w: 14 }, { h: '항목코드', w: 16 }, { h: '항목명', w: 22 }, { h: '구분', w: 12 }, { h: '수량', w: 12 }, { h: '단가', w: 14 }, { h: '계수', w: 10 }, { h: '끝수 처리 전', w: 16 }, { h: '금액', w: 14, money: true }, { h: '자동/수동', w: 10 }, { h: '근거', w: 50 }],
     items.map((i) => {

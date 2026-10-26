@@ -1,6 +1,6 @@
 // 반경 밖 「출근/퇴근 요청」 판단 (의뢰인 2026-10-10 확정: 시프티 방식). 순수함수.
 // 사무실 인터넷도 아니고 출퇴근 장소 반경 안도 아닌 곳에서 찍으면 기록이 아니라 요청이 된다 — 관리자가 승인해야 기록된다.
-export type GeoReason = 'outside' | 'no_fix' | 'low_accuracy' | 'no_office' | 'no_consent';
+export type GeoReason = 'outside' | 'no_fix' | 'low_accuracy' | 'no_office' | 'no_consent' | 'other_place'; // other_place = 다른 지점 장소에서 누름 (2026-10-23)
 
 /**
  * 지금 누른 출퇴근을 바로 기록할지('record'), 요청으로 돌릴지('request').
@@ -21,3 +21,6 @@ export function geoReasonOf(args: { consent: boolean; hasCoords: boolean; verdic
   if (args.verdict === 'ok') return 'outside';
   return args.verdict;
 }
+
+/** 부서 이름이 이것이면 출근할 때 장소를 따지지 않는다 (2026-10-23 의뢰인: 영업부는 밖에서 일한다) — 하위 팀도 포함 */
+export const FREE_PLACE_GROUP = '영업부';

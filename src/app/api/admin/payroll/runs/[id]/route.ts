@@ -1,8 +1,12 @@
 // 급여대장의 작업 — 계산 · 검토 · 확정 · 대상 빼기/넣기 · 금액 조정 · 명세서 공개/회수 (PRD v1.3 18.3 · 19장). 급여 담당 관리자만.
 // 계산 · 검토 · 확정은 화면이 보던 판 번호(expectedVersion)가 지금과 같을 때만 된다 — 두 사람이 동시에 누르면 먼저 한 쪽만 성공한다.
+import { after } from 'next/server';
 import { api, ApiError, readJson } from '@/lib/api';
+import { notifyPayslipPublished } from '@/lib/push-events';
+import { OFFICE } from '@/config/office';
 import { requirePayroll } from '@/lib/payroll/data';
 import { publishRun, unpublishStatement } from '@/lib/payroll/publish-data';
+import { mailPublished } from '@/lib/payroll/slip-mail';
 import { addOverride, calculateRun, finalizeRun, loadRun, reviewRun, setMember, startCorrection, withdrawOverride } from '@/lib/payroll/run-data';
 import { syncOvertimeRange } from '@/lib/period-data';
 
@@ -59,11 +63,14 @@ export const POST = api<{ params: Promise<{ id: string }> }>('admin.payroll.run'
     if (reason.length < 2 || reason.length > 500) throw new ApiError(400, 'payroll_reason_required');
     return { id: (await startCorrection({ id, reason, me, requestId: ctx.requestId })).id };
   }
-  // 공개 · 회수 — 확정한 대장만. 공개가 은행 지급을 뜻하지 않고, 문자 · 메일을 보내지 않는다
+  // 공개 · 회수 — 확정한 대장만. 공개가 은행 지급을 뜻하지 않고, 문자 · 메일은 보내지 않는다(폰 알림만)
   if (b.action === 'publish') {
     const ids = b.employeeIds === undefined ? undefined : Array.isArray(b.employeeIds) && b.employeeIds.length > 0 && b.employeeIds.length <= 500 && b.employeeIds.every((x) => typeof x === 'string' && UUID.test(x)) ? (b.employeeIds as string[]) : null;
     if (ids === null) throw new ApiError(400, 'invalid_input');
-    return { publish: await publishRun({ runId: id, employeeIds: ids, me, requestId: ctx.requestId }) };
+    const publish = await publishRun({ runId: id, employeeIds: ids, me, requestId: ctx.requestId });
+    after(() => notifyPayslipPublished(id, publish.month, publish.kind, publish.employeeIds)); // 공개된 직원 폰으로 — 누르면 내 급여 조회 (2026-10-24 의뢰인)
+    after(() => mailPublished({ me, items: publish.slips, practice: OFFICE.practiceMode, origin: req.nextUrl.origin, requestId: ctx.requestId })); // 공개와 함께 명세서 메일도 (2026-10-24 의뢰인) — 이미 보낸 것은 건너뛴다
+    return { publish: { published: publish.published, skipped: publish.skipped } };
   }
   if (b.action === 'unpublish') {
     const reason = reasonOf(b.reason);

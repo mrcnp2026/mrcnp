@@ -1,8 +1,11 @@
 'use client';
 // 근무일정 생성 요청 양식 (2026-10-11) — 템플릿을 고르면 시각·유형이 채워진다. 사유는 필수. + 대기 중인 내 요청 취소 버튼.
+import { withKindNames, type KindNames } from '@/lib/shift-kind-names';
+import { Select } from '@/components/Select';
 import { useTranslations } from 'next-intl';
 import { useRouter } from 'next/navigation';
 import { useState } from 'react';
+import { CLOSE_SHEET_EVENT } from '@/components/AddSheet';
 import { callApi } from '@/components/client-api';
 import { DateTimeInput } from '@/components/DateTimeInput';
 import { ErrorNote } from '@/components/ErrorNote';
@@ -12,9 +15,10 @@ const field = 'min-h-11 w-full rounded-button border border-border bg-bg px-3 te
 const KINDS = ['none', 'normal', 'outside', 'remote', 'holiday', 'extra'] as const;
 type Kind = (typeof KINDS)[number];
 
-export function ShiftRequestForm({ today, templates }: { today: string; templates: { id: string; name: string; startTime: string; endTime: string; kind: string }[] }) {
+// sheet: 팝업(ShiftRequestSheet) 안에서 쓸 때 그 창 이름 — 보내면 창을 닫는다
+export function ShiftRequestForm({ today, templates, sheet, kindNames }: { kindNames?: KindNames; today: string; templates: { id: string; name: string; startTime: string; endTime: string; kind: string }[]; sheet?: string }) {
   const t = useTranslations('scheduleRequest');
-  const tk = useTranslations('requests.shiftKind');
+  const tk = withKindNames(useTranslations('requests.shiftKind'), kindNames);
   const router = useRouter();
   const [date, setDate] = useState(today);
   const [tpl, setTpl] = useState('');
@@ -34,6 +38,10 @@ export function ShiftRequestForm({ today, templates }: { today: string; template
         const r = await callApi<{ id: string; direct?: boolean }>('/api/schedule-requests', { date, startTime: start, endTime: end, kind, reason });
         setBusy(false);
         if (!r.ok) return setErr(r);
+        if (sheet) {
+          window.dispatchEvent(new CustomEvent(CLOSE_SHEET_EVENT, { detail: sheet }));
+          setReason('');
+        }
         router.push(r.data.direct ? '/punch/schedule' : '/punch/requests'); // 바로 확정 방식이면 일정에 이미 들어갔다
         router.refresh();
       }}
@@ -45,7 +53,7 @@ export function ShiftRequestForm({ today, templates }: { today: string; template
       {templates.length > 0 && (
         <label className="flex flex-col gap-1 text-sm text-muted">
           {t('template')}
-          <select
+          <Select
             value={tpl}
             onChange={(e) => {
               setTpl(e.target.value);
@@ -64,7 +72,7 @@ export function ShiftRequestForm({ today, templates }: { today: string; template
                 {x.name} ({x.startTime} - {x.endTime})
               </option>
             ))}
-          </select>
+          </Select>
         </label>
       )}
       <div className="grid grid-cols-2 gap-2">
@@ -79,13 +87,13 @@ export function ShiftRequestForm({ today, templates }: { today: string; template
       </div>
       <label className="flex flex-col gap-1 text-sm text-muted">
         {t('kind')}
-        <select value={kind} onChange={(e) => setKind(e.target.value as Kind)} className={field}>
+        <Select value={kind} onChange={(e) => setKind(e.target.value as Kind)} className={field}>
           {KINDS.map((k) => (
             <option key={k} value={k}>
               {k === 'none' ? t('kindNone') : tk(k)}
             </option>
           ))}
-        </select>
+        </Select>
       </label>
       <label className="flex flex-col gap-1 text-sm text-muted">
         {t('reason')}

@@ -1,9 +1,11 @@
 // 게시 · 보관 · 되살리기. 삭제는 없다 (②-0 4-13).
 // 게시 전 검사 (요점 9·11): 숫자 확인 필요 번역은 「확인했음」 필요, 법적·급여 관련이면 켜진 언어 번역이 전부 확인돼야 한다
+import { after } from 'next/server';
 import { api, ApiError, readJson } from '@/lib/api';
 import { requireAdmin } from '@/lib/auth';
 import { publishBlockers } from '@/lib/notice-logic';
 import { draftTranslations, getNotice, setStatus, translationLocales } from '@/lib/notices';
+import { notifyNoticePublished } from '@/lib/push-events';
 
 // 게시할 때 번역까지 기다린다 (translate.ts 예산 45초)
 export const maxDuration = 60;
@@ -34,6 +36,7 @@ export const POST = api<{ params: Promise<{ id: string }> }>('admin.notices.stat
     const blockers = publishBlockers(got.notice, got.translations, translationLocales()).filter((b) => !(b.startsWith('numbers:') && machine.has(b.slice(8))));
     if (blockers.length) throw new ApiError(409, blockers[0].startsWith('legal') ? 'notice_legal_review' : 'notice_numbers_review');
     await setStatus(id, 'published', me.id);
+    after(() => notifyNoticePublished(id)); // 직원 폰에 제목만 (2026-10-21 의뢰인). 되살리기는 보내지 않는다 — 같은 공지는 한 번만
   } else if (action === 'archive') {
     await setStatus(id, 'archived', me.id);
   } else if (action === 'restore') {

@@ -5,7 +5,7 @@ import type { LaborReport, LaborSum } from './labor-cost';
 
 export type LaborLabels = {
   sheets: { summary: string; month: string; group: string; job: string; employee: string; pay: string; deduction: string };
-  cols: { name: string; statements: string; pay: string; deduction: string; net: string; employer: string; total: string; people: string; average: string; item: string; amount: string; code: string };
+  cols: { name: string; statements: string; pay: string; taxable: string; exempt: string; deduction: string; net: string; employer: string; total: string; people: string; average: string; item: string; amount: string; code: string };
   sum: string;
   title: string;
   conditions: string;
@@ -16,9 +16,9 @@ const MONEY = '#,##0';
 function sumSheet(wb: ExcelJS.Workbook, name: string, first: string, L: LaborLabels, rows: { label: string; s: LaborSum; people?: number }[], total: LaborSum) {
   const ws = wb.addWorksheet(name);
   const withPeople = rows.some((r) => r.people !== undefined);
-  ws.addRow([first, L.cols.statements, ...(withPeople ? [L.cols.people] : []), L.cols.pay, L.cols.deduction, L.cols.net, L.cols.employer, L.cols.total]).font = { bold: true };
-  for (const r of rows) ws.addRow([r.label, r.s.statements, ...(withPeople ? [r.people ?? 0] : []), r.s.pay, r.s.deduction, r.s.net, r.s.employer, r.s.total]);
-  ws.addRow([L.sum, total.statements, ...(withPeople ? [''] : []), total.pay, total.deduction, total.net, total.employer, total.total]).font = { bold: true };
+  ws.addRow([first, L.cols.statements, ...(withPeople ? [L.cols.people] : []), L.cols.pay, L.cols.taxable, L.cols.exempt, L.cols.deduction, L.cols.net, L.cols.employer, L.cols.total]).font = { bold: true };
+  for (const r of rows) ws.addRow([r.label, r.s.statements, ...(withPeople ? [r.people ?? 0] : []), r.s.pay, r.s.pay - r.s.exempt, r.s.exempt, r.s.deduction, r.s.net, r.s.employer, r.s.total]);
+  ws.addRow([L.sum, total.statements, ...(withPeople ? [''] : []), total.pay, total.pay - total.exempt, total.exempt, total.deduction, total.net, total.employer, total.total]).font = { bold: true };
   ws.columns.forEach((c, i) => {
     c.width = i === 0 ? 28 : 16;
     if (i >= (withPeople ? 3 : 2)) c.numFmt = MONEY;
@@ -44,14 +44,17 @@ export function laborWorkbook(r: LaborReport, L: LaborLabels): ExcelJS.Workbook 
   sumSheet(wb, L.sheets.employee, L.cols.name, L, r.employees.map((e) => ({ label: e.employeeNo ? `${e.name} (${e.employeeNo})` : e.name, s: e })), r.total);
   for (const kind of ['PAYMENT', 'DEDUCTION'] as const) {
     const ws = wb.addWorksheet(kind === 'PAYMENT' ? L.sheets.pay : L.sheets.deduction);
-    ws.addRow([L.cols.item, L.cols.code, L.cols.people, L.cols.amount]).font = { bold: true };
+    const pay = kind === 'PAYMENT';
+    ws.addRow([L.cols.item, L.cols.code, L.cols.people, L.cols.amount, ...(pay ? [L.cols.taxable, L.cols.exempt] : [])]).font = { bold: true };
     const list = r.items.filter((x) => x.kind === kind);
-    for (const x of list) ws.addRow([x.label, x.code, x.people, x.amount]);
-    ws.addRow([L.sum, '', '', list.reduce((a, x) => a + x.amount, 0)]).font = { bold: true };
+    for (const x of list) ws.addRow([x.label, x.code, x.people, x.amount, ...(pay ? [x.amount - x.exempt, x.exempt] : [])]);
+    ws.addRow([L.sum, '', '', list.reduce((a, x) => a + x.amount, 0), ...(pay ? [list.reduce((a, x) => a + x.amount - x.exempt, 0), list.reduce((a, x) => a + x.exempt, 0)] : [])]).font = { bold: true };
     ws.getColumn(1).width = 28;
     ws.getColumn(2).width = 16;
-    ws.getColumn(4).width = 18;
-    ws.getColumn(4).numFmt = MONEY;
+    for (const n of pay ? [4, 5, 6] : [4]) {
+      ws.getColumn(n).width = 18;
+      ws.getColumn(n).numFmt = MONEY;
+    }
   }
   return wb;
 }

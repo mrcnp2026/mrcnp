@@ -26,15 +26,16 @@ export async function RequestTabs({ admin, active, counts, live = false, q = '' 
   return (
     <div className="sticky top-0 z-10 -mx-4 -mt-4 bg-bg pt-[calc(0.5rem+env(safe-area-inset-top))] lg:static lg:mx-0 lg:mt-0 lg:pt-0">
       {/* 검색 줄 — 주소(?q)로 보낸다. 탭·연습 보기 값은 그대로 둔다 */}
-      <div className="flex items-center gap-2 px-4 pb-1 lg:px-0 lg:pb-3">
+      {/* 관리자는 위 띠의 메뉴 검색이 있어 이 검색은 뺀다 (2026-10-26 의뢰인) — 직원 화면만 둔다 */}
+      <div className={`flex items-center gap-2 px-4 pb-1 lg:px-0 lg:pb-3 ${admin ? 'lg:hidden' : ''}`}>
         <MenuButton label={tc('menu')} />
-        <form role="search" method="get" action={action} className="flex min-h-11 min-w-0 flex-1 items-center gap-2 rounded-button bg-surface px-3 lg:min-h-10 lg:max-w-sm lg:border lg:border-border lg:bg-bg lg:focus-within:border-primary">
+        {!admin && <form role="search" method="get" action={action} className="flex min-h-11 min-w-0 flex-1 items-center gap-2 rounded-button bg-surface px-3 lg:min-h-10 lg:max-w-sm lg:border lg:border-border lg:bg-bg lg:focus-within:border-primary">
           {[...new URLSearchParams(query)].map(([k, v]) => (
             <input key={k} type="hidden" name={k} value={v} />
           ))}
           <Search aria-hidden size={18} className="shrink-0 text-faint" />
           <input type="search" name="q" defaultValue={q} placeholder={t('search')} aria-label={t('search')} maxLength={40} className="min-h-11 w-full min-w-0 bg-transparent text-base outline-none lg:min-h-10 lg:text-sm" />
-        </form>
+        </form>}
       </div>
       {/* PC(2026-10-16 디자인 2차): 탭은 왼쪽부터, 고른 탭은 파랑 밑줄 — 견본 「나 · 파랑」 */}
       <nav aria-label={t('title')} className="flex border-b border-border bg-bg px-2 lg:gap-2 lg:px-0">

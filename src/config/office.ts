@@ -45,7 +45,7 @@ export const OFFICE = {
   practiceMode: process.env.OPERATION_MODE !== 'live',
   // 반경 밖 출근/퇴근 요청에 그 순간의 위치를 남기고 관리자에게 지도로 보여 준다 (2026-10-11 의뢰인 스샷의 요청 상세 지도).
   // ★ 꺼 둔다 — 지금 동의 문구가 "반경 밖의 위치는 저장하지 않는다"이다. 켜려면 ① 동의 문구를 바꾸고 다시 동의받기 ② DB 변경 0032 적용 (결정 문서 출퇴근-7)
-  requestLocation: process.env.REQUEST_LOCATION === 'on',
+  requestLocation: process.env.REQUEST_LOCATION !== 'off', // 요청에 쓰는 순간의 GPS 위치를 남긴다 (2026-10-23 의뢰인: 출근 요청에는 시간과 GPS가 함께 있어야 한다 — 기본 켬)
   punchDedupeSeconds: 60, // 7-4 요점 1: 같은 버튼 재탭은 한 번만
   // 퇴근이 직전 출근의 근무일을 이어받는 최대 간격. 이보다 오래된 출근에는 붙이지 않고 '짝 없는 퇴근'으로 남긴다
   // (며칠 전 퇴근 미기록 출근에 오늘 퇴근이 붙어 수십 시간 근무가 되는 것을 막는다. 본문에 값이 없어 정함 — 게이트 4 보고)

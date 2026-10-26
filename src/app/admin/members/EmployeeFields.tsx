@@ -1,11 +1,12 @@
 'use client';
 // 직원 정보 입력칸 — 등록 화면과 수정 화면이 같은 칸을 쓴다 (2026-10-05 의뢰인: 샤플 구성원 등록 양식 대조).
 // 묶음: 기본 정보(이름·사번·휴대폰·이메일) / 소속(그룹·직무/직급·입사일). 휴대폰·이메일·그룹·직급·입사일은 선택.
+import { Select } from '@/components/Select';
 import { useTranslations } from 'next-intl';
 import { DateTimeInput } from '@/components/DateTimeInput';
 
 export type OrgOption = { id: string; label: string };
-export type EmployeeValues = { name: string; employeeNo: string; phone: string; email?: string; groupId: string; jobTitle: string; joinedOn: string; locale: string };
+export type EmployeeValues = { jobId?: string; name: string; employeeNo: string; phone: string; email?: string; groupId: string; jobTitle: string; joinedOn: string; locale: string };
 
 const field = 'min-h-11 w-full rounded-button border border-border bg-bg px-3 text-base text-text';
 
@@ -59,14 +60,14 @@ export function EmployeeFields({
         <legend className={legend}>{t('secOrg')}</legend>
         <label className={label}>
           {t('group')}
-          <select name="groupId" defaultValue={initial?.groupId ?? ''} className={field}>
+          <Select name="groupId" defaultValue={initial?.groupId ?? ''} className={field}>
             <option value="">{t('unassigned')}</option>
             {groups.map((g) => (
               <option key={g.id} value={g.id}>
                 {g.label}
               </option>
             ))}
-          </select>
+          </Select>
           {groups.length === 0 && <span className="text-xs text-faint">{t('groupNone')}</span>}
         </label>
         <label className={label}>
@@ -76,14 +77,14 @@ export function EmployeeFields({
         {jobs && (
           <label className={label}>
             {t('job')}
-            <select name="jobId" defaultValue="" className={field}>
+            <Select name="jobId" defaultValue={initial?.jobId ?? ''} className={field}>
               <option value="">{t('jobNone')}</option>
               {jobs.map((j) => (
                 <option key={j.id} value={j.id}>
                   {j.label}
                 </option>
               ))}
-            </select>
+            </Select>
           </label>
         )}
         <label className={label}>

@@ -1,6 +1,8 @@
 // 내 명세서 한 장 — 지급 · 공제 항목과 계산 방법(시간 × 단가 × 계수), 실지급액 (PRD v1.3 E01). 본인 것 · 공개 중인 것만.
 // 내 것이 아니거나 공개가 회수됐으면 「없는 화면」으로 보인다(있는지 없는지도 알려 주지 않는다). 사업주 부담 항목은 보이지 않는다.
+import { CountUp } from '@/components/CountUp';
 import { getFormatter, getTranslations } from 'next-intl/server';
+import { Download } from 'lucide-react';
 import Link from 'next/link';
 import { notFound, redirect } from 'next/navigation';
 import { Card, CardTitle, Chip, PageShell } from '@/components/ui';
@@ -58,7 +60,8 @@ export default async function MyPayslipPage({ params }: { params: Promise<{ id: 
         </dl>
       </div>
       <div data-noprint className="flex flex-wrap gap-2">
-        <a href={`/api/payslips/${slip.id}/pdf`} className="inline-flex h-8 items-center rounded-button bg-primary px-3 text-sm font-bold text-on-primary">
+        <a href={`/api/payslips/${slip.id}/pdf`} className="inline-flex h-9 items-center gap-1.5 rounded-button bg-primary px-3.5 text-sm font-semibold text-on-primary">
+          <Download aria-hidden size={16} />
           {t('pdf')}
         </a>
         <PrintButton label={t('print')} />
@@ -83,7 +86,7 @@ export default async function MyPayslipPage({ params }: { params: Promise<{ id: 
       )}
       <Card className="flex items-center justify-between gap-3">
         <span className="font-bold">{t('net')}</span>
-        <span className="num text-2xl font-extrabold">{won(slip.net)}</span>
+        <CountUp value={won(slip.net)} className="num text-2xl font-extrabold" />
       </Card>
       {tm && (
         <Card>
@@ -123,6 +126,13 @@ export default async function MyPayslipPage({ params }: { params: Promise<{ id: 
             ))}
             {part(kind).length === 0 && <li className="py-2 text-sm text-faint">{t('none')}</li>}
           </ul>
+          {/* 지급 가운데 세금을 매긴 몫과 비과세 몫 (2026-10-22 의뢰인 ②) */}
+          {kind === 'PAYMENT' && found.tax && (
+            <dl className="num mt-1 grid grid-cols-2 gap-2 border-t border-border pt-3 text-sm">
+              <div className="flex flex-col rounded-button bg-surface px-3 py-2"><dt className="text-xs text-muted">{t('taxableTotal')}</dt><dd className="font-bold">{won(found.tax.taxable)}</dd></div>
+              <div className="flex flex-col rounded-button bg-primary-tint px-3 py-2"><dt className="text-xs text-primary">{t('exemptTotal')}</dt><dd className="font-bold text-primary">{won(found.tax.exempt)}</dd></div>
+            </dl>
+          )}
         </Card>
       ))}
       <p className="text-xs text-faint">{t('detailNote')}</p>

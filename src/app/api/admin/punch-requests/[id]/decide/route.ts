@@ -1,5 +1,5 @@
 // 반경 밖 「출근/퇴근 요청」 승인·거절 (의뢰인 2026-10-10: 시프티 방식).
-// 승인: 요청한 시각 그대로 출퇴근 기록을 만든다 (사무실 확인은 안 된 기록으로 — ip_verified=false). 거절: 기록이 생기지 않는다.
+// 승인: 요청한 시각 그대로 출퇴근 기록을 만든다 (사무실 확인은 안 된 기록으로 — ip_verified=false). 출근은 요청에 찍힌 위치도 함께 남는다. 거절: 기록이 생기지 않는다.
 // 같은 요청을 두 번 승인해도 기록은 하나다 — record_punch가 같은 시각·같은 종류를 한 건으로 본다 (중복 방지).
 import { syncOvertimeFor } from '@/lib/period-data';
 import { OFFICE } from '@/config/office';
@@ -21,7 +21,7 @@ export const POST = api<{ params: Promise<{ id: string }> }>('admin.punchRequest
   const b = await readJson(req);
   if (b.decision !== 'approved' && b.decision !== 'rejected') throw new ApiError(400, 'invalid_input');
   const db = createAdminClient();
-  const { data: r } = await db.from('punch_requests').select('id, employee_id, kind, requested_at, work_date, client_ip, passkey_id, status, is_test').eq('id', id).maybeSingle();
+  const { data: r } = await db.from('punch_requests').select('id, employee_id, kind, requested_at, work_date, client_ip, passkey_id, status, is_test, lat, lng').eq('id', id).maybeSingle();
   if (!r) throw new ApiError(404, 'not_found');
   if (r.status !== 'pending') return { result: 'already' };
   await requireApprover(r.employee_id); // 최고관리자는 본인 요청도 처리한다(권한-10) · 지점관리자는 맡은 지점 직원만, 자기 것은 못 한다
@@ -30,7 +30,8 @@ export const POST = api<{ params: Promise<{ id: string }> }>('admin.punchRequest
   let eventId: string | null = null;
   if (b.decision === 'approved') {
     const { event } = await recordPunch({
-      employeeId: r.employee_id, kind: r.kind, now: new Date(r.requested_at), clientIp: r.client_ip, ipVerified: false, verifiedBy: null, geo: null,
+      employeeId: r.employee_id, kind: r.kind, now: new Date(r.requested_at), clientIp: r.client_ip, ipVerified: false, verifiedBy: null,
+      geo: r.kind === 'in' && r.lat != null && r.lng != null ? { lat: Number(r.lat), lng: Number(r.lng) } : null, // 출근 요청 때 찍힌 자리를 출근 기록에 그대로 (2026-10-25 · 확인된 곳은 아니다) — 퇴근은 위치를 남기지 않는다
       source: 'web', isTest: r.is_test ?? OFFICE.practiceMode, passkeyId: r.passkey_id,
     });
     eventId = event.id;

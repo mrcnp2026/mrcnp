@@ -1,5 +1,7 @@
 'use client';
 // 근무일정 한 건 수정 (2026-10-11) — 날짜별로 넣은 일정이면 그 일정을 고치고, 평소 일정(템플릿·회사 규칙)이면 「이 날만 다르게」 날짜별 일정을 새로 넣는다.
+import { withKindNames, type KindNames } from '@/lib/shift-kind-names';
+import { Select } from '@/components/Select';
 import { useTranslations } from 'next-intl';
 import { useRouter } from 'next/navigation';
 import { useState } from 'react';
@@ -11,9 +13,9 @@ import { SHIFT_KINDS, type ShiftKind } from '@/lib/shifts';
 
 const field = 'min-h-11 w-full rounded-button border border-border bg-bg px-3 text-base text-text';
 
-export function ShiftEdit({ shiftId, employeeId, date, init }: { shiftId: string | null; employeeId: string; date: string; init: { startTime: string; endTime: string; kind: ShiftKind; note: string } }) {
+export function ShiftEdit({ shiftId, employeeId, date, init, kindNames }: { kindNames?: KindNames; shiftId: string | null; employeeId: string; date: string; init: { startTime: string; endTime: string; kind: ShiftKind; note: string } }) {
   const t = useTranslations('admin.scheduleDetail');
-  const tk = useTranslations('admin.shifts.kinds');
+  const tk = withKindNames(useTranslations('admin.shifts.kinds'), kindNames);
   const router = useRouter();
   const [start, setStart] = useState(init.startTime);
   const [end, setEnd] = useState(init.endTime);
@@ -50,13 +52,13 @@ export function ShiftEdit({ shiftId, employeeId, date, init }: { shiftId: string
       </div>
       <label className="flex flex-col gap-1 text-sm text-muted">
         {t('kind')}
-        <select value={kind} onChange={(e) => setKind(e.target.value as ShiftKind)} className={field}>
+        <Select value={kind} onChange={(e) => setKind(e.target.value as ShiftKind)} className={field}>
           {SHIFT_KINDS.map((k) => (
             <option key={k} value={k}>
               {tk(k)}
             </option>
           ))}
-        </select>
+        </Select>
       </label>
       <label className="flex flex-col gap-1 text-sm text-muted">
         {t('note')}

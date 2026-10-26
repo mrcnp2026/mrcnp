@@ -16,6 +16,7 @@ import { staffPushFilter } from '@/lib/push-recipients';
 import { loadRejectReasons } from '@/lib/reject-reason';
 import { approverIdsFor } from '@/lib/scope';
 import { switchOn } from '@/lib/switches';
+import { sendSystem } from '@/lib/work-messages';
 import { createAdminClient } from '@/lib/supabase/admin';
 import { hhmm, toKstDate, toKstTime } from '@/lib/time';
 
@@ -54,6 +55,20 @@ export async function notifyCorrectionRequest(id: string): Promise<void> {
     body: `${md(r.work_date)} ${r.kind === 'in' ? '출근' : '퇴근'} · ${what} — ${String(r.reason).slice(0, 60)}`,
     url: `/admin/inbox?k=corrections&id=${id}`,
     tag: `correction-${id}`,
+  });
+}
+
+/** 출근 요청(자기 지점 밖에서 누른 출근)이 생기면 승인할 관리자 폰으로 (2026-10-23) */
+export async function notifyPunchRequest(id: string): Promise<void> {
+  if (!(await pushOn())) return;
+  const { data: r } = await createAdminClient().from('punch_requests').select('employee_id, kind, work_date, requested_at, geo_reason').eq('id', id).maybeSingle();
+  if (!r) return;
+  const why = r.geo_reason === 'other_place' ? '다른 지점 장소' : r.geo_reason === 'outside' ? '출퇴근 장소 밖' : '위치 확인 안 됨';
+  await notifyApprovers(r.employee_id, {
+    title: `${await nameOf(r.employee_id)} 님이 ${r.kind === 'in' ? '출근' : '퇴근'}을 요청했습니다`,
+    body: `${md(r.work_date)} ${hhmm(toKstTime(new Date(r.requested_at)))} · ${why}`,
+    url: `/admin/inbox?k=punch&id=${id}`,
+    tag: `punchreq-${id}`,
   });
 }
 
@@ -117,7 +132,7 @@ export const DECISION_KINDS = {
   punch_requests: '출근 · 퇴근 요청',
   work_requests: '외근 · 출장 · 재택 신청',
   shift_requests: '근무일정 요청',
-  leave_change_requests: '휴가 취소 요청',
+  leave_change_requests: '휴가 취소 · 정정 요청',
 } as const;
 export type DecisionTable = keyof typeof DECISION_KINDS;
 const DECIDED: Record<string, string> = { approved: '승인', rejected: '거절', cancelled: '취소' };
@@ -134,21 +149,39 @@ const iGa = (w: string) => {
  */
 export async function notifyDecision(table: DecisionTable, id: string): Promise<void> {
   try {
-    if (!(await pushOn())) return;
     const db = createAdminClient();
     const { data: r } = await db.from(table).select('*').eq('id', id).maybeSingle();
     if (!r || !DECIDED[r.status as string]) return;
     const decidedBy = (r.approved_by ?? r.decided_by ?? null) as string | null;
     if (decidedBy && decidedBy === r.employee_id) return;
-    const { data: who } = await db.from('profiles').select('employee_no').eq('id', r.employee_id).maybeSingle();
+    const { data: who } = await db.from('profiles').select('name, employee_no').eq('id', r.employee_id).maybeSingle();
     if (who?.employee_no?.startsWith('e2e-')) return;
-    if (!(await firstTime(`decided:${table}:${id}:${r.status}`))) return;
     const start = (r.work_date ?? r.start_date ?? null) as string | null;
     const end = (r.end_date ?? null) as string | null;
     const span = start ? (end && end !== start ? `${md(start)}~${md(end)}` : md(start)) : '';
     const what = DECISION_KINDS[table];
     const verdict = DECIDED[r.status as string];
     const why = r.status === 'rejected' ? ((await loadRejectReasons([{ table, id }])).get(`${table}:${id}`) ?? null) : null; // 관리자가 적은 거절 사유 (2026-10-21)
+
+    // 사내게시판 글 (2026-10-23 의뢰인): 「누가 요청한 무엇을 누가 승인했다」가 그 직원에게만 보이게 — 소통 메뉴 · 종 알림 숫자가 오른다. 폰 알림 스위치와 상관없이 만든다
+    try {
+      const decider = decidedBy ? await nameOf(decidedBy) : '관리자';
+      const asker = (who?.name as string | undefined) ?? '직원';
+      await sendSystem({
+        dedupeKey: `decided:${table}:${id}:${r.status}`,
+        title: `${what}${iGa(what)} ${verdict}되었습니다`.slice(0, 120),
+        body: `${asker}님이 요청한 ${what}${span ? `(${span})` : ''}을 ${decider}님이 ${verdict}했습니다.${why ? ` 사유: ${why.slice(0, 200)}` : ''}${r.status === 'rejected' ? ' 필요하면 다시 요청해 주세요.' : ''}`,
+        employeeIds: [r.employee_id as string],
+        related: { type: 'decision', id, href: '/punch/requests?tab=done' },
+        senderId: decidedBy,
+        isTest: false,
+      });
+    } catch (e) {
+      console.error(JSON.stringify({ route: 'decision.board', detail: String((e as Error)?.message ?? e).slice(0, 200) }));
+    }
+
+    if (!(await pushOn())) return;
+    if (!(await firstTime(`decided:${table}:${id}:${r.status}`))) return;
     await sendPush([r.employee_id as string], {
       title: `${what}${iGa(what)} ${verdict}되었습니다`,
       body: r.status === 'rejected' ? `${span ? `${span} · ` : ''}${why ? `사유: ${why.slice(0, 80)}` : '자세한 내용은 요청 목록에서 확인해 주세요.'} 필요하면 다시 요청해 주세요.` : `${span ? `${span} · ` : ''}요청 목록에서 확인할 수 있습니다.`,
@@ -182,6 +215,9 @@ export async function notifyPunchAlerts(now = new Date()): Promise<{ checked: nu
     db.from('user_passkeys').select('employee_id').is('revoked_at', null),
   ]);
   const joined = new Set([...(pw ?? []).map((x) => x.id), ...(keys ?? []).map((x) => x.employee_id)]);
+  // 이미 출근 · 퇴근 요청을 보내고 승인을 기다리는 사람은 「기록 없음」 알림에서 뺀다 (2026-10-23)
+  const { data: waiting } = await db.from('punch_requests').select('employee_id, kind, work_date').eq('status', 'pending').eq('is_test', OFFICE.practiceMode).gte('work_date', addDays(today, -2));
+  const waits = new Set((waiting ?? []).map((w) => `${w.employee_id}|${w.kind}|${w.work_date}`));
   const people: PersonMisses[] = [];
   // 최고관리자(관리자 전원, 권한-10) · 시스템관리자 · 간주근무자는 출퇴근 기록이 없어도 알림을 보내지 않는다 (2026-10-19 의뢰인)
   for (const p of data.people.filter((x) => x.active && joined.has(x.id) && !x.employeeNo?.startsWith('e2e-') && x.employeeNo !== OFFICE.ownerEmployeeNo && x.role !== 'admin')) {
@@ -197,7 +233,7 @@ export async function notifyPunchAlerts(now = new Date()): Promise<{ checked: nu
       lookbackDays: 2, includeToday: true,
     });
     // 그날 일정이 간주 근무인 날도 뺀다
-    people.push({ id: p.id, name: p.name, startTime: rule.startTime.slice(0, 5), endTime: rule.endTime.slice(0, 5), misses: misses.filter((m) => !data.planFor(p.id, m.workDate).deemed) });
+    people.push({ id: p.id, name: p.name, startTime: rule.startTime.slice(0, 5), endTime: rule.endTime.slice(0, 5), misses: misses.filter((m) => !data.planFor(p.id, m.workDate).deemed && !waits.has(`${p.id}|${m.kind}|${m.workDate}`)) });
   }
   const approvers = new Map<string, string[]>();
   // 받을 관리자는 알림-9 규칙으로 거른다 (이상준 최고관리자 항상 · 대표자 안 받음 · 나머지는 켠 사람만, 2026-10-21)
@@ -236,7 +272,7 @@ export async function notifyWeeklyPending(now = new Date()): Promise<{ approvers
     { table: 'punch_requests', label: '출퇴근 요청' },
     { table: 'work_requests', label: '외근 · 출장' },
     { table: 'shift_requests', label: '일정' },
-    { table: 'leave_change_requests', label: '휴가 취소' },
+    { table: 'leave_change_requests', label: '휴가 취소 · 정정' },
   ] as const;
   const rows = await Promise.all(KINDS.map(async (k) => {
     const { data, error } = await db.from(k.table).select('employee_id, created_at').eq('is_test', false).eq('status', 'pending');
@@ -270,4 +306,76 @@ export async function notifyWeeklyPending(now = new Date()): Promise<{ approvers
     });
   }
   return { approvers: per.size, sent };
+}
+
+/**
+ * 공지 · 사내게시판 새 글 — 받는 직원 본인에게 제목만 (2026-10-21 의뢰인: 「글 제목 정도만 보여주면 된다」).
+ * 본인에게 가는 알림이라 알림-9(최고관리자 거르기)는 타지 않는다. 글쓴이 · 시스템관리자 · 검사 계정(e2e-)은 받지 않는다. 같은 글은 한 번만.
+ */
+async function pushNewPost(key: string, ids: string[], senderId: string | null, payload: { title: string; url: string; tag: string }): Promise<void> {
+  const uniq = [...new Set(ids)].filter((id) => id !== senderId);
+  if (uniq.length === 0) return;
+  const { data } = await createAdminClient().from('profiles').select('id, active, employee_no').in('id', uniq);
+  const to = (data ?? []).filter((p) => p.active && !p.employee_no?.startsWith('e2e-') && p.employee_no !== OFFICE.ownerEmployeeNo).map((p) => p.id as string);
+  if (to.length === 0 || !(await firstTime(key))) return;
+  await sendPush(to, { title: payload.title, body: '', url: payload.url, tag: payload.tag });
+}
+
+/**
+ * 급여 명세서를 공개했을 때 — 공개된 직원 본인에게만, 누르면 「내 급여 조회」로 (2026-10-24 의뢰인).
+ * 금액은 알림에 담지 않는다(잠금 화면에 보이지 않게). 같은 대장 · 같은 직원은 한 번만 — 회수 뒤 다시 공개해도 또 보내지 않는다.
+ * 공개 API가 응답을 돌려준 뒤(after) 부른다.
+ */
+export async function notifyPayslipPublished(runId: string, month: string, kind: string, employeeIds: string[]): Promise<void> {
+  try {
+    if (!(await pushOn()) || employeeIds.length === 0) return;
+    // 본인 명세서라 알림-9(최고관리자 거르기)는 타지 않는다 — 최고관리자도 받고, 대표자(admin_level ceo)만 뺀다 (2026-10-24 의뢰인)
+    const { data } = await createAdminClient().from('profiles').select('id, active, employee_no, admin_level').in('id', employeeIds);
+    const to = (data ?? []).filter((p) => p.active && !p.employee_no?.startsWith('e2e-') && p.admin_level !== 'ceo').map((p) => p.id as string);
+    const label = kind === 'BONUS' ? '상여 명세서' : '급여 명세서';
+    for (const id of to) {
+      if (!(await firstTime(`payslip:${runId}:${id}`))) continue;
+      await sendPush([id], { title: `${Number(month.slice(5, 7))}월 ${label}가 도착했습니다`, body: '내 급여 조회에서 확인해 주세요.', url: `/punch/payslips?m=${month}`, tag: `payslip-${runId}` });
+    }
+  } catch (e) {
+    console.error(JSON.stringify({ route: 'push.payslip', detail: String((e as Error)?.message ?? e).slice(0, 200) }));
+  }
+}
+
+/** 공지를 게시했을 때. 게시 시작이 앞날이면 지금은 보내지 않는다 — 시작하는 날 아침 정기 작업이 notifyStartedNotices로 보낸다 */
+export async function notifyNoticePublished(id: string, now = new Date()): Promise<void> {
+  try {
+    if (!(await pushOn())) return;
+    const db = createAdminClient();
+    const { data: n } = await db.from('notices').select('id, title, status, audience, starts_at, ends_at, created_by').eq('id', id).maybeSingle();
+    if (!n || n.status !== 'published' || new Date(n.starts_at as string) > now || (n.ends_at && new Date(n.ends_at as string) <= now)) return;
+    const { data: who } = await db.from('profiles').select('employee_no').eq('id', n.created_by as string).maybeSingle();
+    if (who?.employee_no?.startsWith('e2e-')) return; // 검사 계정이 만든 공지는 실제 직원 폰으로 보내지 않는다
+    let ids: string[];
+    if (n.audience === 'all') ids = ((await db.from('profiles').select('id').eq('active', true)).data ?? []).map((p) => p.id as string);
+    else ids = ((await db.from('notice_targets').select('employee_id').eq('notice_id', id)).data ?? []).map((t) => t.employee_id as string);
+    await pushNewPost(`notice:${id}`, ids, n.created_by as string, { title: `[공지] ${String(n.title).slice(0, 80)}`, url: `/punch/notices?open=${id}`, tag: `notice-${id}` });
+  } catch (e) {
+    console.error(JSON.stringify({ route: 'push.notice', detail: String((e as Error)?.message ?? e).slice(0, 200) }));
+  }
+}
+
+/** 게시 시작일을 앞날로 잡아 둔 공지 — 시작한 뒤 처음 도는 정기 작업(아침 absent-watch)이 보낸다. 사흘 안에 시작한 것만 */
+export async function notifyStartedNotices(now = new Date()): Promise<void> {
+  const { data } = await createAdminClient().from('notices').select('id').eq('status', 'published').lte('starts_at', now.toISOString()).gte('starts_at', new Date(now.getTime() - 3 * 86400000).toISOString());
+  for (const n of data ?? []) await notifyNoticePublished(n.id as string, now);
+}
+
+/** 사내게시판에 관리자가 글을 올렸을 때 — 받는 사람으로 정해진 직원에게 */
+export async function notifyBoardPost(id: string): Promise<void> {
+  try {
+    if (!(await pushOn())) return;
+    const db = createAdminClient();
+    const { data: m } = await db.from('work_messages').select('id, kind, title, sender_id, is_test').eq('id', id).maybeSingle();
+    if (!m || m.kind !== 'notice' || m.is_test) return;
+    const { data: rs } = await db.from('work_message_recipients').select('employee_id').eq('message_id', id);
+    await pushNewPost(`board:${id}`, (rs ?? []).map((r) => r.employee_id as string), m.sender_id as string | null, { title: `[사내게시판] ${String(m.title).slice(0, 80)}`, url: `/punch/messages/${id}`, tag: `board-${id}` });
+  } catch (e) {
+    console.error(JSON.stringify({ route: 'push.board', detail: String((e as Error)?.message ?? e).slice(0, 200) }));
+  }
 }

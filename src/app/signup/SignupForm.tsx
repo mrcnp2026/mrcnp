@@ -1,6 +1,7 @@
 'use client';
 // 가입 신청 입력 — 이름 · 이메일(아이디 @ 도메인, 도메인은 직접 입력이 기본 · 네이버 · 지메일 등 고르기) · 휴대폰(선택) · 비밀번호 두 번.
 // 폰 390px: 이메일은 [아이디]@[도메인] 한 줄 + 아래에 도메인 고르기 한 줄 — 가로 넘침 없음.
+import { Select } from '@/components/Select';
 import { Check, Send } from 'lucide-react';
 import { useLocale, useTranslations } from 'next-intl';
 import { useState } from 'react';
@@ -98,14 +99,14 @@ export function SignupForm() {
             className={`${input} flex-1 ${pick ? 'bg-surface text-muted' : ''}`}
           />
         </div>
-        <select aria-label={t('signup.emailPick')} value={pick} onChange={(e) => setPick(e.target.value)} className={input}>
+        <Select aria-label={t('signup.emailPick')} value={pick} onChange={(e) => setPick(e.target.value)} className={input}>
           <option value="">{t('signup.direct')}</option>
           {EMAIL_DOMAINS.map((d) => (
             <option key={d} value={d}>
               {d}
             </option>
           ))}
-        </select>
+        </Select>
         <p className="text-xs text-faint">{t('signup.emailHint')}</p>
       </fieldset>
 
