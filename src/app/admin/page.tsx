@@ -18,6 +18,7 @@ import { weekTotalMinutes } from '@/lib/period';
 import { isProxyCorrection } from '@/lib/day-detail';
 import { fullLeaveSet } from '@/lib/leave';
 import { loadAllLeaveTypes, loadLeaveGrants, loadLeaveRequests } from '@/lib/leave-data';
+import { inquiryBadge } from '@/lib/inquiry-data';
 import { daysFor, leaveDaysFor, loadPeriod, pendingCounts, workDaysFor } from '@/lib/period-data';
 import { createAdminClient } from '@/lib/supabase/admin';
 import { kstDateTime, toKstDate } from '@/lib/time';
@@ -142,6 +143,8 @@ export default async function AdminHome({ searchParams }: { searchParams: Promis
   const delta = rate !== null && prev ? rate - pct(prev.n) : null;
   // 내가 확인해 줘야 하는 권한 변경 (다른 관리자가 요청한 것, R-2의 8)
   const { data: roleReqs } = await later.roleReqs;
+  // 답 안 한 문의 — 최고관리자 · 시스템관리자에게만 (문의하기, 2026-10-26)
+  const inquiryWaiting = await getMe().then((m) => (m ? inquiryBadge(m, OFFICE.practiceMode).then((b) => b.waiting) : 0)).catch(() => 0);
   const todo = [
     { key: 'pendingOvertime', n: counts.overtime, href: '/admin/inbox#overtime' },
     { key: 'pendingCorrections', n: counts.corrections, href: '/admin/inbox#corrections' },
@@ -149,6 +152,7 @@ export default async function AdminHome({ searchParams }: { searchParams: Promis
     { key: 'pendingWork', n: counts.work, href: '/admin/inbox#work' },
     { key: 'missing', n: missingPeople, href: '/admin/missing' },
     ...(roleReqs?.length ? [{ key: 'pendingRole' as const, n: roleReqs.length, href: `/admin/members/${roleReqs[0].target_id}` }] : []),
+    ...(inquiryWaiting > 0 ? [{ key: 'pendingInquiry' as const, n: inquiryWaiting, href: '/admin/inquiry?t=received' }] : []),
   ];
 
   // PC 홈 카드 (2026-10-11 의뢰인 스샷 `스샷/홈.png`): 출퇴근 누락 · 공지사항 · 관리가 필요한 직원 · 휴가 현황
@@ -202,7 +206,7 @@ export default async function AdminHome({ searchParams }: { searchParams: Promis
           { label: t('chartRate'), filter: 'in', value: rate === null ? '–' : `${rate}%`, sub: rate === null ? t('chartNoTarget') : delta === null ? t('chartRateSub', { n: Math.min(inCount, target), target }) : `${t('chartRateSub', { n: Math.min(inCount, target), target })} · ${t('kpiDelta', { d: `${delta > 0 ? '+' : ''}${delta}` })}` },
           { label: th('status.late'), filter: 'late', value: String(board.late.length), warn: board.late.length > 0, sub: t('kpiNames') },
           { label: th('status.absent'), filter: 'absent', value: String(board.absent.length), sub: t('kpiNames') },
-          { label: t('todo'), value: String(todo.reduce((a, x) => a + x.n, 0)), sub: t('kpiTodo'), href: '/admin/inbox' },
+          { label: t('todo'), value: String(todo.filter((x) => x.key !== 'pendingInquiry').reduce((a, x) => a + x.n, 0)), sub: t('kpiTodo'), href: '/admin/inbox' },
         ]}
       />
 

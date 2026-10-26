@@ -1,7 +1,9 @@
 // 내 알림 숫자 — 종 아이콘 · 요청 배지가 화면을 옮길 때마다 · 1분마다 다시 읽는다 (2026-10-14 의뢰인: 숫자가 바로 반영되어야 한다)
 // 공지(아직 확인 안 함) · 업무 메시지(안 읽음) · 처리할 요청(관리자 · 지점관리자만, 검사 계정 것은 실제 관리자에게 세지 않음)
 import { getLocale } from 'next-intl/server';
+import { OFFICE } from '@/config/office';
 import { getMe } from '@/lib/auth';
+import { inquiryBadge } from '@/lib/inquiry-data';
 import { visibleNoticesNow } from '@/lib/notices';
 import { pendingCounts } from '@/lib/period-data';
 import { pendingSignupCount } from '@/lib/signup';
@@ -13,12 +15,13 @@ export async function GET(): Promise<Response> {
   const me = await getMe();
   if (!me) return Response.json({ error: 'not_signed_in' }, { status: 401 });
   const approver = (me.role === 'admin' || me.role === 'manager') && (await switchOn('notify.request')); // 「요청 알림」 스위치 (2026-10-19)
-  const [notices, messages, requests, decided] = await Promise.all([
+  const [notices, messages, requests, decided, inquiry] = await Promise.all([
     visibleNoticesNow(me.id, await getLocale()).then((n) => n.filter((x) => !x.confirmed).length),
     unreadCount(me.id),
     // 직원 가입 신청은 최고관리자만 승인한다 — 종 숫자에 같이 센다 (2026-10-26)
     approver ? Promise.all([pendingCounts().then((c) => c.total), me.role === 'admin' ? pendingSignupCount() : 0]).then(([a, b]) => a + b) : Promise.resolve(0),
     myDecidedCount(me.id), // 내 요청 중 처리된 것 — 「요청」 메뉴 숫자 (2026-10-19)
+    inquiryBadge(me, OFFICE.practiceMode).then((b) => b.unseenAnswers + b.waiting).catch(() => 0), // 문의하기 숫자 (문의 표가 없는 곳에서도 화면은 열린다)
   ]);
-  return Response.json({ notices, messages, requests, decided }, { headers: { 'cache-control': 'no-store' } });
+  return Response.json({ notices, messages, requests, decided, inquiry }, { headers: { 'cache-control': 'no-store' } });
 }

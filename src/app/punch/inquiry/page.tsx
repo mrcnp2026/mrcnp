@@ -3,7 +3,7 @@ import { notFound } from 'next/navigation';
 import { InquiryCenter } from '@/components/InquiryCenter';
 import { getMe } from '@/lib/auth';
 
-export default async function PunchInquiryPage({ searchParams }: { searchParams: Promise<{ t?: string }> }) {
+export default async function PunchInquiryPage({ searchParams }: { searchParams: Promise<{ t?: string; s?: string }> }) {
   const me = await getMe();
   if (!me) notFound();
   return <InquiryCenter base="/punch" me={me} searchParams={searchParams} />;

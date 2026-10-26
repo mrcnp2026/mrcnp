@@ -671,6 +671,7 @@
       "todo": "처리할 일",
       "pendingOvertime": "연장 확인 대기",
       "pendingCorrections": "정정 요청 대기",
+      "pendingInquiry": "답 안 한 문의",
       "missing": "미기록이 있는 직원",
       "adminEntered": "관리자 등록",
       "week": "이번 주 {h}시간 {m}분",
@@ -7287,6 +7288,8 @@
     "mineEmpty": "아직 보낸 문의가 없습니다.",
     "receivedTitle": "받은 문의",
     "receivedEmpty": "받은 문의가 없습니다.",
+    "receivedNoneOpen": "답 안 한 문의가 없습니다.",
+    "filter": { "open": "대기", "answered": "답변 완료", "all": "전체" },
     "fSpace": "어떤 문의인가요",
     "fTopic": "어느 메뉴에 대한 문의인가요",
     "topicNone": "잘 모르겠어요 / 해당하는 메뉴 없음",
@@ -7363,7 +7366,9 @@
       "mTalk": "공지",
       "mReports": "리포트",
       "training": "교육",
-      "mTraining": "교육"
+      "mTraining": "교육",
+      "inquiry": "문의",
+      "mInquiry": "문의"
     },
     "appFull": {
       "home": "홈",
@@ -7384,7 +7389,9 @@
       "mTalk": "공지 · 메시지",
       "mReports": "근태 · 휴가 리포트",
       "training": "교육",
-      "mTraining": "교육"
+      "mTraining": "교육",
+      "inquiry": "문의하기",
+      "mInquiry": "문의하기"
     },
     "group": {
       "gSchedule": "근무일정",
@@ -7493,7 +7500,9 @@
       "myTraining": "내 교육",
       "trainingHome": "교육 · 이행 현황",
       "trainingCourses": "교육 종류",
-      "slipMailLog": "급여명세서 발송"
+      "slipMailLog": "급여명세서 발송",
+      "myInquiry": "문의하기",
+      "adminInquiry": "문의하기"
     },
     "search": {
       "placeholder": "검색",

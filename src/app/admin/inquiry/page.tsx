@@ -3,7 +3,7 @@ import { notFound } from 'next/navigation';
 import { InquiryCenter } from '@/components/InquiryCenter';
 import { getMe } from '@/lib/auth';
 
-export default async function AdminInquiryPage({ searchParams }: { searchParams: Promise<{ t?: string }> }) {
+export default async function AdminInquiryPage({ searchParams }: { searchParams: Promise<{ t?: string; s?: string }> }) {
   const me = await getMe();
   if (!me || me.role === 'employee') notFound();
   return <InquiryCenter base="/admin" me={me} searchParams={searchParams} />;

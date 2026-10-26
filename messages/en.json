@@ -671,6 +671,7 @@
       "todo": "To do",
       "pendingOvertime": "Overtime to review",
       "pendingCorrections": "Corrections to review",
+      "pendingInquiry": "Unanswered inquiries",
       "missing": "Staff with a missing record",
       "adminEntered": "Entered by admin",
       "week": "This week {h}h {m}m",
@@ -7287,6 +7288,8 @@
     "mineEmpty": "You have not sent any inquiries yet.",
     "receivedTitle": "Received inquiries",
     "receivedEmpty": "No inquiries received.",
+    "receivedNoneOpen": "No unanswered inquiries.",
+    "filter": { "open": "Waiting", "answered": "Answered", "all": "All" },
     "fSpace": "What is it about",
     "fTopic": "Which menu",
     "topicNone": "I am not sure / no matching menu",
@@ -7363,7 +7366,9 @@
       "mTalk": "Notices",
       "mReports": "Reports",
       "training": "Training",
-      "mTraining": "Training"
+      "mTraining": "Training",
+      "inquiry": "Contact us",
+      "mInquiry": "Contact us"
     },
     "appFull": {
       "home": "Home",
@@ -7384,7 +7389,9 @@
       "mTalk": "Notices · Messages",
       "mReports": "Attendance · Leave reports",
       "training": "Training",
-      "mTraining": "Training"
+      "mTraining": "Training",
+      "inquiry": "Contact us",
+      "mInquiry": "Contact us"
     },
     "group": {
       "gSchedule": "Schedule",
@@ -7493,7 +7500,9 @@
       "myTraining": "My training",
       "trainingHome": "Training & completion",
       "trainingCourses": "Training types",
-      "slipMailLog": "Payslip emails"
+      "slipMailLog": "Payslip emails",
+      "myInquiry": "Contact us",
+      "adminInquiry": "Contact us"
     },
     "search": {
       "placeholder": "Search",

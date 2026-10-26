@@ -9,6 +9,7 @@ import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import { appLeaves, appsFor, CONSOLE_HOME, locate, type NavRole, type Space } from '@/config/nav';
 import { MANAGER_HOME } from '@/lib/manager-rules';
 import { SEARCH_KINDS, type SearchKind } from '@/lib/search';
+import { useAlerts } from './Alerts';
 import { RECENT_KEY } from './DeskNav';
 import { ConsoleClose } from './ConsoleSheet';
 import { HelpTip } from './Help';
@@ -43,8 +44,9 @@ export function SpaceSwitch({ role }: { role: NavRole }) {
 }
 
 /** 문의하기 — 종 바로 옆. 숫자 = 아직 안 본 답 + (답할 수 있는 관리자는) 답 안 한 받은 문의 (2026-10-26 의뢰인) */
-export function InquiryLink({ count }: { count: number }) {
+export function InquiryLink() {
   const t = useTranslations('frame');
+  const count = useAlerts().inquiry; // 보내거나 답하면 바로 다시 센다(components/Alerts)
   const path = usePathname();
   const base = path.startsWith('/admin') ? '/admin' : '/punch';
   const on = path.startsWith(`${base}/inquiry`);

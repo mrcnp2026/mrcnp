@@ -9,16 +9,18 @@ import { usePathname } from 'next/navigation';
 import { createContext, useCallback, useContext, useEffect, useRef, useState, type ReactNode } from 'react';
 
 // decided: 내 요청 중 처리된 것(「요청」 화면을 마지막으로 연 뒤) — 메뉴 · 종 숫자에 같이 (2026-10-19)
-export type AlertCounts = { notices: number; messages: number; requests: number; decided: number };
-const Ctx = createContext<AlertCounts>({ notices: 0, messages: 0, requests: 0, decided: 0 });
+// inquiry: 문의하기 — 안 본 답 + (답할 수 있는 관리자는) 답 안 한 받은 문의. 종 숫자 · 앱 아이콘 숫자에는 넣지 않는다 (2026-10-26)
+export type AlertCounts = { notices: number; messages: number; requests: number; decided: number; inquiry: number };
+const Ctx = createContext<AlertCounts>({ notices: 0, messages: 0, requests: 0, decided: 0, inquiry: 0 });
 export const useAlerts = () => useContext(Ctx);
 
 /** 메뉴 항목의 숫자 (config/nav.ts의 badge) — 처리할 요청 숫자는 관리자 · 지점관리자에게만 (서버가 0으로 보낸다) */
-export function badgeCount(c: AlertCounts, badge: 'inbox' | 'notices' | 'messages' | 'decided' | undefined): number {
+export function badgeCount(c: AlertCounts, badge: 'inbox' | 'notices' | 'messages' | 'decided' | 'inquiry' | undefined): number {
   if (badge === 'inbox') return c.requests;
   if (badge === 'notices') return c.notices;
   if (badge === 'messages') return c.messages;
   if (badge === 'decided') return c.decided;
+  if (badge === 'inquiry') return c.inquiry;
   return 0;
 }
 

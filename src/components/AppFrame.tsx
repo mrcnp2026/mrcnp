@@ -54,7 +54,7 @@ export async function AppFrame({ me, children, overlay }: { me: Me; children: Re
   const unread = notices.filter((n) => !n.confirmed).length;
   const languages = languageOptions();
   return (
-    <AlertsProvider initial={{ notices: unread, messages: unreadMsg, requests: inboxCount, decided }}>
+    <AlertsProvider initial={{ notices: unread, messages: unreadMsg, requests: inboxCount, decided, inquiry: inquiry.unseenAnswers + inquiry.waiting }}>
       {/* PC 위 띠: 로고 · 메뉴 검색 · 공간 전환(내 화면 / 관리자 화면) · 알림 · 통합설정 · 내 메뉴 */}
       <header className="glass sticky top-0 z-20 hidden h-14 items-center gap-4 border-b px-5 lg:flex">
         <div className="flex w-66 shrink-0 items-center">
@@ -69,7 +69,7 @@ export async function AppFrame({ me, children, overlay }: { me: Me; children: Re
           <span className="ml-1.5">
             <AlertBell approver={isAdmin} />
           </span>
-          <InquiryLink count={inquiry.unseenAnswers + inquiry.waiting} />
+          <InquiryLink />
           <ConsoleLink role={role} />
           <AccountMenu name={me.name} roleLabel={ts(me.employeeNo === OFFICE_SYSTEM_NO ? 'roleSystem' : branchManager ? 'roleManager' : isAdmin ? 'roleAdmin' : 'roleEmployee')}>
             {ops && (

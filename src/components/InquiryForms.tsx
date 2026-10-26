@@ -1,5 +1,6 @@
 'use client';
 // 문의하기 — 보내는 칸 · 답변 칸 · 「답을 봤다」 표시 (DB 묶음 37, 2026-10-26). 글자 · 메뉴 이름은 서버가 번역해서 넘겨 준다.
+import { Info } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 import { useRouter } from 'next/navigation';
 import { useEffect, useMemo, useState } from 'react';
@@ -96,7 +97,10 @@ export function AskForm({ spaces, topics, toLabel }: { spaces: SpaceOption[]; to
         <textarea name="body" required minLength={2} maxLength={2000} rows={6} onChange={(ev) => setLen(ev.target.value.length)} className="w-full rounded-button border border-border bg-bg px-3 py-2 text-sm leading-6 lg:max-w-2xl" />
         <span className="num text-xs text-faint">{len} / 2000</span>
       </label>
-      <p className="text-xs text-muted">{toLabel}</p>
+      <p className="flex items-center gap-2 rounded-button bg-primary-tint px-3 py-2 text-xs font-medium text-primary lg:max-w-2xl">
+        <Info aria-hidden size={14} strokeWidth={1.75} className="shrink-0" />
+        {toLabel}
+      </p>
       <div className="flex flex-wrap items-center gap-3">
         <Button type="submit" disabled={busy}>
           {t('send')}

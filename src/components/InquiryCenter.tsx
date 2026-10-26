@@ -1,5 +1,6 @@
 // 문의하기 화면 (2026-10-26 의뢰인: 종 옆 아이콘 → 문의하기 · 통합설정의 모든 메뉴를 문의 유형으로 · 알림은 앱 푸시). DB 묶음 37.
-// 두 탭: 「문의하기」(보내기 + 내가 보낸 문의와 답) · 「받은 문의」(답할 수 있는 관리자만). 글자는 messages의 inquiry · frame 열쇠.
+// 두 탭: 「문의하기」(보내기 + 내가 보낸 문의와 답) · 「받은 문의」(답할 수 있는 관리자만, 대기 / 답변 완료 / 전체).
+// 글자는 messages의 inquiry · frame 열쇠.
 import { getFormatter, getTranslations } from 'next-intl/server';
 import Link from 'next/link';
 import { OFFICE } from '@/config/office';
@@ -12,8 +13,10 @@ import { Card, Chip, PageShell } from './ui';
 
 type Base = '/admin' | '/punch';
 type Tr = Awaited<ReturnType<typeof getTranslations>>;
+const FILTERS = ['open', 'answered', 'all'] as const;
+type Filter = (typeof FILTERS)[number];
 
-export async function InquiryCenter({ base, me, searchParams }: { base: Base; me: Me; searchParams: Promise<{ t?: string }> }) {
+export async function InquiryCenter({ base, me, searchParams }: { base: Base; me: Me; searchParams: Promise<{ t?: string; s?: string }> }) {
   const [t, tf, f, sp] = await Promise.all([getTranslations('inquiry'), getTranslations('frame'), getFormatter(), searchParams]);
   const practice = OFFICE.practiceMode;
   const sys = isSystem(me);
@@ -21,7 +24,8 @@ export async function InquiryCenter({ base, me, searchParams }: { base: Base; me
   const [mine, received] = await Promise.all([loadMine(me.id, practice), canReceive ? loadReceived(me, practice) : Promise.resolve([] as Inquiry[])]);
   const waiting = received.filter((q) => q.state === 'OPEN').length;
   const tab: 'ask' | 'received' = canReceive && (sp.t === 'received' || (sp.t === undefined && base === '/admin' && waiting > 0)) ? 'received' : 'ask';
-  const unseen = mine.some((q) => q.state === 'ANSWERED' && !q.askerSeenAt);
+  const unseen = mine.filter((q) => q.state === 'ANSWERED' && !q.askerSeenAt).length;
+  const filter: Filter = (FILTERS as readonly string[]).includes(sp.s ?? '') ? (sp.s as Filter) : 'open';
 
   // 메뉴 이름 — 문의 유형은 메뉴 구성에서 자동으로 만들어진다
   const spaceLabel = (s: InquirySpace) => t(`space.${s}`);
@@ -36,24 +40,24 @@ export async function InquiryCenter({ base, me, searchParams }: { base: Base; me
   const toLabel = t(routeFor(me.role) === 'SYSTEM' ? 'toSystem' : 'toAdmin');
 
   const tabLink = (k: 'ask' | 'received', label: string, n?: number) => (
-    <Link href={`${base}/inquiry${k === 'received' ? '?t=received' : '?t=ask'}`} aria-current={tab === k ? 'page' : undefined} className={`inline-flex min-h-9 items-center gap-1.5 rounded-chip border px-3.5 text-sm font-semibold ${tab === k ? 'border-primary/30 bg-primary-tint text-primary' : 'border-border bg-bg text-muted hover:bg-surface'}`}>
+    <Link href={`${base}/inquiry?t=${k}`} aria-current={tab === k ? 'page' : undefined} className={`inline-flex min-h-9 items-center gap-1.5 rounded-chip border px-3.5 text-sm font-semibold ${tab === k ? 'border-primary/30 bg-primary-tint text-primary' : 'border-border bg-bg text-muted hover:bg-surface'}`}>
       {label}
       {n !== undefined && n > 0 && <span className="num min-w-5 rounded-chip bg-danger px-1.5 text-center text-xs leading-5 font-bold text-on-primary">{n}</span>}
     </Link>
   );
+  const shown = filter === 'all' ? received : received.filter((q) => (filter === 'open' ? q.state === 'OPEN' : q.state === 'ANSWERED'));
+  const count = (k: Filter) => (k === 'all' ? received.length : received.filter((q) => (k === 'open' ? q.state === 'OPEN' : q.state === 'ANSWERED')).length);
 
   return (
     <PageShell wide>
-      <MarkSeen when={tab === 'ask' && unseen} />
-      <div className="flex flex-wrap items-end justify-between gap-3">
-        <div>
-          <h1 className="text-2xl font-bold">{t('title')}</h1>
-          <p className="mt-1 text-sm text-muted">{t('intro')}</p>
-        </div>
+      <MarkSeen when={tab === 'ask' && unseen > 0} />
+      <div>
+        <h1 className="text-2xl font-bold">{t('title')}</h1>
+        <p className="mt-1 text-sm text-muted">{t('intro')}</p>
       </div>
       {canReceive && (
         <nav className="flex flex-wrap gap-2" aria-label={t('tabs')}>
-          {tabLink('ask', t('tabAsk'), mine.filter((q) => q.state === 'ANSWERED' && !q.askerSeenAt).length)}
+          {tabLink('ask', t('tabAsk'), unseen)}
           {tabLink('received', t('tabReceived'), waiting)}
         </nav>
       )}
@@ -73,12 +77,16 @@ export async function InquiryCenter({ base, me, searchParams }: { base: Base; me
       )}
 
       {tab === 'received' && (
-        <section className="flex flex-col gap-2">
-          <h2 className="text-base font-bold">{t('receivedTitle')} <span className="num text-muted">{received.length}</span></h2>
-          {received.length === 0 && <p className="rounded-card border border-border bg-bg p-6 text-sm text-muted">{t('receivedEmpty')}</p>}
-          {[...received.filter((q) => q.state === 'OPEN'), ...received.filter((q) => q.state === 'ANSWERED')].map((q) => (
-            <Item key={q.id} q={q} t={t} path={path(q)} when={when} mode="received" answerable={canAnswerFor(me, q)} />
-          ))}
+        <section className="flex flex-col gap-3">
+          <div className="flex flex-wrap items-center gap-2">
+            {FILTERS.map((k) => (
+              <Link key={k} href={`${base}/inquiry?t=received&s=${k}`} aria-current={filter === k ? 'true' : undefined} className={`inline-flex min-h-8 items-center gap-1.5 rounded-chip border px-3 text-sm ${filter === k ? 'border-primary/30 bg-primary-tint font-semibold text-primary' : 'border-border bg-bg text-muted hover:bg-surface'}`}>
+                {t(`filter.${k}`)} <b className="num">{count(k)}</b>
+              </Link>
+            ))}
+          </div>
+          {shown.length === 0 && <p className="rounded-card border border-border bg-bg p-6 text-sm text-muted">{t(filter === 'open' ? 'receivedNoneOpen' : 'receivedEmpty')}</p>}
+          {shown.map((q) => <Item key={q.id} q={q} t={t} path={path(q)} when={when} mode="received" answerable={canAnswerFor(me, q)} />)}
         </section>
       )}
     </PageShell>
@@ -90,14 +98,19 @@ function Item({ q, t, path, when, mode, answerable = false }: { q: Inquiry; t: T
   const fresh = mode === 'mine' && q.state === 'ANSWERED' && !q.askerSeenAt;
   return (
     <details open={mode === 'received' ? open : fresh} className="group rounded-card border border-border bg-bg px-4 py-3">
-      <summary className="flex cursor-pointer list-none flex-wrap items-center gap-x-3 gap-y-1">
-        <Chip tone={open ? 'warn' : 'neutral'}>{t(open ? 'stateOpen' : 'stateAnswered')}</Chip>
-        {fresh && <Chip tone="info">{t('newAnswer')}</Chip>}
-        <span className="min-w-0 flex-1 truncate text-sm font-semibold">{q.title}</span>
-        <span className="num text-xs text-faint">{mode === 'received' ? `${q.name} · ` : ''}{when(q.createdAt)}</span>
+      <summary className="flex cursor-pointer list-none flex-col gap-1">
+        <span className="flex flex-wrap items-center gap-x-3 gap-y-1">
+          <Chip tone={open ? 'warn' : 'neutral'}>{t(open ? 'stateOpen' : 'stateAnswered')}</Chip>
+          {fresh && <Chip tone="info">{t('newAnswer')}</Chip>}
+          <span className="min-w-0 flex-1 truncate text-sm font-semibold">{q.title}</span>
+          <span className="num text-xs text-faint">{when(q.createdAt)}</span>
+        </span>
+        <span className="flex flex-wrap items-center gap-x-2 text-xs text-muted">
+          {mode === 'received' && <b className="font-semibold text-text">{q.name}</b>}
+          <span>{path}</span>
+        </span>
       </summary>
       <div className="mt-3 flex flex-col gap-3 text-sm">
-        <p className="text-xs text-faint">{path}</p>
         <p className="leading-7 whitespace-pre-line text-text">{q.body}</p>
         {q.answer && (
           <div className="rounded-button border border-primary/25 bg-primary-tint/50 px-4 py-3">

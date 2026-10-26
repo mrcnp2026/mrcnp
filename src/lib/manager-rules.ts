@@ -5,7 +5,7 @@ export type Role = 'admin' | 'manager' | 'employee';
 export const isRole = (v: unknown): v is Role => v === 'admin' || v === 'manager' || v === 'employee';
 
 const UUID = '[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}';
-const OPEN = [/^\/admin\/search$/, /^\/admin\/inbox$/, /^\/admin\/records$/, /^\/admin\/records\/list$/, /^\/admin\/records\/calendar$/, new RegExp(`^/admin/records/${UUID}$`, 'i'), new RegExp(`^/admin/records/${UUID}/\\d{4}-\\d{2}-\\d{2}$`, 'i'), /^\/admin\/schedule$/, new RegExp(`^/admin/schedule/${UUID}/\\d{4}-\\d{2}-\\d{2}$`, 'i'), /^\/admin\/leave$/, new RegExp(`^/admin/leave/req/${UUID}$`, 'i'), new RegExp(`^/admin/leave/emp/${UUID}$`, 'i'), /^\/admin\/missing$/];
+const OPEN = [/^\/admin\/search$/, /^\/admin\/inbox$/, /^\/admin\/inquiry$/, /^\/admin\/records$/, /^\/admin\/records\/list$/, /^\/admin\/records\/calendar$/, new RegExp(`^/admin/records/${UUID}$`, 'i'), new RegExp(`^/admin/records/${UUID}/\\d{4}-\\d{2}-\\d{2}$`, 'i'), /^\/admin\/schedule$/, new RegExp(`^/admin/schedule/${UUID}/\\d{4}-\\d{2}-\\d{2}$`, 'i'), /^\/admin\/leave$/, new RegExp(`^/admin/leave/req/${UUID}$`, 'i'), new RegExp(`^/admin/leave/emp/${UUID}$`, 'i'), /^\/admin\/missing$/];
 export const MANAGER_HOME = '/admin/inbox';
 
 /** 지점관리자가 열 수 있는 관리 화면인가 */
