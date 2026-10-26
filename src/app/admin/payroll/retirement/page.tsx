@@ -50,7 +50,7 @@ export default async function RetirementPage({ searchParams }: { searchParams: P
         <h1 className="flex flex-wrap items-center gap-x-1 text-2xl font-bold">
           {t('title')}
           {practice && <Chip>{t('practice')}</Chip>}
-        <HelpTip more="/admin/help?a=admin-retirement">{t('intro')}</HelpTip></h1>
+        <HelpTip>{t('intro')}</HelpTip></h1>
       </div>
       <WarnLine short={t('legalShort')}>{t('legal')}</WarnLine>
       <Card className="flex flex-col gap-3">

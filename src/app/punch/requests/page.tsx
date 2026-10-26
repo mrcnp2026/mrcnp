@@ -66,7 +66,7 @@ export default async function MyRequestsPage({ searchParams }: { searchParams: P
       <div className="lg:flex lg:items-start lg:justify-between lg:gap-4">
         <h1 className="sr-only lg:not-sr-only lg:flex lg:items-center lg:gap-x-1 lg:text-2xl lg:font-bold">
           {t('title')}
-          <HelpTip more="/punch/help?a=staff-requests">{t('intro')}</HelpTip>
+          <HelpTip>{t('intro')}</HelpTip>
         </h1>
         <div className="hidden lg:flex lg:flex-wrap lg:justify-end lg:gap-2">
           {fresh.map((x) =>

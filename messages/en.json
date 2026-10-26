@@ -4,7 +4,6 @@
     "language": "Language",
     "signOut": "Sign out",
     "help": "Show help",
-    "helpMore": "See the full steps",
     "working": "Please wait…",
     "back": "Back",
     "practiceBadge": "Practice",
@@ -1478,7 +1477,6 @@
           "ROUNDED": "Rounded approved time"
         },
         "insuranceBasisExplain": "<em>Billed amount</em>: deducts the amount the agency bills each month. Needs the billing data.\n<em>Monthly taxable total</em>: multiplies the month's taxable pay by the rate.\n<em>Reported pay</em>: multiplies the pay reported to the agency by the rate, the same amount every month.\nWhichever you choose, the agency settles it every year with a refund or extra charge. It never silently switches to rate calculation when billing data is missing.",
-        "insuranceBasisHelp": "See details in Help",
         "withholdingExplain": "Employees can choose <em>80%, 100% or 120%</em> of the simplified tax table amount (by filing a withholding adjustment request with the company).\nOnce changed, it stays until changed again, and <em>it cannot be changed again in the same year</em>.\nWithholding less means paying more at year-end settlement.\nThis value is the default for new employees. A ratio an employee already chose is not overwritten."
       },
       "s08": {
@@ -7278,33 +7276,9 @@
     "x4": "Retirement income tax (this is before tax)",
     "note": "Formula: average daily wage × 30 days × days worked ÷ 365. A reference figure using common practice, not an amount the company promises."
   },
-  "help": {
-    "title": "Help",
-    "intro": "How-to guides and frequently asked questions.",
-    "search": "Search help (e.g. clock in, leave, closing)",
-    "navLabel": "Help contents",
-    "home": "Start here",
-    "faq": "Frequently asked questions",
-    "seeAll": "See all",
-    "seeArticle": "See the full steps",
-    "audStaff": "Staff",
-    "audAdmin": "Admin",
-    "updated": "Updated {date}",
-    "toc": "On this page",
-    "related": "Related articles",
-    "results": "Results for \"{q}\"",
-    "noResult": "No article matches \"{q}\". Try other words, or ask an administrator below.",
-    "articles": "Articles",
-    "questions": "Questions",
-    "moreHelp": "Did not find your answer?",
-    "moreHelpBody": "You can contact an administrator from inside the app.",
-    "moreHelpLink": "Contact us",
-    "langNote": "The help content is available in Korean only."
-  },
   "inquiry": {
     "title": "Contact us",
     "intro": "Send us a question or a problem. We will notify you in the app when there is an answer.",
-    "toHelp": "Look in Help first",
     "tabs": "Inquiries",
     "tabAsk": "Ask",
     "tabReceived": "Received",
@@ -7350,7 +7324,6 @@
     }
   },
   "frame": {
-    "help": "Help",
     "inquiry": "Contact us",
     "inquiryN": "Contact us ({n} new)",
     "bell": "Notices",

@@ -1,7 +1,7 @@
 'use client';
 // PC 위 띠의 조각들 — 공간 전환(내 화면 / 관리자 화면) · 통합설정 톱니 · 메뉴 검색 · 내 메뉴 · 본문 위 경로 (2026-10-14 결정 사항 개발-20 · 21 · 25).
 // 어디가 어느 공간인지는 config/nav.ts가 정한다.
-import { Check, ChevronDown, ChevronRight, CircleHelp, Headset, LayoutGrid, Megaphone, Menu as MenuIcon, MessagesSquare, Plane, Search, Send, Settings, UserRound, Users, Wallet, type LucideIcon } from 'lucide-react';
+import { Check, ChevronDown, ChevronRight, Headset, LayoutGrid, Megaphone, Menu as MenuIcon, MessagesSquare, Plane, Search, Send, Settings, UserRound, Users, Wallet, type LucideIcon } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 import Link from 'next/link';
 import { usePathname, useRouter, useSearchParams } from 'next/navigation';
@@ -52,19 +52,6 @@ export function InquiryLink({ count }: { count: number }) {
     <Link href={`${base}/inquiry`} aria-label={count > 0 ? t('inquiryN', { n: count }) : t('inquiry')} title={t('inquiry')} aria-current={on ? 'page' : undefined} className={`relative flex size-9 shrink-0 items-center justify-center rounded-button ${on ? 'bg-primary-tint text-primary' : 'text-muted hover:bg-surface'}`}>
       <Headset aria-hidden size={20} strokeWidth={1.75} />
       {count > 0 && <span className="num absolute -top-0.5 -right-0.5 flex min-w-4.5 items-center justify-center rounded-chip bg-danger px-1 text-xs leading-4.5 font-bold text-on-primary">{count}</span>}
-    </Link>
-  );
-}
-
-/** 도움말 — 위 띠의 물음표. 지금 모드(관리자 화면 / 내 화면)의 도움말로 간다 (2026-10-26) */
-export function HelpLink() {
-  const t = useTranslations('frame');
-  const path = usePathname();
-  const base = path.startsWith('/admin') ? '/admin' : '/punch';
-  const on = path.startsWith(`${base}/help`);
-  return (
-    <Link href={`${base}/help`} aria-label={t('help')} title={t('help')} aria-current={on ? 'page' : undefined} className={`flex size-9 shrink-0 items-center justify-center rounded-button ${on ? 'bg-primary-tint text-primary' : 'text-muted hover:bg-surface'}`}>
-      <CircleHelp aria-hidden size={20} strokeWidth={1.75} />
     </Link>
   );
 }

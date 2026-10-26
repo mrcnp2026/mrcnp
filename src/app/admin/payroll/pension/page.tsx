@@ -41,7 +41,7 @@ export default async function PensionPage({ searchParams }: { searchParams: Prom
   return (
     <PageShell wide>
       <header className="flex flex-wrap items-center justify-between gap-2">
-        <h1 className="flex flex-wrap items-center gap-x-1 text-2xl font-bold">{t('title')}<HelpTip more="/admin/help?a=admin-pension">{t('intro')}</HelpTip></h1>
+        <h1 className="flex flex-wrap items-center gap-x-1 text-2xl font-bold">{t('title')}<HelpTip>{t('intro')}</HelpTip></h1>
         <nav className="flex items-center gap-1" aria-label={t('month')}>
           <Link href={`/admin/payroll/pension?m=${shift(month, -1)}`} className="flex min-h-11 min-w-11 items-center justify-center" aria-label={t('prev')}>
             <ChevronLeft aria-hidden size={22} strokeWidth={1.75} />

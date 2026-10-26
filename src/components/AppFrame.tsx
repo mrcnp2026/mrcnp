@@ -26,7 +26,7 @@ import { BottomTabs } from './BottomTabs';
 import { SpaceShell } from './ConsoleSheet';
 import { ConsentGate } from './ConsentGate';
 import { DeskNav } from './DeskNav';
-import { AccountMenu, ConsoleGuide, ConsoleLink, Crumb, HelpLink, InquiryLink, MenuSearch, SpaceSwitch } from './DeskTop';
+import { AccountMenu, ConsoleGuide, ConsoleLink, Crumb, InquiryLink, MenuSearch, SpaceSwitch } from './DeskTop';
 import { FrameHeader } from './FrameHeader';
 import { LanguageSwitcher } from './LanguageSwitcher';
 import { Logo } from './Logo';
@@ -70,7 +70,6 @@ export async function AppFrame({ me, children, overlay }: { me: Me; children: Re
             <AlertBell approver={isAdmin} />
           </span>
           <InquiryLink count={inquiry.unseenAnswers + inquiry.waiting} />
-          <HelpLink />
           <ConsoleLink role={role} />
           <AccountMenu name={me.name} roleLabel={ts(me.employeeNo === OFFICE_SYSTEM_NO ? 'roleSystem' : branchManager ? 'roleManager' : isAdmin ? 'roleAdmin' : 'roleEmployee')}>
             {ops && (

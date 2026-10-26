@@ -4,7 +4,6 @@
 // 부모는 flex flex-wrap — 설명 줄이 제목 아래로 내려간다 (basis-full).
 import { CircleHelp } from 'lucide-react';
 import { useTranslations } from 'next-intl';
-import Link from 'next/link';
 import { useEffect, useId, useRef, useState, type ReactNode } from 'react';
 
 export function Help({ children }: { children: ReactNode }) {
@@ -30,8 +29,7 @@ export function Help({ children }: { children: ReactNode }) {
  * 화면 제목(h1) · 설정 줄 이름 옆에 둔다. 바깥을 누르거나 Esc로 닫힌다. 해야 할 행동 · 경고는 여기 넣지 않고 그대로 보인다.
  */
 // phone: 폰 통합설정에서 제목이 숨겨질 때(위 머리가 제목을 맡음) ? 옆에 보이는 글자 — 홀로 남은 ? 가 무엇인지 알게 (2026-10-22)
-// more: 도움말 센터의 글 주소 — 있으면 말풍선 아래에 「자세한 방법 보기」가 붙는다 (2026-10-26, 짧은 안내는 ?에 두고 자세한 순서는 도움말로)
-export function HelpTip({ children, label, phone = false, more }: { children: ReactNode; label?: string; phone?: boolean; more?: string }) {
+export function HelpTip({ children, label, phone = false }: { children: ReactNode; label?: string; phone?: boolean }) {
   const t = useTranslations('common');
   const [open, setOpen] = useState(false);
   const id = useId();
@@ -56,7 +54,6 @@ export function HelpTip({ children, label, phone = false, more }: { children: Re
       {open && (
         <span id={id} role="note" className="absolute top-full left-0 z-30 mt-1 block w-72 lg:w-96 rounded-card border border-border bg-bg p-3.5 text-sm leading-relaxed font-normal tracking-normal whitespace-normal text-text shadow-pop">
           {children}
-          {more && <Link href={more} className="mt-2 block w-fit font-medium text-primary hover:underline">{t('helpMore')}</Link>}
         </span>
       )}
     </span>

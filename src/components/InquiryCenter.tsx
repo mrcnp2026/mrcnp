@@ -50,7 +50,6 @@ export async function InquiryCenter({ base, me, searchParams }: { base: Base; me
           <h1 className="text-2xl font-bold">{t('title')}</h1>
           <p className="mt-1 text-sm text-muted">{t('intro')}</p>
         </div>
-        <Link href={`${base}/help`} className="text-sm font-medium text-primary hover:underline">{t('toHelp')}</Link>
       </div>
       {canReceive && (
         <nav className="flex flex-wrap gap-2" aria-label={t('tabs')}>

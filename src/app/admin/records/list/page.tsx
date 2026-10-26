@@ -137,7 +137,7 @@ export default async function RecordListPage({ searchParams }: { searchParams: P
       <div className="hidden flex-col gap-4 lg:flex">
         <div className="flex items-center justify-between gap-3">
           <div className="min-w-0">
-            <h1 className="flex flex-wrap items-center gap-x-1 text-2xl font-bold">{t('title')}{admin && <SettingsLink href="/admin/settings?tab=punch" label={tGear('item.setPunch')} />}<HelpTip more="/admin/help?a=admin-pay-flow">{t('pcIntro')} {t('hint')}</HelpTip></h1>
+            <h1 className="flex flex-wrap items-center gap-x-1 text-2xl font-bold">{t('title')}{admin && <SettingsLink href="/admin/settings?tab=punch" label={tGear('item.setPunch')} />}<HelpTip>{t('pcIntro')} {t('hint')}</HelpTip></h1>
           </div>
           <div className="flex items-center gap-2">
 {admin && (
