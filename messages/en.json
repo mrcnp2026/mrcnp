@@ -7564,7 +7564,8 @@
       "myTraining": "My training",
       "trainingHome": "Training & completion",
       "trainingCourses": "Training types",
-      "slipMailLog": "Payslip emails"
+      "slipMailLog": "Payslip emails",
+      "ops": "Operations status"
     },
     "search": {
       "placeholder": "Search",

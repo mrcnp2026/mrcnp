@@ -13,7 +13,7 @@ export type How = 'view' | 'instant' | 'versioned' | 'list' | 'review';
 // pcOnly: 폰에서는 같은 화면이 다른 모양으로만 그려져 고를 의미가 없는 항목 — 폰 서랍에서 뺀다 (2026-10-15 의뢰인: 폰 근무일정 「달력형」이 눌러도 그대로)
 // badge: 메뉴 옆 숫자 (2026-10-19 의뢰인: 종의 알림을 메뉴에도) — inbox 처리할 요청 · notices 안 본 공지 · messages 안 읽은 사내게시판 · decided 처리된 내 요청
 export type Badge = 'inbox' | 'notices' | 'messages' | 'decided' | 'inquiry';
-export type Leaf = { href: string; key: string; exact?: boolean; also?: string[]; badge?: Badge; how?: How; pcOnly?: boolean };
+export type Leaf = { href: string; key: string; exact?: boolean; also?: string[]; badge?: Badge; how?: How; pcOnly?: boolean; systemOnly?: boolean };
 export type Group = { key: string | null; items: Leaf[] };
 export type App = { key: string; icon: LucideIcon; groups: Group[]; section?: 'company' | 'apps' };
 export type Space = 'my' | 'admin' | 'console';
@@ -73,7 +73,7 @@ export const CONSOLE_APPS: App[] = [
   { key: 'cBasic', section: 'company', icon: Building2, groups: one([{ href: '/admin/settings', key: 'setGeneral', how: 'instant' }, { href: tab('holidays'), key: 'setHolidays', how: 'instant' }, { href: tab('notify'), key: 'setNotify', how: 'view' }, { href: tab('advanced'), key: 'setAdvanced', how: 'view' }]) },
   { key: 'cOrg', section: 'company', icon: Network, groups: one([{ href: '/admin/branches', key: 'branches', how: 'list' }, { href: '/admin/jobs', key: 'jobs', how: 'list' }, { href: tab('branch'), key: 'setBranch', how: 'view' }]) },
   { key: 'cAccess', section: 'company', icon: ShieldCheck, groups: one([{ href: tab('access'), key: 'setAccess', how: 'view' }, { href: tab('security'), key: 'setSecurity', how: 'view' }]) },
-  { key: 'cData', section: 'company', icon: Database, groups: one([{ href: '/admin/backups', key: 'backups', how: 'view' }, { href: '/admin/diag', key: 'diag', how: 'view' }]) }, // 데이터베이스 백업: 2026-10-18 의뢰인
+  { key: 'cData', section: 'company', icon: Database, groups: one([{ href: '/admin/backups', key: 'backups', how: 'view' }, { href: '/admin/diag', key: 'diag', how: 'view' }, { href: '/admin/ops', key: 'ops', how: 'view', systemOnly: true }]) }, // 운영 현황은 시스템관리자만(2026-10-27 의뢰인) · 데이터베이스 백업: 2026-10-18 의뢰인
   {
     key: 'aAttendance',
     section: 'apps',
@@ -105,10 +105,10 @@ const leavesOf = (app: App) => app.groups.flatMap((g) => g.items);
 const mayOpen = (href: string) => managerCanOpen(href.split('?')[0]) && !href.includes('v=accrual');
 
 /** 그 사람이 열 수 있는 앱만 (지점관리자는 허용한 화면만, 통합설정은 관리자만) */
-export function appsFor(space: Space, role: NavRole): App[] {
+export function appsFor(space: Space, role: NavRole, system = false): App[] {
   if (space === 'my') return MY_APPS;
   if (role === 'employee') return [];
-  if (space === 'console') return role === 'admin' ? CONSOLE_APPS : [];
+  if (space === 'console') return role === 'admin' ? (system ? CONSOLE_APPS : CONSOLE_APPS.map((a) => ({ ...a, groups: a.groups.map((g) => ({ ...g, items: g.items.filter((i) => !i.systemOnly) })) }))) : [];
   if (role === 'admin') return ADMIN_APPS;
   return ADMIN_APPS.map((a) => ({ ...a, groups: a.groups.map((g) => ({ ...g, items: g.items.filter((i) => mayOpen(i.href)) })).filter((g) => g.items.length > 0) })).filter((a) => a.groups.length > 0);
 }
@@ -139,7 +139,7 @@ export function locate(path: string, query: Query, role: NavRole): Located {
   let hit: Located | undefined;
   let top = -1;
   for (const space of ['my', 'admin', 'console'] as const) {
-    for (const app of appsFor(space, role)) {
+    for (const app of appsFor(space, role, true)) {
       for (const leaf of leavesOf(app)) {
         const s = score(leaf, path, query);
         if (s > top) [top, hit] = [s, { space, app, leaf }];

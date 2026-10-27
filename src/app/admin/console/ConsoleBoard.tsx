@@ -6,10 +6,12 @@ import { ChevronDown, ChevronRight, Search } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 import Link from 'next/link';
 import { useEffect, useState } from 'react';
-import { appLeaves, CONSOLE_APPS } from '@/config/nav';
+import { appLeaves, appsFor } from '@/config/nav';
+import { useSystemNav } from '@/components/SystemNav';
 
 export function ConsoleBoard() {
   const t = useTranslations('frame');
+  const system = useSystemNav();
   const [q, setQ] = useState('');
   const [phone, setPhone] = useState(false);
   const [unfold, setUnfold] = useState<Set<string>>(new Set());
@@ -25,7 +27,7 @@ export function ConsoleBoard() {
   const toggle = (k: string) => setUnfold((s) => (s.has(k) ? new Set() : new Set([k])));
   const sections = (['company', 'apps'] as const).map((s) => ({
     s,
-    apps: CONSOLE_APPS.filter((a) => a.section === s)
+    apps: appsFor('console', 'admin', system).filter((a) => a.section === s)
       .map((a) => {
         const name = t(`app.${a.key}`);
         const leaves = appLeaves(a).filter((l) => !word || `${t(`item.${l.key}`)} ${name}`.toLowerCase().includes(word));

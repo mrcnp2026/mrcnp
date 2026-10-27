@@ -2,6 +2,7 @@
 // PC(1024px~) 왼쪽 틀 — 앱 띠(아이콘 + 짧은 이름) + 메뉴 판(앱 이름 → 묶음 제목 → 항목). 직원 · 관리자가 같은 틀을 쓴다 (2026-10-14 결정 사항 개발-21).
 // 통합설정에서는 앱 띠 자리에 「회사설정 / App 관리」 묶음 목록이 놓인다 (개발-20, 문서 07 6장).
 // 무엇이 어디에 있는지는 config/nav.ts 한곳에서 정한다. 폰에서는 보이지 않는다(하단 탭 + 서랍 메뉴).
+import { useSystemNav } from '@/components/SystemNav';
 import { History, LayoutGrid, PanelLeftClose, PanelLeftOpen } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 import Link, { useLinkStatus } from 'next/link';
@@ -68,7 +69,8 @@ export function DeskNav({ role, initialWide = false }: { role: NavRole; inboxCou
     }
   }, [hereHref]);
 
-  const apps = appsFor(at.space, role);
+  const system = useSystemNav();
+  const apps = appsFor(at.space, role, system);
 
   // 통합설정 왼쪽 판의 「최근 사용한 메뉴」 (2026-10-22, 다우오피스 통합설정의 My) — 위에서 기억한 최근 화면 가운데 통합설정 것만 넷까지
   const [recent, setRecent] = useState<string[]>([]);

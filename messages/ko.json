@@ -7564,7 +7564,8 @@
       "myTraining": "내 교육",
       "trainingHome": "교육 · 이행 현황",
       "trainingCourses": "교육 종류",
-      "slipMailLog": "급여명세서 발송"
+      "slipMailLog": "급여명세서 발송",
+      "ops": "운영 현황"
     },
     "search": {
       "placeholder": "검색",

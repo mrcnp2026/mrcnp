@@ -5,6 +5,7 @@ import 'server-only';
 import { getLocale, getTranslations } from 'next-intl/server';
 import { OFFICE } from '@/config/office';
 import { appsFor, type NavRole } from '@/config/nav';
+import { isSystemAdminNo } from '@/lib/system-admin';
 import type { Me } from '@/lib/auth';
 import { leaveTypeName } from '@/lib/leave';
 import { loadAllLeaveTypes } from '@/lib/leave-data';
@@ -43,7 +44,7 @@ export async function runSearch(me: Me, rawQ: string): Promise<SearchResult> {
 
   // ── 메뉴 (내가 열 수 있는 공간만) ──
   for (const space of (['my', 'admin', 'console'] as const).filter((s) => s === 'my' || (s === 'admin' && staff) || (s === 'console' && role === 'admin'))) {
-    for (const app of appsFor(space, role)) {
+    for (const app of appsFor(space, role, isSystemAdminNo(me.employeeNo))) {
       const appName = tf(space === 'console' ? `app.${app.key}` : `appFull.${app.key}`);
       for (const g of app.groups) {
         const groupName = g.key ? tf(`group.${g.key}`) : '';

@@ -1,6 +1,7 @@
 'use client';
 // PC 위 띠의 조각들 — 공간 전환(내 화면 / 관리자 화면) · 통합설정 톱니 · 메뉴 검색 · 내 메뉴 · 본문 위 경로 (2026-10-14 결정 사항 개발-20 · 21 · 25).
 // 어디가 어느 공간인지는 config/nav.ts가 정한다.
+import { useSystemNav } from '@/components/SystemNav';
 import { Check, ChevronDown, ChevronRight, Headset, LayoutGrid, Megaphone, Menu as MenuIcon, MessagesSquare, Plane, Search, Send, Settings, UserRound, Users, Wallet, type LucideIcon } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 import Link from 'next/link';
@@ -87,12 +88,13 @@ export function MenuSearch({ role }: { role: NavRole }) {
   const [scopeOpen, setScopeOpen] = useState(false);
   const [pick, setPick] = useState(-1); // -1 = 「전체 검색 결과 보기」 (Enter를 누르면 통합 검색 화면으로)
   const [recent, setRecent] = useState<string[]>([]);
+  const system = useSystemNav();
   const all = useMemo(
     () =>
       (['my', 'admin', 'console'] as const).flatMap((space) =>
-        appsFor(space, role).flatMap((a) => appLeaves(a).map((l) => ({ href: l.href, name: t(`item.${l.key}`), where: `${t(`space.${space}`)} › ${t(space === 'console' ? `app.${a.key}` : `appFull.${a.key}`)}` }))),
+        appsFor(space, role, system).flatMap((a) => appLeaves(a).map((l) => ({ href: l.href, name: t(`item.${l.key}`), where: `${t(`space.${space}`)} › ${t(space === 'console' ? `app.${a.key}` : `appFull.${a.key}`)}` }))),
       ),
-    [role, t],
+    [role, t, system],
   );
   useEffect(() => {
     setOpen(false);
