@@ -7817,6 +7817,12 @@
     "dotLate": "지각",
     "dotOt": "초과 · 퇴근 미기록",
     "dotLeave": "휴가",
+    "late": "지각",
+    "otShort": "초과 {t} ({state})",
+    "colDay": "날짜",
+    "colIn": "출근",
+    "colOut": "퇴근",
+    "colIssue": "초과 · 이슈",
     "corrected": "정정됨",
     "policy": "회사 근태 방침"
   },

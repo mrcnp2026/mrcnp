@@ -7817,6 +7817,12 @@
     "dotLate": "Late",
     "dotOt": "Overtime · no clock-out",
     "dotLeave": "Leave",
+    "late": "Late",
+    "otShort": "OT {t} ({state})",
+    "colDay": "Date",
+    "colIn": "In",
+    "colOut": "Out",
+    "colIssue": "OT · Issues",
     "corrected": "Corrected",
     "policy": "Company attendance policy"
   },

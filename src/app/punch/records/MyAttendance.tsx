@@ -120,6 +120,39 @@ export async function MyAttendance({ me, sp, base, defaultView, extra }: { me: {
     </div>
   );
 
+  // 폰 한 줄: 출근 · 퇴근 · 오른쪽에 초과/이슈만 (2026-10-27 의뢰인: 같은 내용이 여러 번 보이지 않게)
+  const phoneRow = (x: Info) => {
+    const planned = !x.firstIn && !x.fullLeave && x.d >= today && (x.dayType === 'workday' || x.plan.some((p) => p.source === 'shift'));
+    const tags: { k: string; text: string; cls: string }[] = [];
+    if (x.late) tags.push({ k: 'late', text: t('late'), cls: 'bg-danger-tint text-danger' });
+    if (x.open && !x.live) tags.push({ k: 'noOut', text: t('noOut'), cls: 'bg-warn-tint text-warn' });
+    if (x.otMin > 0) tags.push({ k: 'ot', text: t('otShort', { t: dur(x.otMin), state: t(`otState.${x.ot?.status ?? 'pending'}`) }), cls: x.ot?.status === 'approved' ? 'bg-primary-tint text-primary' : 'bg-warn-tint text-warn' });
+    for (const l of x.lv) tags.push({ k: l.requestId, text: leaveTypeName(data.leaveTypes, l.typeCode, tl), cls: 'bg-primary-tint text-primary' });
+    if (!x.firstIn && x.dayType === 'holiday' && !x.holiday) tags.push({ k: 'off', text: t('off'), cls: 'bg-surface text-muted' });
+    if (x.corrected) tags.push({ k: 'corr', text: t('corrected'), cls: 'bg-surface text-muted' });
+    return (
+      <span className="num flex min-w-0 flex-1 items-center gap-3 text-sm lg:hidden">
+        {x.firstIn ? (
+          <>
+            <span className={`w-12 shrink-0 ${x.late ? 'font-semibold text-danger' : ''}`}>{hm(x.firstIn)}</span>
+            <span className="w-12 shrink-0">{x.lastOut ? hm(x.lastOut) : x.live ? <span className="text-xs font-semibold text-primary">{t('working')}</span> : '–'}</span>
+          </>
+        ) : planned ? (
+          <span className="shrink-0 text-xs text-faint">{x.plan.map((p) => `${hhmm(p.startTime)} - ${hhmm(p.endTime)}`).join(' · ')}</span>
+        ) : (
+          <span className="text-faint">–</span>
+        )}
+        <span className="ml-auto flex flex-wrap justify-end gap-1">
+          {tags.map((g) => (
+            <span key={g.k} className={`rounded-chip px-1.5 text-xs font-semibold ${g.cls}`}>
+              {g.text}
+            </span>
+          ))}
+        </span>
+      </span>
+    );
+  };
+
   const q = (o: Record<string, string>) => `${base}?${new URLSearchParams(o)}`;
   const prevHref = view === 'week' ? (addDays(from, -1) >= oldest ? q({ v: 'week', d: addDays(from, -7) }) : null) : ym > oldest.slice(0, 7) ? q({ v: 'month', m: shiftMonth(ym, -1) }) : null;
   const nextHref = view === 'week' ? (addDays(from, 7) <= newest ? q({ v: 'week', d: addDays(from, 7) }) : null) : ym < newest.slice(0, 7) ? q({ v: 'month', m: shiftMonth(ym, 1) }) : null;
@@ -198,11 +231,11 @@ export async function MyAttendance({ me, sp, base, defaultView, extra }: { me: {
               <span className="absolute right-0">{t('hours', { n: OFFICE.weeklyLimitHours })}</span>
             </div>
           </div>
-          <dl className="grid grid-cols-2 gap-3 lg:px-6">
+          <dl className="hidden grid-cols-2 gap-3 lg:grid lg:px-6">
             {stat(t('leftDays'), <CountUp value={t('days', { n: s.left })} className="text-primary" />, t('ofDays', { n: s.all }))}
             {stat(t('leftHours'), <CountUp value={dur(leftStd)} className="text-primary" />, t('ofHours', { n: 40 }))}
           </dl>
-          <dl className="grid grid-cols-2 gap-3 lg:pl-6">
+          <dl className="hidden grid-cols-2 gap-3 lg:grid lg:pl-6">
             {stat(t('total'), dur(s.net))}
             {stat(t('leave'), dur(s.lvMin))}
           </dl>
@@ -210,6 +243,12 @@ export async function MyAttendance({ me, sp, base, defaultView, extra }: { me: {
 
         <section className="overflow-hidden rounded-card border border-border bg-bg">
           <ol className="grid divide-y divide-border lg:grid-cols-7 lg:divide-y-0" data-week-days>
+            <li aria-hidden className="flex gap-3 bg-surface px-4 py-2 text-xs text-muted lg:hidden">
+              <span className="w-16 shrink-0">{t('colDay')}</span>
+              <span className="w-12 shrink-0">{t('colIn')}</span>
+              <span className="w-12 shrink-0">{t('colOut')}</span>
+              <span className="ml-auto">{t('colIssue')}</span>
+            </li>
             {days7.map((x) => {
               const on = x.d === sel.d;
               return (
@@ -218,7 +257,7 @@ export async function MyAttendance({ me, sp, base, defaultView, extra }: { me: {
                     href={q({ v: 'week', d: x.d })}
                     scroll={false}
                     aria-current={on ? 'date' : undefined}
-                    className={`flex h-full gap-3 px-4 py-3 lg:min-h-32 lg:flex-col lg:gap-2 lg:px-3 ${on ? 'bg-primary-tint' : 'hover:bg-surface'}`}
+                    className={`flex h-full gap-3 px-4 py-3 max-lg:items-center lg:min-h-32 lg:flex-col lg:gap-2 lg:px-3 ${on ? 'bg-primary-tint' : 'hover:bg-surface'}`}
                   >
                     <span className="flex w-16 shrink-0 flex-col gap-0.5 lg:w-auto">
                       <span className="num flex items-center gap-1 text-sm">
@@ -227,7 +266,8 @@ export async function MyAttendance({ me, sp, base, defaultView, extra }: { me: {
                       </span>
                       {x.holiday && <span className="truncate text-xs text-danger">{x.holiday}</span>}
                     </span>
-                    {chips(x)}
+                    {phoneRow(x)}
+                    <span className="hidden lg:block">{chips(x)}</span>
                   </Link>
                 </li>
               );
@@ -237,8 +277,8 @@ export async function MyAttendance({ me, sp, base, defaultView, extra }: { me: {
 
         <section className="rounded-card border border-border bg-bg" data-day-detail>
           <div className="flex flex-wrap items-start gap-x-8 gap-y-3 border-b border-border px-4 py-4 lg:px-6">
-            <p className="num w-full font-bold lg:w-auto">{f.dateTime(new Date(`${sel.d}T12:00:00+09:00`), { month: 'long', day: 'numeric', weekday: 'short' })}</p>
-            <dl className="num grid flex-1 grid-cols-2 gap-x-8 gap-y-3 text-sm lg:flex lg:flex-wrap">
+            <p className="num flex-1 font-bold lg:w-auto lg:flex-none">{f.dateTime(new Date(`${sel.d}T12:00:00+09:00`), { month: 'long', day: 'numeric', weekday: 'short' })}</p>
+            <dl className="num order-3 grid basis-full grid-cols-2 gap-x-8 gap-y-3 text-sm lg:order-none lg:flex lg:flex-1 lg:basis-auto lg:flex-wrap">
               {(
                 [
                   ['dStart', sel.firstIn ? hm(sel.firstIn) : '–'],
@@ -246,12 +286,12 @@ export async function MyAttendance({ me, sp, base, defaultView, extra }: { me: {
                   ['dTotal', sel.r && !sel.live ? dur(sel.r.netMinutes) : '–'],
                 ] as const
               ).map(([k, v]) => (
-                <div key={k} className="flex flex-col gap-1">
+                <div key={k} className={`flex flex-col gap-1 ${k === 'dTotal' ? '' : 'max-lg:hidden'}`}>
                   <dt className="text-xs text-faint">{t(k)}</dt>
                   <dd className="font-semibold">{v}</dd>
                 </div>
               ))}
-              <div className="col-span-2 flex flex-col gap-1">
+              <div className="col-span-2 flex flex-col gap-1 max-lg:hidden">
                 <dt className="text-xs text-faint">{t('dDetail')}</dt>
                 <dd>{sel.r && !sel.live ? t('dDetailValue', { r: dur(sel.r.regularMinutes), o: dur(sel.otMin), e: dur(sel.r.overtimeMinutes), h: dur(sel.r.holidayMinutes), n: dur(sel.r.nightMinutes) }) : '–'}</dd>
               </div>
@@ -310,7 +350,7 @@ export async function MyAttendance({ me, sp, base, defaultView, extra }: { me: {
                 ))}
               </ul>
             </div>
-            <div className="border-t border-border bg-surface px-4 py-4 lg:border-t-0 lg:border-l lg:px-5" data-day-log>
+            <div className={`border-t border-border bg-surface px-4 py-4 lg:border-t-0 lg:border-l lg:px-5 ${log.length === 0 ? 'max-lg:hidden' : ''}`} data-day-log>
               <p className="text-sm font-bold">{t('dLog')}</p>
               {log.length === 0 ? (
                 <p className="py-6 text-center text-sm text-faint">{t('dLogNone')}</p>
