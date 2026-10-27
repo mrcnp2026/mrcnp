@@ -438,9 +438,9 @@ export async function MyAttendance({ me, sp, base, defaultView, extra }: { me: {
 
   return (
     <div className="flex flex-col gap-3 lg:gap-4" data-my-attendance={view}>
-      <div className="flex flex-col gap-3 lg:grid lg:grid-cols-[1fr_auto_1fr] lg:items-center">
+      <div className="flex items-center justify-between gap-2 lg:grid lg:grid-cols-[1fr_auto_1fr]">
         <h1 className="hidden text-xl font-bold lg:block">{t('title')}</h1>
-        <nav aria-label={t('range')} className="flex items-center justify-center gap-1">
+        <nav aria-label={t('range')} className="flex min-w-0 items-center gap-0.5 lg:justify-center lg:gap-1">
           {prevHref ? (
             <Link href={prevHref} aria-label={t('prev')} className={arrow}>
               <ChevronLeft aria-hidden size={20} />
@@ -448,7 +448,9 @@ export async function MyAttendance({ me, sp, base, defaultView, extra }: { me: {
           ) : (
             <span className="size-11 lg:size-9" />
           )}
-          <span className="num text-center text-lg font-semibold lg:text-2xl">{rangeLabel}</span>
+          <Link href={q(view === 'week' ? { v: 'week' } : { v: 'month' })} title={t('today')} aria-label={`${t('today')}: ${view === 'week' ? `${from} ~ ${to}` : ym}`} className="num min-w-0 rounded-button px-1 text-center text-base font-semibold hover:bg-surface lg:text-2xl">
+            {rangeLabel}
+          </Link>
           {nextHref ? (
             <Link href={nextHref} aria-label={t('next')} className={arrow}>
               <ChevronRight aria-hidden size={20} />
@@ -456,18 +458,15 @@ export async function MyAttendance({ me, sp, base, defaultView, extra }: { me: {
           ) : (
             <span className="size-11 lg:size-9" />
           )}
-          <Link href={q(view === 'week' ? { v: 'week' } : { v: 'month' })} className="ml-1 inline-flex min-h-9 items-center rounded-button px-2 text-sm text-muted hover:bg-surface">
-            {t('today')}
-          </Link>
         </nav>
-        <div role="tablist" aria-label={t('views')} className="grid grid-cols-2 self-center rounded-button border border-border bg-bg p-0.5 text-sm lg:justify-self-end">
+        <div role="tablist" aria-label={t('views')} className="grid shrink-0 grid-cols-2 rounded-button border border-border bg-bg p-0.5 text-sm lg:justify-self-end">
           {(['week', 'month'] as const).map((v) => (
             <Link
               key={v}
               role="tab"
               aria-selected={view === v}
               href={v === 'week' ? q({ v: 'week', d: view === 'month' ? (ym === today.slice(0, 7) ? today : month.from) : picked }) : q({ v: 'month', m: view === 'week' ? picked.slice(0, 7) : ym })}
-              className={`inline-flex min-h-9 items-center justify-center rounded-button px-4 ${view === v ? 'bg-surface font-bold text-text' : 'text-muted'}`}
+              className={`inline-flex min-h-9 items-center justify-center rounded-button px-3 lg:px-4 ${view === v ? 'bg-surface font-bold text-text' : 'text-muted'}`}
             >
               {t(v)}
             </Link>
