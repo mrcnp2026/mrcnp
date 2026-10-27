@@ -21,7 +21,7 @@ const LISTS: Record<MenuSpace, readonly App[]> = { my: MY_APPS, admin: ADMIN_APP
 export function inquiryTopics(): Topic[] {
   const out: Topic[] = [];
   for (const space of Object.keys(LISTS) as MenuSpace[]) {
-    for (const app of LISTS[space].filter((a) => a.key !== 'inquiry' && a.key !== 'mInquiry')) for (const g of app.groups) for (const leaf of g.items) out.push({ id: `${space}:${app.key}:${leaf.key}`, space, appKey: app.key, section: app.section, leafKey: leaf.key });
+    for (const app of LISTS[space]) for (const g of app.groups) for (const leaf of g.items) out.push({ id: `${space}:${app.key}:${leaf.key}`, space, appKey: app.key, section: app.section, leafKey: leaf.key });
   }
   return out;
 }

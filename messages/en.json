@@ -7366,9 +7366,7 @@
       "mTalk": "Notices",
       "mReports": "Reports",
       "training": "Training",
-      "mTraining": "Training",
-      "inquiry": "Contact us",
-      "mInquiry": "Contact us"
+      "mTraining": "Training"
     },
     "appFull": {
       "home": "Home",
@@ -7389,9 +7387,7 @@
       "mTalk": "Notices · Messages",
       "mReports": "Attendance · Leave reports",
       "training": "Training",
-      "mTraining": "Training",
-      "inquiry": "Contact us",
-      "mInquiry": "Contact us"
+      "mTraining": "Training"
     },
     "group": {
       "gSchedule": "Schedule",
@@ -7500,9 +7496,7 @@
       "myTraining": "My training",
       "trainingHome": "Training & completion",
       "trainingCourses": "Training types",
-      "slipMailLog": "Payslip emails",
-      "myInquiry": "Contact us",
-      "adminInquiry": "Contact us"
+      "slipMailLog": "Payslip emails"
     },
     "search": {
       "placeholder": "Search",

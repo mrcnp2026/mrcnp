@@ -7366,9 +7366,7 @@
       "mTalk": "공지",
       "mReports": "리포트",
       "training": "교육",
-      "mTraining": "교육",
-      "inquiry": "문의",
-      "mInquiry": "문의"
+      "mTraining": "교육"
     },
     "appFull": {
       "home": "홈",
@@ -7389,9 +7387,7 @@
       "mTalk": "공지 · 메시지",
       "mReports": "근태 · 휴가 리포트",
       "training": "교육",
-      "mTraining": "교육",
-      "inquiry": "문의하기",
-      "mInquiry": "문의하기"
+      "mTraining": "교육"
     },
     "group": {
       "gSchedule": "근무일정",
@@ -7500,9 +7496,7 @@
       "myTraining": "내 교육",
       "trainingHome": "교육 · 이행 현황",
       "trainingCourses": "교육 종류",
-      "slipMailLog": "급여명세서 발송",
-      "myInquiry": "문의하기",
-      "adminInquiry": "문의하기"
+      "slipMailLog": "급여명세서 발송"
     },
     "search": {
       "placeholder": "검색",
