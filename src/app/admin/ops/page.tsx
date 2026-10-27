@@ -5,6 +5,7 @@ import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import { getFormatter, getTranslations } from 'next-intl/server';
 import { Card, CardTitle, Chip, PageShell } from '@/components/ui';
+import { ERROR_CATALOG } from '@/config/error-catalog';
 import { OFFICE } from '@/config/office';
 import { getMe } from '@/lib/auth';
 import { backupConfigured, listBackups } from '@/lib/backup/github';
@@ -16,7 +17,7 @@ export const dynamic = 'force-dynamic';
 
 const STALE_DAYS = 8; // 백업 감시(cron/backup-watch)와 같은 기준
 
-type ErrRow = { id: number; code: string; severity: 'info' | 'warn' | 'error'; route: string | null; occurrences: number; last_seen_at: string; resolved_at: string | null };
+type ErrRow = { id: number; code: string; severity: 'info' | 'warn' | 'error'; route: string | null; occurrences: number; last_seen_at: string; resolved_at: string | null; detail: Record<string, string | number> | null };
 
 export default async function OpsPage() {
   const me = await getMe();
@@ -48,7 +49,7 @@ export default async function OpsPage() {
   const since = new Date(Date.now() - 7 * 86_400_000).toISOString();
   const { data: errs, error: errRead } = await db
     .from('app_errors')
-    .select('id, code, severity, route, occurrences, last_seen_at, resolved_at')
+    .select('id, code, severity, route, occurrences, last_seen_at, resolved_at, detail')
     .gte('last_seen_at', since)
     .order('last_seen_at', { ascending: false })
     .limit(30);
@@ -68,6 +69,9 @@ export default async function OpsPage() {
   const problems = (dbOk ? 0 : 1) + (backupBad ? 1 : 0) + openErrors + (errRead ? 1 : 0);
   const when = (iso: string) => f.dateTime(new Date(iso), { month: 'numeric', day: 'numeric', hour: '2-digit', minute: '2-digit', timeZone: 'Asia/Seoul' });
   const day = (d: string) => f.dateTime(new Date(`${d}T12:00:00+09:00`), { year: 'numeric', month: 'long', day: 'numeric', weekday: 'short' });
+  const known = (c: string): c is keyof typeof ERROR_CATALOG => c in ERROR_CATALOG;
+  const DB_HINTS = ['23505', '23503', '23502', '42501', '42P01', '42703', 'AC001', '40001', '57014', 'PGRST116'];
+  const dbHint = (r: ErrRow) => DB_HINTS.includes(String(r.detail?.dbCode));
   const tone = { error: 'danger', warn: 'warn', info: 'neutral' } as const;
 
   return (
@@ -100,14 +104,19 @@ export default async function OpsPage() {
         ) : (
           <ul className="divide-y divide-border overflow-hidden rounded-card border border-border">
             {rows.map((r) => (
-              <li key={r.id} className="flex flex-wrap items-center gap-x-3 gap-y-1 px-4 py-3">
-                <Chip tone={r.resolved_at ? 'ok' : tone[r.severity]}>{r.resolved_at ? t('resolved') : r.severity}</Chip>
-                <span className="min-w-0 flex-1">
-                  <span className="block truncate font-bold">{r.code}</span>
-                  <span className="block truncate text-xs text-muted">{r.route ?? '-'}</span>
+              <li key={r.id} className="flex flex-col gap-1.5 px-4 py-3">
+                <span className="flex flex-wrap items-center gap-x-3 gap-y-1">
+                  <Chip tone={r.resolved_at ? 'ok' : tone[r.severity]}>{r.resolved_at ? t('resolved') : t(`sev.${r.severity}`)}</Chip>
+                  <span className="min-w-0 flex-1 font-bold">{known(r.code) ? t(`err.${r.code}.name`) : r.code}</span>
+                  <span className="num text-sm text-muted">{t('times', { n: r.occurrences })}</span>
+                  <span className="num text-sm text-muted">{when(r.last_seen_at)}</span>
                 </span>
-                <span className="num text-sm text-muted">{t('times', { n: r.occurrences })}</span>
-                <span className="num text-sm text-muted">{when(r.last_seen_at)}</span>
+                {known(r.code) && <p className="text-sm">{t(`err.${r.code}.what`)}</p>}
+                {known(r.code) && !r.resolved_at && <p className="text-sm text-primary">{t(`err.${r.code}.todo`)}</p>}
+                {dbHint(r) && <p className="text-sm text-muted">{t('dbHint', { code: String(r.detail?.dbCode), text: t(`db.${r.detail?.dbCode}`) })}</p>}
+                <p className="num truncate text-xs text-faint">
+                  {[r.route ? t('where', { route: r.route }) : null, r.detail?.errorName ? t('kind', { n: String(r.detail.errorName) }) : null, r.detail?.requestId ? t('reqId', { id: String(r.detail.requestId).slice(0, 8) }) : null, r.detail?.appVersion ? t('ver', { v: String(r.detail.appVersion) }) : null].filter(Boolean).join(' · ')}
+                </p>
               </li>
             ))}
           </ul>

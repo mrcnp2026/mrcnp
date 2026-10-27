@@ -5704,7 +5704,71 @@
       "ruleFreeze": "No deployments within two days of payroll closing or payday.",
       "ruleRollback": "If a deploy causes trouble, roll back to the previous one in Vercel.",
       "ruleMonitor": "An external uptime monitor calls /api/health every 5 minutes and alerts your phone if it fails.",
-      "ruleCron": "Scheduled-job run history will appear here after the database change is approved."
+      "ruleCron": "Scheduled-job run history will appear here after the database change is approved.",
+      "sev": {
+        "error": "Error",
+        "warn": "Warning",
+        "info": "Info"
+      },
+      "err": {
+        "PUNCH_SAVE_FAILED": {
+          "name": "Clock-in/out not saved",
+          "what": "An in/out record could not be saved.",
+          "todo": "Ask the employee to try again; if it still fails, enter it by proxy. Tell the developer if it repeats."
+        },
+        "PASSKEY_VERIFY_FAILED": {
+          "name": "Phone check failed",
+          "what": "The fingerprint/face check on the phone did not match.",
+          "todo": "If the same employee keeps failing, reset and re-register their phone."
+        },
+        "AUTH_SESSION_FAILED": {
+          "name": "Login/session error",
+          "what": "Checking the sign-in state failed.",
+          "todo": "Signing in again usually fixes it. Tell the developer if many people are affected."
+        },
+        "EXPORT_FAILED": {
+          "name": "Download (Excel/PDF) failed",
+          "what": "An error occurred while building the file.",
+          "todo": "Try again with the same settings; tell the developer if it repeats."
+        },
+        "TRANSLATION_FAILED": {
+          "name": "Auto-translation failed",
+          "what": "The notice translation (Gemini) did not respond.",
+          "todo": "The notice goes out in the original text. Translate again later if needed."
+        },
+        "IMAGE_PROCESS_FAILED": {
+          "name": "Image processing failed",
+          "what": "The uploaded photo could not be processed.",
+          "todo": "Try another or smaller photo."
+        },
+        "DB_UNREACHABLE": {
+          "name": "Database unreachable",
+          "what": "The database did not respond.",
+          "todo": "If it continues, tell the developer right away."
+        },
+        "UNKNOWN": {
+          "name": "Unclassified server error",
+          "what": "An unexpected error occurred during a requested action. \"Where\" below shows which feature it was.",
+          "todo": "Try again; if it repeats, pass the Where, Request no. and DB error below to the developer."
+        }
+      },
+      "dbHint": "DB error {code}: {text}",
+      "db": {
+        "23502": "A required value was empty.",
+        "23503": "A linked record is missing or still in use.",
+        "23505": "A duplicate value was inserted.",
+        "40001": "A concurrent edit conflicted. Try again.",
+        "42501": "The database denied permission.",
+        "42703": "A required column is missing — a DB change may not be applied yet.",
+        "57014": "The operation took too long and was stopped.",
+        "42P01": "A required table is missing — a DB change may not be applied yet.",
+        "AC001": "The period is closed, so it cannot be changed.",
+        "PGRST116": "The record was not found or matched several."
+      },
+      "where": "Where {route}",
+      "kind": "Type {n}",
+      "reqId": "Request no. {id}",
+      "ver": "App {v}"
     },
     "backups": {
       "title": "Database backups",
@@ -7289,7 +7353,11 @@
     "receivedTitle": "Received inquiries",
     "receivedEmpty": "No inquiries received.",
     "receivedNoneOpen": "No unanswered inquiries.",
-    "filter": { "open": "Waiting", "answered": "Answered", "all": "All" },
+    "filter": {
+      "open": "Waiting",
+      "answered": "Answered",
+      "all": "All"
+    },
     "fSpace": "What is it about",
     "fTopic": "Which menu",
     "topicNone": "I am not sure / no matching menu",
