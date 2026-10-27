@@ -5,6 +5,7 @@ import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import { getFormatter, getTranslations } from 'next-intl/server';
 import { Card, CardTitle, Chip, PageShell } from '@/components/ui';
+import { CopyReport } from './CopyReport';
 import { ERROR_CATALOG } from '@/config/error-catalog';
 import { OFFICE } from '@/config/office';
 import { getMe } from '@/lib/auth';
@@ -70,8 +71,10 @@ export default async function OpsPage() {
   const when = (iso: string) => f.dateTime(new Date(iso), { month: 'numeric', day: 'numeric', hour: '2-digit', minute: '2-digit', timeZone: 'Asia/Seoul' });
   const day = (d: string) => f.dateTime(new Date(`${d}T12:00:00+09:00`), { year: 'numeric', month: 'long', day: 'numeric', weekday: 'short' });
   const known = (c: string): c is keyof typeof ERROR_CATALOG => c in ERROR_CATALOG;
-  const DB_HINTS = ['23505', '23503', '23502', '42501', '42P01', '42703', 'AC001', '40001', '57014', 'PGRST116'];
+  const DB_HINTS = ['unknown', '23505', '23503', '23502', '42501', '42P01', '42703', 'AC001', '40001', '57014', 'PGRST116'];
   const dbHint = (r: ErrRow) => DB_HINTS.includes(String(r.detail?.dbCode));
+  const report = (r: ErrRow) =>
+    t('report', { name: known(r.code) ? t(`err.${r.code}.name`) : r.code, route: r.route ?? '-', fn: String(r.detail?.fn ?? '-'), kind: String(r.detail?.errorName ?? '-'), db: String(r.detail?.dbCode ?? '-'), req: String(r.detail?.requestId ?? '-'), ver: String(r.detail?.appVersion ?? '-'), n: r.occurrences, last: when(r.last_seen_at) });
   const tone = { error: 'danger', warn: 'warn', info: 'neutral' } as const;
 
   return (
@@ -113,10 +116,11 @@ export default async function OpsPage() {
                 </span>
                 {known(r.code) && <p className="text-sm">{t(`err.${r.code}.what`)}</p>}
                 {known(r.code) && !r.resolved_at && <p className="text-sm text-primary">{t(`err.${r.code}.todo`)}</p>}
-                {dbHint(r) && <p className="text-sm text-muted">{t('dbHint', { code: String(r.detail?.dbCode), text: t(`db.${r.detail?.dbCode}`) })}</p>}
+                {dbHint(r) && <p className="text-sm text-muted">{r.detail?.dbCode === 'unknown' ? t('db.unknown') : t('dbHint', { code: String(r.detail?.dbCode), text: t(`db.${r.detail?.dbCode}`) })}</p>}
                 <p className="num truncate text-xs text-faint">
-                  {[r.route ? t('where', { route: r.route }) : null, r.detail?.errorName ? t('kind', { n: String(r.detail.errorName) }) : null, r.detail?.requestId ? t('reqId', { id: String(r.detail.requestId).slice(0, 8) }) : null, r.detail?.appVersion ? t('ver', { v: String(r.detail.appVersion) }) : null].filter(Boolean).join(' · ')}
+                  {[r.route ? t('where', { route: r.route }) : null, r.detail?.fn ? t('fnLabel', { n: String(r.detail.fn) }) : null, r.detail?.errorName ? t('kind', { n: String(r.detail.errorName) }) : null, r.detail?.requestId ? t('reqId', { id: String(r.detail.requestId).slice(0, 8) }) : null, r.detail?.appVersion ? t('ver', { v: String(r.detail.appVersion) }) : null].filter(Boolean).join(' · ')}
                 </p>
+                <CopyReport text={report(r)} />
               </li>
             ))}
           </ul>

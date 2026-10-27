@@ -49,8 +49,11 @@ export function api<C extends { params: Promise<object> } = { params: Promise<Re
         // 원인 메시지는 서버 로그에만 (화면에 스택·SQL·키를 보이지 않는다, ②-1 요점 3)
         console.error(JSON.stringify({ requestId, route, code: 'unhandled', detail: String((e as Error)?.message ?? e).slice(0, 300) }));
         // ② 7-16: 오류 기록 표에 한 줄 (같은 오류는 묶임). detail은 허용 칸만 — 메시지 원문은 넣지 않는다
-        const dbCode = /:\s*([A-Z0-9]{2,10})$/.exec(String((e as Error)?.message ?? ''))?.[1];
-        await logError({ code: codeForRoute(route), route, detail: { errorName: (e as Error)?.name, httpStatus: 500, dbCode, ms: Date.now() - started, requestId } });
+        // 데이터 읽기 · 쓰기 함수가 던지는 「함수이름: DB코드」 꼴이면 함수 이름과 코드를 같이 남긴다 (2026-10-27 의뢰인: 오류만 보고 고칠 수 있게)
+        const msg = String((e as Error)?.message ?? '');
+        const m = /^([A-Za-z][A-Za-z0-9_.]{0,39}):\s*([A-Za-z0-9]{2,10})$/.exec(msg);
+        const dbCode = m ? (m[2] === 'unknown' || /^[A-Z0-9]{2,10}$/.test(m[2]) ? m[2] : undefined) : /:\s*([A-Z0-9]{2,10})$/.exec(msg)?.[1];
+        await logError({ code: codeForRoute(route), route, detail: { errorName: (e as Error)?.name, httpStatus: 500, dbCode, fn: m?.[1], ms: Date.now() - started, requestId } });
       }
     }
     if (status >= 400) {

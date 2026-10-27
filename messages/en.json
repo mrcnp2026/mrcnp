@@ -5763,12 +5763,18 @@
         "57014": "The operation took too long and was stopped.",
         "42P01": "A required table is missing — a DB change may not be applied yet.",
         "AC001": "The period is closed, so it cannot be changed.",
-        "PGRST116": "The record was not found or matched several."
+        "PGRST116": "The record was not found or matched several.",
+        "unknown": "The database gave no error code (possibly a momentary connection drop)."
       },
       "where": "Where {route}",
       "kind": "Type {n}",
       "reqId": "Request no. {id}",
-      "ver": "App {v}"
+      "ver": "App {v}",
+      "copy": "Copy details for the developer",
+      "copied": "Copied",
+      "copyManual": "Copy the text below and send it to the developer",
+      "fnLabel": "Function {n}",
+      "report": "[Ops error] {name}\nWhere: {route}\nFunction: {fn}\nType: {kind}\nDB error: {db}\nRequest no.: {req}\nApp: {ver}\nCount: {n} (last {last})"
     },
     "backups": {
       "title": "Database backups",

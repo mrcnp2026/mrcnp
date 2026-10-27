@@ -10,7 +10,8 @@ import { createAdminClient } from '@/lib/supabase/admin';
 export type SafeDetail = {
   errorName?: string; // Error, TypeError 등 — 메시지 원문이 아니라 종류 이름만
   httpStatus?: number;
-  dbCode?: string; // PostgREST/Postgres 오류 코드 (예: 23505)
+  dbCode?: string; // PostgREST/Postgres 오류 코드 (예: 23505). DB가 코드를 안 줬으면 'unknown'
+  fn?: string; // 실패한 곳의 이름 — 코드에 미리 적어 둔 고정 이름(예: saveItem)이라 개인정보가 없다
   ms?: number;
   requestId?: string;
 };
@@ -20,7 +21,8 @@ export function safeDetail(d: SafeDetail): Record<string, string | number> {
   const out: Record<string, string | number> = { appVersion: OFFICE.calcVersion };
   if (d.errorName && /^[A-Za-z]{1,40}$/.test(d.errorName)) out.errorName = d.errorName;
   if (typeof d.httpStatus === 'number') out.httpStatus = d.httpStatus;
-  if (d.dbCode && /^[A-Z0-9]{2,10}$/.test(d.dbCode)) out.dbCode = d.dbCode;
+  if (d.dbCode && /^([A-Z0-9]{2,10}|unknown)$/.test(d.dbCode)) out.dbCode = d.dbCode;
+  if (d.fn && /^[A-Za-z][A-Za-z0-9_.]{0,39}$/.test(d.fn)) out.fn = d.fn;
   if (typeof d.ms === 'number') out.ms = Math.round(d.ms);
   if (d.requestId && /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/.test(d.requestId)) out.requestId = d.requestId;
   return out;
