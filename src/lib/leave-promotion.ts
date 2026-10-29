@@ -90,7 +90,7 @@ export async function setTargetIncluded(args: { campaignId: string; targetId: st
  * 안내 보내기 — 후보마다 업무 메시지(답변 필요)를 보내고 「통지함」으로 바꾼다. 보낸 뒤에는 안내문을 고칠 수 없다(DB가 막는다).
  * 같은 대상에게 두 번 가지 않는다(메시지 열쇠가 대상마다 하나). 중간에 실패해도 다시 누르면 남은 사람에게만 간다.
  */
-export async function sendCampaign(args: { campaignId: string; me: Me; hrefOf: (targetId: string) => string }): Promise<{ sent: number }> {
+export async function sendCampaign(args: { campaignId: string; sender: { id: string; employeeNo: string | null }; hrefOf: (targetId: string) => string }): Promise<{ sent: number; targetIds: string[] }> {
   const c = db();
   const { campaign, targets } = await must(args.campaignId);
   if (campaign.state === 'CLOSED') throw new ApiError(409, 'promotion_locked');
@@ -98,17 +98,19 @@ export async function sendCampaign(args: { campaignId: string; me: Me; hrefOf: (
   if (campaign.state === 'DRAFT' && todo.length === 0) throw new ApiError(409, 'promotion_no_targets');
   const now = new Date().toISOString();
   if (campaign.state === 'DRAFT') {
-    const { error } = await c.from('leave_promotion_campaigns').update({ state: 'SENT', sent_by: args.me.id, sent_at: now }).eq('id', campaign.id).eq('state', 'DRAFT');
+    const { error } = await c.from('leave_promotion_campaigns').update({ state: 'SENT', sent_by: args.sender.id, sent_at: now }).eq('id', campaign.id).eq('state', 'DRAFT');
     if (error) boom('sendCampaign.state', error);
   }
   let sent = 0;
+  const targetIds: string[] = [];
   for (const t of todo) {
-    const messageId = await sendSystem({ dedupeKey: `promotion:${t.id}`, title: campaign.title, body: campaign.noticeBody, needsReply: true, employeeIds: [t.employeeId], senderId: args.me.id, isTest: isTestNo(args.me.employeeNo), related: { type: 'promotion', id: t.id, href: args.hrefOf(t.id) } });
+    const messageId = await sendSystem({ dedupeKey: `promotion:${t.id}`, title: campaign.title, body: campaign.noticeBody, needsReply: true, employeeIds: [t.employeeId], senderId: args.sender.id, isTest: isTestNo(args.sender.employeeNo), related: { type: 'promotion', id: t.id, href: args.hrefOf(t.id) } });
     const { error } = await c.from('leave_promotion_targets').update({ state: 'NOTIFIED', message_id: messageId, notified_at: now }).eq('id', t.id).eq('state', 'CANDIDATE');
     if (error) boom('sendCampaign.target', error);
     sent++;
+    targetIds.push(t.id);
   }
-  return { sent };
+  return { sent, targetIds }; // 폰 알림 · 메일은 부르는 쪽이 notifyFirst로 (lib/leave-promotion-notify)
 }
 
 /** 관리자 처리 — 「확인」(계획대로 진행) 또는 「예외」(따로 처리해야 함). 사유를 남길 수 있다. 법적 판단을 대신하지 않는다 */
@@ -127,7 +129,7 @@ export async function decideTarget(args: { campaignId: string; targetId: string;
  * 2차 통지 — 계획을 내지 않은 직원(통지함 · 예외)에게 회사가 사용 시기를 정해 알린다(업무 메시지, 같은 대상에게 한 번).
  * 날짜는 오늘 이후 · 사용기간 안 · 남은 일수(올림)까지. 보내면 상태가 「사용 시기 지정함」이 되고 바꾸지 못한다.
  */
-export async function sendSecond(args: { campaignId: string; targetId: string; dates: string[]; me: Me; today: string; hrefOf: (targetId: string) => string }): Promise<{ messageId: string }> {
+export async function sendSecond(args: { campaignId: string; targetId: string; dates: string[]; me: Me; today: string; hrefOf: (targetId: string) => string }): Promise<{ messageId: string; employeeId: string; title: string; body: string }> {
   const c = db();
   const { campaign, targets } = await must(args.campaignId);
   if (campaign.state !== 'SENT') throw new ApiError(409, 'promotion_locked');
@@ -140,15 +142,16 @@ export async function sendSecond(args: { campaignId: string; targetId: string; d
   if (dates.length === 0 || dates.length > Math.min(60, maxDays) || dates.some((d) => !/^\d{4}-\d{2}-\d{2}$/.test(d) || Number.isNaN(Date.parse(`${d}T00:00:00Z`)) || d < args.today || (campaign.periodEnd !== null && d > campaign.periodEnd))) throw new ApiError(400, 'promotion_dates_invalid');
   const tr = await getTranslations({ locale: 'ko', namespace: 'admin.promotion.second' });
   const days = Math.round((t.remainingMinutes / 480) * 100) / 100;
+  const title = tr('msgTitle', { title: campaign.title }), body = tr('msgBody', { days, dates: dates.join(', '), end: campaign.periodEnd ?? '' });
   const messageId = await sendSystem({
-    dedupeKey: `promotion2:${t.id}`, title: tr('msgTitle', { title: campaign.title }), body: tr('msgBody', { days, dates: dates.join(', '), end: campaign.periodEnd ?? '' }),
+    dedupeKey: `promotion2:${t.id}`, title, body,
     needsReply: true, employeeIds: [t.employeeId], senderId: args.me.id, isTest: isTestNo(args.me.employeeNo), related: { type: 'promotion', id: t.id, href: args.hrefOf(t.id) },
   });
   if (!messageId) throw new Error('sendSecond: message not sent');
   const { error } = await c.from('leave_promotion_targets').update({ state: 'DESIGNATED', designated: dates, second_message_id: messageId, second_notified_at: new Date().toISOString(), second_by: args.me.id }).eq('id', t.id).is('second_message_id', null);
   if (error?.code === 'PGRST204' || error?.code === '42703') throw new ApiError(503, 'db_update_required');
   if (error) boom('sendSecond', error);
-  return { messageId };
+  return { messageId, employeeId: t.employeeId, title, body };
 }
 
 export async function closeCampaign(args: { campaignId: string; me: Me }): Promise<void> {

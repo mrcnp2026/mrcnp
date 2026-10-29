@@ -43,6 +43,10 @@
     {
       "path": "/api/cron/backup-daily",
       "schedule": "0 17 * * *"
+    },
+    {
+      "path": "/api/cron/leave-promotion",
+      "schedule": "0 0 * * *"
     }
   ]
 }

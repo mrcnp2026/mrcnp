@@ -3,6 +3,8 @@
 import { api, ApiError, readJson } from '@/lib/api';
 import { requireAdmin } from '@/lib/auth';
 import { closeCampaign, createCampaign, decideTarget, sendCampaign, sendSecond, setTargetIncluded } from '@/lib/leave-promotion';
+import { notifyFirst, notifySecond } from '@/lib/leave-promotion-notify';
+import { after } from 'next/server';
 import { toKstDate } from '@/lib/time';
 
 export const maxDuration = 60;
@@ -24,7 +26,12 @@ export const POST = api('admin.leave.promotion', async (req) => {
     return createCampaign({ title, basisOn: b.basisOn, planDueOn: b.planDueOn, noticeBody: body, policyNote: note || null, periodEnd, leaveKind: (b.leaveKind as 'ANNUAL' | 'UNDER_ONE_YEAR' | undefined) ?? null, me });
   }
   if (typeof b.campaignId !== 'string' || !UUID.test(b.campaignId)) throw new ApiError(400, 'invalid_input');
-  if (b.action === 'send') return sendCampaign({ campaignId: b.campaignId, me, hrefOf: (id) => `/punch/leave/promotion/${id}` });
+  if (b.action === 'send') {
+    const campaignId = b.campaignId;
+    const r = await sendCampaign({ campaignId, sender: { id: me.id, employeeNo: me.employeeNo }, hrefOf: (id) => `/punch/leave/promotion/${id}` });
+    after(() => notifyFirst(campaignId, r.targetIds)); // 업무 메시지에 더해 폰 알림 · 메일 (2026-10-29)
+    return { sent: r.sent };
+  }
   if (b.action === 'close') {
     await closeCampaign({ campaignId: b.campaignId, me });
     return { ok: true };
@@ -39,7 +46,10 @@ export const POST = api('admin.leave.promotion', async (req) => {
   if (b.action === 'second') {
     const dates = Array.isArray(b.dates) ? (b.dates as unknown[]).filter(isDate) : [];
     if (dates.length === 0 || dates.length !== (b.dates as unknown[]).length) throw new ApiError(400, 'promotion_dates_invalid');
-    return sendSecond({ campaignId: b.campaignId, targetId: b.targetId, dates, me, today: toKstDate(new Date()), hrefOf: (id) => `/punch/leave/promotion/${id}` });
+    const targetId = b.targetId;
+    const r = await sendSecond({ campaignId: b.campaignId, targetId, dates, me, today: toKstDate(new Date()), hrefOf: (id) => `/punch/leave/promotion/${id}` });
+    after(() => notifySecond(targetId, r.employeeId, r.title, r.body));
+    return { messageId: r.messageId };
   }
   if (b.action === 'decide') {
     const note = text(b.note, 500);
