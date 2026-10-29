@@ -8,71 +8,81 @@
 // 2026-10-22 의뢰인(결정 사항 개발-52): 「우리 색으로, 어울리는 색으로」 + 「글래스 효과를 통합설정 포함 전반적으로」
 //   → 처음엔 로고 빨강으로 바꿨다가, 같은 날 의뢰인: 「색상은 파란색 계통이 좋은 거 같아, 빨간색 별로야」 → 파란 계열로 되돌림(더 맑은 파랑 #1D4ED8).
 //   바탕은 서늘한 회색 + 옅은 빛(aura 세 가지: 하늘 · 보라빛 · 물빛) 위에 반투명 흰 판(글래스)을 얹는다 — globals.css 「글래스」.
+// 2026-10-27 의뢰인: 온디랩스 디자인 키트(Code and Chill 'Corvane' 참고)의 바탕 · 카드 · 등장 효과가 마음에 든다 → 키트 색(미색 바탕 · 초록 강조)으로 바꿈. 남청색은 유지 안 해도 된다고 함.
 
 export const COLORS = {
-  bg: '#FFFFFF',
-  surface: '#F3F5F9', // 화면 바탕 (카드는 흰색) — 파랑과 어울리게 서늘한 회색 (2026-10-22)
-  border: '#E3E8EF', // 목록 구분선·입력칸 테두리만. 카드에는 테두리를 쓰지 않는다
-  text: '#191F28', // 16.9:1
-  muted: '#4E5968', // 6.6:1 (회색 바탕)
-  faint: '#646E7B', // 4.7:1 (회색 바탕)
-  primary: '#2B4C9E', // 흰 글자 8.3:1 — 출근 버튼·링크·선택·승인. 깊고 차분한 남청색 (2026-10-23 의뢰인: 파랑 · 노랑이 촌스럽다 → 하단 탭 남색과 한 계열)
-  'primary-tint': '#ECF0FA', // 고른 메뉴 · 연습 모드 배지 바탕
-  'primary-deep': '#18213B', // 큰 제목·퇴근 버튼 바탕 (아주 짙은 남색 — 출근 파랑과 어울리게)
-  warn: '#B45309', // 주의 글자·선 5.0:1 — ⚠ 아이콘과 함께만
-  'warn-tint': '#FFF7ED',
-  ok: '#047857', // 정상 글자·선 5.5:1 — ✓ 아이콘과 함께만. 퇴근 버튼 바탕
-  'ok-tint': '#ECFDF5',
-  danger: '#B42318', // 주 52시간 초과·오류·되돌릴 수 없는 확인창에만
-  'danger-tint': '#FEF3F2',
+  // 2026-10-27 의뢰인: 「키트 색상으로 가는 게 좋겠다 · 남청색은 유지 안 해도 된다」 — 온디랩스 디자인 키트(레퍼런스 폴더) 색으로 바꿈.
+  //   따뜻한 미색 바탕 + 살짝 떠 보이는 카드 + 깊은 초록 강조색. 이전 남청색 판은 백업/theme-남청색-2026-10-27.ts
+  bg: '#FBFAF6', // 카드 바탕 (키트 card) — 순백이 아니라 아주 옅은 미색
+  surface: '#F2F0EA', // 화면 바탕 (키트 bg) — 차가운 회색 대신 따뜻한 미색
+  border: '#E4E0D7', // 목록 구분선·입력칸 테두리
+  text: '#1D1C1A', // 카드 위 16.3:1
+  muted: '#5F5B54', // 5.9:1 (바탕)
+  faint: '#68635B', // 5.2:1 (바탕)
+  primary: '#1F6B57', // 흰 글자 6.4:1 — 출근 버튼·링크·선택·승인 (키트 accent)
+  'primary-tint': '#DBE9E2', // 고른 메뉴 · 보조 버튼 바탕 (키트 accent-soft)
+  'primary-deep': '#1D1E20', // 큰 제목·퇴근 버튼·가장 중요한 버튼 (키트 ink)
+  warn: '#8A5A00', // 주의 글자·선 — ⚠ 아이콘과 함께만
+  'warn-tint': '#F5EAD6',
+  ok: '#1F6B57', // 정상 글자·선 — ✓ 아이콘과 함께만 (키트 good = accent)
+  'ok-tint': '#DCE6D9',
+  danger: '#A63A2E', // 주 52시간 초과·오류·되돌릴 수 없는 확인창에만
+  'danger-tint': '#F6E2DD',
   'on-primary': '#FFFFFF',
-  nav: '#1E2B4A', // 폰 하단 탭 바탕 (짙은 남색) — 흰 글자 14:1
-  rail: '#F4F7FC', // PC 앱 띠 바탕 (아주 옅은 파랑 회색)
-  // 글래스 뒤에 깔리는 옅은 빛 세 가지 (2026-10-22) — 글자 바탕으로 쓰지 않는다. 그 위에는 늘 반투명 흰 판이 온다
-  'aura-1': '#BFD4F7', // 하늘빛 (왼쪽 위) — 가장자리로 갈수록 바탕색으로 사라진다
-  'aura-2': '#D3CCF2', // 보라빛 (오른쪽 위)
-  'aura-3': '#BFE6EA', // 물빛 (아래)
-  // 링크 · 강조 글자(text-primary) — 채운 단추보다 한 단계 깊은 파랑(흰 바탕 8.7:1). 표 안 링크가 너무 튀지 않게 (2026-10-22)
-  'primary-ink': '#223D82',
-  // 그래프 보조색 (2026-10-22 의뢰인: 모바일 그래프의 녹색 · 빨강을 손봐 달라) — 파랑과 같이 쓰는 연장 · 야간 · 지각 조각. 파랑과 색약에서도 구분(ΔE 39, validate_palette).
-  // 그래프 칸에만 쓰고 글자색으로는 쓰지 않는다. 조각 옆에 이름 · 숫자를 함께 적는다(흰 바탕 2:1대라 색만으로는 읽히지 않는다).
-  'chart-idle': '#C3CAD6', // 옅은 회색 (2026-10-23 의뢰인): 미출근 조각 — 남청색 파랑과 확실히 구분. 휴무 조각(border)보다는 한 단계 진하다
-  'chart-extra': '#E58A5F', // 부드러운 코랄 (2026-10-23: 노랑이 촌스럽다). 파랑과 ΔE 38 · 색약 30 이상, 흰 바탕 2.5:1이라 이름 · 숫자를 함께
+  nav: '#1D1E20', // 폰 하단 탭 바탕 (키트 ink) — 흰 글자 16:1
+  rail: '#F5F3EE', // PC 앱 띠 바탕 (키트 card-2)
+  // 예전 글래스 뒤 옅은 빛 — 지금은 쓰지 않는다(이름만 남김)
+  'aura-1': '#E9E3D6',
+  'aura-2': '#E6E9DF',
+  'aura-3': '#E3E8EC',
+  'primary-ink': '#185645', // 링크 · 강조 글자 — 카드 위 8.2:1
+  // 그래프 보조색 — 그래프 칸에만, 이름 · 숫자와 함께
+  'chart-idle': '#C9C4B8', // 미출근 조각 (키트 bar)
+  'chart-extra': '#C08A2E', // 연장 · 야간 · 지각 조각 (키트 amber)
+  // 지표 타일 파스텔 4색 (키트 tile-1~4): 샌드 · 세이지 · 미스트 · 클레이 — 글자는 text · muted만 올린다
+  'tile-1': '#ECE2D1',
+  'tile-2': '#DCE6D9',
+  'tile-3': '#DBE3EC',
+  'tile-4': '#EFDCD5',
+  'accent-2': '#5FA58A', // 곡선 그라데이션 시작색 (primary보다 밝게)
 } as const;
 
 // 8px 격자: 4·8·12·16·24·32·48 (Tailwind 1·2·3·4·6·8·12 단계만 쓴다)
 // 메일(HTML)에 쓰는 색 — 메일 앱은 CSS 변수를 못 읽어 값을 그대로 적어야 한다. 앱 화면 색과 따로 두되 이 파일에만 둔다.
 export const MAIL_COLORS = { page: '#f4f6fa', card: '#ffffff', text: '#1f2937', body: '#374151', muted: '#6b7280', faint: '#9ca3af', action: '#2563eb', onAction: '#ffffff' } as const;
-export const RADII = { card: '6px', button: '4px', punch: '4px', chip: '9999px' } as const;
+export const RADII = { card: '14px', button: '11px', punch: '11px', chip: '9999px' } as const; // 2026-10-27 키트: 둥근 카드 (이전 6/4px)
 // PC(1024px~) 디자인 기준 — 2026-10-14 의뢰인이 견본 「나 · 파랑」을 골랐다 (결정 사항 개발-22, `09 디자인 기준 견본 (2026-10-14).html`).
 //   본문 14px · 카드 모서리 12px · 버튼 8px · 옅은 선 · 강조색 한 가지(파랑) · 상태는 옅은 바탕 + 진한 글자 딱지.
 //   이전 기준(2026-10-11 시프티 PC: 각진 3px 모서리 · 13px · 짙은 남색 왼쪽 메뉴)을 바꾼 것이다. 폰 값은 건드리지 않는다.
-export const RADII_PC = { card: '12px', button: '8px', punch: '8px' } as const;
+export const RADII_PC = { card: '18px', button: '11px', punch: '11px' } as const; // 2026-10-27 키트 r-card 18 · r-ctl 11 (이전 12/8px)
 export const COLORS_PC = {
-  surface: '#F3F5F9',
-  border: '#E3E8EF',
-  text: '#1B1F24', // 16.5:1
-  muted: '#5D6672', // 5.9:1
-  primary: '#2B4C9E', // 흰 글자 8.3:1
-  'primary-tint': '#ECF0FA',
-  'primary-deep': '#18213B',
-  ok: '#0A7D54', // 흰 바탕 5.2:1
-  'ok-tint': '#E6F6EE',
-  'warn-tint': '#FFF3E3',
-  danger: '#C62828', // 흰 글자 5.6:1
-  'danger-tint': '#FDECEC',
+  // 2026-10-27 키트 색으로 — 폰과 같은 값 (PC만 다르게 둘 이유가 없어졌다)
+  surface: COLORS.surface,
+  border: COLORS.border,
+  text: COLORS.text,
+  muted: COLORS.muted,
+  primary: COLORS.primary,
+  'primary-tint': COLORS['primary-tint'],
+  'primary-deep': COLORS['primary-deep'],
+  ok: COLORS.ok,
+  'ok-tint': COLORS['ok-tint'],
+  'warn-tint': COLORS['warn-tint'],
+  danger: COLORS.danger,
+  'danger-tint': COLORS['danger-tint'],
 } as const;
 export const FONT_SIZES_PC = { xs: '12px', sm: '14px', base: '14px', lg: '16px', xl: '18px', '2xl': '24px', '3xl': '28px', '4xl': '36px' } as const;
-export const SHADOW_CARD_PC = '0 1px 2px 0 rgb(27 31 36 / 0.05)';
-export const SHADOW_POP = '0 8px 24px 0 rgb(27 31 36 / 0.12)'; // 떠 있는 것(검색 결과 · 내 메뉴)에만
+export const SHADOW_CARD_PC = '0 1px 2px #28221a0a, 0 10px 28px -22px #28221a33'; // 키트 shadow를 한 단계 옅게 (2026-10-27 의뢰인: 그림자가 조금 심하다)
+export const SHADOW_POP = '0 24px 60px -18px #1e1a1452, 0 2px 6px #1e1a1414'; // 떠 있는 것 · PC에서 카드에 마우스를 올렸을 때 (키트 shadow-pop)
 // 글래스 판의 그림자 (2026-10-22): 바깥은 아주 옅은 남색 퍼짐, 안쪽 위 가장자리는 흰 빛 한 줄 — 유리 모서리처럼 보인다
-export const SHADOW_GLASS = '0 10px 30px -12px rgb(30 50 100 / 0.14), inset 0 1px 0 0 rgb(255 255 255 / 0.65)';
-export const SHADOW_SHEET = '0 -8px 40px 0 rgb(15 25 50 / 0.22)'; // 통합설정 판
+// 카드에 마우스를 올렸을 때 — 시안(원장 대시보드)의 --shadow-hover. 한 단계만 깊어진다 (2026-10-27 의뢰인: 호버가 너무 심하다 → shadow-pop 대신)
+export const SHADOW_HOVER = '0 1px 3px #28221a0d, 0 16px 34px -24px #28221a47'; // 2026-10-27 2차(의뢰인: 「팍 튀어나오고 많이 튀어나온다 · 그림자도 심하다」) — 한 단계만, 옅게
+export const SHADOW_GLASS = '0 10px 30px -12px rgb(40 34 26 / 0.14), inset 0 1px 0 0 rgb(255 255 255 / 0.65)';
+export const SHADOW_SHEET = '0 -8px 40px 0 rgb(30 26 20 / 0.22)'; // 통합설정 판
 export const PC_MIN_WIDTH = '1024px'; // Tailwind lg와 같게
 // 글자 크기 12/14/16/20/24/32 — 본문 16 (외국인 직원, R-10-8)
 // 큰 숫자(지금 시각·근무 시간)만 4xl 44px — 화면에서 가장 먼저 읽혀야 하는 것 하나
 export const FONT_SIZES = { xs: '12px', sm: '14px', base: '16px', lg: '18px', xl: '20px', '2xl': '24px', '3xl': '32px', '4xl': '44px' } as const;
-export const SHADOW_CARD = 'none'; // 토스풍: 그림자 없이 흰 카드와 회색 바탕의 대비만
+export const SHADOW_CARD = '0 1px 2px #28221a0a, 0 10px 28px -22px #28221a33'; // 2026-10-27 키트: 폰도 같은 옅은 그림자 (이전: 그림자 없음)
 export const MOTION_MS = 150; // 상태 변화만. 등장 애니메이션 없음
 
 /** layout.tsx의 :root 스타일 — 토큰을 CSS 변수로 */
@@ -81,7 +91,7 @@ export function themeCssVariables(): string {
   for (const [k, v] of Object.entries(COLORS)) lines.push(`--t-color-${k}:${v}`);
   for (const [k, v] of Object.entries(RADII)) lines.push(`--t-radius-${k}:${v}`);
   for (const [k, v] of Object.entries(FONT_SIZES)) lines.push(`--t-text-${k}:${v}`);
-  lines.push(`--t-shadow-card:${SHADOW_CARD}`, `--t-shadow-pop:${SHADOW_POP}`, `--t-shadow-glass:${SHADOW_GLASS}`, `--t-shadow-sheet:${SHADOW_SHEET}`, `--t-motion:${MOTION_MS}ms`);
+  lines.push(`--t-shadow-card:${SHADOW_CARD}`, `--t-shadow-pop:${SHADOW_POP}`, `--t-shadow-hover:${SHADOW_HOVER}`, `--t-shadow-glass:${SHADOW_GLASS}`, `--t-shadow-sheet:${SHADOW_SHEET}`, `--t-motion:${MOTION_MS}ms`);
   const pc = [
     ...Object.entries(RADII_PC).map(([k, v]) => `--t-radius-${k}:${v}`),
     ...Object.entries(COLORS_PC).map(([k, v]) => `--t-color-${k}:${v}`),

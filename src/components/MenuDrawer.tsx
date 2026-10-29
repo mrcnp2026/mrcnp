@@ -11,7 +11,7 @@
 import { useSystemNav } from '@/components/SystemNav';
 import { Activity, ChevronDown, Menu, Search, Settings, X } from 'lucide-react';
 import { useTranslations } from 'next-intl';
-import Link from 'next/link';
+import { IntentLink as Link } from './IntentLink'; // 손이 닿으면 미리 받아 둔다 (2026-10-29)
 import { usePathname, useSearchParams } from 'next/navigation';
 import { useEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';

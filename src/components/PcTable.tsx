@@ -86,7 +86,7 @@ export function PcTable({ cols, rows, labels, total, pageSize = 50 }: { cols: Pc
               {cols.map((c) => {
                 const on = sort?.key === c.key;
                 return (
-                  <th key={c.key} scope="col" aria-sort={on ? (sort!.dir === 1 ? 'ascending' : 'descending') : undefined} className={`px-3 py-2.5 text-xs font-semibold whitespace-nowrap text-muted ${al(c)} ${c.className ?? ''}`}>
+                  <th key={c.key} scope="col" aria-sort={on ? (sort!.dir === 1 ? 'ascending' : 'descending') : undefined} className={`px-1.5 py-2.5 text-xs font-semibold text-muted xl:px-3 xl:whitespace-nowrap ${al(c)} ${c.className ?? ''}`}>
                     {c.sort === false ? (
                       c.label
                     ) : (
@@ -117,7 +117,7 @@ export function PcTable({ cols, rows, labels, total, pageSize = 50 }: { cols: Pc
             {slice.map((r) => (
               <tr key={r.id} className={`border-b border-border last:border-b-0 hover:bg-surface/50 ${r.dim ? 'opacity-60' : ''}`}>
                 {cols.map((c) => (
-                  <td key={c.key} className={`px-4 py-2.5 ${al(c)}`}>
+                  <td key={c.key} className={`px-1.5 py-2.5 xl:px-4 ${al(c)} ${c.className ?? ''}`}>
                     {r.cells[c.key]?.node ?? r.cells[c.key]?.text ?? ''}
                   </td>
                 ))}

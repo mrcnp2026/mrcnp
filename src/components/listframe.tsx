@@ -80,18 +80,18 @@ export function ListTable({ head, children, empty, count }: { head: { label: str
   return (
     <div className="flex flex-col gap-1.5">
       {count && <p className="text-sm text-muted">{count}</p>}
-      <div className="overflow-x-auto lg:rounded-card lg:border lg:border-border lg:bg-bg lg:shadow-card">
+      <div className="overflow-x-auto rounded-card border border-border bg-bg shadow-card">
         <table className="w-full text-sm max-lg:[&_thead]:hidden">
           <thead>
             <tr className="border-b border-border lg:bg-surface/60">
               {head.map((h, i) => (
-                <th key={i} scope="col" className={`px-3 py-2.5 text-xs font-semibold whitespace-nowrap text-muted ${h.right ? 'text-right' : 'text-left'}`}>
+                <th key={i} scope="col" className={`px-2 py-2.5 text-xs font-semibold text-muted xl:px-3 xl:whitespace-nowrap ${h.right ? 'text-right' : 'text-left'}`}>
                   {h.label}
                 </th>
               ))}
             </tr>
           </thead>
-          <tbody className="[&_td]:h-12 [&_td]:px-3 max-lg:border-t max-lg:border-text max-lg:[&_td]:flex max-lg:[&_td]:h-auto max-lg:[&_td]:min-h-7 max-lg:[&_td]:items-center max-lg:[&_td]:justify-between max-lg:[&_td]:gap-3 max-lg:[&_td]:px-1 max-lg:[&_td]:text-right max-lg:[&_td]:before:shrink-0 max-lg:[&_td]:before:text-xs max-lg:[&_td]:before:font-normal max-lg:[&_td]:before:text-faint max-lg:[&_td]:before:content-[attr(data-label)] max-lg:[&_td:first-child]:text-left max-lg:[&_td:first-child]:text-base max-lg:[&_td:first-child]:before:content-none max-lg:[&_td:empty]:hidden max-lg:[&_tr]:flex max-lg:[&_tr]:flex-col max-lg:[&_tr]:border-b max-lg:[&_tr]:border-border max-lg:[&_tr]:py-3">
+          <tbody className="[&_td]:h-12 [&_td]:px-2 xl:[&_td]:px-3 max-lg:[&_td]:flex max-lg:[&_td]:h-auto max-lg:[&_td]:min-h-7 max-lg:[&_td]:items-center max-lg:[&_td]:justify-between max-lg:[&_td]:gap-3 max-lg:[&_td]:px-4 max-lg:[&_td]:text-right max-lg:[&_td]:before:shrink-0 max-lg:[&_td]:before:text-xs max-lg:[&_td]:before:font-normal max-lg:[&_td]:before:text-faint max-lg:[&_td]:before:content-[attr(data-label)] max-lg:[&_td:first-child]:text-left max-lg:[&_td:first-child]:text-base max-lg:[&_td:first-child]:before:content-none max-lg:[&_td:empty]:hidden max-lg:[&_tr]:flex max-lg:[&_tr]:flex-col max-lg:[&_tr]:border-b max-lg:[&_tr]:border-border max-lg:[&_tr:last-child]:border-b-0 max-lg:[&_tr]:py-3">
             {rows}
             {empty && (
               <tr>

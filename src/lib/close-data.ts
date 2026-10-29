@@ -10,12 +10,13 @@ import { addDays } from '@/lib/calendar';
 import { monthSpan, reviewMonth, type CloseReview, type PendingCounts } from '@/lib/close-review';
 import { confirmKey, loadConfirms } from '@/lib/confirm-data';
 import { canonical } from '@/lib/payroll/reference';
-import { daysFor, loadPeriod, syncOvertimeRange, type PeriodData } from '@/lib/period-data';
+import { daysFor, loadPeriod, syncOvertimeRequests, type PeriodData } from '@/lib/period-data';
 import { summarizeAnomalies } from '@/lib/anomaly';
 import { collectAnomalies, loadAnomalyPolicy, loadAnomalyReviews } from '@/lib/anomaly-data';
 import { loadStaff } from '@/lib/staff-data';
 import { needsSecondAdmin } from '@/lib/staff-rules';
 import { createAdminClient } from '@/lib/supabase/admin';
+import { toKstDate } from '@/lib/time';
 
 export type CloseRow = { id: string; employeeId: string; periodFrom: string; periodTo: string; revision: number; state: 'CLOSED' | 'REOPENED'; closedBy: string; closedAt: string; reopenedBy: string | null; reopenedAt: string | null; reopenReason: string | null };
 const toClose = (r: Record<string, unknown>): CloseRow => ({ id: r.id as string, employeeId: r.employee_id as string, periodFrom: r.period_from as string, periodTo: r.period_to as string, revision: r.revision as number, state: r.state as CloseRow['state'], closedBy: r.closed_by as string, closedAt: r.closed_at as string, reopenedBy: r.reopened_by as string | null, reopenedAt: r.reopened_at as string | null, reopenReason: r.reopen_reason as string | null });
@@ -54,15 +55,8 @@ export async function loadCloseBoard(ym: string, practice: boolean): Promise<{ l
   const db = createAdminClient();
   // 마감 판단 전에 그 달의 연장근로 확인을 맞춘다 — 빠진 확인이 있는 채로 마감되지 않게 (2026-10-19: 화면을 열 때 하던 계산을 옮김)
   let syncFailed = false; // 연장근로 확인을 맞추지 못했으면 마감하지 않는다(빠진 확인이 있는 채로 닫히면 급여 계산이 영영 막힌다 — 2026-10-25)
-  try {
-    await syncOvertimeRange(from, last, practice);
-  } catch (e) {
-    syncFailed = true;
-    // 맞추기가 안 돼도 화면은 열어야 한다(마감 관리를 못 여는 것이 더 나쁘다). 빠진 확인은 아래 검토에서 「확인 필요」로 보인다
-    console.error(JSON.stringify({ route: 'close-board', code: 'sync_failed', detail: String((e as Error)?.message ?? e).slice(0, 200) }));
-  }
-  const [data, confirms, closes, { data: pr }, { data: sr }, anomalyPolicy, reviews] = await Promise.all([
-    loadPeriod(from, last, practice),
+  // 속도 (2026-10-28 의뢰인: 2초 넘는 화면을 줄여라): 맞추기와 상관없는 조회는 맞추기를 기다리지 않고 동시에 시작한다
+  const side = Promise.all([
     loadConfirms(from, last, practice),
     loadCloses(ym, practice),
     db.from('punch_requests').select('employee_id').eq('is_test', practice).eq('status', 'pending').gte('work_date', from).lt('work_date', to),
@@ -70,6 +64,23 @@ export async function loadCloseBoard(ym: string, practice: boolean): Promise<{ l
     loadAnomalyPolicy(),
     loadAnomalyReviews(from, last, practice),
   ]);
+  side.catch(() => {}); // 맞추기를 기다리는 동안 실패해도 「처리 안 된 실패」 경고가 나지 않게 — 아래에서 그대로 기다려 오류를 받는다
+  // 맞추기 때 읽은 자료를 그대로 다시 쓴다 — 지난 달이고(같은 기간) 맞추기가 아무것도 바꾸지 않았을 때만. 바뀌었으면 새로 읽는다
+  let reuse: PeriodData | null = null;
+  try {
+    const today = toKstDate(new Date());
+    const upTo = last < today ? last : today;
+    if (from <= upTo) {
+      const pre = await loadPeriod(from, upTo, practice);
+      const changed = await syncOvertimeRequests(pre, upTo);
+      if (changed === 0 && upTo === last) reuse = pre;
+    }
+  } catch (e) {
+    syncFailed = true;
+    // 맞추기가 안 돼도 화면은 열어야 한다(마감 관리를 못 여는 것이 더 나쁘다). 빠진 확인은 아래 검토에서 「확인 필요」로 보인다
+    console.error(JSON.stringify({ route: 'close-board', code: 'sync_failed', detail: String((e as Error)?.message ?? e).slice(0, 200) }));
+  }
+  const [data, [confirms, closes, { data: pr }, { data: sr }, anomalyPolicy, reviews]] = await Promise.all([reuse ? Promise.resolve(reuse) : loadPeriod(from, last, practice), side]);
   // 이상자 관리에서 「마감 차단」으로 정한 유형이 남아 있으면 마감하지 못한다
   const anomalies = summarizeAnomalies(collectAnomalies(data, from, last), anomalyPolicy.policy, new Set(reviews.keys())).byEmployee;
   const count = (rows: { employee_id: string }[] | null, id: string) => (rows ?? []).filter((r) => r.employee_id === id).length;

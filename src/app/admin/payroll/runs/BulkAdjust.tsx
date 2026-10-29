@@ -115,9 +115,10 @@ function SamePart({ id, columns, members }: { id: string; columns: BulkColumn[];
       <div className="flex flex-col gap-2 rounded-button border border-border p-3">
         <div className="flex flex-wrap items-center justify-between gap-2">
           <span className="font-bold">{t('who', { n: picked.length, all: members.length })}</span>
-          <span className="flex gap-3 text-xs">
-            <button type="button" className="font-semibold text-primary" onClick={() => setPicked(members.map((m) => m.employeeId))}>{t('all')}</button>
-            <button type="button" className="font-semibold text-muted" onClick={() => setPicked([])}>{t('none')}</button>
+          {/* 전체 · 해제는 누르기 쉬운 크기로 (2026-10-27 의뢰인: 폰에서 전체 체크를 한 번에 누를 수 없다 — 작은 글자였다) */}
+          <span className="flex gap-2 text-sm">
+            <button type="button" className="inline-flex min-h-9 items-center rounded-button bg-primary-tint px-3 font-semibold text-primary" onClick={() => setPicked(members.map((m) => m.employeeId))}>{t('all')}</button>
+            <button type="button" className="inline-flex min-h-9 items-center rounded-button border border-border bg-bg px-3 font-semibold text-muted" onClick={() => setPicked([])}>{t('none')}</button>
           </span>
         </div>
         <div className="grid grid-cols-2 gap-x-4 gap-y-1 sm:grid-cols-3 lg:grid-cols-4">

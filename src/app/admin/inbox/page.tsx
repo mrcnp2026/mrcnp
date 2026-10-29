@@ -47,14 +47,13 @@ const REQUEST_PAGE = 5;
 const LIST_PAGE = 10;
 
 export default async function InboxPage({ searchParams }: { searchParams: Promise<{ live?: string; op?: string; cp?: string; lp?: string; wp?: string; tab?: string; dp?: string; q?: string; k?: string; id?: string; pp?: string; rk?: string }> }) {
-  const t = await getTranslations('admin.inbox');
-  const tr = await getTranslations('requests');
-  const f = await getFormatter();
-  const me = (await getMe())!;
+  // 자료는 서로 기다릴 필요가 없는 것끼리 한꺼번에 읽는다 (2026-10-28 의뢰인: 「처리할 일」 카드를 누르면 오래 걸린다 —
+  // 전에는 15번 정도를 하나씩 차례로 읽었다). 앞 것의 결과가 있어야 하는 것만 둘째 묶음으로
+  const [t, tr, tc, tl, f, meRaw, staffAll, sp] = await Promise.all([getTranslations('admin.inbox'), getTranslations('requests'), getTranslations('common'), getTranslations('leave'), getFormatter(), getMe(), loadStaff(), searchParams]);
+  const me = meRaw!;
   // 최고관리자는 본인 요청도 처리한다 (2026-10-16 권한-10, staff-rules.ts) — 막히는 것은 지점관리자의 본인 것 · 맡지 않은 사람 것
   // 지점관리자는 자기 요청을 처리하지 못한다 — 관리자가 한다
   // 등급별 승인 규칙 (개발-39): 처리할 수 없는 사람의 요청은 단추 대신 안내 — 본인 것 · 상위 등급 것
-  const staffAll = await loadStaff();
   const actorStaff = staffAll.find((x) => x.id === me.id);
   const cannot = (id: string) => {
     const target = staffAll.find((x) => x.id === id);
@@ -62,7 +61,6 @@ export default async function InboxPage({ searchParams }: { searchParams: Promis
   };
   const ownNote = <p className="text-sm text-muted">{t('selfBlocked')}</p>;
   const rankNote = <p className="text-sm text-muted">{t('rankBlocked')}</p>;
-  const sp = await searchParams;
 // ★ 연습 모드에서는 모든 기록이 연습 기록이다 — 관리자 화면도 기본으로 연습 기록을 본다 (2026-10-02: 시험직원 정정 요청이 관리자에게 0건으로 보이던 문제). ?live=1이면 실제 기록
   const practice = OFFICE.practiceMode && sp.live !== '1';
   if (sp.tab === 'done') return <DoneTab sp={sp} practice={practice} />;
@@ -71,28 +69,39 @@ export default async function InboxPage({ searchParams }: { searchParams: Promis
   // 31일치 전 직원 기록도 읽지 않는다 — 쓰던 것은 한 건 보기의 그날 근무규칙 · 공휴일뿐이라 그것만 읽는다(아래 dayPreview)
 
   const db = createAdminClient();
-  const [{ data: otAll }, { data: coAll }, { data: staff }] = await Promise.all([
-    db.from('overtime_requests').select('*').eq('is_test', practice).or('status.eq.pending,needs_review.eq.true').order('work_date'),
-    db.from('punch_corrections').select('*').eq('is_test', practice).eq('status', 'pending').order('created_at'),
-    db.from('profiles').select('id, name, employee_no'),
-  ]);
-  const name = new Map((staff ?? []).map((p) => [p.id, p.name]));
-  // 이름 검색 (?q) — 모든 종류의 대기 요청에 같이 적용한다
-  const q = (sp.q ?? '').trim().slice(0, 40).toLowerCase();
-  const hidden = new Set(await hiddenTestIds()); // 꺼져 있는 검사 전용 계정의 요청은 보이지 않는다
-  const inScope = await scopeFilter(); // 지점관리자면 맡은 지점 직원의 요청만 (아래에서 표를 직접 읽는 것들을 여기서 거른다)
-  const hit = (id: string) => inScope(id) && !hidden.has(id) && (!q || (name.get(id) ?? '').toLowerCase().includes(q));
   // 한 건만 보기 (2026-10-11 의뢰인: 시프티처럼 대기중은 한 목록, 줄을 누르면 그 요청 하나를 처리하는 화면) — ?k=종류&id=요청
   const FOCUS_KINDS = ['punch', 'shift', 'leaveDelete', 'overtime', 'corrections', 'leave', 'work'] as const;
   type FocusKind = (typeof FOCUS_KINDS)[number];
   const focus = (FOCUS_KINDS as readonly string[]).includes(sp.k ?? '') && /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(sp.id ?? '') ? { k: sp.k as FocusKind, id: sp.id as string } : null;
+  const [{ data: otAll }, { data: coAll }, { data: staff }, hiddenIds, inScope, { data: punchRows }, { data: shiftRows }, { data: delRows }, leaveTypes, leaveReqs, workReqs, reqs, signups, focusPunch] = await Promise.all([
+    db.from('overtime_requests').select('*').eq('is_test', practice).or('status.eq.pending,needs_review.eq.true').order('work_date'),
+    db.from('punch_corrections').select('*').eq('is_test', practice).eq('status', 'pending').order('created_at'),
+    db.from('profiles').select('id, name, employee_no'),
+    hiddenTestIds(), // 꺼져 있는 검사 전용 계정의 요청은 보이지 않는다
+    scopeFilter(), // 지점관리자면 맡은 지점 직원의 요청만 (아래에서 표를 직접 읽는 것들을 여기서 거른다)
+    db.from('punch_requests').select(OFFICE.requestLocation ? 'id, employee_id, kind, requested_at, work_date, nearest_m, geo_reason, lat, lng' : 'id, employee_id, kind, requested_at, work_date, nearest_m, geo_reason').eq('is_test', practice).eq('status', 'pending').order('requested_at'),
+    db.from('shift_requests').select('id, employee_id, work_date, start_time, end_time, kind, reason').eq('is_test', practice).eq('status', 'pending').order('work_date'),
+    db.from('leave_change_requests').select('id, employee_id, kind, reason, new_type_code, new_start_date, new_end_date, new_start_time, leave_requests(type_code, start_date, end_date, days, start_time, end_time)').eq('is_test', practice).eq('status', 'pending').order('created_at'),
+    loadAllLeaveTypes(),
+    loadLeaveRequests({ practice }),
+    loadWorkRequests({ practice }),
+    loadRequests({ practice }),
+    // 직원 가입 신청 — 최고관리자에게만, 요청 처리 맨 위에 (2026-10-26 의뢰인: 가입 신청도 요청 처리에서 승인)
+    me.role === 'admin' ? loadPendingSignups() : Promise.resolve([] as Awaited<ReturnType<typeof loadPendingSignups>>),
+    focus?.k === 'punch' ? db.from('punch_requests').select('employee_id, work_date').eq('id', focus.id).maybeSingle() : Promise.resolve({ data: null }),
+  ]);
+  const name = new Map((staff ?? []).map((p) => [p.id, p.name]));
+  // 이름 검색 (?q) — 모든 종류의 대기 요청에 같이 적용한다
+  const q = (sp.q ?? '').trim().slice(0, 40).toLowerCase();
+  const hidden = new Set(hiddenIds);
+  const hit = (id: string) => inScope(id) && !hidden.has(id) && (!q || (name.get(id) ?? '').toLowerCase().includes(q));
   // 같은 사람 · 같은 날의 출근/퇴근 요청 · 정정 · 연장근로는 한 화면에 모아 한 번에 승인한다 (2026-10-18 의뢰인: 셋을 따로 누르면 불편하다)
   const DAY_KINDS: readonly FocusKind[] = ['punch', 'corrections', 'overtime'];
   const focusDay: { employee_id: string; work_date: string } | null = !focus || !DAY_KINDS.includes(focus.k)
     ? null
     : focus.k === 'overtime' ? ((otAll ?? []).find((o) => o.id === focus.id) ?? null)
     : focus.k === 'corrections' ? ((coAll ?? []).find((c) => c.id === focus.id) ?? null)
-    : ((await db.from('punch_requests').select('employee_id, work_date').eq('id', focus.id).maybeSingle()).data ?? null);
+    : ((focusPunch.data as { employee_id: string; work_date: string } | null) ?? null);
   const only = (k: FocusKind, id: string, day?: { e: string; d: string }) =>
     !focus || (focus.k === k && focus.id === id) || (!!day && !!focusDay && DAY_KINDS.includes(k) && focusDay.employee_id === day.e && focusDay.work_date === day.d);
   const ot = (otAll ?? []).filter((o) => hit(o.employee_id) && only('overtime', o.id, { e: o.employee_id, d: o.work_date }));
@@ -100,13 +109,37 @@ export default async function InboxPage({ searchParams }: { searchParams: Promis
   const keys = [...(ot ?? []).map((o) => [o.employee_id, o.work_date]), ...(co ?? []).map((c) => [c.employee_id, c.work_date])];
   const empIds = [...new Set(keys.map((k) => k[0]))];
   const dates = [...new Set(keys.map((k) => k[1]))];
-  const [{ data: notes }, { data: evs }] = await Promise.all([
+  const punchPending = ((punchRows ?? []) as unknown as { id: string; employee_id: string; kind: 'in' | 'out'; requested_at: string; work_date: string; nearest_m: number | null; geo_reason: string; lat?: number | null; lng?: number | null }[]).filter((r) => hit(r.employee_id) && only('punch', r.id, { e: r.employee_id, d: r.work_date }));
+  const leavePending = leaveReqs.filter((r) => r.status === 'pending' && hit(r.employeeId) && only('leave', r.id));
+  const leaveEmp = [...new Set(leavePending.map((r) => r.employeeId))];
+  const [{ data: notes }, { data: evs }, punchNoteRows, baseList, placeList, leaveGrants, leaveAll, { data: leavePunches }, dayNoteRow, ruleVersions, dayHolidays, signupGroupRows, signupNoRows] = await Promise.all([
     empIds.length
       ? db.from('work_notes').select('employee_id, work_date, body, created_at').in('employee_id', empIds).in('work_date', dates).eq('is_test', practice).order('created_at', { ascending: false })
       : Promise.resolve({ data: [] as { employee_id: string; work_date: string; body: string }[] }),
     empIds.length
       ? db.from('punch_events').select('id, employee_id, work_date, kind, punched_at, verified_by, source, location_id, geo_lat, geo_lng').in('employee_id', empIds).in('work_date', dates).eq('is_test', practice).order('punched_at')
       : Promise.resolve({ data: [] as { id: string; employee_id: string; work_date: string; kind: string; punched_at: string; verified_by: string | null; source: string; location_id: string | null; geo_lat: number | null; geo_lng: number | null }[] }),
+    // 직원이 출근 · 퇴근 요청 때 남긴 사유(근무노트) — 없으면 카드에 「사유 없음」 (2026-10-23 의뢰인)
+    punchPending.length
+      ? db.from('work_notes').select('employee_id, work_date, body, created_at').in('employee_id', [...new Set(punchPending.map((r) => r.employee_id))]).in('work_date', [...new Set(punchPending.map((r) => r.work_date))]).eq('is_test', practice).order('created_at', { ascending: false }).then((r) => r.data ?? [])
+      : Promise.resolve([]),
+    // 요청한 사람에게 적용되는 출퇴근 장소(우측 패널 지도용) — 한 건 보기에서만 읽는다
+    focus ? Promise.all([...new Set(punchPending.map((r) => r.employee_id))].map(async (id) => [id, (await loadLocationsFor(id)).filter((l) => l.active)[0]] as const)) : Promise.resolve([]),
+    // 연장근로 상세의 출퇴근 위치 — 한 건 보기에서만 장소를 읽는다
+    focus?.k === 'overtime' ? loadOfficeLocations(true) : Promise.resolve([]),
+    Promise.all(leaveEmp.map((e) => loadLeaveGrants(e))).then((x) => x.flat()),
+    Promise.all(leaveEmp.map((e) => loadLeaveRequests({ employeeId: e, practice }))).then((x) => x.flat()),
+    leaveEmp.length
+      ? db.from('punch_events').select('employee_id, work_date').in('employee_id', leaveEmp).eq('is_test', practice)
+          .gte('work_date', leavePending.reduce((a, r) => (r.startDate < a ? r.startDate : a), '9999-12-31'))
+          .lte('work_date', leavePending.reduce((a, r) => (r.endDate > a ? r.endDate : a), '0000-01-01'))
+      : Promise.resolve({ data: [] as { employee_id: string; work_date: string }[] }),
+    // 직원이 출근 · 퇴근 때 남긴 사유(근무노트) — 하루 카드에 같이 보인다 (2026-10-18 의뢰인: 관리자가 따로 묻지 않게)
+    focusDay ? db.from('work_notes').select('body').eq('employee_id', focusDay.employee_id).eq('work_date', focusDay.work_date).eq('is_test', practice).order('created_at', { ascending: false }).limit(1).then((r) => r.data?.[0] ?? null) : Promise.resolve(null),
+    focusDay ? loadRuleVersions() : Promise.resolve(null),
+    focusDay ? loadHolidays(focusDay.work_date, focusDay.work_date) : Promise.resolve([]),
+    signups.length > 0 ? loadOrgGroups() : Promise.resolve(null),
+    signups.length > 0 ? db.from('profiles').select('employee_no').then((r) => r.data ?? []) : Promise.resolve(null),
   ]);
   const noteOf = (e: string, d: string) => notes?.find((n) => n.employee_id === e && n.work_date === d)?.body ?? null;
   const hm = (iso: string | null) => (iso ? f.dateTime(new Date(iso), { hour: '2-digit', minute: '2-digit', hourCycle: 'h23' }) : '—');
@@ -115,7 +148,7 @@ export default async function InboxPage({ searchParams }: { searchParams: Promis
     (evs ?? []).filter((x) => x.employee_id === e && x.work_date === d).map((x) => `${x.kind === 'in' ? '↘' : '↗'} ${hm(x.punched_at)}`).join('  ');
   // 연장근로 상세의 출퇴근 위치 (2026-10-18 의뢰인: 연장근로 요청에 퇴근 위치가 안 나온다) — 연장근로는 직원이 쓰는 요청이 아니라
   // 출퇴근 기록에서 저절로 생기므로, 그날 출근 · 퇴근을 어디서 어떻게 확인했는지를 보여 준다. 한 건 보기에서만 장소를 읽는다
-  const placeOf = new Map(focus?.k === 'overtime' ? (await loadOfficeLocations(true)).map((l) => [l.id, l]) : []);
+  const placeOf = new Map(placeList.map((l) => [l.id, l]));
   const wherePunched = (e: string, d: string) => {
     const day = (evs ?? []).filter((x) => x.employee_id === e && x.work_date === d);
     if (day.length === 0) return null;
@@ -153,44 +186,19 @@ export default async function InboxPage({ searchParams }: { searchParams: Promis
     );
   };
 
-  const { data: punchRows } = await db.from('punch_requests').select(OFFICE.requestLocation ? 'id, employee_id, kind, requested_at, work_date, nearest_m, geo_reason, lat, lng' : 'id, employee_id, kind, requested_at, work_date, nearest_m, geo_reason').eq('is_test', practice).eq('status', 'pending').order('requested_at');
-  const punchPending = ((punchRows ?? []) as unknown as { id: string; employee_id: string; kind: 'in' | 'out'; requested_at: string; work_date: string; nearest_m: number | null; geo_reason: string; lat?: number | null; lng?: number | null }[]).filter((r) => hit(r.employee_id) && only('punch', r.id, { e: r.employee_id, d: r.work_date }));
-  // 직원이 출근 · 퇴근 요청 때 남긴 사유(근무노트) — 없으면 카드에 「사유 없음」 (2026-10-23 의뢰인)
-  const punchNoteRows = punchPending.length
-    ? ((await db.from('work_notes').select('employee_id, work_date, body, created_at').in('employee_id', [...new Set(punchPending.map((r) => r.employee_id))]).in('work_date', [...new Set(punchPending.map((r) => r.work_date))]).eq('is_test', practice).order('created_at', { ascending: false })).data ?? [])
-    : [];
   const punchNoteOf = (e: string, d: string) => (punchNoteRows.find((n) => n.employee_id === e && n.work_date === d)?.body as string | undefined) ?? null;
-  // 요청한 사람에게 적용되는 출퇴근 장소(우측 패널 지도용) — 한 건 보기에서만 읽는다
   const baseOf = new Map<string, Awaited<ReturnType<typeof loadLocationsFor>>[number]>();
-  if (focus) for (const id of new Set(punchPending.map((r) => r.employee_id))) {
-    const locs = (await loadLocationsFor(id)).filter((l) => l.active);
-    if (locs[0]) baseOf.set(id, locs[0]);
-  }
-  const { data: shiftRows } = await db.from('shift_requests').select('id, employee_id, work_date, start_time, end_time, kind, reason').eq('is_test', practice).eq('status', 'pending').order('work_date');
+  for (const [id, loc] of baseList) if (loc) baseOf.set(id, loc);
   const shiftPending = ((shiftRows ?? []) as { id: string; employee_id: string; work_date: string; start_time: string; end_time: string; kind: string; reason: string | null }[]).filter((r) => hit(r.employee_id) && only('shift', r.id));
-  const { data: delRows } = await db.from('leave_change_requests').select('id, employee_id, kind, reason, new_type_code, new_start_date, new_end_date, new_start_time, leave_requests(type_code, start_date, end_date, days, start_time, end_time)').eq('is_test', practice).eq('status', 'pending').order('created_at');
   const delPending = ((delRows ?? []) as unknown as { id: string; employee_id: string; kind: string; reason: string | null; new_type_code: string | null; new_start_date: string | null; new_end_date: string | null; new_start_time: string | null; leave_requests: { type_code: string; start_date: string; end_date: string; days: number; start_time: string | null; end_time: string | null } | null }[]).filter((r) => hit(r.employee_id) && r.leave_requests && only('leaveDelete', r.id));
-  const tc = await getTranslations('common');
   const otPage = pageOf(ot ?? [], sp.op, REQUEST_PAGE);
   const coPage = pageOf(co ?? [], sp.cp, REQUEST_PAGE);
 
   // 연차·휴가 신청 (②-2 게이트 5): 남은 연차 + 그 날짜 출근 기록 충돌 경고 (자동으로 지우지 않는다, 요점 4)
-  const tl = await getTranslations('leave');
-  const [leaveTypes, leavePending] = await Promise.all([loadAllLeaveTypes(), loadLeaveRequests({ practice }).then((rs) => rs.filter((r) => r.status === 'pending' && hit(r.employeeId) && only('leave', r.id)))]);
-  const leaveEmp = [...new Set(leavePending.map((r) => r.employeeId))];
-  const [leaveGrants, leaveAll, { data: leavePunches }] = await Promise.all([
-    Promise.all(leaveEmp.map((e) => loadLeaveGrants(e))).then((x) => x.flat()),
-    Promise.all(leaveEmp.map((e) => loadLeaveRequests({ employeeId: e, practice }))).then((x) => x.flat()),
-    leaveEmp.length
-      ? db.from('punch_events').select('employee_id, work_date').in('employee_id', leaveEmp).eq('is_test', practice)
-          .gte('work_date', leavePending.reduce((a, r) => (r.startDate < a ? r.startDate : a), '9999-12-31'))
-          .lte('work_date', leavePending.reduce((a, r) => (r.endDate > a ? r.endDate : a), '0000-01-01'))
-      : Promise.resolve({ data: [] as { employee_id: string; work_date: string }[] }),
-  ]);
   const leaveName = (code: string) => leaveTypeName(leaveTypes, code, tl);
   const nDays = (v: number) => f.number(v, { maximumFractionDigits: 2 }); // 일수는 화면에 소수 둘째 자리까지 (2026-10-19 의뢰인: 15분 = 0.03125일까지 저장하지만 폰에서 칸을 넘지 않게. 저장 · 계산은 다섯째 자리 그대로)
   const lvPage = pageOf(leavePending, sp.lp, REQUEST_PAGE);
-  const workPending = (await loadWorkRequests({ practice })).filter((w) => w.status === 'pending' && hit(w.employeeId) && only('work', w.id)).sort((a, b) => (a.startDate < b.startDate ? -1 : 1));
+  const workPending = workReqs.filter((w) => w.status === 'pending' && hit(w.employeeId) && only('work', w.id)).sort((a, b) => (a.startDate < b.startDate ? -1 : 1));
   const wkPage = pageOf(workPending, sp.wp, REQUEST_PAGE);
 
   // 상세(폰 화면 · PC 오른쪽 패널)의 카드가 쓰는 값
@@ -219,7 +227,7 @@ export default async function InboxPage({ searchParams }: { searchParams: Promis
   });
   // 폰의 한 목록: 대기 중인 요청 전부 + 다시 확인할 연장근로(상태는 처리됨이지만 재확인 필요)
   const listed = [
-    ...splitRequests((await loadRequests({ practice })).filter((x) => hit(x.employeeId))).pending,
+    ...splitRequests(reqs.filter((x) => hit(x.employeeId))).pending,
     ...(otAll ?? []).filter((o) => hit(o.employee_id) && o.status !== 'pending').map((o) => ({ ...fromOvertime(o), status: 'pending' as const })),
   ];
   // 종류 카드로 거르기 (목록 틀 — components/listframe). ?rk= 는 한 건 보기(?k=)와 겹치지 않는 이름
@@ -242,11 +250,8 @@ export default async function InboxPage({ searchParams }: { searchParams: Promis
       ];
   // 출근 · 퇴근 요청만 있는 날: 요청한 시각으로 대략의 근무 시간 · 휴일 여부를 미리 보인다(정확한 연장 · 야간 · 휴일 구분은 승인 뒤 앱이 계산)
   // 직원이 출근 · 퇴근 때 남긴 사유(근무노트) — 하루 카드에 같이 보인다 (2026-10-18 의뢰인: 관리자가 따로 묻지 않게)
-  const dayNote = focusDay
-    ? (((await db.from('work_notes').select('body').eq('employee_id', focusDay.employee_id).eq('work_date', focusDay.work_date).eq('is_test', practice).order('created_at', { ascending: false }).limit(1)).data?.[0]?.body as string | undefined) ?? null)
-    : null;
-  const dayRule = focusDay ? (ruleAt(await loadRuleVersions(), focusDay.work_date) ?? ruleAt(await loadRuleVersions(), today)) : null;
-  const dayHolidays = focusDay ? await loadHolidays(focusDay.work_date, focusDay.work_date) : [];
+  const dayNote = (dayNoteRow?.body as string | undefined) ?? null;
+  const dayRule = focusDay && ruleVersions ? (ruleAt(ruleVersions, focusDay.work_date) ?? ruleAt(ruleVersions, today)) : null;
   const dayPreview = (() => {
     if (!focusDay || punchPending.length === 0) return null;
     const pin = punchPending.find((r) => r.kind === 'in');
@@ -256,10 +261,8 @@ export default async function InboxPage({ searchParams }: { searchParams: Promis
     return t(off ? 'dayPreviewOff' : 'dayPreview', { from: pin ? hm(pin.requested_at) : '—', to: pout ? hm(pout.requested_at) : '—', min: span ?? 0, known: span === null ? 'no' : 'yes' });
   })();
   const focusCount = focus ? ot.length + co.length + leavePending.length + workPending.length + punchPending.length + shiftPending.length + delPending.length : 0;
-  // 직원 가입 신청 — 최고관리자에게만, 요청 처리 맨 위에 (2026-10-26 의뢰인: 가입 신청도 요청 처리에서 승인)
-  const signups = me.role === 'admin' ? await loadPendingSignups() : [];
-  const signupGroups = signups.length > 0 ? orgOptions(await loadOrgGroups()) : [];
-  const signupNo = signups.length > 0 ? suggestEmployeeNo(((await createAdminClient().from('profiles').select('employee_no')).data ?? []).map((p) => p.employee_no as string | null)) : null;
+  const signupGroups = signupGroupRows ? orgOptions(signupGroupRows) : [];
+  const signupNo = signupNoRows ? suggestEmployeeNo(signupNoRows.map((p) => p.employee_no as string | null)) : null;
   const empty = <Empty title={t('empty')} desc={t('emptyDesc')} />;
   const hint = (text: string) => (
     <div className="flex flex-wrap items-center gap-x-1 text-sm text-muted">
@@ -491,7 +494,7 @@ export default async function InboxPage({ searchParams }: { searchParams: Promis
           <h2 className="px-1 font-bold">
             {t('punchTitle')} <span className="num text-warn">{punchPending.length}</span>
           </h2>
-          <ul className="-mx-4 divide-y divide-border border-y border-border bg-bg lg:mx-0 lg:rounded-card lg:border">
+          <ul className="divide-y divide-border rounded-card border border-border bg-bg shadow-card">
             {punchPending.map((r) => {
               const who = name.get(r.employee_id) ?? '';
               const what = `${dayLabel(r.work_date)} ${hm(r.requested_at)} ${t(`kind.${r.kind}`)}`;
@@ -547,7 +550,7 @@ export default async function InboxPage({ searchParams }: { searchParams: Promis
           <h2 className="px-1 font-bold">
             {t('shiftTitle')} <span className="num text-warn">{shiftPending.length}</span>
           </h2>
-          <ul className="-mx-4 divide-y divide-border border-y border-border bg-bg lg:mx-0 lg:rounded-card lg:border">
+          <ul className="divide-y divide-border rounded-card border border-border bg-bg shadow-card">
             {shiftPending.map((r) => {
               const who = name.get(r.employee_id) ?? '';
               const what = `${dayLabel(r.work_date)} ${r.start_time.slice(0, 5)} - ${r.end_time.slice(0, 5)}`;
@@ -574,7 +577,7 @@ export default async function InboxPage({ searchParams }: { searchParams: Promis
           <h2 className="px-1 font-bold">
             {t('leaveDeleteTitle')} <span className="num text-warn">{delPending.length}</span>
           </h2>
-          <ul className="-mx-4 divide-y divide-border border-y border-border bg-bg lg:mx-0 lg:rounded-card lg:border">
+          <ul className="divide-y divide-border rounded-card border border-border bg-bg shadow-card">
             {delPending.map((r) => {
               const lv = r.leave_requests!;
               const who = name.get(r.employee_id) ?? '';

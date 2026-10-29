@@ -92,7 +92,7 @@ export default async function MembersPage({ searchParams }: { searchParams: Prom
     return (
       <li key={p.id} data-find={[p.name, p.employeeNo, p.phone, p.email, p.jobTitle, p.jobId ? jobName.get(p.jobId) : ''].filter(Boolean).join(' ')} className={`flex min-h-16 items-center gap-2 py-2 pr-3 pl-5 ${p.active ? '' : 'opacity-60'}`}>
         <Link href={`/admin/members/${p.id}`} className="flex min-h-12 min-w-0 flex-1 items-center gap-3">
-          <span aria-hidden className={`flex size-10 shrink-0 items-center justify-center rounded-chip font-bold ${ok ? 'bg-primary-tint text-primary' : 'bg-warn-tint text-warn'}`}>
+          <span aria-hidden className={`flex size-10 shrink-0 items-center justify-center rounded-chip bg-primary-tint font-bold text-primary`}>
             {p.name.slice(0, 1)}
           </span>
           <span className="min-w-0 flex-1">
@@ -206,11 +206,12 @@ export default async function MembersPage({ searchParams }: { searchParams: Prom
             { key: 'name', label: t('colName') },
             { key: 'role', label: t('colRole') },
             { key: 'no', label: t('colNo') },
-            { key: 'phone', label: t('infoPhone') },
+            // 1440px 미만: 휴대폰 · 입사일 칸 숨김 — 칸 10개가 상자보다 넓어 옆으로 밀렸다 (2026-10-29 가로 넘침 검사, 의뢰인: 고쳐줘). 검색은 그대로 찾는다
+            { key: 'phone', label: t('infoPhone'), className: 'max-[90rem]:hidden' },
             { key: 'group', label: t('colGroup') },
             ...(list.some((p) => p.jobTitle) ? [{ key: 'title', label: t('colTitle') }] : []),
             { key: 'job', label: t('colJob') },
-            { key: 'joined', label: t('infoJoined') },
+            { key: 'joined', label: t('infoJoined'), className: 'max-[90rem]:hidden' },
             { key: 'status', label: t('colStatus') },
             { key: 'act', label: '', search: false, sort: false, align: 'right' },
           ]}
@@ -225,11 +226,11 @@ export default async function MembersPage({ searchParams }: { searchParams: Prom
                 role: { text: roleText, node: <RoleCell employeeId={p.id} role={p.role} self={p.id === me.id} waiting={roleWaiting.has(p.id)} level={p.level} actorTop={me.top} /> },
                 no: { text: p.employeeNo ?? '' },
                 phone: { text: p.phone ?? '', node: <span className="num whitespace-nowrap">{showPhone(p.phone)}</span> },
-                group: { text: groupPath(groups, p.groupId) ?? t('unassigned'), node: <span className="whitespace-nowrap">{groupPath(groups, p.groupId) ?? t('unassigned')}</span> },
+                group: { text: groupPath(groups, p.groupId) ?? t('unassigned'), node: <span className="xl:whitespace-nowrap">{groupPath(groups, p.groupId) ?? t('unassigned')}</span> },
                 title: { text: p.jobTitle ?? '' },
-                job: { text: (p.jobId && jobName.get(p.jobId)) || '', node: <span className="whitespace-nowrap">{(p.jobId && jobName.get(p.jobId)) || ''}</span> },
+                job: { text: (p.jobId && jobName.get(p.jobId)) || '', node: <span className="xl:whitespace-nowrap">{(p.jobId && jobName.get(p.jobId)) || ''}</span> },
                 joined: { text: p.joinedOn ?? '', node: <span className="num whitespace-nowrap">{p.joinedOn ?? ''}</span> },
-                status: { text: !p.active ? t('inactive') : ok ? t('joined') : `${t('notJoined')} ${inviteNote(p.id)}`, node: !p.active ? <Chip>{t('inactive')}</Chip> : ok ? <Chip tone="ok">{t('joined')}</Chip> : <span className="inline-flex items-center gap-1.5 whitespace-nowrap"><Chip tone="warn">{t('notJoined')}</Chip>{inviteNote(p.id) && <span className="text-xs text-muted">{inviteNote(p.id)}</span>}</span> },
+                status: { text: !p.active ? t('inactive') : ok ? t('joined') : `${t('notJoined')} ${inviteNote(p.id)}`, node: !p.active ? <Chip>{t('inactive')}</Chip> : ok ? <Chip tone="ok">{t('joined')}</Chip> : <span className="inline-flex flex-wrap items-center gap-x-1.5 xl:flex-nowrap xl:whitespace-nowrap"><Chip tone="warn">{t('notJoined')}</Chip>{inviteNote(p.id) && <span className="text-xs text-muted">{inviteNote(p.id)}</span>}</span> },
                 act: { text: '', node: p.active && !ok ? <NewInviteButton employeeId={p.id} name={p.name} compact /> : null },
               },
             };

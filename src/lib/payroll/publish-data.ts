@@ -9,6 +9,7 @@ import { ApiError } from '@/lib/api';
 import type { Me } from '@/lib/auth';
 import { createAdminClient } from '@/lib/supabase/admin';
 import { loadRevisions, loadRun } from './run-data';
+import { slipFamilyTemp } from './tax-defaults';
 import { payrollAudit } from './staff-data';
 
 const db = () => createAdminClient();
@@ -126,7 +127,7 @@ async function calculatedSlips(employeeId: string, practice: boolean): Promise<M
 }
 
 /** 내 명세서 한 장. 내 것이 아니거나 공개 중이 아니면 null (있는지 없는지도 알려 주지 않는다) */
-export async function loadMySlip(employeeId: string, statementId: string, practice: boolean): Promise<{ slip: MySlip; lines: MySlipLine[]; previous: MySlip | null; replacedBy: MySlip | null; time?: unknown; tax?: { taxable: number; exempt: number } | null } | null> {
+export async function loadMySlip(employeeId: string, statementId: string, practice: boolean): Promise<{ slip: MySlip; lines: MySlipLine[]; previous: MySlip | null; replacedBy: MySlip | null; time?: unknown; tax?: { taxable: number; exempt: number } | null; familyTemp?: number | null } | null> {
   const all = await mySlips(employeeId, practice);
   const slip = all.find((x) => x.id === statementId);
   if (!slip) return null;
@@ -138,12 +139,15 @@ export async function loadMySlip(employeeId: string, statementId: string, practi
   const [{ data, error }, { data: st }] = await Promise.all([
     db().from('payroll_statement_items').select('item_code, kind, label_ko, quantity, unit_price, factor, amount, line_no, created_at').eq('statement_id', statementId).in('kind', ['PAYMENT', 'DEDUCTION']).order('created_at').order('line_no'),
     // 근로 내역(근로일수 · 시간)은 계산 때 저장한 시간 입력에서 읽는다 — 상여에는 없다
-    db().from('payroll_statements').select('time:snapshot->time, totals:snapshot->totals').eq('id', statementId).maybeSingle(),
+    db().from('payroll_statements').select('time:snapshot->time, totals:snapshot->totals, taxSnap:snapshot->tax, blockers, tax_id').eq('id', statementId).maybeSingle(),
   ]);
   if (error) boom('loadMySlip', error);
   const t = (v: unknown) => (v === null || v === undefined ? null : String(Number(v)));
   // 과세 대상 · 비과세 (2026-10-22 의뢰인 ②) — 계산 때 저장한 과세 합계에서
   const taxable = (st as { totals?: { taxable?: unknown } | null } | null)?.totals?.taxable;
   const tax = typeof taxable === 'number' ? { taxable, exempt: Math.max(0, slip.pay - taxable) } : null;
-  return { slip, previous, replacedBy, tax, time: slip.kind === 'REGULAR' ? ((st as { time?: unknown } | null)?.time ?? null) : null, lines: (data ?? []).map((i) => ({ code: i.item_code as string, kind: i.kind as 'PAYMENT' | 'DEDUCTION', label: i.label_ko as string, quantity: t(i.quantity), unitPrice: t(i.unit_price), factor: t(i.factor), amount: Number(i.amount) })) };
+  // 부양가족 신고 전이면 가족 수가 임시다 → 화면 · PDF에 「임시」 (묶음 38)
+  const s = st as { taxSnap?: unknown; blockers?: unknown; tax_id?: string | null } | null;
+  const familyTemp = s ? slipFamilyTemp(s.blockers, s.tax_id ?? null, { tax: s.taxSnap }) : null;
+  return { slip, previous, replacedBy, tax, familyTemp, time: slip.kind === 'REGULAR' ? ((st as { time?: unknown } | null)?.time ?? null) : null, lines: (data ?? []).map((i) => ({ code: i.item_code as string, kind: i.kind as 'PAYMENT' | 'DEDUCTION', label: i.label_ko as string, quantity: t(i.quantity), unitPrice: t(i.unit_price), factor: t(i.factor), amount: Number(i.amount) })) };
 }

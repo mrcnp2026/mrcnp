@@ -108,6 +108,85 @@ export default async function RecordCalendarPage({ searchParams }: { searchParam
   const weekdayNames = [...Array(7)].map((_, i) => f.dateTime(kstDateTime(addDays(sunday, i), '12:00'), { weekday: 'short' }));
   const dayList = cellsOf(pd).filter((x) => x.c.in || x.c.out || x.c.anyLeave);
 
+  // 한 달 표 — 화면 폭에 따라 나눠 쌓는다 (2026-10-29 가로 넘침 검사: 31일이 한 줄이면 1920px 미만 PC에서 상자 안이 옆으로 밀렸다, 의뢰인: 고쳐줘).
+  //   1920px~: 한 달 한 표 · 1280~1919px: 1~15일 / 16일~말일 · 1024~1279px: 1~10일 / 11~20일 / 21일~말일. 합계 칸은 마지막 표에만
+  const monthTable = (part: string[], withTotal: boolean, key: string) => (
+        <div key={key} className="overflow-x-auto rounded-card border border-border bg-bg shadow-card">
+          <table className="w-full border-separate border-spacing-0 text-xs">
+            <thead>
+              <tr>
+                <th scope="col" className="sticky left-0 z-10 w-28 min-w-28 border-b border-border bg-bg px-3 py-3 text-left xl:w-36 xl:min-w-36 min-[120rem]:w-44 min-[120rem]:min-w-44 min-[120rem]:px-4">
+                  {t('colEmployee')}
+                </th>
+                {part.map((d) => {
+                  const red = redDay(d);
+                  return (
+                    <th key={d} scope="col" className={`num min-w-10 border-b border-border px-0.5 py-2 text-center whitespace-nowrap ${d === today ? 'bg-primary-tint!' : red ? 'bg-surface!' : ''}`}>
+                      <span className={`block text-sm font-bold ${d === today ? 'text-primary' : red ? 'text-danger' : 'text-text'}`}>{Number(d.slice(8))}</span>
+                      <span className={`block text-xs! font-normal ${red ? 'text-danger' : 'text-faint'}`}>{f.dateTime(kstDateTime(d, '12:00'), { weekday: 'narrow' })}</span>
+                    </th>
+                  );
+                })}
+                {withTotal && (
+                  <th scope="col" className="min-w-20 border-b border-border px-3 py-2 text-right xl:min-w-24">
+                    {t('colTotal')}
+                  </th>
+                )}
+              </tr>
+            </thead>
+            <tbody>
+              {rows.length === 0 && (
+                <tr>
+                  <td colSpan={part.length + (withTotal ? 2 : 1)} className="px-3 py-8 text-center text-sm text-faint">
+                    {t('empty')}
+                  </td>
+                </tr>
+              )}
+              {rows.map(({ p, cells, worked, payable }) => (
+                <tr key={p.id} className="group">
+                  <th scope="row" className="sticky left-0 z-10 border-b border-border bg-bg px-3 py-2 text-left font-normal group-hover:bg-surface min-[120rem]:px-4">
+                    <Link href={`/admin/records/${p.id}?ym=${ym}${sp.live === '1' ? '&live=1' : ''}`} className="flex items-center gap-2.5 hover:text-primary">
+                      <span aria-hidden className="flex size-7 shrink-0 items-center justify-center rounded-chip bg-primary-tint text-xs font-bold text-primary">{p.name.slice(0, 1)}</span>
+                      <span className="flex min-w-0 flex-col">
+                        <span className="truncate text-sm font-bold">{p.name}</span>
+                        <span className="truncate text-xs text-faint">{groupPath(groups, p.groupId)}</span>
+                      </span>
+                    </Link>
+                  </th>
+                  {cells.filter((c) => part.includes(c.d)).map((c) => {
+                    // 칸 아래 띠는 상태 색 (2026-10-19 의뢰인: 파란 띠만 있어 지각 · 퇴근 미기록 · 휴가를 구분할 수 없었다 — 폰 달력의 점과 같은 색)
+                    //   지각 빨강 · 퇴근 미기록 주황 · 휴가 파랑 · 정상은 띠 없음. 글자는 정상이면 보통 굵기, 문제가 있는 값만 굵게
+                    return (
+                      <td key={c.d} className={`num border-b border-border p-0.5 text-center align-middle ${c.d === today ? 'bg-primary-tint/60' : redDay(c.d) ? 'bg-surface/70' : 'group-hover:bg-surface/50'}`}>
+                        {c.in || c.out ? (
+                          <Link href={`/admin/records/${p.id}/${c.d}${sp.live === '1' ? '?live=1' : ''}`} title={[c.late ? t('dotLate') : '', c.open ? t('noOut') : '', c.leaveNames].filter(Boolean).join(' · ') || undefined} className={`flex flex-col items-center gap-0.5 rounded-button px-0.5 py-1.5 leading-tight hover:bg-bg hover:shadow-card ${c.deemed ? 'text-muted' : ''}`}>
+                            <span className={c.late ? 'rounded-chip bg-danger-tint px-1 font-bold text-danger' : 'font-medium text-text'}>{c.in ?? '–'}</span>
+                            <span className={c.open ? 'rounded-chip bg-warn-tint px-1 font-bold text-warn' : 'text-faint'}>{c.out ?? (c.open ? t('noOutShort') : '–')}</span>
+                            {c.deemed && <span className="text-faint">{t('deemed')}</span>}
+                            {!c.leave && c.leaveNames && <span className="max-w-full truncate rounded-chip bg-primary-tint px-1 font-semibold text-primary">{c.leaveNames}</span>}
+                          </Link>
+                        ) : c.leave ? (
+                          <span className="mx-0.5 block rounded-button bg-primary-tint px-0.5 py-2 font-semibold text-primary">{c.leaveNames || t('leave')}</span>
+                        ) : null}
+                      </td>
+                    );
+                  })}
+                  {withTotal && (
+                    <td className="num border-b border-border px-3 py-1.5 text-right group-hover:bg-surface/50">
+                      <span className="block text-sm font-bold">{t('days', { n: worked })}</span>
+                      <span className="text-muted">{hm(payable)}</span>
+                    </td>
+                  )}
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+  );
+  const lastOf = <T,>(list: T[], i: number) => i === list.length - 1;
+  const halves = [days.slice(0, 15), days.slice(15)];
+  const thirds = [days.slice(0, 10), days.slice(10, 20), days.slice(20)];
+
   return (
     <PageShell wide>
       <div className="flex flex-col gap-3 lg:hidden" data-phone-records>
@@ -200,7 +279,7 @@ export default async function RecordCalendarPage({ searchParams }: { searchParam
           {dayList.length === 0 ? (
             <p className="rounded-card bg-bg p-5 text-sm text-faint">{t('emptyDay')}</p>
           ) : (
-            <ul className="-mx-4 divide-y divide-border border-y border-border bg-bg">
+            <ul className="divide-y divide-border rounded-card border border-border bg-bg shadow-card">
               {dayList.map(({ r, c }) => (
                 <li key={r.p.id}>
                   <Link href={c.in || c.out ? `/admin/records/${r.p.id}/${pd}${sp.live === '1' ? '?live=1' : ''}` : `/admin/records/${r.p.id}?ym=${ym}`} className="flex min-h-14 items-center gap-3 py-2 pr-4 pl-5">
@@ -300,73 +379,9 @@ export default async function RecordCalendarPage({ searchParams }: { searchParam
         </ul>
       </div>
       {/* 2026-10-22 의뢰인: 「한눈에 볼 필요는 있는데 디자인적으로 별로」 — 칸마다 세로 선 · 분홍 주말을 빼고, 정상은 차분하게 · 문제만 딱지로 */}
-      <div className="overflow-x-auto rounded-card border border-border bg-bg shadow-card">
-        <table className="w-full border-separate border-spacing-0 text-xs">
-          <thead>
-            <tr>
-              <th scope="col" className="sticky left-0 z-10 w-44 min-w-44 border-b border-border bg-bg px-4 py-3 text-left">
-                {t('colEmployee')}
-              </th>
-              {days.map((d) => {
-                const red = redDay(d);
-                return (
-                  <th key={d} scope="col" className={`num min-w-12 border-b border-border px-0.5 py-2 text-center whitespace-nowrap ${d === today ? 'bg-primary-tint!' : red ? 'bg-surface!' : ''}`}>
-                    <span className={`block text-sm font-bold ${d === today ? 'text-primary' : red ? 'text-danger' : 'text-text'}`}>{Number(d.slice(8))}</span>
-                    <span className={`block text-xs! font-normal ${red ? 'text-danger' : 'text-faint'}`}>{f.dateTime(kstDateTime(d, '12:00'), { weekday: 'narrow' })}</span>
-                  </th>
-                );
-              })}
-              <th scope="col" className="min-w-24 border-b border-border px-3 py-2 text-right">
-                {t('colTotal')}
-              </th>
-            </tr>
-          </thead>
-          <tbody>
-            {rows.length === 0 && (
-              <tr>
-                <td colSpan={days.length + 2} className="px-3 py-8 text-center text-sm text-faint">
-                  {t('empty')}
-                </td>
-              </tr>
-            )}
-            {rows.map(({ p, cells, worked, payable }) => (
-              <tr key={p.id} className="group">
-                <th scope="row" className="sticky left-0 z-10 border-b border-border bg-bg px-4 py-2 text-left font-normal group-hover:bg-surface">
-                  <Link href={`/admin/records/${p.id}?ym=${ym}${sp.live === '1' ? '&live=1' : ''}`} className="flex items-center gap-2.5 hover:text-primary">
-                    <span aria-hidden className="flex size-7 shrink-0 items-center justify-center rounded-chip bg-primary-tint text-xs font-bold text-primary">{p.name.slice(0, 1)}</span>
-                    <span className="flex min-w-0 flex-col">
-                      <span className="truncate text-sm font-bold">{p.name}</span>
-                      <span className="truncate text-xs text-faint">{groupPath(groups, p.groupId)}</span>
-                    </span>
-                  </Link>
-                </th>
-                {cells.map((c) => {
-                  // 칸 아래 띠는 상태 색 (2026-10-19 의뢰인: 파란 띠만 있어 지각 · 퇴근 미기록 · 휴가를 구분할 수 없었다 — 폰 달력의 점과 같은 색)
-                  //   지각 빨강 · 퇴근 미기록 주황 · 휴가 파랑 · 정상은 띠 없음. 글자는 정상이면 보통 굵기, 문제가 있는 값만 굵게
-                  return (
-                    <td key={c.d} className={`num border-b border-border p-0.5 text-center align-middle ${c.d === today ? 'bg-primary-tint/60' : redDay(c.d) ? 'bg-surface/70' : 'group-hover:bg-surface/50'}`}>
-                      {c.in || c.out ? (
-                        <Link href={`/admin/records/${p.id}/${c.d}${sp.live === '1' ? '?live=1' : ''}`} title={[c.late ? t('dotLate') : '', c.open ? t('noOut') : '', c.leaveNames].filter(Boolean).join(' · ') || undefined} className={`flex flex-col items-center gap-0.5 rounded-button px-0.5 py-1.5 leading-tight hover:bg-bg hover:shadow-card ${c.deemed ? 'text-muted' : ''}`}>
-                          <span className={c.late ? 'rounded-chip bg-danger-tint px-1 font-bold text-danger' : 'font-medium text-text'}>{c.in ?? '–'}</span>
-                          <span className={c.open ? 'rounded-chip bg-warn-tint px-1 font-bold text-warn' : 'text-faint'}>{c.out ?? (c.open ? t('noOutShort') : '–')}</span>
-                          {c.deemed && <span className="text-faint">{t('deemed')}</span>}
-                          {!c.leave && c.leaveNames && <span className="max-w-full truncate rounded-chip bg-primary-tint px-1 font-semibold text-primary">{c.leaveNames}</span>}
-                        </Link>
-                      ) : c.leave ? (
-                        <span className="mx-0.5 block rounded-button bg-primary-tint px-0.5 py-2 font-semibold text-primary">{c.leaveNames || t('leave')}</span>
-                      ) : null}
-                    </td>
-                  );
-                })}
-                <td className="num border-b border-border px-3 py-1.5 text-right group-hover:bg-surface/50">
-                  <span className="block text-sm font-bold">{t('days', { n: worked })}</span>
-                  <span className="text-muted">{hm(payable)}</span>
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      </div>
+      <div className="hidden min-[120rem]:block">{monthTable(days, true, 'all')}</div>
+      <div className="hidden flex-col gap-4 xl:flex min-[120rem]:hidden">{halves.map((p, i) => monthTable(p, lastOf(halves, i), `h${i}`))}</div>
+      <div className="flex flex-col gap-4 xl:hidden">{thirds.map((p, i) => monthTable(p, lastOf(thirds, i), `t${i}`))}</div>
       </div>
       {deemedNote}
     </PageShell>

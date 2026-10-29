@@ -67,6 +67,7 @@ export async function PaySettings({ sp }: { sp: SP }) {
   const period = (a: string | null, b: string | null) => (a ? `${a} ~ ${b ? toKstDate(new Date(Date.parse(`${b}T00:00:00+09:00`) - 864e5)) : t('open')}` : t('review.fromMissing'));
 
   let body: ReactNode;
+  const bare = section === 'employee-defaults' || section === 'ledger' || section === 'masking' || section === 'working-time';
 
   if (section === 'employee-defaults' || section === 'ledger' || section === 'masking' || section === 'working-time') {
     // 회사 공통 고정 수당 · 공제를 고를 항목(사람이 정하는 고정 · 직접 입력 항목만)과 제외할 직원 (2026-10-25)
@@ -84,17 +85,17 @@ export async function PaySettings({ sp }: { sp: SP }) {
     body = (
       <>
         {section === 'ledger' && ledger && (
-          <p className="num border-b border-border bg-primary-tint px-4 py-3 text-sm text-primary lg:px-6">{t('s02.example', { month: today.slice(0, 7), date: payDateFor(today.slice(0, 7), ledger) })}</p>
+          <p className="num set-card rounded-card border border-border bg-surface px-4 py-3 text-sm text-text lg:px-6">{t('s02.example', { month: today.slice(0, 7), date: payDateFor(today.slice(0, 7), ledger) })}</p>
         )}
         {section === 'ledger' && !cur && (
-          <div className="flex flex-wrap items-center justify-between gap-2 border-b border-border bg-warn-tint px-4 py-3 text-sm text-warn lg:px-6">
+          <div className="flex flex-wrap items-center justify-between gap-2 rounded-card bg-warn-tint px-4 py-3 text-sm text-warn lg:px-6">
             <p>{t('s02.missing')}</p>
             <SeedButton path="/api/admin/payroll/settings/ledger" label={t('s02.seed')} />
           </div>
         )}
-        {section === 'masking' && <p className="border-b border-border px-4 py-3 text-sm text-muted lg:px-6">{t('s08.intro')}</p>}
+        {section === 'masking' && <p className="px-1 text-sm text-muted">{t('s08.intro')}</p>}
         {section === 'working-time' && (
-          <div className="flex flex-col gap-1 border-b border-border px-4 py-3 text-sm lg:px-6">
+          <div className="set-card flex flex-col gap-1 rounded-card border border-border bg-surface px-4 py-3 text-sm lg:px-6">
             <p className="font-bold">{t('s09.ruleTitle')}</p>
             <p className="num text-muted">{rule ? t('s09.rule', { start: rule.startTime.slice(0, 5), end: rule.endTime.slice(0, 5), step: rule.roundStepMin ?? 0 }) : t('s09.ruleNone')}</p>
             <Link href="/admin/settings?tab=work" className="self-start font-bold text-primary">
@@ -102,9 +103,10 @@ export async function PaySettings({ sp }: { sp: SP }) {
             </Link>
           </div>
         )}
-        <div className="px-4 py-4 lg:px-6">
+        <div>
           <SettingForm key={cur?.version ?? 0} section={section as SettingSection} current={cur?.payload ?? null} version={cur?.version ?? 0} today={today} common={common} />
         </div>
+        <div className="set-card overflow-hidden rounded-card border border-border bg-bg shadow-card">
         <Band>{t('history')}</Band>
         {history.length === 0 ? (
           <p className="px-4 py-6 text-center text-sm text-faint lg:px-6">{t('historyNone')}</p>
@@ -125,6 +127,7 @@ export async function PaySettings({ sp }: { sp: SP }) {
             ))}
           </ul>
         )}
+        </div>
       </>
     );
   } else if (section === 'payment-items' || section === 'deduction-items') {
@@ -584,7 +587,8 @@ export async function PaySettings({ sp }: { sp: SP }) {
   return (
     <div className="grid gap-4">
       {/* 메뉴 줄은 뺐다 — PC는 통합설정 메뉴 판, 폰은 맨 위 화면 이름을 누르면 같은 목록이 펼쳐진다 (2026-10-22: 폰에서 옆으로 밀어야 보이던 줄) */}
-      <section className="min-w-0 overflow-hidden border border-border bg-bg lg:rounded-card">
+      {/* 설정 양식 넷(사원급여 · 급여대장 · 마스킹 · 근로시간)은 주제 카드가 따로 떠 있다 — 바깥 상자로 다시 두르지 않는다 (2026-10-28) */}
+      <section className={bare ? 'flex min-w-0 flex-col gap-4' : 'set-card min-w-0 overflow-hidden border border-border bg-bg shadow-card lg:rounded-card'}>
         {body}
       </section>
     </div>

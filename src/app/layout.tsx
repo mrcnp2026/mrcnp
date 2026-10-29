@@ -7,6 +7,7 @@ import { companyName } from '@/lib/company'; // 통합설정 › 회사 기본�
 import { themeCssVariables } from '@/config/theme';
 import { FxObserver } from '@/components/FxObserver';
 import { NavProgress } from '@/components/NavProgress';
+import { DetailsMotion } from '@/components/DetailsMotion';
 import { PickerHost } from '@/components/PickerHost';
 import 'pretendard/dist/web/variable/pretendardvariable-dynamic-subset.css'; // 한글 · 영문 글꼴 (OFL). 쓰는 글자 조각만 내려받는다
 import './globals.css';
@@ -36,12 +37,13 @@ export default async function RootLayout({ children }: Readonly<{ children: Reac
       </head>
       <body className="min-h-dvh font-sans text-text antialiased">
         <NextIntlClientProvider>
-          {isDev && <div role="status" data-noprint className="sticky top-0 z-50 bg-danger px-3 py-1 text-center text-sm font-bold text-on-primary">{tc('devBanner')}</div>}
+          {isDev && <div role="status" data-noprint className="relative z-50 bg-danger px-3 py-1 text-center text-sm font-bold text-on-primary">{tc('devBanner')}</div>}
           {children}
           <PickerHost />
         </NextIntlClientProvider>
         <FxObserver />
         <NavProgress />
+        <DetailsMotion />
       </body>
     </html>
   );

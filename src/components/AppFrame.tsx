@@ -89,7 +89,7 @@ export async function AppFrame({ me, children, overlay }: { me: Me; children: Re
       <SpaceShell role={role}>
         <DeskNav role={role} inboxCount={inboxCount} initialWide={(await cookies()).get('nav-wide')?.value === '1'} />
         {/* 폰에서는 하단 탭 바 높이 + 아이폰 하단 여백만큼 비운다 */}
-        <div data-page-root className="min-w-0 flex-1 pb-[calc(4rem+env(safe-area-inset-bottom))] lg:min-h-[calc(100dvh-3.5rem)] lg:bg-bg lg:pb-0">
+        <div data-page-root className="min-w-0 flex-1 pb-[calc(4rem+env(safe-area-inset-bottom))] min-h-[calc(100dvh-3.5rem)] bg-bg lg:pb-0">
           <FrameHeader>
             <TopBar
               className="lg:hidden"

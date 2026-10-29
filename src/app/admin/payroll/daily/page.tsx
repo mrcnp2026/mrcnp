@@ -1,6 +1,8 @@
-// 일용직 — 지급 대상자 · 근무 입력 · 일용 대장 (PRD v1.3 18.5 W07). 급여 담당 관리자만.
-// 대상자는 로그인 계정과 따로다(계정을 만들지 않는다). 세금은 하루 단위 임시 규칙, 4대보험료는 계산하지 않는다. 신고 파일 · 이체는 없다.
+// 일용직 — 지급 대상자 · 근무 입력 · 일용 대장 (PRD v1.3 18.5 W07, 2026-10-28 급여-58로 다시 짬). 급여 담당 관리자만.
+// 대상자는 로그인 계정과 따로다(계정을 만들지 않는다). 일반 · 외국인 일용직을 고르고, 4대보험은 앱이 자동 계산한다(최고관리자가 대장에서 고칠 수 있다).
+// 화면은 폰에서 옆으로 밀리지 않게 카드로 — 표는 넓은 화면의 대장에서만.
 import { getFormatter, getTranslations } from 'next-intl/server';
+import { ChevronDown } from 'lucide-react';
 import { WarnLine } from '@/components/listframe';
 import { HelpTip } from '@/components/Help';
 import Link from 'next/link';
@@ -9,16 +11,19 @@ import { SheetOpener } from '@/components/SheetOpener';
 import { Chip, PageShell } from '@/components/ui';
 import { OFFICE } from '@/config/office';
 import { getMe } from '@/lib/auth';
-import { loadDailyRuns, loadPayees, loadWork } from '@/lib/payroll/daily-data';
+import { loadItems } from '@/lib/payroll/data';
+import { loadDailyRuns, loadPayees, loadWork, type Engagement, type Payee } from '@/lib/payroll/daily-data';
+import { AUTO_PAYMENT_CODES, canonicalItemCode } from '@/lib/payroll/engine/reserved-items';
 import { toKstDate } from '@/lib/time';
-import { DailyRunCreate, EngagementAdd, EngagementOff, PayeeAdd, PayeeToggle, WorkAdd, WorkControls } from './DailyForms';
+import { Popup } from '@/components/Popup';
+import { ConfirmAll, DailyRunCreate, EngagementAddForm, EngagementEditForm, PayeeActions, PayeeForm, PayeeSearch, WorkAdd, WorkControls, WorkPayeeFilter, type ItemOpt } from './DailyForms';
 
-const field = 'min-h-9 rounded-button border border-border bg-bg px-3 text-sm';
 const VIEWS = ['payees', 'work', 'runs'] as const;
 const WTONE = { DRAFT: 'warn', CONFIRMED: 'ok', VOID: 'neutral' } as const;
 const RTONE = { DRAFT: 'neutral', CALCULATED: 'info', REVIEWED: 'warn', FINALIZED: 'ok' } as const;
+const NOT_ITEMS = new Set(['PENSION', 'HEALTH', 'LTC', 'EMPLOYMENT', 'INCOME_TAX', 'LOCAL_TAX', 'NP', 'HI', 'EI']); // 4대보험 · 세금은 자동 항목이다
 
-export default async function DailyPage({ searchParams }: { searchParams: Promise<{ v?: string; m?: string; live?: string }> }) {
+export default async function DailyPage({ searchParams }: { searchParams: Promise<{ v?: string; m?: string; p?: string; live?: string }> }) {
   const [t, f, me, sp] = await Promise.all([getTranslations('admin.daily'), getFormatter(), getMe(), searchParams]);
   if (!me || me.role !== 'admin' || !me.canViewPayroll) return <PageShell><p className="rounded-card bg-warn-tint p-4 text-sm text-warn">{t('forbidden')}</p></PageShell>;
   const practice = OFFICE.practiceMode && sp.live !== '1';
@@ -27,17 +32,115 @@ export default async function DailyPage({ searchParams }: { searchParams: Promis
   const today = toKstDate(new Date());
   const month = /^\d{4}-(0[1-9]|1[0-2])$/.test(sp.m ?? '') ? sp.m! : today.slice(0, 7);
   const live = sp.live === '1';
-  const loaded = await loadPayees(testViewer);
+  const [loaded, allItems] = await Promise.all([loadPayees(testViewer), loadItems()]);
   const { engagements } = loaded;
-  // 확인이 필요한 대상자(세금 · 보험 조건이 정해지지 않은 사람)를 맨 위에, 사용 중지한 사람은 맨 아래로 (2026-10-26 의뢰인: 이슈 먼저)
+  const items: ItemOpt[] = allItems.filter((i) => i.inUse && !AUTO_PAYMENT_CODES.has(canonicalItemCode(i.code)) && !NOT_ITEMS.has(canonicalItemCode(i.code))).map((i) => ({ code: i.code, name: i.koName, kind: i.kind, nontax: i.taxTreatment === 'EXEMPT', amount: i.defaultAmount }));
+  // 확인이 필요한 대상자(세금 · 보험이 「모름」)를 맨 위에 (2026-10-26 의뢰인: 이슈 먼저)
   const unknownTerms = (id: string) => engagements.some((e) => e.payeeId === id && (e.taxState === 'UNKNOWN' || e.ei === 'UNKNOWN' || e.np === 'UNKNOWN' || e.hi === 'UNKNOWN'));
-  const payees = [...loaded.payees].sort((a, b) => Number(!a.active) - Number(!b.active) || Number(unknownTerms(b.id)) - Number(unknownTerms(a.id)));
-  const [works, runs] = await Promise.all([view === 'work' ? loadWork({ month, practice, payeeIds: payees.map((p) => p.id) }) : Promise.resolve([]), view === 'runs' ? loadDailyRuns({ practice, testViewer }) : Promise.resolve([])]);
+  const payees = [...loaded.payees].sort((a, b) => Number(unknownTerms(b.id)) - Number(unknownTerms(a.id)) || a.name.localeCompare(b.name));
+  const active = payees.filter((p) => p.active), off = payees.filter((p) => !p.active);
+  const pick = payees.find((p) => p.id === sp.p) ?? null;
+  const thisMonth = today.slice(0, 7);
+  const [works, runs, monthWorks] = await Promise.all([view === 'work' ? loadWork({ month, practice, payeeIds: (pick ? [pick] : payees).map((p) => p.id) }) : Promise.resolve([]), view === 'runs' ? loadDailyRuns({ practice, testViewer }) : Promise.resolve([]), view === 'payees' ? loadWork({ month: thisMonth, practice, payeeIds: payees.map((p) => p.id) }) : Promise.resolve([])]);
+  // 카드의 이번 달 요약 — 일한 날 · 지급(무효 줄 빼고, 공제 · 세금 전)
+  const monthSum = new Map<string, { days: number; pay: number }>();
+  const monthDates = new Map<string, Set<string>>();
+  for (const w of monthWorks) {
+    if (w.status === 'VOID') continue;
+    const dates = monthDates.get(w.payeeId) ?? new Set<string>();
+    dates.add(w.workDate);
+    monthDates.set(w.payeeId, dates);
+    const pay = (monthSum.get(w.payeeId)?.pay ?? 0) + Math.round(w.quantity * w.dayRate) + w.items.filter((i) => i.kind !== 'DEDUCTION').reduce((x, i) => x + i.amount, 0);
+    monthSum.set(w.payeeId, { days: dates.size, pay });
+  }
   const tab = (on: boolean) => `flex min-h-11 items-center border-b-2 px-4 text-sm font-bold ${on ? 'border-text text-text lg:border-primary lg:text-primary' : 'border-transparent text-muted hover:text-text'}`;
   const href = (v: string) => `/admin/payroll/daily?v=${v}${v === 'work' ? `&m=${month}` : ''}${live ? '&live=1' : ''}`;
   const won = (v: number) => t('won', { n: f.number(v) });
   const nameOf = new Map(payees.map((p) => [p.id, p]));
-  const day = month === today.slice(0, 7) ? today : `${month}-01`;
+  const engOf = new Map(engagements.map((e) => [e.id, e]));
+
+  const termsChips = (e: Engagement) => (
+    <span className="flex flex-wrap items-center gap-1 text-xs text-muted">
+      <span>{t(`tax.${e.taxState}`)}</span>
+      {(['ei', 'np', 'hi'] as const).map((k) => <span key={k}>· {t(`eng.${k}`)} {t(`ins.${e[k]}`)}</span>)}
+      {(e.taxState === 'UNKNOWN' || e.ei === 'UNKNOWN' || e.np === 'UNKNOWN' || e.hi === 'UNKNOWN') && <Chip tone="warn">{t('termsUnknown')}</Chip>}
+    </span>
+  );
+  // 대상자 한 사람 — 한 줄에 한 명 (2026-10-29 검수: 두 칸으로 나누니 PC는 좁고, 카드 안에서 양식이 길게 펼쳐졌다).
+  // PC: 왼쪽 사람 · 이번 달 요약 / 가운데 고용 조건 / 오른쪽 단추. 폰: 위에서 아래로, 단추는 두 칸씩. 고치기는 모두 창(Popup)으로 연다
+  const workOpts = active.map((p) => ({ id: p.id, name: p.name, internalNo: p.internalNo, projects: engagements.filter((e) => e.payeeId === p.id).map((e) => ({ project: e.project, basis: e.payBasis, rate: e.dayRate })).filter((x, i, a) => a.findIndex((y) => y.project === x.project) === i) }));
+  const btn = 'inline-flex h-9 items-center justify-center rounded-button border border-border bg-bg px-3 text-sm font-bold text-text hover:bg-surface';
+  const card = (p: Payee) => {
+    const mine = engagements.filter((e) => e.payeeId === p.id);
+    const sum = monthSum.get(p.id);
+    return (
+      <li key={p.id} id={`payee-${p.id}`} data-payee-name={`${p.name} ${p.internalNo}`} className="rounded-card border border-border bg-bg p-4 lg:p-5">
+        <div className="flex flex-col gap-3 lg:grid lg:grid-cols-[minmax(0,16rem)_minmax(0,1fr)_auto] lg:items-start lg:gap-6">
+          <div className="flex min-w-0 flex-col gap-1.5">
+            <div className="flex items-start gap-2">
+              <span className="flex min-w-0 flex-1 flex-wrap items-center gap-x-2 gap-y-1">
+                <b className="text-base">{p.name}</b>
+                <span className="num text-xs text-muted">{p.internalNo}</span>
+              </span>
+              <PayeeActions id={p.id} active={p.active} name={p.name} deletable={!p.hasRecords} />
+            </div>
+            <span className="flex flex-wrap gap-1">
+              <Chip tone={p.workerKind === 'FOREIGN' ? 'info' : 'neutral'}>{t(`kind.${p.workerKind}`)}</Chip>
+              {p.workerKind === 'FOREIGN' && <Chip>{[p.nationality ? t(`nation.${p.nationality}`) : null, p.visaType].filter(Boolean).join(' · ')}</Chip>}
+              {!p.active && <Chip>{t('payeeInactive')}</Chip>}
+            </span>
+            {(p.jobTitle || p.phone) && <p className="text-xs text-muted">{[p.jobTitle, p.phone].filter(Boolean).join(' · ')}</p>}
+            {p.workerKind === 'FOREIGN' && p.stayUntil && <p className="num text-xs text-muted">{t('f.stayUntilShort', { d: p.stayUntil })}</p>}
+            <p className="num text-sm">{sum ? t('cardMonth', { m: Number(thisMonth.slice(5)), days: sum.days, pay: won(sum.pay) }) : t('cardMonthNone', { m: Number(thisMonth.slice(5)) })}</p>
+          </div>
+          <div className="flex min-w-0 flex-col gap-2">
+            {mine.length === 0 ? (
+              <p className="rounded-button bg-warn-tint px-3 py-2 text-sm text-warn">{t('engEmpty')}</p>
+            ) : (
+              mine.map((e) => (
+                <div key={e.id} className="flex flex-col gap-1.5 rounded-button bg-surface px-3 py-2.5 text-sm sm:flex-row sm:items-center sm:gap-3">
+                  <span className="flex min-w-0 flex-1 flex-col gap-0.5">
+                    <span className="num">{e.project || t('noProject')} · {t(`basis.${e.payBasis}`)} {e.dayRate === null ? t('noRate') : won(e.dayRate)}</span>
+                    <span className="num text-xs text-muted">{e.startsOn} ~ {e.endsOn ?? t('open')}</span>
+                    {termsChips(e)}
+                  </span>
+                  <Popup id={`eng-${e.id}`} label={t('engEdit')} title={t('engEditOf', { name: p.name })} triggerClass={`${btn} h-8 self-start sm:self-center`}>
+                    <EngagementEditForm id={e.id} sheet={`eng-${e.id}`} values={{ endsOn: e.endsOn, dayRate: e.dayRate, taxState: e.taxState, ei: e.ei, np: e.np, hi: e.hi, basisNote: e.basisNote }} />
+                  </Popup>
+                </div>
+              ))
+            )}
+            {p.monthlyItems.length > 0 && <p className="text-xs text-muted">{t('m.short')}: {p.monthlyItems.map((m) => `${m.label} ${won(m.amount)}`).join(' · ')}</p>}
+          </div>
+          <div className="grid grid-cols-2 gap-2 lg:flex lg:w-36 lg:flex-col">
+            {p.active && mine.length > 0 && (
+              <Popup id={`work-add-${p.id}`} label={t('workFor')} title={t('workForOf', { name: p.name })} wide triggerClass="inline-flex h-9 items-center justify-center rounded-button bg-primary px-3 text-sm font-bold text-on-primary">
+                <WorkAdd month={thisMonth} live={live} payees={workOpts} preset={p.id} sheet={`work-add-${p.id}`} />
+              </Popup>
+            )}
+            <Popup id={`payee-${p.id}-edit`} label={t('payeeEdit')} title={t('payeeEditOf', { name: p.name })} wide triggerClass={btn}>
+              <PayeeForm items={items} sheet={`payee-${p.id}-edit`} value={{ id: p.id, name: p.name, workerKind: p.workerKind, nationality: p.nationality, visaType: p.visaType, stayUntil: p.stayUntil, jobTitle: p.jobTitle, phone: p.phone, note: p.note, monthlyItems: p.monthlyItems }} />
+            </Popup>
+            <Popup id={`eng-add-${p.id}`} label={t('engAdd')} title={t('engAddOf', { name: p.name })} triggerClass={btn}>
+              <EngagementAddForm payeeId={p.id} sheet={`eng-add-${p.id}`} />
+            </Popup>
+            <Link href={`/admin/payroll/daily?v=work&m=${thisMonth}&p=${p.id}${live ? '&live=1' : ''}`} className={`${btn} text-primary`}>{t('toWork')}</Link>
+          </div>
+        </div>
+      </li>
+    );
+  };
+
+  // 근무: 대상자마다 묶고 합계 (일한 날 · 공수/시간 · 지급)
+  const byPayee = new Map<string, typeof works>();
+  for (const w of works) byPayee.set(w.payeeId, [...(byPayee.get(w.payeeId) ?? []), w]);
+  const drafts = works.filter((w) => w.status === 'DRAFT').map((w) => ({ id: w.id, version: w.version }));
+  const shiftMonth = (d: number) => {
+    const [y, m] = month.split('-').map(Number);
+    const x = new Date(Date.UTC(y, m - 1 + d, 1));
+    return x.toISOString().slice(0, 7);
+  };
+  const workHref = (m: string, p?: string | null) => `/admin/payroll/daily?v=work&m=${m}${p ? `&p=${p}` : ''}${live ? '&live=1' : ''}`;
 
   return (
     <PageShell wide>
@@ -45,7 +148,8 @@ export default async function DailyPage({ searchParams }: { searchParams: Promis
         <h1 className="flex flex-wrap items-center gap-x-1 text-2xl font-bold">
           {t('title')}
           {practice && view !== 'payees' && <Chip>{t('practice')}</Chip>}
-        <HelpTip>{t('intro')}</HelpTip></h1>
+          <HelpTip>{t('intro')}</HelpTip>
+        </h1>
       </div>
       <nav className="flex border-b border-border">
         {VIEWS.map((v) => (
@@ -56,120 +160,87 @@ export default async function DailyPage({ searchParams }: { searchParams: Promis
 
       {view === 'payees' && (
         <>
-          {/* 등록 양식은 단추를 눌러 여는 창으로 — 화면은 목록이 먼저 (2026-10-14 의뢰인: 무엇을 하라는 건지 한눈에) */}
-          <div className="flex items-center gap-2">
-            <p className="text-sm text-muted">{t('payeeCount', { n: payees.filter((x) => x.active).length })}</p>
+          <div className="flex flex-wrap items-center gap-2">
+            <p className="w-full text-sm text-muted sm:w-auto">{t('payeeCount', { n: active.length })}{active.some((p) => p.workerKind === 'FOREIGN') && ` · ${t('foreignCount', { n: active.filter((p) => p.workerKind === 'FOREIGN').length })}`}</p>
+            {payees.length > 5 && <PayeeSearch />}
             <SheetOpener id="payee" label={t('payeeTitle')} className="ml-auto inline-flex" />
           </div>
-          <AddSheet id="payee" title={t('payeeTitle')} modal>
-            <div className="flex flex-col gap-3">
-              <PayeeAdd />
-              <p className="text-xs text-faint">{t('payeeNote')}</p>
-            </div>
+          <AddSheet id="payee" title={t('payeeTitle')} modal wide>
+            <PayeeForm items={items} sheet="payee" />
           </AddSheet>
-          <div className="overflow-x-auto table-ruled" data-payees>
-            <table className="w-full text-sm">
-              <thead>
-                <tr className="border-b border-border bg-surface text-left">
-                  {[t('colPayee'), t('colEngagement'), t('colTerms'), ''].map((h, i) => (
-                    <th key={i} scope="col" className="px-3 py-2.5 text-xs font-semibold whitespace-nowrap text-muted">{h}</th>
-                  ))}
-                </tr>
-              </thead>
-              <tbody>
-                {payees.length === 0 && (
-                  <tr>
-                    <td colSpan={4} className="px-3 py-8 text-center text-faint">{t('payeeEmpty')}</td>
-                  </tr>
-                )}
-                {payees.map((p) => {
-                  const mine = engagements.filter((e) => e.payeeId === p.id);
-                  return (
-                    <tr key={p.id} className={`border-b border-border align-top last:border-b-0 ${p.active ? '' : 'opacity-60'}`}>
-                      <td className="px-3 py-3 whitespace-nowrap">
-                        <b>{p.name}</b> <span className="num text-xs text-muted">{p.internalNo}</span> {p.jobTitle && <span className="text-xs text-muted">· {p.jobTitle}</span>} {!p.active && <Chip>{t('payeeInactive')}</Chip>}
-                        {(p.phone || p.note) && <span className="block text-xs text-muted">{[p.phone, p.note].filter(Boolean).join(' · ')}</span>}
-                      </td>
-                      <td className="px-3 py-3">
-                        {mine.length === 0 ? (
-                          <span className="text-faint">{t('engEmpty')}</span>
-                        ) : (
-                          <ul className="flex flex-col gap-1.5">
-                            {mine.map((e) => (
-                              <li key={e.id} className="num flex flex-wrap items-center gap-x-2">
-                                <span>{e.startsOn} ~ {e.endsOn ?? t('open')} · {e.project || t('noProject')} · {t(`basis.${e.payBasis}`)} {e.dayRate === null ? t('noRate') : won(e.dayRate)}</span>
-                                <EngagementOff id={e.id} label={t('engOffOf', { name: p.name })} />
-                              </li>
-                            ))}
-                          </ul>
-                        )}
-                      </td>
-                      <td className="px-3 py-3">
-                        {mine.map((e) => (
-                          <span key={e.id} className="flex flex-wrap items-center gap-1 text-xs text-muted">
-                            {t('termsLine', { tax: t(`tax.${e.taxState}`), ei: t(`tri.${e.ei}`), np: t(`tri.${e.np}`), hi: t(`tri.${e.hi}`) })}
-                            {e.basisNote && ` · ${e.basisNote}`}
-                            {(e.taxState === 'UNKNOWN' || e.ei === 'UNKNOWN' || e.np === 'UNKNOWN' || e.hi === 'UNKNOWN') && <Chip tone="warn">{t('termsUnknown')}</Chip>}
-                          </span>
-                        ))}
-                      </td>
-                      <td className="px-3 py-3 text-right whitespace-nowrap">
-                        <span className="inline-flex gap-2">
-                          <EngagementAdd payeeId={p.id} today={today} name={p.name} />
-                          <PayeeToggle id={p.id} active={p.active} name={p.name} />
-                        </span>
-                      </td>
-                    </tr>
-                  );
-                })}
-              </tbody>
-            </table>
-          </div>
+          {active.length === 0 && <p className="rounded-card border border-border p-6 text-center text-sm text-faint">{t('payeeEmpty')}</p>}
+          <ul className="flex flex-col gap-3" data-payees>{active.map(card)}</ul>
+          {off.length > 0 && (
+            <details className="group rounded-card border border-border">
+              <summary className="flex min-h-11 cursor-pointer list-none items-center gap-2 px-4 text-sm font-bold text-muted [&::-webkit-details-marker]:hidden">
+                {t('offTitle', { n: off.length })}
+                <ChevronDown aria-hidden size={16} className="ml-auto transition-transform duration-300 group-open:rotate-180" />
+              </summary>
+              <div className="flex flex-col gap-2 border-t border-border p-3">
+                <p className="text-xs text-faint">{t('offHint')}</p>
+                <ul className="flex flex-col gap-3 opacity-80">{off.map(card)}</ul>
+              </div>
+            </details>
+          )}
         </>
       )}
 
       {view === 'work' && (
         <>
-          <div className="flex flex-wrap items-end gap-3">
-            <form action="/admin/payroll/daily" className="flex flex-wrap items-end gap-3 text-sm">
-              <input type="hidden" name="v" value="work" />
-              {live && <input type="hidden" name="live" value="1" />}
-              <label className="flex flex-col gap-1">
-                <span className="font-bold">{t('fMonth')}</span>
-                <input type="month" name="m" defaultValue={month} className={field} />
-              </label>
-              <button type="submit" className="inline-flex min-h-9 items-center rounded-button border border-border bg-bg px-4 text-sm font-bold text-primary">{t('show')}</button>
-            </form>
-            <SheetOpener id="daily-work" label={t('workTitle')} className="ml-auto inline-flex" />
+          <div className="flex flex-wrap items-center gap-2">
+            <Link href={workHref(shiftMonth(-1), pick?.id)} className="inline-flex h-9 items-center rounded-button border border-border bg-bg px-3 text-sm font-bold" aria-label={t('prevMonth')}>‹</Link>
+            <span className="num min-w-24 text-center text-base font-bold">{month}</span>
+            <Link href={workHref(shiftMonth(1), pick?.id)} className="inline-flex h-9 items-center rounded-button border border-border bg-bg px-3 text-sm font-bold" aria-label={t('nextMonth')}>›</Link>
+            <WorkPayeeFilter payees={payees.map((p) => ({ id: p.id, name: p.name }))} value={pick?.id ?? null} month={month} live={live} />
+            <span className="flex w-full flex-wrap items-center justify-end gap-2 sm:ml-auto sm:w-auto">
+              <ConfirmAll rows={drafts} />
+              <SheetOpener id="daily-work" label={t('workTitle')} className="inline-flex" />
+            </span>
           </div>
           <AddSheet id="daily-work" title={t('workTitle')} modal wide>
-            <WorkAdd payees={payees.filter((p) => p.active).map((p) => ({ id: p.id, name: p.name, internalNo: p.internalNo, projects: [...new Set(engagements.filter((e) => e.payeeId === p.id).map((e) => e.project))], bases: Object.fromEntries(engagements.filter((e) => e.payeeId === p.id).map((e) => [e.project, e.payBasis])) }))} day={day} live={live} />
+            <WorkAdd month={month} live={live} payees={workOpts} preset={pick?.id} sheet="daily-work" />
           </AddSheet>
-          <div className="overflow-x-auto table-ruled">
-            <table className="w-full text-sm" data-work>
-              <thead>
-                <tr className="border-b border-border bg-surface text-left">
-                  {['wDate', 'wPayee', 'wProject', 'wQty', 'wRate', 'wItems', 'wStatus', 'wManage'].map((k) => (
-                    <th key={k} scope="col" className="px-3 py-2.5 text-xs font-semibold whitespace-nowrap text-muted">{t(k)}</th>
-                  ))}
-                </tr>
-              </thead>
-              <tbody>
-                {works.map((w) => (
-                  <tr key={w.id} className={`border-b border-border align-top ${w.status === 'VOID' ? 'text-faint line-through' : ''}`}>
-                    <td className="num px-3 py-3 whitespace-nowrap">{w.workDate}{w.segmentKey !== 'A' && ` (${w.segmentKey})`}</td>
-                    <td className="px-3 py-3 whitespace-nowrap"><b>{nameOf.get(w.payeeId)?.name}</b> <span className="num text-xs text-muted">{nameOf.get(w.payeeId)?.internalNo}</span></td>
-                    <td className="px-3 py-3">{w.project || t('noProject')}</td>
-                    <td className="num px-3 py-3">{f.number(w.quantity)}</td>
-                    <td className="num px-3 py-3 whitespace-nowrap">{won(w.dayRate)}</td>
-                    <td className="num px-3 py-3">{w.items.map((i) => `${i.label}(${t(`item.${i.kind}`)}) ${f.number(i.amount)}`).join(' · ')}{w.basisNote && <span className="block text-xs text-muted">{w.basisNote}</span>}</td>
-                    <td className="px-3 py-3"><Chip tone={WTONE[w.status]}>{t(`wState.${w.status}`)}</Chip></td>
-                    <td className="px-3 py-3"><WorkControls id={w.id} version={w.version} status={w.status} label={t('workOf', { name: nameOf.get(w.payeeId)?.name ?? '', date: w.workDate })} /></td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-            {works.length === 0 && <p className="p-4 text-sm text-faint">{t('workEmpty')}</p>}
+          {works.length === 0 && <p className="rounded-card border border-border p-6 text-center text-sm text-faint">{t('workEmpty')}</p>}
+          <div className="flex flex-col gap-3" data-work>
+            {[...byPayee].map(([pid, rows]) => {
+              const p = nameOf.get(pid);
+              const liveRows = rows.filter((w) => w.status !== 'VOID');
+              const days = new Set(liveRows.map((w) => w.workDate)).size;
+              const qtyOf = (b: string) => liveRows.filter((w) => (engOf.get(w.engagementId)?.payBasis ?? 'DAY') === b).reduce((s, w) => s + w.quantity, 0);
+              const pay = liveRows.reduce((s, w) => s + Math.round(w.quantity * w.dayRate) + w.items.filter((i) => i.kind !== 'DEDUCTION').reduce((x, i) => x + i.amount, 0), 0);
+              return (
+                <section key={pid} className="rounded-card border border-border bg-bg">
+                  <header className="flex flex-wrap items-center gap-x-3 gap-y-1 border-b border-border px-4 py-3">
+                    <b>{p?.name}</b>
+                    <span className="num text-xs text-muted">{p?.internalNo}</span>
+                    {p?.workerKind === 'FOREIGN' && <Chip tone="info">{t('kind.FOREIGN')}</Chip>}
+                    {/* 0인 값(공수 0 · 시간 0)은 적지 않는다 (2026-10-29 검수) */}
+                    <span className="num ml-auto text-sm text-muted">{[t('u.days', { n: days }), qtyOf('DAY') ? t('u.man', { n: f.number(qtyOf('DAY')) }) : null, qtyOf('HOUR') ? t('u.hours', { n: f.number(qtyOf('HOUR')) }) : null, t('u.pay', { pay: won(pay) })].filter(Boolean).join(' · ')}</span>
+                  </header>
+                  <ul className="flex flex-col divide-y divide-border">
+                    {rows.map((w) => {
+                      const basis = engOf.get(w.engagementId)?.payBasis ?? 'DAY';
+                      return (
+                        <li key={w.id} className={`flex items-start gap-3 px-4 py-3 text-sm ${w.status === 'VOID' ? 'text-faint line-through' : ''}`}>
+                          {/* 폰: 첫 줄 날짜 · 금액 · 상태, 둘째 줄 현장 · 수량 × 단가 · 항목. PC: 한 줄 */}
+                          <span className="flex min-w-0 flex-1 flex-col gap-1 lg:flex-row lg:flex-wrap lg:items-center lg:gap-x-4">
+                            <span className="flex items-center gap-2 lg:contents">
+                              <b className="num w-14 shrink-0">{w.workDate.slice(5)}{w.segmentKey !== 'A' && ` (${w.segmentKey})`}</b>
+                              <b className="num lg:order-3">{won(Math.round(w.quantity * w.dayRate))}</b>
+                              <span className="ml-auto lg:order-5 lg:ml-0"><Chip tone={WTONE[w.status]}>{t(`wState.${w.status}`)}</Chip></span>
+                            </span>
+                            <span className="num text-xs text-muted lg:order-2 lg:text-sm lg:text-text">{w.project || t('noProject')} · {f.number(w.quantity)}{t(`unit.${basis}`)} × {won(w.dayRate)}</span>
+                            {w.items.length > 0 && <span className="num text-xs text-muted lg:order-4">{w.items.map((i) => `${i.label}(${t(`item.${i.kind}`)}) ${f.number(i.amount)}`).join(' · ')}</span>}
+                            {w.basisNote && <span className="text-xs text-muted lg:order-6">{w.basisNote}</span>}
+                          </span>
+                          <WorkControls id={w.id} version={w.version} status={w.status} label={t('workOf', { name: p?.name ?? '', date: w.workDate })} values={{ quantity: w.quantity, dayRate: w.dayRate, items: w.items, basisNote: w.basisNote }} />
+                        </li>
+                      );
+                    })}
+                  </ul>
+                </section>
+              );
+            })}
           </div>
         </>
       )}
@@ -185,32 +256,26 @@ export default async function DailyPage({ searchParams }: { searchParams: Promis
               <p className="text-xs text-faint">{t('runNote')}</p>
             </div>
           </AddSheet>
-          <div className="overflow-x-auto table-ruled">
-            <table className="w-full text-sm">
-              <thead>
-                <tr className="border-b border-border bg-surface text-left">
-                  {['rMonth', 'rPayDate', 'rStatus', 'rPeople', 'rGross', 'rNet'].map((k) => (
-                    <th key={k} scope="col" className="px-3 py-2.5 text-xs font-semibold whitespace-nowrap text-muted">{t(k)}</th>
-                  ))}
-                </tr>
-              </thead>
-              <tbody>
-                {runs.map((r) => (
-                  <tr key={r.id} className="border-b border-border last:border-b-0">
-                    <td className="num px-3 py-3 whitespace-nowrap">
-                      <Link href={`/admin/payroll/daily/runs/${r.id}`} className="font-bold text-primary hover:underline">{t('runName', { month: r.periodFrom.slice(0, 7), n: r.sequence })}</Link>
-                    </td>
-                    <td className="num px-3 py-3 whitespace-nowrap">{r.payDate}</td>
-                    <td className="px-3 py-3"><Chip tone={RTONE[r.status]}>{t(`rState.${r.status}`)}</Chip></td>
-                    <td className="num px-3 py-3">{r.totals.members ?? ''}</td>
-                    <td className="num px-3 py-3 text-right">{r.totals.pay === undefined ? '' : won(Number(r.totals.pay))}</td>
-                    <td className="num px-3 py-3 text-right">{r.totals.net === undefined ? '' : won(Number(r.totals.net))}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-            {runs.length === 0 && <p className="p-4 text-sm text-faint">{t('runEmpty')}</p>}
-          </div>
+          {runs.length === 0 && <p className="rounded-card border border-border p-6 text-center text-sm text-faint">{t('runEmpty')}</p>}
+          <ul className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
+            {runs.map((r) => (
+              <li key={r.id}>
+                <Link href={`/admin/payroll/daily/runs/${r.id}`} className="flex flex-col gap-2 rounded-card border border-border bg-bg p-4 hover:bg-surface">
+                  <span className="flex flex-wrap items-center gap-2">
+                    <b className="num">{t('runName', { month: r.periodFrom.slice(0, 7), n: r.sequence })}</b>
+                    <Chip tone={RTONE[r.status]}>{t(`rState.${r.status}`)}</Chip>
+                    {r.revision > 1 && <Chip tone="info">{t('revision', { n: r.revision })}</Chip>}
+                  </span>
+                  <span className="num text-xs text-muted">{t('runMeta', { month: r.periodFrom.slice(0, 7), payDate: r.payDate })}</span>
+                  <span className="num grid grid-cols-3 gap-2 text-sm">
+                    <span className="flex flex-col"><span className="text-xs text-muted">{t('rPeople')}</span>{r.totals.members ?? '—'}</span>
+                    <span className="flex flex-col"><span className="text-xs text-muted">{t('rGross')}</span>{r.totals.pay === undefined ? '—' : won(Number(r.totals.pay))}</span>
+                    <span className="flex flex-col"><span className="text-xs text-muted">{t('rNet')}</span><b>{r.totals.net === undefined ? '—' : won(Number(r.totals.net))}</b></span>
+                  </span>
+                </Link>
+              </li>
+            ))}
+          </ul>
         </>
       )}
     </PageShell>

@@ -21,8 +21,12 @@ export default async function MyRecordsPage({ searchParams }: { searchParams: Pr
   if (!me) redirect('/login');
   const [t, tm, tc, ts, sp] = await Promise.all([getTranslations('myAtt'), getTranslations('common'), getTranslations('corrections'), getTranslations('schedule'), searchParams]);
   // 오늘 근무노트 — 홈에서 이리로 옮겼다 (2026-10-18 의뢰인: 매일 쓰는 칸이 아니라 첫 화면에 둘 필요가 없다). 비어 있으면 한 줄로 접혀 있다
-  const policy = (await companyProfile()).policy.trim(); // 회사 근태 방침 — 맨 위 접힌 한 줄 (2026-10-18 의뢰인, 통합설정 › 회사 기본설정)
-  const { data: notes } = await createAdminClient().from('work_notes').select('body').eq('employee_id', me.id).eq('work_date', toKstDate(new Date())).eq('is_test', OFFICE.practiceMode).order('created_at', { ascending: false }).limit(1);
+  // 회사 근태 방침(맨 위 접힌 한 줄, 2026-10-18) · 오늘 근무노트는 함께 읽는다 (2026-10-28 속도: 차례로 기다렸다)
+  const [profile, { data: notes }] = await Promise.all([
+    companyProfile(),
+    createAdminClient().from('work_notes').select('body').eq('employee_id', me.id).eq('work_date', toKstDate(new Date())).eq('is_test', OFFICE.practiceMode).order('created_at', { ascending: false }).limit(1),
+  ]);
+  const policy = profile.policy.trim();
   return (
     <PageShell wide>
       <MineBar menu={tm('menu')} title={t('title')} side={me.role === 'admin' ? { href: '/admin/records/list', label: t('allStaff') } : undefined} />

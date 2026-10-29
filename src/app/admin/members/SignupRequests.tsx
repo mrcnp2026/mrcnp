@@ -34,7 +34,7 @@ export function SignupRequests({ items, groups, suggestNo, today }: { items: Sig
   }
 
   return (
-    <section id="signups" className="scroll-mt-20 rounded-card border border-primary bg-bg lg:shadow-card">
+    <section id="signups" className="scroll-mt-20 rounded-card border border-primary bg-bg shadow-card">
       <h2 className="flex items-center gap-2 border-b border-border px-4 py-3 font-bold">
         <MailPlus aria-hidden size={18} className="text-primary" />
         {t('title', { n: items.length })}

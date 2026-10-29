@@ -1,5 +1,7 @@
 {
   "common": {
+    "foldMore": "More",
+    "foldLess": "Less",
     "appName": "Attendance",
     "language": "Language",
     "signOut": "Sign out",
@@ -754,7 +756,15 @@
       "cardLeaveNone": "No employee has a leave grant yet.",
       "cardLeaveAll": "See leave accrual",
       "totalStaff": "Employees",
-      "lateNone": "No late arrivals in the last 14 days."
+      "lateNone": "No late arrivals in the last 14 days.",
+      "chartAvg": "Avg",
+      "chartVsAvg": "%d vs. average",
+      "chartPeople": "",
+      "liveTitle": "Live punches",
+      "liveNone": "No punches yet today",
+      "liveIn": "Clock in",
+      "liveOut": "Clock out",
+      "liveLate": "Late clock-in"
     },
     "inbox": {
       "title": "Requests",
@@ -1208,7 +1218,9 @@
         "sumPeople": "People on leave",
         "sumMonth": "This month",
         "sumWaiting": "Waiting",
-        "waitingLine": "{n} leave requests waiting — open the inbox"
+        "waitingLine": "{n} leave requests waiting — open the inbox",
+        "chartTitle": "Leave used by month, {y} (days)",
+        "chartTip": "Month {m} · {days} days ({count})"
       },
       "legendTitle": "What the columns mean",
       "legend": {
@@ -1339,6 +1351,7 @@
       "invalid_group": "That department was not found. Please refresh."
     },
     "paySettings": {
+      "part": { "payDay": "Pay day", "insurance": "Social insurance deduction basis", "deduct": "Deductions · premium pay", "tax": "Income tax", "apply": "Apply · save" },
       "title": "Payroll settings",
       "menu": "Payroll settings menu",
       "forbidden": "Only top admins can see this.",
@@ -1403,7 +1416,7 @@
         "durunuriHint": "Turning this on does not reduce anyone's deduction. Eligibility and period are entered per employee.",
         "smeTaxCut": "SME employee income tax reduction",
         "smeTaxCutHint": "Turning this on does not apply a reduction. Eligibility, period and rate are entered per employee.",
-        "smeTaxCutExplain": "Employees hired by a small or medium company get an income tax reduction if they fall into one of these groups (Restriction of Special Taxation Act Art. 30, capped at <em>KRW 2 million a year</em>).\n1. Youth — <em>aged 15–34</em> at contract (up to 6 years of military service not counted): <em>90% for 5 years</em>\n2. <em>Aged 60 or over</em>, persons with disabilities, women returning after a career break: <em>70% for 3 years</em>\nThe employee must file an application with the company, and the company reports the list to the tax office by the 10th of the following month.\nTurning this on does not reduce tax by itself — enter eligibility, period and rate for each employee.",
+        "smeTaxCutExplain": "Employees hired by a small or medium company get an income tax reduction if they fall into one of these groups (Restriction of Special Taxation Act Art. 30, capped at <em>KRW 2 million a year</em>).\n1. Youth — <em>aged 15–34</em> at contract (up to 6 years of military service not counted): <em>90% for 5 years</em>\n2. <em>Aged 60 or over</em>, persons with disabilities, women returning after a career break: <em>70% for 3 years</em>\nThe employee must file an application with the company, and the company reports the list to the tax office by the 10th of the following month.\n<warn>Turning this on does not reduce tax by itself</warn> — enter eligibility, period and rate for each employee.",
         "smeTaxCutLink": "More on the National Tax Service site",
         "commonTitle": "Company-wide fixed allowances and deductions",
         "commonHint": "Items added here are applied to every active employee (new employees too). Select only the employees to exclude. For someone with a different amount, add the same item as that employee's fixed allowance; that value takes priority.",
@@ -1478,7 +1491,7 @@
           "ROUNDED": "Rounded approved time"
         },
         "insuranceBasisExplain": "<em>Billed amount</em>: deducts the amount the agency bills each month. Needs the billing data.\n<em>Monthly taxable total</em>: multiplies the month's taxable pay by the rate.\n<em>Reported pay</em>: multiplies the pay reported to the agency by the rate, the same amount every month.\nWhichever you choose, the agency settles it every year with a refund or extra charge. It never silently switches to rate calculation when billing data is missing.",
-        "withholdingExplain": "Employees can choose <em>80%, 100% or 120%</em> of the simplified tax table amount (by filing a withholding adjustment request with the company).\nOnce changed, it stays until changed again, and <em>it cannot be changed again in the same year</em>.\nWithholding less means paying more at year-end settlement.\nThis value is the default for new employees. A ratio an employee already chose is not overwritten."
+        "withholdingExplain": "Employees can choose <em>80%, 100% or 120%</em> of the simplified tax table amount (by filing a withholding adjustment request with the company).\nOnce changed, it stays until changed again, and <warn>it cannot be changed again in the same year</warn>.\nWithholding less means paying more at year-end settlement.\nThis value is the default for new employees. A ratio an employee already chose is not overwritten."
       },
       "s08": {
         "intro": "Choose whether resident registration numbers are masked on screen, in print and in downloads. While on, a top admin can reveal one at a time for a moment after entering a reason.",
@@ -3471,7 +3484,7 @@
       "closeAll": "Close all {n} ready",
       "closeSelected": "Close {n} selected",
       "clearPick": "Clear selection",
-      "nextCheck": "Next: Pay check",
+      "nextCheck": "Pay check",
       "allClosed": "Nobody needs attention. Everyone is closed."
     },
     "leaveLedger": {
@@ -4094,6 +4107,8 @@
         "ratio": "Tax ratio",
         "family": "Dependents",
         "familyValue": "{n} ({c} children)",
+        "familyTemp": "{v} · provisional",
+        "sumFamilyTemp": "Dependants provisional: {n}",
         "smeCol": "SME tax cut",
         "durunuriCol": "Durunuri",
         "flat19Col": "Foreign 19%",
@@ -4125,6 +4140,10 @@
         "personal": "Replaced by personal item"
       },
       "taxDefaultTag": "company default",
+      "familyTempTag": "provisional — not yet declared",
+      "familyReportedOn": "declared {d}",
+      "fFamilyReported": "Dependants declared on",
+      "familyReportedHint": "Leave empty until the employee declares dependants — the count is marked provisional until then.",
       "taxDefaultOn": "This employee has no tax settings, so the company default is used.",
       "taxDefaultNote": "Withholding ratio from the ledger default, 1 dependant, 0 children, no student loan or tax relief (temporary). Enter tax below if it should differ.",
       "sumPay": "Pay",
@@ -4180,7 +4199,8 @@
           "payroll_auto_item": "Automatic items cannot be added",
           "payroll_item_missing": "Item not available",
           "generic": "Could not save"
-        }
+        },
+        "pickedN": "%d selected"
       },
       "validFromHint": "Leave it as today to apply right away. A future date applies from that day.",
       "validFromBefore": "The last change starts on {date}, so an earlier date cannot be saved. Use the same date to correct that change.",
@@ -4277,6 +4297,7 @@
       "notCalculated": "Not calculated",
       "resultOk": "Calculated",
       "resultBlocked": "Blocked {n}",
+      "familyTempChip": "Dependants provisional",
       "exclude": "Exclude",
       "include": "Include again",
       "excludeReason": "Reason for excluding",
@@ -4385,6 +4406,7 @@
         "employer_notice_missing": "Employer billing amount missing ({detail}); excluded from employer totals.",
         "rounded_time_missing": "Rounded attendance categories are missing.",
         "basis_unverified": "Payroll basis is not verified ({detail}).",
+        "family_unreported": "Dependants not yet declared — calculated with {detail} (incl. self) as a provisional value. After the declaration, enter the date under Staff pay › Tax and recalculate.",
         "policy_changed_in_period": "A payroll basis changed during this period ({detail}). Review the period calculation.",
         "leave_duration_mismatch": "Leave duration does not match scheduled work time ({detail}). Review the leave and schedule.",
         "weekly_rest_with_absence": "There were absent days this month ({detail}). Weekly paid rest was not reduced — whether to drop it for a week with an absence is a company decision. Use an adjustment if needed.",
@@ -4657,7 +4679,10 @@
         "row": "{rate}% · present {present}/{due} · late {late}",
         "empty": "No expected workdays in this month yet.",
         "note": "Attendance = days present ÷ expected workdays. Expected = workdays after joining, already past, not fully on leave; present = of those, days with a clock-in or approved field/business/remote work (provisional definition)."
-      }
+      },
+      "trendAvg": "Avg",
+      "trendVsAvg": "%d vs. 6-month avg",
+      "monthSuffix": ""
     },
     "promotion": {
       "title": "Leave use promotion",
@@ -5212,28 +5237,30 @@
         "work": "Work entry",
         "runs": "Day-labor ledgers"
       },
-      "legal": "Tax uses the common day-labor method (daily taxable pay − ₩150,000 → × 6% → 55% credit; under ₩1,000 a day is not withheld) and awaits tax verification. Social insurance premiums are not calculated — enter them as a \"deduction\" on the work row if needed. The program does not file day-labor pay statements or insurance reports, and does not transfer money.",
+      "legal": "Income tax uses the usual day-worker method (daily taxable pay − 150,000 won → × 6% → 55% credit; under 1,000 won a day is not withheld). Social insurance is calculated automatically with the same approved rates as regular payroll (eligibility uses provisional rules). Both are provisional until reviewed; top admins can adjust amounts on the ledger. No filing files or transfers.",
       "payeeTitle": "Register a payee",
       "payee": {
         "internalNo": "Internal no.",
         "name": "Name",
         "phone": "Phone (optional)",
         "note": "Note (optional)",
-        "jobTitle": "Job (type it in)"
+        "jobTitle": "Job (type it in)",
+        "internalNoAuto": "Internal no. (auto if empty)",
+        "internalNoPh": "Auto (e.g. D0001)"
       },
       "payeeAdd": "Register",
-      "payeeNote": "The internal number is assigned by the company and cannot change. Same name with a different number is a different person. Do not enter resident numbers or bank accounts here. No login account is created. No department is assigned. Only a job title can be typed.",
+      "payeeNote": "Resident numbers and bank accounts are not stored. Same name with a different internal no. is a different person.",
       "payeeInactive": "Off",
       "payeeOff": "Turn off",
-      "payeeOn": "Turn on",
+      "payeeOn": "Use again",
       "payeeOffOf": "Turn off {name}",
-      "payeeOnOf": "Turn on {name}",
+      "payeeOnOf": "Use {name} again",
       "payeeEmpty": "No payees yet.",
       "engAdd": "Add engagement",
       "engAddOf": "Add engagement for {name}",
-      "engOff": "Turn off",
+      "engOff": "Turn off this period",
       "engOffOf": "Turn off engagement of {name}",
-      "engEmpty": "None — add an engagement before entering work",
+      "engEmpty": "No engagement — add one before entering work.",
       "eng": {
         "startsOn": "Start",
         "endsOn": "End (optional)",
@@ -5241,16 +5268,17 @@
         "dayRate": "Day rate (KRW)",
         "taxState": "Tax",
         "ei": "Employment ins.",
-        "np": "National pension",
+        "np": "Pension",
         "hi": "Health ins.",
         "basisNote": "Basis for these settings",
         "payBasis": "Pay basis",
-        "unitRate": "Unit rate (KRW per day · hour · month · item)"
+        "unitRate": "Unit rate (KRW per day · hour · month · item)",
+        "basisHint": "e.g. worker application · agency confirmation · contract"
       },
       "tax": {
         "UNKNOWN": "Unknown",
-        "DAILY": "Withhold as day-labor income",
-        "NONE": "Do not withhold",
+        "DAILY": "Day-worker income tax",
+        "NONE": "Not withheld",
         "BUSINESS": "Business income 3.3% (freelancer)"
       },
       "tri": {
@@ -5270,7 +5298,7 @@
       "pick": "Select",
       "fMonth": "Work month",
       "show": "Show",
-      "workTitle": "Add a work row",
+      "workTitle": "Enter work",
       "work": {
         "payee": "Payee",
         "date": "Work date",
@@ -5349,20 +5377,29 @@
         "nontax": "Non-taxable",
         "incomeTax": "Income tax",
         "localTax": "Local tax",
-        "otherDeduction": "Other deductions",
-        "net": "Net"
+        "otherDeduction": "Other deductions (old)",
+        "net": "Net",
+        "deduction": "Total deductions",
+        "ei": "Employment ins.",
+        "hi": "Health ins.",
+        "ltc": "Long-term care",
+        "np": "Pension"
       },
       "blocker": {
         "tax_unknown": "Tax setting is \"Unknown\" or differs between rows.",
         "insurance_unknown": "An insurance setting is \"Unknown\".",
         "unconfirmed_work": "There are work rows not confirmed.",
-        "no_work": "No work to calculate."
+        "no_work": "No work to calculate.",
+        "insurance_ref_missing": "No approved insurance rate data (Settings › Payroll › Reference data)."
       },
       "warning": {
-        "insurance_not_calculated": "Insurance applies to this person. Premiums were not calculated by the program (only deductions you entered are included).",
+        "insurance_not_calculated": "No insurance rate data — premiums were not calculated.",
         "same_day_projects": "Two sites on the same day. Check it is not a duplicate (tax uses the day total).",
         "business_insurance": "This freelancer (business income) is marked as insured. Freelancers have no social insurance — check whether they should be treated as an employee.",
-        "business_no_exempt": "Business income has no tax exemption — amounts entered as non-taxable were included in the 3.3% base."
+        "business_no_exempt": "Business income has no tax exemption — amounts entered as non-taxable were included in the 3.3% base.",
+        "ei_foreign_check": "Employment insurance could not be set from the visa and was left out (Auto). Set Apply/Exclude in the terms after checking.",
+        "np_foreign_check": "Pension for foreign workers depends on the country and was left out (Auto). Set it in the terms after checking with the agency.",
+        "monthly_pay_not_in_daily_tax": "Monthly or adjusted payments are not part of the per-day income tax. Adjust the tax if needed."
       },
       "daysToggle": "{n} daily lines",
       "dayLine": "{date} · pay {gross} · tax {tax} · local {local}",
@@ -5389,7 +5426,7 @@
       "payroll_wrong_status": "Not allowed in the current state.",
       "payroll_run_exists": "The same ledger already exists.",
       "version_conflict": "Someone else changed it first. Reload.",
-      "legalShort": "Tax is a provisional calculation · social insurance is not calculated",
+      "legalShort": "Tax and insurance are auto-calculated with provisional rules",
       "payeeCount": "{n} active payees",
       "colPayee": "Payee",
       "colEngagement": "Engagement · site · day rate",
@@ -5420,7 +5457,14 @@
         "made": "Generated",
         "by": "Downloaded by",
         "rule": "Tax rule",
-        "sum": "Total"
+        "sum": "Total",
+        "amount": "Amount",
+        "how": "How",
+        "item": "Item",
+        "kind": "Type",
+        "part": "Part",
+        "sheetLines": "Items",
+        "source": "Adjusted"
       },
       "payroll_duplicate_payment": "The same work is included in another finalized run. Check regular/daily runs and revisions.",
       "pdf": "PDF",
@@ -5436,7 +5480,168 @@
         "MONTH": "Months",
         "FIXED": "Items"
       },
-      "daily_quantity": "The quantity is over the limit for this pay basis (day 3 · hour 744 · month 12 · item 100)."
+      "daily_quantity": "The quantity is over the limit for this pay basis (day 3 · hour 744 · month 12 · item 100).",
+      "adj": {
+        "chip": "Adjusted",
+        "customDeduction": "Custom deduction",
+        "customPayment": "Custom payment",
+        "hint": "Insurance and tax lines are replaced with the amount you enter; other items are added. Recalculate the ledger to apply. Who, when and why are recorded.",
+        "item": "Item",
+        "none": "No adjustments.",
+        "now": "now {n} won",
+        "reason": "Reason (2+ characters)",
+        "remove": "Remove",
+        "save": "Add adjustment",
+        "title": "Amount adjustments (top admins)",
+        "newAmount": "New amount (won)",
+        "payment": "Payment",
+        "finalized": "A finalized ledger cannot be adjusted. Start a correction from the ledger first.",
+        "topOnly": "Only top admins can adjust amounts."
+      },
+      "allPayees": "All payees",
+      "cUnits": "Units · hours",
+      "delete": "Delete",
+      "deleteAsk": "Delete {name}? This cannot be undone.",
+      "deleteOf": "Delete {name}",
+      "deleteYes": "Delete",
+      "employerNote": "Paid by the company. Not taken from net pay.",
+      "engEdit": "Edit terms",
+      "f": {
+        "hint": "Employment insurance and pension are set automatically from the visa (provisional rule). Change to Apply/Exclude in the terms if different.",
+        "nationality": "Nationality",
+        "stayUntil": "Stay until (optional)",
+        "stayUntilShort": "stay until {d}",
+        "visa": "Visa"
+      },
+      "filterPayee": "Choose payee",
+      "firstTerms": "First engagement",
+      "foreignCount": "{n} foreign",
+      "insNote": "Insurance \"Auto\": employment insurance applies to general day workers; pension and health apply when the person worked 8+ days or 60+ hours that month. For foreign workers it depends on the visa (provisional rule). Give a basis when you set Apply/Exclude yourself.",
+      "insRuleNote": "Insurance rule daily-insurance-temp-1 (provisional): same approved rates and rounding as regular payroll, base = taxable pay of the month. Top admins can adjust each amount.",
+      "kind": {
+        "FOREIGN": "Foreign day worker",
+        "GENERAL": "Day worker",
+        "title": "Type"
+      },
+      "legacyNoLines": "This statement was calculated before itemized lines existed. Recalculate the ledger to see items.",
+      "m": {
+        "add": "Add item",
+        "custom": "Custom",
+        "hint": "Items added once a month, such as mutual aid, donations or pension. They are included every time the ledger is calculated.",
+        "incomplete": "Enter a name and amount for each monthly item.",
+        "kind": "Type",
+        "pick": "Choose item",
+        "remove": "Remove",
+        "short": "Monthly items",
+        "title": "Monthly deductions · payments"
+      },
+      "nextMonth": "Next month",
+      "prevMonth": "Previous month",
+      "offHint": "Payees turned off. Their records stay. People without payment records can be deleted.",
+      "offTitle": "{n} payees turned off",
+      "payeeDone": "Registered — internal no. {no}",
+      "payeeEdit": "Edit info",
+      "people": "{n} people",
+      "toWork": "View work",
+      "u": {
+        "hours": "{n} h",
+        "man": "{n} units",
+        "days": "{n} days",
+        "pay": "pay {pay}"
+      },
+      "w": {
+        "add": "Add {n} days",
+        "addItem": "Add item",
+        "clear": "Clear",
+        "confirmAll": "Confirm all {n} drafts",
+        "confirmNow": "Confirm right away (used in calculation)",
+        "dates": "{n} days selected",
+        "done": "Added {n} days",
+        "edit": "Edit",
+        "items": "Other payments · deductions (optional)",
+        "more": "Split shifts on the same day",
+        "noEngagement": "No engagement — add one first",
+        "segmentHint": "Use B, C … only when the same person worked twice at the same site on one day.",
+        "skipped": "Skipped: {list}",
+        "sum": "{days} days · {man} units · {hours} h · pay {pay}",
+        "weekdays": "Weekdays",
+        "editConfirmed": "Editing a confirmed line voids it and adds a new confirmed line.",
+        "editDraft": "Draft lines are edited in place."
+      },
+      "ins": {
+        "AUTO": "Auto",
+        "YES": "Apply",
+        "NO": "Exclude",
+        "UNKNOWN": "Unknown"
+      },
+      "dow": {
+        "0": "Sun",
+        "1": "Mon",
+        "2": "Tue",
+        "3": "Wed",
+        "4": "Thu",
+        "5": "Fri",
+        "6": "Sat"
+      },
+      "nation": {
+        "VN": "Vietnam",
+        "TH": "Thailand",
+        "CN": "China",
+        "UZ": "Uzbekistan",
+        "KH": "Cambodia",
+        "NP": "Nepal",
+        "PH": "Philippines",
+        "ID": "Indonesia",
+        "MN": "Mongolia",
+        "MM": "Myanmar",
+        "LK": "Sri Lanka",
+        "BD": "Bangladesh",
+        "KZ": "Kazakhstan",
+        "RU": "Russia"
+      },
+      "visa": {
+        "E9": "Non-professional",
+        "H2": "Working visit",
+        "F4": "Overseas Korean",
+        "F2": "Residence",
+        "F5": "Permanent",
+        "F6": "Marriage",
+        "E7": "Special activity",
+        "D10": "Job seeking",
+        "G1": "Other"
+      },
+      "part": {
+        "PAYMENT": "Payments",
+        "DEDUCTION": "Deductions",
+        "EMPLOYER": "Company share"
+      },
+      "skip": {
+        "daily_no_engagement": "outside engagement",
+        "daily_work_exists": "already entered"
+      },
+      "unit": {
+        "DAY": " units",
+        "HOUR": " h",
+        "MONTH": " months",
+        "FIXED": " items"
+      },
+      "fixPayee": "Fix terms",
+      "fixWork": "Fix work",
+      "sumPeople": "People",
+      "sumGross": "Gross",
+      "sumDeduction": "Deductions",
+      "sumNet": "Net pay",
+      "daily_payee_has_records": "Payees with payment records cannot be deleted. Turn them off instead.",
+      "top_only": "Only top admins can do this.",
+      "moreOf": "More for {name}",
+      "noDelete": "Has payment records — cannot delete",
+      "search": "Find name · internal no.",
+      "cardMonth": "{m}: {days} days · pay {pay}",
+      "cardMonthNone": "No work in month {m}",
+      "engEditOf": "Edit terms for {name}",
+      "workFor": "Add work",
+      "workForOf": "Add work for {name}",
+      "payeeEditOf": "Edit {name}"
     },
     "paySlips": {
       "title": "Payslips",
@@ -5587,7 +5792,9 @@
       "closed": "Final",
       "open": "Provisional",
       "kpiOver52": "Over 52h",
-      "kpiPeople": "{n} people"
+      "kpiPeople": "{n} people",
+      "chartTitle": "{m} by month (company)",
+      "chartVsAvg": "%d vs. monthly avg"
     },
     "signups": {
       "title": "{n} sign-up requests",
@@ -6560,7 +6767,7 @@
     "future_time": "You cannot request a time in the future.",
     "duplicate_request": "You already have a waiting request for this record.",
     "backToRequests": "Requests",
-    "next": "Next: review request",
+    "next": "review request",
     "reviewTitle": "Review request",
     "reviewWhat": "Request",
     "reviewNextDay": "next day",
@@ -7090,6 +7297,7 @@
       "PAID_HOLIDAY": "Paid holiday"
     },
     "correctedNote": "This payslip was corrected. Reason: {reason}",
+    "familyTemp": "Provisional dependants — income tax was calculated with {n} dependant(s) incl. self because no declaration has been received yet. It may change after you declare.",
     "toPrevious": "View the previous payslip",
     "oldVersion": "This is the payslip before correction. The corrected payslip is the valid one.",
     "toCurrent": "View the corrected payslip",
@@ -7151,6 +7359,8 @@
       "more": "Show details",
       "less": "Hide",
       "family": "Dependents for tax",
+      "familyTemp": "{n} (provisional)",
+      "familyTempNote": "Provisional dependants — calculated with {n} incl. self until you declare.",
       "children": "Children (8–20)",
       "people": "{n}",
       "ratio": "Withholding rate",
@@ -7467,10 +7677,10 @@
       "gSchedule": "Schedule",
       "gRecords": "Punch records",
       "gCheck": "Checks",
-      "gPayPrep": "1. Close & check",
-      "gPayRun": "2. Pay ledger",
-      "gPaySettle": "3. Insurance · Retirement",
-      "gPayView": "4. Overview",
+      "gPayPrep": "Close & check",
+      "gPayRun": "Pay ledger",
+      "gPaySettle": "Insurance · Retirement",
+      "gPayView": "Overview",
       "gRule": "Rules",
       "gPlace": "Locations",
       "gShift": "Schedule setup",
@@ -7697,7 +7907,7 @@
     "fix": "Go fix",
     "allReady": "Everything is ready. Go to the payroll runs and create the run.",
     "someBlocked": "Some employees are blocked. Resolve them above first. You can still create the ledger, but those employees will not be calculated.",
-    "next": "Next: payroll runs",
+    "next": "payroll runs",
     "nextAnyway": "Go to payroll runs anyway",
     "okGroup": "{n} with no issues",
     "nextNew": "Create pay ledger",
@@ -7899,7 +8109,9 @@
     "colOut": "Out",
     "colIssue": "OT · Issues",
     "corrected": "Corrected",
-    "policy": "Company attendance policy"
+    "policy": "Company attendance policy",
+    "weekChart": "Hours by day",
+    "monthChart": "Hours by week"
   },
   "push": {
     "title": "Phone alerts",
@@ -8190,6 +8402,7 @@
       "localTax": "Local income tax",
       "other": "Other deductions",
       "taxHow": "Per-day calculation",
+      "adjusted": "(adjusted)",
       "note": "Each payment line is one work day. Income tax is calculated per day (pay minus 150,000 won × 6% × 45%; under 1,000 won not withheld — provisional rule). Social insurance is included only where entered as a deduction. Not a filing form."
     },
     "r": {

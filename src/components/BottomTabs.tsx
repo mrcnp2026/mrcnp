@@ -7,7 +7,7 @@
 import { useSystemNav } from '@/components/SystemNav';
 import { BellRing, Building2, CalendarDays, ChartPie, Clock, House, LayoutGrid, type LucideIcon, Network, Plane, Settings, Wallet, X } from 'lucide-react';
 import { useTranslations } from 'next-intl';
-import Link from 'next/link';
+import { IntentLink as Link } from './IntentLink'; // 손이 닿으면 미리 받아 둔다 (2026-10-29)
 import { useSearchParams } from 'next/navigation';
 import { useEffect, useState } from 'react';
 import { createPortal } from 'react-dom';
@@ -73,7 +73,7 @@ export function BottomTabs({ role }: { role: NavRole; inboxCount?: number }) {
 
   return (
     <>
-      <nav className="glass-dark fixed inset-x-0 bottom-0 z-20 pb-[env(safe-area-inset-bottom)] lg:hidden" data-tabs={consoleMode ? 'console' : adminMode ? 'admin' : 'my'}>
+      <nav className="fixed inset-x-0 bottom-0 z-20 border-t border-border bg-rail pb-[env(safe-area-inset-bottom)] lg:hidden" data-tabs={consoleMode ? 'console' : adminMode ? 'admin' : 'my'}>
         <ul className="mx-auto flex max-w-md">
           {tabs.map(({ key, icon, href }) => {
             const here = key === activeKey;
@@ -101,7 +101,7 @@ export function BottomTabs({ role }: { role: NavRole; inboxCount?: number }) {
                 type="button"
                 aria-expanded={grid}
                 onClick={() => setGrid((g) => !g)}
-                className={`relative flex min-h-16 w-full flex-col items-center justify-center gap-1 text-xs text-on-primary ${allOn ? 'font-bold' : 'opacity-60'}`}
+                className={`relative flex min-h-16 w-full flex-col items-center justify-center gap-1 text-xs ${allOn ? 'font-bold text-primary' : 'text-muted'}`}
               >
                 <LayoutGrid aria-hidden size={22} strokeWidth={allOn ? 2.25 : 1.75} />
                 <span>{t('tab.all')}</span>

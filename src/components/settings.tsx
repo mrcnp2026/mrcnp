@@ -7,11 +7,13 @@
 import { Check, Minus } from 'lucide-react';
 import { SHEET_ICONS } from './SheetOpener';
 import Link from 'next/link';
+import { Clamp } from './ClampText';
 import { HelpTip } from './Help';
 import type { ReactNode } from 'react';
 
 export function SettingBox({ children, className = '' }: { children: ReactNode; className?: string }) {
-  return <section className={`rounded-card border border-border bg-bg px-4 lg:px-8 ${className}`}>{children}</section>;
+  // 2026-10-28 의뢰인(통합설정 전반에 키트): 그림자 + 차례로 떠오르는 등장(set-card, globals.css)
+  return <section className={`set-card rounded-card border border-border bg-bg px-4 shadow-card lg:px-8 ${className}`}>{children}</section>;
 }
 
 export function SettingGroup({ children }: { children: ReactNode }) {
@@ -32,7 +34,8 @@ export function SettingRow({ label, desc, children, wide = false }: { label: Rea
             </span>
           )}
         </div>
-        {desc && <p className="hidden min-w-0 flex-1 text-sm leading-6 text-faint lg:block lg:pt-0.5">{desc}</p>}
+        {/* 긴 설명은 두 줄만 — 「자세히」로 펼친다 (2026-10-28 의뢰인: 「긴 텍스트들은 뭐고」) */}
+        {desc && <Clamp lines={2} className="hidden min-w-0 flex-1 text-sm leading-6 text-faint lg:block lg:pt-0.5">{desc}</Clamp>}
       </div>
       {children !== undefined && <div className={`flex min-w-0 flex-col gap-2 text-sm ${wide ? '' : 'lg:max-w-md lg:shrink-0 lg:items-end lg:text-right'}`}>{children}</div>}
     </div>

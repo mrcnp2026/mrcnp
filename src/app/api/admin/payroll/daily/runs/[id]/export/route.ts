@@ -5,8 +5,8 @@ import ExcelJS from 'exceljs';
 import { getTranslations } from 'next-intl/server';
 import { getMe } from '@/lib/auth';
 import { deny } from '@/lib/csv-response';
-import { loadDailyBoard } from '@/lib/payroll/daily-data';
-import { DAILY_RULE } from '@/lib/payroll/daily';
+import { loadDailyBoard, type DailyLine } from '@/lib/payroll/daily-data';
+import { AUTO_CODES, DAILY_RULE } from '@/lib/payroll/daily';
 import { createAdminClient } from '@/lib/supabase/admin';
 
 const MONEY = '#,##0';
@@ -29,17 +29,37 @@ export async function GET(_req: Request, ctx: { params: Promise<{ id: string }> 
   const head = (ws: ExcelJS.Worksheet) => {
     if (draft) ws.addRow([t('x.draft')]).font = { bold: true, color: { argb: 'FFB45309' } };
   };
-  const COLS = ['gross', 'taxable', 'nontax', 'incomeTax', 'localTax', 'otherDeduction', 'net'] as const;
   const ok = lines.filter((l) => l.state === 'OK');
+  // 대장 화면과 같은 열 (2026-10-28 급여-58) — 4대보험 · 세금 · 공제 항목마다 · 공제계 · 실지급
+  const extra = [...new Set(ok.flatMap((l) => l.lines.filter((x) => x.kind === 'DEDUCTION' && !(AUTO_CODES as readonly string[]).includes(x.code)).map((x) => x.label)))];
+  const COLS: { label: string; get: (l: DailyLine) => number | null | undefined }[] = [
+    { label: t('c.gross'), get: (l) => l.gross }, { label: t('c.taxable'), get: (l) => l.taxable }, { label: t('c.nontax'), get: (l) => l.nontax },
+    { label: t('c.np'), get: (l) => l.insurance?.np }, { label: t('c.hi'), get: (l) => l.insurance?.hi }, { label: t('c.ltc'), get: (l) => l.insurance?.ltc }, { label: t('c.ei'), get: (l) => l.insurance?.ei },
+    { label: t('c.incomeTax'), get: (l) => l.incomeTax }, { label: t('c.localTax'), get: (l) => l.localTax },
+    ...extra.map((label) => ({ label, get: (l: DailyLine) => l.lines.filter((x) => x.kind === 'DEDUCTION' && x.label === label && !(AUTO_CODES as readonly string[]).includes(x.code)).reduce((s, x) => s + x.amount, 0) })),
+    ...(ok.some((l) => !l.lines.length && (l.otherDeduction ?? 0) > 0) ? [{ label: t('c.otherDeduction'), get: (l: DailyLine) => (l.lines.length ? 0 : l.otherDeduction) }] : []),
+    { label: t('c.deduction'), get: (l) => l.deduction }, { label: t('c.net'), get: (l) => l.net },
+  ];
 
   const a = wb.addWorksheet(t('x.sheetPayee'));
   head(a);
-  a.addRow([t('x.payee'), t('x.no'), t('cDays'), ...COLS.map((k) => t(`c.${k}`)), t('x.status')]).font = { bold: true };
-  for (const l of lines) a.addRow([l.name, l.internalNo, l.workDays ?? '', ...COLS.map((k) => (l.state === 'OK' ? (l[k] ?? 0) : '')), l.state === 'OK' ? '' : l.blockers.map((b) => t(`blocker.${b}`)).join(' / ')]);
-  a.addRow([t('x.sum'), '', ok.reduce((s, l) => s + (l.workDays ?? 0), 0), ...COLS.map((k) => ok.reduce((s, l) => s + (l[k] ?? 0), 0)), '']).font = { bold: true };
+  a.addRow([t('x.payee'), t('x.no'), t('x.kind'), t('cDays'), t('cUnits'), ...COLS.map((c) => c.label), t('x.status')]).font = { bold: true };
+  const units = (l: DailyLine) => [l.manDays ? t('u.man', { n: l.manDays }) : null, l.hours ? t('u.hours', { n: l.hours }) : null].filter(Boolean).join(' · ');
+  for (const l of lines) a.addRow([l.name, l.internalNo, l.workerKind === 'FOREIGN' ? `${t('kind.FOREIGN')} ${l.visaType ?? ''}` : t('kind.GENERAL'), l.workDays ?? '', units(l), ...COLS.map((c) => (l.state === 'OK' ? (c.get(l) ?? 0) : '')), l.state === 'OK' ? '' : l.blockers.map((b) => t(`blocker.${b}`)).join(' / ')]);
+  a.addRow([t('x.sum'), '', '', ok.reduce((s, l) => s + (l.workDays ?? 0), 0), '', ...COLS.map((c) => ok.reduce((s, l) => s + (c.get(l) ?? 0), 0)), '']).font = { bold: true };
   a.columns.forEach((c, i) => {
-    c.width = i < 2 ? 18 : 14;
-    if (i >= 3 && i < 3 + COLS.length) c.numFmt = MONEY;
+    c.width = i < 3 ? 16 : 13;
+    if (i >= 5 && i < 5 + COLS.length) c.numFmt = MONEY;
+  });
+
+  // 항목별 내역 — 사람마다 지급 · 공제 · 회사 부담 한 줄씩 (조정한 줄은 표시)
+  const li = wb.addWorksheet(t('x.sheetLines'));
+  head(li);
+  li.addRow([t('x.payee'), t('x.no'), t('x.part'), t('x.item'), t('x.how'), t('x.amount'), t('x.source')]).font = { bold: true };
+  for (const l of ok) for (const x of l.lines) li.addRow([l.name, l.internalNo, t(`part.${x.kind}`), x.label, x.how ?? '', x.amount, x.source === 'OVERRIDE' ? t('adj.chip') : '']);
+  li.columns.forEach((c, i) => {
+    c.width = [14, 12, 10, 18, 36, 13, 8][i] ?? 12;
+    if (i === 5) c.numFmt = MONEY;
   });
 
   const d = wb.addWorksheet(t('x.sheetDay'));

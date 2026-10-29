@@ -203,7 +203,7 @@ export function TaxForm({ reportedUsed, employeeId, today, version, last, relief
             const f = new FormData(e.currentTarget);
             const ok = await save({
               action: 'tax', expectedVersion: version, validFrom: f.get('validFrom'), reason: f.get('reason') || null,
-              withholdingRatio: Number(f.get('ratio')), familyCount: f.get('family'), childCount: f.get('child'),
+              withholdingRatio: Number(f.get('ratio')), familyCount: f.get('family'), childCount: f.get('child'), familyReportedOn: f.get('familyReported') || null,
               insurance: Object.fromEntries(INSURERS.map((k) => [k, { state: f.get(`${k}.state`), reportedWage: f.get(`${k}.wage`), note: f.get(`${k}.note`) || null }])),
               studentLoan: { state: f.get('loan.state'), monthlyAmount: f.get('loan.amount'), from: f.get('loan.from') || null, to: f.get('loan.to') || null },
               // 회사가 끈 감면 · 지원은 화면에 없으니 앞 판의 값을 그대로 넘긴다(지우지 않는다)
@@ -232,6 +232,11 @@ export function TaxForm({ reportedUsed, employeeId, today, version, last, relief
           <Label text={t('fChildCount')}>
             <input name="child" type="number" min="0" max="10" step="1" required defaultValue={last?.childCount ?? 0} className={field} />
           </Label>
+          {/* 부양가족 신고를 받은 날 — 비우면 「신고 전」이라 가족 수에 「임시」가 붙는다 (묶음 38 · 급여-57) */}
+          <Label text={t('fFamilyReported')}>
+            <input name="familyReported" type="date" defaultValue={last?.familyReportedOn ?? ''} className={field} />
+          </Label>
+          <p className="self-end pb-2 text-xs text-faint">{t('familyReportedHint')}</p>
           {INSURERS.map((k) => (
             <fieldset key={k} className="flex flex-col gap-2 rounded-button border border-border p-3 md:col-span-2">
               <legend className="px-1 font-bold">{t(`insurer.${k}`)}</legend>

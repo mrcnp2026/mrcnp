@@ -41,6 +41,12 @@ describe('buildSlipPdf', () => {
     expect(doc.getPageCount()).toBeGreaterThan(1);
     if (process.env.SLIP_PDF_OUT) writeFileSync(`${process.env.SLIP_PDF_OUT}-2.pdf`, bytes);
   });
+  it('가족 수 「임시」 문구가 들어가도 한 쪽에 만들어진다 (묶음 38)', async () => {
+    const bytes = await buildSlipPdf({ ...base, revision: 2, labels: { ...labels, correction: '정정된 명세서입니다. 정정 사유: 가족 수', familyTemp: '가족 수 임시 — 부양가족 신고 전이라 공제대상 가족 1명(본인 포함)으로 소득세를 계산했습니다. 신고 뒤 달라질 수 있습니다.' } });
+    const doc = await PDFDocument.load(bytes);
+    expect(doc.getPageCount()).toBe(1);
+    if (process.env.SLIP_PDF_OUT) writeFileSync(`${process.env.SLIP_PDF_OUT}-3.pdf`, bytes);
+  });
   it('항목이 하나도 없어도 만들어진다', async () => {
     const doc = await PDFDocument.load(await buildSlipPdf({ ...base, lines: [], pay: 0, deduction: 0, net: 0 }));
     expect(doc.getPageCount()).toBe(1);

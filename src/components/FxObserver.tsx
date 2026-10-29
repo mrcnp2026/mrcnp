@@ -18,13 +18,23 @@ export function FxObserver() {
         for (const e of es) {
           if (!e.isIntersecting) continue;
           // 클래스가 아니라 속성 — React가 className을 다시 그려도 지워지지 않는다
-          for (const el of waiting.get(e.target) ?? [e.target]) el.setAttribute('data-fx', 'run');
+          start(waiting.get(e.target) ?? [e.target]);
           waiting.delete(e.target);
           io.unobserve(e.target);
         }
       },
       { rootMargin: '0px 0px -8% 0px' },
     );
+    // React가 그 부분을 아직 이어 붙이지 않았으면(늦게 오는 화면 조각) 기다렸다가 붙인다 — 먼저 붙이면 「서버가 그린 것과 다르다」 경고가 난다 (2026-10-28).
+    // 이어 붙인 노드에는 React가 __reactFiber… 표시를 남긴다. 3초가 지나도 없으면 그냥 붙인다
+    const hydrated = (el: Element) => Object.keys(el).some((k) => k.startsWith('__reactFiber'));
+    const start = (els: Element[], tries = 0) => {
+      if (tries < 180 && !els.every(hydrated)) {
+        requestAnimationFrame(() => start(els, tries + 1));
+        return;
+      }
+      for (const el of els) el.setAttribute('data-fx', 'run');
+    };
     const seen = new WeakSet<Element>();
     const waiting = new Map<Element, Element[]>();
     const scan = () => {

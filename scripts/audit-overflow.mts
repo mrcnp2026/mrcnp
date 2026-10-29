@@ -115,7 +115,11 @@ try {
     await run(`내 계정(${loc})`, '/punch/account');
     await run(`정정 요청-쓰기(${loc})`, '/punch/corrections?new=1');
     await run(`정정 요청-시각수정(${loc})`, '/punch/corrections?new=1', async (pg) => {
-      await pg.locator('input[type=radio]').nth(1).check();
+      // 누락이 있으면 먼저 「누락 안내 · 빠른 정정」이 나온다(2026-10 정정 흐름) — 「다른 정정」을 눌러 원래 양식으로 (2026-10-29: 여기서 라디오를 못 찾아 검사가 멈췄다)
+      const other = pg.locator('[data-correction-other]:visible');
+      if (await other.count()) await other.first().click();
+      // 좁은 폭에서는 아래 고정 탭 · + 단추가 칸 위를 덮어 check()가 30초 기다리다 멈췄다 — 화면 위치와 상관없이 그 칸에 누름을 보낸다
+      await pg.locator('input[type=radio]').nth(1).dispatchEvent('click');
     });
   }
   // 관리자 화면 (한국어·영어)
@@ -125,7 +129,8 @@ try {
     await run(`관리자가 본 출퇴근 화면(${loc})`, '/punch');
     await run(`관리자가 본 내 기록(${loc})`, '/punch/records');
     await run(`관리자 홈(${loc})`, '/admin?practice=1', async (pg) => {
-      await pg.locator('[role=tablist] button:visible').nth(1).click(); // 폰·PC 탭 목록이 따로 있어 보이는 것만
+      // 폰·PC 탭 목록이 따로 있어 보이는 것만. 폰 폭에서는 아래 고정 탭이 덮어 click()이 멈췄다 — 그 단추에 누름을 바로 보낸다 (2026-10-29)
+      await pg.locator('[role=tablist] button:visible').nth(1).dispatchEvent('click');
     });
     await run(`처리함(${loc})`, '/admin/inbox?practice=1');
     await run(`기록(${loc})`, '/admin/records?practice=1');

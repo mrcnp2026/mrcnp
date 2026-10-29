@@ -55,7 +55,6 @@ export async function WeekHoursCard({ meId, today, weekStart, period: given }: {
   const top = Math.max(8 * 60, ...bars.map((b) => b.net));
   const hm = (min: number) => t('hm', { h: Math.floor(min / 60), m: min % 60 });
   const dash = (min: number) => (min > 0 ? <CountUp value={hm(min)} /> : '–');
-  const tone = 'stroke-primary'; // 한도 초과는 색이 아니라 아래 글자로
   const C = 2 * Math.PI * R;
   const mid = `week-ring-${weekStart ?? 'desk'}`; // PC 칸과 폰 칸이 한 화면에 같이 있어도 id가 겹치지 않게
 
@@ -69,14 +68,19 @@ export async function WeekHoursCard({ meId, today, weekStart, period: given }: {
       <div className="flex items-center gap-4">
         <div className="relative size-24 shrink-0" role="img" aria-label={`${hm(worked)} / ${hm(goal)}`}>
           <svg viewBox="0 0 100 100" className="size-full -rotate-90" aria-hidden>
-            <circle cx="50" cy="50" r={R} fill="none" strokeWidth="11" className="stroke-surface" />
+            <circle cx="50" cy="50" r={R} fill="none" strokeWidth="11" className="stroke-rail" />
             <defs>
+              {/* 2026-10-27 키트: 고리도 초록 그라데이션 */}
+              <linearGradient id={`${mid}-g`} x1="0" y1="0" x2="1" y2="1">
+                <stop offset="0%" stopColor="var(--t-color-accent-2)" />
+                <stop offset="100%" stopColor="var(--t-color-primary)" />
+              </linearGradient>
               <mask id={mid}>
                 <circle cx="50" cy="50" r={R} fill="none" stroke="white" strokeWidth="13" pathLength={1} className="fx-draw" />
               </mask>
             </defs>
             <g mask={`url(#${mid})`}>
-              {p > 0 && <circle cx="50" cy="50" r={R} fill="none" strokeWidth="11" strokeLinecap="round" strokeDasharray={`${p * C} ${C}`} className={tone} />}
+              {p > 0 && <circle cx="50" cy="50" r={R} fill="none" strokeWidth="11" strokeLinecap="round" strokeDasharray={`${p * C} ${C}`} stroke={`url(#${mid}-g)`} />}
             </g>
           </svg>
           <div className="absolute inset-0 flex flex-col items-center justify-center">
@@ -96,8 +100,9 @@ export async function WeekHoursCard({ meId, today, weekStart, period: given }: {
         <ul className="grid grid-cols-7 gap-1.5" aria-label={t('weekBars')}>
           {bars.map((b) => (
             <li key={b.d} className="flex flex-col items-center gap-1">
-              <div className="relative h-14 w-full overflow-hidden rounded-button bg-surface">
-                {b.net > 0 && <span className={`fx-grow absolute inset-x-0 bottom-0 block rounded-button ${b.isToday ? 'bg-primary' : 'bg-primary/45'}`} style={{ height: `${Math.max(8, (b.net / top) * 100)}%` }} />}
+              {/* 2026-10-27 키트: 관리자 지각 막대와 같은 알약 — 옅은 빈 막대 위에 오늘만 초록, 다른 날은 베이지 */}
+              <div className="relative mx-auto h-14 w-full max-w-5 overflow-hidden rounded-full bg-rail">
+                {b.net > 0 && <span className="fx-grow absolute inset-x-0 bottom-0 block rounded-full" style={{ height: `${Math.max(14, (b.net / top) * 100)}%`, background: b.isToday ? 'linear-gradient(to top, var(--t-color-primary), var(--t-color-accent-2))' : 'var(--t-color-chart-idle)' }} />}
               </div>
               <span className={`text-xs ${b.isToday ? 'font-bold text-text' : 'text-faint'}`}>{b.label}</span>
               <span className={`num text-xs ${b.net > 0 ? 'text-muted' : 'text-faint'}`}>{b.net > 0 ? (b.net / 60).toFixed(1) : b.future ? '' : '–'}</span>

@@ -9,7 +9,8 @@ import { useState, type ReactNode } from 'react';
 import { callApi } from '@/components/client-api';
 import { ErrorNote } from '@/components/ErrorNote';
 import { useSaveRule } from '@/components/useSaveRule';
-import { Button, Explain, em } from '@/components/ui';
+import { Clamp } from '@/components/ClampText';
+import { Button, Explain, em, warn } from '@/components/ui';
 import type { ItemRow } from '@/lib/payroll/data';
 import { guessAverageKind, guessTax } from '@/lib/payroll/item-picks';
 import { MANUAL_FIELDS, RATE_KINDS, type ReferenceKind } from '@/lib/payroll/reference';
@@ -42,22 +43,27 @@ export function usePost() {
 }
 
 // explain: 항목 밑 설명 상자(components/ui Explain) — 있으면 짧은 hint 대신. 누르면 칸이 바뀌지 않게 label 밖에 둔다
+// hint도 label 밖으로 — 긴 글은 한 줄만 보이고 「자세히」로 펼친다 (2026-10-28 의뢰인: 「긴 텍스트들은 뭐고」)
 function Row({ label, hint, explain, children }: { label: string; hint?: string; explain?: ReactNode; children: ReactNode }) {
-  const row = (
-    <label className="flex flex-col gap-1 text-sm lg:grid lg:grid-cols-[14rem_minmax(0,1fr)] lg:items-start lg:gap-4">
-      <span className="pt-2 font-bold">{label}</span>
-      <span className="flex min-w-0 flex-col gap-1">
-        {children}
-        {hint && !explain && <span className="text-xs text-faint">{hint}</span>}
-      </span>
-    </label>
-  );
-  if (!explain) return row;
+  const note = explain ?? (hint ? <Clamp lines={1} className="text-xs leading-5 text-faint">{hint}</Clamp> : null);
   return (
-    <div className="flex flex-col gap-2">
-      {row}
-      <div className="lg:pl-[calc(14rem+1rem)]">{explain}</div>
+    <div className="flex flex-col gap-1.5">
+      <label className="flex flex-col gap-1 text-sm lg:grid lg:grid-cols-[14rem_minmax(0,1fr)] lg:items-start lg:gap-4">
+        <span className="pt-2 font-bold">{label}</span>
+        <span className="flex min-w-0 flex-col gap-1">{children}</span>
+      </label>
+      {note && <div className="lg:pl-[calc(14rem+1rem)]">{note}</div>}
     </div>
+  );
+}
+
+/** 주제 카드 하나 (2026-10-28 의뢰인: 통합설정 전반에 키트 — 한 상자에 줄줄이 있던 칸을 주제마다 카드로, 차례로 떠오른다) */
+function Part({ title, children }: { title?: string; children: ReactNode }) {
+  return (
+    <section className="set-card flex flex-col gap-3 rounded-card border border-border bg-bg px-3.5 py-3 shadow-card lg:gap-4 lg:p-6">
+      {title && <h3 className="text-base font-bold">{title}</h3>}
+      {children}
+    </section>
   );
 }
 
@@ -113,7 +119,7 @@ export function SettingForm({ section, current, version, today, common }: { sect
   return (
     <form
       ref={rule.ref}
-      className="flex flex-col gap-4"
+      className="flex flex-col gap-3 lg:gap-4"
       onSubmit={async (ev) => {
         ev.preventDefault();
         const fd = new FormData(ev.currentTarget);
@@ -134,6 +140,7 @@ export function SettingForm({ section, current, version, today, common }: { sect
     >
       {section === 'employee-defaults' && (
         <>
+          <Part>
           <Row label={t('s01.insTitle')} hint={t('s01.insHint')}>
             <div className="grid gap-2 sm:grid-cols-2">
               {(['pension', 'health', 'employment', 'accident'] as const).map((k) => (
@@ -147,23 +154,29 @@ export function SettingForm({ section, current, version, today, common }: { sect
                 </label>
               ))}
             </div>
-            <p className="pt-2 text-xs text-faint">{t('s01.insNote')}</p>
+            <Clamp lines={1} className="pt-2 text-xs leading-5 text-faint">{t('s01.insNote')}</Clamp>
           </Row>
+          </Part>
           {common && (
+            <Part>
             <Row label={t('s01.commonTitle')} hint={t('s01.commonHint')}>
               <CommonItemsEditor initial={e?.commonItems ?? []} options={common.options} people={common.people} />
             </Row>
+            </Part>
           )}
-          <Row label={t('s01.smeTaxCut')} explain={<Explain link={{ href: 'https://www.nts.go.kr', label: t('s01.smeTaxCutLink') }}>{t.rich('s01.smeTaxCutExplain', { em })}</Explain>}>
+          <Part>
+          <Row label={t('s01.smeTaxCut')} explain={<Explain link={{ href: 'https://www.nts.go.kr', label: t('s01.smeTaxCutLink') }}>{t.rich('s01.smeTaxCutExplain', { em, warn })}</Explain>}>
             <span className="flex min-h-9 items-center gap-2">
               <input type="checkbox" name="smeTaxCut" defaultChecked={e?.smeTaxCut ?? false} className="size-5 accent-primary" />
               {t('use')}
             </span>
           </Row>
+          </Part>
         </>
       )}
       {section === 'ledger' && (
         <>
+          <Part title={t('part.payDay')}>
           <Row label={t('s02.payMonth')}>
             <Select name="payMonth" defaultValue={l?.payMonth ?? 'CURRENT'} className={`${field} lg:max-w-56`}>
               {opts(['CURRENT', 'NEXT'], (k) => t(`s02.payMonthOf.${k}`))}
@@ -183,6 +196,8 @@ export function SettingForm({ section, current, version, today, common }: { sect
               {opts(['KEEP', 'PREV_BUSINESS_DAY', 'NEXT_BUSINESS_DAY'], (k) => t(`s02.holidayShiftOf.${k}`))}
             </Select>
           </Row>
+          </Part>
+          <Part title={t('part.insurance')}>
           <Row label={t('s02.insuranceBasis')} explain={<Explain>{t.rich('s02.insuranceBasisExplain', { em })}</Explain>}>
             <Select name="insuranceBasis" defaultValue={l?.insuranceBasis ?? 'PAYROLL_BASE'} className={`${field} lg:max-w-md`}>
               {opts(['NOTICE', 'PAYROLL_BASE', 'REPORTED_BASE'], (k) => t(`s02.insuranceBasisOf.${k}`))}
@@ -197,6 +212,8 @@ export function SettingForm({ section, current, version, today, common }: { sect
               </Select>
             </Row>
           ))}
+          </Part>
+          <Part title={t('part.deduct')}>
           <Row label={t('s02.deductUnpaidLeave')} hint={t('s02.deductionHint')}>
             <span className="flex min-h-9 items-center gap-2"><input type="checkbox" name="deductUnpaidLeave" defaultChecked={l?.deductUnpaidLeave ?? false} className="size-5 accent-primary" />{t('use')}</span>
           </Row>
@@ -206,25 +223,28 @@ export function SettingForm({ section, current, version, today, common }: { sect
           <Row label={t('s02.premiumTimeBasis')} hint={t('s02.premiumTimeHint')}>
             <Select name="premiumTimeBasis" defaultValue={l?.premiumTimeBasis ?? 'ACTUAL'} className={field}>{opts(['ACTUAL', 'ROUNDED'], (k) => t(`s02.premiumTimeOf.${k}`))}</Select>
           </Row>
-          <Row label={t('s02.withholding')} explain={<Explain>{t.rich('s02.withholdingExplain', { em })}</Explain>}>
+          </Part>
+          <Part title={t('part.tax')}>
+          <Row label={t('s02.withholding')} explain={<Explain>{t.rich('s02.withholdingExplain', { em, warn })}</Explain>}>
             <Select name="withholdingRatio" defaultValue={l?.withholdingRatio ?? 100} className={`num ${field} lg:max-w-32`}>
               {opts([80, 100, 120], (k) => `${k}%`)}
             </Select>
           </Row>
+          </Part>
         </>
       )}
       {section === 'masking' && (
-        <>
+        <Part>
           <Row label={t('s08.enabled')} hint={t('s08.enabledHint')}>
             <span className="flex min-h-9 items-center gap-2"><input type="checkbox" name="enabled" defaultChecked={m?.enabled ?? true} className="size-5 accent-primary" />{t('use')}</span>
           </Row>
           <Row label={t('s08.minutes')} hint={t('s08.minutesHint')}>
             <input name="unmaskMinutes" type="number" min={1} max={60} required defaultValue={m?.unmaskMinutes ?? 5} className={`num ${field} lg:max-w-32`} />
           </Row>
-        </>
+        </Part>
       )}
       {section === 'working-time' && (
-        <>
+        <Part>
           <Row label={t('s09.weekly')}>
             <input name="weeklyHours" type="number" min={1} max={52} required defaultValue={w?.weeklyHours ?? 40} className={`num ${field} lg:max-w-32`} />
           </Row>
@@ -234,10 +254,12 @@ export function SettingForm({ section, current, version, today, common }: { sect
           <Row label={t('s09.monthly')} explain={<Explain>{t.rich('s09.monthlyExplain', { em })}</Explain>}>
             <input name="monthlyHours" type="number" min={1} max={400} defaultValue={w?.monthlyHours ?? ''} className={`num ${field} lg:max-w-32`} />
           </Row>
-        </>
+        </Part>
       )}
-      <When first={version === 0} today={today} />
-      <Foot busy={busy} err={err} done={done} label={t('save')} still={version > 0 && !rule.dirty} />
+      <Part title={t('part.apply')}>
+        <When first={version === 0} today={today} />
+        <Foot busy={busy} err={err} done={done} label={t('save')} still={version > 0 && !rule.dirty} />
+      </Part>
     </form>
   );
 }
@@ -253,7 +275,7 @@ export function ItemForm({ kind, item, today }: { kind: 'PAYMENT' | 'DEDUCTION';
   return (
     <form
       ref={rule.ref}
-      className="flex flex-col gap-4"
+      className="flex flex-col gap-3 lg:gap-4"
       onSubmit={async (ev) => {
         ev.preventDefault();
         const fd = new FormData(ev.currentTarget);
@@ -356,7 +378,7 @@ export function AllowanceForm({ kind, current, version, today }: { kind: Allowan
   return (
     <form
       ref={rule.ref}
-      className="flex flex-col gap-4"
+      className="flex flex-col gap-3 lg:gap-4"
       onSubmit={async (ev) => {
         ev.preventDefault();
         if (await post('/api/admin/payroll/policies', { ...Object.fromEntries(new FormData(ev.currentTarget)), kind, expectedVersion: version })) rule.settle();

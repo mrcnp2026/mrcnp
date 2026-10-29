@@ -1,7 +1,7 @@
 // 근태 리포트 — 부서/전사의 한 달 근태 합계와 직원별 내역 (PRD v1.3 35.4, A21). 관리자만.
 // 화면과 「엑셀 받기」가 같은 계산(buildAttendanceDeptReport)을 쓴다 — 조건이 같으면 숫자가 같다. 금액은 없다.
 // 2026-10-23 디자인(의뢰인: 정신없고 빡빡하다): 공통 조각(components/report) · 표는 핵심 8칸만 기본, 「항목 모두 보기」를 누르면 13칸.
-import { ChevronDown, ChevronRight, Download } from 'lucide-react';
+import { ChevronRight, Download } from 'lucide-react';
 import { getFormatter, getTranslations } from 'next-intl/server';
 import Link from 'next/link';
 import { Suspense } from 'react';
@@ -30,6 +30,8 @@ export default async function AttendanceReportPage({ searchParams }: { searchPar
   const groupId = options.some((o) => o.id === sp.g) ? sp.g! : null;
   const basis = sp.basis === 'current' ? 'current' : 'at_month_end';
   const more = sp.more === '1';
+  // 6개월 추이 계산을 이번 달 표보다 먼저 시작해 둔다 — 아래 그래프가 표 계산이 끝난 뒤에야 출발하지 않게 (2026-10-28 속도)
+  // 6개월 추이는 본문이 나간 뒤 TrendCharts(Suspense)가 센다 — 예전처럼 여기서 미리 시작하면 이번 달 집계와 서로 다퉈 본문이 늦게 떴다 (2026-10-29 의뢰인: 메뉴 전환이 늦다)
   const r = await reportOnce(month, practice, groupId, basis);
   // 시간은 천 단위 쉼표(1,089.7시간), 일수는 소수 둘째 자리까지(8.0625 → 8.06)
   const f = await getFormatter();
@@ -115,9 +117,17 @@ export default async function AttendanceReportPage({ searchParams }: { searchPar
           { label: t('cOvertime'), value: <CountUp value={h(r.total.overtimeMinutes)} />, tone: r.total.overtimeMinutes ? 'primary' : 'faint' },
           { label: t('cLate'), value: <CountUp value={String(r.total.lateCount)} />, tone: r.total.lateCount ? 'warn' : 'faint' },
           { label: t('cAbsent'), value: <CountUp value={dayN(r.total.absentDays)} />, tone: r.total.absentDays ? 'danger' : 'faint' },
-          { label: t('cRate'), value: <CountUp value={rate(r.total)} />, tone: 'primary' },
+          { label: t('cRate'), value: <CountUp value={rate(r.total)} />, tone: 'primary', pcOnly: true }, // 폰은 네 칸으로 (2026-10-27 의뢰인) — 출근율은 아래 6개월 추이 · 표에 있다
         ]}
       />
+
+      {/* 이 달 출근율 일별 곡선 · 게이지는 뺐다 (2026-10-27 의뢰인: 너무 큰 영역을 차지한다) — 흐름은 아래 6개월 추이로 본다 */}
+      <Block title={t('trendTitle')}>
+        {/* 6개월 추이는 늦게 채운다 — 위 숫자가 먼저 보이고 그래프는 뒤따라 (2026-10-19 속도) */}
+        <Suspense fallback={<p className="h-56 rounded-card bg-surface" aria-hidden />}>
+          <TrendCharts month={month} practice={practice} groupId={groupId} basis={basis} />
+        </Suspense>
+      </Block>
 
       <Block title={t('byGroup')} aside={toggle}>
         {/* 폰: 부서마다 한 줄 */}
@@ -228,25 +238,6 @@ export default async function AttendanceReportPage({ searchParams }: { searchPar
         </TableCard>
       </Block>
 
-      <Block title={t('trendTitle')}>
-        {/* 6개월 추이는 늦게 채운다 — 표가 먼저 보이고 그래프는 뒤따라 (2026-10-19 속도) */}
-        <div className="hidden lg:block">
-          <Suspense fallback={<p className="h-24 rounded-card bg-surface" aria-hidden />}>
-            <TrendCharts month={month} practice={practice} groupId={groupId} basis={basis} />
-          </Suspense>
-        </div>
-        <details className="group lg:hidden">
-          <summary className={`flex min-h-11 cursor-pointer list-none items-center justify-between gap-2 px-4 text-sm font-medium ${R.card}`}>
-            {t('trendOpen')}
-            <ChevronDown aria-hidden size={18} className="shrink-0 text-muted transition-transform group-open:rotate-180" />
-          </summary>
-          <div className="mt-2 flex flex-col gap-2">
-            <Suspense fallback={<p className="h-24 rounded-card bg-surface" aria-hidden />}>
-              <TrendCharts month={month} practice={practice} groupId={groupId} basis={basis} />
-            </Suspense>
-          </div>
-        </details>
-      </Block>
     </PageShell>
   );
 }

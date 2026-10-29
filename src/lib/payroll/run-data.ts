@@ -342,6 +342,8 @@ async function buildInputs(run: RunRow): Promise<Built> {
     // 고지 기준으로 고른 보험의 고지 문제만 막는다 (산재는 기본 기준을 따른다)
     if (!bonus && notice) pre.push(...notice.blockers.filter((x) => (x.detail === 'accident' ? insuranceBasis === 'NOTICE' : basisOf(x.detail as InsurerKey) === 'NOTICE')));
     if (!bonus && overrides.some((o) => (o.itemCode === 'PENSION_SETTLE' && basisOf('pension') === 'NOTICE') || (o.itemCode === 'HEALTH_SETTLE' && basisOf('health') === 'NOTICE') || (o.itemCode === 'EMPLOYMENT_SETTLE' && basisOf('employment') === 'NOTICE'))) pre.push({ code: 'notice_settlement_duplicate' });
+    // 부양가족 신고 전(세무 판이 없거나 신고일이 비어 있음)이면 가족 수는 임시다 — 계산은 그대로, 화면 · 명세서에 「임시」 (묶음 38 · 급여-57)
+    if (tax && !taxRow?.family_reported_on) notes.push({ code: 'family_unreported', detail: String(tax.familyCount) });
     const input: MemberInput['input'] = { runKind: bonus ? 'BONUS' : 'REGULAR', contract, tax, time, partialMonth, items: engineItems, policy, reference, insuranceBasis, insuranceBasisOf, notices: notice?.notices, overrides, prior, skipInsurance: bonus, minimumHourly: bonus ? null : minimumHourly, exemptYtd: exemptYtd.get(id) ?? {} };
     members.push({ employeeId: id, input, pre, notes, closeId: (close?.id as string | undefined) ?? null, contractId: (con?.id as string | undefined) ?? null, taxId: (taxRow?.id as string | undefined) ?? null, snapshot: { contract, tax, time, attendance: facts, items: engineItems, notices: notice?.notices ?? null, overrides, partialMonth, prior, closeHash: close?.input_hash ?? null } });
   }
@@ -620,6 +622,7 @@ export async function previewPay(employeeId: string, date: string): Promise<Engi
     time: con && con.payType !== 'HOURLY' ? { workedMinutes: 0, overtimeMinutes: 0, nightMinutes: 0, holidayMinutes: 0, holidayOver8Minutes: 0, paidLeaveMinutes: 0 } : null,
     partialMonth: false, items, policy: basis.policy, reference: basis.reference, insuranceBasis: basis.insuranceBasis, insuranceBasisOf: basis.insuranceBasisOf, withholding: basis.withholding, overrides: [], prior: null, minimumHourly: basis.minimumHourly,
   });
+  if (tax && !taxRaw?.familyReportedOn) r.warnings.push({ code: 'family_unreported', detail: String(tax.familyCount) }); // 부양가족 신고 전 = 가족 수 임시 (묶음 38)
   if (pre.length === 0) return r;
   return { state: 'BLOCKED', lines: [], totals: null, blockers: [...pre, ...r.blockers], warnings: r.warnings, engineVersion: r.engineVersion };
 }
@@ -687,7 +690,7 @@ export async function loadRunBoard(run: RunRow): Promise<{ lines: BoardLine[]; s
 }
 
 export type StatementLine = { code: string; kind: 'PAYMENT' | 'DEDUCTION' | 'EMPLOYER'; label: string; quantity: string | null; unitPrice: string | null; factor: string | null; rawValue: string | null; amount: number; source: 'AUTO' | 'MANUAL' | 'OVERRIDE'; trace: Row };
-export type StatementView = { state: 'OK' | 'BLOCKED'; blockers: (Blocker & { warning?: boolean })[]; pay: number | null; deduction: number | null; net: number | null; employer: number | null; lines: StatementLine[]; snapshot: Row; bundle: Row; createdAt: string };
+export type StatementView = { state: 'OK' | 'BLOCKED'; blockers: (Blocker & { warning?: boolean })[]; pay: number | null; deduction: number | null; net: number | null; employer: number | null; lines: StatementLine[]; snapshot: Row; bundle: Row; createdAt: string; taxId: string | null };
 export async function loadStatement(run: RunRow, employeeId: string): Promise<{ statement: StatementView | null; overrides: { id: string; itemCode: string; kind: string; original: number | null; proposed: number; reason: string; createdBy: string; createdAt: string }[] }> {
   const c = db();
   const { data: ovs, error } = await c.from('payroll_statement_overrides').select('*').eq('run_id', run.id).eq('employee_id', employeeId).eq('active', true).order('created_at');
@@ -701,7 +704,7 @@ export async function loadStatement(run: RunRow, employeeId: string): Promise<{ 
   const t = (v: unknown) => (v === null || v === undefined ? null : String(Number(v)));
   return {
     statement: {
-      state: s.state as 'OK' | 'BLOCKED', blockers: (s.blockers ?? []) as StatementView['blockers'], pay: n(s.pay_total), deduction: n(s.deduction_total), net: n(s.net_total), employer: n(s.employer_total), snapshot: (s.snapshot ?? {}) as Row, bundle: (s.reference_bundle ?? {}) as Row, createdAt: s.created_at as string,
+      state: s.state as 'OK' | 'BLOCKED', blockers: (s.blockers ?? []) as StatementView['blockers'], pay: n(s.pay_total), deduction: n(s.deduction_total), net: n(s.net_total), employer: n(s.employer_total), snapshot: (s.snapshot ?? {}) as Row, bundle: (s.reference_bundle ?? {}) as Row, createdAt: s.created_at as string, taxId: (s.tax_id as string | null) ?? null,
       lines: (items ?? []).map((i) => ({ code: i.item_code as string, kind: i.kind as StatementLine['kind'], label: i.label_ko as string, quantity: t(i.quantity), unitPrice: t(i.unit_price), factor: t(i.factor), rawValue: t(i.raw_value), amount: Number(i.amount), source: i.source as StatementLine['source'], trace: (i.calc_trace ?? {}) as Row })),
     },
     overrides,

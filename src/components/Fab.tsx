@@ -11,7 +11,7 @@ import { SHEET_ICONS } from './SheetOpener';
 
 // 글자가 있는 알약 모양 (2026-10-23 의뢰인: 직원 홈 PC의 「아이콘 + 글자」 요청 단추와 폰의 「+」만 있는 단추가 달랐다 → 같은 모양으로).
 // 목록의 각 항목에도 PC 단추와 같은 아이콘을 붙인다 (id가 아래에 있으면).
-const SHAPE = 'flex h-14 max-w-[calc(100vw-2rem)] items-center justify-center gap-2 rounded-chip bg-primary px-5 text-base font-bold text-on-primary shadow-pop';
+const SHAPE = 'flex h-14 max-w-[calc(100vw-2rem)] items-center justify-center gap-2 rounded-chip bg-primary px-5 text-base font-bold text-on-primary shadow-pop'; // 2026-10-29 의뢰인: 먹색으로 하자고 한 적 없다 → PC의 요청 단추와 같은 초록 (이전 2026-10-27: 키트의 「가장 중요한 단추는 먹색」을 따라 검정)
 const openSheet = (id: string) => window.dispatchEvent(new CustomEvent(OPEN_SHEET_EVENT, { detail: id }));
 
 export function Fab({ label, items, href }: { label: string; items?: { id: string; label: string; href?: string }[]; href?: string }) {

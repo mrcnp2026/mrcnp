@@ -31,7 +31,7 @@ export default async function ShiftRequestPage() {
       {(mine ?? []).length > 0 && (
         <section className="flex flex-col gap-2">
           <h2 className="px-1 font-bold">{t('pending')}</h2>
-          <ul className="-mx-4 divide-y divide-border border-y border-border bg-bg lg:mx-0 lg:rounded-card lg:border">
+          <ul className="divide-y divide-border rounded-card border border-border bg-bg shadow-card">
             {(mine ?? []).map((r) => (
               <li key={r.id} className="flex min-h-16 items-center gap-3 px-5 py-2">
                 <span className="flex min-w-0 flex-1 flex-col">

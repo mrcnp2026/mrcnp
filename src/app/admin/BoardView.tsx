@@ -4,14 +4,19 @@
 //   기준을 화면에 적어 둔다 (의뢰인: "이건 무슨 기준이야? 1일? 1달?"). 지난 날·월별은 기록 탭.
 // 숫자 칸을 누르면 아래 명단이 그 상태로 걸러진다 (의뢰인: "누르면 누가 지각인지 이름이 나오나?").
 // 명단은 6명씩 쪽 넘김(홈의 다른 카드와 같은 모양) — 20명이어도 길게 내리지 않게.
+// 걸러보기 · 쪽을 바꾸면 남는 줄은 새 자리로 미끄러지고 새 줄은 흐릿하게 나타난다 (2026-10-28 GSAP Flip, 0.3초 · 움직임 줄이기 설정이면 하지 않는다)
+import gsap from 'gsap';
+import { Flip } from 'gsap/Flip';
 import { useFormatter, useTranslations } from 'next-intl';
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { Help } from '@/components/Help';
 import { MiniPager, PER_CARD } from '@/components/PagedList';
 import { Card } from '@/components/ui';
 import { CountUp } from '@/components/CountUp';
 import type { BoardRow, DayStatus } from '@/lib/today';
 import { BOARD_FILTER_EVENT } from './KpiRow';
+
+if (typeof window !== 'undefined') gsap.registerPlugin(Flip);
 
 const ORDER: Exclude<DayStatus, 'off'>[] = ['working', 'late', 'absent', 'done', 'overtime'];
 const PER_PAGE = PER_CARD; // 6명씩 — 홈 카드와 같은 쪽 넘김 (2026-10-14 의뢰인)
@@ -46,9 +51,17 @@ export function BoardView({
   const [filter, setFilter] = useState<DayStatus | 'all' | 'in'>('all');
   const listRef = useRef<HTMLDivElement>(null);
   const phoneListRef = useRef<HTMLDivElement>(null);
+  const bodyRef = useRef<HTMLTableSectionElement>(null);
+  const flip = useRef<Flip.FlipState | null>(null);
+  // 바꾸기 직전의 줄 위치를 기억해 두고, 다시 그린 뒤 그 자리에서 새 자리로 옮긴다
+  const remember = () => {
+    const rows = bodyRef.current?.querySelectorAll('tr[data-flip-id]');
+    flip.current = rows && rows.length ? Flip.getState(rows) : null;
+  };
   // 맨 위 숫자 칸(KpiRow)을 누르면 그 사람들로 거르고 명단으로 내려간다
   useEffect(() => {
     const on = (e: Event) => {
+      remember();
       setFilter((e as CustomEvent<DayStatus | 'in'>).detail);
       setPage(1);
       listRef.current?.scrollIntoView({ block: 'nearest' });
@@ -67,6 +80,7 @@ export function BoardView({
   const cur = Math.min(page, pages);
   const shown = list.slice((cur - 1) * PER_PAGE, cur * PER_PAGE);
   const pick = (k: DayStatus | 'all' | 'in') => {
+    remember();
     setFilter(filter === k ? 'all' : k);
     setPage(1);
     // 폰: 숫자 칸을 누르면 바로 아래 이름 목록이 보이게 내려간다 (2026-10-06 의뢰인: 눌러도 이름이 안 보였다 — 목록이 화면 아래에 있었다)
@@ -84,7 +98,17 @@ export function BoardView({
   const weekTone = (wm: number | null) => (wm === null || !colored ? '' : wm > limitMinutes ? 'text-danger' : wm >= cautionMinutes ? 'text-warn' : '');
 
   const statusText = (r: BoardRow) => (r.status === 'off' && r.onLeave ? t('onLeave') : r.status === 'off' && r.work ? t(`work.${r.work}`) : th(`status.${r.status}`));
-  const pager = <MiniPager page={cur} pages={pages} onPage={setPage} />;
+  useLayoutEffect(() => {
+    const st = flip.current;
+    flip.current = null;
+    const body = bodyRef.current;
+    if (!st || !body || window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+    const tl = Flip.from(st, { targets: body.querySelectorAll('tr[data-flip-id]'), duration: 0.3, ease: 'power2.out', onEnter: (els) => gsap.fromTo(els, { opacity: 0 }, { opacity: 1, duration: 0.25, ease: 'power1.out' }) });
+    return () => {
+      tl.kill();
+    };
+  }, [filter, cur]);
+  const pager = <MiniPager page={cur} pages={pages} onPage={(n) => { remember(); setPage(n); }} />;
 
   return (
     <div ref={listRef} className="flex scroll-mt-4 flex-col gap-3 lg:h-full">
@@ -102,7 +126,7 @@ export function BoardView({
               const on = filter === k;
               const n = k === 'all' ? all.length : k === 'in' ? cameIn.length : board[k].length;
               return (
-                <button key={k} type="button" role="tab" aria-selected={on} onClick={() => { setFilter(k); setPage(1); }} className={`inline-flex min-h-9 items-center gap-1 rounded-button px-3 text-sm ${on ? 'bg-primary-tint font-bold text-primary' : 'text-muted'}`}>
+                <button key={k} type="button" role="tab" aria-selected={on} onClick={() => { remember(); setFilter(k); setPage(1); }} className={`inline-flex min-h-9 items-center gap-1 rounded-button px-3 text-sm ${on ? 'bg-rail font-bold text-text' : 'text-muted'}`}>
                   {k === 'all' ? t('everyone') : k === 'in' ? t('filterIn') : th(`status.${k}`)} <span className="num">{n}</span>
                 </button>
               );
@@ -120,9 +144,9 @@ export function BoardView({
                 ))}
               </tr>
             </thead>
-            <tbody className="divide-y divide-border">
+            <tbody ref={bodyRef} className="divide-y divide-border">
               {shown.map((r) => (
-                <tr key={r.id}>
+                <tr key={r.id} data-flip-id={r.id}>
                   <td className="px-5 py-3 font-medium whitespace-nowrap">{r.name}</td>
                   <td className={`px-5 py-3 font-bold whitespace-nowrap ${(r.onLeave || r.work) && r.status === 'off' ? 'text-primary' : TONE[r.status]}`}>{statusText(r)}</td>
                   <td className="num px-5 py-3">{time(r.firstIn) || '–'}</td>
@@ -186,7 +210,7 @@ export function BoardView({
           <ul>
             {shown.map((r) => (
               <li key={r.id} className="flex min-h-14 items-center gap-3 px-5 py-2">
-                <span aria-hidden className="flex size-10 shrink-0 items-center justify-center rounded-chip bg-surface font-bold text-muted">
+                <span aria-hidden className={`flex size-10 shrink-0 items-center justify-center rounded-chip font-bold bg-primary-tint text-primary`}>
                   {r.name.slice(0, 1)}
                 </span>
                 <span className="min-w-0 flex-1">
@@ -210,21 +234,7 @@ export function BoardView({
       </Card>
       </div>
 
-      {/* 기준 — 무엇을 어떻게 셌는지 */}
-      <details className="rounded-card bg-bg px-5 text-sm lg:hidden">
-        <summary className="flex min-h-11 cursor-pointer items-center justify-between text-muted">
-          <span>{t('basis')}</span>
-          <span className="text-faint">{t('basisOpen')}</span>
-        </summary>
-        <ul className="flex flex-col gap-1.5 pb-4 text-muted">
-          <li>{t('basisToday')}</li>
-          {legend && <li>{t('basisLate', { time: legend.deadline })}</li>}
-          {legend && <li>{t('basisOvertime', { time: legend.end })}</li>}
-          <li>{t('basisAbsent')}</li>
-          <li>{t('basisOne')}</li>
-          <li>{t('basisPast')}</li>
-        </ul>
-      </details>
+      {/* 「숫자는 어떻게 세나요」 접는 칸은 뺐다 (2026-10-27 의뢰인: 필요 없다) */}
     </div>
   );
 }

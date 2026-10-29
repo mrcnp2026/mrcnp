@@ -3,6 +3,7 @@
 // ★ 마감한 직원의 숫자는 「확정」, 마감하지 않은 직원의 숫자는 「잠정」이다. 섞인 합계에는 잠정이 몇 명인지 같이 적는다.
 // ★ 소속은 기본으로 「그 달 마지막 날의 소속」(소속 이력)으로 묶는다. 이력이 없는 직원은 지금 소속으로 본다(이력은 2026-10-13부터 쌓였다). basis='current'면 전부 지금 소속.
 // ★ 근태 리포트에는 금액이 없다.
+import { monthSpan } from '@/lib/close-review';
 import 'server-only';
 import ExcelJS from 'exceljs';
 import { OFFICE } from '@/config/office';
@@ -32,13 +33,16 @@ const addTo = (a: AttSum, b: AttSum) => { for (const k of KEYS) a[k] += b[k]; };
 // withDays: 직원마다 날짜별 합계(정규 + 연장 + 휴일, 현황판의 주 합계와 같은 셈)를 같이 낸다 — 연간 리포트가 주 52시간 넘은 주를 센다(lib/report-annual.ts)
 // employeeId: 그 직원만 센다(연간 리포트의 직원 한 명 화면)
 export async function buildAttendanceDeptReport(args: { ym: string; practice: boolean; groupId: string | null; basis: 'at_month_end' | 'current'; withDays?: boolean; employeeId?: string }): Promise<AttReport> {
-  const [{ lines, data, from, last }, groups, policy, { data: hist }] = await Promise.all([
+  const span = monthSpan(args.ym);
+  // 이상자 검토 기록도 처음 묶음에 같이 읽는다 (2026-10-28 속도: 다 끝난 뒤 따로 한 번 더 기다렸다)
+  const [{ lines, data, from, last }, groups, policy, { data: hist }, reviewMap] = await Promise.all([
     loadCloseBoard(args.ym, args.practice),
     loadOrgGroups(),
     loadAnomalyPolicy(),
     createAdminClient().from('staff_assignment_history').select('employee_id, group_id, valid_from, valid_to').eq('active', true),
+    loadAnomalyReviews(span.from, span.last, args.practice),
   ]);
-  const anomalies = summarizeAnomalies(collectAnomalies(data, from, last), policy.policy, new Set((await loadAnomalyReviews(from, last, args.practice)).keys())).byEmployee;
+  const anomalies = summarizeAnomalies(collectAnomalies(data, from, last), policy.policy, new Set(reviewMap.keys())).byEmployee;
   const now = new Date();
   const today = toKstDate(now);
   const upTo = today < last ? today : last;

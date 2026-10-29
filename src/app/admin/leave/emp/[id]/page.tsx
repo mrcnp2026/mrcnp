@@ -1,6 +1,7 @@
 // 휴가 발생 — 직원 한 명 (의뢰인 2026-10-11: 시프티의 「휴가 발생」 화면처럼) — 기준일 · 산정 기간 · 총/사용/남은 · 발생 내역(만료됨·발생됨·예정됨) · 발생 건 추가.
 // 발생 건 = 연차 부여(leave_grants) 한 줄. 기준일에 적용되는 건이 「발생됨」, 그보다 앞선 건이 「만료됨」, 시작일이 기준일 뒤인 건이 「예정됨」이다.
 // ★ 발생 일수는 관리자가 넣는다 (4-7). 자동 발생(회계연도 기준·매달 1일)과 휴가 그룹별 발생은 결정 뒤에 만든다 (결정 문서 급여-10).
+import { KpiStrip } from '@/components/report';
 import { OFFICE } from '@/config/office';
 import { leaveBalanceFor } from '@/lib/leave-balance-data';
 import { getMe } from '@/lib/auth';
@@ -65,20 +66,14 @@ export default async function LeaveAccrualPage({ params, searchParams }: { param
         </p>
       </section>
       {bal.grant || bal.ledger ? (
-        <dl className="num -mx-4 grid grid-cols-3 divide-x divide-border border-y border-border bg-bg text-center lg:mx-0 lg:rounded-card lg:border">
-          {(
-            [
-              ['total', bal.granted],
-              ['used', bal.used],
-              ['left', bal.remaining],
-            ] as const
-          ).map(([k, v]) => (
-            <div key={k} className="flex flex-col gap-1 py-4">
-              <dt className="text-sm text-muted">{t(k)}</dt>
-              <dd className={`text-2xl font-extrabold ${k === 'left' ? (v < 0 ? 'text-danger' : 'text-primary') : ''}`}>{n(v)}</dd>
-            </div>
-          ))}
-        </dl>
+        // 2026-10-28 키트: 파스텔 타일 — 사용 칸에 받은 연차 중 쓴 만큼 알약 막대
+        <KpiStrip
+          items={[
+            { label: t('total'), value: n(bal.granted) },
+            { label: t('used'), value: n(bal.used), meter: bal.granted > 0 ? Math.round((bal.used / bal.granted) * 100) : null },
+            { label: t('left'), value: n(bal.remaining), tone: bal.remaining < 0 ? 'danger' : 'primary' },
+          ]}
+        />
       ) : (
         <p className="rounded-card bg-bg p-5 text-sm text-muted">{t('noGrant')}</p>
       )}
@@ -88,7 +83,7 @@ export default async function LeaveAccrualPage({ params, searchParams }: { param
         <h2 className="px-1 font-bold">{t('history')}</h2>
         {sorted.length === 0 && lots.length === 0 && <p className="rounded-card bg-bg p-5 text-sm text-faint">{t('historyNone')}</p>}
         {lots.length > 0 && (
-          <ul className="-mx-4 divide-y divide-border border-y border-border bg-bg lg:mx-0 lg:rounded-card lg:border">
+          <ul className="divide-y divide-border rounded-card border border-border bg-bg shadow-card">
             {lots.map((l) => {
               const end = l.usableTo ? addDays(l.usableTo, -1) : null; // 원장의 끝은 「이 날부터 못 씀」이라 하루 앞까지 보인다
               const state = l.usableFrom > asOf ? 'planned' : end && end < asOf ? 'expired' : 'active';
@@ -108,7 +103,7 @@ export default async function LeaveAccrualPage({ params, searchParams }: { param
           </ul>
         )}
         {sorted.length > 0 && lots.length === 0 && (
-          <ul className="-mx-4 divide-y divide-border border-y border-border bg-bg lg:mx-0 lg:rounded-card lg:border">
+          <ul className="divide-y divide-border rounded-card border border-border bg-bg shadow-card">
             {sorted.map((g) => {
               const state = g.effectiveFrom > asOf ? 'planned' : g.id === bal.grant?.id ? 'active' : 'expired';
               const end = until(g);
@@ -138,7 +133,7 @@ export default async function LeaveAccrualPage({ params, searchParams }: { param
           <h2 className="px-1 font-bold">{tv('directList')}</h2>
           {live.length === 0 && <p className="rounded-card bg-bg p-5 text-sm text-faint">{tv('directListNone')}</p>}
           {live.length > 0 && (
-            <ul className="-mx-4 divide-y divide-border border-y border-border bg-bg lg:mx-0 lg:rounded-card lg:border">
+            <ul className="divide-y divide-border rounded-card border border-border bg-bg shadow-card">
               {live.map((r) => (
                 <li key={r.id} id={`leave-${r.id}`} className={`flex scroll-mt-20 flex-wrap items-center gap-2 px-5 py-2.5 ${sp.edit === r.id ? 'bg-primary-tint' : ''}`}>
                   <span className="flex min-w-0 flex-col">

@@ -5,7 +5,8 @@
 import { useSystemNav } from '@/components/SystemNav';
 import { History, LayoutGrid, PanelLeftClose, PanelLeftOpen } from 'lucide-react';
 import { useTranslations } from 'next-intl';
-import Link, { useLinkStatus } from 'next/link';
+import { useLinkStatus } from 'next/link';
+import { IntentLink as Link } from './IntentLink'; // 손이 닿으면 미리 받아 둔다 (2026-10-29)
 import { useSearchParams } from 'next/navigation';
 import { useEffect, useState } from 'react';
 import { appHref, appLeaves, appsFor, CONSOLE_HOME, locate, locateHref, type App, type NavRole } from '@/config/nav';
@@ -35,7 +36,7 @@ function Panel({ app, title, active, counts, onPick, t }: { app: App; title: str
           {g.items.map((s) => {
             const on = active === s.href;
             return (
-              <Link key={s.href} href={s.href} aria-current={on ? 'page' : undefined} onClick={() => onPick(s.href)} className={`flex min-h-9 items-center gap-2 rounded-button px-2.5 text-sm ${on ? 'bg-primary-tint font-bold text-primary' : 'text-text hover:bg-surface'}`}>
+              <Link key={s.href} href={s.href} aria-current={on ? 'page' : undefined} onClick={() => onPick(s.href)} className={`flex min-h-9 items-center gap-2 rounded-button px-2.5 text-sm ${on ? 'bg-rail font-bold text-text' : 'text-text hover:bg-surface'}`}>
                 <span className="flex-1">{t(`item.${s.key}`)}</span>
                 {badgeCount(counts, s.badge) > 0 && <Count n={badgeCount(counts, s.badge)} />}
                 <Loading />
@@ -121,7 +122,7 @@ export function DeskNav({ role, initialWide = false }: { role: NavRole; inboxCou
       <>
         <nav aria-label={t('space.console')} className="sticky top-14 hidden h-[calc(100dvh-3.5rem)] w-58 shrink-0 overflow-y-auto border-r glass px-3.5 py-6 lg:block">
           <h2 className="px-2 pb-4 text-2xl font-extrabold tracking-tight">{t('space.console')}</h2>
-          <Link href={CONSOLE_HOME} aria-current={allOn ? 'page' : undefined} onClick={() => setPressed(CONSOLE_HOME)} className={`flex min-h-10 items-center gap-2.5 rounded-button px-2.5 text-sm font-bold ${allOn ? 'bg-primary-tint text-primary' : 'text-text hover:bg-surface'}`}>
+          <Link href={CONSOLE_HOME} aria-current={allOn ? 'page' : undefined} onClick={() => setPressed(CONSOLE_HOME)} className={`flex min-h-10 items-center gap-2.5 rounded-button px-2.5 text-sm font-bold ${allOn ? 'bg-rail text-text' : 'text-text hover:bg-surface'}`}>
             <LayoutGrid aria-hidden size={18} strokeWidth={1.75} />
             <span className="flex-1">{t('console.all')}</span>
             <Loading />
@@ -150,7 +151,7 @@ export function DeskNav({ role, initialWide = false }: { role: NavRole; inboxCou
                 const on = at.app?.key === a.key;
                 const Icon = a.icon;
                 return (
-                  <Link key={a.key} href={appHref(a)} aria-current={on ? 'true' : undefined} onClick={() => setPressed(appHref(a))} className={`flex min-h-10 items-center gap-2.5 rounded-button px-2.5 text-sm ${on ? 'bg-primary-tint font-bold text-primary' : 'text-text hover:bg-surface'}`}>
+                  <Link key={a.key} href={appHref(a)} aria-current={on ? 'true' : undefined} onClick={() => setPressed(appHref(a))} className={`flex min-h-10 items-center gap-2.5 rounded-button px-2.5 text-sm ${on ? 'bg-rail font-bold text-text' : 'text-text hover:bg-surface'}`}>
                     <Icon aria-hidden size={18} strokeWidth={1.75} className={on ? '' : 'text-muted'} />
                     <span className="flex-1">{t(`app.${a.key}`)}</span>
                     <Loading />
@@ -175,7 +176,7 @@ export function DeskNav({ role, initialWide = false }: { role: NavRole; inboxCou
           const appCount = appLeaves(a).reduce((n, l) => n + badgeCount(counts, l.badge), 0); // 앱 띠 숫자 = 그 앱 메뉴 숫자의 합
           return (
             <Link key={a.key} href={href} aria-current={on ? 'true' : undefined} aria-label={t(`appFull.${a.key}`)} title={wide ? undefined : t(`appFull.${a.key}`)} onClick={() => setPressed(href)} className={`relative block w-full shrink-0 overflow-hidden rounded-card ${move} ${wide ? 'h-10.5' : 'h-15'} ${on ? 'font-bold text-primary' : 'font-medium text-muted hover:bg-bg'} ${on && wide ? 'bg-primary-tint' : ''}`}>
-              <span className={`absolute flex size-8 items-center justify-center rounded-button ${move} ${wide ? 'top-1.25 left-1.5' : 'top-1.5 left-3.5'} ${on && !wide ? 'bg-primary text-on-primary' : ''}`}>
+              <span className={`absolute flex size-8 items-center justify-center rounded-button ${move} ${wide ? 'top-1.25 left-1.5' : 'top-1.5 left-3.5'} ${on && !wide ? 'bg-rail text-text' : ''}`}>
                 <Icon aria-hidden size={18} strokeWidth={on ? 2.25 : 1.75} />
               </span>
               {/* 좁을 때: 아이콘 아래 짧은 이름 · 넓을 때: 아이콘 오른쪽 온전한 이름 — 한쪽이 옆으로 밀리며 사라지고 다른 쪽이 나타난다 */}

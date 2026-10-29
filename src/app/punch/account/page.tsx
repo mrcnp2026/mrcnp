@@ -48,7 +48,7 @@ export default async function AccountPage() {
         <h1 className="text-2xl font-bold">{t('title')}</h1>
 
         {/* 나 — 이름 · 소속 + 로그인할 때 쓸 수 있는 아이디 */}
-        <header className="flex flex-col gap-3 rounded-card border border-border bg-bg p-4 lg:p-5 lg:shadow-card">
+        <header className="flex flex-col gap-3 rounded-card border border-border bg-bg p-4 lg:p-5 shadow-card">
           <div className="flex items-center gap-3">
             <span aria-hidden className="flex size-12 shrink-0 items-center justify-center rounded-chip bg-primary-tint text-lg font-extrabold text-primary">
               {me.name.slice(0, 1)}

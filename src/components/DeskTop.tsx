@@ -4,7 +4,7 @@
 import { useSystemNav } from '@/components/SystemNav';
 import { Check, ChevronDown, ChevronRight, Headset, LayoutGrid, Megaphone, Menu as MenuIcon, MessagesSquare, Plane, Search, Send, Settings, UserRound, Users, Wallet, type LucideIcon } from 'lucide-react';
 import { useTranslations } from 'next-intl';
-import Link from 'next/link';
+import { IntentLink as Link } from './IntentLink'; // 손이 닿으면 미리 받아 둔다 (2026-10-29)
 import { usePathname, useRouter, useSearchParams } from 'next/navigation';
 import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import { appLeaves, appsFor, CONSOLE_HOME, locate, type NavRole, type Space } from '@/config/nav';

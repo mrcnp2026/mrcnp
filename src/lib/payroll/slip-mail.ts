@@ -117,7 +117,7 @@ export async function mailSlips(args: { me: Me; items: { employeeId: string; sli
         try {
           const pdf = await slipPdfBytes({
             locale: lang, no: slip.no, name: p.name as string, employeeNo: (p.employee_no as string | null) ?? null, groupId: (p.group_id as string | null) ?? null, month: slip.month, periodFrom: slip.periodFrom, periodTo: slip.periodTo, payDate: slip.payDate, revision: slip.revision,
-            pay: slip.pay, deduction: slip.deduction, net: slip.net, draft: false, practice: slip.isTest, correctionReason: slip.correctionReason, requestId: args.requestId, tax: found.tax ?? null, lines, time: asSlipTime(time),
+            pay: slip.pay, deduction: slip.deduction, net: slip.net, draft: false, practice: slip.isTest, correctionReason: slip.correctionReason, requestId: args.requestId, tax: found.tax ?? null, familyTemp: found.familyTemp ?? null, lines, time: asSlipTime(time),
           });
           const month = lang === 'ko' ? `${slip.month.slice(0, 4)}년 ${Number(slip.month.slice(5, 7))}월` : new Intl.DateTimeFormat('en', { year: 'numeric', month: 'long', timeZone: 'UTC' }).format(new Date(`${slip.month}-15T00:00:00Z`));
           const link = `${args.origin}/punch/payslips?m=${slip.month}`; // 로그인 뒤 그 달 명세서가 바로 열린다 (토큰 없음)

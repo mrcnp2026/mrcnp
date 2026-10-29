@@ -13,6 +13,8 @@ import { leaveTypeName } from '@/lib/leave';
 import { ago, type ReqItem, type ReqKind } from '@/lib/requests';
 
 const ICON: Record<ReqKind, LucideIcon> = { correction: PencilLine, overtime: Clock, leave: CalendarDays, work: MapPin, punch: MapPinOff, shift: CalendarRange, leaveDelete: CalendarX };
+// 종류마다 파스텔 네모 + 진한 아이콘 (2026-10-27 의뢰인: 처리할 일의 아이콘 네모가 좋다 → 카드 안 목록에)
+const TONE: Record<ReqKind, string> = { correction: 'bg-surface text-muted', overtime: 'bg-surface text-muted', leave: 'bg-surface text-muted', work: 'bg-surface text-muted', punch: 'bg-surface text-muted', shift: 'bg-surface text-muted', leaveDelete: 'bg-surface text-muted' }; // 2026-10-28 taste: 종류마다 색을 칠하지 않는다 — 종류는 아이콘 모양과 글자로
 
 export async function RequestRows({ items, leaveTypes, names, showName = false, hrefOf, table = false, openKey = 'open', hideable = false, pick }: {
   items: ReqItem[];
@@ -143,8 +145,8 @@ export async function RequestRows({ items, leaveTypes, names, showName = false, 
         return (
           <li key={r.key} className="relative">
             <Link href={hrefOf(r)} className={`flex items-start gap-3 px-5 py-3 ${hideable && r.status !== 'pending' ? 'pr-14' : ''}`}>
-              <span aria-hidden className="mt-1 flex size-11 shrink-0 items-center justify-center rounded-chip bg-surface text-muted">
-                <Icon size={22} strokeWidth={1.75} />
+              <span aria-hidden className={`mt-1 flex size-11 shrink-0 items-center justify-center rounded-button ${TONE[r.kind]}`}>
+                <Icon size={21} strokeWidth={1.9} />
               </span>
               <span className="flex min-w-0 flex-1 flex-col gap-1">
                 <span className="flex items-start justify-between gap-2">

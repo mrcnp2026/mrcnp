@@ -22,7 +22,7 @@ export function HomeToggles({ cards, initial }: { cards: HomeCard[]; initial: Ho
     router.refresh();
   };
   return (
-    <ul className="-mx-4 divide-y divide-border border-y border-border bg-bg lg:mx-0 lg:rounded-card lg:border">
+    <ul className="divide-y divide-border rounded-card border border-border bg-bg shadow-card">
       {cards.map((k) => (
         <li key={k}>
           <label className="flex min-h-14 items-center gap-3 px-5">

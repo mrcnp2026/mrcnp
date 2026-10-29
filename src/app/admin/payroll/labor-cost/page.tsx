@@ -7,6 +7,8 @@ import { getFormatter, getTranslations } from 'next-intl/server';
 import { Download } from 'lucide-react';
 import Link from 'next/link';
 import { HelpTip } from '@/components/Help';
+import { BarChart } from '@/components/charts/BarChart';
+import { KpiStrip } from '@/components/report';
 import { Card, CardTitle, Chip, PageShell } from '@/components/ui';
 import { OFFICE } from '@/config/office';
 import { getMe } from '@/lib/auth';
@@ -39,7 +41,6 @@ export default async function LaborCostPage({ searchParams }: { searchParams: Pr
 
   const byMonth = new Map(r.months.map((m) => [m.month, m]));
   const months12 = [...Array(12)].map((_, i) => ({ n: i + 1, m: byMonth.get(`${year}-${String(i + 1).padStart(2, '0')}`) ?? null }));
-  const maxMonth = Math.max(1, ...months12.map((x) => x.m?.total ?? 0));
   const peak = months12.reduce<(typeof months12)[number] | null>((a, x) => (x.m && (!a || x.m.total > (a.m?.total ?? 0)) ? x : a), null);
   const T = r.total;
   const groupRows = [...r.groups].sort((a, b) => b.total - a.total);
@@ -59,7 +60,8 @@ export default async function LaborCostPage({ searchParams }: { searchParams: Pr
               <span className="num font-bold">{short(x.value)}</span>
               <span className="num w-12 text-right text-xs text-muted">{pct(x.value, total)}%</span>
             </div>
-            <div className="h-2 overflow-hidden rounded-chip bg-surface"><div className={`fx-grow-x h-2 rounded-chip ${tone}`} style={{ width: `${Math.max(2, (x.value / max) * 100)}%` }} /></div>
+            {/* 2026-10-27 키트: 옅은 빈 막대 + 둥근 알약 */}
+            <div className="h-2.5 overflow-hidden rounded-full bg-rail"><div className={`fx-grow-x h-full rounded-full ${tone}`} style={{ width: `${Math.max(2, (x.value / max) * 100)}%`, ...(tone === 'bg-primary' ? { background: 'linear-gradient(to right, var(--t-color-accent-2), var(--t-color-primary))' } : {}) }} /></div>
           </li>
         ))}
       </ul>
@@ -165,33 +167,21 @@ export default async function LaborCostPage({ searchParams }: { searchParams: Pr
       ) : (
         <>
           {/* ① 큰 숫자 네 칸 — 크기 · 모양이 모두 같다 */}
-          <section aria-label={t('overview')} className="grid grid-cols-1 gap-3 sm:grid-cols-3">
-            {kpis.map((x) => (
-              <Card key={x.k} className="flex flex-col gap-1">
-                <p className="text-sm text-muted">{t(x.k)}</p>
-                <p className={`num text-2xl font-extrabold lg:text-3xl ${x.accent ? 'text-primary' : ''}`} title={x.full}>{x.v}</p>
-                <p className="num text-xs text-muted">{x.sub}</p>
-              </Card>
-            ))}
+          <section aria-label={t('overview')}>
+            {/* 2026-10-27 키트: 파스텔 지표 타일 (금액 전체는 칸에 마우스를 올리면 — title) */}
+            <KpiStrip items={kpis.map((x) => ({ label: t(x.k), value: <span title={x.full}>{x.v}</span>, sub: x.sub, tone: x.accent ? 'primary' : 'default' }))} />
           </section>
 
           {/* ② 월별 · 부서별 */}
           <div className="grid items-stretch gap-3 lg:grid-cols-2">
             <Card className="flex flex-col">
               <CardTitle>{t('chartMonth')}</CardTitle>
-              <div className="flex h-44 items-end gap-1.5 border-b border-border pt-6 sm:gap-2.5" role="img" aria-label={t('chartMonth')}>
-                {months12.map(({ n, m }) => (
-                  <div key={n} className="flex h-full min-w-0 flex-1 flex-col items-center justify-end gap-1" title={m ? `${t('monthN', { n })} · ${won(m.total)}` : t('monthN', { n })}>
-                    {m === peak?.m && <span className="num text-xs font-bold whitespace-nowrap text-primary">{short(m!.total)}</span>}
-                    {m ? <div className={`fx-grow w-full max-w-9 rounded-t-button ${m === peak?.m ? 'bg-primary' : 'bg-primary/45'}`} style={{ height: `${Math.max(4, (m.total / maxMonth) * 82)}%` }} /> : <div className="h-0.5 w-full max-w-9 rounded-chip bg-border" />}
-                  </div>
-                ))}
-              </div>
-              <div className="flex gap-1.5 pt-1.5 sm:gap-2.5">
-                {months12.map(({ n }) => (
-                  <span key={n} className="num min-w-0 flex-1 text-center text-xs text-muted">{n}</span>
-                ))}
-              </div>
+              {/* 2026-10-27 키트 막대: 가장 많은 달만 초록, 손을 대면 그달 금액 · 평균과의 차이 */}
+              <BarChart
+                ariaLabel={t('chartMonth')}
+                focus={peak ? peak.n - 1 : undefined}
+                bars={months12.map(({ n, m }) => ({ key: String(n), label: String(n), n: m?.total ?? 0, skip: !m, text: m === peak?.m && m ? short(m.total) : '', tip: m ? `${t('monthN', { n })} · ${won(m.total)}` : t('monthN', { n }) }))}
+              />
               {peak?.m && <p className="num pt-3 text-sm text-muted">{t('peak', { n: peak.n, amount: short(peak.m.total) })}</p>}
             </Card>
             <Card className="flex flex-col gap-3">
@@ -204,7 +194,7 @@ export default async function LaborCostPage({ searchParams }: { searchParams: Pr
           <div className="grid items-stretch gap-3 lg:grid-cols-2">
             <Card className="flex flex-col gap-3">
               <CardTitle>{t('byPayItem')}</CardTitle>
-              <BarList tone="bg-chart-extra" total={payItems.reduce((a, x) => a + x.amount, 0)} rows={payItems.map((x) => ({ key: x.code, label: x.label, value: x.amount }))} />
+              <BarList total={payItems.reduce((a, x) => a + x.amount, 0)} rows={payItems.map((x) => ({ key: x.code, label: x.label, value: x.amount }))} />
             </Card>
             <Card className="flex flex-col gap-3">
               <CardTitle>{t('byDeductionItem')}</CardTitle>

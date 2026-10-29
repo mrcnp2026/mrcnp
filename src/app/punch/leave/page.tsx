@@ -154,7 +154,7 @@ export default async function LeavePage({ searchParams }: { searchParams: Promis
         <Empty icon={CalendarDays} title={t('balanceTitle')} desc={t('noGrant')} />
       )}
 
-      <section className="flex flex-col gap-2 rounded-card border border-border bg-bg p-4 lg:p-6 lg:shadow-card">
+      <section className="flex flex-col gap-2 rounded-card border border-border bg-bg p-4 lg:p-6 shadow-card">
         <div className="flex items-center gap-2">
           <h2 className="flex-1 font-bold">{t('monthlyTitle')}</h2>
           <Link href={`/punch/leave?y=${Number(year) - 1}`} aria-label={t('prevYear')} className="flex size-9 items-center justify-center rounded-button border border-border text-muted">
@@ -171,9 +171,9 @@ export default async function LeavePage({ searchParams }: { searchParams: Promis
             {monthly.map((m) => {
               const any = m.deducted > 0 || m.other > 0 || m.pending > 0;
               return (
-                <li key={m.month} className={`flex min-h-14 flex-col items-center justify-center rounded-button px-1 py-1.5 text-center ${any ? 'bg-primary-tint' : 'bg-surface'}`}>
+                <li key={m.month} className={`flex min-h-14 flex-col items-center justify-center rounded-button px-1 py-1.5 text-center ${any ? 'bg-tile-2' : 'bg-rail'}`}>
                   <span className="text-xs text-muted">{t('monthN', { n: m.month })}</span>
-                  <span className={`text-sm font-bold ${any ? 'text-primary' : 'text-faint'}`}>{m.deducted > 0 ? cell(m.deducted) : '–'}</span>
+                  <span className={`text-sm font-bold ${any ? 'text-text' : 'text-faint'}`}>{m.deducted > 0 ? cell(m.deducted) : '–'}</span>
                   {m.other > 0 && <span className="text-xs text-muted">+{cell(m.other)}</span>}
                   {m.pending > 0 && <span className="text-xs text-warn">{cell(m.pending)}</span>}
                 </li>

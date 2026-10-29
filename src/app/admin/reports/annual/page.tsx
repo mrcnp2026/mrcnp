@@ -7,6 +7,7 @@ import { ChevronLeft, ChevronRight, Download } from 'lucide-react';
 import { getTranslations } from 'next-intl/server';
 import Link from 'next/link';
 import { CountUp } from '@/components/CountUp';
+import { BarChart } from '@/components/charts/BarChart';
 import { ParamSelect } from '@/components/ParamSelect';
 import { Block, KpiStrip, ListCard, R, ReportHead, TableCard } from '@/components/report';
 import { Chip, PageShell } from '@/components/ui';
@@ -44,6 +45,13 @@ export default async function AnnualReportPage({ searchParams }: { searchParams:
   const sumOf = (m: AnnualMetric) => Math.round(r.employees.reduce((a, e) => a + empTotal(e, m), 0) * 10) / 10;
   const detail = (id: string) => `/admin/reports/annual/${id}?${qs({ g: undefined })}`;
   const kpiMetrics = ['overtime', 'holiday', 'late', 'absent', 'leave'] as const;
+  // 월별 회사 합계 (2026-10-27 의뢰인: 리포트에 그래프 · 디자인 키트) — 고른 항목, 안 고르면 연장
+  const chartK: AnnualMetric = k ?? 'overtime';
+  const monthSum = Array.from({ length: 12 }, (_, i) => {
+    const vals = r.employees.map((e) => empMonths(e, chartK)[i]);
+    return vals.every((v) => v == null) ? null : Math.round(vals.reduce<number>((a, v) => a + (v ?? 0), 0) * 10) / 10;
+  });
+  const nowMonth = year === thisYear ? Number(toKstDate(new Date()).slice(5, 7)) - 1 : 11;
 
   return (
     <PageShell wide>
@@ -88,6 +96,16 @@ export default async function AnnualReportPage({ searchParams }: { searchParams:
           { label: t('kpiOver52'), value: <CountUp value={t('kpiPeople', { n: over52 })} />, tone: over52 > 0 ? 'warn' : 'faint', href: `?${qs({ k: k === 'over52' ? undefined : 'over52' })}`, active: k === 'over52' },
         ]}
       />
+
+      <section className={`${R.card} flex flex-col gap-3 p-5`} data-annual-chart>
+        <h2 className="text-base font-semibold">{t('chartTitle', { m: t(`m.${chartK}`) })}</h2>
+        <BarChart
+          ariaLabel={t('chartTitle', { m: t(`m.${chartK}`) })}
+          focus={nowMonth}
+          vsAvg={t('chartVsAvg')}
+          bars={monthSum.map((v, i) => ({ key: String(i), label: t('monthLabel', { m: i + 1 }), short: String(i + 1), n: v ?? 0, skip: v == null, text: v == null ? '' : String(v), tip: `${t('monthLabel', { m: i + 1 })} · ${v == null ? '–' : unit(chartK, v)}` }))}
+        />
+      </section>
 
       <Block title={k ? t(`m.${k}`) : t('byNameTitle')} count={rows.length}>
         {/* 폰: 직원마다 한 줄 */}
@@ -151,9 +169,12 @@ export default async function AnnualReportPage({ searchParams }: { searchParams:
                     ? empMonths(e, k).map((v, i, all) => {
                         const top = Math.max(1, ...all.map((x) => x ?? 0));
                         return (
-                          <td key={i} className={`${R.td} relative px-2! ${!v ? 'text-faint!' : ''}`}>
-                            {/* 그 사람의 가장 많은 달 대비 — 칸 아래 얇은 막대 */}
-                            {!!v && <span aria-hidden className="fx-grow-x absolute bottom-1.5 left-2 block h-0.5 rounded-chip bg-primary/40" style={{ width: `calc(${(v / top) * 100}% - 1rem)` }} />}
+                          <td
+                            key={i}
+                            className={`${R.td} px-2! ${!v ? 'text-faint!' : ''}`}
+                            // 옅은 히트맵 (2026-10-27 의뢰인: 진한 알약 칸이 「어지럽고 정신없다」) — 칸 바탕에 아주 옅게, 그 사람의 가장 많은 달만 조금 진하게. 글자색은 그대로
+                            style={v ? { background: `color-mix(in srgb, var(--t-color-primary) ${Math.round((v / top) * 16)}%, transparent)` } : undefined}
+                          >
                             {!v ? '–' : v}
                           </td>
                         );
@@ -182,7 +203,7 @@ function Spark({ values, label }: { values: (number | null)[]; label: string }) 
   return (
     <span role="img" aria-label={label} className="flex h-7 w-20 shrink-0 items-end gap-px">
       {values.map((v, i) => (
-        <span key={i} className={`fx-grow flex-1 rounded-t-sm ${v ? 'bg-primary' : 'bg-border'}`} style={{ height: v ? `${Math.max(12, (v / max) * 100)}%` : '2px' }} />
+        <span key={i} className="fx-grow flex-1 rounded-full" style={{ height: v ? `${Math.max(14, (v / max) * 100)}%` : '3px', background: v ? (v === max ? 'var(--t-color-primary)' : 'var(--t-color-chart-idle)') : 'var(--t-color-border)' }} />
       ))}
     </span>
   );

@@ -3,14 +3,27 @@
 import { AlertTriangle, Check, Inbox, type LucideIcon } from 'lucide-react';
 import Link from 'next/link';
 import type { ButtonHTMLAttributes, ReactNode } from 'react';
+import { Clamp } from './ClampText';
 import { Help } from './Help';
+import { MorphButton } from './MorphButton';
 
 export function Card({ children, className = '', id }: { children: ReactNode; className?: string; id?: string }) {
-  // 시프티풍 (2026-10-10 의뢰인): 모서리가 거의 각진 흰 카드 + 얇은 테두리
+  // 2026-10-27 키트: 둥근 미색 카드 + 얇은 테두리 + 아래로 퍼지는 옅은 그림자 (이전: 시프티풍 각진 카드)
   // 부르는 쪽이 여백(p-…)을 주면 기본 여백을 빼서 겹치지 않게
   const pad = /(^|\s)p-/.test(className) ? '' : 'p-5';
   // PC(2026-10-16 디자인 2차): 견본 「나 · 파랑」처럼 아주 옅은 그림자
-  return <section id={id} className={`rounded-card border border-border bg-bg lg:shadow-card ${pad} ${className}`}>{children}</section>;
+  return <section id={id} className={`rounded-card border border-border bg-bg shadow-card ${pad} ${className}`}>{children}</section>;
+}
+
+// 아이콘 네모 — 2026-10-28 taste 기준으로 중립색 하나로(종류마다 파스텔 색을 칠하지 않는다: 색은 숫자 · 데이터에만).
+// tone은 예전 호출과 맞추려고 받기만 한다. 주의가 필요하면 아이콘이 아니라 옆의 숫자 · 글자에 색을 쓴다
+const ICON_TONE = { 1: 'bg-surface text-muted', 2: 'bg-surface text-muted', 3: 'bg-surface text-muted', 4: 'bg-surface text-muted' } as const;
+export function IconTile({ icon: Icon, tone = 2, size = 36 }: { icon: LucideIcon; tone?: 1 | 2 | 3 | 4; size?: number }) {
+  return (
+    <span aria-hidden className={`inline-flex shrink-0 items-center justify-center rounded-button ${ICON_TONE[tone]}`} style={{ width: size, height: size }}>
+      <Icon size={Math.round(size * 0.47)} strokeWidth={1.9} />
+    </span>
+  );
 }
 
 type Variant = 'primary' | 'ok' | 'outline' | 'danger';
@@ -34,7 +47,8 @@ export function Button({
   ...rest
 }: ButtonHTMLAttributes<HTMLButtonElement> & { variant?: Variant; size?: keyof typeof SIZE }) {
   return (
-    <button
+    // 누르면 줄어들어 고리가 도는 움직임 (MorphButton, 2026-10-27) — 부르는 쪽의 disabled={busy}로 저절로 동작
+    <MorphButton
       className={`inline-flex items-center justify-center gap-2 rounded-button font-bold disabled:opacity-60 ${SIZE[size]} ${VARIANT[variant]} ${className}`}
       {...rest}
     />
@@ -68,8 +82,8 @@ export function CardTitle({ children, aside, help }: { icon?: LucideIcon; childr
   // help: 한 번 읽으면 되는 설명은 ? 아이콘 뒤로 접는다 (2026-10-06 의뢰인)
   return (
     <div className="flex flex-wrap items-center gap-x-1">
-      {/* 폰: 작은 회색 한 줄(토스풍) · PC(2026-10-16 디자인 2차): 견본처럼 진하고 굵은 제목 */}
-      <h2 className="text-sm font-medium text-muted lg:text-base lg:font-bold lg:text-text">{children}</h2>
+      {/* 폰 · PC 같은 모양: 진하고 굵은 제목 (2026-10-29 의뢰인: 폰만 작은 회색이라 PC와 달라 보였다. 이전 폰: 토스풍 작은 회색) */}
+      <h2 className="text-base font-bold text-text">{children}</h2>
       {help && <Help>{help}</Help>}
       {aside && <span className="ml-auto flex items-center">{aside}</span>}
     </div>
@@ -91,32 +105,35 @@ export function PageShell({ children, wide = false, flush = false }: { children:
 )은 그대로 보인다. link: 공식 안내 한 곳
  */
 const linkCls = 'mt-2 flex w-fit min-h-9 items-center gap-1 rounded-button border border-border bg-bg px-3 text-sm font-medium whitespace-normal text-text hover:bg-surface';
+// 2026-10-28 의뢰인(「긴 텍스트 · 전부 초록」): 처음엔 두 줄만(Fold) — 「자세히」로 펼친다. 테두리 · 강조를 초록에서 차분한 색으로.
+//   초록은 저장 · 고른 값 같은 「누를 것」에만, 되돌릴 수 없는 경고는 주황(warn), 숫자 · 조건은 진한 글씨(em)
 export function Explain({ children, link }: { children: ReactNode; link?: { href: string; label: string } }) {
+  const more = link ? (link.href.startsWith('/') ? (
+    <Link href={link.href} className={linkCls}>
+      {link.label} →
+    </Link>
+  ) : (
+    <a href={link.href} target="_blank" rel="noreferrer" className={linkCls}>
+      {link.label} →
+    </a>
+  )) : undefined;
   return (
-    <div className="rounded-button border border-primary/25 bg-bg/70 px-4 py-3 text-sm leading-6 whitespace-pre-line text-muted">
+    <Clamp lines={2} after={more} className="rounded-button border-l-2 border-border bg-surface/60 px-4 py-2.5 text-sm leading-6 whitespace-pre-line text-muted">
       {children}
-      {link &&
-        (link.href.startsWith('/') ? (
-          <Link href={link.href} className={linkCls}>
-            {link.label} →
-          </Link>
-        ) : (
-          <a href={link.href} target="_blank" rel="noreferrer" className={linkCls}>
-            {link.label} →
-          </a>
-        ))}
-    </div>
+    </Clamp>
   );
 }
-/** Explain 안의 강조 — t.rich(key, { em }) */
-export const em = (chunks: ReactNode) => <strong className="font-semibold text-primary">{chunks}</strong>;
+/** Explain 안의 강조 — t.rich(key, { em, warn }). em: 숫자 · 조건(진한 글씨), warn: 되돌릴 수 없는 것 · 저절로 되지 않는 것(주황) */
+export const em = (chunks: ReactNode) => <strong className="font-semibold text-text">{chunks}</strong>;
+export const warn = (chunks: ReactNode) => <strong className="font-semibold text-warn">{chunks}</strong>;
 
 /** 빈 화면 — 글자 한 줄 대신 아이콘 + 제목 + 한 줄 설명 (2026-10-22 디자인: 「요청이 없습니다」 한 줄만 덩그러니 있었다) */
 export function Empty({ title, desc, icon: Icon = Inbox, children }: { title: string; desc?: string; icon?: LucideIcon; children?: ReactNode }) {
   return (
-    <div className="flex flex-col items-center gap-2 rounded-card border border-dashed border-border bg-bg px-6 py-12 text-center">
-      <span className="flex size-12 items-center justify-center rounded-chip bg-primary-tint text-primary">
-        <Icon aria-hidden size={24} strokeWidth={1.75} />
+    // 폰은 낮고 작게 (2026-10-27 의뢰인: 모바일 — 빈 상자가 세로를 너무 많이 차지한다). 아이콘은 파스텔 네모
+    <div className="flex flex-col items-center gap-2 rounded-card border border-dashed border-border bg-bg px-5 py-6 text-center lg:px-6 lg:py-12">
+      <span className="flex size-10 items-center justify-center rounded-button bg-tile-2 text-ok lg:size-12">
+        <Icon aria-hidden size={22} strokeWidth={1.75} />
       </span>
       <p className="text-base font-bold text-text">{title}</p>
       {desc && <p className="max-w-md text-sm text-muted">{desc}</p>}

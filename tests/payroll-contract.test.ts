@@ -41,6 +41,12 @@ describe('세무 · 보험', () => {
     expect(validateTax({ ...tax, familyCount: 3, childCount: 3 })).toEqual({ ok: false, code: 'tax_child' });
     expect(validateTax({ ...tax, familyCount: 3, childCount: 2 }).ok).toBe(true);
   });
+  it('부양가족 신고일 — 비우면 신고 전(null), 날짜가 아니면 거부 (묶음 38)', () => {
+    expect(validateTax(tax)).toMatchObject({ ok: true, value: { familyReportedOn: null } });
+    expect(validateTax({ ...tax, familyReportedOn: '' })).toMatchObject({ ok: true, value: { familyReportedOn: null } });
+    expect(validateTax({ ...tax, familyReportedOn: '2026-10-28' })).toMatchObject({ ok: true, value: { familyReportedOn: '2026-10-28' } });
+    expect(validateTax({ ...tax, familyReportedOn: '2026-13-01' })).toEqual({ ok: false, code: 'tax_family' });
+  });
   it('가입하지 않는다면 근거가 있어야 한다. 모름은 근거 없이 저장된다', () => {
     const no = (note: string | null) => ({ ...tax, insurance: { ...tax.insurance, employment: { state: 'NO', reportedWage: null, note } } });
     expect(validateTax(no(null))).toEqual({ ok: false, code: 'tax_insurance_reason' });

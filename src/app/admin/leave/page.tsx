@@ -14,6 +14,8 @@ import { PcTable } from '@/components/PcTable';
 import { Pager, pageOf } from '@/components/Pager';
 import { Card, Chip, Empty, PageShell } from '@/components/ui';
 import { CountUp } from '@/components/CountUp';
+import { BarChart } from '@/components/charts/BarChart';
+import { KpiStrip } from '@/components/report';
 import { OFFICE } from '@/config/office';
 import { addDays } from '@/lib/calendar';
 import { leaveTypeName, suggestGrant } from '@/lib/leave';
@@ -96,17 +98,30 @@ export default async function AdminLeavePage({ searchParams }: { searchParams: P
             const thisMonth = inYear.filter((r) => r.startDate.slice(0, 7) <= ym && r.endDate.slice(0, 7) >= ym).length;
             const waiting = requests.filter((r) => r.status === 'pending' && name.has(r.employeeId)).length;
             return (
-              <div className="grid grid-cols-2 gap-2 lg:grid-cols-4 lg:gap-3">
-                {([['sumCount', String(inYear.length), 'text-text'], ['sumDays', n(deducted), 'text-primary'], ['sumPeople', String(people), 'text-text'], [year === today.slice(0, 4) ? 'sumMonth' : 'sumWaiting', String(year === today.slice(0, 4) ? thisMonth : waiting), 'text-text']] as const).map(([k, v, tone]) => (
-                  <div key={k} className="flex flex-col gap-1 rounded-card border border-border bg-bg px-4 py-3 lg:px-5 lg:py-4">
-                    <span className="text-sm font-semibold text-muted">{t(`pcSum.${k}`, { y: year })}</span>
-                    <span className={`num text-2xl font-bold lg:text-3xl ${v === '0' ? 'text-faint' : tone}`}>
-                      <CountUp value={v} />
-                    </span>
-                  </div>
-                ))}
+              <div className="flex flex-col gap-3 lg:gap-4">
+                {/* 2026-10-27 키트: 파스텔 지표 타일 + 월별 휴가 사용 막대(이번 달 초록) */}
+                <KpiStrip
+                  items={([['sumCount', String(inYear.length)], ['sumDays', n(deducted)], ['sumPeople', String(people)], [year === today.slice(0, 4) ? 'sumMonth' : 'sumWaiting', String(year === today.slice(0, 4) ? thisMonth : waiting)]] as const).map(([k, v]) => ({
+                    label: t(`pcSum.${k}`, { y: year }),
+                    value: <CountUp value={v} />,
+                    tone: v === '0' ? ('faint' as const) : ('default' as const),
+                  }))}
+                />
+                <section className="flex flex-col gap-2 rounded-card border border-border bg-bg p-4 shadow-card lg:p-5">
+                  <h2 className="text-base font-semibold">{t('pcSum.chartTitle', { y: year })}</h2>
+                  <BarChart
+                    ariaLabel={t('pcSum.chartTitle', { y: year })}
+                    focus={year === today.slice(0, 4) ? Number(today.slice(5, 7)) - 1 : undefined}
+                    bars={[...Array(12)].map((_, i) => {
+                      const list = inYear.filter((r) => Number(r.startDate.slice(5, 7)) === i + 1);
+                      const days = Math.round(list.reduce((a, r) => a + r.days, 0) * 100) / 100;
+                      const future = year === today.slice(0, 4) && i + 1 > Number(today.slice(5, 7));
+                      return { key: String(i), label: t('monthOf', { m: i + 1 }), short: String(i + 1), n: days, skip: future, text: days ? n(days) : '', tip: t('pcSum.chartTip', { m: i + 1, days: n(days), count: list.length }) };
+                    })}
+                  />
+                </section>
                 {waiting > 0 && year === today.slice(0, 4) && (
-                  <Link href="/admin/inbox" className="col-span-2 flex lg:col-span-4 items-center justify-between rounded-card bg-warn-tint px-5 py-3 text-sm font-semibold text-warn">
+                  <Link href="/admin/inbox" className="flex items-center justify-between rounded-card bg-warn-tint px-5 py-3 text-sm font-semibold text-warn">
                     {t('pcSum.waitingLine', { n: waiting })}
                     <ChevronRight aria-hidden size={16} />
                   </Link>
@@ -215,7 +230,7 @@ export default async function AdminLeavePage({ searchParams }: { searchParams: P
                       <tr key={p.id} className="group">
                         <th scope="row" className="border-b border-border px-4 py-2 text-left font-normal group-hover:bg-surface">
                           <span className="flex items-center gap-2.5">
-                            <span aria-hidden className="flex size-7 shrink-0 items-center justify-center rounded-chip bg-primary-tint text-xs font-bold text-primary">{p.name.slice(0, 1)}</span>
+                            <span aria-hidden className={`flex size-7 shrink-0 items-center justify-center rounded-chip text-xs font-bold bg-primary-tint text-primary`}>{p.name.slice(0, 1)}</span>
                             <span className="truncate font-bold">{p.name}</span>
                           </span>
                         </th>
@@ -225,7 +240,7 @@ export default async function AdminLeavePage({ searchParams }: { searchParams: P
                           return (
                             <td key={i} className="border-b border-border px-1 py-2 text-center group-hover:bg-surface">
                               {c > 0 && (
-                                <span title={list.map((r) => `${day(r.startDate)} ${leaveName(r.typeCode)}`).join('\n')} className={`fx-pop inline-flex h-7 min-w-8 items-center justify-center rounded-button px-1.5 font-bold ${c >= 3 ? 'bg-primary text-on-primary' : c === 2 ? 'bg-primary/40 text-primary' : 'bg-primary-tint text-primary'}`}>
+                                <span title={list.map((r) => `${day(r.startDate)} ${leaveName(r.typeCode)}`).join('\n')} className="fx-pop inline-flex h-7 min-w-8 items-center justify-center rounded-button px-1.5 font-semibold text-text" style={{ background: `color-mix(in srgb, var(--t-color-primary) ${c >= 3 ? 30 : c === 2 ? 20 : 11}%, transparent)` }}>
                                   {c}
                                 </span>
                               )}
@@ -300,8 +315,8 @@ export default async function AdminLeavePage({ searchParams }: { searchParams: P
                         {i === 2 && v === 0 ? '–' : n(v)}
                         {/* 받은 연차 중 쓴 만큼 (2026-10-22 의뢰인: 그래프가 채워지는 모습) */}
                         {i === 3 && (
-                          <span aria-hidden className="mt-1 ml-auto block h-1.5 w-20 overflow-hidden rounded-chip bg-surface">
-                            <span className="fx-grow-x block h-full rounded-chip bg-primary" style={{ width: `${bal.granted > 0 ? Math.min(100, (bal.used / bal.granted) * 100) : 0}%` }} />
+                          <span aria-hidden className="mt-1 ml-auto block h-2 w-20 overflow-hidden rounded-full bg-rail">
+                            <span className="fx-grow-x block h-full rounded-full" style={{ width: `${bal.granted > 0 ? Math.min(100, (bal.used / bal.granted) * 100) : 0}%`, background: 'linear-gradient(to right, var(--t-color-accent-2), var(--t-color-primary))' }} />
                           </span>
                         )}
                       </td>
@@ -325,8 +340,9 @@ export default async function AdminLeavePage({ searchParams }: { searchParams: P
 
       {/* 폰: 직원 한 명 = 한 줄 (받은 · 사용 · 잔여). 누르면 그 직원의 입력 칸이 아래에 열린다 (2026-10-10 의뢰인: 시프티의 휴가 「전체」처럼) */}
       {view !== 'accrual' && <div className="mt-3 lg:hidden">{summaryEl}</div>}
-      {shown.length === 0 && <div className="mt-3 lg:mt-0"><Empty title={t('emptyPeople')} /></div>}
-      <div className="-mx-4 flex flex-col lg:hidden">
+      {/* 폰: 「휴가 내역」은 실제 휴가 기록(아래 #approved)만, 「휴가 발생」은 직원별 발생 · 사용 · 잔여만 (2026-10-27 의뢰인: 폰에서 두 화면이 같은 내용이었다) */}
+      {view === 'accrual' && shown.length === 0 && <div className="mt-3 lg:mt-0"><Empty title={t('emptyPeople')} /></div>}
+      <div className={`-mx-4 flex-col lg:hidden ${view === 'accrual' ? 'flex' : 'hidden'}`}>
         {byRole.map(({ role, list }, gi) => (
           <section key={role}>
             <h2 className="num flex items-center gap-2 border-b border-border bg-surface px-5 py-3 text-sm font-bold">
@@ -422,7 +438,7 @@ export default async function AdminLeavePage({ searchParams }: { searchParams: P
         })}
       </section>
 
-      <section id="approved" className="mt-3 flex scroll-mt-16 flex-col gap-2 lg:hidden">
+      <section id="approved" className={`mt-3 scroll-mt-16 flex-col gap-2 lg:hidden ${view === 'accrual' ? 'hidden' : 'flex'}`}>
         <div className="flex flex-wrap items-center gap-x-1">
           <h2 className="font-semibold">{t('approvedTitle')}</h2>
           <Help>{t('approvedHint')}</Help>

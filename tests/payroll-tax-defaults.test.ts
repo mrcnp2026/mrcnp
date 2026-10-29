@@ -2,7 +2,7 @@
 import { describe, expect, it } from 'vitest';
 import { setupGaps } from '@/lib/payroll/contract';
 import { validateSetting } from '@/lib/payroll/settings';
-import { cleanTaxDefaults, fillState, synthTax } from '@/lib/payroll/tax-defaults';
+import { cleanTaxDefaults, fillState, slipFamilyTemp, synthTax } from '@/lib/payroll/tax-defaults';
 
 const ALL_YES = { pension: 'YES', health: 'YES', employment: 'YES', accident: 'YES' };
 
@@ -37,6 +37,20 @@ describe('직원 값과 합치기', () => {
     expect(t).toMatchObject({ withholdingRatio: 100, familyCount: 1, childCount: 0, studentLoan: { state: 'NO' } });
     expect(t.insurance.employment.state).toBe('NO');
     expect(t.insurance.pension.reportedWage).toBeNull();
+  });
+});
+
+describe('가족 수 「임시」 (묶음 38 · 급여-57)', () => {
+  const snap = { tax: { familyCount: 3 } };
+  it('계산 때 남긴 「신고 전」 안내가 있으면 그 가족 수', () => {
+    expect(slipFamilyTemp([{ code: 'basis_unverified' }, { code: 'family_unreported', detail: '3', warning: true }], 'tax-1', snap)).toBe(3);
+  });
+  it('안내가 없는 옛 명세서는 세무 판 없이 계산한 것만 임시', () => {
+    expect(slipFamilyTemp([], null, { tax: { familyCount: 1 } })).toBe(1);
+    expect(slipFamilyTemp([], 'tax-1', snap)).toBeNull();
+  });
+  it('세금 입력 자체가 없으면(계산 안 됨) 임시로 보지 않는다', () => {
+    expect(slipFamilyTemp(null, null, { tax: null })).toBeNull();
   });
 });
 

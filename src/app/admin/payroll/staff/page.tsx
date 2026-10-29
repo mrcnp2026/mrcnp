@@ -84,7 +84,13 @@ export default async function StaffPayPage({ searchParams }: { searchParams: Pro
           <QuickFind target="pay-staff" placeholder={tc('findName')} clearLabel={tc('clear')} emptyText={t('empty')} />
         </div>
       )}
+      {/* 폰: 목록 맨 윗줄에 「전체 선택」 — 개별 체크칸과 같은 줄에 맞추고, 줄 어디를 눌러도 된다. 고른 수가 옆에 보인다 (2026-10-27 의뢰인) */}
       <ul id="pay-staff" className="flex flex-col divide-y divide-border rounded-card border border-border bg-bg lg:hidden" data-phone-staff>
+        <li className="bg-surface">
+          <label className="flex min-h-12 cursor-pointer items-center px-3 text-sm">
+            <BulkAll label={t('bulk.selectAll')} withCount countLabel={t('bulk.pickedN')} />
+          </label>
+        </li>
         {lines.map((l) => {
           const c = l.contract;
           return (

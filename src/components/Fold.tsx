@@ -3,9 +3,9 @@
 import { ChevronDown } from 'lucide-react';
 import type { ReactNode } from 'react';
 
-export function Fold({ title, summary, aside, open = false, id, children }: { title: ReactNode; summary?: ReactNode; aside?: ReactNode; open?: boolean; id?: string; children: ReactNode }) {
+export function Fold({ title, summary, aside, open = false, id, children }: { title: string; summary?: string; aside?: ReactNode; open?: boolean; id?: string; children: ReactNode }) {
   return (
-    <details id={id} open={open} className="group scroll-mt-20 rounded-card border border-border bg-bg lg:shadow-card">
+    <details id={id} open={open} className="group scroll-mt-20 rounded-card border border-border bg-bg shadow-card">
       <summary className="flex min-h-14 cursor-pointer list-none items-center gap-3 px-4 py-3 hover:bg-surface lg:px-5 [&::-webkit-details-marker]:hidden">
         <span className="flex min-w-0 flex-1 flex-col">
           <span className="font-bold">{title}</span>

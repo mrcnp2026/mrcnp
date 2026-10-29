@@ -99,6 +99,7 @@ export default async function MyPayPage({ searchParams }: { searchParams: Promis
               <span className="text-lg font-bold text-muted">{tm('won')}</span>
             </p>
             {picked.slip.payDate && <p className="num text-xs text-faint">{tm('heroPayDate', { date: picked.slip.payDate })}</p>}
+            {picked.familyTemp != null && <p className="text-xs font-semibold text-warn">{tm('familyTempNote', { n: picked.familyTemp })}</p>}
           </div>
           <dl className="grid grid-cols-2 gap-3 lg:w-80">
             <div className="rounded-button bg-surface px-4 py-3">
@@ -128,7 +129,7 @@ export default async function MyPayPage({ searchParams }: { searchParams: Promis
       )}
 
       {/* 내 정보 — 폰에서는 명세서 아래로(가장 자주 보는 것이 명세서, 2026-10-17 디자인) */}
-      <details open className="group rounded-card border border-border bg-bg max-lg:order-2 lg:shadow-card">
+      <details open className="group rounded-card border border-border bg-bg max-lg:order-2 shadow-card">
         <summary className="flex cursor-pointer list-none items-center justify-between px-4 pt-3 text-sm font-bold lg:hidden [&::-webkit-details-marker]:hidden">
           {tm('profile')}
           <ChevronDown aria-hidden size={16} className="transition-transform duration-[350ms] group-open:rotate-180" />
@@ -150,7 +151,7 @@ export default async function MyPayPage({ searchParams }: { searchParams: Promis
       </details>
 
       {/* 급여상세 */}
-      <section className="rounded-card border border-border bg-bg max-lg:order-2 lg:shadow-card" data-pay-detail>
+      <section className="rounded-card border border-border bg-bg max-lg:order-2 shadow-card" data-pay-detail>
         <h2 className="border-b border-border px-4 py-3 font-bold lg:px-6">{tm('detail')}</h2>
         <dl className={`${grid} px-4 py-4 lg:px-6`}>
           <Field label={tm('payType')} value={c ? ts(`payType.${c.payType}`) : null} />
@@ -166,7 +167,8 @@ export default async function MyPayPage({ searchParams }: { searchParams: Promis
           </summary>
           <div className="flex flex-col divide-y divide-border border-t border-border">
             <dl className={`${grid} px-4 py-4 lg:px-6`}>
-              <Field label={tm('family')} num value={tax ? n(tax.familyCount) : null} />
+              {/* 부양가족 신고 전이면 계산에 쓰는 가족 수(세무 판이 없으면 1명)에 「임시」 (묶음 38 · 급여-57) */}
+              <Field label={tm('family')} num value={tax?.familyReportedOn ? n(tax.familyCount) : tm('familyTemp', { n: n(tax?.familyCount ?? 1) })} />
               <Field label={tm('children')} num value={tax ? n(tax.childCount) : null} />
               <Field label={tm('loan')} value={yn(tax?.studentLoan.state)} />
               <Field label={tm('loanPeriod')} num range={[loan?.from, loan?.to]} />

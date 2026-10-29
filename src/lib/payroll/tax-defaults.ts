@@ -58,3 +58,14 @@ export const NO_RELIEFS = {
   durunuri: { state: 'NO', pensionRate: null, employmentRate: null, from: null, to: null, note: null },
   flat19: { state: 'NO', from: null, to: null, note: null },
 };
+
+/**
+ * 부양가족 신고 전이라 가족 수가 임시인 명세서면 그때 쓴 가족 수, 아니면 null (묶음 38 · 급여-57).
+ * 계산 때 남긴 안내(family_unreported)를 본다. 그 안내가 생기기 전 명세서는 세무 판 없이(tax_id 없음) 계산한 것만 임시로 본다.
+ */
+export function slipFamilyTemp(blockers: unknown, taxId: string | null, snapshot: unknown): number | null {
+  const note = Array.isArray(blockers) ? (blockers as { code?: string; detail?: string }[]).find((b) => b?.code === 'family_unreported') : undefined;
+  if (note) return Number(note.detail) || 1;
+  const family = (snapshot as { tax?: { familyCount?: unknown } | null } | null)?.tax?.familyCount;
+  return taxId === null && typeof family === 'number' ? family : null;
+}

@@ -139,11 +139,11 @@ export default async function EmployeeNoticesPage({ searchParams }: { searchPara
         <div className="flex flex-col gap-3 lg:hidden">
           {/* 숫자 칸: 전체 · 아직 확인하지 않은 공지 (2026-10-06 의뢰인: 무엇이 중요한지 구분되지 않았다) */}
           <dl className="grid grid-cols-2 gap-2">
-            <div className="flex flex-col gap-2 rounded-card bg-bg p-4">
+            <div className="flex flex-col gap-2 rounded-card bg-tile-2 p-4 shadow-card">
               <dt className="text-sm text-muted">{t('countAll')}</dt>
               <dd className="num text-2xl leading-none font-extrabold"><CountUp value={list.length} /></dd>
             </div>
-            <div className="flex flex-col gap-2 rounded-card bg-bg p-4">
+            <div className="flex flex-col gap-2 rounded-card bg-tile-1 p-4 shadow-card">
               <dt className="text-sm text-muted">{t('countNew')}</dt>
               <dd className={`num text-2xl leading-none font-extrabold ${unread ? 'text-warn' : ''}`}><CountUp value={unread} /></dd>
             </div>

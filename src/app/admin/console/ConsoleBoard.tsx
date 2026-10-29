@@ -38,7 +38,8 @@ export function ConsoleBoard() {
 
   return (
     <>
-      <label className="flex h-11 items-center gap-2 rounded-button border border-border bg-bg px-3 text-faint focus-within:border-primary lg:max-w-sm">
+      {/* 폰에만 — PC는 위 띠 검색창이 통합설정 항목까지 찾는다 (2026-10-28 의뢰인: 「헤더에 검색창이 있는데 설정 찾기가 또 있네」) */}
+      <label className="flex h-11 items-center gap-2 rounded-button border border-border bg-bg px-3 text-faint focus-within:border-primary lg:hidden">
         <Search aria-hidden size={16} strokeWidth={1.75} />
         <input type="search" value={q} onChange={(e) => setQ(e.target.value)} placeholder={t('console.find')} aria-label={t('console.find')} className="min-w-0 flex-1 bg-transparent text-sm text-text outline-none placeholder:text-faint" />
       </label>

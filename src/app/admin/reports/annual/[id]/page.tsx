@@ -94,7 +94,9 @@ export default async function AnnualEmployeePage({ params, searchParams }: { par
                 const max = Math.max(1, ...vals.map((v) => v ?? 0));
                 const href = (i: number) => `/admin/records/${id}?m=${year}-${String(i + 1).padStart(2, '0')}${live ? '&live=1' : ''}`;
                 const label = (i: number, v: number | null) => `${t('monthLabel', { m: i + 1 })} ${v === null ? '–' : unit(k, v)} · ${t('toRecords')}`;
-                const tone = (i: number) => (e.cells[i]?.isClosed ? 'bg-primary' : 'bg-primary-tint');
+                // 마감된 달은 초록 그라데이션, 아직 안 된 달은 베이지 (2026-10-28 키트: 옅은 빈 막대 위 알약)
+                const fill = (i: number) => (e.cells[i]?.isClosed ? 'linear-gradient(to top, var(--t-color-primary), var(--t-color-accent-2))' : 'var(--t-color-chart-idle)');
+                const fillX = (i: number) => (e.cells[i]?.isClosed ? 'linear-gradient(to right, var(--t-color-accent-2), var(--t-color-primary))' : 'var(--t-color-chart-idle)');
                 return (
                   <>
                     {/* 폰: 한 달 한 줄(가로 막대) */}
@@ -103,8 +105,8 @@ export default async function AnnualEmployeePage({ params, searchParams }: { par
                         const row = (
                           <>
                             <span className="num w-9 shrink-0 text-xs text-muted">{t('monthLabel', { m: i + 1 })}</span>
-                            <span className="relative h-2.5 flex-1 rounded-chip bg-surface">
-                              {v ? <span className={`absolute inset-y-0 left-0 rounded-chip ${tone(i)}`} style={{ width: `${Math.max(3, (v / max) * 100)}%` }} /> : null}
+                            <span className="relative h-2.5 flex-1 overflow-hidden rounded-full bg-rail">
+                              {v ? <span className="fx-grow-x absolute inset-y-0 left-0 rounded-full" style={{ width: `${Math.max(3, (v / max) * 100)}%`, background: fillX(i), animationDelay: `${i * 40}ms` }} /> : null}
                             </span>
                             <span className={`num w-16 shrink-0 text-right text-sm ${v === null ? 'text-faint' : ''}`}>{v === null ? '–' : unit(k, v)}</span>
                           </>
@@ -126,7 +128,9 @@ export default async function AnnualEmployeePage({ params, searchParams }: { par
                         const col = (
                           <>
                             <span className={`num text-xs ${v === null ? 'text-faint' : 'text-muted'}`}>{v === null ? '–' : unit(k, v)}</span>
-                            <span className={`w-full max-w-10 rounded-t ${v ? tone(i) : 'bg-surface'}`} style={{ height: v ? `${Math.max(4, (v / max) * 100)}%` : '3px' }} />
+                            <span className="relative flex w-full max-w-7 flex-1 items-end overflow-hidden rounded-full bg-rail">
+                              {v ? <span className="fx-grow block w-full rounded-full" style={{ height: `${Math.max(6, (v / max) * 100)}%`, background: fill(i), animationDelay: `${i * 50}ms` }} /> : null}
+                            </span>
                             <span className="num text-xs text-muted">{t('monthLabel', { m: i + 1 })}</span>
                           </>
                         );

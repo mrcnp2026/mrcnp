@@ -28,13 +28,16 @@ export async function dailyPdfBytes(run: RunRow, l: DailyLine, locale = 'ko'): P
   const t = await getTranslations({ locale, namespace: 'paperPdf' });
   const nf = new Intl.NumberFormat(locale, { maximumFractionDigits: 2 });
   const month = run.periodFrom.slice(0, 7);
-  const lines: SlipPdfLine[] = [
-    ...l.days.map((d) => ({ kind: 'PAYMENT' as const, label: d.workDate, how: null, amount: d.gross })),
-    { kind: 'DEDUCTION', label: t('d.incomeTax'), how: t('d.taxHow'), amount: l.incomeTax ?? 0 },
-    { kind: 'DEDUCTION', label: t('d.localTax'), how: null, amount: l.localTax ?? 0 },
-    ...(l.otherDeduction ? [{ kind: 'DEDUCTION' as const, label: t('d.other'), how: null, amount: l.otherDeduction }] : []),
-  ];
-  const deduction = (l.incomeTax ?? 0) + (l.localTax ?? 0) + (l.otherDeduction ?? 0);
+  // 항목별 내역(2026-10-28 급여-58)이 있으면 그대로 — 기준 · 단가마다 지급, 4대보험 · 세금 · 공제 항목마다 한 줄. 회사 부담은 직원용 종이에 넣지 않는다
+  const lines: SlipPdfLine[] = l.lines.length
+    ? l.lines.flatMap((x) => (x.kind === 'EMPLOYER' ? [] : [{ kind: x.kind, label: x.source === 'OVERRIDE' ? `${x.label} ${t('d.adjusted')}` : x.label, how: x.how, amount: x.amount }]))
+    : [
+        ...l.days.map((d) => ({ kind: 'PAYMENT' as const, label: d.workDate, how: null, amount: d.gross })),
+        { kind: 'DEDUCTION', label: t('d.incomeTax'), how: t('d.taxHow'), amount: l.incomeTax ?? 0 },
+        { kind: 'DEDUCTION', label: t('d.localTax'), how: null, amount: l.localTax ?? 0 },
+        ...(l.otherDeduction ? [{ kind: 'DEDUCTION' as const, label: t('d.other'), how: null, amount: l.otherDeduction }] : []),
+      ];
+  const deduction = l.deduction ?? (l.incomeTax ?? 0) + (l.localTax ?? 0) + (l.otherDeduction ?? 0);
   const bytes = await buildSlipPdf({
     company: await companyName(), no: `D${month.replace('-', '')}-${run.sequence}-${l.internalNo}`, name: l.name, employeeNo: l.internalNo, group: t('d.groupValue'),
     periodFrom: run.periodFrom, periodTo: lastDay(run.periodTo), payDate: run.payDate, revision: run.revision, pay: l.gross, deduction, net: l.net, lines,

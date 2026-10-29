@@ -44,7 +44,7 @@ export function DetailBar({ back, backLabel, title, action, extra, plain = false
 
 /** 「항목 — 값」 줄 묶음. 묶음 사이는 바탕색 띠로 나뉜다 */
 export function FieldList({ children }: { children: ReactNode }) {
-  return <dl className="-mx-4 divide-y divide-border border-y border-border bg-bg lg:mx-0 lg:rounded-card lg:border">{children}</dl>;
+  return <dl className="divide-y divide-border rounded-card border border-border bg-bg shadow-card">{children}</dl>;
 }
 
 export function Field({ label, value, href }: { label: string; value: ReactNode; href?: string }) {

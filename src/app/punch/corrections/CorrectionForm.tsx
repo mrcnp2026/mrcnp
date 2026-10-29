@@ -106,7 +106,7 @@ export function CorrectionForm(props: {
     window.dispatchEvent(new CustomEvent(CLOSE_SHEET_EVENT, { detail: 'correction' }));
   };
   const otherLink = (
-    <button type="button" onClick={() => setStep('form')} className="min-h-11 text-sm font-semibold text-muted">
+    <button type="button" onClick={() => setStep('form')} className="min-h-11 text-sm font-semibold text-muted" data-correction-other>
       {t('notice.other')}
     </button>
   );

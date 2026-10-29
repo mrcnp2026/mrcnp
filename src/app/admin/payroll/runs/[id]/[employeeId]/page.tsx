@@ -8,6 +8,7 @@ import { getMe } from '@/lib/auth';
 import { loadItems } from '@/lib/payroll/data';
 import { loadRun, loadStatement } from '@/lib/payroll/run-data';
 import { slipTax } from '@/lib/payroll/slip-pdf-response';
+import { slipFamilyTemp } from '@/lib/payroll/tax-defaults';
 import { createAdminClient } from '@/lib/supabase/admin';
 import { OverrideForm } from '../../RunForms';
 
@@ -51,6 +52,7 @@ export default async function PayStatementPage({ params }: { params: Promise<{ i
         <h1 className="flex flex-wrap items-center gap-2 text-2xl font-bold">
           {p.name}
           {mem.inclusion_state === 'EXCLUDED' ? <Chip>{t('excluded')}</Chip> : !s ? <Chip>{t('notCalculated')}</Chip> : s.state === 'OK' ? <Chip tone="ok">{t('resultOk')}</Chip> : <Chip tone="warn">{t('resultBlocked', { n: s.blockers.filter((b) => !b.warning).length })}</Chip>}
+          {s && slipFamilyTemp(s.blockers, s.taxId, s.snapshot) !== null && <Chip tone="warn">{t('familyTempChip')}</Chip>}
         </h1>
         <p className="num pt-1 text-sm text-faint">{p.employee_no}</p>
       </div>

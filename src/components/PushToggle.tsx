@@ -114,7 +114,7 @@ export function PushToggle({ mode = 'menu', audience = 'staff', bare = false }: 
         <Bell aria-hidden size={18} className="shrink-0 text-primary" />
         <p className="min-w-0 flex-1 text-sm text-text">{note ?? (state === 'ios-home' ? t('iosHome') : t('promptEmployee'))}</p>
         {state === 'off' && (
-          <button type="button" disabled={busy} onClick={turnOn} className="min-h-9 shrink-0 rounded-button bg-primary px-3 text-sm font-bold text-on-primary disabled:opacity-50">
+          <button type="button" disabled={busy} onClick={turnOn} className={`min-h-9 shrink-0 rounded-button px-3 text-sm font-bold text-primary disabled:opacity-50 ${bare ? 'bg-primary-tint' : 'bg-bg'}`}>
             {t('promptOn')}
           </button>
         )}

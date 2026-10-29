@@ -222,12 +222,7 @@ export default async function AdminSchedulePage({ searchParams }: { searchParams
   const phoneBoard = board && !sp.pm && !sp.pd && !q && !g;
   const boardEl = board ? (
     <>
-      {/* 이 현황은 잡힌 일정(계획) 기준이다 — 실제 출근은 홈의 오늘 현황판 (2026-10-22 의뢰인: 모두 정상 근무라고 나와 출근한 줄 알았다) */}
-      <p className="flex flex-wrap items-center gap-x-2 rounded-card bg-primary-tint px-4 py-2.5 text-sm text-primary">
-        {t('board.planNote')}
-        <Link href="/admin" className="font-bold underline">{t('board.planNoteLink')}</Link>
-        {t('board.planNoteEnd')}
-      </p>
+      {/* 「정해 둔 근무일정을 보여 주는 화면…」 안내는 뺐다 (2026-10-27 의뢰인: 메뉴 상세의 안내 메시지를 없애라) */}
       <ScheduleBoard
         people={boardPeople}
         pick={pick}
@@ -335,7 +330,7 @@ export default async function AdminSchedulePage({ searchParams }: { searchParams
         {!board && <p className="text-xs text-faint">{t('hint')}</p>}
       </div>
       <div className="flex flex-col lg:hidden" data-phone-schedule>
-        <MineBar menu={tc('menu')} title={t('title')} side={{ href: '/punch/records?v=week', label: t('mine') }}>
+        <MineBar flush menu={tc('menu')} title={t('title')} side={{ href: '/punch/records?v=week', label: t('mine') }}>
           <form action="/admin/schedule" className="flex items-center gap-2 px-4 pb-2">
             <input type="hidden" name="pm" value={pm} />
             <input type="search" name="q" defaultValue={q} placeholder={t('search')} aria-label={t('search')} maxLength={40} className="h-10 min-w-0 flex-1 rounded-button border border-border bg-bg px-3 text-sm" />
@@ -417,7 +412,7 @@ export default async function AdminSchedulePage({ searchParams }: { searchParams
                 <span className="text-sm font-medium text-muted">{t('summary', { work: day.work, leave: day.leave })}</span>
               </h2>
               {day.rows.length === 0 && day.onLeave.length === 0 && <p className="rounded-card bg-bg p-5 text-sm text-faint">{t('emptyDay')}</p>}
-              <ul className="-mx-4 divide-y divide-border border-y border-border bg-bg empty:hidden">
+              <ul className="divide-y divide-border rounded-card border border-border bg-bg shadow-card empty:hidden">
                 {day.onLeave.map((p) => (
                   <li key={`leave${p.id}`} className="flex min-h-14 items-center gap-3 px-5">
                     <span className="flex w-14 shrink-0 justify-center">

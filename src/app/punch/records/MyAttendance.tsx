@@ -9,6 +9,8 @@ import { ChevronLeft, ChevronRight, History, Pencil } from 'lucide-react';
 import { getFormatter, getTranslations } from 'next-intl/server';
 import Link from 'next/link';
 import { CountUp } from '@/components/CountUp';
+import { BarChart } from '@/components/charts/BarChart';
+import { KpiStrip } from '@/components/report';
 import type { ReactNode } from 'react';
 import { resolveDayType } from '@/config/labor-rules';
 import { OFFICE } from '@/config/office';
@@ -36,7 +38,7 @@ const hhmm = (s: string) => s.slice(0, 5);
 export async function MyAttendance({ me, sp, base, defaultView, extra }: { me: { id: string }; sp: { v?: string; d?: string; m?: string }; base: string; defaultView: View; extra?: ReactNode }) {
   const [t, tl, tkRaw, f] = await Promise.all([getTranslations('myAtt'), getTranslations('leave'), getTranslations('admin.shifts.kinds'), getFormatter()]);
   const today = toKstDate(new Date());
-  const tk = withKindNames(tkRaw, await getShiftKindNames(today));
+  const kindNamesP = getShiftKindNames(today); // 출퇴근 자료와 함께 기다린다 (2026-10-28 속도)
   const oldest = `${shiftMonth(today.slice(0, 7), -(MONTHS_BACK - 1))}-01`;
   const newest = addDays(today, AHEAD_DAYS);
   const view: View = sp.v === 'month' ? 'month' : sp.v === 'week' ? 'week' : defaultView;
@@ -47,7 +49,8 @@ export async function MyAttendance({ me, sp, base, defaultView, extra }: { me: {
   const from = view === 'week' ? weekStartOf(picked) : weekStartOf(month.from);
   const to = view === 'week' ? addDays(from, 6) : addDays(weekStartOf(month.to), 6);
 
-  const [data, { data: hol }] = await Promise.all([loadPeriod(from, to, OFFICE.practiceMode), createAdminClient().from('holidays').select('the_date, label, kind').gte('the_date', from).lte('the_date', to)]);
+  const [data, { data: hol }, kindNames] = await Promise.all([loadPeriod(from, to, OFFICE.practiceMode), createAdminClient().from('holidays').select('the_date, label, kind').gte('the_date', from).lte('the_date', to), kindNamesP]);
+  const tk = withKindNames(tkRaw, kindNames);
   const holName = new Map((hol ?? []).filter((h) => h.kind !== 'weekly_rest').map((h) => [h.the_date as string, h.label as string]));
   const upTo = to < today ? to : today;
   const rows = data.rule && from <= upTo ? daysFor(data, me.id, from, upTo) : [];
@@ -171,15 +174,6 @@ export async function MyAttendance({ me, sp, base, defaultView, extra }: { me: {
     const workdays = xs.filter((x) => x.dayType === 'workday' && !x.fullLeave);
     return { net, regular, lvMin, otApproved, otPending, left: workdays.filter(remaining).length, all: workdays.length };
   };
-  const stat = (label: string, value: ReactNode, sub?: ReactNode, tone = '') => (
-    <div className="flex flex-col gap-1">
-      <dt className="text-xs text-muted">{label}</dt>
-      <dd className={`num text-xl font-semibold lg:text-2xl ${tone}`}>
-        {typeof value === 'string' || typeof value === 'number' ? <CountUp value={value} /> : value}
-        {sub && <span className="text-sm font-normal text-faint">{sub}</span>}
-      </dd>
-    </div>
-  );
 
   let body: ReactNode;
   if (view === 'week') {
@@ -213,15 +207,24 @@ export async function MyAttendance({ me, sp, base, defaultView, extra }: { me: {
 
     body = (
       <>
-        <section className="grid gap-4 rounded-card border border-border bg-bg p-4 lg:grid-cols-[minmax(0,5fr)_minmax(0,4fr)_minmax(0,3fr)] lg:divide-x lg:divide-border lg:p-6" data-week-summary>
-          <div className="flex flex-col gap-2 lg:pr-6">
-            <p className="font-bold">
-              {t('weekSum')} <CountUp value={dur(s.net)} className="num text-primary" />
+        {/* 2026-10-27 의뢰인(「내 근태도 디자인 키트로」): 파스텔 타일 4개 + 요일별 근무 시간 막대(고른 날만 초록) + 40시간까지 알약 진행 막대 */}
+        <KpiStrip
+          items={[
+            { label: t('weekSum'), value: <CountUp value={dur(s.net)} /> },
+            { label: t('leftDays'), value: <CountUp value={t('days', { n: s.left })} />, sub: t('ofDays', { n: s.all }) },
+            { label: t('leftHours'), value: <CountUp value={dur(leftStd)} />, sub: t('ofHours', { n: 40 }) },
+            { label: t('leave'), value: <CountUp value={dur(s.lvMin)} /> },
+          ]}
+        />
+        <section className="flex flex-col gap-4 rounded-card border border-border bg-bg p-4 shadow-card lg:p-6" data-week-summary>
+          <div className="flex flex-col gap-2">
+            <p className="flex flex-wrap items-baseline justify-between gap-2">
+              <span className="font-semibold">{t('weekChart')}</span>
+              <span className="text-xs text-muted">{leftStd > 0 ? t('needMore', { left: dur(leftStd) }) : t('reached')}</span>
             </p>
-            <p className="text-xs text-muted">{leftStd > 0 ? t('needMore', { left: dur(leftStd) }) : t('reached')}</p>
-            <div className="relative mt-1 h-2 rounded-chip bg-surface">
-              <span className="fx-grow-x absolute inset-y-0 left-0 rounded-chip bg-primary" style={{ width: pct(Math.min(s.net, STD_WEEK)) }} />
-              {s.net > STD_WEEK && <span className="fx-grow-x absolute inset-y-0 rounded-chip bg-chart-extra" style={{ left: pct(STD_WEEK), width: pct(s.net - STD_WEEK), animationDelay: '1400ms' }} />}
+            <div className="relative mt-1 h-2.5 rounded-full bg-rail">
+              <span className="fx-grow-x absolute inset-y-0 left-0 rounded-full" style={{ width: pct(Math.min(s.net, STD_WEEK)), background: 'linear-gradient(to right, var(--t-color-accent-2), var(--t-color-primary))' }} />
+              {s.net > STD_WEEK && <span className="fx-grow-x absolute inset-y-0 rounded-full bg-chart-extra" style={{ left: pct(STD_WEEK), width: pct(s.net - STD_WEEK), animationDelay: '1400ms' }} />}
               <span aria-hidden className="absolute -inset-y-1 border-l-2 border-dotted border-text" style={{ left: pct(STD_WEEK) }} />
             </div>
             <div className="num relative h-4 text-xs text-faint">
@@ -231,14 +234,17 @@ export async function MyAttendance({ me, sp, base, defaultView, extra }: { me: {
               <span className="absolute right-0">{t('hours', { n: OFFICE.weeklyLimitHours })}</span>
             </div>
           </div>
-          <dl className="hidden grid-cols-2 gap-3 lg:grid lg:px-6">
-            {stat(t('leftDays'), <CountUp value={t('days', { n: s.left })} className="text-primary" />, t('ofDays', { n: s.all }))}
-            {stat(t('leftHours'), <CountUp value={dur(leftStd)} className="text-primary" />, t('ofHours', { n: 40 }))}
-          </dl>
-          <dl className="hidden grid-cols-2 gap-3 lg:grid lg:pl-6">
-            {stat(t('total'), dur(s.net))}
-            {stat(t('leave'), dur(s.lvMin))}
-          </dl>
+          {/* 폰은 숨긴다 — 바로 아래 요일 목록에 같은 7일이 있어 세로만 길어졌다 (2026-10-27 의뢰인: 모바일) */}
+          <div className="max-lg:hidden">
+          <BarChart
+            ariaLabel={t('weekChart')}
+            focus={days7.findIndex((x) => x.d === sel.d)}
+            bars={days7.map((x) => {
+              const m = x.r && !x.live ? x.r.netMinutes : 0;
+              return { key: x.d, label: f.dateTime(new Date(`${x.d}T12:00:00+09:00`), { weekday: 'short' }), sub: String(Number(x.d.slice(8))), n: m, text: m ? `${Math.floor(m / 60)}:${String(m % 60).padStart(2, '0')}` : '', tip: `${f.dateTime(new Date(`${x.d}T12:00:00+09:00`), { month: 'long', day: 'numeric', weekday: 'short' })} · ${m ? dur(m) : '–'}` };
+            })}
+          />
+          </div>
         </section>
 
         <section className="overflow-hidden rounded-card border border-border bg-bg">
@@ -321,13 +327,13 @@ export async function MyAttendance({ me, sp, base, defaultView, extra }: { me: {
                 ))}
                 <div className="relative h-2">
                   {plans.map((x, i) => (
-                    <span key={i} className="fx-grow-x absolute inset-y-0 rounded-chip bg-primary-tint" style={bar(x)} />
+                    <span key={i} className="fx-grow-x absolute inset-y-0 rounded-full bg-primary-tint" style={bar(x)} />
                   ))}
                 </div>
                 <div className="relative h-6">
                   {sel.fullLeave && <span className="absolute inset-0 rounded-button bg-primary-tint" />}
                   {work.map((x, i) => (
-                    <span key={i} className={`fx-grow-x absolute inset-y-0 ${x.night ? 'bg-chart-extra' : 'bg-primary'}`} style={{ ...bar(x), animationDelay: '500ms' }} />
+                    <span key={i} className={`fx-grow-x absolute inset-y-0 rounded-full ${x.night ? 'bg-chart-extra' : 'bg-primary'}`} style={{ ...bar(x), animationDelay: '500ms' }} />
                   ))}
                   {brk.map((x, i) => (
                     <span key={`b${i}`} className="absolute inset-y-0 bg-border" style={bar(x)} />
@@ -372,15 +378,30 @@ export async function MyAttendance({ me, sp, base, defaultView, extra }: { me: {
     const s = sumOf(weeks.flat().filter((x) => inMonth(x.d)));
     body = (
       <>
-        <section className="grid grid-cols-2 gap-4 rounded-card border border-border bg-bg p-4 sm:grid-cols-3 lg:flex lg:justify-between lg:p-6" data-month-summary>
-          <dl className="contents">
-            {stat(t('total'), dur(s.net))}
-            {stat(t('leave'), dur(s.lvMin))}
-            {stat(t('regular'), dur(s.regular))}
-            {stat(t('otPending'), dur(s.otPending), undefined, s.otPending > 0 ? 'text-danger' : '')}
-            {stat(t('otApproved'), dur(s.otApproved))}
-            {stat(t('leftDays'), <CountUp value={t('days', { n: s.left })} className="text-primary" />, t('ofDays', { n: s.all }))}
-          </dl>
+        <div data-month-summary>
+          <KpiStrip
+            items={[
+              { label: t('total'), value: <CountUp value={dur(s.net)} /> },
+              { label: t('leave'), value: <CountUp value={dur(s.lvMin)} /> },
+              { label: t('regular'), value: <CountUp value={dur(s.regular)} /> },
+              { label: t('otPending'), value: <CountUp value={dur(s.otPending)} />, tone: s.otPending > 0 ? 'danger' : 'default' },
+              { label: t('otApproved'), value: <CountUp value={dur(s.otApproved)} /> },
+              { label: t('leftDays'), value: <CountUp value={t('days', { n: s.left })} />, sub: t('ofDays', { n: s.all }) },
+            ]}
+          />
+        </div>
+        {/* 주별 근무 시간 (2026-10-27) — 이번 주만 초록 */}
+        <section className="flex flex-col gap-3 rounded-card border border-border bg-bg p-4 shadow-card lg:p-6">
+          <p className="font-semibold">{t('monthChart')}</p>
+          <BarChart
+            ariaLabel={t('monthChart')}
+            focus={weeks.findIndex((w) => w.some((x) => x.d === today))}
+            bars={weeks.map((w) => {
+              const m = sumOf(w.filter((x) => inMonth(x.d))).net;
+              const a0 = w.find((x) => inMonth(x.d))?.d ?? w[0].d;
+              return { key: w[0].d, label: `${Number(a0.slice(5, 7))}/${Number(a0.slice(8))}~`, n: m, text: m ? `${Math.floor(m / 60)}h` : '', tip: `${Number(a0.slice(5, 7))}/${Number(a0.slice(8))}~ · ${m ? dur(m) : '–'}` };
+            })}
+          />
         </section>
         <section className="overflow-hidden rounded-card border border-border bg-bg" data-month-grid>
           <div className="grid grid-cols-7 border-b border-border text-xs text-muted lg:grid-cols-[8rem_repeat(7,minmax(0,1fr))]">

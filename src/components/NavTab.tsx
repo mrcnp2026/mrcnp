@@ -4,14 +4,15 @@
 // ② 다음 화면을 불러오는 동안 아이콘 아래 작은 막대 (useLinkStatus)
 // 움직임은 150ms 이내 색·투명도만 (R-10-8), 움직임 줄이기 설정이면 globals.css가 끈다.
 import type { LucideIcon } from 'lucide-react';
-import Link, { useLinkStatus } from 'next/link';
+import { useLinkStatus } from 'next/link';
+import { IntentLink as Link } from './IntentLink'; // 손이 닿으면 미리 받아 둔다 (2026-10-29)
 import { usePathname } from 'next/navigation';
 import { useEffect, useState, type ReactNode } from 'react';
 
 function Pending({ dark = false }: { dark?: boolean }) {
   const { pending } = useLinkStatus();
   // 자리를 차지하지 않게 탭 바닥에 띄운다 — 흐름 안에 두면 아이콘·글자가 위로 쏠려 보인다 (2026-10-11 의뢰인)
-  return <span aria-hidden className={`h-0.5 w-6 rounded-chip ${dark ? 'absolute bottom-1 left-1/2 -translate-x-1/2 bg-on-primary' : 'bg-primary'} ${pending ? 'opacity-100' : 'opacity-0'}`} />;
+  return <span aria-hidden className={`h-0.5 w-6 rounded-chip ${dark ? 'absolute bottom-1 left-1/2 -translate-x-1/2 bg-primary' : 'bg-primary'} ${pending ? 'opacity-100' : 'opacity-0'}`} />;
 }
 
 /** 방금 누른 탭 — 화면 주소가 바뀌면 지운다 */
@@ -39,7 +40,7 @@ export function NavTab({
   onPress: () => void;
   badge?: ReactNode;
   wideRow?: boolean; // 넓은 화면 왼쪽 메뉴 모양 (관리자)
-  dark?: boolean; // 짙은 바탕(폰 하단 탭) 위 — 흰 글자
+  dark?: boolean; // 폰 하단 탭 — 이름은 예전(먹색 바탕) 그대로. 2026-10-29부터 PC 앱 띠처럼 밝은 바탕 · 고른 탭 초록 · 나머지 회색
 }) {
   return (
     <Link
@@ -48,7 +49,7 @@ export function NavTab({
       onClick={onPress}
       className={`relative flex flex-col items-center justify-center text-xs ${dark ? 'min-h-16 gap-1' : 'min-h-14 gap-0.5'} ${
         wideRow ? 'lg:flex-row lg:justify-start lg:gap-2 lg:rounded-button lg:px-3 lg:text-base' : ''
-      } ${dark ? (active ? 'font-bold text-on-primary' : 'text-on-primary opacity-60') : active ? `font-bold text-text ${wideRow ? 'lg:bg-primary-tint' : ''}` : 'text-faint'}`}
+      } ${dark ? (active ? 'font-bold text-primary' : 'text-muted') : active ? `font-bold text-text ${wideRow ? 'lg:bg-primary-tint' : ''}` : 'text-faint'}`}
     >
       <span className="relative">
         <Icon aria-hidden size={22} strokeWidth={active ? 2.25 : 1.75} />

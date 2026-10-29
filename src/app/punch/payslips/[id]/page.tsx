@@ -84,6 +84,7 @@ export default async function MyPayslipPage({ params }: { params: Promise<{ id: 
           )}
         </p>
       )}
+      {found.familyTemp != null && <p className="rounded-card border border-warn bg-warn-tint p-3 text-sm text-warn">{t('familyTemp', { n: found.familyTemp })}</p>}
       <Card className="flex items-center justify-between gap-3">
         <span className="font-bold">{t('net')}</span>
         <CountUp value={won(slip.net)} className="num text-2xl font-extrabold" />

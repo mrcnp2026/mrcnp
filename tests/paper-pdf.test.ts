@@ -15,7 +15,7 @@ const { dailyPdfBytes, retirementPdfBytes } = await import('@/lib/payroll/paper-
 const { calcRetirement } = await import('@/lib/payroll/retirement');
 
 const run = { id: 'r', kind: 'DAILY', title: null, periodFrom: '2026-10-01', periodTo: '2026-11-01', payDate: '2026-11-05', sequence: 1, isTest: false, revision: 1, status: 'FINALIZED', version: 1, generationId: 'g', totals: {}, createdBy: 'x', createdAt: '', reviewedBy: null, reviewedAt: null, finalizedBy: null, finalizedAt: null, supersedesId: null, correctionReason: null } as const;
-const line = { payeeId: 'p', name: '홍길동', internalNo: 'D-001', state: 'OK', blockers: [], warnings: [], workDays: 2, gross: 400_000, taxable: 400_000, nontax: 0, incomeTax: 2_700, localTax: 260, otherDeduction: 0, net: 397_040, days: [{ workDate: '2026-10-01', gross: 200_000, incomeTax: 1_350, localTax: 130, deduction: 0 }, { workDate: '2026-10-02', gross: 200_000, incomeTax: 1_350, localTax: 130, deduction: 0 }] } as const;
+const line = { payeeId: 'p', name: '홍길동', internalNo: 'D-001', state: 'OK', blockers: [], warnings: [], workDays: 2, gross: 400_000, taxable: 400_000, nontax: 0, incomeTax: 2_700, localTax: 260, otherDeduction: 0, net: 397_040, workerKind: 'GENERAL' as const, visaType: null, nationality: null, manDays: 2, hours: 0, insurance: null, insuranceTotal: null, deduction: null, lines: [] as never[], days: [{ workDate: '2026-10-01', gross: 200_000, incomeTax: 1_350, localTax: 130, deduction: 0 }, { workDate: '2026-10-02', gross: 200_000, incomeTax: 1_350, localTax: 130, deduction: 0 }] } as const;
 
 describe('paper PDF', () => {
   it('일용 지급명세서 — 한 쪽, 파일 이름에 근무월 · 내부번호', async () => {

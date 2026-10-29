@@ -26,7 +26,12 @@ function Bar() {
     const id = setTimeout(() => setOn(false), 8000);
     return () => clearTimeout(id);
   }, [on]);
-  return on ? <div aria-hidden data-noprint className="nav-progress pointer-events-none fixed inset-x-0 top-0 z-60 h-0.5 bg-primary" /> : null;
+  // 넘어가는 동안 지금 화면을 살짝 흐리게 (2026-10-27 의뢰인: 「불러오는 중」 빈 카드 잔상이 오래 남는다) —
+  // 빈 카드로 바꾸지 않고 지금 화면을 그대로 둔 채 「눌렸고 처리 중」만 보인다. 새 화면이 오면 바로 바뀐다
+  useEffect(() => {
+    document.documentElement.toggleAttribute('data-navigating', on);
+  }, [on]);
+  return on ? <div aria-hidden data-noprint className="nav-progress pointer-events-none fixed inset-x-0 top-0 z-60 h-1 bg-primary" /> : null;
 }
 
 export function NavProgress() {

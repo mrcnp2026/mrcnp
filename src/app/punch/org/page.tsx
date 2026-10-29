@@ -36,8 +36,10 @@ export default async function OrgPage({ searchParams }: { searchParams: Promise<
   for (const l of leaves ?? []) away.set(l.employee_id as string, Number(l.days) >= 1 ? 'leave' : 'partLeave');
   const sections = groupPeople(groups, list).filter((s) => s.count > 0);
   const person = (p: (typeof list)[number]) => (
-    <li key={p.id} className="flex min-h-11 min-w-0 items-center justify-between gap-2 border-b border-border py-1.5">
-      <span className="min-w-0">
+    <li key={p.id} className="flex min-h-11 min-w-0 items-center gap-2 border-b border-border py-1.5">
+      {/* 이름 앞 파스텔 네모 — 사람마다 같은 색 (2026-10-28 키트) */}
+      <span aria-hidden className={`flex size-8 shrink-0 items-center justify-center rounded-chip text-xs font-bold bg-primary-tint text-primary`}>{p.name.slice(0, 1)}</span>
+      <span className="min-w-0 flex-1">
         <span className="block truncate font-bold">{p.name}</span>
         {p.title && <span className="block truncate text-xs text-muted">{p.title}</span>}
       </span>

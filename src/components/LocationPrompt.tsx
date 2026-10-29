@@ -48,7 +48,7 @@ export function LocationPrompt({ bare = false }: { bare?: boolean } = {}) {
             setBusy(false);
             if (p) setState('granted');
           }}
-          className="min-h-9 shrink-0 rounded-button bg-primary px-3 text-sm font-bold text-on-primary disabled:opacity-50"
+          className="min-h-9 shrink-0 rounded-button bg-primary-tint px-3 text-sm font-bold text-primary disabled:opacity-50" // 안내 줄의 작은 단추는 옅게 (2026-10-27 — 진한 초록 단추가 한 화면에 여럿이라 무거웠다)
         >
           {t('allow')}
         </button>

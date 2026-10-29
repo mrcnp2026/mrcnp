@@ -41,7 +41,7 @@ const toTax = (r: Row): TaxRow => {
   const loan = (r.student_loan ?? {}) as Partial<TaxInput['studentLoan']>;
   const rel = (r.reliefs ?? {}) as Partial<Reliefs>;
   return {
-    id: r.id as string, employeeId: r.employee_id as string, withholdingRatio: r.withholding_ratio as TaxRow['withholdingRatio'], familyCount: r.family_count as number, childCount: r.child_count as number, insurance,
+    id: r.id as string, employeeId: r.employee_id as string, withholdingRatio: r.withholding_ratio as TaxRow['withholdingRatio'], familyCount: r.family_count as number, childCount: r.child_count as number, familyReportedOn: (r.family_reported_on as string | null | undefined) ?? null, insurance,
     studentLoan: { state: loan.state ?? UNKNOWN_TAX.studentLoan.state, monthlyAmount: n(loan.monthlyAmount), from: loan.from ?? null, to: loan.to ?? null },
     reliefs: { sme: { ...UNKNOWN_RELIEFS.sme, ...(rel.sme ?? {}) }, durunuri: { ...UNKNOWN_RELIEFS.durunuri, ...(rel.durunuri ?? {}) }, ...(rel.flat19 ? { flat19: rel.flat19 } : {}) }, // 외국인 단일세율 19%도 이어 받는다(예전에는 빠져서, 고칠 때마다 「아니오」로 돌아갔다)
     validFrom: r.valid_from as string, validTo: r.valid_to as string | null, version: r.version as number, reason: r.reason as string | null, createdBy: r.created_by as string, createdAt: r.created_at as string,
@@ -56,15 +56,17 @@ export type StaffPayLine = { employeeId: string; name: string; employeeNo: strin
 /** 사원별 급여 목록 — 켜져 있는 직원 + 꺼져 있어도 계약이 있는 직원. 검사 전용 계정은 뺀다 */
 export async function loadStaffPayBoard(today: string): Promise<StaffPayLine[]> {
   const c = db();
-  const [{ data: people, error }, { data: cons }, { data: taxes }, { data: items }] = await Promise.all([
+  // 세무 기본값도 같이 읽는다 — 따로 한 번 더 기다리던 것 (2026-10-28 속도)
+  const [{ data: people, error }, { data: cons }, { data: taxes }, { data: items }, taxDefaults] = await Promise.all([
     c.from('profiles').select('id, name, employee_no, group_id, joined_on, active').order('name'),
     c.from('payroll_contract_versions').select('*').eq('status', 'active'),
     c.from('payroll_employee_tax_versions').select('*').eq('status', 'active'),
     c.from('payroll_employee_items').select('employee_id, valid_from, valid_to').eq('active', true),
+    loadTaxDefaults(today),
   ]);
   if (error) fail('loadStaffPayBoard', error);
   const contracts = (cons ?? []).map(toContract), taxRows = (taxes ?? []).map(toTax);
-  const hasTaxDefaults = !!(await loadTaxDefaults(today));
+  const hasTaxDefaults = !!taxDefaults;
   return (people ?? [])
     // 시스템관리자(admin)는 직원이 아니다 — 계약이 있어도 급여 대상이 아니다 (2026-10-17 디자인 · 2026-10-26 의뢰인: 「급여 대상에서 빼줘」)
     .filter((p) => !(p.employee_no as string | null)?.startsWith('e2e-') && (p.active || contracts.some((x) => x.employeeId === p.id)) && p.employee_no !== OFFICE.ownerEmployeeNo)
@@ -168,7 +170,7 @@ export async function saveContract(args: { employeeId: string; input: ContractIn
 
 export async function saveTax(args: { employeeId: string; input: TaxInput; validFrom: string; reason: string | null; expectedVersion: number; me: Me; requestId?: string }): Promise<TaxRow> {
   const i = args.input;
-  const row = await appendVersion('payroll_employee_tax_versions', args.employeeId, { withholding_ratio: i.withholdingRatio, family_count: i.familyCount, child_count: i.childCount, insurance: i.insurance, student_loan: i.studentLoan, reliefs: i.reliefs }, args);
+  const row = await appendVersion('payroll_employee_tax_versions', args.employeeId, { withholding_ratio: i.withholdingRatio, family_count: i.familyCount, child_count: i.childCount, family_reported_on: i.familyReportedOn ?? null, insurance: i.insurance, student_loan: i.studentLoan, reliefs: i.reliefs }, args);
   await payrollAudit({ actorId: args.me.id, action: 'tax.save', table: 'payroll_employee_tax_versions', subjectId: row.id as string, employeeId: args.employeeId, requestId: args.requestId, detail: { version: row.version, validFrom: args.validFrom } });
   return toTax(row);
 }

@@ -198,7 +198,7 @@ export default async function StaffPayDetailPage({ params, searchParams }: { par
         {tax ? (
           <dl className="num grid gap-x-6 gap-y-1 pt-3 text-sm md:grid-cols-2">
             <div className="flex justify-between gap-3"><dt className="text-muted">{t('fRatio')}</dt><dd className="font-bold">{t('pct', { n: tax.withholdingRatio })}</dd></div>
-            <div className="flex justify-between gap-3"><dt className="text-muted">{t('fFamily')}</dt><dd>{t('familyValue', { n: tax.familyCount, c: tax.childCount })}</dd></div>
+            <div className="flex justify-between gap-3"><dt className="text-muted">{t('fFamily')}</dt><dd>{t('familyValue', { n: tax.familyCount, c: tax.childCount })} {tax.familyReportedOn ? <span className="text-xs text-faint">({t('familyReportedOn', { d: tax.familyReportedOn })})</span> : <span className="text-xs font-bold text-warn">({t('familyTempTag')})</span>}</dd></div>
             {INSURERS.map((k) => (
               <div key={k} className="flex justify-between gap-3">
                 <dt className="text-muted">{t(`insurer.${k}`)}</dt>

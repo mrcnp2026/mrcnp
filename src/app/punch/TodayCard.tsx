@@ -8,6 +8,7 @@
 //   · 등록한 기기가 없으면: 버튼 자리에 "이 기기를 출퇴근 기기로 등록" (본인이 직접, 초대 코드 없음)
 //   · 다른 기기에서 열었으면: 버튼 대신 안내 (등록하지 않은 기기에서 지문 창을 띄우면 브라우저가 "보안 키(USB)"를 찾으라고 해서 혼란스럽다)
 // - 기록 중에는 버튼을 막고 "기록하는 중" — 두 번 눌러도 한 번만 (7-4 요점 1)
+import { MorphButton } from '@/components/MorphButton';
 import { browserSupportsWebAuthn, startAuthentication, startRegistration } from '@simplewebauthn/browser';
 import { Check, Clock, Fingerprint, ShieldCheck, Smartphone } from 'lucide-react';
 import { useFormatter, useTranslations } from 'next-intl';
@@ -272,7 +273,8 @@ export function TodayCard(props: {
       ) : (
         // 옆의 「요청」 단추는 뺐다 — 요청은 다른 화면처럼 오른쪽 아래 + 단추에서 (2026-10-18 의뢰인)
         // 알약 모양 (2026-10-23 의뢰인: 동그라미·아이콘은 별로 → 글자만 있는 알약). 출근은 파랑, 퇴근은 진한 남색 + 글자로 구분
-        <button
+        // 누르면 동그라미로 줄고 기록하는 동안 고리가 돈다 (MorphButton, 2026-10-27)
+        <MorphButton
           type="button"
           onClick={punch}
           disabled={busy || thisDevice === null}
@@ -281,7 +283,7 @@ export function TodayCard(props: {
           }`}
         >
           {busy ? t('recording') : t(kind === 'in' ? 'clockIn' : 'clockOut')}
-        </button>
+        </MorphButton>
       )}
 
       {ask && props.reason && <ReasonSheet ask={ask} today={props.reason.today} note={props.reason.note} canAskWork={props.reason.canAskWork} onClose={() => setAsk(null)} />}

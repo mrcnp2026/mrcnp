@@ -52,7 +52,7 @@ export function ListBar({
     setOpen(null);
   };
   return (
-    <div className="sticky top-0 z-10 -mx-4 flex flex-col gap-2 border-b border-border bg-bg px-4 pt-[calc(0.5rem+env(safe-area-inset-top))] pb-2 lg:static lg:mx-0 lg:rounded-card lg:border lg:pt-2">
+    <div className="sticky top-0 z-20 -mx-4 flex flex-col gap-2 border-b border-border bg-bg px-4 pt-[calc(0.5rem+env(safe-area-inset-top))] pb-2 lg:static lg:mx-0 lg:rounded-card lg:border lg:pt-2">
       <div className="flex items-center gap-2">
         <MenuButton label={labels.menu} />
         <form

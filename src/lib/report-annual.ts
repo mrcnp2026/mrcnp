@@ -2,10 +2,11 @@
 // ★ 달마다의 숫자는 근태 리포트(buildAttendanceDeptReport)를 그대로 쓴다 → 근태 리포트의 그 달 숫자와 같다. 금액은 없다.
 // ★ 주 52시간: 달을 넘는 주도 한 주로 센다(달마다 받은 날짜별 합계를 이어 붙여 월요일 기준으로 묶는다). 해를 넘는 주는 그 해 안의 날만 센다.
 // 숫자를 모으는 부분(collectAnnual)은 순수함수 — 시험(tests/report-annual.test.ts)이 이것을 본다.
+import { monthReport } from '@/lib/report-month-cache';
 import 'server-only';
 import ExcelJS from 'exceljs';
 import { OFFICE } from '@/config/office';
-import { buildAttendanceDeptReport, type AttReport } from '@/lib/report-attendance';
+import { type AttReport } from '@/lib/report-attendance';
 import { createAdminClient } from '@/lib/supabase/admin';
 import { toKstDate } from '@/lib/time';
 import { collectAnnual, type AnnualReport, type AnnualSum } from '@/lib/report-annual-core';
@@ -24,7 +25,7 @@ export async function buildAnnualReport(args: { year: number; practice: boolean;
   const months = await annualMonths(args.year);
   // 달마다 따로 센다(근태 리포트와 같은 계산). 셀 수 없는 달(규칙 없음 등)은 빈 달로 둔다
   const reports = await Promise.all(
-    months.map((ym) => buildAttendanceDeptReport({ ym, practice: args.practice, groupId: args.groupId, basis: 'at_month_end', withDays: true, employeeId: args.employeeId }).catch(() => null as AttReport | null)),
+    months.map((ym) => monthReport({ ym, practice: args.practice, groupId: args.groupId, basis: 'at_month_end', withDays: true, employeeId: args.employeeId }).catch(() => null as AttReport | null)), // 지난 달은 10분 보관 (2026-10-28 속도: 12초)
   );
   return collectAnnual({
     year: args.year,

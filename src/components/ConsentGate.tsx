@@ -21,8 +21,8 @@ export function ConsentGate({ version, languages }: { version: string; languages
   const [err, setErr] = useState<{ code: string; requestId?: string } | null>(null);
 
   return (
-    <div className="fixed inset-0 z-40 flex items-end justify-center bg-text/40 md:items-center" role="dialog" aria-modal="true" aria-labelledby="consent-title">
-      <div className="flex max-h-[calc(100dvh-1rem)] w-full max-w-md flex-col rounded-t-card bg-bg md:rounded-card">
+    <div className="pop-backdrop fixed inset-0 z-40 flex items-end justify-center bg-text/40 md:items-center" role="dialog" aria-modal="true" aria-labelledby="consent-title">
+      <div className="sheet-up flex max-h-[calc(100dvh-1rem)] w-full max-w-md flex-col rounded-t-card bg-bg md:rounded-card">
         <div className="flex items-center justify-between gap-2 px-6 pt-5">
           <h2 id="consent-title" className="flex items-center gap-2 text-xl font-extrabold tracking-tight">
             <ShieldCheck aria-hidden size={22} strokeWidth={1.75} className="shrink-0 text-primary" />

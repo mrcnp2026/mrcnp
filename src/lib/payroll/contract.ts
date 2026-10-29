@@ -52,6 +52,7 @@ export type TaxInput = {
   withholdingRatio: 80 | 100 | 120;
   familyCount: number; // 본인 포함
   childCount: number; // 8세 이상 20세 이하 자녀 (가족 수에 포함된 사람)
+  familyReportedOn?: string | null; // 직원에게 부양가족 신고를 받은 날. 비어 있으면 「신고 전」 → 가족 수에 「임시」 표시 (묶음 38 · 급여-57)
   insurance: Record<Insurer, InsuranceState>;
   studentLoan: { state: Tri; monthlyAmount: number | null; from: string | null; to: string | null }; // 상환 기간(끝은 그 날까지)
   reliefs: Reliefs;
@@ -82,6 +83,8 @@ export function validateTax(b: Record<string, unknown>): Result<TaxInput> {
   const family = num(b.familyCount), child = num(b.childCount);
   if (typeof family !== 'number' || !Number.isInteger(family) || family < 1 || family > 11) return { ok: false, code: 'tax_family' };
   if (typeof child !== 'number' || !Number.isInteger(child) || child < 0 || child > family - 1) return { ok: false, code: 'tax_child' }; // 자녀는 가족 수 안의 사람이다
+  const reported = date(b.familyReportedOn);
+  if (reported === undefined) return { ok: false, code: 'tax_family' };
   const src = (b.insurance && typeof b.insurance === 'object' ? b.insurance : {}) as Record<string, unknown>;
   const insurance = {} as Record<Insurer, InsuranceState>;
   for (const k of INSURERS) {
@@ -99,7 +102,7 @@ export function validateTax(b: Record<string, unknown>): Result<TaxInput> {
   if (lf === undefined || lt === undefined || (lf && lt && lt < lf)) return { ok: false, code: 'tax_loan_period' };
   const reliefs = validateReliefs(b.reliefs);
   if (!reliefs.ok) return reliefs;
-  return { ok: true, value: { withholdingRatio: b.withholdingRatio, familyCount: family, childCount: child, insurance, studentLoan: { state: loan.state, monthlyAmount: loan.state === 'YES' ? amt : null, from: loan.state === 'YES' ? lf : null, to: loan.state === 'YES' ? lt : null }, reliefs: reliefs.value } };
+  return { ok: true, value: { withholdingRatio: b.withholdingRatio, familyCount: family, childCount: child, familyReportedOn: reported, insurance, studentLoan: { state: loan.state, monthlyAmount: loan.state === 'YES' ? amt : null, from: loan.state === 'YES' ? lf : null, to: loan.state === 'YES' ? lt : null }, reliefs: reliefs.value } };
 }
 
 const date = (v: unknown): string | null | undefined => (v === null || v === undefined || v === '' ? null : typeof v === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(v) && !Number.isNaN(Date.parse(`${v}T00:00:00Z`)) ? v : undefined);

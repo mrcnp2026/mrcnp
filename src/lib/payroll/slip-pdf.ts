@@ -13,7 +13,7 @@ export type SlipPdfLine = { kind: 'PAYMENT' | 'DEDUCTION'; label: string; how: s
 export type SlipPdfLabels = {
   title: string; company: string; no: string; name: string; group: string; period: string; payDate: string; revision: string;
   pay: string; deduction: string; item: string; how: string; amount: string; payTotal: string; deductionTotal: string; net: string; none: string; taxable?: string; exempt?: string;
-  draft: string | null; practice: string | null; correction: string | null; note: string; page: (n: number, all: number) => string; money: (n: number) => string;
+  draft: string | null; practice: string | null; correction: string | null; familyTemp?: string | null; note: string; page: (n: number, all: number) => string; money: (n: number) => string; // familyTemp: 부양가족 신고 전 「임시」 문구 (묶음 38)
 };
 // 근로 내역 (임금명세서의 근로일수 · 총 근로시간 · 연장 · 야간 · 휴일 시간, 2026-10-16) — 칸 이름과 값을 이미 글자로 만들어 넘긴다. 없으면 이 칸을 그리지 않는다
 export type SlipPdfWork = { title: string; rows: [string, string][] };
@@ -98,8 +98,9 @@ export async function buildSlipPdf(d: SlipPdfData): Promise<Uint8Array> {
     text(wrap(v, font, 9.5, half - 86)[0], x + 76, yy);
   });
   y -= Math.ceil(info.length / 2) * 15 + 4;
-  if (L.correction) {
-    for (const l of wrap(L.correction, font, 9, W - 2 * M)) {
+  for (const warn of [L.correction, L.familyTemp]) {
+    if (!warn) continue;
+    for (const l of wrap(warn, font, 9, W - 2 * M)) {
       text(l, M, y, { size: 9, color: WARN });
       y -= 12;
     }

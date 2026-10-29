@@ -2,13 +2,14 @@
 // 홈에서 승인하지 않는다 — 요약을 누르면 처리함으로 간다 (5장 규칙 2).
 // 연습 기록은 기본으로 빼고(4-6), 연습 기간에는 "연습 기록으로 보기"로 따로 볼 수 있다 (연습 배너가 항상 붙는다).
 import { leaveBalancesFor } from '@/lib/leave-balance-data';
-import { ChevronRight, Inbox, NotebookPen, TriangleAlert } from 'lucide-react';
+import { CalendarCheck, MapPinned, CalendarX2, Network, Smartphone, BriefcaseBusiness, ChevronRight, Clock4, FilePenLine, Headset, Inbox, NotebookPen, ShieldCheck, TriangleAlert, UserRoundX, type LucideIcon } from 'lucide-react';
 import { getFormatter, getTranslations } from 'next-intl/server';
 import Link from 'next/link';
 import { CountUp } from '@/components/CountUp';
 import { Pager, pageOf } from '@/components/Pager';
 import { PagedList } from '@/components/PagedList';
-import { Card, CardTitle, PageShell } from '@/components/ui';
+import { LiveFeed } from '@/components/charts/LiveFeed';
+import { Card, CardTitle, IconTile, PageShell } from '@/components/ui';
 import { LABOR, resolveDayType } from '@/config/labor-rules';
 import { OFFICE } from '@/config/office';
 import { addDays, weekStartOf } from '@/lib/calendar';
@@ -137,6 +138,18 @@ export default async function AdminHome({ searchParams }: { searchParams: Promis
     };
     return { d, workday, n: firstIns.length, late: workday && rule ? firstIns.filter(lateOf).length : 0 };
   });
+  // 실시간 출퇴근 (2026-10-27 시안 「실시간 출석」) — 오늘 찍힌 기록을 최신순으로. 30초마다 다시 읽혀 새 줄이 위에서 밀고 들어온다
+  const nameOf = new Map(active.map((p) => [p.id, p.name]));
+  const feed = data.events
+    .filter((e) => e.workDate === today && nameOf.has(e.employeeId))
+    .sort((a, b) => b.punchedAt.getTime() - a.punchedAt.getTime())
+    .slice(0, 7)
+    .map((e) => {
+      const r = data.ruleFor(e.employeeId, today);
+      const late = e.kind === 'in' && !!r && e.punchedAt.getTime() > kstDateTime(today, r.startTime).getTime() + r.lateGraceMin * 60_000;
+      const name = nameOf.get(e.employeeId)!;
+      return { id: e.id, initial: name.slice(0, 1), seed: e.employeeId, title: name, sub: late ? t('liveLate') : t(e.kind === 'in' ? 'liveIn' : 'liveOut'), right: hhmm(e.punchedAt), tone: late ? ('warn' as const) : ('ok' as const) };
+    });
   const pct = (n: number) => (active.length > 0 ? Math.round((Math.min(n, active.length) / active.length) * 100) : 0);
   const workdays = daily.filter((x) => x.workday);
   const prev = workdays.filter((x) => today > x.d).at(-1);
@@ -203,15 +216,77 @@ export default async function AdminHome({ searchParams }: { searchParams: Promis
 
       <KpiRow
         kpis={[
-          { label: t('chartRate'), filter: 'in', value: rate === null ? '–' : `${rate}%`, sub: rate === null ? t('chartNoTarget') : delta === null ? t('chartRateSub', { n: Math.min(inCount, target), target }) : `${t('chartRateSub', { n: Math.min(inCount, target), target })} · ${t('kpiDelta', { d: `${delta > 0 ? '+' : ''}${delta}` })}` },
-          { label: th('status.late'), filter: 'late', value: String(board.late.length), warn: board.late.length > 0, sub: t('kpiNames') },
+          { label: t('chartRate'), filter: 'in', trend: daily.filter((x) => x.workday).map((x) => x.n), value: rate === null ? '–' : `${rate}%`, sub: rate === null ? t('chartNoTarget') : delta === null ? t('chartRateSub', { n: Math.min(inCount, target), target }) : `${t('chartRateSub', { n: Math.min(inCount, target), target })} · ${t('kpiDelta', { d: `${delta > 0 ? '+' : ''}${delta}` })}` },
+          { label: th('status.late'), filter: 'late', trend: daily.filter((x) => x.workday).map((x) => x.late), value: String(board.late.length), warn: board.late.length > 0, sub: t('kpiNames') },
           { label: th('status.absent'), filter: 'absent', value: String(board.absent.length), sub: t('kpiNames') },
           { label: t('todo'), value: String(todo.filter((x) => x.key !== 'pendingInquiry').reduce((a, x) => a + x.n, 0)), sub: t('kpiTodo'), href: '/admin/inbox' },
         ]}
       />
 
+      {/* ③ 처리할 일 + 오늘 직원 현황 (2026-10-27 의뢰인이 정한 순서: 출근 인원 → 숫자 4칸 → 처리할 일 → 근무중 · 지각 … → 명단) */}
+      <div className="flex flex-col gap-3 lg:grid lg:grid-cols-3 lg:gap-4">
+      <Card className="flex flex-col p-0 py-2 lg:col-start-3 lg:row-start-1">
+        <div className="px-5 pt-2">
+          <CardTitle icon={Inbox}>{t('todo')}</CardTitle>
+        </div>
+        {todo.every((x) => x.n === 0) && <p className="px-5 py-3 text-sm text-faint">{t('todoNone')}</p>}
+        <PagedList
+          items={todo.filter((x) => x.n > 0).map((x) => (
+            <li key={x.key}>
+              <Link href={!practiceView && OFFICE.practiceMode && x.href.startsWith('/admin/inbox') ? x.href.replace('/admin/inbox', '/admin/inbox?live=1') : x.href} className="mx-2 flex min-h-14 items-center gap-3 rounded-button px-3 transition-colors hover:bg-surface">
+                <IconTile icon={(TODO_ICON[x.key] ?? TODO_ICON.pendingWork).icon} tone={(TODO_ICON[x.key] ?? TODO_ICON.pendingWork).tone} />
+                <span className="flex-1">{t(x.key)}</span>
+                <span className={`num inline-flex min-w-6 items-center justify-center rounded-chip px-2 text-sm font-bold ${x.n > 0 ? 'bg-primary text-on-primary' : 'text-faint'}`}>{x.n}</span>
+                <ChevronRight aria-hidden size={20} strokeWidth={2} className="text-faint" />
+              </Link>
+            </li>
+          ))}
+        />
+      </Card>
+
+      <div className="flex flex-col gap-3 lg:col-span-2 lg:col-start-1 lg:row-start-1">
+      <BoardView board={board} total={active.length} limitMinutes={OFFICE.weeklyLimitHours * 60} cautionMinutes={OFFICE.weeklyCautionHours * 60} colored={OFFICE.workplaceSize === '5_or_more'} legend={legend} />
+      </div>
+
+      </div>
+
+      {/* ④ 그래프 줄 */}
+      {/* 그래프 줄 (2026-10-11 의뢰인: 막대·선·동그라미 그래프로 집계를 보는 현황판) — 동그라미: 오늘 근무 현황 · 선: 최근 14일 출근 인원 */}
+      <div className="flex flex-col gap-3 lg:grid lg:grid-cols-4 lg:gap-4">
+        <Card className="flex flex-col">
+          <LiveFeed title={t('liveTitle')} empty={t('liveNone')} rows={feed} />
+        </Card>
+        {/* 첫 화면 순서 (2026-10-27 의뢰인): 휴가 현황 막대가 끝난 뒤 → 도넛 1.8초 → 곡선 1.9초(2026-10-28 의뢰인: 도넛과 거의 동시에) → 지각 막대 2.4초 */}
+        <DonutCard
+          after={1800}
+          title={t('donutTitle')}
+          unit={t('chartUnit')}
+          center={rate === null ? '–' : `${rate}%`}
+          centerLabel={t('chartRate')}
+          slices={[
+            { key: 'in', label: t('donutIn'), n: Math.max(0, inCount - board.late.length), tone: 'primary' },
+            { key: 'late', label: th('status.late'), n: board.late.length, tone: 'warn' },
+            { key: 'absent', label: th('status.absent'), n: board.absent.length, tone: 'danger' },
+            { key: 'off', label: t('donutOff'), n: board.off.length, tone: 'muted' },
+          ]}
+        />
+        {/* 폰에서도 보인다 (2026-10-27 의뢰인: 「최근 14일 출근 인원 그래프가 좋다, 적당한 위치에」) — 폰은 도넛 바로 아래 */}
+        <LineCard
+          after={1900}
+          className="lg:col-span-2"
+          title={t('lineTitle')}
+          unit={t('chartUnit')}
+          avgLabel={t('chartAvg')}
+          vsAvg={t('chartVsAvg')}
+          avgUnit={t('chartPeople')}
+          points={daily.map((x) => ({ key: x.d, label: md(x.d), n: x.n, dim: !x.workday, tip: t('lineTip', { date: longDay(x.d), n: x.n }) }))}
+        />
+      </div>
+
+      {/* PC: ① 오늘 직원 현황(넓게) + 처리할 일 ② 30일 추이 + 14일 지각 ③ 주 52시간 + 근무노트 — 줄마다 높이를 맞춘다 (2026-10-06 의뢰인: 흩어져 난잡했다) · 폰: 한 칸 */}
+      {/* ⑤ 카드 줄 — 2026-10-29 의뢰인: 폰에도 보이게 (이전: PC에만) */}
       {/* PC 카드 줄: 공지사항 · 출퇴근 누락 · 관리가 필요한 직원 · 휴가 현황 (2026-10-23 의뢰인: 공지사항과 출퇴근 누락 자리 바꿈) */}
-      <div className="hidden gap-4 lg:grid lg:grid-cols-4">
+      <div className="flex flex-col gap-3 lg:grid lg:grid-cols-4 lg:gap-4">
         <Card className="flex flex-col gap-2">
           <CardTitle>{t('cardNotices')}</CardTitle>
           {(latestNotices ?? []).length === 0 ? (
@@ -246,7 +321,8 @@ export default async function AdminHome({ searchParams }: { searchParams: Promis
             className="flex-1 text-sm"
             items={care.map((x) => (
               <li key={x.key}>
-                <Link href="/admin/members" className="flex items-center gap-2 py-1.5 hover:text-primary">
+                <Link href="/admin/members" className="-mx-2 flex items-center gap-3 rounded-button px-2 py-1.5 transition-colors hover:bg-surface">
+                  <IconTile icon={CARE_ICON[x.key].icon} tone={CARE_ICON[x.key].tone} size={32} />
                   <span className="flex-1">{t(x.key)}</span>
                   <span className={`num inline-flex h-6 min-w-8 items-center justify-center rounded-button px-1 font-bold ${x.n > 0 ? 'bg-warn-tint text-warn' : 'bg-surface text-faint'}`}>{x.n}</span>
                   <ChevronRight aria-hidden size={16} className="text-faint" />
@@ -268,9 +344,10 @@ export default async function AdminHome({ searchParams }: { searchParams: Promis
                 return (
                   <li key={p.id} className="flex items-center gap-2 py-1">
                     <span className="w-20 shrink-0 truncate font-bold">{p.name}</span>
-                    <svg aria-hidden viewBox="0 0 100 6" preserveAspectRatio="none" className="h-1.5 min-w-0 flex-1 rounded-chip bg-border">
-                      <rect width={w} height="6" className={`fx-grow-x ${over ? 'fill-chart-extra' : 'fill-primary'}`} />
-                    </svg>
+                    {/* 최근 14일 지각 막대의 가로판 (2026-10-27 의뢰인): 옅은 빈 막대 위에 둥근 초록 막대, 넘게 쓰면 호박색 */}
+                    <span aria-hidden className="h-2.5 min-w-0 flex-1 overflow-hidden rounded-full bg-rail">
+                      <span className="fx-grow-x block h-full rounded-full" style={{ width: `${Math.max(w, w > 0 ? 4 : 0)}%`, background: over ? 'var(--t-color-chart-extra)' : 'linear-gradient(to right, var(--t-color-accent-2), var(--t-color-primary))' }} />
+                    </span>
                     <CountUp value={`${num(bal.used)} / ${num(bal.granted)}`} className={`num w-20 shrink-0 text-right text-xs ${over ? 'text-danger' : 'text-muted'}`} />
                   </li>
                 );
@@ -281,52 +358,8 @@ export default async function AdminHome({ searchParams }: { searchParams: Promis
         </Card>
       </div>
 
-      {/* 그래프 줄 (2026-10-11 의뢰인: 막대·선·동그라미 그래프로 집계를 보는 현황판) — 동그라미: 오늘 근무 현황 · 선: 최근 14일 출근 인원 */}
-      <div className="order-last flex flex-col gap-3 lg:order-none lg:grid lg:grid-cols-3 lg:gap-4">
-        <DonutCard
-          title={t('donutTitle')}
-          unit={t('chartUnit')}
-          center={rate === null ? '–' : `${rate}%`}
-          centerLabel={t('chartRate')}
-          slices={[
-            { key: 'in', label: t('donutIn'), n: Math.max(0, inCount - board.late.length), tone: 'primary' },
-            { key: 'late', label: th('status.late'), n: board.late.length, tone: 'warn' },
-            { key: 'absent', label: th('status.absent'), n: board.absent.length, tone: 'danger' },
-            { key: 'off', label: t('donutOff'), n: board.off.length, tone: 'muted' },
-          ]}
-        />
-        <LineCard
-          className="lg:col-span-2"
-          title={t('lineTitle')}
-          unit={t('chartUnit')}
-          points={daily.map((x) => ({ key: x.d, label: md(x.d), n: x.n, dim: !x.workday, tip: t('lineTip', { date: longDay(x.d), n: x.n }) }))}
-        />
-      </div>
-
-      {/* PC: ① 오늘 직원 현황(넓게) + 처리할 일 ② 30일 추이 + 14일 지각 ③ 주 52시간 + 근무노트 — 줄마다 높이를 맞춘다 (2026-10-06 의뢰인: 흩어져 난잡했다) · 폰: 한 칸 */}
+      {/* ⑥ 연장근로 · 지각 막대 — 그래프끼리 뭉치지 않게 카드 줄 다음에 */}
       <div className="flex flex-col gap-3 lg:grid lg:grid-cols-3 lg:gap-4">
-      <Card className="flex flex-col p-0 py-2 lg:col-start-3 lg:row-start-1">
-        <div className="px-5 pt-2">
-          <CardTitle icon={Inbox}>{t('todo')}</CardTitle>
-        </div>
-        {todo.every((x) => x.n === 0) && <p className="px-5 py-3 text-sm text-faint">{t('todoNone')}</p>}
-        <PagedList
-          items={todo.filter((x) => x.n > 0).map((x) => (
-            <li key={x.key}>
-              <Link href={!practiceView && OFFICE.practiceMode && x.href.startsWith('/admin/inbox') ? x.href.replace('/admin/inbox', '/admin/inbox?live=1') : x.href} className="flex min-h-14 items-center gap-3 px-5">
-                <span className="flex-1">{t(x.key)}</span>
-                <span className={`num inline-flex min-w-6 items-center justify-center rounded-chip px-2 text-sm font-bold ${x.n > 0 ? 'bg-primary text-on-primary' : 'text-faint'}`}>{x.n}</span>
-                <ChevronRight aria-hidden size={20} strokeWidth={2} className="text-faint" />
-              </Link>
-            </li>
-          ))}
-        />
-      </Card>
-
-      <div className="flex flex-col gap-3 lg:col-span-2 lg:col-start-1 lg:row-start-1">
-      <BoardView board={board} total={active.length} limitMinutes={OFFICE.weeklyLimitHours * 60} cautionMinutes={OFFICE.weeklyCautionHours * 60} colored={OFFICE.workplaceSize === '5_or_more'} legend={legend} />
-      </div>
-
       {/* 이번 주 요일별 연장근로 시간 (2026-10-06 의뢰인: 30일 출근 비율 선 그래프는 볼 것이 없었다 → 샤플처럼 이번 주 초과근무). 폰에서도 보인다 — 칸이 화면 폭에 맞춰 줄어들어 가로 스크롤이 생기지 않는다 */}
       <BarCard
         className="flex lg:col-span-2"
@@ -339,14 +372,22 @@ export default async function AdminHome({ searchParams }: { searchParams: Promis
           return { key: d, label: md(d), sub: fmt.dateTime(kstDateTime(d, '12:00'), { weekday: 'short' }), n: m, text, tip: t('otWeekTip', { date: longDay(d), time: text }) };
         })}
       />
+      {/* 폰에서는 14일 곡선 · 지각 막대를 숨긴다 — PC에서 보는 분석이고, 폰은 세로가 너무 길었다 (2026-10-27 의뢰인: 모바일) */}
       <BarCard
-        className="flex"
+        className="flex max-lg:hidden"
         dense
+        after={2400}
         title={t('lateTitle')}
         unit={t('chartUnit')}
+        avgLabel={t('chartAvg')}
+        vsAvg={t('chartVsAvg')}
+        avgUnit={t('chartPeople')}
         empty={t('lateNone')}
         bars={daily.map((x) => ({ key: x.d, label: md(x.d), n: x.late, tip: t('lateTip', { date: longDay(x.d), n: x.late }) }))}
       />
+      </div>
+
+      {/* ⑦ 주 52시간 관리 → ⑧ 오늘 근무노트(맨 아래) */}
       <div className="flex flex-col gap-3 lg:col-span-3 lg:grid lg:grid-cols-2 lg:gap-4">
       {data.rule && (await switchOn('report.week52')) && (
         <WeekLimitCard
@@ -379,8 +420,26 @@ export default async function AdminHome({ searchParams }: { searchParams: Promis
         <Pager page={notePage.page} pages={notePage.pages} param="np" params={sp} anchor="notes" label={tc('pages')} />
       </Card>
       </div>
-      </div>
 
     </PageShell>
   );
 }
+
+// 처리할 일 줄의 아이콘 — 파스텔 네모 + 진한 아이콘 (2026-10-27 의뢰인: Corvane · 시안 「확인이 필요해요」처럼 아이콘 색을)
+const TODO_ICON: Record<string, { icon: LucideIcon; tone: 1 | 2 | 3 | 4 }> = {
+  pendingOvertime: { icon: Clock4, tone: 1 },
+  pendingCorrections: { icon: FilePenLine, tone: 3 },
+  pendingLeave: { icon: CalendarCheck, tone: 2 },
+  pendingWork: { icon: MapPinned, tone: 3 },
+  missing: { icon: UserRoundX, tone: 4 },
+  pendingRole: { icon: ShieldCheck, tone: 3 },
+  pendingInquiry: { icon: Headset, tone: 2 },
+};
+
+// 관리가 필요한 직원 줄의 아이콘 (2026-10-27 의뢰인: 처리할 일의 아이콘 네모가 좋다 → 카드 안 목록에)
+const CARE_ICON: Record<string, { icon: LucideIcon; tone: 1 | 2 | 3 | 4 }> = {
+  careNoPhone: { icon: Smartphone, tone: 4 },
+  careNoHire: { icon: CalendarX2, tone: 1 },
+  careNoGroup: { icon: Network, tone: 3 },
+  careNoJob: { icon: BriefcaseBusiness, tone: 2 },
+};

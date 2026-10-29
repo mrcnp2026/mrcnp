@@ -110,8 +110,9 @@ export async function WeekBar({
         </div>
         <div className="relative" role="img" aria-label={`${t('regular')} ${hm(week.regularMinutes)}, ${t('overtime')} ${hm(week.overtimeMinutes)}, ${t('plan')} ${hm(planMinutes)}`}>
           {/* 막대 색은 상태로 바꾸지 않는다 — 둥근 막대, 두 조각 사이 2px 틈 */}
-          <div className="flex h-4 gap-0.5 overflow-hidden rounded-full bg-surface">
-            <div className="fx-grow-x h-full rounded-full bg-primary" style={{ width: `${regPct}%` }} />
+          {/* 2026-10-27 키트: 옅은 빈 막대 + 초록 그라데이션 알약, 연장은 호박색 */}
+          <div className="flex h-3.5 gap-0.5 overflow-hidden rounded-full bg-rail">
+            <div className="fx-grow-x h-full rounded-full" style={{ width: `${regPct}%`, background: 'linear-gradient(to right, var(--t-color-accent-2), var(--t-color-primary))' }} />
             <div className="fx-grow-x h-full rounded-full bg-chart-extra" style={{ width: `${otPct}%`, animationDelay: '1400ms' }} />
           </div>
           <div className="absolute -inset-y-1 border-l-2 border-text/70" style={{ left: `${(regularHours / limitHours) * 100}%` }} />
@@ -125,15 +126,19 @@ export async function WeekBar({
       </div>
       <ol className="-mx-2 grid grid-cols-7 gap-1">
         {cells.map((c) => (
-          <li key={c.date} className={`flex min-h-16 flex-col items-center gap-0.5 rounded-card px-0.5 py-2 text-center ${c.today ? 'bg-primary-tint' : ''}`}>
-            <span className={`text-sm font-bold ${c.today ? 'text-primary' : c.red ? 'text-danger' : ''}`}>{c.today ? t('today') : c.label}</span>
+          // 오늘은 세이지 파스텔 칸, 출근한 날은 요일 옆 작은 초록 점 (2026-10-27 키트)
+          <li key={c.date} className={`flex min-h-16 flex-col items-center gap-0.5 rounded-button px-0.5 py-2 text-center ${c.today ? 'bg-tile-2' : ''}`}>
+            <span className={`flex items-center gap-1 text-sm font-bold ${c.today ? 'text-text' : c.red ? 'text-danger' : ''}`}>
+              {c.today ? t('today') : c.label}
+              {c.inAt && <span aria-hidden className="size-1.5 rounded-full bg-primary" />}
+            </span>
             {c.inAt ? (
               <span className="num flex flex-col text-xs leading-snug">
                 <span className="font-bold">{c.inAt}</span>
                 <span className={c.outAt ? 'font-semibold' : 'text-primary'}>{c.outAt ?? (c.working ? t('workingShort') : '—')}</span>
               </span>
             ) : c.leave ? (
-              <span className="text-xs text-primary">{t('leave')}</span>
+              <span className="rounded-chip bg-tile-1 px-1.5 py-0.5 text-xs font-semibold text-warn">{t('leave')}</span>
             ) : c.start ? (
               <span className="num flex flex-col text-xs leading-snug text-faint">
                 <span>{c.start}</span>

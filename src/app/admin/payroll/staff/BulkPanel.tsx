@@ -6,7 +6,7 @@ import { Select } from '@/components/Select';
 import { ChevronDown } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 import { useRouter } from 'next/navigation';
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { callApi } from '@/components/client-api';
 import { ErrorNote } from '@/components/ErrorNote';
 import { Button, Card } from '@/components/ui';
@@ -18,17 +18,49 @@ export function BulkCheck({ id, label }: { id: string; label: string }) {
   return <input type="checkbox" data-bulk-id={id} aria-label={label} className="size-5 accent-primary lg:size-4" />;
 }
 
-export function BulkAll({ label }: { label: string }) {
-  return (
+// 전체 선택 — 지금 보이는 체크칸의 실제 상태를 따라간다: 전부 ✓ · 일부 ➖ · 없음 □ (2026-10-27 의뢰인: 「전체 체크박스 이게 최선이야?」
+// — 예전엔 하나를 풀어도 전체 표시가 남았고, 몇 명 골랐는지 안 보였다). withCount면 옆에 「N명 선택됨」
+export function BulkAll({ label, withCount = false, countLabel }: { label: string; withCount?: boolean; countLabel?: string }) {
+  const ref = useRef<HTMLInputElement>(null);
+  const [n, setN] = useState(0);
+  useEffect(() => {
+    const sync = () => {
+      const all = [...document.querySelectorAll<HTMLInputElement>('input[data-bulk-id]')].filter((el) => el.offsetParent !== null);
+      const on = all.filter((el) => el.checked).length;
+      setN(on);
+      if (ref.current) {
+        ref.current.checked = all.length > 0 && on === all.length;
+        ref.current.indeterminate = on > 0 && on < all.length;
+      }
+    };
+    sync();
+    document.addEventListener('change', sync);
+    window.addEventListener('resize', sync);
+    return () => {
+      document.removeEventListener('change', sync);
+      window.removeEventListener('resize', sync);
+    };
+  }, []);
+  const box = (
     <input
+      ref={ref}
       type="checkbox"
       aria-label={label}
       className="size-5 accent-primary lg:size-4"
       onChange={(e) => {
-        for (const el of document.querySelectorAll<HTMLInputElement>('input[data-bulk-id]')) if (el.offsetParent !== null) el.checked = e.currentTarget.checked;
+        const want = e.currentTarget.checked;
+        for (const el of document.querySelectorAll<HTMLInputElement>('input[data-bulk-id]')) if (el.offsetParent !== null) el.checked = want;
         document.dispatchEvent(new Event('change'));
       }}
     />
+  );
+  if (!withCount) return box;
+  return (
+    <span className="flex flex-1 items-center gap-3">
+      {box}
+      <span className="flex-1 font-semibold">{label}</span>
+      {n > 0 && <span className="num rounded-chip bg-primary-tint px-2.5 py-0.5 text-xs font-bold text-primary">{countLabel?.replace('%d', String(n)) ?? n}</span>}
+    </span>
   );
 }
 

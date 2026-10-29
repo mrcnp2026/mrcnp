@@ -6,6 +6,7 @@ import { getTranslations } from 'next-intl/server';
 import Link from 'next/link';
 import type { ReactNode } from 'react';
 import { CountUp } from '@/components/CountUp';
+import { RankBars } from '@/components/charts/RankBars';
 import { Block, dim, Field, FilterBar, KpiStrip, ListCard, Meter, R, ReportHead, TableCard } from '@/components/report';
 import { Select } from '@/components/Select';
 import { Chip, PageShell } from '@/components/ui';
@@ -18,6 +19,10 @@ import { buildLeaveReport, type LeaveSum } from '@/lib/report-leave';
 import { toKstDate } from '@/lib/time';
 
 type Sum = LeaveSum & { rate: number | null };
+// 세 표(부서별 · 정책 그룹별 · 직원별)의 칸을 위아래로 맞춘다 (2026-10-27 의뢰인: 직원별 칸이 위 표들과 줄이 안 맞는다) —
+// 칸 폭을 고정(table-fixed)하고 이름 칸만 넓게, 둘째 칸(원장 시작 · 입사일)부터는 모두 같은 너비로 나눈다
+// (같은 날 의뢰인: 둘째 칸이 왼쪽에 붙어 간격이 고르지 않다 → 같은 간격)
+const FIXED = 'w-full xl:table-fixed'; // 1024~1279px는 칸 폭을 내용에 맞춘다 — 같은 폭으로 나누면 숫자 칸이 넘쳤다 (2026-10-29 가로 넘침 검사)
 
 export default async function LeaveReportPage({ searchParams }: { searchParams: Promise<{ to?: string; g?: string; inactive?: string; live?: string; more?: string }> }) {
   const [t, sp, groups] = await Promise.all([getTranslations('admin.reports'), searchParams, loadOrgGroups()]);
@@ -42,7 +47,6 @@ export default async function LeaveReportPage({ searchParams }: { searchParams: 
       {more ? t('lessCols') : t('moreCols')}
     </Link>
   );
-  const typeTop = Math.max(1, ...r.typeUse.map((x) => x.days));
 
   // 칸 — 0은 옅은 「–」, 잔여만 눈에 띄게(음수는 빨강)
   const num = (n: number) => dim(day(n), n === 0);
@@ -138,11 +142,26 @@ export default async function LeaveReportPage({ searchParams }: { searchParams: 
       <KpiStrip
         items={[
           { label: t('lGranted'), value: <CountUp value={day(r.total.granted)} /> },
-          { label: t('lUsed'), value: <CountUp value={day(r.total.used)} />, tone: 'primary' },
+          { label: t('lUsed'), value: <CountUp value={day(r.total.used)} /> },
           { label: t('lRemaining'), value: <CountUp value={day(r.total.remaining)} />, tone: r.total.remaining < 0 ? 'danger' : 'default' },
-          { label: t('lRate'), value: <CountUp value={pct(r.total.rate)} />, tone: 'primary' },
+          { label: t('lRate'), value: <CountUp value={pct(r.total.rate)} />, meter: r.total.rate },
         ]}
       />
+
+      {/* 종류별 사용 — 한 줄 전체 (2026-10-27 의뢰인: 옆 반원 게이지는 종류가 많아지면 빈 여백이 너무 크다 → 게이지를 빼고 소진율은 위 타일의 진행 막대로) */}
+        <section className={`${R.card} flex flex-col gap-3 p-5`} data-type-use>
+          <h2 className="text-base font-semibold">{t('byType', { from: r.yearFrom, to: r.asOf })}</h2>
+          {r.typeUse.length === 0 ? (
+            <p className="py-4 text-center text-sm text-faint">{t('typeNone')}</p>
+          ) : (
+            <RankBars
+              ariaLabel={t('byType', { from: r.yearFrom, to: r.asOf })}
+              head={{ label: t('cType'), value: t('cDays'), extra: [t('cRequests'), t('cPeopleUsed')] }}
+              rows={r.typeUse.map((x) => ({ key: x.code, label: typeName(x.code), n: x.days, value: day(x.days), extra: [String(x.requests), String(x.people)] }))}
+            />
+          )}
+          <p className="mt-auto text-xs text-muted">{t('typeNote')}</p>
+        </section>
 
       <Block title={t('byGroup')} aside={toggle}>
         {mobile([
@@ -150,7 +169,7 @@ export default async function LeaveReportPage({ searchParams }: { searchParams: 
           { key: 'total', name: t('total'), sub: started(r.total), sum: r.total },
         ])}
         <TableCard className="max-lg:hidden">
-          <table className="w-full">
+          <table className={FIXED}>
             {head(t('cGroup'), [t('lPeople')])}
             <tbody>
               {r.groups.map((g) => (
@@ -177,7 +196,7 @@ export default async function LeaveReportPage({ searchParams }: { searchParams: 
       <Block title={t('byPolicyGroup')}>
         {mobile(r.policyGroups.map((g) => ({ key: g.groupId, name: <>{g.name}{g.excluded && <span className="ml-1.5 text-xs font-normal text-warn">{t('excludedTag')}</span>}</>, sub: started(g), sum: g })))}
         <TableCard className="max-lg:hidden">
-          <table className="w-full" data-policy-groups>
+          <table className={FIXED} data-policy-groups>
             {head(t('cPolicyGroup'), [t('lPeople')])}
             <tbody>
               {r.policyGroups.map((g) => (
@@ -197,31 +216,6 @@ export default async function LeaveReportPage({ searchParams }: { searchParams: 
         </TableCard>
       </Block>
 
-      <Block title={t('byType', { from: r.yearFrom, to: r.asOf })} note={t('typeNote')}>
-        {/* 종류별 사용: 일수만큼 가로 막대 */}
-        <div className={`${R.card} p-5`} data-type-use>
-          {r.typeUse.length === 0 ? (
-            <p className="py-4 text-center text-sm text-faint">{t('typeNone')}</p>
-          ) : (
-            <ul className="flex flex-col gap-4">
-              {r.typeUse.map((x, i) => (
-                <li key={x.code} className="grid grid-cols-1 gap-1.5 text-sm lg:grid-cols-[11rem_minmax(0,1fr)_15rem] lg:items-center lg:gap-5">
-                  <span className="truncate">{typeName(x.code)}</span>
-                  <span aria-hidden className="h-2 overflow-hidden rounded-chip bg-surface">
-                    <span className="fx-grow-x block h-full rounded-chip bg-primary" style={{ width: `${(x.days / typeTop) * 100}%`, animationDelay: `${i * 80}ms` }} />
-                  </span>
-                  <span className="num flex gap-4 text-xs text-muted lg:justify-end">
-                    <span className="text-sm text-text">{day(x.days)}</span>
-                    <span>{t('cRequests')} {x.requests}</span>
-                    <span>{t('cPeopleUsed')} {x.people}</span>
-                  </span>
-                </li>
-              ))}
-            </ul>
-          )}
-        </div>
-      </Block>
-
       <Block title={t('byEmployeeTitle')} count={r.employees.length} note={t('leaveNote')} aside={toggle}>
         {mobile(r.employees.map((e) => ({
           key: e.employeeId,
@@ -230,7 +224,7 @@ export default async function LeaveReportPage({ searchParams }: { searchParams: 
           sum: e.isStarted ? e : null,
         })))}
         <TableCard className="max-lg:hidden">
-          <table className="w-full">
+          <table className={FIXED}>
             {head(t('cName'), [t('lJoined')], more ? [t('lOld')] : [])}
             <tbody>
               {r.employees.map((e) => (

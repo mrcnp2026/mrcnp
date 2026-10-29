@@ -608,20 +608,36 @@ export async function ledgerFor(employeeId: string, asOf: string, practice: bool
 export async function ledgerForMany(employeeIds: readonly string[], asOf: string, practice: boolean): Promise<Map<string, NonNullable<Awaited<ReturnType<typeof ledgerFor>>>>> {
   const out = new Map<string, NonNullable<Awaited<ReturnType<typeof ledgerFor>>>>();
   const want = new Set(employeeIds);
-  const lots = (await loadLots({ states: ['APPROVED'] })).filter((l) => want.has(l.employeeId));
+  // 받은 연차 묶음 · 원장 기록 · 정책 그룹 소속을 한꺼번에 읽는다 (2026-10-28 속도: 셋을 차례로 기다렸다).
+  // 소속은 「묶음이 있는 직원」을 알기 전에 읽으므로 요청한 직원 전부로 묻는다
+  const ids = [...want];
+  const [allLots, allEntries, { data: members, error: memberError }] = await Promise.all([
+    loadLots({ states: ['APPROVED'] }),
+    loadEntries(),
+    ids.length
+      ? db().from('leave_policy_members').select('employee_id, group_id').in('employee_id', ids).eq('active', true).lte('valid_from', asOf).or(`valid_to.is.null,valid_to.gt.${asOf}`)
+      : Promise.resolve({ data: [] as { employee_id: string; group_id: string }[], error: null }),
+  ]);
+  if (memberError) boom('ledgerForMany.members', memberError);
+  const lots = allLots.filter((l) => want.has(l.employeeId));
   if (lots.length === 0) return out;
   const withLots = [...new Set(lots.map((l) => l.employeeId))];
-  const entries = (await loadEntries()).filter((e) => withLots.includes(e.employeeId));
+  const lotSet = new Set(withLots);
+  const entries = allEntries.filter((e) => lotSet.has(e.employeeId));
   const policyCache = new Map<string, Promise<PolicyRow[]>>();
   const d = (m: number) => minutesToDays(m);
-  // 직원마다 소속 그룹을 따로 묻지 않고 한 번에 읽는다 (2026-10-19 속도: 23명이면 23번을 차례로 기다렸다)
-  const { data: members, error: memberError } = await db().from('leave_policy_members').select('employee_id, group_id').in('employee_id', withLots).eq('active', true).lte('valid_from', asOf).or(`valid_to.is.null,valid_to.gt.${asOf}`);
-  if (memberError) boom('ledgerForMany.members', memberError);
   const groupOf = new Map((members ?? []).map((m) => [m.employee_id as string, m.group_id as string]));
+  // 그룹마다 정책을 먼저 한꺼번에 요청해 두고(차례로 기다리지 않게 — 2026-10-28 속도) 아래에서 받는다
   for (const id of withLots) {
     const key = groupOf.get(id) ?? 'default';
-    if (!policyCache.has(key)) policyCache.set(key, policiesForEmployee(id, asOf));
-    const policies = await policyCache.get(key)!;
+    if (!policyCache.has(key)) {
+      const pr = policiesForEmployee(id, asOf);
+      pr.catch(() => {}); // 기다리기 전에 실패해도 경고가 나지 않게 — 아래에서 그대로 기다려 오류를 받는다
+      policyCache.set(key, pr);
+    }
+  }
+  for (const id of withLots) {
+    const policies = await policyCache.get(groupOf.get(id) ?? 'default')!;
     const b = ledgerBalance(lots.filter((l) => l.employeeId === id), entriesFor(entries.filter((e) => e.employeeId === id), practice), asOf);
     out.set(id, { grantedDays: d(b.granted), usedDays: d(b.used), remainingDays: d(b.remaining), expiredDays: d(b.expired), advanceDays: d(b.advance), advanceMaxDays: policyAt(policies, asOf)?.policy.advanceMaxDays ?? 0 });
   }

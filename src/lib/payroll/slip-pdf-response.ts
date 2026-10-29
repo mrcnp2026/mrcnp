@@ -9,6 +9,7 @@ import { buildSlipPdf } from './slip-pdf';
 export type SlipPdfInput = {
   locale: string; no: string; name: string; employeeNo: string | null; groupId: string | null; month: string; periodFrom: string; periodTo: string; payDate: string; revision: number;
   pay: number; deduction: number; net: number; draft: boolean; practice: boolean; correctionReason: string | null; requestId: string; tax?: { taxable: number; exempt: number } | null;
+  familyTemp?: number | null; // 부양가족 신고 전이면 그때 쓴 가족 수 → 「임시」 문구 (slipFamilyTemp)
   lines: { code: string; kind: 'PAYMENT' | 'DEDUCTION' | 'EMPLOYER'; label: string; quantity: string | null; unitPrice: string | null; factor: string | null; amount: number }[];
   time?: SlipTime | null; // 저장된 명세의 시간 입력(snapshot.time). 올린 명세서 · 상여에는 없다
 };
@@ -58,6 +59,7 @@ export async function slipPdfBytes(a: SlipPdfInput): Promise<{ bytes: Uint8Array
       title: t('pdfTitle', { month: a.month }), company: t('hCompany'), no: t('hNo'), name: t('hName'), group: t('hGroup'), period: t('hPeriod'), payDate: t('hPayDate'), revision: t('hRevision'),
       pay: t('pay'), deduction: t('deduction'), item: t('pdfItem'), how: t('pdfHow'), amount: t('pdfAmount'), payTotal: t('pdfPayTotal'), deductionTotal: t('pdfDeductionTotal'), net: t('net'), none: t('none'), taxable: t('taxableTotal'), exempt: t('exemptTotal'),
       draft: a.draft ? t('pdfDraft') : null, practice: a.practice ? t('practice') : null, correction: a.revision > 1 ? t('correctedNote', { reason: a.correctionReason ?? '' }) : null,
+      familyTemp: a.familyTemp != null ? t('familyTemp', { n: a.familyTemp }) : null,
       note: t('pdfNote'), page: (n, all) => t('pdfPage', { n, all }), money: (n) => t('won', { n: nf.format(n) }),
     },
   });
@@ -85,3 +87,4 @@ export function slipTax(snapshot: unknown, pay: number | null): { taxable: numbe
   if (!t || typeof t.taxable !== 'number' || pay === null) return null;
   return { taxable: t.taxable, exempt: Math.max(0, pay - t.taxable) };
 }
+
