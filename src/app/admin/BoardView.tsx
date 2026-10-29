@@ -18,7 +18,8 @@ import { BOARD_FILTER_EVENT } from './KpiRow';
 
 if (typeof window !== 'undefined') gsap.registerPlugin(Flip);
 
-const ORDER: Exclude<DayStatus, 'off'>[] = ['working', 'late', 'absent', 'done', 'overtime'];
+// 상태 칸 · 탭: 퇴근 대신 휴가 (2026-10-29 의뢰인: 퇴근 인원은 아침 · 낮에 거의 0이라 볼 일이 없고, 휴가는 「미출근인지 휴가인지」를 바로 가른다). 폰 숫자 칸 · PC 탭 같음. 퇴근한 사람은 「전체」에 그대로 있다
+const ORDER = ['working', 'late', 'absent', 'leave', 'overtime'] as const;
 const PER_PAGE = PER_CARD; // 6명씩 — 홈 카드와 같은 쪽 넘김 (2026-10-14 의뢰인)
 // 상태 글자 색: 예외(지각·야근)만 주황, 근무 중은 파랑, 나머지는 회색 (R-10-5)
 const TONE: Record<DayStatus, string> = {
@@ -48,7 +49,7 @@ export function BoardView({
   const th = useTranslations('home');
   const f = useFormatter();
   // 'in' = 오늘 출근을 찍은 사람 전부 (지각·근무중·퇴근·야근중)
-  const [filter, setFilter] = useState<DayStatus | 'all' | 'in'>('all');
+  const [filter, setFilter] = useState<DayStatus | 'all' | 'in' | 'leave'>('all');
   const listRef = useRef<HTMLDivElement>(null);
   const phoneListRef = useRef<HTMLDivElement>(null);
   const bodyRef = useRef<HTMLTableSectionElement>(null);
@@ -75,11 +76,12 @@ export function BoardView({
   // "전체"는 확인이 필요한 사람부터: 지각·야근 → 미출근 → 근무 중 → 퇴근 → 휴무
   const all = [...board.late, ...board.overtime, ...board.absent, ...board.working, ...board.done, ...board.off];
   const cameIn = [...board.late, ...board.overtime, ...board.working, ...board.done];
-  const list = filter === 'all' ? all : filter === 'in' ? cameIn : board[filter];
+  const onLeave = board.off.filter((r) => r.onLeave); // 휴무(일정 없는 날) · 외근은 빼고 휴가인 사람만
+  const list = filter === 'all' ? all : filter === 'in' ? cameIn : filter === 'leave' ? onLeave : board[filter];
   const pages = Math.max(1, Math.ceil(list.length / PER_PAGE));
   const cur = Math.min(page, pages);
   const shown = list.slice((cur - 1) * PER_PAGE, cur * PER_PAGE);
-  const pick = (k: DayStatus | 'all' | 'in') => {
+  const pick = (k: DayStatus | 'all' | 'in' | 'leave') => {
     remember();
     setFilter(filter === k ? 'all' : k);
     setPage(1);
@@ -124,10 +126,10 @@ export function BoardView({
           <div className="ml-auto flex flex-wrap gap-1" role="tablist" aria-label={t('statusTabs')}>
             {(['all', 'in', ...ORDER] as const).map((k) => {
               const on = filter === k;
-              const n = k === 'all' ? all.length : k === 'in' ? cameIn.length : board[k].length;
+              const n = k === 'all' ? all.length : k === 'in' ? cameIn.length : k === 'leave' ? onLeave.length : board[k].length;
               return (
                 <button key={k} type="button" role="tab" aria-selected={on} onClick={() => { remember(); setFilter(k); setPage(1); }} className={`inline-flex min-h-9 items-center gap-1 rounded-button px-3 text-sm ${on ? 'bg-rail font-bold text-text' : 'text-muted'}`}>
-                  {k === 'all' ? t('everyone') : k === 'in' ? t('filterIn') : th(`status.${k}`)} <span className="num">{n}</span>
+                  {k === 'all' ? t('everyone') : k === 'in' ? t('filterIn') : k === 'leave' ? t('onLeave') : th(`status.${k}`)} <span className="num">{n}</span>
                 </button>
               );
             })}
@@ -171,7 +173,7 @@ export function BoardView({
       <Card className="p-2 lg:hidden">
         <div className="grid grid-cols-5" role="tablist" aria-label={t('statusTabs')}>
           {ORDER.map((k) => {
-            const n = board[k].length;
+            const n = k === 'leave' ? onLeave.length : board[k].length;
             const on = filter === k;
             const attention = (k === 'late' || k === 'overtime') && n > 0;
             return (
@@ -184,7 +186,7 @@ export function BoardView({
                 className={`flex min-h-16 flex-col items-center justify-center gap-0.5 rounded-button ${on ? 'bg-primary-tint' : ''}`}
               >
                 <CountUp value={n} className={`num text-2xl leading-none font-extrabold ${attention ? "text-warn" : on ? "text-primary" : "text-text"}`} />
-                <span className={`text-xs ${on ? 'font-bold text-primary' : 'text-muted'}`}>{th(`status.${k}`)}</span>
+                <span className={`text-xs ${on ? 'font-bold text-primary' : 'text-muted'}`}>{k === 'leave' ? t('onLeave') : th(`status.${k}`)}</span>
               </button>
             );
           })}
@@ -196,7 +198,7 @@ export function BoardView({
       <Card className="flex flex-col p-0 py-2">
         <div className="flex min-h-11 items-center justify-between px-5">
           <h2 className="text-sm font-medium text-muted">
-            {filter === 'all' ? t('everyone') : filter === 'in' ? t('filterIn') : th(`status.${filter}`)} <span className="num">{list.length}</span>
+            {filter === 'all' ? t('everyone') : filter === 'in' ? t('filterIn') : filter === 'leave' ? t('onLeave') : th(`status.${filter}`)} <span className="num">{list.length}</span>
           </h2>
           {filter !== 'all' && (
             <button type="button" onClick={() => pick('all')} className="min-h-11 text-sm font-medium text-primary">

@@ -4186,7 +4186,7 @@
         "apply": "Apply",
         "cancel": "Cancel",
         "result": "Applied to {done} of {total} employees.",
-        "selectAll": "Select all shown",
+        "selectAll": "Check all staff",
         "selectOne": "Select {name}",
         "err": {
           "no_contract": "Skipped: no contract",
