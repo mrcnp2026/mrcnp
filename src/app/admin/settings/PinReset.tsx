@@ -1,5 +1,5 @@
 'use client';
-// 다른 관리자의 통합설정 숫자 지우기 — 숫자를 잊었을 때. 지우면 그 사람은 다음에 통합설정을 열 때 숫자를 새로 정한다 (2026-10-14 DB 묶음 7)
+// 다른 관리자의 통합설정 비밀번호(숫자 4자리) 지우기 — 잊었을 때. 지우면 그 사람은 다음에 통합설정을 열 때 새로 정한다 (2026-10-30 이름: 「숫자」 → 「비밀번호」) (2026-10-14 DB 묶음 7)
 import { useTranslations } from 'next-intl';
 import { useRouter } from 'next/navigation';
 import { useState } from 'react';

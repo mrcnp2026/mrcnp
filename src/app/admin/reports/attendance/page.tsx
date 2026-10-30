@@ -136,7 +136,7 @@ export default async function AttendanceReportPage({ searchParams }: { searchPar
             <li key={x.key} className={`px-4 py-3 ${x.key === 'total' ? 'bg-surface/70' : ''}`}>
               <div className="flex items-baseline justify-between gap-3">
                 <span className="text-sm font-medium">{x.name}</span>
-                <span className="num text-xs text-muted">{t('cPeople')} {x.s.people} · {t(cols[11])} {rate(x.s)}</span>
+                <span className="num text-xs text-muted">{t(cols[11])} {rate(x.s)}</span>
               </div>
               <dl className="num mt-2 grid grid-cols-2 gap-3 text-sm">
                 {([2, 3] as const).map((i) => (
@@ -150,11 +150,11 @@ export default async function AttendanceReportPage({ searchParams }: { searchPar
           ))}
         </ListCard>
         <TableCard className="hidden lg:block">
-          <table className="w-full">
+          <table className="w-full xl:table-fixed">
             <thead>
               <tr className="border-b border-border">
+                {/* 2026-10-30 의뢰인: 「대상」 칸은 마감 칸(n/전체)과 겹쳐서 뺐다. 부서별 · 직원별 표는 같은 칸 구성 + 휴가 리포트와 같은 xl:table-fixed(모든 칸 같은 폭)로 세로줄을 맞춘다 */}
                 <th scope="col" className={R.th}>{t('cGroup')}</th>
-                <th scope="col" className={R.th}>{t(cols[0])}</th>
                 {shown.map((i) => (
                   <th key={i} scope="col" className={R.th}>{t(cols[i])}</th>
                 ))}
@@ -165,7 +165,6 @@ export default async function AttendanceReportPage({ searchParams }: { searchPar
               {r.groups.map((g) => (
                 <tr key={g.groupId ?? ''} className={R.tr}>
                   <td className={`${R.td} font-medium`}>{g.groupId === null ? t('unassigned') : g.name}</td>
-                  <td className={R.td}>{g.people}</td>
                   {shown.map((i) => (
                     <td key={i} className={R.td}>{cell(g, i)}</td>
                   ))}
@@ -174,7 +173,6 @@ export default async function AttendanceReportPage({ searchParams }: { searchPar
               ))}
               <tr className={R.total}>
                 <td className={`${R.td} font-medium`}>{t('total')}</td>
-                <td className={R.td}>{r.total.people}</td>
                 {shown.map((i) => (
                   <td key={i} className={`${R.td} font-medium`}>{cell(r.total, i)}</td>
                 ))}
@@ -208,7 +206,7 @@ export default async function AttendanceReportPage({ searchParams }: { searchPar
           {r.employees.length === 0 && <li className="p-4 text-sm text-faint">{t('empty')}</li>}
         </ListCard>
         <TableCard className="hidden lg:block">
-          <table className="w-full">
+          <table className="w-full xl:table-fixed">
             <thead>
               <tr className="border-b border-border">
                 <th scope="col" className={R.th}>{t('cName')}</th>

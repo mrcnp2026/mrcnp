@@ -1,5 +1,6 @@
 'use client';
 // 증명서 신청 · 발급 · 반려 단추 (2026-10-29 남은 일 9-3). 직원 화면(신청)과 관리자 화면(발급 · 반려 · 바로 발급)이 같이 쓴다. 처리하면 화면을 새로 읽는다.
+import { BriefcaseBusiness, FileText, LogOut, type LucideIcon } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 import { useRouter } from 'next/navigation';
 import { useState } from 'react';
@@ -11,6 +12,7 @@ import { CertEditor, type CertDraft } from './CertEditor';
 
 const field = 'min-h-11 w-full rounded-button border border-border bg-bg px-3 text-base lg:min-h-9 lg:text-sm';
 type Err = { code: string; requestId?: string } | null;
+const ICON: Record<'EMPLOYMENT' | 'CAREER' | 'RETIREMENT', LucideIcon> = { EMPLOYMENT: FileText, CAREER: BriefcaseBusiness, RETIREMENT: LogOut };
 
 function useSend(url: string) {
   const router = useRouter();
@@ -70,13 +72,23 @@ export function CertRequestForm({ kinds, people }: { kinds: readonly ('EMPLOYMEN
           </Select>
         </label>
       )}
-      <fieldset className="flex flex-col gap-1 text-sm">
+      {/* 종류는 위쪽 단추 줄이 아니라 고르는 카드로 (2026-10-30 의뢰인: 「상단에 재직 · 경력 버튼 말고 — 지금 UX/UI 너무 별로」) — 아이콘 · 이름 · 무엇을 증명하는지 한 줄 */}
+      <fieldset className="flex flex-col gap-2 text-sm">
         <legend className="pb-1 font-bold">{t('kindLabel')}</legend>
-        <div className={`grid gap-1 rounded-button border border-border p-0.5 ${kinds.length === 3 ? 'grid-cols-3' : 'grid-cols-2'}`}>
-          {kinds.map((k) => (
-            <button key={k} type="button" aria-pressed={kind === k} onClick={() => setKind(k)} className={`min-h-10 rounded-button px-2 text-sm font-bold ${kind === k ? 'bg-primary text-on-primary' : 'text-muted hover:bg-surface'}`}>{t(`kind.${k}`)}</button>
-          ))}
-        </div>
+        {kinds.map((k) => {
+          const Icon = ICON[k];
+          const on = kind === k;
+          return (
+            <button key={k} type="button" aria-pressed={on} onClick={() => setKind(k)} className={`flex min-h-14 items-center gap-3 rounded-card border px-3 py-2.5 text-left transition-colors ${on ? 'border-primary bg-primary-tint' : 'border-border bg-bg hover:bg-surface'}`}>
+              <span aria-hidden className={`flex size-9 shrink-0 items-center justify-center rounded-button ${on ? 'bg-primary text-on-primary' : 'bg-surface text-muted'}`}><Icon size={18} /></span>
+              <span className="flex min-w-0 flex-1 flex-col">
+                <b className={on ? 'text-primary' : ''}>{t(`kind.${k}`)}</b>
+                <span className="text-xs text-muted">{t(`kindDesc.${k}`)}</span>
+              </span>
+              <span aria-hidden className={`size-4 shrink-0 rounded-full border-2 ${on ? 'border-primary bg-primary' : 'border-border'}`} />
+            </button>
+          );
+        })}
       </fieldset>
       <div className="grid grid-cols-[minmax(0,1fr)_5rem] gap-2">
         <label className="flex flex-col gap-1 text-sm">
@@ -89,7 +101,7 @@ export function CertRequestForm({ kinds, people }: { kinds: readonly ('EMPLOYMEN
         </label>
       </div>
       <div className="flex flex-wrap items-center gap-3">
-        <Button type="submit" disabled={busy} className="min-w-32">{t(admin ? 'previewEdit' : 'request')}</Button>
+        <Button type="submit" disabled={busy} className="w-full">{t(admin ? 'previewEdit' : 'request')}</Button>
         {done && <span role="status" className="text-sm text-ok">{t(admin ? 'issuedDone' : 'requestedDone')}</span>}
       </div>
       {(err ?? dErr) && <ErrorNote code={(err ?? dErr)!.code} requestId={(err ?? dErr)!.requestId} namespace="certificates" />}

@@ -27,7 +27,8 @@ import { buildTodayBoard, type BoardPerson } from '@/lib/today';
 import { weekLimitList } from '@/lib/week-limit';
 import { AutoRefresh } from './AutoRefresh';
 import { BoardView } from './BoardView';
-import { BarCard, GaugeCard, LineCard } from './Analytics';
+import { BarCard, DonutCard, LineCard } from './Analytics';
+import { Gauge } from '@/components/charts/Gauge';
 import { KpiRow } from './KpiRow';
 import { WeekLimitCard } from './WeekLimitCard';
 import { switchOn } from '@/lib/switches';
@@ -197,18 +198,8 @@ export default async function AdminHome({ searchParams }: { searchParams: Promis
       <PanelPortal>
         <div className="flex flex-col gap-4 px-3 pb-4">
           <p className="num text-xs text-muted">{t('asOf', { date: fmt.dateTime(now, { month: 'long', day: 'numeric', weekday: 'short' }), time: fmt.dateTime(now, { hour: '2-digit', minute: '2-digit', hourCycle: 'h23' }) })}</p>
-          <div className="flex items-center gap-3">
-            <svg viewBox="0 0 64 36" className="h-9 w-16 shrink-0" aria-hidden>
-              <path d="M6,32 A26,26 0 0 1 58,32" fill="none" strokeWidth="6" stroke="currentColor" strokeLinecap="round" className="text-rail" />
-              {(rate ?? 0) > 0 && <path d="M6,32 A26,26 0 0 1 58,32" fill="none" strokeWidth="6" stroke="currentColor" strokeLinecap="round" className="text-primary" pathLength={100} strokeDasharray={`${rate} 100`} />}
-            </svg>
-            <div className="min-w-0">
-              <p className="num text-2xl leading-tight font-extrabold tracking-tight">
-                <CountUp value={String(inCount)} /><span className="text-base font-bold text-muted"> / {active.length}</span>
-              </p>
-              <p className="num text-xs text-muted">{t('panelIn')}{rate !== null ? ` · ${t('panelRate', { p: rate })}` : ''}</p>
-            </div>
-          </div>
+          {/* 2026-10-30 의뢰인: 옆 판만 반원(리포트 때 만든 키트 Gauge), 본문 「오늘의 근무 현황」은 도넛 그대로 */}
+          <Gauge value={rate} caption={t('panelCaption', { n: inCount, total: active.length })} ariaLabel={t('donutTitle')} />
           <ul className="flex flex-col divide-y divide-border rounded-button border border-border bg-bg text-sm">
             {([['bg-warn', th('status.late'), board.late.length], ['bg-danger', th('status.absent'), board.absent.length], ['bg-faint', t('donutOff'), board.off.length]] as const).map(([dot, label, n]) => (
               <li key={label} className="flex min-h-9 items-center gap-2 px-3">
@@ -295,13 +286,12 @@ export default async function AdminHome({ searchParams }: { searchParams: Promis
           <LiveFeed title={t('liveTitle')} empty={t('liveNone')} rows={feed} />
         </Card>
         {/* 첫 화면 순서 (2026-10-27 의뢰인): 휴가 현황 막대가 끝난 뒤 → 도넛 1.8초 → 곡선 1.9초(2026-10-28 의뢰인: 도넛과 거의 동시에) → 지각 막대 2.4초 */}
-        {/* 2026-10-30 의뢰인: 도넛 → 반원 게이지(리포트 때 만든 키트 Gauge) */}
-        <GaugeCard
+        <DonutCard
           after={1800}
           title={t('donutTitle')}
           unit={t('chartUnit')}
-          value={rate}
-          caption={t('chartRate')}
+          center={rate === null ? '–' : `${rate}%`}
+          centerLabel={t('chartRate')}
           slices={[
             { key: 'in', label: t('donutIn'), n: Math.max(0, inCount - board.late.length), tone: 'primary' },
             { key: 'late', label: th('status.late'), n: board.late.length, tone: 'warn' },

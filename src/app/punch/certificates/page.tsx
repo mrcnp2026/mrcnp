@@ -14,24 +14,28 @@ export default async function MyCertificatesPage() {
   const [t, { rows, missing }] = await Promise.all([getTranslations('certificates'), loadCerts({ employeeId: me.id, practice: OFFICE.practiceMode })]);
   return (
     <PageShell>
-      <div className="flex w-full flex-col gap-3 lg:gap-4">
-        <div>
-          <h1 className="text-2xl font-bold">{t('myTitle')}</h1>
-          <p className="mt-1 text-sm text-muted">{t('myIntro')}</p>
-        </div>
-        {missing ? (
-          <p className="rounded-card bg-warn-tint p-4 text-sm text-warn">{t('missing')}</p>
-        ) : (
-          <>
-            <Card className="flex flex-col gap-3">
-              <h2 className="font-bold">{t('newTitle')}</h2>
-              <CertRequestForm kinds={['EMPLOYMENT', 'CAREER']} />
-            </Card>
-            <h2 className="pt-2 font-bold">{t('historyTitle')}</h2>
-            <CertList rows={rows} />
-          </>
-        )}
+      <div>
+        <h1 className="text-2xl font-bold">{t('myTitle')}</h1>
+        <p className="mt-1 text-sm text-muted">{t('myIntro')}</p>
       </div>
+      {missing ? (
+        <p className="rounded-card bg-warn-tint p-4 text-sm text-warn">{t('missing')}</p>
+      ) : (
+        // 2026-10-30 의뢰인: 직원 홈 · 내 프로필처럼 칸을 나눈다 — 왼쪽: 신청(종류 카드 · 용도 · 부수), 오른쪽: 신청 · 발급 내역. 폰은 신청 → 내역 순서
+        <div className="grid gap-4 lg:grid-cols-[20rem_minmax(0,1fr)] lg:items-start lg:gap-6">
+          <Card className="flex flex-col gap-3 lg:sticky lg:top-4">
+            <h2 className="font-bold">{t('newTitle')}</h2>
+            <CertRequestForm kinds={['EMPLOYMENT', 'CAREER']} />
+          </Card>
+          <section className="flex min-w-0 flex-col gap-2">
+            <h2 className="flex min-h-8 items-center gap-2 font-bold">
+              {t('historyTitle')}
+              <span className="num rounded-chip bg-surface px-2 text-xs text-muted">{rows.length}</span>
+            </h2>
+            <CertList rows={rows} />
+          </section>
+        </div>
+      )}
     </PageShell>
   );
 }

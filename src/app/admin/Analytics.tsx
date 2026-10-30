@@ -5,7 +5,6 @@
 import { AreaChart, type AreaPoint } from '@/components/charts/AreaChart';
 import { BarChart, type BarDatum } from '@/components/charts/BarChart';
 import { Donut } from '@/components/charts/Donut';
-import { Gauge } from '@/components/charts/Gauge';
 import { Card, CardTitle } from '@/components/ui';
 
 /** n = 막대 높이를 정하는 값. text = 막대 위에 적을 글자 (없으면 n). sub = 날짜 아래 둘째 줄 (요일) */
@@ -39,23 +38,6 @@ export function DonutCard({ title, unit, slices, center, centerLabel, className 
     <Card className={`flex flex-col gap-3 ${className}`}>
       <CardTitle aside={<span className="text-xs text-faint">{unit}</span>}>{title}</CardTitle>
       <Donut slices={slices.map((s) => ({ key: s.key, label: s.label, n: s.n, color: COLOR[s.tone] }))} center={center} centerLabel={centerLabel} ariaLabel={title} after={after} />
-    </Card>
-  );
-}
-
-/** 반원 게이지 그래프 — 출근율 하나를 크게, 아래에 항목별 비율 막대 · 이름 · 숫자 · 비율 (2026-10-30 의뢰인: 「출근율 도넛 말고 반원으로 — 리포트 때 만든 반원」) */
-export function GaugeCard({ title, unit, slices, value, caption, className = '', after }: { title: string; unit: string; slices: Slice[]; value: number | null; caption?: string; className?: string } & After) {
-  const total = slices.reduce((a, s) => a + s.n, 0);
-  return (
-    <Card className={`flex flex-col gap-3 ${className}`}>
-      <CardTitle aside={<span className="text-xs text-faint">{unit}</span>}>{title}</CardTitle>
-      <Gauge
-        value={value}
-        caption={caption}
-        ariaLabel={title}
-        after={after}
-        parts={slices.map((s) => ({ key: s.key, label: s.label, value: `${s.n} · ${total ? Math.round((s.n / total) * 100) : 0}%`, share: s.n, color: COLOR[s.tone] }))}
-      />
     </Card>
   );
 }

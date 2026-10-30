@@ -767,7 +767,8 @@
       "liveOut": "Clock out",
       "liveLate": "Late clock-in",
       "panelIn": "Checked in",
-      "panelRate": "{p}% rate"
+      "panelRate": "{p}% rate",
+      "panelCaption": "{n} of {total} checked in"
     },
     "inbox": {
       "title": "Requests",
@@ -8802,7 +8803,12 @@
     "cert_no_start": "No hire date. Add it to the staff record first.",
     "cert_already_done": "This request was already handled.",
     "cert_reason_required": "Enter a reason of at least 2 characters.",
-    "cert_busy": "Please try again in a moment."
+    "cert_busy": "Please try again in a moment.",
+    "kindDesc": {
+      "EMPLOYMENT": "Proves you currently work here",
+      "CAREER": "Proves your period, team and role",
+      "RETIREMENT": "Proves your resignation and period"
+    }
   },
   "certPdf": {
     "b": {
