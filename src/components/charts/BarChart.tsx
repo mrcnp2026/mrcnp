@@ -15,7 +15,7 @@ export type BarDatum = { key: string; label: string; short?: string; sub?: strin
 /** focus: 이 막대만 초록(나머지 베이지) — 「고른 달」처럼 하나를 짚을 때. 없으면 평균보다 많은 막대가 초록 */
 export function BarChart({ bars, dense = false, avgLabel, vsAvg, avgUnit = '', ariaLabel, focus, after = 0 }: { bars: BarDatum[]; dense?: boolean; avgLabel?: string; vsAvg?: string; avgUnit?: string; ariaLabel: string; focus?: number; after?: number }) {
   const [hover, setHover] = useState<number | null>(null);
-  const [ref, inView] = useInView<HTMLDivElement>(0.25, after);
+  const [ref, inView] = useInView<HTMLDivElement>(0.15, after);
   const max = niceMax(Math.max(0, ...bars.map((d) => d.n)));
   const counted = bars.filter((d) => !d.skip);
   const avg = counted.length ? counted.reduce((a, d) => a + d.n, 0) / counted.length : 0;

@@ -8,7 +8,9 @@ import { COLORS } from '@/config/theme';
 import { formatInviteCode, newInviteCode } from '@/lib/invite-code';
 import { hashToken } from '@/lib/passkey';
 import { staffEmail } from '@/lib/session';
+import { getSettingAt } from '@/lib/settings';
 import { createAdminClient } from '@/lib/supabase/admin';
+import { toKstDate } from '@/lib/time';
 import type { Locale } from '@/i18n/locales';
 
 export const EMPLOYEE_NO_RE = /^[A-Za-z0-9-]{1,20}$/;
@@ -39,7 +41,8 @@ export async function issueInvite(args: {
   if (e1) throw new Error(`issueInvite.revoke: ${e1.message}`);
 
   const token = newInviteCode();
-  const expiresAt = new Date(now.getTime() + OFFICE.inviteValidHours * 3_600_000);
+  const validHours = await getSettingAt('invite.valid_hours', toKstDate(now)); // 통합설정 › 직원 기준 (2026-10-29 9-2, 기본 OFFICE.inviteValidHours)
+  const expiresAt = new Date(now.getTime() + validHours * 3_600_000);
   const { error: e2 } = await db.from('invites').insert({
     employee_id: args.employeeId,
     token_hash: hashToken(token),

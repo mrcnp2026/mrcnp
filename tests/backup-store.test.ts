@@ -1,4 +1,4 @@
-// 백업 이름 · 보관 규칙 (2026-10-25): 최근 14일은 전부, 달마다 첫 백업(12개월), 해마다 첫 백업(영구)
+// 백업 이름 · 보관 규칙 (2026-10-25): 최근 14일은 전부, 달마다 첫 백업(12개월), 해마다 첫 백업(최근 5년)
 import { describe, expect, it } from 'vitest';
 import { keepRule, nameFor, parseName } from '@/lib/backup/store';
 
@@ -25,5 +25,13 @@ describe('보관 규칙', () => {
     expect(flag('2026-09-20')).toEqual({ recent: false, monthly: false, yearly: false }); // 지워도 되는 것
     expect(flag('2025-01-05').yearly).toBe(true);
     expect(flag('2025-01-20')).toEqual({ recent: false, monthly: false, yearly: false });
+  });
+  it('해마다 첫 백업은 최근 5년치만 남긴다', () => {
+    const list = mk(['2020-01-01', '2021-01-01', '2022-01-01', '2023-01-01', '2024-01-01', '2025-01-01', '2026-10-25']);
+    const r = keepRule(list, '2026-10-25');
+    const flag = (d: string) => r.get(list.find((x) => x.date === d)!.name)!;
+    expect(flag('2020-01-01').yearly).toBe(false);
+    expect(flag('2021-01-01').yearly).toBe(false);
+    expect(['2022-01-01', '2023-01-01', '2024-01-01', '2025-01-01', '2026-10-25'].every((d) => flag(d).yearly)).toBe(true);
   });
 });

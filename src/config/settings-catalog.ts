@@ -22,7 +22,9 @@ export const SETTINGS = {
   'missing.out_grace_hours': { group: 3, kind: 'int', min: 0, max: 12, unit: 'hour', default: OFFICE.missingOutGraceHours },
   'missing.in_grace_min': { group: 3, kind: 'int', min: 0, max: 240, unit: 'min', default: OFFICE.missingInGraceMin },
   'week.caution_hours': { group: 3, kind: 'int', min: 1, max: 80, unit: 'hour', default: OFFICE.weeklyCautionHours },
-  'week.limit_hours': { group: 3, kind: 'int', min: 1, max: 80, unit: 'hour', default: OFFICE.weeklyLimitHours },
+  'week.limit_hours': { group: 3, kind: 'int', min: 1, max: 80, unit: 'hour', default: OFFICE.weeklyLimitHours }, // 법정 한도 — 화면에서 바꾸지 않는다
+  // 그룹 9 — 직원 · 초대 (2026-10-29 9-2: 회사가 바꾼다)
+  'invite.valid_hours': { group: 9, kind: 'int', min: 1, max: 720, unit: 'hour', default: OFFICE.inviteValidHours },
   // 그룹 4 — 위치 검증 (주소 목록은 office_networks. 여기는 경고 기준만)
   'location.failure_alert_percent': { group: 4, kind: 'int', min: 1, max: 100, unit: 'percent', default: 50 },
   // 그룹 7 — 연차 (② 4-7: 발생일수는 자동 계산하지 않는다. 기준·허용 단위만)

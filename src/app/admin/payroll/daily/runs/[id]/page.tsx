@@ -4,13 +4,14 @@
 import { getFormatter, getTranslations } from 'next-intl/server';
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
+import { Steps } from '@/components/listframe';
 import { Chip, PageShell } from '@/components/ui';
 import { getMe } from '@/lib/auth';
 import { loadDailyBoard, loadDailyRevisions, type DailyLine } from '@/lib/payroll/daily-data';
 import { AUTO_CODES } from '@/lib/payroll/daily';
 import { DailyRunActions } from '../../DailyForms';
 
-const RTONE = { DRAFT: 'neutral', CALCULATED: 'info', REVIEWED: 'warn', FINALIZED: 'ok' } as const;
+const RTONE = { DRAFT: 'neutral', CALCULATED: 'info', REVIEWED: 'info', FINALIZED: 'ok' } as const; // 검토됨은 문제가 아니라 진행 상태 — 경고색을 쓰지 않는다 (2026-10-29)
 // 계산하지 못한 이유마다 고칠 곳
 const FIX: Record<string, 'payee' | 'work'> = { tax_unknown: 'payee', insurance_unknown: 'payee', unconfirmed_work: 'work', no_work: 'work', insurance_ref_missing: 'payee' };
 
@@ -71,6 +72,15 @@ export default async function DailyRunPage({ params }: { params: Promise<{ id: s
         </h1>
         <p className="num pt-1 text-sm text-faint">{t('runMeta', { month, payDate: run.payDate })}</p>
       </div>
+      {/* 이 대장이 어디까지 왔는가 — 정규 급여대장과 같은 순서 안내 (2026-10-29 의뢰인: 처음 쓰면 무엇을 누를지 모른다) */}
+      <Steps
+        label={t('stepsLabel')}
+        steps={(['DRAFT', 'CALCULATED', 'REVIEWED', 'FINALIZED'] as const).map((k, i) => {
+          const at = ['DRAFT', 'CALCULATED', 'REVIEWED', 'FINALIZED'].indexOf(run.status) + 1;
+          const done = run.status === 'FINALIZED' ? true : i < at;
+          return { key: k, label: t(`flow.${k}`), state: done ? 'done' : i === at ? 'now' : 'todo' };
+        })}
+      />
       {prev && (
         <p className="rounded-card border border-border bg-surface p-3 text-sm">
           {t('correctionOf', { reason: run.correctionReason ?? '' })}{' '}
@@ -190,8 +200,12 @@ export default async function DailyRunPage({ params }: { params: Promise<{ id: s
           </li>
         </ul>
       )}
-      <p className="text-xs text-faint">{t('ruleNote')}</p>
-      <p className="text-xs text-faint">{t('insRuleNote')}</p>
+      {/* 규칙 설명은 접어 둔다 — 처음 보는 사람에게는 개발용 이름 · 식이 먼저 보일 필요가 없다 */}
+      <details className="text-xs text-faint">
+        <summary className="min-h-9 cursor-pointer content-center">{t('rulesTitle')}</summary>
+        <p className="pt-1">{t('ruleNote')}</p>
+        <p className="pt-1">{t('insRuleNote')}</p>
+      </details>
     </PageShell>
   );
 }

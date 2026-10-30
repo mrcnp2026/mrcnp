@@ -5,6 +5,8 @@
 // - 사무실 위치(GPS)는 좌표+반경. 하나라도 켜져 있으면, 사무실 인터넷이 아닌 곳에서 찍을 때 폰이 위치를 함께 보낸다 (0017)
 // 누가 바꿨는지는 변경 기록에 남는다 (표에 *_by 칸이 없어 따로 한 줄 적는다).
 import { api, ApiError, readJson } from '@/lib/api';
+import { OFFICE } from '@/config/office';
+import { checkSetting } from '@/config/settings-catalog';
 import { putSetting, putShiftKindNames } from '@/lib/settings';
 import { cleanKindNames } from '@/lib/shift-kind-names';
 import { requireConsole } from '@/lib/console-pin';
@@ -33,6 +35,17 @@ export const POST = api('admin.settings', async (req, ctx) => {
       const r = await putSetting('schedule.request_mode', b.mode, today, me.id);
       if (r === 'duplicate') throw new ApiError(409, 'setting_same_day'); // 같은 날 두 번 바꾸지 않는다(이력 한 줄)
       await note('app_settings', me.id, 'schedule.mode', { mode: b.mode });
+      return { ok: true };
+    }
+    case 'setting.int': {
+      // 숫자 설정 — 회사가 바꿔도 되는 것만 (2026-10-29 9-2). 주 52시간 「한도」는 법이라 여기 없다
+      if (b.key !== 'week.caution_hours' && b.key !== 'invite.valid_hours') throw new ApiError(400, 'invalid_input');
+      const v = checkSetting(b.key, b.value);
+      if (typeof v !== 'number') throw new ApiError(400, 'invalid_input');
+      if (b.key === 'week.caution_hours' && v >= OFFICE.weeklyLimitHours) throw new ApiError(400, 'invalid_input'); // 주의는 한도보다 낮아야 한다
+      const r = await putSetting(b.key, v, today, me.id);
+      if (r === 'duplicate') throw new ApiError(409, 'setting_same_day');
+      await note('app_settings', me.id, 'setting.int', { key: b.key, value: v });
       return { ok: true };
     }
     case 'shift.kind_names': {

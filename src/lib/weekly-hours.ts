@@ -11,6 +11,7 @@ export function weeklyHours(args: {
   // overtimeMinutes: 그날 연장+휴일 근로 (calcWeek 결과 — 하루 8시간·주 40시간 초과, 휴일). 없으면 0
   dailyWork: { workDate: string; netMinutes: number; overtimeMinutes?: number }[];
   is5OrMore: boolean; // 상시 5인 이상인가 (7-14: 지금은 OFFICE.workplaceSize)
+  cautionHours?: number; // 주의 기준 시간 — 통합설정 값(week.caution_hours). 없으면 OFFICE 기본값
 }): { totalMinutes: number; regularMinutes: number; overtimeMinutes: number; level: WeeklyLevel; colored: boolean; note: string } {
   const weekEnd = addDays(args.weekStart, 6);
   // 요점 1: 월~일 KST. 근무일(work_date)로 묶으므로 일요일 23시 기록이 다음 주로 넘어가지 않는다
@@ -22,7 +23,7 @@ export function weeklyHours(args: {
 
   let level: WeeklyLevel = 'normal';
   if (totalMinutes > OFFICE.weeklyLimitHours * 60) level = 'over';
-  else if (totalMinutes >= OFFICE.weeklyCautionHours * 60) level = 'caution';
+  else if (totalMinutes >= (args.cautionHours ?? OFFICE.weeklyCautionHours) * 60) level = 'caution'; // 주의 기준은 통합설정 › 리포트 기준 (2026-10-29 9-2)
 
   // 요점 4: 상시 5인 미만이면 52시간 한도 규정이 적용되지 않으므로 색 없이 숫자만
   const colored = args.is5OrMore;

@@ -425,7 +425,7 @@ export default async function InboxPage({ searchParams }: { searchParams: Promis
   );
 
   return (
-    <PageShell wide>
+    <PageShell>
       {/* 폰: 한 건 보기는 그 요청만의 화면 */}
       {focus && (
         <div className="flex flex-col gap-3 lg:hidden">
@@ -622,7 +622,7 @@ async function DoneTab({ sp, practice }: { sp: { live?: string; tab?: string; dp
   const page = pageOf(splitRequests(items.filter((x) => !check.has(x.employeeId) && (!q || (names.get(x.employeeId) ?? '').toLowerCase().includes(q)))).done, sp.dp, LIST_PAGE);
   const hrefOf = (r: (typeof items)[number]) => (r.kind === 'leave' ? `/admin/leave/req/${r.key.split(':')[1]}` : r.kind === 'shift' ? `/admin/schedule?d=${r.date}` : `/admin/records/${r.employeeId}?m=${r.date.slice(0, 7)}`);
   return (
-    <PageShell wide>
+    <PageShell>
       <h1 className="sr-only">{t('title')}</h1>
       <RequestTabs admin active="done" live={sp.live === '1'} q={q} counts={{ pending: (await pendingCounts(practice)).total }} />
       {practice && <p className="rounded-card bg-primary-tint p-3 text-sm text-primary">{t('practiceBanner')}</p>}

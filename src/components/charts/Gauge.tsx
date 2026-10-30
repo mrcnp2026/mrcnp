@@ -6,8 +6,9 @@ import { C, useInView, useProgress } from './base';
 
 export type GaugePart = { key: string; label: string; value: string; share: number; color: string };
 
-export function Gauge({ value, caption, parts = [], ariaLabel }: { value: number | null; caption?: string; parts?: GaugePart[]; ariaLabel: string }) {
-  const [ref, inView] = useInView<HTMLDivElement>();
+// after(ms): 화면을 연 뒤 이 시간 전에는 움직이지 않는다 — 오늘 현황 첫 화면에서 그래프가 차례로 움직이게 (2026-10-30, 도넛 자리에 넣으며)
+export function Gauge({ value, caption, parts = [], ariaLabel, after = 0 }: { value: number | null; caption?: string; parts?: GaugePart[]; ariaLabel: string; after?: number }) {
+  const [ref, inView] = useInView<HTMLDivElement>(0.15, after);
   const p = useProgress(inView, 1500, 200);
   const v = Math.min(100, Math.max(0, value ?? 0)) * p;
   const ang = Math.PI * (1 - v / 100);

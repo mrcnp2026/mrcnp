@@ -14,7 +14,7 @@ export type DonutSlice = { key: string; label: string; n: number; color: string 
 
 export function Donut({ slices, center, centerLabel, ariaLabel, after = 0 }: { slices: DonutSlice[]; center: string; centerLabel: string; ariaLabel: string; after?: number }) {
   const [hot, setHot] = useState<number | null>(null);
-  const [ref, inView] = useInView<HTMLDivElement>(0.25, after);
+  const [ref, inView] = useInView<HTMLDivElement>(0.15, after);
   const arcs = useRef<(SVGCircleElement | null)[]>([]);
   const total = slices.reduce((a, s) => a + s.n, 0);
   const live = slices.filter((s) => s.n > 0).length;
@@ -43,11 +43,11 @@ export function Donut({ slices, center, centerLabel, ariaLabel, after = 0 }: { s
     if (motion.current) paint(0);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
-  // 보이면 시계 방향으로 자란다 — 1.5초, 0.25초 뒤 (최근 14일 그래프와 같은 시간, 2026-10-28 의뢰인)
+  // 보이면 시계 방향으로 자란다 — 1.5초, 0.1초 뒤 (최근 14일 그래프와 같은 시간, 2026-10-28 의뢰인 · 2026-10-29 시작을 당김)
   useLayoutEffect(() => {
     if (!inView || !motion.current) return;
     const o = { p: 0 };
-    const tw = gsap.to(o, { p: 1, duration: 1.5, delay: 0.25, ease: 'power2.out', onUpdate: () => paint(o.p) });
+    const tw = gsap.to(o, { p: 1, duration: 1.5, delay: 0.1, ease: 'power2.out', onUpdate: () => paint(o.p) });
     return () => {
       tw.kill();
       paint(1);

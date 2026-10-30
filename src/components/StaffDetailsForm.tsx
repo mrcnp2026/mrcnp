@@ -97,7 +97,7 @@ export function StaffDetailsForm({ endpoint, initial, today, startEditing }: { e
       <fieldset className="flex flex-col gap-2">
         <legend className="mb-1.5 text-sm font-bold">{t('contacts')} <span className="font-normal text-faint">{t('upTo', { n: MAX_CONTACTS })}</span></legend>
         {contacts.map((c, i) => (
-          <div key={i} className="flex items-start gap-1 rounded-card border border-border p-2 lg:items-center lg:border-0 lg:p-0">
+          <div key={i} className="flex items-start gap-1 rounded-card border border-border p-2 lg:max-w-3xl lg:items-center lg:border-0 lg:p-0">
             <div className="grid min-w-0 flex-1 grid-cols-2 gap-2 lg:grid-cols-[1fr_8rem_1fr]">
               <input aria-label={t('cName')} placeholder={t('cName')} value={c.name} maxLength={30} onChange={(e) => setC(i, 'name', e.target.value)} className={input} />
               <input aria-label={t('cRelation')} placeholder={t('cRelation')} value={c.relation} maxLength={20} onChange={(e) => setC(i, 'relation', e.target.value)} className={input} />
@@ -112,7 +112,7 @@ export function StaffDetailsForm({ endpoint, initial, today, startEditing }: { e
       <fieldset className="flex flex-col gap-2">
         <legend className="mb-1.5 text-sm font-bold">{t('certs')}</legend>
         {certs.map((c, i) => (
-          <div key={i} className="flex items-start gap-1 rounded-card border border-border p-2 lg:items-center lg:border-0 lg:p-0">
+          <div key={i} className="flex items-start gap-1 rounded-card border border-border p-2 lg:max-w-3xl lg:items-center lg:border-0 lg:p-0">
             <div className="grid min-w-0 flex-1 grid-cols-2 gap-2 lg:grid-cols-[1fr_10rem_10rem]">
               <input aria-label={t('kName')} placeholder={t('kName')} value={c.name} maxLength={60} onChange={(e) => setK(i, 'name', e.target.value)} className={`${input} col-span-2 lg:col-span-1`} />
               <input aria-label={t('kDate')} type="date" value={c.acquiredOn ?? ''} max={today} onChange={(e) => setK(i, 'acquiredOn', e.target.value)} className={input} />

@@ -3,6 +3,7 @@
 import { getFormatter, getTranslations } from 'next-intl/server';
 import { getSettingAt } from '@/lib/settings';
 import { ScheduleModeForm } from './ScheduleModeForm';
+import { NumberSettingForm } from './NumberSettingForm';
 import { HelpTip } from '@/components/Help';
 import { headers } from 'next/headers';
 import Link from 'next/link';
@@ -22,7 +23,8 @@ import { PinReset } from './PinReset';
 import { CompanyForm } from './CompanyForm';
 import { companyProfile } from '@/lib/company';
 import { isSwitchKey, switches } from '@/lib/switches';
-import { pushAdminRule, receivesStaffPush, savedPushAdmins } from '@/lib/push-recipients';
+import { pushAdminRule, receivesStaffPush, savedPushAdmins, savedPushAlways } from '@/lib/push-recipients';
+import { PushAlwaysForm } from './PushAlwaysForm';
 import { SwitchToggle } from '@/components/SwitchToggle';
 import { BRAND } from '@/config/brand';
 import { getMe } from '@/lib/auth';
@@ -82,6 +84,8 @@ export default async function SettingsPage({ searchParams }: { searchParams: Pro
   const info = INFO[tab];
   const tsm = await getTranslations('admin.settings.scheduleMode');
   const scheduleMode = (await getSettingAt('schedule.request_mode', toKstDate(new Date()))) as 'approval' | 'direct';
+  const [cautionHours, inviteHours] = await Promise.all([getSettingAt('week.caution_hours', toKstDate(new Date())), getSettingAt('invite.valid_hours', toKstDate(new Date()))]); // 9-2 (2026-10-29)
+  const tns = await getTranslations('admin.settings.numberSetting');
   // 권한 한 화면 (2026-10-14 문서 07 ④-4): 관리자 · 지점관리자 · 급여 담당을 표로. 바꾸기는 직원 화면에서(다른 관리자 확인 규칙을 그대로 쓴다)
   const access =
     tab === 'access'
@@ -119,10 +123,10 @@ export default async function SettingsPage({ searchParams }: { searchParams: Pro
   const pushAdmins =
     tab === 'notify'
       ? await (async () => {
-          const [{ data: ppl }, saved] = await Promise.all([createAdminClient().from('profiles').select('id, name, role, admin_level, employee_no').eq('active', true).eq('role', 'admin').order('name'), savedPushAdmins()]);
+          const [{ data: ppl }, saved, alwaysId] = await Promise.all([createAdminClient().from('profiles').select('id, name, role, admin_level, employee_no').eq('active', true).eq('role', 'admin').order('name'), savedPushAdmins(), savedPushAlways()]);
           return (ppl ?? [])
             .filter((x) => !(x.employee_no as string | null)?.startsWith('e2e-'))
-            .map((x) => ({ id: x.id as string, name: x.name as string, rule: pushAdminRule(x)!, on: receivesStaffPush(x, saved) }))
+            .map((x) => ({ id: x.id as string, name: x.name as string, ceo: x.admin_level === 'ceo', rule: pushAdminRule(x, alwaysId)!, on: receivesStaffPush(x, saved, alwaysId) }))
             .sort((a, b) => ['always', 'choice', 'never'].indexOf(a.rule) - ['always', 'choice', 'never'].indexOf(b.rule));
         })()
       : null;
@@ -227,7 +231,8 @@ export default async function SettingsPage({ searchParams }: { searchParams: Pro
                 ) : (
                   <span className="inline-flex flex-col items-end gap-1">
                     <UseMark on={r.on} label={ti(`${tab}.${r.k}.value`)} />
-                    <span className="text-xs text-faint" title={tsw('fixedWhy')}>{tsw('fixed')}</span>
+                    {/* 없는 기능은 「고정」이 아니라 「아직 없음」 — 고칠 수 없는 설정처럼 보이지 않게 (2026-10-29) */}
+                    <span className="text-xs text-faint" title={tsw(r.on ? 'fixedWhy' : 'notYetWhy')}>{tsw(r.on ? 'fixed' : 'notYet')}</span>
                   </span>
                 )}
               </SettingRow>
@@ -236,6 +241,9 @@ export default async function SettingsPage({ searchParams }: { searchParams: Pro
             <>
               <SettingGroup>{tpa('title')}</SettingGroup>
               <p className="pb-1 text-sm text-muted">{tpa('intro')}</p>
+              <SettingRow label={tpa('alwaysPick')} desc={tpa('alwaysPickDesc')}>
+                <PushAlwaysForm options={pushAdmins.filter((a) => !a.ceo).map((a) => ({ id: a.id, name: a.name }))} value={pushAdmins.find((a) => a.rule === 'always')?.id ?? null} />
+              </SettingRow>
               {pushAdmins.map((a) => (
                 <SettingRow key={a.id} label={a.name} desc={tpa(`rule.${a.rule}`)}>
                   {a.rule === 'choice' ? (
@@ -262,11 +270,22 @@ export default async function SettingsPage({ searchParams }: { searchParams: Pro
               <ScheduleModeForm mode={scheduleMode} />
             </SettingRow>
           )}
+          {/* 회사가 바꾸는 숫자 (2026-10-29 남은 일 9-2) — 오늘부터 적용, 지난 날짜는 예전 값 */}
+          {tab === 'report' && (
+            <SettingRow label={tns('caution.label')} desc={tns('caution.desc', { limit: OFFICE.weeklyLimitHours })}>
+              <NumberSettingForm k="week.caution_hours" value={cautionHours} min={1} max={OFFICE.weeklyLimitHours - 1} unit={tns('hours')} />
+            </SettingRow>
+          )}
+          {tab === 'staff' && (
+            <SettingRow label={tns('invite.label')} desc={tns('invite.desc')}>
+              <NumberSettingForm k="invite.valid_hours" value={inviteHours} min={1} max={720} unit={tns('hours')} />
+            </SettingRow>
+          )}
           {tab === 'general' && (
             <>
               {/* 회사 정보 (2026-10-18 의뢰인: 휴일 넣고 빼기보다 회사 정보가 먼저 — 휴일은 「휴일」 메뉴로 뺐다) */}
               <SettingGroup>{tco('title')}</SettingGroup>
-              <CompanyForm initial={{ name: company.name || BRAND.name, ceo: company.ceo, bizNo: company.bizNo, address: company.address, phone: company.phone, policy: company.policy, hasLogo: !!company.logoPath, logoAt: company.logoAt }} />
+              <CompanyForm initial={{ name: company.name || BRAND.name, ceo: company.ceo, bizNo: company.bizNo, address: company.address, phone: company.phone, policy: company.policy, privacyOfficer: company.privacyOfficer ?? '', hasLogo: !!company.logoPath, logoAt: company.logoAt }} />
               <SettingGroup>{tco('fixedTitle')}</SettingGroup>
               {(['country', 'unit', 'weekStart', 'timeFormat', 'holidayCountry', 'night'] as const).map((k) => (
                 <SetRow key={k} side label={tco(`fixed.${k}`)}>

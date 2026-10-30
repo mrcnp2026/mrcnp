@@ -20,7 +20,7 @@ import { ConfirmAll, DailyRunCreate, EngagementAddForm, EngagementEditForm, Paye
 
 const VIEWS = ['payees', 'work', 'runs'] as const;
 const WTONE = { DRAFT: 'warn', CONFIRMED: 'ok', VOID: 'neutral' } as const;
-const RTONE = { DRAFT: 'neutral', CALCULATED: 'info', REVIEWED: 'warn', FINALIZED: 'ok' } as const;
+const RTONE = { DRAFT: 'neutral', CALCULATED: 'info', REVIEWED: 'info', FINALIZED: 'ok' } as const; // 검토됨은 문제가 아니라 진행 상태 — 경고색을 쓰지 않는다 (2026-10-29)
 const NOT_ITEMS = new Set(['PENSION', 'HEALTH', 'LTC', 'EMPLOYMENT', 'INCOME_TAX', 'LOCAL_TAX', 'NP', 'HI', 'EI']); // 4대보험 · 세금은 자동 항목이다
 
 export default async function DailyPage({ searchParams }: { searchParams: Promise<{ v?: string; m?: string; p?: string; live?: string }> }) {
@@ -53,7 +53,7 @@ export default async function DailyPage({ searchParams }: { searchParams: Promis
     const pay = (monthSum.get(w.payeeId)?.pay ?? 0) + Math.round(w.quantity * w.dayRate) + w.items.filter((i) => i.kind !== 'DEDUCTION').reduce((x, i) => x + i.amount, 0);
     monthSum.set(w.payeeId, { days: dates.size, pay });
   }
-  const tab = (on: boolean) => `flex min-h-11 items-center border-b-2 px-4 text-sm font-bold ${on ? 'border-text text-text lg:border-primary lg:text-primary' : 'border-transparent text-muted hover:text-text'}`;
+  const tab = (on: boolean) => `flex min-h-11 flex-1 items-center justify-center whitespace-nowrap border-b-2 px-1.5 text-sm font-bold sm:flex-none sm:px-4 ${on ? 'border-text text-text lg:border-primary lg:text-primary' : 'border-transparent text-muted hover:text-text'}`;
   const href = (v: string) => `/admin/payroll/daily?v=${v}${v === 'work' ? `&m=${month}` : ''}${live ? '&live=1' : ''}`;
   const won = (v: number) => t('won', { n: f.number(v) });
   const nameOf = new Map(payees.map((p) => [p.id, p]));
@@ -70,6 +70,7 @@ export default async function DailyPage({ searchParams }: { searchParams: Promis
   // PC: 왼쪽 사람 · 이번 달 요약 / 가운데 고용 조건 / 오른쪽 단추. 폰: 위에서 아래로, 단추는 두 칸씩. 고치기는 모두 창(Popup)으로 연다
   const workOpts = active.map((p) => ({ id: p.id, name: p.name, internalNo: p.internalNo, projects: engagements.filter((e) => e.payeeId === p.id).map((e) => ({ project: e.project, basis: e.payBasis, rate: e.dayRate })).filter((x, i, a) => a.findIndex((y) => y.project === x.project) === i) }));
   const btn = 'inline-flex h-9 items-center justify-center rounded-button border border-border bg-bg px-3 text-sm font-bold text-text hover:bg-surface';
+  const link = 'inline-flex min-h-9 items-center font-bold text-primary hover:underline';
   const card = (p: Payee) => {
     const mine = engagements.filter((e) => e.payeeId === p.id);
     const sum = monthSum.get(p.id);
@@ -100,31 +101,34 @@ export default async function DailyPage({ searchParams }: { searchParams: Promis
               mine.map((e) => (
                 <div key={e.id} className="flex flex-col gap-1.5 rounded-button bg-surface px-3 py-2.5 text-sm sm:flex-row sm:items-center sm:gap-3">
                   <span className="flex min-w-0 flex-1 flex-col gap-0.5">
-                    <span className="num">{e.project || t('noProject')} · {t(`basis.${e.payBasis}`)} {e.dayRate === null ? t('noRate') : won(e.dayRate)}</span>
+                    <span className="num">{[e.project, `${t(`basis.${e.payBasis}`)} ${e.dayRate === null ? t('noRate') : won(e.dayRate)}`].filter(Boolean).join(' · ')}</span>
                     <span className="num text-xs text-muted">{e.startsOn} ~ {e.endsOn ?? t('open')}</span>
                     {termsChips(e)}
                   </span>
                   <Popup id={`eng-${e.id}`} label={t('engEdit')} title={t('engEditOf', { name: p.name })} triggerClass={`${btn} h-8 self-start sm:self-center`}>
-                    <EngagementEditForm id={e.id} sheet={`eng-${e.id}`} values={{ endsOn: e.endsOn, dayRate: e.dayRate, taxState: e.taxState, ei: e.ei, np: e.np, hi: e.hi, basisNote: e.basisNote }} />
+                    <EngagementEditForm id={e.id} sheet={`eng-${e.id}`} basis={e.payBasis} values={{ endsOn: e.endsOn, dayRate: e.dayRate, taxState: e.taxState, ei: e.ei, np: e.np, hi: e.hi, basisNote: e.basisNote }} />
                   </Popup>
                 </div>
               ))
             )}
             {p.monthlyItems.length > 0 && <p className="text-xs text-muted">{t('m.short')}: {p.monthlyItems.map((m) => `${m.label} ${won(m.amount)}`).join(' · ')}</p>}
           </div>
-          <div className="grid grid-cols-2 gap-2 lg:flex lg:w-36 lg:flex-col">
+          {/* 단추는 하나만 크게(근무 넣기), 나머지는 글자 단추로 — 같은 크기 단추 넷이 나란히 있으면 무엇을 누를지 모른다 (2026-10-29 의뢰인) */}
+          <div className="flex flex-col gap-2 lg:w-40">
             {p.active && mine.length > 0 && (
-              <Popup id={`work-add-${p.id}`} label={t('workFor')} title={t('workForOf', { name: p.name })} wide triggerClass="inline-flex h-9 items-center justify-center rounded-button bg-primary px-3 text-sm font-bold text-on-primary">
+              <Popup id={`work-add-${p.id}`} label={t('workFor')} title={t('workForOf', { name: p.name })} wide triggerClass="inline-flex h-10 w-full items-center justify-center rounded-button bg-primary px-3 text-sm font-bold text-on-primary">
                 <WorkAdd month={thisMonth} live={live} payees={workOpts} preset={p.id} sheet={`work-add-${p.id}`} />
               </Popup>
             )}
-            <Popup id={`payee-${p.id}-edit`} label={t('payeeEdit')} title={t('payeeEditOf', { name: p.name })} wide triggerClass={btn}>
-              <PayeeForm items={items} sheet={`payee-${p.id}-edit`} value={{ id: p.id, name: p.name, workerKind: p.workerKind, nationality: p.nationality, visaType: p.visaType, stayUntil: p.stayUntil, jobTitle: p.jobTitle, phone: p.phone, note: p.note, monthlyItems: p.monthlyItems }} />
-            </Popup>
-            <Popup id={`eng-add-${p.id}`} label={t('engAdd')} title={t('engAddOf', { name: p.name })} triggerClass={btn}>
-              <EngagementAddForm payeeId={p.id} sheet={`eng-add-${p.id}`} />
-            </Popup>
-            <Link href={`/admin/payroll/daily?v=work&m=${thisMonth}&p=${p.id}${live ? '&live=1' : ''}`} className={`${btn} text-primary`}>{t('toWork')}</Link>
+            <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-sm lg:flex-col lg:items-start">
+              <Link href={`/admin/payroll/daily?v=work&m=${thisMonth}&p=${p.id}${live ? '&live=1' : ''}`} className={link}>{t('toWork')}</Link>
+              <Popup id={`payee-${p.id}-edit`} label={t('payeeEdit')} title={t('payeeEditOf', { name: p.name })} wide triggerClass={link}>
+                <PayeeForm items={items} sheet={`payee-${p.id}-edit`} value={{ id: p.id, name: p.name, workerKind: p.workerKind, nationality: p.nationality, visaType: p.visaType, stayUntil: p.stayUntil, jobTitle: p.jobTitle, phone: p.phone, note: p.note, monthlyItems: p.monthlyItems }} />
+              </Popup>
+              <Popup id={`eng-add-${p.id}`} label={t('engAdd')} title={t('engAddOf', { name: p.name })} triggerClass={link}>
+                <EngagementAddForm payeeId={p.id} sheet={`eng-add-${p.id}`} />
+              </Popup>
+            </div>
           </div>
         </div>
       </li>
@@ -140,10 +144,11 @@ export default async function DailyPage({ searchParams }: { searchParams: Promis
     const x = new Date(Date.UTC(y, m - 1 + d, 1));
     return x.toISOString().slice(0, 7);
   };
+  const SHOW = 7;
   const workHref = (m: string, p?: string | null) => `/admin/payroll/daily?v=work&m=${m}${p ? `&p=${p}` : ''}${live ? '&live=1' : ''}`;
 
   return (
-    <PageShell wide>
+    <PageShell>
       <div>
         <h1 className="flex flex-wrap items-center gap-x-1 text-2xl font-bold">
           {t('title')}
@@ -152,8 +157,12 @@ export default async function DailyPage({ searchParams }: { searchParams: Promis
         </h1>
       </div>
       <nav className="flex border-b border-border">
-        {VIEWS.map((v) => (
-          <Link key={v} href={href(v)} aria-current={view === v ? 'page' : undefined} className={tab(view === v)}>{t(`tab.${v}`)}</Link>
+        {/* 탭이 곧 순서다 — 번호를 붙여 ① 명단 → ② 근무 → ③ 대장으로 읽히게 (2026-10-29) */}
+        {VIEWS.map((v, i) => (
+          <Link key={v} href={href(v)} aria-current={view === v ? 'page' : undefined} className={`${tab(view === v)} gap-1.5`}>
+            <span aria-hidden className={`num flex size-5 items-center justify-center rounded-chip text-xs ${view === v ? 'bg-primary text-on-primary' : 'bg-surface text-muted'}`}>{i + 1}</span>
+            {t(`tab.${v}`)}
+          </Link>
         ))}
       </nav>
       <WarnLine short={t('legalShort')}>{t('legal')}</WarnLine>
@@ -168,7 +177,21 @@ export default async function DailyPage({ searchParams }: { searchParams: Promis
           <AddSheet id="payee" title={t('payeeTitle')} modal wide>
             <PayeeForm items={items} sheet="payee" />
           </AddSheet>
-          {active.length === 0 && <p className="rounded-card border border-border p-6 text-center text-sm text-faint">{t('payeeEmpty')}</p>}
+          {/* 처음 여는 사람에게 무엇부터 하는지 (2026-10-29 의뢰인: 「처음 접한다고 생각해 봐」) */}
+          {active.length === 0 && (
+            <section className="flex flex-col gap-4 rounded-card border border-border bg-bg p-5 lg:p-6">
+              <p className="text-sm text-muted">{off.length > 0 ? t('payeeEmpty') : t('guide.title')}</p>
+              <ol className="flex flex-col gap-3 lg:flex-row lg:gap-4">
+                {(['s1', 's2', 's3'] as const).map((k, i) => (
+                  <li key={k} className={`flex flex-1 items-start gap-3 rounded-button p-3 ${i === 0 ? 'bg-primary-tint' : 'bg-surface'}`}>
+                    <span className={`num flex size-7 shrink-0 items-center justify-center rounded-chip text-sm font-bold ${i === 0 ? 'bg-primary text-on-primary' : 'bg-bg text-muted'}`}>{i + 1}</span>
+                    <span className={`text-sm ${i === 0 ? 'font-bold' : 'text-muted'}`}>{t(`guide.${k}`)}</span>
+                  </li>
+                ))}
+              </ol>
+              <SheetOpener id="payee" label={t('guide.go')} className="inline-flex self-start" />
+            </section>
+          )}
           <ul className="flex flex-col gap-3" data-payees>{active.map(card)}</ul>
           {off.length > 0 && (
             <details className="group rounded-card border border-border">
@@ -191,34 +214,33 @@ export default async function DailyPage({ searchParams }: { searchParams: Promis
             <Link href={workHref(shiftMonth(-1), pick?.id)} className="inline-flex h-9 items-center rounded-button border border-border bg-bg px-3 text-sm font-bold" aria-label={t('prevMonth')}>‹</Link>
             <span className="num min-w-24 text-center text-base font-bold">{month}</span>
             <Link href={workHref(shiftMonth(1), pick?.id)} className="inline-flex h-9 items-center rounded-button border border-border bg-bg px-3 text-sm font-bold" aria-label={t('nextMonth')}>›</Link>
-            <WorkPayeeFilter payees={payees.map((p) => ({ id: p.id, name: p.name }))} value={pick?.id ?? null} month={month} live={live} />
-            <span className="flex w-full flex-wrap items-center justify-end gap-2 sm:ml-auto sm:w-auto">
-              <ConfirmAll rows={drafts} />
-              <SheetOpener id="daily-work" label={t('workTitle')} className="inline-flex" />
-            </span>
+            {active.length > 0 && <WorkPayeeFilter payees={payees.map((p) => ({ id: p.id, name: p.name }))} value={pick?.id ?? null} month={month} live={live} />}
+            {active.length > 0 && (
+              <span className="flex w-full flex-wrap items-center justify-end gap-2 sm:ml-auto sm:w-auto">
+                <ConfirmAll rows={drafts} />
+                <SheetOpener id="daily-work" label={t('workTitle')} className="inline-flex" />
+              </span>
+            )}
           </div>
           <AddSheet id="daily-work" title={t('workTitle')} modal wide>
             <WorkAdd month={month} live={live} payees={workOpts} preset={pick?.id} sheet="daily-work" />
           </AddSheet>
-          {works.length === 0 && <p className="rounded-card border border-border p-6 text-center text-sm text-faint">{t('workEmpty')}</p>}
+          {active.length === 0 ? (
+            <div className="flex flex-col items-center gap-3 rounded-card border border-border p-6 text-center text-sm text-muted">
+              {t('workNeedPayee')}
+              <Link href={href('payees')} className="inline-flex h-10 items-center rounded-button bg-primary px-4 font-bold text-on-primary">{t('workNeedPayeeGo')}</Link>
+            </div>
+          ) : (
+            works.length === 0 && <p className="rounded-card border border-border p-6 text-center text-sm text-faint">{t('workEmpty')}</p>
+          )}
           <div className="flex flex-col gap-3" data-work>
             {[...byPayee].map(([pid, rows]) => {
               const p = nameOf.get(pid);
               const liveRows = rows.filter((w) => w.status !== 'VOID');
               const days = new Set(liveRows.map((w) => w.workDate)).size;
               const qtyOf = (b: string) => liveRows.filter((w) => (engOf.get(w.engagementId)?.payBasis ?? 'DAY') === b).reduce((s, w) => s + w.quantity, 0);
-              const pay = liveRows.reduce((s, w) => s + Math.round(w.quantity * w.dayRate) + w.items.filter((i) => i.kind !== 'DEDUCTION').reduce((x, i) => x + i.amount, 0), 0);
-              return (
-                <section key={pid} className="rounded-card border border-border bg-bg">
-                  <header className="flex flex-wrap items-center gap-x-3 gap-y-1 border-b border-border px-4 py-3">
-                    <b>{p?.name}</b>
-                    <span className="num text-xs text-muted">{p?.internalNo}</span>
-                    {p?.workerKind === 'FOREIGN' && <Chip tone="info">{t('kind.FOREIGN')}</Chip>}
-                    {/* 0인 값(공수 0 · 시간 0)은 적지 않는다 (2026-10-29 검수) */}
-                    <span className="num ml-auto text-sm text-muted">{[t('u.days', { n: days }), qtyOf('DAY') ? t('u.man', { n: f.number(qtyOf('DAY')) }) : null, qtyOf('HOUR') ? t('u.hours', { n: f.number(qtyOf('HOUR')) }) : null, t('u.pay', { pay: won(pay) })].filter(Boolean).join(' · ')}</span>
-                  </header>
-                  <ul className="flex flex-col divide-y divide-border">
-                    {rows.map((w) => {
+              // 한 사람의 근무 줄 — 처음 SHOW일만 보이고 나머지는 접는다 (2026-10-29: 폰에서 22줄이 다 펼쳐져 너무 길었다)
+              const row = (w: (typeof rows)[number]) => {
                       const basis = engOf.get(w.engagementId)?.payBasis ?? 'DAY';
                       return (
                         <li key={w.id} className={`flex items-start gap-3 px-4 py-3 text-sm ${w.status === 'VOID' ? 'text-faint line-through' : ''}`}>
@@ -227,16 +249,42 @@ export default async function DailyPage({ searchParams }: { searchParams: Promis
                             <span className="flex items-center gap-2 lg:contents">
                               <b className="num w-14 shrink-0">{w.workDate.slice(5)}{w.segmentKey !== 'A' && ` (${w.segmentKey})`}</b>
                               <b className="num lg:order-3">{won(Math.round(w.quantity * w.dayRate))}</b>
-                              <span className="ml-auto lg:order-5 lg:ml-0"><Chip tone={WTONE[w.status]}>{t(`wState.${w.status}`)}</Chip></span>
+                              {/* 확정은 머리에 「모두 확정」으로 한 번만 — 줄에는 확정 전 · 무효만 표시 */}
+                              {w.status !== 'CONFIRMED' && <span className="ml-auto lg:order-5 lg:ml-0"><Chip tone={WTONE[w.status]}>{t(`wState.${w.status}`)}</Chip></span>}
                             </span>
-                            <span className="num text-xs text-muted lg:order-2 lg:text-sm lg:text-text">{w.project || t('noProject')} · {f.number(w.quantity)}{t(`unit.${basis}`)} × {won(w.dayRate)}</span>
+                            <span className="num text-xs text-muted lg:order-2 lg:text-sm lg:text-text">{[w.project, `${f.number(w.quantity)}${t(`unit.${basis}`)} × ${won(w.dayRate)}`].filter(Boolean).join(' · ')}</span>
                             {w.items.length > 0 && <span className="num text-xs text-muted lg:order-4">{w.items.map((i) => `${i.label}(${t(`item.${i.kind}`)}) ${f.number(i.amount)}`).join(' · ')}</span>}
                             {w.basisNote && <span className="text-xs text-muted lg:order-6">{w.basisNote}</span>}
                           </span>
                           <WorkControls id={w.id} version={w.version} status={w.status} label={t('workOf', { name: p?.name ?? '', date: w.workDate })} values={{ quantity: w.quantity, dayRate: w.dayRate, items: w.items, basisNote: w.basisNote }} />
                         </li>
                       );
-                    })}
+                    };
+              const pay = liveRows.reduce((s, w) => s + Math.round(w.quantity * w.dayRate) + w.items.filter((i) => i.kind !== 'DEDUCTION').reduce((x, i) => x + i.amount, 0), 0);
+              return (
+                <section key={pid} className="rounded-card border border-border bg-bg">
+                  <header className="flex flex-wrap items-center gap-x-3 gap-y-1 border-b border-border px-4 py-3">
+                    <b>{p?.name}</b>
+                    <span className="num text-xs text-muted">{p?.internalNo}</span>
+                    {p?.workerKind === 'FOREIGN' && <Chip tone="info">{t('kind.FOREIGN')}</Chip>}
+                    {liveRows.length > 0 && liveRows.every((w) => w.status === 'CONFIRMED') && <Chip tone="ok">{t('allConfirmed')}</Chip>}
+                    {/* 0인 값(공수 0 · 시간 0)은 적지 않는다 (2026-10-29 검수) */}
+                    <span className="num ml-auto text-sm text-muted">{[t('u.days', { n: days }), qtyOf('DAY') ? t('u.man', { n: f.number(qtyOf('DAY')) }) : null, qtyOf('HOUR') ? t('u.hours', { n: f.number(qtyOf('HOUR')) }) : null, t('u.pay', { pay: won(pay) })].filter(Boolean).join(' · ')}</span>
+                  </header>
+                  <ul className="flex flex-col divide-y divide-border">
+                    {rows.slice(0, SHOW).map((w) => row(w))}
+                    {rows.length > SHOW && (
+                      <li>
+                        <details className="group">
+                          <summary className="flex min-h-11 cursor-pointer list-none items-center justify-center gap-1 text-sm font-bold text-primary [&::-webkit-details-marker]:hidden">
+                            <span className="group-open:hidden">{t('moreDays', { n: rows.length - SHOW })}</span>
+                            <span className="hidden group-open:inline">{t('lessDays')}</span>
+                            <ChevronDown aria-hidden size={16} className="transition-transform duration-300 group-open:rotate-180" />
+                          </summary>
+                          <ul className="flex flex-col divide-y divide-border border-t border-border">{rows.slice(SHOW).map((w) => row(w))}</ul>
+                        </details>
+                      </li>
+                    )}
                   </ul>
                 </section>
               );
@@ -256,7 +304,12 @@ export default async function DailyPage({ searchParams }: { searchParams: Promis
               <p className="text-xs text-faint">{t('runNote')}</p>
             </div>
           </AddSheet>
-          {runs.length === 0 && <p className="rounded-card border border-border p-6 text-center text-sm text-faint">{t('runEmpty')}</p>}
+          {runs.length === 0 && (
+            <div className="flex flex-col gap-1 rounded-card border border-border p-6 text-center text-sm">
+              <p className="text-faint">{t('runEmpty')}</p>
+              <p className="text-muted">{t('runNeedWork')}</p>
+            </div>
+          )}
           <ul className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
             {runs.map((r) => (
               <li key={r.id}>
@@ -267,6 +320,7 @@ export default async function DailyPage({ searchParams }: { searchParams: Promis
                     {r.revision > 1 && <Chip tone="info">{t('revision', { n: r.revision })}</Chip>}
                   </span>
                   <span className="num text-xs text-muted">{t('runMeta', { month: r.periodFrom.slice(0, 7), payDate: r.payDate })}</span>
+                  <span className={`text-sm font-bold ${r.status === 'FINALIZED' ? 'text-ok' : 'text-primary'}`}>{t(`next.${r.status}`)} ›</span>
                   <span className="num grid grid-cols-3 gap-2 text-sm">
                     <span className="flex flex-col"><span className="text-xs text-muted">{t('rPeople')}</span>{r.totals.members ?? '—'}</span>
                     <span className="flex flex-col"><span className="text-xs text-muted">{t('rGross')}</span>{r.totals.pay === undefined ? '—' : won(Number(r.totals.pay))}</span>

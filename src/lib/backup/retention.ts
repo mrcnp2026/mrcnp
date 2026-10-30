@@ -1,11 +1,12 @@
 // 백업 보관 규칙 (2026-10-16 의뢰인 결정, Supabase Pro가 최근 7일은 따로 보관)
 // - 매주: 최근 8개
 // - 매월: 최근 12개월, 그달의 첫 백업
-// - 매년: 해마다 그해의 첫 백업, 지우지 않음
+// - 매년: 최근 5년, 그해의 첫 백업 (2026-10-29 의뢰인: 영구 → 5년, 결정 운영-3)
 // 날짜는 한국 시간 기준 'YYYY-MM-DD'.
 
 export const KEEP_WEEKLY = 8;
 export const KEEP_MONTHLY = 12;
+export const KEEP_YEARLY = 5;
 
 export type Kept = { weekly: boolean; monthly: boolean; yearly: boolean };
 
@@ -20,7 +21,7 @@ export function classify(dates: string[]): Map<string, Kept> {
     if (!firstOfYear.has(d.slice(0, 4))) firstOfYear.set(d.slice(0, 4), d);
   }
   for (const d of [...firstOfMonth.values()].slice(-KEEP_MONTHLY)) res.get(d)!.monthly = true;
-  for (const d of firstOfYear.values()) res.get(d)!.yearly = true;
+  for (const d of [...firstOfYear.values()].slice(-KEEP_YEARLY)) res.get(d)!.yearly = true;
   return res;
 }
 

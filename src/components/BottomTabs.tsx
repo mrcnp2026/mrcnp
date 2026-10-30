@@ -4,7 +4,7 @@
 //   관리자 모드: 현황 · 요청(배지) · 근태 · 휴가 · 전체(관리자 앱 + 통합설정을 아이콘 격자 한 장으로 — 다우오피스 · 시프티 폰 앱 방식)
 // 어느 모드인지는 지금 주소로 정한다(config/nav.ts의 locate — PC 틀과 같은 표). 근무일정 · 공지 · 조직도 등은 왼쪽 위 메뉴(MenuDrawer).
 // 예전(2026-10-10~10-14)에는 직원 · 관리자가 같은 5칸을 썼고, 관리자 모드에서 「홈」이 직원 홈으로 가던 문제가 있었다.
-import { useSystemNav } from '@/components/SystemNav';
+import { useSystemNav, useLogNav } from '@/components/SystemNav';
 import { BellRing, Building2, CalendarDays, ChartPie, Clock, House, LayoutGrid, type LucideIcon, Network, Plane, Settings, Wallet, X } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 import { IntentLink as Link } from './IntentLink'; // 손이 닿으면 미리 받아 둔다 (2026-10-29)
@@ -62,7 +62,8 @@ export function BottomTabs({ role }: { role: NavRole; inboxCount?: number }) {
   const adminMode = role !== 'employee' && (at.leaf ? at.space !== 'my' : path === '/admin' || path.startsWith('/admin/'));
   const consoleMode = role === 'admin' && at.space === 'console';
   const system = useSystemNav();
-  const allApps = consoleMode ? appsFor('console', role, system) : adminMode ? appsFor('admin', role, system) : [];
+  const logs = useLogNav(); // 접속 · 변경 기록 메뉴 (2026-10-30)
+  const allApps = consoleMode ? appsFor('console', role, system) : adminMode ? appsFor('admin', role, system, logs) : [];
   // 지점관리자는 열 수 있는 앱의 탭만 (현황 · 관리 화면은 관리자 전용 — manager-rules.ts)
   const tabs = consoleMode ? CONSOLE_TABS : adminMode ? ADMIN_TABS.filter((x) => allApps.some((a) => x.apps.includes(a.key))) : MY_TABS;
   const appKey = at.leaf ? at.app?.key : undefined;

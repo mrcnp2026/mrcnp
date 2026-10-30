@@ -10,7 +10,7 @@ import { Popup } from '@/components/Popup';
 import { callApi } from '@/components/client-api';
 import { ErrorNote } from '@/components/ErrorNote';
 import { Button } from '@/components/ui';
-import { MoreHorizontal, X } from 'lucide-react';
+import { ChevronDown, MoreHorizontal, X } from 'lucide-react';
 
 const field = 'min-h-9 w-full rounded-button border border-border bg-bg px-3 text-sm';
 const small = 'inline-flex h-8 items-center rounded-button border border-border bg-bg px-3 text-sm font-bold text-muted disabled:opacity-50';
@@ -46,6 +46,15 @@ const Label = ({ text, children, wide = false }: { text: string; children: React
     {children}
   </label>
 );
+
+/** 창 안의 묶음 제목 — 「누구인가요 → 얼마를 주나요 → 더 보기」 순서로 읽히게 (2026-10-29) */
+const Sec = ({ n, text }: { n?: number; text: string }) => (
+  <p className="flex items-center gap-2 pt-1 text-sm font-extrabold sm:col-span-2">
+    {n !== undefined && <span className="num flex size-5 items-center justify-center rounded-chip bg-primary-tint text-xs text-primary">{n}</span>}
+    {text}
+  </p>
+);
+const Req = () => <span className="text-danger"> *</span>;
 
 // ── 대상자 ──
 export type ItemOpt = { code: string; name: string; kind: 'PAYMENT' | 'DEDUCTION'; nontax: boolean; amount: number | null };
@@ -99,38 +108,59 @@ function MonthlyRows({ value, onChange, items }: { value: MonthlyRow[]; onChange
   );
 }
 
-/** 고용 조건 칸 — 기간 · 현장 · 지급 기준 · 단가 · 세금 · 보험(자동/적용/제외) · 근거 */
-function TermsFields({ withStart, values }: { withStart: boolean; values?: { endsOn?: string | null; dayRate?: number | null; taxState?: string; ei?: string; np?: string; hi?: string; basisNote?: string | null } }) {
+/** 고용 조건 칸 — 지급 기준 · 금액 · 기간 · 현장, 그 아래 세금 · 보험(자동/적용/제외) · 근거.
+ *  2026-10-29 의뢰인(「처음 접하면 단추 하나하나가 불편하다」): 지급 기준을 먼저 고르면 금액 칸 이름이 「일당 · 시급 · 월급 · 건당」으로 바뀐다.
+ *  세금 · 보험은 거의 바꾸지 않으므로 「모두 자동」 한 줄로 접어 두고, 직접 정한 값이 있거나 「모름」이면 펼친 채로 연다 */
+function TermsFields({ withStart, values, basis: fixedBasis }: { withStart: boolean; basis?: 'DAY' | 'HOUR' | 'MONTH' | 'FIXED'; values?: { endsOn?: string | null; dayRate?: number | null; taxState?: string; ei?: string; np?: string; hi?: string; basisNote?: string | null } }) {
   const t = useTranslations('admin.daily');
+  const [basis, setBasis] = useState<'DAY' | 'HOUR' | 'MONTH' | 'FIXED'>(fixedBasis ?? 'DAY');
   const [states, setStates] = useState({ ei: values?.ei ?? 'AUTO', np: values?.np ?? 'AUTO', hi: values?.hi ?? 'AUTO' });
+  const [tax, setTax] = useState(values?.taxState && values.taxState !== 'UNKNOWN' ? values.taxState : 'DAILY');
   const manual = Object.values(states).some((v) => v === 'YES' || v === 'NO');
+  const unknown = values?.taxState === 'UNKNOWN' || Object.values(states).some((v) => v === 'UNKNOWN');
+  const allAuto = Object.values(states).every((v) => v === 'AUTO' || v === 'UNKNOWN');
   return (
     <>
+      {withStart && (
+        <fieldset className="flex min-w-0 flex-col gap-1 text-sm sm:col-span-2">
+          <legend className="pb-1 font-bold">{t('eng.payBasis')}</legend>
+          <input type="hidden" name="payBasis" value={basis} />
+          <div className="grid grid-cols-2 gap-1 rounded-button border border-border p-0.5 sm:grid-cols-4">
+            {(['DAY', 'HOUR', 'MONTH', 'FIXED'] as const).map((k) => (
+              <button key={k} type="button" aria-pressed={basis === k} onClick={() => setBasis(k)} className={`min-h-9 rounded-button px-2 text-sm font-bold ${basis === k ? 'bg-primary text-on-primary' : 'text-muted hover:bg-surface'}`}>{t(`basis.${k}`)}</button>
+            ))}
+          </div>
+        </fieldset>
+      )}
+      <Label text={t(`eng.rate.${fixedBasis || withStart ? basis : 'ANY'}`)}>
+        <input name="dayRate" inputMode="numeric" defaultValue={values?.dayRate ?? ''} onInput={(e) => { e.currentTarget.value = digits(e.currentTarget.value); }} className={`num ${field}`} autoComplete="off" placeholder={t('eng.ratePh')} />
+      </Label>
+      {withStart && <Label text={t('eng.project')}><input name="project" maxLength={80} className={field} autoComplete="off" placeholder={t('noProject')} /></Label>}
       {withStart && <Label text={t('eng.startsOn')}><input type="date" name="startsOn" required defaultValue={`${new Date().toISOString().slice(0, 7)}-01`} className={field} /></Label>} {/* 이번 달 1일 — 오늘로 두면 그 앞 근무를 넣을 때 「고용 기간 밖」이 된다 */}
       <Label text={t('eng.endsOn')}><input type="date" name="endsOn" defaultValue={values?.endsOn ?? ''} className={field} /></Label>
-      {withStart && <Label text={t('eng.project')}><input name="project" maxLength={80} className={field} autoComplete="off" placeholder={t('noProject')} /></Label>}
-      {withStart && (
-        <Label text={t('eng.payBasis')}>
-          <Select name="payBasis" defaultValue="DAY" className={field}>
-            {(['DAY', 'HOUR', 'MONTH', 'FIXED'] as const).map((k) => <option key={k} value={k}>{t(`basis.${k}`)}</option>)}
-          </Select>
-        </Label>
-      )}
-      <Label text={t('eng.unitRate')}><input name="dayRate" inputMode="numeric" defaultValue={values?.dayRate ?? ''} onInput={(e) => { e.currentTarget.value = digits(e.currentTarget.value); }} className={`num ${field}`} autoComplete="off" /></Label>
-      <Label text={t('eng.taxState')}>
-        <Select name="taxState" defaultValue={values?.taxState && values.taxState !== 'UNKNOWN' ? values.taxState : 'DAILY'} className={field}>
-          {(['DAILY', 'BUSINESS', 'NONE'] as const).map((k) => <option key={k} value={k}>{t(`tax.${k}`)}</option>)}
-        </Select>
-      </Label>
-      {(['ei', 'np', 'hi'] as const).map((k) => (
-        <Label key={k} text={t(`eng.${k}`)}>
-          <Select name={k} value={states[k] === 'UNKNOWN' ? 'AUTO' : states[k]} onChange={(e) => setStates((s) => ({ ...s, [k]: e.target.value }))} className={field}>
-            {INS.map((v) => <option key={v} value={v}>{t(`ins.${v}`)}</option>)}
-          </Select>
-        </Label>
-      ))}
-      {manual && <Label text={t('eng.basisNote')} wide><input name="basisNote" required minLength={2} maxLength={300} defaultValue={values?.basisNote ?? ''} className={field} autoComplete="off" placeholder={t('eng.basisHint')} /></Label>}
-      <p className="text-xs text-faint sm:col-span-2">{t('insNote')}</p>
+      <details open={manual || unknown} className="group rounded-button border border-border sm:col-span-2">
+        <summary className="flex min-h-11 cursor-pointer list-none flex-wrap items-center gap-x-2 gap-y-0.5 px-3 py-2 text-sm [&::-webkit-details-marker]:hidden">
+          <b>{t('sec.tax')}</b>
+          <span className="text-muted">{t(`tax.${tax}`)} · {allAuto ? t('sec.taxAuto') : t('sec.taxManual')}</span>
+          <span className="ml-auto text-sm font-bold text-primary group-open:hidden">{t('sec.change')}</span>
+        </summary>
+        <div className="grid gap-3 border-t border-border p-3 sm:grid-cols-2">
+          <Label text={t('eng.taxState')}>
+            <Select name="taxState" value={tax} onChange={(e) => setTax(e.target.value)} className={field}>
+              {(['DAILY', 'BUSINESS', 'NONE'] as const).map((k) => <option key={k} value={k}>{t(`tax.${k}`)}</option>)}
+            </Select>
+          </Label>
+          {(['ei', 'np', 'hi'] as const).map((k) => (
+            <Label key={k} text={t(`eng.${k}`)}>
+              <Select name={k} value={states[k] === 'UNKNOWN' ? 'AUTO' : states[k]} onChange={(e) => setStates((s) => ({ ...s, [k]: e.target.value }))} className={field}>
+                {INS.map((v) => <option key={v} value={v}>{t(`ins.${v}`)}</option>)}
+              </Select>
+            </Label>
+          ))}
+          {manual && <Label text={t('eng.basisNote')} wide><input name="basisNote" required minLength={2} maxLength={300} defaultValue={values?.basisNote ?? ''} className={field} autoComplete="off" placeholder={t('eng.basisHint')} /></Label>}
+          <p className="text-xs text-faint sm:col-span-2">{t('insNote')}</p>
+        </div>
+      </details>
     </>
   );
 }
@@ -166,7 +196,11 @@ export function PayeeForm({ value, items, sheet }: { value?: PayeeValue; items: 
         }
       }}
     >
-      <Label text={t('payee.name')}><input name="name" required maxLength={60} defaultValue={value?.name ?? ''} className={field} autoComplete="off" /></Label>
+      <Sec n={1} text={t('sec.who')} />
+      <label className="flex min-w-0 flex-col gap-1 text-sm">
+        <span className="font-bold">{t('payee.name')}<Req /></span>
+        <input name="name" required maxLength={60} defaultValue={value?.name ?? ''} className={field} autoComplete="off" placeholder={t('payee.namePh')} />
+      </label>
       <fieldset className="flex min-w-0 flex-col gap-1 text-sm">
         <legend className="pb-1 font-bold">{t('kind.title')}</legend>
         <div className="grid grid-cols-2 rounded-button border border-border p-0.5">
@@ -191,21 +225,31 @@ export function PayeeForm({ value, items, sheet }: { value?: PayeeValue; items: 
           <p className="self-end pb-2 text-xs text-faint">{t('f.hint')}</p>
         </>
       )}
-      <Label text={t('payee.jobTitle')}><input name="jobTitle" maxLength={40} defaultValue={value?.jobTitle ?? ''} className={field} autoComplete="off" /></Label>
-      <Label text={t('payee.phone')}><input name="phone" maxLength={30} defaultValue={value?.phone ?? ''} className={field} autoComplete="off" /></Label>
-      <Label text={t('payee.note')} wide><input name="note" maxLength={300} defaultValue={value?.note ?? ''} className={field} autoComplete="off" /></Label>
-      {!editing && <Label text={t('payee.internalNoAuto')}><input name="internalNo" maxLength={30} className={field} autoComplete="off" placeholder={t('payee.internalNoPh')} /></Label>}
+      <Label text={t('payee.jobTitle')}><input name="jobTitle" maxLength={40} defaultValue={value?.jobTitle ?? ''} className={field} autoComplete="off" placeholder={t('payee.jobTitlePh')} /></Label>
+      <Label text={t('payee.phone')}><input name="phone" maxLength={30} inputMode="tel" defaultValue={value?.phone ?? ''} className={field} autoComplete="off" placeholder="010-0000-0000" /></Label>
       {!editing && (
-        <fieldset className="grid gap-3 rounded-card border border-border p-3 sm:col-span-2 sm:grid-cols-2">
-          <legend className="px-1 text-sm font-bold">{t('firstTerms')}</legend>
+        <>
+          <Sec n={2} text={t('sec.pay')} />
           <TermsFields withStart />
-        </fieldset>
+        </>
       )}
-      <MonthlyRows value={monthly} onChange={setMonthly} items={items} />
-      {monthly.some((m) => !m.label.trim() || !m.amount) && <p className="text-xs text-warn sm:col-span-2">{t('m.incomplete')}</p>}
+      {/* 자주 쓰지 않는 칸은 접어 둔다 — 매달 항목 · 내부번호 · 메모 (고치는 중이고 값이 있으면 펼친 채로) */}
+      <details open={editing && (monthly.length > 0 || !!value?.note)} className="group rounded-button border border-border sm:col-span-2">
+        <summary className="flex min-h-11 cursor-pointer list-none items-center gap-2 px-3 text-sm [&::-webkit-details-marker]:hidden">
+          <b>{t('sec.more')}</b>
+          <span className="truncate text-muted">{t('sec.moreHint')}</span>
+          <ChevronDown aria-hidden size={16} className="ml-auto shrink-0 text-faint transition-transform duration-300 group-open:rotate-180" />
+        </summary>
+        <div className="grid gap-3 border-t border-border p-3 sm:grid-cols-2">
+          <MonthlyRows value={monthly} onChange={setMonthly} items={items} />
+          {monthly.some((m) => !m.label.trim() || !m.amount) && <p className="text-xs text-warn sm:col-span-2">{t('m.incomplete')}</p>}
+          {!editing && <Label text={t('payee.internalNoAuto')}><input name="internalNo" maxLength={30} className={field} autoComplete="off" placeholder={t('payee.internalNoPh')} /></Label>}
+          <Label text={t('payee.note')} wide={editing}><input name="note" maxLength={300} defaultValue={value?.note ?? ''} className={field} autoComplete="off" /></Label>
+        </div>
+      </details>
       <p className="text-xs text-faint sm:col-span-2">{t('payeeNote')}</p>
       <div className={footer}>
-        <Button type="submit" size="sm" disabled={busy}>{editing ? t('save') : t('payeeAdd')}</Button>
+        <Button type="submit" disabled={busy} className="min-w-32 flex-1 sm:flex-none">{editing ? t('save') : t('payeeAdd')}</Button>
         {done && <span role="status" className="text-sm text-ok">{done}</span>}
         <Fail err={err} />
       </div>
@@ -233,7 +277,7 @@ export function EngagementAddForm({ payeeId, sheet }: { payeeId: string; sheet?:
     </form>
   );
 }
-export function EngagementEditForm({ id, values, sheet }: { id: string; sheet?: string; values: { endsOn: string | null; dayRate: number | null; taxState: string; ei: string; np: string; hi: string; basisNote: string | null } }) {
+export function EngagementEditForm({ id, values, sheet, basis }: { id: string; sheet?: string; basis?: 'DAY' | 'HOUR' | 'MONTH' | 'FIXED'; values: { endsOn: string | null; dayRate: number | null; taxState: string; ei: string; np: string; hi: string; basisNote: string | null } }) {
   const t = useTranslations('admin.daily');
   const { busy, err, send } = useCall();
   return (
@@ -244,7 +288,7 @@ export function EngagementEditForm({ id, values, sheet }: { id: string; sheet?: 
         if (await send({ action: 'engagement.set', id, ...termsBody(new FormData(e.currentTarget)) })) if (sheet) closeSheet(sheet);
       }}
     >
-      <TermsFields withStart={false} values={values} />
+      <TermsFields withStart={false} basis={basis} values={values} />
       <div className={footer}>
         <Button type="submit" size="sm" disabled={busy}>{t('save')}</Button>
         <button type="button" className={small} disabled={busy} onClick={async () => { if (await send({ action: 'engagement.set', id, disable: true })) if (sheet) closeSheet(sheet); }}>{t('engOff')}</button>
@@ -403,6 +447,12 @@ export function WorkAdd({ payees, month, live, preset, sheet }: { payees: PayeeO
         }
       }}
     >
+      {preset && picked && picked.projects.length <= 1 ? (
+        <p className="num rounded-button bg-surface px-3 py-2 text-sm font-bold sm:col-span-2">
+          {[picked.name, proj?.project, proj ? `${t(`basis.${proj.basis}`)} ${proj.rate === null ? t('noRate') : proj.rate.toLocaleString('ko-KR')}` : null].filter(Boolean).join(' · ')}
+        </p>
+      ) : (
+      <>
       <Label text={t('work.payee')}>
         <Select required value={payeeId} onChange={(e) => { setPayeeId(e.target.value); setProject(null); }} className={field}>
           <option value="">{t('pick')}</option>
@@ -415,6 +465,8 @@ export function WorkAdd({ payees, month, live, preset, sheet }: { payees: PayeeO
           {picked?.projects.map((p) => <option key={p.project} value={p.project}>{(p.project || t('noProject')) + ` · ${t(`basis.${p.basis}`)}`}</option>)}
         </Select>
       </Label>
+      </>
+      )}
       <DatePicker month={month} value={dates} onChange={setDates} />
       <Label text={t(`qty.${basis}`)}><input key={basis} name="quantity" type="number" step={QTY[basis].step} min={QTY[basis].step} max={QTY[basis].max} defaultValue={basis === 'HOUR' ? '8' : '1'} required className={`num ${field}`} /></Label>
       <Label text={t('work.unitRate')}><input name="dayRate" inputMode="numeric" placeholder={proj?.rate ? String(proj.rate) : ''} onInput={(e) => { e.currentTarget.value = digits(e.currentTarget.value); }} className={`num ${field}`} autoComplete="off" /></Label>
@@ -470,13 +522,13 @@ export function WorkControls({ id, version, status, label, values }: { id: strin
       <button type="button" className={small} disabled={busy} onClick={() => send({ action: 'work.status', id, expectedVersion: version, status: 'VOID' })}>{t('workVoid')}</button>
     </>
   );
+  // PC에서도 「⋯」 안에 — 한 달 20줄 넘게 「고치기 · 무효」가 줄마다 보이면 날짜 · 금액이 묻힌다 (2026-10-29 의뢰인)
   return (
     <span className="flex flex-col items-end gap-1" aria-label={label}>
-      <span className="hidden items-center gap-2 lg:flex">{buttons}</span>
-      <button type="button" className="flex size-8 items-center justify-center rounded-button text-muted hover:bg-surface lg:hidden" aria-label={t('moreOf', { name: label })} aria-expanded={more} onClick={() => setMore(!more)}>
+      <button type="button" className="flex size-8 items-center justify-center rounded-button text-muted hover:bg-surface" aria-label={t('moreOf', { name: label })} aria-expanded={more} onClick={() => setMore(!more)}>
         <MoreHorizontal aria-hidden size={18} />
       </button>
-      {more && <span className="flex items-center gap-2 lg:hidden">{buttons}</span>}
+      {more && <span className="flex items-center gap-2">{buttons}</span>}
       <Fail err={err} />
     </span>
   );
@@ -545,23 +597,29 @@ export function DailyRunActions({ id, version, status, stale, blocked, latest }:
     );
   }
   const base = { id, expectedVersion: version };
-  const canReview = status === 'CALCULATED' && !stale && blocked === 0, canFinalize = status === 'REVIEWED' && !stale && blocked === 0;
+  const canFinalize = status === 'REVIEWED' && !stale && blocked === 0;
+  // 확정은 되돌릴 수 없다 — 다른 단추를 치우고 확인 상자만 보인다 (키트: 비가역 행동은 확인 창이 먼저)
+  if (ask) {
+    return (
+      <div role="alertdialog" aria-labelledby={`fin-${id}`} className="flex w-full flex-col gap-3 rounded-card border border-warn bg-warn-tint p-4 text-sm sm:w-auto">
+        <p id={`fin-${id}`} className="font-bold text-warn">{t('finalizeConfirm')}</p>
+        <div className="flex flex-wrap gap-2">
+          <Button type="button" disabled={busy} onClick={async () => { await send({ action: 'run.finalize', ...base }); setAsk(false); }}>{t('finalizeYes')}</Button>
+          <Button type="button" variant="outline" disabled={busy} onClick={() => setAsk(false)}>{t('cancel')}</Button>
+        </div>
+        <Fail err={err} />
+      </div>
+    );
+  }
   return (
     <div className="flex flex-col gap-2 text-sm">
       <div className="flex flex-wrap items-center gap-2">
-        <Button type="button" size="sm" variant={status === 'DRAFT' || stale ? undefined : 'outline'} disabled={busy} onClick={async () => { setMsg(null); const r = await send<{ calculated: { ok: number; blocked: number } }>({ action: 'run.calculate', ...base }); if (r) setMsg(t('calcDone', r.calculated)); }}>
+        {/* 지금 할 일 하나만 진하게, 아직 할 수 없는 단계는 보이지 않게 (2026-10-29 의뢰인: 단추 셋이 같은 모양이라 어디까지 왔는지 모른다) */}
+        {(status === 'CALCULATED' && !stale && blocked === 0) && <Button type="button" disabled={busy} onClick={() => send({ action: 'run.review', ...base })}>{t('review')}</Button>}
+        <Button type="button" size={status === 'DRAFT' || stale ? undefined : 'sm'} variant={status === 'DRAFT' || stale || blocked > 0 ? undefined : 'outline'} disabled={busy} onClick={async () => { setMsg(null); const r = await send<{ calculated: { ok: number; blocked: number } }>({ action: 'run.calculate', ...base }); if (r) setMsg(t('calcDone', r.calculated)); }}>
           {t(status === 'DRAFT' ? 'calculate' : 'recalculate')}
         </Button>
-        <Button type="button" size="sm" variant={canReview ? undefined : 'outline'} disabled={busy || !canReview} onClick={() => send({ action: 'run.review', ...base })}>{t('review')}</Button>
-        {ask ? (
-          <>
-            <span className="text-warn">{t('finalizeConfirm')}</span>
-            <Button type="button" size="sm" disabled={busy} onClick={async () => { await send({ action: 'run.finalize', ...base }); setAsk(false); }}>{t('finalizeYes')}</Button>
-            <Button type="button" size="sm" variant="outline" disabled={busy} onClick={() => setAsk(false)}>{t('cancel')}</Button>
-          </>
-        ) : (
-          <Button type="button" size="sm" variant={canFinalize ? undefined : 'outline'} disabled={busy || !canFinalize} onClick={() => setAsk(true)}>{t('finalize')}</Button>
-        )}
+        {canFinalize && <Button type="button" disabled={busy} className="order-first" onClick={() => setAsk(true)}>{t('finalize')}</Button>}
       </div>
       {msg && <p role="status" className="text-ok">{msg}</p>}
       <Fail err={err} />

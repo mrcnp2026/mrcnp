@@ -5,6 +5,7 @@
   "scripts": {
     "dev": "next dev -p 4123",
     "dev:devdb": "node scripts/dev-on-devdb.mjs",
+    "dev:devdb:fast": "node scripts/dev-on-devdb.mjs --fast",
     "build": "next build",
     "start": "next start -p 4123",
     "lint": "eslint",

@@ -16,7 +16,7 @@ import { LoginForm } from './LoginForm';
 export default async function LoginPage() {
   const me = await getMe();
   if (me) redirect(homePathForRole());
-  const t = await getTranslations('login');
+  const [t, tp] = await Promise.all([getTranslations('login'), getTranslations('privacy')]);
   // 넓은 화면(PC·태블릿 가로, 1024px~)은 두 칸: 왼쪽 소개 면 + 오른쪽 로그인. 폰은 그대로 한 칸 (2026-10-05 의뢰인: PC 로그인이 폰 화면 그대로였다)
   return (
     <div className="lg:grid lg:min-h-dvh lg:grid-cols-2">
@@ -89,6 +89,9 @@ export default async function LoginPage() {
         </p>
         {/* 예전에 폰을 등록해 둔 기기에서만 되는 보조 로그인 — 맨 아래 작게 */}
         <LoginButton />
+        <Link href="/privacy" className="min-h-11 content-center text-center text-xs text-muted">
+          {tp('link')}
+        </Link>
       </main>
     </div>
   );

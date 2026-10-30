@@ -5,15 +5,16 @@
 //   console = 통합설정 (기준 — 관리자만) = 회사설정 + App 관리
 // 화면 주소는 바꾸지 않았다 — 어느 주소가 어느 공간 · 앱 · 항목인지는 여기서 정한다(가장 길게 맞는 항목이 이긴다).
 // 이름은 번역 파일 frame.app / frame.group / frame.item 의 열쇠다.
-import { Building2, ChartColumn, ClipboardList, Clock, Database, FileBarChart, GraduationCap, House, type LucideIcon, Megaphone, MessagesSquare, Network, Plane, Send, ShieldCheck, SlidersHorizontal, UserRound, Users, Wallet } from 'lucide-react';
+import { Building2, ChartColumn, ClipboardList, Clock, Database, FileBarChart, FileText, GraduationCap, House, type LucideIcon, Megaphone, MessagesSquare, Network, Plane, Send, ShieldCheck, SlidersHorizontal, UserRound, Users, Wallet } from 'lucide-react';
 import { managerCanOpen } from '@/lib/manager-rules';
 
 // how: 통합설정 화면 맨 위 「이 화면 쓰는 법」 띠의 종류 (2026-10-14 의뢰인: 이미 적용된 건지 · 저장해야 적용되는지 · 보기만인지 한눈에)
 export type How = 'view' | 'instant' | 'versioned' | 'list' | 'review';
+// 2026-10-29 점검(남은 일 9-1): 스위치가 있는 화면이 「보기 전용 — 개발 담당자에게」로 잘못 표시돼 있었다 → 바로 적용으로. 근로정보는 근무일정 기준과 같은 내용이라 메뉴에서 뺐다(주소는 그대로 열린다)
 // pcOnly: 폰에서는 같은 화면이 다른 모양으로만 그려져 고를 의미가 없는 항목 — 폰 서랍에서 뺀다 (2026-10-15 의뢰인: 폰 근무일정 「달력형」이 눌러도 그대로)
 // badge: 메뉴 옆 숫자 (2026-10-19 의뢰인: 종의 알림을 메뉴에도) — inbox 처리할 요청 · notices 안 본 공지 · messages 안 읽은 사내게시판 · decided 처리된 내 요청
 export type Badge = 'inbox' | 'notices' | 'messages' | 'decided' | 'inquiry';
-export type Leaf = { href: string; key: string; exact?: boolean; also?: string[]; badge?: Badge; how?: How; pcOnly?: boolean; systemOnly?: boolean };
+export type Leaf = { href: string; key: string; exact?: boolean; also?: string[]; badge?: Badge; how?: How; pcOnly?: boolean; systemOnly?: boolean; logOnly?: boolean }; // logOnly: 접속 · 변경 기록 — 볼 수 있는 사람만(lib/log-access.ts)
 export type Group = { key: string | null; items: Leaf[] };
 export type App = { key: string; icon: LucideIcon; groups: Group[]; section?: 'company' | 'apps' };
 export type Space = 'my' | 'admin' | 'console';
@@ -32,14 +33,18 @@ export const MY_APPS: App[] = [
   { key: 'pay', icon: Wallet, groups: one([{ href: '/punch/payslips', key: 'payslips' }]) }, // 예상 퇴직금 조회는 뺐다(2026-10-25 의뢰인): 관리자가 급여 › 퇴직급여에서 직원별로 본다
   // 「업무 메시지」는 2026-10-16 의뢰인 지시로 이름이 「사내게시판」이다(주소 · 코드 이름은 messages 그대로). 따로 만들었던 자유 게시판은 같은 날 지웠다
   { key: 'training', icon: GraduationCap, groups: one([{ href: '/punch/training', key: 'myTraining' }]) }, // 교육 확인 · 서명 (묶음 33)
-  { key: 'talk', icon: MessagesSquare, groups: one([{ href: '/punch/notices', key: 'notices', badge: 'notices' }, { href: '/punch/messages', key: 'messages', badge: 'messages' }]) },
-  { key: 'people', icon: UserRound, groups: one([{ href: '/punch/org', key: 'orgChart' }, { href: '/punch/account', key: 'account' }]) },
+  // 2026-10-30 의뢰인: 직원 모드는 묶음을 풀어 메뉴마다 하나 — 옆 판을 열지 않는다(DeskNav). 소통 → 전사공지 · 게시판, 조직 · 내 정보 → 조직도 · 내 프로필 · 제증명
+  { key: 'notices', icon: Megaphone, groups: one([{ href: '/punch/notices', key: 'notices', badge: 'notices' }]) },
+  { key: 'board', icon: MessagesSquare, groups: one([{ href: '/punch/messages', key: 'messages', badge: 'messages' }]) },
+  { key: 'org', icon: Network, groups: one([{ href: '/punch/org', key: 'orgChart' }]) },
+  { key: 'profile', icon: UserRound, groups: one([{ href: '/punch/account', key: 'account' }]) },
+  { key: 'certs', icon: FileText, groups: one([{ href: '/punch/certificates', key: 'myCertificates' }]) },
 ];
 
 export const ADMIN_APPS: App[] = [
   { key: 'mHome', icon: House, groups: one([{ href: '/admin', key: 'adminHome', exact: true }]) },
-  { key: 'mHr', icon: Users, groups: one([{ href: '/admin/members', key: 'members' }, { href: '/admin/members/groups', key: 'orgGroups' }]) },
-  { key: 'mLog', icon: ClipboardList, groups: one([{ href: '/admin/hr-log', key: 'resignLog', exact: true }, { href: '/admin/hr-log/mail', key: 'slipMailLog' }]) }, // 이력 · 내역 (2026-10-25 의뢰인): 인사 변동 이력 + 급여명세서 메일 발송 내역. 출퇴근 「기록」과 겹치지 않게, 직원 상세의 「인사 기록」과도 다른 이름. 관리자만
+  { key: 'mHr', icon: Users, groups: one([{ href: '/admin/members', key: 'members' }, { href: '/admin/members/groups', key: 'orgGroups' }, { href: '/admin/certificates', key: 'certificates' }]) },
+  { key: 'mLog', icon: ClipboardList, groups: one([{ href: '/admin/hr-log', key: 'resignLog', exact: true }, { href: '/admin/hr-log/mail', key: 'slipMailLog' }, { href: '/admin/hr-log/access', key: 'accessLog', logOnly: true }]) }, // 이력 · 내역 (2026-10-25 의뢰인): 인사 변동 이력 + 급여명세서 메일 발송 내역. 출퇴근 「기록」과 겹치지 않게, 직원 상세의 「인사 기록」과도 다른 이름. 관리자만
   {
     key: 'mAttendance',
     icon: Clock,
@@ -70,7 +75,7 @@ export const ADMIN_APPS: App[] = [
 // 통합설정 — 문서 07의 6장 분류 표. section: company = 회사설정, apps = App 관리
 export const CONSOLE_HOME = '/admin/console';
 export const CONSOLE_APPS: App[] = [
-  { key: 'cBasic', section: 'company', icon: Building2, groups: one([{ href: '/admin/settings', key: 'setGeneral', how: 'instant' }, { href: tab('holidays'), key: 'setHolidays', how: 'instant' }, { href: tab('notify'), key: 'setNotify', how: 'view' }, { href: tab('advanced'), key: 'setAdvanced', how: 'view' }]) },
+  { key: 'cBasic', section: 'company', icon: Building2, groups: one([{ href: '/admin/settings', key: 'setGeneral', how: 'instant' }, { href: tab('holidays'), key: 'setHolidays', how: 'instant' }, { href: tab('notify'), key: 'setNotify', how: 'instant' }, { href: tab('advanced'), key: 'setAdvanced', how: 'instant' }]) },
   { key: 'cOrg', section: 'company', icon: Network, groups: one([{ href: '/admin/branches', key: 'branches', how: 'list' }, { href: '/admin/jobs', key: 'jobs', how: 'list' }, { href: tab('branch'), key: 'setBranch', how: 'view' }]) },
   { key: 'cAccess', section: 'company', icon: ShieldCheck, groups: one([{ href: tab('access'), key: 'setAccess', how: 'view' }, { href: tab('security'), key: 'setSecurity', how: 'view' }]) },
   { key: 'cData', section: 'company', icon: Database, groups: one([{ href: '/admin/backups', key: 'backups', how: 'view' }, { href: '/admin/diag', key: 'diag', how: 'view' }, { href: '/admin/ops', key: 'ops', how: 'view', systemOnly: true }]) }, // 운영 현황은 시스템관리자만(2026-10-27 의뢰인) · 데이터베이스 백업: 2026-10-18 의뢰인
@@ -81,13 +86,13 @@ export const CONSOLE_APPS: App[] = [
     groups: [
       { key: 'gRule', items: [{ href: tab('work'), key: 'setWork', how: 'versioned' }, { href: tab('punch'), key: 'setPunch', how: 'instant' }, { href: tab('break'), key: 'setBreak', how: 'versioned' }, { href: tab('closing'), key: 'setClosing', how: 'view' }] },
       { key: 'gPlace', items: [{ href: '/admin/places', key: 'places', how: 'list' }] },
-      { key: 'gShift', items: [{ href: '/admin/manage/shift-kinds', key: 'shiftKinds', how: 'view' }, { href: '/admin/shifts', key: 'shifts', how: 'list' }] },
+      { key: 'gShift', items: [{ href: '/admin/manage/shift-kinds', key: 'shiftKinds', how: 'versioned' }, { href: '/admin/shifts', key: 'shifts', how: 'list' }] },
     ],
   },
-  { key: 'aLeave', section: 'apps', icon: Plane, groups: one([{ href: tab('leave'), key: 'setLeave', how: 'view' }, { href: '/admin/leave/types', key: 'leaveTypes', how: 'list' }, { href: '/admin/manage/leave-groups', key: 'leaveGroups', how: 'view' }, { href: '/admin/manage/accrual-rule', key: 'accrualRule', how: 'view' }]) },
-  { key: 'aRequests', section: 'apps', icon: Send, groups: one([{ href: tab('request'), key: 'setRequest', how: 'view' }, { href: '/admin/manage/approval-rules', key: 'approvalRules', how: 'view' }]) },
-  { key: 'aTalk', section: 'apps', icon: Megaphone, groups: one([{ href: tab('message'), key: 'setMessage', how: 'view' }]) },
-  { key: 'aReports', section: 'apps', icon: FileBarChart, groups: one([{ href: tab('report'), key: 'setReport', how: 'view' }]) },
+  { key: 'aLeave', section: 'apps', icon: Plane, groups: one([{ href: tab('leave'), key: 'setLeave', how: 'instant' }, { href: '/admin/leave/types', key: 'leaveTypes', how: 'list' }, { href: '/admin/manage/leave-groups', key: 'leaveGroups', how: 'view' }, { href: '/admin/manage/accrual-rule', key: 'accrualRule', how: 'view' }]) },
+  { key: 'aRequests', section: 'apps', icon: Send, groups: one([{ href: tab('request'), key: 'setRequest', how: 'instant' }, { href: '/admin/manage/approval-rules', key: 'approvalRules', how: 'view' }]) },
+  { key: 'aTalk', section: 'apps', icon: Megaphone, groups: one([{ href: tab('message'), key: 'setMessage', how: 'instant' }]) },
+  { key: 'aReports', section: 'apps', icon: FileBarChart, groups: one([{ href: tab('report'), key: 'setReport', how: 'instant' }]) },
   {
     key: 'aPay',
     section: 'apps',
@@ -98,16 +103,17 @@ export const CONSOLE_APPS: App[] = [
       { key: 'gPayRates', items: [{ href: pay('insurance-rates'), key: 'payInsuranceRates', how: 'review' }, { href: pay('income-tax'), key: 'payIncomeTax', how: 'review' }] },
     ],
   },
-  { key: 'aHr', section: 'apps', icon: SlidersHorizontal, groups: one([{ href: tab('staff'), key: 'setStaff', how: 'view' }, { href: '/admin/manage/work-info', key: 'workInfo', how: 'view' }, { href: tab('esign'), key: 'setEsign', how: 'view' }]) },
+  { key: 'aHr', section: 'apps', icon: SlidersHorizontal, groups: one([{ href: tab('staff'), key: 'setStaff', how: 'view' }, { href: tab('esign'), key: 'setEsign', how: 'view' }]) },
 ];
 
 const leavesOf = (app: App) => app.groups.flatMap((g) => g.items);
 const mayOpen = (href: string) => managerCanOpen(href.split('?')[0]) && !href.includes('v=accrual');
 
 /** 그 사람이 열 수 있는 앱만 (지점관리자는 허용한 화면만, 통합설정은 관리자만) */
-export function appsFor(space: Space, role: NavRole, system = false): App[] {
+export function appsFor(space: Space, role: NavRole, system = false, logs = system): App[] {
   if (space === 'my') return MY_APPS;
   if (role === 'employee') return [];
+  if (space === 'admin' && !logs) return appsFor(space, role, system, true).map((a) => ({ ...a, groups: a.groups.map((g) => ({ ...g, items: g.items.filter((i) => !i.logOnly) })).filter((g) => g.items.length > 0) })).filter((a) => a.groups.length > 0);
   if (space === 'console') return role === 'admin' ? (system ? CONSOLE_APPS : CONSOLE_APPS.map((a) => ({ ...a, groups: a.groups.map((g) => ({ ...g, items: g.items.filter((i) => !i.systemOnly) })) }))) : [];
   if (role === 'admin') return ADMIN_APPS;
   return ADMIN_APPS.map((a) => ({ ...a, groups: a.groups.map((g) => ({ ...g, items: g.items.filter((i) => mayOpen(i.href)) })).filter((g) => g.items.length > 0) })).filter((a) => a.groups.length > 0);

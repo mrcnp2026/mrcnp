@@ -4,7 +4,7 @@
 //   ① 칸 모양: 왼쪽 이름표(오른쪽 맞춤) + 옅은 파란 칸. 값이 없으면 칸만 비워 둔다 ② 안내 문장 · 「○일부터 적용」 · 환산 설명 · 원천징수 비율은 뺐다
 //   ③ 명세서: [달 고르기(달력)] [조회] → 그해 목록 + 고른 달의 지급 · 공제 항목(PC는 나란히 2칸, 폰은 목록 → 한 장 화면). 계산 방법은 한 장 화면 · PDF에 있다(임금명세서 기재 사항).
 // 계좌 · 주민등록번호는 민감정보 결정(급여-36 · 37) 전이라 칸만 둔다(비어 있음). 관리자가 공개한 명세서만 보인다 (PRD v1.3 E01).
-import { ChevronDown, FileText, Printer, Search, Wallet } from 'lucide-react';
+import { ChevronDown, Download, FileText, Search, Wallet } from 'lucide-react';
 import { getFormatter, getTranslations } from 'next-intl/server';
 import Link from 'next/link';
 import { redirect } from 'next/navigation';
@@ -117,7 +117,7 @@ export default async function MyPayPage({ searchParams }: { searchParams: Promis
               {tm('heroOpen')}
             </Link>
             <a href={`/api/payslips/${picked.slip.id}/pdf`} className="inline-flex h-9 items-center justify-center gap-1.5 rounded-button border border-border bg-bg px-3.5 text-sm font-semibold hover:bg-surface">
-              <Printer aria-hidden size={16} />
+              <Download aria-hidden size={16} />
               {tm('printSlip')}
             </a>
           </div>
@@ -202,7 +202,7 @@ export default async function MyPayPage({ searchParams }: { searchParams: Promis
           <span className="ml-auto flex items-center gap-2">
             {picked && (
               <a href={`/api/payslips/${picked.slip.id}/pdf`} className="inline-flex h-9 items-center gap-1.5 rounded-button border border-border bg-bg px-3 text-sm font-semibold hover:bg-surface">
-                <Printer aria-hidden size={14} />
+                <Download aria-hidden size={14} />
                 {tm('printSlip')}
               </a>
             )}
@@ -309,7 +309,7 @@ export default async function MyPayPage({ searchParams }: { searchParams: Promis
                 <span className="num text-muted">{tm('dailyDays', { n: f.number(line.workDays ?? 0) })}</span>
                 <span className="num font-bold">{n(line.net ?? 0)}</span>
                 <a href={`/api/payslips/daily?run=${run.id}`} className="inline-flex h-9 items-center gap-1.5 rounded-button border border-border bg-bg px-3 font-semibold hover:bg-surface">
-                  <Printer aria-hidden size={14} />
+                  <Download aria-hidden size={14} />
                   {t('pdf')}
                 </a>
               </li>

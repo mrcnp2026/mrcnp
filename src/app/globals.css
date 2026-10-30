@@ -443,11 +443,11 @@ button:not(:disabled):active, a:active, summary:active, [role='button']:active {
 @keyframes od-shimmer { from { background-position: 120% 0; } to { background-position: -120% 0; } }
 @keyframes od-skout { to { opacity: 0; visibility: hidden; } }
 /* 곡선: 면이 먼저 흐리게 → 선이 펜으로 긋듯 → 비교선 · 평균선 → 끝점 + 퍼지는 고리 */
-.od-area { opacity: 0; animation: od-fade calc(1.2s * var(--od-t)) ease calc(.25s * var(--od-t)) forwards; }
-.od-line { stroke-dasharray: 1; stroke-dashoffset: 1; animation: od-draw calc(1.5s * var(--od-t)) cubic-bezier(.5,0,.2,1) calc(.35s * var(--od-t)) forwards; } /* 1.5초 — 도넛(useProgress 1500ms)과 같게 (2026-10-28 의뢰인) */
-.od-ghost { opacity: 0; animation: od-fade calc(1s * var(--od-t)) ease calc(1.1s * var(--od-t)) forwards; }
-.od-endpt { opacity: 0; animation: od-fade calc(.4s * var(--od-t)) ease calc(1.7s * var(--od-t)) forwards; }
-.od-pulse { transform-box: fill-box; transform-origin: center; opacity: 0; animation: od-pulse calc(2.2s * var(--od-t)) ease-out calc(1.8s * var(--od-t)) infinite; }
+.od-area { opacity: 0; animation: od-fade calc(.75s * var(--od-t)) ease calc(.06s * var(--od-t)) forwards; }
+.od-line { stroke-dasharray: 1; stroke-dashoffset: 1; animation: od-draw calc(.94s * var(--od-t)) cubic-bezier(.5,0,.2,1) calc(.06s * var(--od-t)) forwards; } /* 실제 1.5초(.94 × 배율 1.6) · 0.1초 뒤 — 도넛과 같게 (2026-10-28 의뢰인. 2026-10-29: 전에는 배율 때문에 실제 2.4초 + 0.56초 뒤였다) */
+.od-ghost { opacity: 0; animation: od-fade calc(.6s * var(--od-t)) ease calc(.6s * var(--od-t)) forwards; }
+.od-endpt { opacity: 0; animation: od-fade calc(.3s * var(--od-t)) ease calc(.95s * var(--od-t)) forwards; }
+.od-pulse { transform-box: fill-box; transform-origin: center; opacity: 0; animation: od-pulse calc(2.2s * var(--od-t)) ease-out calc(1.05s * var(--od-t)) infinite; }
 .od-spark { stroke-dasharray: 1; stroke-dashoffset: 1; animation: od-draw calc(1.3s * var(--od-t)) ease calc(.5s * var(--od-t)) forwards; }
 /* 막대: 왼쪽부터 물결처럼 자란다 — 막대마다 animation-delay를 준다 */
 .od-bar { transform-origin: center bottom; transform: scaleY(0); animation: od-grow-y calc(.8s * var(--od-t)) cubic-bezier(.2,.7,.2,1) forwards; }

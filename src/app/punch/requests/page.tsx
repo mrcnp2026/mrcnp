@@ -59,7 +59,7 @@ export default async function MyRequestsPage({ searchParams }: { searchParams: P
   // 이 쪽의 처리된 요청을 한 번에 지우기 (표가 준비됐을 때만)
   const doneKeys = (list: ReqItem[]) => (hidden.ready ? list.filter((r) => r.status !== 'pending').map((r) => r.key) : []);
   return (
-    <PageShell wide>
+    <PageShell>
       <SeenRequests />
       {/* 폰은 위 줄(MineBar)이 제목을 맡는다 · PC는 제목 + ? 설명 */}
       {/* PC: 다른 화면처럼 제목 왼쪽 · 새 요청 단추 오른쪽 한 줄 (2026-10-18 디자인: 단추가 목록 위에 따로 떠 있었다) */}

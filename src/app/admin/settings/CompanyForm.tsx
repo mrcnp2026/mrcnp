@@ -8,7 +8,7 @@ import { callApi } from '@/components/client-api';
 import { ErrorNote } from '@/components/ErrorNote';
 import { Button } from '@/components/ui';
 
-export type CompanyValues = { name: string; ceo: string; bizNo: string; address: string; phone: string; policy: string; hasLogo: boolean; logoAt: string | null };
+export type CompanyValues = { name: string; ceo: string; bizNo: string; address: string; phone: string; policy: string; privacyOfficer: string; hasLogo: boolean; logoAt: string | null };
 
 const field = 'min-h-11 w-full rounded-button border border-border bg-bg px-3 text-base text-text lg:min-h-9 lg:text-sm';
 
@@ -28,7 +28,7 @@ export function CompanyForm({ initial }: { initial: CompanyValues }) {
   async function save() {
     setBusy(true);
     setErr(null);
-    const r = await callApi('/api/admin/company', { name: v.name, ceo: v.ceo, bizNo: v.bizNo, address: v.address, phone: v.phone, policy: v.policy });
+    const r = await callApi('/api/admin/company', { name: v.name, ceo: v.ceo, bizNo: v.bizNo, address: v.address, phone: v.phone, policy: v.policy, privacyOfficer: v.privacyOfficer });
     setBusy(false);
     if (!r.ok) return setErr(r);
     setSaved(true);
@@ -79,7 +79,7 @@ export function CompanyForm({ initial }: { initial: CompanyValues }) {
           <p className="text-xs text-faint">{t('logoNote')}</p>
         </div>
       </div>
-      {(['name', 'ceo', 'bizNo', 'phone', 'address'] as const).map((k) => (
+      {(['name', 'ceo', 'bizNo', 'phone', 'address', 'privacyOfficer'] as const).map((k) => (
         <label key={k} className={row}>
           <span className="font-semibold">
             {t(k)}

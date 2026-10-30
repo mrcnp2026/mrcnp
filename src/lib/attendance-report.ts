@@ -10,6 +10,7 @@ import type { AttendanceReport } from '@/lib/export-xlsx';
 import { FLAG } from '@/lib/flags';
 import { buildMonth, monthRange } from '@/lib/month-data';
 import { daysFor } from '@/lib/period-data';
+import { getSettingAt } from '@/lib/settings';
 import { toKstDate } from '@/lib/time';
 import { workStatusOn } from '@/lib/work-requests';
 
@@ -29,6 +30,7 @@ export async function buildAttendanceReport(ym: string, practice: boolean, gener
   const now = new Date();
   const today = toKstDate(now);
   const { from, to } = monthRange(ym);
+  const caution = await getSettingAt('week.caution_hours', to); // 그 달 끝에 유효했던 주의 기준 (2026-10-29 9-2)
   const { data, rows } = await buildMonth(ym, practice);
   const nameOf = new Map(data.people.map((p) => [p.id, p.name]));
   const person = new Map(data.people.map((p) => [p.id, p]));
@@ -160,7 +162,7 @@ export async function buildAttendanceReport(ym: string, practice: boolean, gener
     settings: [
       ['하루 소정근로', `${LABOR.dailyRegularLimitMin / 60}시간`],
       ['주 소정근로', `${LABOR.weeklyRegularLimitMin / 60}시간`],
-      ['주 최대 근로(주의 / 한도)', `${OFFICE.weeklyCautionHours}시간 / ${OFFICE.weeklyLimitHours}시간`],
+      ['주 최대 근로(주의 / 한도)', `${caution}시간 / ${OFFICE.weeklyLimitHours}시간`],
       ['연장 확인 기준', `하루 ${OFFICE.overtimeReviewThresholdMin}분 이상이면 승인 대상`],
       ['결근 판정 시각', `${OFFICE.absentCheckTime} 이후 출근 기록 없으면 결근 후보`],
       ['사업장 규모', OFFICE.workplaceSize === '5_or_more' ? '상시 5인 이상' : '상시 5인 미만'],

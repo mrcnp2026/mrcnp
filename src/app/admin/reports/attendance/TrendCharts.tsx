@@ -3,7 +3,7 @@
 import { getTranslations } from 'next-intl/server';
 import { cache } from 'react';
 import { BarChart } from '@/components/charts/BarChart';
-import { attendanceRate, buildAttendanceDeptReport, type AttSum } from '@/lib/report-attendance';
+import { buildAttendanceDeptReport, type AttSum } from '@/lib/report-attendance';
 import { monthReport } from '@/lib/report-month-cache'; // 지난 달은 보관해 두고 다시 쓴다 (2026-10-28)
 import { createAdminClient } from '@/lib/supabase/admin';
 
@@ -20,13 +20,11 @@ export const trendOnce = cache(async (month: string, practice: boolean, groupId:
 export async function TrendCharts({ month, practice, groupId, basis }: { month: string; practice: boolean; groupId: string | null; basis: 'at_month_end' | 'current' }) {
   const t = await getTranslations('admin.reports');
   const trend = await trendOnce(month, practice, groupId, basis);
+  // 2026-10-29 의뢰인(「그래프 6개는 과하다」): 연장 · 지각 · 결근 셋만. 출근율은 위 「출근율 추이」(일별 · 주별)와 겹치고, 인정시간 · 유급휴가는 표에 있다
   const METRICS = [
-    { key: 'cRate', v: (x: AttSum) => attendanceRate(x), unit: 'pctUnit' },
-    { key: 'cNet', v: (x: AttSum) => Math.round((x.netMinutes / 60) * 10) / 10, unit: 'hUnit' },
     { key: 'cOvertime', v: (x: AttSum) => Math.round((x.overtimeMinutes / 60) * 10) / 10, unit: 'hUnit' },
     { key: 'cLate', v: (x: AttSum) => x.lateCount, unit: 'countUnit' },
     { key: 'cAbsent', v: (x: AttSum) => x.absentDays, unit: 'dayUnit' },
-    { key: 'cPaidLeave', v: (x: AttSum) => Math.round(x.paidLeaveDays * 100) / 100, unit: 'dayUnit' },
   ] as const;
 
   // 2026-10-27 의뢰인(「리포트가 어지럽다 · 그래프가 별로」): 관리자 첫 화면과 같은 막대(components/charts/BarChart)로.

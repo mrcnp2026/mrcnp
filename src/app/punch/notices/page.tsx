@@ -61,7 +61,7 @@ export default async function EmployeeNoticesPage({ searchParams }: { searchPara
 
   return (
     <>
-      <PageShell wide>
+      <PageShell>
         <div>
           <h1 className="flex flex-wrap items-center gap-x-1 text-2xl font-semibold text-primary-deep lg:font-bold lg:text-text">
             <Megaphone aria-hidden size={24} strokeWidth={1.75} className="lg:hidden" />

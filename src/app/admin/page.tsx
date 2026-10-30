@@ -27,10 +27,12 @@ import { buildTodayBoard, type BoardPerson } from '@/lib/today';
 import { weekLimitList } from '@/lib/week-limit';
 import { AutoRefresh } from './AutoRefresh';
 import { BoardView } from './BoardView';
-import { BarCard, DonutCard, LineCard } from './Analytics';
+import { BarCard, GaugeCard, LineCard } from './Analytics';
 import { KpiRow } from './KpiRow';
 import { WeekLimitCard } from './WeekLimitCard';
 import { switchOn } from '@/lib/switches';
+import { PanelPortal } from '@/components/PanelPortal';
+import { getSettingAt } from '@/lib/settings';
 
 export default async function AdminHome({ searchParams }: { searchParams: Promise<{ live?: string; np?: string }> }) {
   const t = await getTranslations('admin.home');
@@ -41,6 +43,7 @@ export default async function AdminHome({ searchParams }: { searchParams: Promis
   const practiceView = OFFICE.practiceMode && sp.live !== '1';
   const now = new Date();
   const today = toKstDate(now);
+  const cautionMin = (await getSettingAt('week.caution_hours', today)) * 60; // 주 52시간 「주의」 기준 — 통합설정 › 리포트 기준 (2026-10-29 9-2)
   // 서로 상관없는 조회는 한꺼번에 시작한다 (2026-10-23 의뢰인: 화면 이동이 느리다 — 예전에는 아홉 개를 하나씩 기다렸다)
   const db = createAdminClient();
   const later = {
@@ -190,8 +193,43 @@ export default async function AdminHome({ searchParams }: { searchParams: Promis
   return (
     <PageShell wide>
       <AutoRefresh seconds={30} />
-      {/* 토스풍 머리: 날짜·기준 시각은 작게, 한 줄 요약을 크게 (2026-10-02 의뢰인 선택 시안) */}
-      <header className="flex flex-col gap-1 px-1 pt-2">
+      {/* PC: 오늘 요약은 옆 메뉴 판에 — 출근 고리 · 숫자 · 지각/미출근/휴가 (2026-10-30 의뢰인: 「카드 위 글을 옆 판으로, 텍스트만은 별로 — 심플하지만 비어 보이지 않게, 본문은 그만큼 위로」) */}
+      <PanelPortal>
+        <div className="flex flex-col gap-4 px-3 pb-4">
+          <p className="num text-xs text-muted">{t('asOf', { date: fmt.dateTime(now, { month: 'long', day: 'numeric', weekday: 'short' }), time: fmt.dateTime(now, { hour: '2-digit', minute: '2-digit', hourCycle: 'h23' }) })}</p>
+          <div className="flex items-center gap-3">
+            <svg viewBox="0 0 64 36" className="h-9 w-16 shrink-0" aria-hidden>
+              <path d="M6,32 A26,26 0 0 1 58,32" fill="none" strokeWidth="6" stroke="currentColor" strokeLinecap="round" className="text-rail" />
+              {(rate ?? 0) > 0 && <path d="M6,32 A26,26 0 0 1 58,32" fill="none" strokeWidth="6" stroke="currentColor" strokeLinecap="round" className="text-primary" pathLength={100} strokeDasharray={`${rate} 100`} />}
+            </svg>
+            <div className="min-w-0">
+              <p className="num text-2xl leading-tight font-extrabold tracking-tight">
+                <CountUp value={String(inCount)} /><span className="text-base font-bold text-muted"> / {active.length}</span>
+              </p>
+              <p className="num text-xs text-muted">{t('panelIn')}{rate !== null ? ` · ${t('panelRate', { p: rate })}` : ''}</p>
+            </div>
+          </div>
+          <ul className="flex flex-col divide-y divide-border rounded-button border border-border bg-bg text-sm">
+            {([['bg-warn', th('status.late'), board.late.length], ['bg-danger', th('status.absent'), board.absent.length], ['bg-faint', t('donutOff'), board.off.length]] as const).map(([dot, label, n]) => (
+              <li key={label} className="flex min-h-9 items-center gap-2 px-3">
+                <span aria-hidden className={`size-2 rounded-full ${dot}`} />
+                <span className="flex-1 text-muted">{label}</span>
+                <b className="num">{n}</b>
+              </li>
+            ))}
+          </ul>
+          <div className="flex flex-col items-start">
+            <Link href="/punch" className="inline-flex min-h-9 items-center text-sm font-bold text-primary">{t('myPunch')} ›</Link>
+            {OFFICE.practiceMode && (
+              <Link href={practiceView ? '/admin?live=1' : '/admin'} className="inline-flex min-h-9 items-center text-sm text-muted">
+                {practiceView ? t('showLive') : t('showPractice')}
+              </Link>
+            )}
+          </div>
+        </div>
+      </PanelPortal>
+      {/* 폰: 토스풍 머리 — 날짜·기준 시각은 작게, 한 줄 요약을 크게 (2026-10-02 의뢰인 선택 시안). PC는 위 옆 판으로 옮겼다 */}
+      <header className="flex flex-col gap-1 px-1 pt-2 lg:hidden">
         <div className="flex items-center justify-between gap-2">
           <p className="num text-sm text-muted">{t('asOf', { date: fmt.dateTime(now, { month: 'long', day: 'numeric', weekday: 'short' }), time: fmt.dateTime(now, { hour: '2-digit', minute: '2-digit', hourCycle: 'h23' }) })}</p>
           <Link href="/punch" className="-my-2 inline-flex min-h-11 items-center text-sm font-medium text-muted">
@@ -245,7 +283,7 @@ export default async function AdminHome({ searchParams }: { searchParams: Promis
       </Card>
 
       <div className="flex flex-col gap-3 lg:col-span-2 lg:col-start-1 lg:row-start-1">
-      <BoardView board={board} total={active.length} limitMinutes={OFFICE.weeklyLimitHours * 60} cautionMinutes={OFFICE.weeklyCautionHours * 60} colored={OFFICE.workplaceSize === '5_or_more'} legend={legend} />
+      <BoardView board={board} total={active.length} limitMinutes={OFFICE.weeklyLimitHours * 60} cautionMinutes={cautionMin} colored={OFFICE.workplaceSize === '5_or_more'} legend={legend} />
       </div>
 
       </div>
@@ -257,12 +295,13 @@ export default async function AdminHome({ searchParams }: { searchParams: Promis
           <LiveFeed title={t('liveTitle')} empty={t('liveNone')} rows={feed} />
         </Card>
         {/* 첫 화면 순서 (2026-10-27 의뢰인): 휴가 현황 막대가 끝난 뒤 → 도넛 1.8초 → 곡선 1.9초(2026-10-28 의뢰인: 도넛과 거의 동시에) → 지각 막대 2.4초 */}
-        <DonutCard
+        {/* 2026-10-30 의뢰인: 도넛 → 반원 게이지(리포트 때 만든 키트 Gauge) */}
+        <GaugeCard
           after={1800}
           title={t('donutTitle')}
           unit={t('chartUnit')}
-          center={rate === null ? '–' : `${rate}%`}
-          centerLabel={t('chartRate')}
+          value={rate}
+          caption={t('chartRate')}
           slices={[
             { key: 'in', label: t('donutIn'), n: Math.max(0, inCount - board.late.length), tone: 'primary' },
             { key: 'late', label: th('status.late'), n: board.late.length, tone: 'warn' },
@@ -359,10 +398,11 @@ export default async function AdminHome({ searchParams }: { searchParams: Promis
       </div>
 
       {/* ⑥ 연장근로 · 지각 막대 — 그래프끼리 뭉치지 않게 카드 줄 다음에 */}
-      <div className="flex flex-col gap-3 lg:grid lg:grid-cols-3 lg:gap-4">
+      {/* 2026-10-30 의뢰인: 「연장근로 그래프가 과하게 넓다 — 지각 그래프와 좌우를 같게」 → 두 칸 같은 폭(아래 주 52시간 · 근무노트 줄과도 같다) */}
+      <div className="flex flex-col gap-3 lg:grid lg:grid-cols-2 lg:gap-4">
       {/* 이번 주 요일별 연장근로 시간 (2026-10-06 의뢰인: 30일 출근 비율 선 그래프는 볼 것이 없었다 → 샤플처럼 이번 주 초과근무). 폰에서도 보인다 — 칸이 화면 폭에 맞춰 줄어들어 가로 스크롤이 생기지 않는다 */}
       <BarCard
-        className="flex lg:col-span-2"
+        className="flex"
         title={t('otWeekTitle')}
         unit={t('otWeekUnit')}
         empty={t('otWeekNone')}
@@ -391,7 +431,7 @@ export default async function AdminHome({ searchParams }: { searchParams: Promis
       <div className="flex flex-col gap-3 lg:col-span-3 lg:grid lg:grid-cols-2 lg:gap-4">
       {data.rule && (await switchOn('report.week52')) && (
         <WeekLimitCard
-          rows={weekLimitList(people, { regularMin: LABOR.weeklyRegularLimitMin, cautionMin: OFFICE.weeklyCautionHours * 60, limitMin: OFFICE.weeklyLimitHours * 60 })}
+          rows={weekLimitList(people, { regularMin: LABOR.weeklyRegularLimitMin, cautionMin, limitMin: OFFICE.weeklyLimitHours * 60 })}
           limitMin={OFFICE.weeklyLimitHours * 60}
           colored={OFFICE.workplaceSize === '5_or_more'}
         />

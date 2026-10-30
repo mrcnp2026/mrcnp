@@ -16,6 +16,7 @@ const ITEMS = ['basic', 'details', 'punch', 'network', 'device', 'location'] as 
 export function ConsentGate({ version, languages }: { version: string; languages: { code: string; name: string }[] }) {
   const t = useTranslations('consent');
   const tc = useTranslations('common');
+  const tp = useTranslations('privacy');
   const router = useRouter();
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState<{ code: string; requestId?: string } | null>(null);
@@ -55,7 +56,12 @@ export function ConsentGate({ version, languages }: { version: string; languages
             <h3 className="font-bold">{t('refuseTitle')}</h3>
             <p className="text-muted">{t('refuse')}</p>
           </section>
-          <p className="num text-xs text-faint">{t('version', { v: version })}</p>
+          <div className="flex items-center justify-between gap-2">
+            <p className="num text-xs text-faint">{t('version', { v: version })}</p>
+            <a href="/privacy" target="_blank" rel="noopener" className="min-h-11 content-center text-xs font-semibold text-primary">
+              {tp('fullLink')}
+            </a>
+          </div>
         </div>
         <div className="flex flex-col gap-2 border-t border-border px-6 pt-4 pb-[calc(1rem+env(safe-area-inset-bottom))]">
           {err && <ErrorNote code={err.code} requestId={err.requestId} namespace="consent" />}

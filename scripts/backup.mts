@@ -16,7 +16,7 @@ import { createGzip } from 'node:zlib';
 import { config } from 'dotenv';
 import pg from 'pg';
 import { encryptFile, decryptFile } from '../src/lib/backup/crypto.ts';
-import { classify, toDelete, KEEP_WEEKLY, KEEP_MONTHLY } from '../src/lib/backup/retention.ts';
+import { classify, toDelete, KEEP_WEEKLY, KEEP_MONTHLY, KEEP_YEARLY } from '../src/lib/backup/retention.ts';
 import { listBackups, uploadBackup, deleteBackup } from '../src/lib/backup/github.ts';
 import { sendBackupMail, mailConfigured, mb, kstDate, kstTime } from '../src/lib/backup/mail.ts';
 
@@ -169,7 +169,7 @@ async function main() {
     ...summary,
     '',
     `■ 보관 중인 백업: ${kept.length}개, 합계 ${mb(total)}`,
-    `  · 매주 ${n('weekly')}개 (최근 ${KEEP_WEEKLY}주) · 매월 ${n('monthly')}개 (최근 ${KEEP_MONTHLY}개월) · 매년 ${n('yearly')}개 (영구)`,
+    `  · 매주 ${n('weekly')}개 (최근 ${KEEP_WEEKLY}주) · 매월 ${n('monthly')}개 (최근 ${KEEP_MONTHLY}개월) · 매년 ${n('yearly')}개 (최근 ${KEEP_YEARLY}년)`,
     `  · 이번에 정리한 오래된 백업: ${gone.length}개`,
     `  · 최근 7일은 Supabase가 따로 매일 백업합니다`,
     '',

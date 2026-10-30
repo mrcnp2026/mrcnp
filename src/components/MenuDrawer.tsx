@@ -8,7 +8,7 @@
 //   ⑤ 관리자 · 지점관리자는 그 위에 「폰 알림」 켜기 · 끄기 한 줄 (2026-10-16, components/PushToggle)
 // 이름 · 묶음은 PC 틀과 같은 표(config/nav.ts)에서 읽는다. 통합설정은 관리자 모드 맨 아래 한 줄(전체 메뉴 한 장으로 들어간다).
 // 왼쪽에서 밀려 나오고 닫을 때 밀려 들어간다(2026-10-17 의뢰인, R-10-8을 바꿈). Esc · 바깥 누르기 · 화면 이동으로 닫힌다. body에 직접 붙인다(하단 탭이 가리지 않게).
-import { useSystemNav } from '@/components/SystemNav';
+import { useSystemNav, useLogNav } from '@/components/SystemNav';
 import { Activity, ChevronDown, Menu, Search, Settings, X } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 import { IntentLink as Link } from './IntentLink'; // 손이 닿으면 미리 받아 둔다 (2026-10-29)
@@ -86,7 +86,8 @@ export function MenuDrawer({ name, role, languages, ops = false }: { name: strin
   }, []);
 
   const system = useSystemNav();
-  const apps: App[] = appsFor(view, role, system);
+  const logs = useLogNav(); // 접속 · 변경 기록 메뉴 (2026-10-30)
+  const apps: App[] = appsFor(view, role, system, logs);
   // 통합설정 앱 이름은 app.* 에만 있다 (appFull.* 로 찾으면 「frame.appFull.cBasic」 같은 영어 열쇠가 그대로 나왔다)
   const appName = (a: App) => tf(view === 'console' ? `app.${a.key}` : `appFull.${a.key}`);
   const word = q.trim().toLowerCase();

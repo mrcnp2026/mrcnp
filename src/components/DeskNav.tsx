@@ -2,7 +2,7 @@
 // PC(1024px~) 왼쪽 틀 — 앱 띠(아이콘 + 짧은 이름) + 메뉴 판(앱 이름 → 묶음 제목 → 항목). 직원 · 관리자가 같은 틀을 쓴다 (2026-10-14 결정 사항 개발-21).
 // 통합설정에서는 앱 띠 자리에 「회사설정 / App 관리」 묶음 목록이 놓인다 (개발-20, 문서 07 6장).
 // 무엇이 어디에 있는지는 config/nav.ts 한곳에서 정한다. 폰에서는 보이지 않는다(하단 탭 + 서랍 메뉴).
-import { useSystemNav } from '@/components/SystemNav';
+import { useSystemNav, useLogNav } from '@/components/SystemNav';
 import { History, LayoutGrid, PanelLeftClose, PanelLeftOpen } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 import { useLinkStatus } from 'next/link';
@@ -26,17 +26,22 @@ function Count({ n }: { n: number }) {
 }
 
 function Panel({ app, title, active, counts, onPick, t }: { app: App; title: string; active?: string; counts: AlertCounts; onPick: (href: string) => void; t: (k: string) => string }) {
+  // 2026-10-30 의뢰인: 「확장판 메뉴 서체 · 색이 깨져 보이고 성의 없다」 — 유리(뒤 흐림) 효과를 빼 글자를 또렷하게(윈도우에서 흐림 위 글자가 들쭉날쭉했다),
+  //   제목은 크고 굵게 · 묶음 이름은 작은 회색 · 메뉴는 진회색 · 지금 메뉴는 강조색 글자 + 옅은 강조 바탕 + 왼쪽 막대
   return (
-    <nav aria-label={title} className="sticky top-14 hidden h-[calc(100dvh-3.5rem)] w-58 shrink-0 overflow-y-auto border-r glass px-3.5 py-5 lg:block">
-      <h2 className="px-1.5 pb-3 text-xl font-bold tracking-tight">{title}</h2>
-      {app.groups.map((g, gi) => (
-        // 묶음 이름을 또렷하게 + 묶음 사이 줄 (2026-10-22 의뢰인: 「근무일정 밑에 달력형 · 목록형 · 월 집계 — 출퇴근은 어디냐」 — 옅은 작은 글씨라 묶음이 안 보였다)
-        <div key={g.key ?? gi} className={`pb-2 ${gi > 0 && g.key ? 'mt-2 border-t border-border pt-1' : ''}`}>
-          {g.key && <p className="px-2 pt-3 pb-1.5 text-sm font-bold text-text">{t(`group.${g.key}`)}</p>}
+    <nav aria-label={title} className="sticky top-14 hidden h-[calc(100dvh-3.5rem)] w-58 shrink-0 overflow-y-auto border-r border-border bg-bg px-3 py-6 lg:block">
+      <h2 className="px-3 pb-4 text-xl font-extrabold tracking-tight text-text">{title}</h2>
+      {/* 화면이 판에 그려 넣는 자리(PanelPortal) — 오늘 현황 요약 등 */}
+      <div id="side-panel-slot" className="empty:hidden" />
+      {/* 항목이 하나뿐인 앱은 제목만 — 같은 이름이 두 번 보이지 않게 (2026-10-30 의뢰인) */}
+      {appLeaves(app).length > 1 && app.groups.map((g, gi) => (
+        <div key={g.key ?? gi} className={`flex flex-col gap-0.5 pb-3 ${gi > 0 && g.key ? 'mt-1 border-t border-border pt-3' : ''}`}>
+          {g.key && <p className="px-3 pb-1.5 text-xs font-semibold tracking-wide text-faint">{t(`group.${g.key}`)}</p>}
           {g.items.map((s) => {
             const on = active === s.href;
             return (
-              <Link key={s.href} href={s.href} aria-current={on ? 'page' : undefined} onClick={() => onPick(s.href)} className={`flex min-h-9 items-center gap-2 rounded-button px-2.5 text-sm ${on ? 'bg-rail font-bold text-text' : 'text-text hover:bg-surface'}`}>
+              <Link key={s.href} href={s.href} aria-current={on ? 'page' : undefined} onClick={() => onPick(s.href)} className={`relative flex min-h-10 items-center gap-2 rounded-button px-3 text-sm transition-colors duration-150 ${on ? 'bg-primary-tint font-bold text-primary' : 'font-medium text-muted hover:bg-surface hover:text-text'}`}>
+                {on && <span aria-hidden className="absolute top-2 bottom-2 left-0 w-1 rounded-full bg-primary" />}
                 <span className="flex-1">{t(`item.${s.key}`)}</span>
                 {badgeCount(counts, s.badge) > 0 && <Count n={badgeCount(counts, s.badge)} />}
                 <Loading />
@@ -71,7 +76,10 @@ export function DeskNav({ role, initialWide = false }: { role: NavRole; inboxCou
   }, [hereHref]);
 
   const system = useSystemNav();
-  const apps = appsFor(at.space, role, system);
+  const apps = appsFor(at.space, role, system, useLogNav());
+  // 메뉴 판은 거른 목록의 앱을 쓴다 — 지금 주소 찾기(locate)는 모든 항목을 보므로, 볼 수 없는 항목(접속 기록 등)이 판에 새지 않게 (2026-10-30)
+  // 판은 관리자 모드에서만(홈 · 오늘 현황 포함) — 직원 모드는 메뉴가 하나씩이라 판 없이 (2026-10-30 의뢰인)
+  const panelApp = at.app && at.space !== 'my' ? (apps.find((a) => a.key === at.app!.key) ?? null) : null;
 
   // 통합설정 왼쪽 판의 「최근 사용한 메뉴」 (2026-10-22, 다우오피스 통합설정의 My) — 위에서 기억한 최근 화면 가운데 통합설정 것만 넷까지
   const [recent, setRecent] = useState<string[]>([]);
@@ -161,7 +169,7 @@ export function DeskNav({ role, initialWide = false }: { role: NavRole; inboxCou
             </div>
           ))}
         </nav>
-        {at.app && <Panel app={at.app} title={t(`app.${at.app.key}`)} active={active} counts={counts} onPick={setPressed} t={t} />}
+        {panelApp && <Panel app={panelApp} title={t(`app.${panelApp.key}`)} active={active} counts={counts} onPick={setPressed} t={t} />}
       </>
     );
   }
@@ -209,8 +217,8 @@ export function DeskNav({ role, initialWide = false }: { role: NavRole; inboxCou
           </span>
         </button>
       </nav>
-      {/* 항목이 하나뿐인 앱(홈 · 요청 …)은 메뉴 판 없이 본문을 넓게 쓴다 */}
-      {at.app && appLeaves(at.app).length > 1 && <Panel app={at.app} title={t(`appFull.${at.app.key}`)} active={active} counts={counts} onPick={setPressed} t={t} />}
+      {/* 메뉴 판은 홈 · 오늘 현황 포함 언제나 연다 — 항목이 하나뿐인 앱은 판에 제목 한 줄만. 모든 화면의 시작 위치 · 폭을 같게 (2026-10-30 의뢰인) */}
+      {panelApp && <Panel app={panelApp} title={t(`appFull.${panelApp.key}`)} active={active} counts={counts} onPick={setPressed} t={t} />}
     </>
   );
 }

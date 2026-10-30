@@ -623,7 +623,8 @@
       "bulkNoEmail": "{n} employees have no email and were skipped: {names}",
       "bulkFailed": "{n} employees could not be sent: {names} — please send them one by one.",
       "bulkNotReady": "The sending mail account is not set up yet, so bulk sending is unavailable. Copy each employee link and send it.",
-      "bulkNoneSendable": "No unregistered employee has an email. Add an email to the {none} employees without one."
+      "bulkNoneSendable": "No unregistered employee has an email. Add an email to the {none} employees without one.",
+      "toHrCard": "Personnel card"
     },
     "more": {
       "title": "All menus",
@@ -764,7 +765,9 @@
       "liveNone": "No punches yet today",
       "liveIn": "Clock in",
       "liveOut": "Clock out",
-      "liveLate": "Late clock-in"
+      "liveLate": "Late clock-in",
+      "panelIn": "Checked in",
+      "panelRate": "{p}% rate"
     },
     "inbox": {
       "title": "Requests",
@@ -2024,7 +2027,7 @@
       "revokeDeviceNote": "After this, that device can no longer punch. The employee signs in on the new phone and registers it. Until then, add punches with \"Add record\".",
       "no_device": "No punch device is registered.",
       "owner_only": "Only top admins can change a top admin account.",
-      "readOnly": "This screen shows what is currently fixed in the app. Tell us if anything should be changed.",
+      "readOnly": "This shows how the app works. Where it can be changed elsewhere, use the “Go” link.",
       "shiftKinds": {
         "title": "Shift types",
         "intro": "The six types attached to work schedules. The types and how they are calculated are fixed; only the displayed name can be changed. Leave a field empty to return to the default name.",
@@ -2385,7 +2388,7 @@
         "desc_pay": "What this app covers for payroll.",
         "desc_security": "Rules for sign-in and record protection.",
         "go": "Open the management screen",
-        "fixedNote": "These items show how the app works today. Tell us if any of them should be changed.",
+        "fixedNote": "Rows with a switch can be turned on or off right away. “Fixed” rows are set by the app because of law, payroll or security.",
         "desc_esign": "Exchanging employment contracts and similar documents by e-signature.",
         "desc_advanced": "Other options about how screens are arranged.",
         "descHolidays": "Add or remove public and company holidays. Only this month and later can change."
@@ -2568,7 +2571,7 @@
           "week52": {
             "label": "52-hour week",
             "value": "Caution from 48 h · limit 52 h",
-            "note": "Weeks over the thresholds are flagged on the home and record screens."
+            "note": "Weeks above the “caution” level below are marked caution, and above 52 hours as over the limit, on the home screen. Turn off to hide the 52-hour view on home."
           }
         },
         "pay": {
@@ -2690,13 +2693,15 @@
         "phonePh": "055-000-0000",
         "address": "Address",
         "addressPh": "Head office address",
+        "privacyOfficer": "Privacy officer",
+        "privacyOfficerPh": "e.g. Name (department, phone)",
         "policy": "Attendance policy",
         "policyPh": "e.g. Report missing records to the admin office right away.",
         "policyNote": "Shown as a folded line at the top of the employee Attendance screen. Hidden when empty.",
         "save": "Save",
         "saved": "Saved",
         "fixedTitle": "Attendance basics",
-        "fixedNote": "These values are fixed in the app. Tell the developer if they need to change.",
+        "fixedNote": "These values are set by the app because of law or payroll rules.",
         "fixed": {
           "country": "Country",
           "unit": "Management unit",
@@ -2719,7 +2724,9 @@
         "off": "Off",
         "failed": "Couldn't save. Please try again.",
         "fixed": "Fixed — cannot change",
-        "fixedWhy": "Tied to law, payroll calculation or security, or not built yet, so there is no switch."
+        "fixedWhy": "Tied to law, payroll calculation or security, or not built yet, so there is no switch.",
+        "notYet": "Not available yet",
+        "notYetWhy": "Planned for the next development stage."
       },
       "pushAdmins": {
         "title": "Admins who get phone alerts",
@@ -2731,7 +2738,11 @@
           "always": "Always receives alerts. Cannot be turned off.",
           "never": "The CEO does not receive admin phone alerts.",
           "choice": "Turn on to receive admin phone alerts. Off by default."
-        }
+        },
+        "alwaysPick": "Always notified admin",
+        "alwaysPickDesc": "This person cannot turn off admin phone alerts. Other top admins are switched on or off below. The CEO does not receive them.",
+        "alwaysNone": "None",
+        "alwaysSave": "Save"
       },
       "cal": {
         "prev": "Previous month",
@@ -2745,6 +2756,21 @@
         "namePh": "e.g. Founding day",
         "monthCount": "{n} holidays this month",
         "monthNone": "No holidays this month."
+      },
+      "numberSetting": {
+        "aria": "Value",
+        "save": "Save",
+        "saved": "Saved — applies from today",
+        "range": "Enter a value from {min} to {max}",
+        "hours": "hours",
+        "caution": {
+          "label": "Weekly hours “caution” level",
+          "desc": "When weekly working hours pass this, the admin board, the 52-hour view and the staff week bar show a caution colour. The limit is fixed by law at {limit} hours. Applies from today; past weeks keep the old value."
+        },
+        "invite": {
+          "label": "Invite link valid for",
+          "desc": "Sign-up invites (link, code, QR) must be used within this time. Invites already sent keep their original time."
+        }
       }
     },
     "places": {
@@ -5233,20 +5259,22 @@
       "forbidden": "Only top admins can see this.",
       "practice": "Practice data",
       "tab": {
-        "payees": "Payees",
-        "work": "Work entry",
-        "runs": "Day-labor ledgers"
+        "payees": "Day workers",
+        "work": "Work days",
+        "runs": "Day ledger"
       },
       "legal": "Income tax uses the usual day-worker method (daily taxable pay − 150,000 won → × 6% → 55% credit; under 1,000 won a day is not withheld). Social insurance is calculated automatically with the same approved rates as regular payroll (eligibility uses provisional rules). Both are provisional until reviewed; top admins can adjust amounts on the ledger. No filing files or transfers.",
-      "payeeTitle": "Register a payee",
+      "payeeTitle": "Add a day worker",
       "payee": {
         "internalNo": "Internal no.",
         "name": "Name",
         "phone": "Phone (optional)",
         "note": "Note (optional)",
-        "jobTitle": "Job (type it in)",
+        "jobTitle": "Job (optional)",
         "internalNoAuto": "Internal no. (auto if empty)",
-        "internalNoPh": "Auto (e.g. D0001)"
+        "internalNoPh": "Auto (e.g. D0001)",
+        "namePh": "e.g. Hong Gil-dong",
+        "jobTitlePh": "e.g. Packing"
       },
       "payeeAdd": "Register",
       "payeeNote": "Resident numbers and bank accounts are not stored. Same name with a different internal no. is a different person.",
@@ -5264,7 +5292,7 @@
       "eng": {
         "startsOn": "Start",
         "endsOn": "End (optional)",
-        "project": "Site / project",
+        "project": "Site / project (optional)",
         "dayRate": "Day rate (KRW)",
         "taxState": "Tax",
         "ei": "Employment ins.",
@@ -5273,7 +5301,15 @@
         "basisNote": "Basis for these settings",
         "payBasis": "Pay basis",
         "unitRate": "Unit rate (KRW per day · hour · month · item)",
-        "basisHint": "e.g. worker application · agency confirmation · contract"
+        "basisHint": "e.g. worker application · agency confirmation · contract",
+        "rate": {
+          "DAY": "Daily wage (KRW)",
+          "HOUR": "Hourly wage (KRW)",
+          "MONTH": "Monthly pay (KRW)",
+          "FIXED": "Amount per job (KRW)",
+          "ANY": "Rate (KRW)"
+        },
+        "ratePh": "e.g. 150000"
       },
       "tax": {
         "UNKNOWN": "Unknown",
@@ -5307,7 +5343,7 @@
         "dayRate": "Day rate (blank = engagement rate)",
         "segment": "Segment",
         "basis": "Basis / note (optional)",
-        "unitRate": "Unit rate (blank = contract)"
+        "unitRate": "Rate (blank = registered rate)"
       },
       "item": {
         "NONTAX": "Non-taxable pay",
@@ -5364,10 +5400,10 @@
       "hasBlocked": "{n} payees could not be calculated. Resolve the reasons and recalculate.",
       "calculate": "Calculate",
       "recalculate": "Recalculate",
-      "review": "Mark reviewed",
+      "review": "Mark as reviewed",
       "finalize": "Finalize",
-      "finalizeConfirm": "A finalized ledger cannot change.",
-      "finalizeYes": "Finalize",
+      "finalizeConfirm": "Once finalized, amounts in this ledger cannot be changed (a correction creates a new version). Finalize now?",
+      "finalizeYes": "Yes, finalize",
       "calcDone": "Calculated {ok} · not calculated {blocked}",
       "cPayee": "Payee",
       "cDays": "Days",
@@ -5405,7 +5441,7 @@
       "dayLine": "{date} · pay {gross} · tax {tax} · local {local}",
       "notCalculated": "Not calculated",
       "sum": "Total ({n})",
-      "runNotCalculated": "Not calculated yet.",
+      "runNotCalculated": "Not calculated yet. Press “Calculate” to work out pay, social insurance and tax for each person from the month’s confirmed work.",
       "ruleNote": "Tax rule daily-tax-temp-1 (temporary, awaiting tax verification): per day (taxable pay − 150,000) × 2.7%, rounded down to 10 won, zero if under 1,000 won. Local tax is 10% of income tax. This screen is not a filing form.",
       "daily_internal_no": "This internal number cannot be used.",
       "daily_payee_exists": "A payee with this internal number already exists.",
@@ -5475,8 +5511,8 @@
         "FIXED": "Fixed (per item)"
       },
       "qty": {
-        "DAY": "Days",
-        "HOUR": "Hours",
+        "DAY": "Man-days per day (usually 1)",
+        "HOUR": "Hours per day",
         "MONTH": "Months",
         "FIXED": "Items"
       },
@@ -5566,7 +5602,8 @@
         "sum": "{days} days · {man} units · {hours} h · pay {pay}",
         "weekdays": "Weekdays",
         "editConfirmed": "Editing a confirmed line voids it and adds a new confirmed line.",
-        "editDraft": "Draft lines are edited in place."
+        "editDraft": "Draft lines are edited in place.",
+        "forWho": "{name} · {rate}"
       },
       "ins": {
         "AUTO": "Auto",
@@ -5641,7 +5678,44 @@
       "engEditOf": "Edit terms for {name}",
       "workFor": "Add work",
       "workForOf": "Add work for {name}",
-      "payeeEditOf": "Edit {name}"
+      "payeeEditOf": "Edit {name}",
+      "sec": {
+        "who": "Who",
+        "pay": "How much, from when",
+        "tax": "Tax and social insurance",
+        "taxAuto": "insurance decided by the app",
+        "taxManual": "insurance set by hand",
+        "change": "Change",
+        "more": "More",
+        "moreHint": "Monthly items, internal no., memo"
+      },
+      "guide": {
+        "title": "First time? Go in this order",
+        "s1": "Add a day worker — just a name and a daily wage",
+        "s2": "Enter work — pick the days worked on the calendar",
+        "s3": "Day ledger — calculate pay, tax and insurance for the month and finalize",
+        "go": "Add a day worker"
+      },
+      "workNeedPayee": "First add a day worker in ① Day workers.",
+      "workNeedPayeeGo": "Go to add a day worker",
+      "runNeedWork": "Press “+ New day ledger” to calculate pay, tax and insurance from the month’s confirmed work. If there is no work yet, enter it in ② Work days first.",
+      "allConfirmed": "All confirmed",
+      "flow": {
+        "DRAFT": "Create ledger",
+        "CALCULATED": "Calculate",
+        "REVIEWED": "Review",
+        "FINALIZED": "Finalize"
+      },
+      "stepsLabel": "Day ledger steps",
+      "rulesTitle": "Calculation rules (provisional — awaiting review)",
+      "next": {
+        "DRAFT": "Next: calculate",
+        "CALCULATED": "Next: check amounts, then mark reviewed",
+        "REVIEWED": "Next: finalize",
+        "FINALIZED": "Done — statements can be downloaded"
+      },
+      "moreDays": "Show {n} more days",
+      "lessDays": "Collapse"
     },
     "paySlips": {
       "title": "Payslips",
@@ -5985,7 +6059,7 @@
     },
     "backups": {
       "title": "Database backups",
-      "intro": "Every day at 2 AM the whole company data (staff, punches, leave, payroll, login info) is encrypted and uploaded to a private store in a different project from production. The last 14 days are all kept, then one per month and one per year. Mistakes can be rolled back from this page.",
+      "intro": "Every day at 2 AM the whole company data (staff, punches, leave, payroll, login info) is encrypted and uploaded to a private store in a different project from production. The last 14 days are all kept, then one per month (12 months) and one per year (5 years). Mistakes can be rolled back from this page.",
       "offTitle": "Backups are not turned on yet",
       "offBody": "The store address/key, the backup password and the DB connection must be set on the server. Please tell the developer.",
       "readFailed": "Could not read the backup store. Try again later. If it persists, check whether the store key changed or the project is paused.",
@@ -5995,11 +6069,11 @@
       "empty": "No backups yet. Press Back up now.",
       "emptyOff": "Once backups are set up, one row per month appears here.",
       "size": "{mb}MB",
-      "keepYearly": "Kept forever",
+      "keepYearly": "Yearly",
       "download": "Download",
       "downloadOf": "Download {month} backup",
       "pages": "Backup pages",
-      "fileNote": "The file (.jsonl.gz.enc) is encrypted and cannot be opened without the backup password, which is in the file Backup password.txt. Write it on paper and keep it elsewhere.",
+      "fileNote": "The file (.jsonl.gz.enc) is encrypted and cannot be opened without the backup password, Keep the password on paper or in a password manager, not in a file on the computer. If it is lost, backups cannot be restored.",
       "onlySystem": "Only the system admin can download or restore.",
       "staleBody": "The last backup was {n} days ago. It should run every night. Press Back up now below.",
       "noneBody": "There is no backup yet. Press Back up now below to take one.",
@@ -6491,6 +6565,99 @@
       "how3": "Emails go out automatically on publish, and who received them and who did not is kept on this screen.",
       "toRuns": "Go to payroll runs",
       "toSlips": "Go to payslips"
+    },
+    "accessLog": {
+      "title": "Access and change log",
+      "intro": "Shows who signed in, who downloaded files with personal data, and who changed information, and when. Typed IDs are not stored. Kept 2 years (provisional).",
+      "missing": "The sign-in log table is not in this database yet (DB batch 40 not applied).",
+      "empty": "No records in this period.",
+      "range": "Period",
+      "d": {
+        "30": "Last 30 days",
+        "90": "90 days",
+        "365": "1 year",
+        "730": "2 years"
+      },
+      "result": {
+        "OK": "Signed in",
+        "FAIL": "Failed",
+        "THROTTLED": "Blocked after failures"
+      },
+      "method": {
+        "PASSWORD": "Password",
+        "PASSKEY": "Fingerprint / face"
+      },
+      "c": {
+        "when": "Time",
+        "who": "Person",
+        "result": "Result",
+        "method": "Method",
+        "device": "Device",
+        "ip": "IP address",
+        "kind": "What",
+        "file": "File",
+        "purpose": "Purpose",
+        "table": "Where",
+        "action": "Action",
+        "reason": "Reason / detail"
+      },
+      "count": "{n}",
+      "unknown": "(deleted account)",
+      "unknownId": "(unknown ID)",
+      "note": "Sign-in records are kept as required by personal-information safety standards. A sudden rise in failures may be password guessing — reset that person’s sign-in (staff detail › Manage).",
+      "tab": {
+        "login": "Sign-ins",
+        "download": "Downloads",
+        "change": "Changes"
+      },
+      "action": {
+        "insert": "Added",
+        "update": "Changed",
+        "delete": "Removed"
+      },
+      "reviewDo": "Reviewed this month",
+      "reviewLast": "Last review: {date} by {name}",
+      "reviewNever": "Not reviewed yet.",
+      "reviewDue": "Review these records at least once a month and press “Reviewed this month” (personal-information safety standards).",
+      "kind": {
+        "list": "List Excel",
+        "attendance_report": "Attendance sheet",
+        "attendance_annual_report": "Annual attendance report",
+        "attendance_dept_report": "Department attendance report",
+        "leave_dept_report": "Department leave report",
+        "labor_cost": "Labour cost",
+        "payroll_confirm_sheet": "Payroll check sheet",
+        "daily_statements": "Day-worker statements",
+        "certificate": "Certificate",
+        "hr_card": "Personnel card"
+      },
+      "table": {
+        "profiles": "Staff info",
+        "staff_details": "Staff optional info",
+        "app_settings": "Settings",
+        "work_rules": "Work rules",
+        "company_profile_versions": "Company info / switches",
+        "leave_requests": "Leave",
+        "punch_corrections": "Punch corrections",
+        "punch_requests": "Punch requests",
+        "shifts": "Schedules",
+        "staff_notes": "HR notes",
+        "certificate_issues": "Certificates",
+        "inquiries": "Inquiries",
+        "notices": "Notices",
+        "leave_types": "Leave types",
+        "leave_grants": "Leave grants",
+        "org_groups": "Organisation",
+        "jobs": "Jobs",
+        "payroll_runs": "Payroll ledgers",
+        "payroll_contract_versions": "Pay contracts",
+        "payroll_payees": "Day workers",
+        "invites": "Sign-up invites",
+        "consents": "Privacy consent",
+        "user_passkeys": "Clock-in devices",
+        "login_events": "Sign-in log"
+      },
+      "system": "(app)"
     }
   },
   "side": {
@@ -6838,7 +7005,7 @@
     "other1": "Use a phone with a screen lock, and open the link in Safari or Chrome."
   },
   "notices": {
-    "title": "Notices",
+    "title": "Company notices",
     "important": "Important",
     "more": "{n} more",
     "machine": "Machine translation",
@@ -7068,7 +7235,7 @@
     "consent_outdated": "The notice has changed. Please read the new notice and tap again."
   },
   "account": {
-    "title": "My account",
+    "title": "My profile",
     "idLabel": "Sign-in ID (employee number)",
     "changeTitle": "Change password",
     "createTitle": "Create a password",
@@ -7309,7 +7476,7 @@
     "hGroup": "Branch",
     "hPeriod": "Period",
     "hPayDate": "Pay date",
-    "pdf": "Download PDF",
+    "pdf": "Download payslip (PDF)",
     "pdfTitle": "Payslip {month}",
     "pdfItem": "Item",
     "pdfHow": "How it is calculated",
@@ -7386,7 +7553,7 @@
       "pensionAccount": "Pension account",
       "monthPick": "Payslip month",
       "search": "Search",
-      "printSlip": "Print payslip",
+      "printSlip": "Download payslip (PDF)",
       "colPay": "Total pay",
       "colDeduction": "Total deductions",
       "colNet": "Net pay",
@@ -7419,7 +7586,10 @@
     "days": "{n} d",
     "taxableTotal": "Taxable amount",
     "exemptTotal": "Tax-exempt amount",
-    "insuranceBase": "Insurance base"
+    "insuranceBase": "Insurance base",
+    "pdfFormula": "How amounts are calculated",
+    "pdfThanks": "Thank you for your hard work.",
+    "pdfCorrectionMark": "Corrected (rev. {n})"
   },
   "org": {
     "title": "Org chart",
@@ -7437,7 +7607,7 @@
     "note": "Leave type, reason and balance are not shown."
   },
   "messages": {
-    "title": "Company board",
+    "title": "Board",
     "intro": "Posts from the company. Opening one records that you read it.",
     "adminTitle": "Company board",
     "adminIntro": "Post to employees and see who read it. Employees cannot post or reply. Posts can't be edited or deleted.",
@@ -7490,7 +7660,17 @@
     "message_invalid": "Check the title and message. Title up to 120, message up to 4,000 characters.",
     "message_no_recipients": "No recipients. Pick recipients again.",
     "boardEmpty": "No posts yet",
-    "boardEmptyDesc": "Use “New post” to send to everyone, a branch or chosen people — recipients get the title as a phone notification."
+    "boardEmptyDesc": "Use “New post” to send to everyone, a branch or chosen people — recipients get the title as a phone notification.",
+    "tabAll": "All",
+    "read": "Read",
+    "searchTitle": "Search titles",
+    "emptyUnread": "No unread posts.",
+    "colTitle": "Title",
+    "colState": "Status",
+    "colFrom": "From",
+    "colPosted": "Posted",
+    "countAll": "All posts",
+    "countNew": "Unread"
   },
   "promotionPlan": {
     "back": "Leave",
@@ -7642,7 +7822,7 @@
       "aHr": "Staff settings",
       "mHome": "Home",
       "mHr": "Staff",
-      "mLog": "History",
+      "mLog": "Records",
       "mAttendance": "Time",
       "mLeave": "Leave",
       "mRequests": "Requests",
@@ -7650,7 +7830,12 @@
       "mTalk": "Notices",
       "mReports": "Reports",
       "training": "Training",
-      "mTraining": "Training"
+      "mTraining": "Training",
+      "notices": "Notices",
+      "board": "Board",
+      "org": "Org chart",
+      "profile": "My profile",
+      "certs": "Certificates"
     },
     "appFull": {
       "home": "Home",
@@ -7663,7 +7848,7 @@
       "people": "Organization · Me",
       "mHome": "Today",
       "mHr": "Staff · Org",
-      "mLog": "History & logs",
+      "mLog": "Records",
       "mAttendance": "Schedule · Attendance",
       "mLeave": "Leave management",
       "mRequests": "Request handling",
@@ -7671,7 +7856,12 @@
       "mTalk": "Notices · Messages",
       "mReports": "Attendance · Leave reports",
       "training": "Training",
-      "mTraining": "Training"
+      "mTraining": "Training",
+      "notices": "Company notices",
+      "board": "Board",
+      "org": "Org chart",
+      "profile": "My profile",
+      "certs": "Certificates"
     },
     "group": {
       "gSchedule": "Schedule",
@@ -7697,10 +7887,10 @@
       "myRequests": "Requests",
       "payslips": "My pay",
       "myRetirement": "Estimated retirement pay",
-      "notices": "Notices",
-      "messages": "Company board",
+      "notices": "Company notices",
+      "messages": "Board",
       "orgChart": "Org chart",
-      "account": "My account",
+      "account": "My profile",
       "adminHome": "Home",
       "members": "Employees",
       "orgGroups": "Org chart",
@@ -7781,7 +7971,10 @@
       "trainingHome": "Training & completion",
       "trainingCourses": "Training types",
       "slipMailLog": "Payslip emails",
-      "ops": "Operations status"
+      "ops": "Operations status",
+      "accessLog": "Access and change log",
+      "certificates": "Issue certificates",
+      "myCertificates": "Certificates"
     },
     "search": {
       "placeholder": "Search",
@@ -7815,8 +8008,8 @@
     "wideShort": "Wide",
     "how": {
       "view": {
-        "tag": "View only",
-        "text": "This is how the app works now. You cannot change it here — ask the developer if it needs to change."
+        "tag": "How it works",
+        "text": "This screen shows how the app works. Anything you can change has a switch or a “Go” link on its row."
       },
       "instant": {
         "tag": "Applies at once",
@@ -8434,6 +8627,267 @@
       "withdrawn": "Withdrawn",
       "revised": "Revision {n}.",
       "note": "Average daily wage = (3-month wages + bonus × 3/12 + leave pay × 3/12) ÷ days. Benefit = daily wage (ordinary if higher) × 30 × service days ÷ 365, truncated. Retirement income tax is the confirmed value as entered."
-    }
+    },
+    "formula": "How amounts are calculated",
+    "thanks": "Thank you for your hard work.",
+    "correctionMark": "Corrected"
+  },
+  "privacy": {
+    "title": "Privacy policy",
+    "link": "Privacy policy",
+    "fullLink": "Read the full privacy policy",
+    "draft": "This is a draft under review. The effective date will be added and this notice removed after labour and privacy review.",
+    "intro": "{company} (the company) processes personal information in this app to manage staff attendance and pay. This page explains what is collected, why, and for how long.",
+    "itemsTitle": "1. What we collect",
+    "item": {
+      "basic": {
+        "name": "Basic info",
+        "detail": "Name, staff number, team and job, hire and leave dates, phone and email (if entered by the company)"
+      },
+      "details": {
+        "name": "Optional info",
+        "detail": "Date of birth, emergency contacts, certificates, car. You can use the app without them."
+      },
+      "work": {
+        "name": "Attendance records",
+        "detail": "Clock-in and clock-out times, work notes, leave, field work and correction requests, schedules, training records"
+      },
+      "location": {
+        "name": "Location",
+        "detail": "Only the location at the moment you clock in or out or send a request. You are not tracked otherwise, and leave requests do not collect location."
+      },
+      "device": {
+        "name": "Device and sign-in",
+        "detail": "The public key of your clock-in device, your encrypted password and the internet address (IP) you connect from. Fingerprint and face data never leave your device and are not received by the company."
+      },
+      "pay": {
+        "name": "Pay",
+        "detail": "Contract terms (hourly or monthly pay, allowances), payslips, number of dependants and children for insurance and income tax, and nationality and visa status for foreign staff"
+      },
+      "consent": {
+        "name": "Consent record",
+        "detail": "When you agreed and which version of the notice"
+      }
+    },
+    "notCollected": "Resident registration numbers, alien registration numbers and bank account numbers are not collected in this app.",
+    "purposeTitle": "2. What it is used for",
+    "purpose": "Recording and managing working hours, calculating pay and issuing payslips, keeping records required by law, and emergency contact (optional info)",
+    "keepTitle": "3. How long we keep it",
+    "keep": {
+      "work": {
+        "name": "Attendance records, staff register, contracts",
+        "period": "3 years after leaving"
+      },
+      "pay": {
+        "name": "Pay and tax records",
+        "period": "5 years"
+      },
+      "location": {
+        "name": "Location",
+        "period": "1 year"
+      },
+      "details": {
+        "name": "Optional info",
+        "period": "1 year after leaving"
+      },
+      "consent": {
+        "name": "Consent record",
+        "period": "3 years after leaving"
+      },
+      "logs": {
+        "name": "Records of admin changes and downloads",
+        "period": "2 years"
+      },
+      "backup": {
+        "name": "Backups",
+        "period": "Up to 5 years"
+      }
+    },
+    "keepNote": "These periods are provisional and will be confirmed after review. Data past its period is deleted so that it cannot be recovered.",
+    "entrustTitle": "4. Service providers and where data is stored",
+    "entrust": {
+      "supabase": {
+        "name": "Supabase Inc.",
+        "detail": "Data storage and sign-in — servers in Seoul"
+      },
+      "vercel": {
+        "name": "Vercel Inc.",
+        "detail": "App servers — servers in Seoul"
+      },
+      "push": {
+        "name": "Phone makers' notification services (Apple, Google, etc.)",
+        "detail": "Delivering phone notifications — only the title is sent, never amounts"
+      }
+    },
+    "entrustNote": "Supabase and Vercel are US companies, but the data is kept on servers in Seoul, Korea.",
+    "shareTitle": "5. Sharing with others",
+    "share": "We do not give your information to anyone else, except for reports required by law, such as to the tax office and the social insurance agencies.",
+    "safetyTitle": "6. How we protect it",
+    "safety": {
+      "admins": "Only top admins have admin rights, and staff see only their own information.",
+      "records": "Attendance records cannot be changed or deleted; mistakes are fixed by adding a correction record.",
+      "logs": "When an admin changes information or downloads it to Excel, a record is kept.",
+      "backup": "Backup files are stored encrypted.",
+      "slip": "Payslips sent by email are locked with a password."
+    },
+    "rightsTitle": "7. What you can ask for",
+    "rights": "You can ask to see, correct or delete your information, or to stop processing it. Records the law requires us to keep (attendance 3 years, pay 5 years) cannot be deleted during that period. Ask an admin or use Contact us in the app.",
+    "officerTitle": "8. Privacy officer",
+    "officer": "{name}. Send privacy questions and requests to the privacy officer or use Contact us in the app.",
+    "officerNone": "Not yet appointed — set it in Settings › Company",
+    "changeTitle": "9. Changes",
+    "change": "If this policy changes, we will let you know in the app, and ask for your consent again if what you agreed to changes.",
+    "effective": "Effective date: not set (draft)",
+    "back": "Back"
+  },
+  "certificates": {
+    "editorTitle": "Certificate preview and edit",
+    "editorHint": "The right side shows the certificate exactly as issued. Changes appear immediately. Edit names and company details in staff info and company settings.",
+    "from": "From",
+    "to": "To",
+    "companyEmpty": "Company details (representative, business no., address) are empty. Fill them in Settings › Company.",
+    "issueThis": "Issue as shown",
+    "issuedAs": "Issued as no. {no}",
+    "viewPdf": "View",
+    "download": "Download",
+    "close": "Close",
+    "previewEdit": "Preview and edit",
+    "cannotIssue": "Cannot be issued with the current data (check hire date and status)",
+    "myTitle": "Certificates",
+    "myIntro": "Request a certificate of employment or career; a top admin issues it and you download the PDF here. Ask an admin for a certificate of retirement.",
+    "adminTitle": "Issue certificates",
+    "adminIntro": "Issue or reject staff requests, or issue directly (for example for former staff). Issued certificates keep their number and contents and cannot be changed.",
+    "missing": "The certificate ledger table is not in this database yet (DB batch 40 not applied).",
+    "empty": "Nothing yet.",
+    "newTitle": "New request",
+    "historyTitle": "Requests and certificates",
+    "openTitle": "{n} requests to handle",
+    "ledgerTitle": "Issue ledger",
+    "directTitle": "Issue directly",
+    "directHint": "Issue without a request. Retirement certificates are only for people who have left.",
+    "kindLabel": "Type",
+    "kind": {
+      "EMPLOYMENT": "Employment",
+      "CAREER": "Career",
+      "RETIREMENT": "Retirement"
+    },
+    "state": {
+      "REQUESTED": "Requested",
+      "ISSUED": "Issued",
+      "REJECTED": "Rejected"
+    },
+    "purpose": "Purpose",
+    "purposePh": "e.g. for the bank",
+    "copies": "Copies",
+    "person": "Person",
+    "pick": "Choose",
+    "left": "left",
+    "request": "Request",
+    "requestedDone": "Requested. Download it below once issued.",
+    "issueNow": "Issue",
+    "issuedDone": "Issued.",
+    "issue": "Issue",
+    "issueOf": "Issue certificate for {name}",
+    "reject": "Reject",
+    "rejectYes": "Reject",
+    "rejectPh": "Reason (2+ characters)",
+    "cancel": "Cancel",
+    "serialOf": "No. {no}",
+    "purposeOf": "Purpose {p}",
+    "copiesOf": "{n} copies",
+    "rejectedBecause": "Rejected: {r}",
+    "unknown": "(unknown)",
+    "cert_not_employed": "Not currently employed. Choose career or retirement.",
+    "cert_not_retired": "Retirement certificates are issued by admins for people who have left.",
+    "cert_no_start": "No hire date. Add it to the staff record first.",
+    "cert_already_done": "This request was already handled.",
+    "cert_reason_required": "Enter a reason of at least 2 characters.",
+    "cert_busy": "Please try again in a moment."
+  },
+  "certPdf": {
+    "b": {
+      "person": "Personal",
+      "work": "Employment",
+      "career": "Career",
+      "issue": "Issue"
+    },
+    "copiesLabel": "Copies",
+    "copies": "{n}",
+    "serial": "No. {no}",
+    "serialNone": "No.",
+    "sample": "SAMPLE",
+    "ceo": "CEO",
+    "title": {
+      "EMPLOYMENT": "Certificate of Employment",
+      "CAREER": "Certificate of Career",
+      "RETIREMENT": "Certificate of Retirement"
+    },
+    "body": {
+      "EMPLOYMENT": "This is to certify that the above person is employed as stated.",
+      "CAREER": "This is to certify that the above person worked during the period stated.",
+      "RETIREMENT": "This is to certify that the above person worked during the period stated and has retired."
+    },
+    "name": "Name",
+    "birth": "Date of birth",
+    "group": "Department",
+    "job": "Job",
+    "periodLabel": "Period",
+    "periodLabelNow": "Employed since",
+    "purpose": "Purpose",
+    "period": "{from} to {to}",
+    "periodNow": "{from} to present",
+    "date": "{y}-{m}-{d}",
+    "companyName": "Company",
+    "address": "Address",
+    "phone": "Phone",
+    "bizNo": "Business reg. no.",
+    "seal": "(seal)"
+  },
+  "hrCard": {
+    "title": "Personnel card",
+    "back": "Staff detail",
+    "pdf": "Download PDF",
+    "note": "All staff information on one page. Edit it on the staff detail, payroll and training screens. Downloading the PDF is logged. No resident or bank account numbers are included.",
+    "s": {
+      "basic": "Basic info",
+      "details": "Optional info",
+      "employment": "Employment periods",
+      "history": "Assignment history",
+      "contract": "Pay contract",
+      "training": "Training completed",
+      "notes": "HR notes (latest 15)",
+      "consent": "Privacy consent"
+    },
+    "name": "Name",
+    "employeeNo": "Staff no.",
+    "group": "Department",
+    "job": "Job",
+    "joinedOn": "Hire date",
+    "status": "Status",
+    "active": "Employed",
+    "left": "Left",
+    "role": "Role",
+    "roleOf": {
+      "admin": "Top admin",
+      "manager": "Branch manager",
+      "employee": "Staff"
+    },
+    "phone": "Mobile",
+    "email": "Email",
+    "birth": "Date of birth",
+    "emergency": "Emergency contact {n}",
+    "cert": "Certificate",
+    "car": "Car",
+    "now": "present",
+    "none": "No records.",
+    "pay": {
+      "MONTHLY": "Monthly",
+      "HOURLY": "Hourly",
+      "ANNUAL": "Annual"
+    },
+    "won": " KRW",
+    "consentAt": "Agreed on",
+    "notAgreed": "Not agreed yet",
+    "footer": "{company} · printed {date} · page {n}/{all}"
   }
 }

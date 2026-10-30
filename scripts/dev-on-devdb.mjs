@@ -23,5 +23,11 @@ const env = {
   GEMINI_API_KEY: '', // 번역 호출 끔
 };
 console.log(`\n  개발용 DB로 띄웁니다: ${new URL(dev.DEV_SUPABASE_URL).host}\n  주소: http://localhost:4123\n`);
-const run = spawn('npx', ['next', 'dev', '-p', '4123'], { cwd: root, env, stdio: 'inherit', shell: true });
+// --fast: 운영과 같은 방식(미리 한 번 만들고 띄우기). next dev는 누를 때마다 화면을 새로 조립해 오래 켜 두면 한 번에 수십 초씩 걸린다 (2026-10-30)
+//   고친 코드를 보려면 다시 실행해야 한다(만들기 1~3분). 화면을 고치는 중에는 그냥 dev:devdb, 둘러보며 확인할 때는 --fast
+const fast = process.argv.includes('--fast');
+const startOnly = process.argv.includes('--start'); // 이미 만든 것을 다시 띄우기만(만들기 건너뜀)
+const run = fast
+  ? spawn(startOnly ? 'npx next start -p 4123' : 'npx next build && npx next start -p 4123', { cwd: root, env, stdio: 'inherit', shell: true })
+  : spawn('npx', ['next', 'dev', '-p', '4123'], { cwd: root, env, stdio: 'inherit', shell: true });
 run.on('exit', (c) => process.exit(c ?? 0));

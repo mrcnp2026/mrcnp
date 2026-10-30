@@ -1,36 +1,101 @@
 // 사내게시판 (직원) — 회사가 보낸 글을 본다. 직원은 글쓰기 · 답글이 없다(2026-10-16 의뢰인 알림-8). 본인이 받은 것만.
-import { getTranslations } from 'next-intl/server';
+// 2026-10-30 의뢰인 「게시판도 공지처럼 레이아웃」: 전사공지와 같은 틀 — PC는 「전체 · 안 읽음」 탭 + 표(제목 · 상태 · 보낸 사람 · 올린 날),
+//   폰은 숫자 칸(전체 · 안 읽음) + 목록. 글을 누르면 지금처럼 한 건 보기(/punch/messages/[id])로 간다(열면 읽음으로 남는다).
+import { CountUp } from '@/components/CountUp';
+import { MessagesSquare } from 'lucide-react';
+import { getFormatter, getTranslations } from 'next-intl/server';
 import { HelpTip } from '@/components/Help';
 import Link from 'next/link';
 import { redirect } from 'next/navigation';
 import { MessageList } from '@/components/MessageViews';
-import { PageShell } from '@/components/ui';
+import { PcTable } from '@/components/PcTable';
+import { Chip, PageShell } from '@/components/ui';
 import { getMe } from '@/lib/auth';
 import { createAdminClient } from '@/lib/supabase/admin';
+import { toKstDate } from '@/lib/time';
 import { loadInbox } from '@/lib/work-messages';
 
-export default async function MyMessagesPage() {
+export default async function MyMessagesPage({ searchParams }: { searchParams: Promise<{ f?: string }> }) {
   const me = await getMe();
   if (!me) redirect('/login');
-  const t = await getTranslations('messages');
-  const [items, { data: staff }] = await Promise.all([loadInbox(me), createAdminClient().from('profiles').select('id, name')]);
+  const [t, f, sp] = await Promise.all([getTranslations('messages'), getFormatter(), searchParams]);
+  const [all, { data: staff }] = await Promise.all([loadInbox(me), createAdminClient().from('profiles').select('id, name')]);
   const names = new Map((staff ?? []).map((p) => [p.id as string, p.name as string]));
-  const tab = (on: boolean) => `flex min-h-11 flex-1 lg:flex-none lg:px-4 items-center justify-center border-b-2 text-sm font-bold ${on ? 'border-text text-text lg:border-primary lg:text-primary' : 'border-transparent text-muted hover:text-text'}`;
+  const isUnread = (m: (typeof all)[number]) => !m.readAt && !m.mine;
+  const unread = all.filter(isUnread).length;
+  const onlyUnread = sp.f === 'unread';
+  const list = onlyUnread ? all.filter(isUnread) : all;
+  const from = (id: string | null) => (id ? (names.get(id) ?? '') : t('system'));
   return (
     <PageShell>
       <div>
-        <h1 className="flex flex-wrap items-center gap-x-1 text-2xl font-bold">{t('title')}<HelpTip>{t('intro')}</HelpTip></h1>
+        <h1 className="flex flex-wrap items-center gap-x-1 text-2xl font-semibold text-primary-deep lg:font-bold lg:text-text">
+          <MessagesSquare aria-hidden size={24} strokeWidth={1.75} className="lg:hidden" />
+          {t('title')}
+          <HelpTip>{t('intro')}</HelpTip>
+        </h1>
       </div>
-      {/* 폰에서만 — PC는 왼쪽 메뉴(공지 · 사내게시판)가 같은 일을 해서 겹쳤다 (2026-10-18 디자인) */}
-      <nav className="flex border-b border-border lg:hidden">
-        <Link href="/punch/notices" className={tab(false)}>
-          {t('tabNotices')}
-        </Link>
-        <Link href="/punch/messages" aria-current="page" className={tab(true)}>
-          {t('tabInbox')}
-        </Link>
-      </nav>
-      <MessageList items={items} base="/punch/messages" names={names} sent={false} />
+      <div className="hidden flex-col gap-3 lg:flex">
+        <nav className="flex items-center gap-1 border-b border-border" aria-label={t('title')}>
+          {([['all', t('tabAll'), all.length], ['unread', t('unread'), unread]] as const).map(([k, label, n]) => {
+            const on = (k === 'unread') === onlyUnread;
+            return (
+              <Link key={k} href={k === 'unread' ? '/punch/messages?f=unread' : '/punch/messages'} aria-current={on ? 'page' : undefined} className={`-mb-px flex min-h-11 items-center gap-2 border-b-2 px-3 text-sm font-bold ${on ? 'border-primary text-primary' : 'border-transparent text-muted hover:text-text'}`}>
+                {label}
+                <span className={`num rounded-chip px-2 text-xs ${k === 'unread' && n > 0 ? 'bg-warn-tint text-warn' : 'bg-surface text-muted'}`}>{n}</span>
+              </Link>
+            );
+          })}
+        </nav>
+        <PcTable
+          labels={{ search: t('searchTitle'), empty: t(onlyUnread ? 'emptyUnread' : 'empty') }}
+          cols={[
+            { key: 'name', label: t('colTitle') },
+            { key: 'state', label: t('colState'), search: false },
+            { key: 'from', label: t('colFrom'), search: false },
+            { key: 'date', label: t('colPosted'), search: false },
+          ]}
+          rows={list.map((m) => ({
+            id: m.id,
+            cells: {
+              name: {
+                text: m.title,
+                node: (
+                  <Link href={`/punch/messages/${m.id}`} className={`hover:text-primary ${isUnread(m) ? 'font-bold' : ''}`}>
+                    {m.title}
+                    {m.replies > 0 && <span className="num ml-1.5 text-xs font-normal text-muted">{t('replyCount', { n: m.replies })}</span>}
+                  </Link>
+                ),
+              },
+              state: {
+                text: isUnread(m) ? t('unread') : t('read'),
+                node: (
+                  <span className="flex flex-wrap items-center gap-1">
+                    <Chip tone={m.kind === 'inquiry' ? 'info' : 'neutral'}>{t(`kind.${m.kind}`)}</Chip>
+                    {m.needsReply && <Chip tone="info">{t('needsReply')}</Chip>}
+                    {isUnread(m) ? <Chip tone="warn">{t('unread')}</Chip> : <Chip tone="ok">{t('read')}</Chip>}
+                  </span>
+                ),
+              },
+              from: { text: from(m.senderId), node: <span className="text-muted">{from(m.senderId)}</span> },
+              date: { text: toKstDate(new Date(m.createdAt)), node: <span className="num whitespace-nowrap text-muted">{f.dateTime(new Date(m.createdAt), { dateStyle: 'medium' })}</span> },
+            },
+          }))}
+        />
+      </div>
+      <div className="flex flex-col gap-3 lg:hidden">
+        <dl className="grid grid-cols-2 gap-2">
+          <div className="flex flex-col gap-2 rounded-card bg-tile-2 p-4 shadow-card">
+            <dt className="text-sm text-muted">{t('countAll')}</dt>
+            <dd className="num text-2xl leading-none font-extrabold"><CountUp value={all.length} /></dd>
+          </div>
+          <div className="flex flex-col gap-2 rounded-card bg-tile-1 p-4 shadow-card">
+            <dt className="text-sm text-muted">{t('countNew')}</dt>
+            <dd className={`num text-2xl leading-none font-extrabold ${unread ? 'text-warn' : ''}`}><CountUp value={unread} /></dd>
+          </div>
+        </dl>
+        <MessageList items={all} base="/punch/messages" names={names} sent={false} />
+      </div>
     </PageShell>
   );
 }

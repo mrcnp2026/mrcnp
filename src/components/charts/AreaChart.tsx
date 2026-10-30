@@ -21,7 +21,7 @@ const DASH = `color-mix(in srgb, ${C.grid} 85%, ${C.text})`;
 
 export function AreaChart({ points, unit = '', avgLabel, vsAvg, ariaLabel, after = 0 }: { points: AreaPoint[]; unit?: string; avgLabel?: string; vsAvg?: string; ariaLabel: string; after?: number }) {
   const [hover, setHover] = useState<number | null>(null);
-  const [ref, inView] = useInView<HTMLDivElement>(0.25, after);
+  const [ref, inView] = useInView<HTMLDivElement>(0.15, after);
   const id = useId().replace(/:/g, '');
   const n = points.length;
   if (n === 0) return null;

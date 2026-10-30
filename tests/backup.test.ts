@@ -24,7 +24,7 @@ describe('보관 규칙', () => {
     expect([...cls.values()].filter((v) => v.monthly)).toHaveLength(12);
     expect([...cls.values()].filter((v) => v.yearly)).toHaveLength(3);
     expect(kept.length).toBeLessThanOrEqual(8 + 12 + 3);
-    expect(kept).toContain('2024-01-07'); // 첫해 첫 백업은 영구
+    expect(kept).toContain('2024-01-07'); // 5년 안이면 첫해 첫 백업도 남는다
     expect(kept.at(-1)).toBe(all.at(-1)); // 방금 만든 것은 남는다
   });
 
@@ -35,6 +35,14 @@ describe('보관 규칙', () => {
     const kept2 = next.filter((d) => !toDelete(next).includes(d));
     const yearly = (ds: string[]) => [...classify(ds)].filter(([, v]) => v.yearly).map(([d]) => d);
     expect(yearly(kept2)).toEqual(yearly(kept1));
+  });
+
+  it('매년 백업은 최근 5년치만 남긴다', () => {
+    const all = sundays(52 * 7); // 2024 ~ 2030
+    const kept = all.filter((d) => !toDelete(all).includes(d));
+    const years = [...classify(kept)].filter(([, v]) => v.yearly).map(([d]) => d.slice(0, 4));
+    expect(years).toEqual(['2026', '2027', '2028', '2029', '2030']);
+    expect(kept.some((d) => d.startsWith('2024'))).toBe(false);
   });
 
   it('백업이 몇 개 없으면 아무것도 지우지 않는다', () => {

@@ -32,7 +32,8 @@ export function motionScale(): number {
 
 /** 화면에 1/4쯤 들어온 순간 한 번 true. 그 상자에 `od-wait` + (보이면) `od-in`을 붙이면 안의 CSS 움직임이 그때 시작한다.
  *  after(ms): 화면을 연 뒤 이 시간이 지나기 전에는 시작하지 않는다 — 첫 화면에 그래프가 여럿 보일 때 차례로 움직이게
- *  (2026-10-27 의뢰인: 휴가 현황 막대가 끝난 뒤 도넛 · 지각 막대가 시작해야 끝까지 보인다). 나중에 스크롤해서 보이면 기다리지 않는다 */
+ *  (2026-10-27 의뢰인: 휴가 현황 막대가 끝난 뒤 도넛 · 지각 막대가 시작해야 끝까지 보인다). 나중에 스크롤해서 보이면 기다리지 않는다
+ *  — 화면을 연 순간 이미 보이던 것만 after를 기다린다. 처음엔 안 보이다가 스크롤로 들어오면 바로 시작(2026-10-29 의뢰인: 폰에서 조금 내리면 늦게 시작한다) */
 export function useInView<T extends Element>(threshold = 0.25, after = 0) {
   const ref = useRef<T>(null);
   const [inView, setInView] = useState(false);
@@ -44,19 +45,22 @@ export function useInView<T extends Element>(threshold = 0.25, after = 0) {
     const el = ref.current;
     if (!el || inView) return;
     let timer: ReturnType<typeof setTimeout> | undefined;
-    const go = () => {
-      const wait = reduceMotion() ? 0 : Math.max(0, after - (performance.now() - born.current));
+    let first = true; // 관찰을 시작한 첫 알림 = 화면을 연 순간의 상태
+    const go = (atOpen: boolean) => {
+      const wait = reduceMotion() || !atOpen ? 0 : Math.max(0, after - (performance.now() - born.current));
       if (wait === 0) setInView(true);
       else timer = setTimeout(() => setInView(true), wait);
     };
     if (typeof IntersectionObserver === 'undefined') {
-      go();
+      go(true);
       return () => clearTimeout(timer);
     }
     const io = new IntersectionObserver((es) => {
+      const atOpen = first;
+      first = false;
       if (es.some((e) => e.isIntersecting)) {
         io.disconnect();
-        go();
+        go(atOpen);
       }
     }, { threshold });
     io.observe(el);

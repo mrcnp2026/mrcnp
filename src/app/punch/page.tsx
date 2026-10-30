@@ -36,6 +36,7 @@ import { ShiftRequestSheet } from './schedule/request/ShiftRequestSheet';
 import { TodayCard } from './TodayCard';
 import { WeekBar, type WeekCell } from './WeekBar';
 import { switchOn } from '@/lib/switches';
+import { getSettingAt } from '@/lib/settings';
 
 export default async function PunchPage({ searchParams }: { searchParams: Promise<{ w?: string; m?: string; new?: string }> }) {
   const me = await getMe();
@@ -82,6 +83,7 @@ export default async function PunchPage({ searchParams }: { searchParams: Promis
           overtimeMinutes: d.overtimeMinutes + d.holidayMinutes,
         })),
         is5OrMore: today.week?.colored ?? true,
+        cautionHours: await getSettingAt('week.caution_hours', weekStart),
       });
   const weekHref = (n: number) => {
     const w = addDays(weekStart, 7 * n);

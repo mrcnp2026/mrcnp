@@ -29,7 +29,9 @@ export async function slipPdfBytes(a: SlipPdfInput): Promise<{ bytes: Uint8Array
   const how = (l: SlipPdfInput['lines'][number]) => {
     if (l.quantity === null) return null;
     if (l.unitPrice !== null) return l.factor !== null ? t('howHours', { h: num(l.quantity), rate: num(l.unitPrice), factor: l.factor }) : t('howHoursPlain', { h: num(l.quantity), rate: num(l.unitPrice) });
-    return l.factor !== null ? t('howRate', { base: num(l.quantity), rate: l.factor }) : null;
+    // 요율은 %로 (0.0475 → 4.75%) — 2026-10-30
+    const pct = (f: string) => (Number(f) > 0 && Number(f) < 1 ? `${nf.format(Math.round(Number(f) * 1e6) / 1e4)}%` : f);
+    return l.factor !== null ? t('howRate', { base: num(l.quantity), rate: pct(l.factor) }) : null;
   };
   const h = (m: number) => t('hours', { h: nf.format(Math.round((m / 60) * 100) / 100) });
   const tm = a.time;
@@ -40,9 +42,10 @@ export async function slipPdfBytes(a: SlipPdfInput): Promise<{ bytes: Uint8Array
           [t('workDays'), tm.workDays === undefined ? '—' : t('days', { n: tm.workDays })],
           [t('workTotal'), h(tm.workedMinutes)],
           [t('workRegular'), h(Math.max(0, tm.workedMinutes - tm.overtimeMinutes - tm.holidayMinutes))],
-          [t('workOvertime'), h(tm.overtimeMinutes)],
-          [t('workNight'), h(tm.nightMinutes)],
-          [t('workHoliday'), h(tm.holidayMinutes)],
+          // 0인 시간은 적지 않는다(2026-10-30 의뢰인: 쓸데없는 칸)
+          ...(tm.overtimeMinutes ? [[t('workOvertime'), h(tm.overtimeMinutes)] as [string, string]] : []),
+          ...(tm.nightMinutes ? [[t('workNight'), h(tm.nightMinutes)] as [string, string]] : []),
+          ...(tm.holidayMinutes ? [[t('workHoliday'), h(tm.holidayMinutes)] as [string, string]] : []),
           ...(tm.paidLeaveMinutes ? [[t('workPaidLeave'), h(tm.paidLeaveMinutes)] as [string, string]] : []),
           ...(tm.weeklyRestMinutes ? [[t('workWeeklyRest'), h(tm.weeklyRestMinutes)] as [string, string]] : []),
           ...(tm.paidHolidayMinutes ? [[t('workPaidHoliday'), h(tm.paidHolidayMinutes)] as [string, string]] : []),
@@ -58,7 +61,7 @@ export async function slipPdfBytes(a: SlipPdfInput): Promise<{ bytes: Uint8Array
     labels: {
       title: t('pdfTitle', { month: a.month }), company: t('hCompany'), no: t('hNo'), name: t('hName'), group: t('hGroup'), period: t('hPeriod'), payDate: t('hPayDate'), revision: t('hRevision'),
       pay: t('pay'), deduction: t('deduction'), item: t('pdfItem'), how: t('pdfHow'), amount: t('pdfAmount'), payTotal: t('pdfPayTotal'), deductionTotal: t('pdfDeductionTotal'), net: t('net'), none: t('none'), taxable: t('taxableTotal'), exempt: t('exemptTotal'),
-      draft: a.draft ? t('pdfDraft') : null, practice: a.practice ? t('practice') : null, correction: a.revision > 1 ? t('correctedNote', { reason: a.correctionReason ?? '' }) : null,
+      draft: a.draft ? t('pdfDraft') : null, practice: a.practice ? t('practice') : null, correction: null, correctionMark: a.revision > 1 ? t('pdfCorrectionMark', { n: a.revision }) : null, formula: t('pdfFormula'), thanks: t('pdfThanks'), // 정정 사유 문장은 종이에 넣지 않는다(화면에만)
       familyTemp: a.familyTemp != null ? t('familyTemp', { n: a.familyTemp }) : null,
       note: t('pdfNote'), page: (n, all) => t('pdfPage', { n, all }), money: (n) => t('won', { n: nf.format(n) }),
     },

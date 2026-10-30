@@ -59,9 +59,10 @@ export async function removeStored(names: string[]): Promise<void> {
   if (!r.ok) throw new Error(`보관소 파일 지우기 실패 ${r.status}`);
 }
 
-/** 보관 규칙: 최근 14일은 전부, 그 밖에는 달마다 첫 백업(최근 12개월), 해마다 첫 백업(영구). 같은 날 여러 개면 모두 최근 14일 안에서만 둔다 */
+/** 보관 규칙: 최근 14일은 전부, 그 밖에는 달마다 첫 백업(최근 12개월), 해마다 첫 백업(최근 5년 — 2026-10-29 의뢰인, 결정 운영-3). 같은 날 여러 개면 모두 최근 14일 안에서만 둔다 */
 export const KEEP_DAYS = 14;
 export const KEEP_MONTHS = 12;
+export const KEEP_YEARS = 5;
 export function keepRule(stamps: { name: string; date: string }[], today: string): Map<string, { recent: boolean; monthly: boolean; yearly: boolean }> {
   const res = new Map(stamps.map((s) => [s.name, { recent: false, monthly: false, yearly: false }]));
   const cutoff = new Date(Date.parse(today) - (KEEP_DAYS - 1) * 86_400_000).toISOString().slice(0, 10);
@@ -73,6 +74,6 @@ export function keepRule(stamps: { name: string; date: string }[], today: string
     if (!firstY.has(s.date.slice(0, 4))) firstY.set(s.date.slice(0, 4), s.name);
   }
   for (const n of [...firstM.values()].slice(-KEEP_MONTHS)) res.get(n)!.monthly = true;
-  for (const n of firstY.values()) res.get(n)!.yearly = true;
+  for (const n of [...firstY.values()].slice(-KEEP_YEARS)) res.get(n)!.yearly = true;
   return res;
 }

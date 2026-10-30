@@ -22,6 +22,7 @@ import { myDecidedCount } from '@/lib/my-decided';
 import { unreadCount } from '@/lib/work-messages';
 import { AlertBell, AlertsProvider } from './Alerts';
 import { SystemNavProvider } from './SystemNav';
+import { canViewLogs } from '@/lib/log-access';
 import { PhoneSearchLink } from './DeskTop';
 import { BottomTabs } from './BottomTabs';
 import { SpaceShell } from './ConsoleSheet';
@@ -56,7 +57,7 @@ export async function AppFrame({ me, children, overlay }: { me: Me; children: Re
   const languages = languageOptions();
   return (
     <AlertsProvider initial={{ notices: unread, messages: unreadMsg, requests: inboxCount, decided, inquiry: inquiry.unseenAnswers + inquiry.waiting }}>
-      <SystemNavProvider on={ops}>
+      <SystemNavProvider on={ops} logs={await canViewLogs(me)}>
       {/* PC 위 띠: 로고 · 메뉴 검색 · 공간 전환(내 화면 / 관리자 화면) · 알림 · 통합설정 · 내 메뉴 */}
       <header className="glass sticky top-0 z-20 hidden h-14 items-center gap-4 border-b px-5 lg:flex">
         <div className="flex w-66 shrink-0 items-center">

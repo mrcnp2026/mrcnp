@@ -90,12 +90,14 @@ export function CardTitle({ children, aside, help }: { icon?: LucideIcon; childr
   );
 }
 
+const WIDTH = 'max-w-md md:max-w-3xl lg:mx-0 lg:max-w-none'; // 모든 화면이 같은 폭 — PC는 옆 판 오른쪽 남은 영역을 끝까지 쓴다(다우오피스처럼, 2026-10-30 의뢰인 스샷2/사이즈 · 사이즈1 — 1920px 모니터에서 1280px 제한은 오른쪽이 비었다)
 export function PageShell({ children, wide = false, flush = false }: { children: ReactNode; wide?: boolean; flush?: boolean }) {
   // 화면 좌우 16px, 폰 기준 폭 (4-9). 폰에서는 언제나 좁은 한 칸이다.
-  // PC(1024px~): wide는 본문 전체 폭 — 목록·표·달력은 전부 이것을 쓴다 (2026-10-11 의뢰인: PC 화면 전체를 쓸 것, 2분할 금지).
-  //   기본(좁은 쪽)은 상세·입력 화면용으로 왼쪽에 붙인 읽기 좋은 폭이다(가운데로 모으지 않는다)
+  // 2026-10-30 의뢰인: 「모든 메뉴 · 하위 메뉴의 화면 좌우 폭이 같아야 한다 — 늘었다 줄었다 하면 어지럽다(다우오피스처럼)」 →
+  //   폭은 한 가지: 옆 메뉴 판 오른쪽 남은 영역을 채운다(제한 없음). 오른쪽은 남긴다 — 왼쪽 40px · 오른쪽 64px(넓은 화면 112px). 다우오피스의 오른쪽 메뉴 자리만큼(같은 날 의뢰인: 「끝까지 채우는 게 아니라 우리는 우측에 메뉴가 없잖아」)
+  //   wide는 예전 화면 코드와 맞추려고 남겨 둔 칸이고 이제 폭에 영향을 주지 않는다. 화면 안에서 폭을 따로 좁히지 않는다.
   // flush: 폰에서 위 여백·사이 여백 없이 — 목록 위 줄(ListBar)이 화면 맨 위에 붙고 목록이 바로 이어진다 (2026-10-11)
-  return <main className={`mx-auto flex w-full flex-col px-4 lg:gap-4 lg:px-8 lg:py-6 ${flush ? 'gap-0 pb-4' : 'gap-3 py-4'} ${wide ? 'max-w-md md:max-w-3xl lg:mx-0 lg:max-w-none' : 'max-w-md lg:mx-0 lg:max-w-5xl'}`}>{children}</main>;
+  return <main className={`mx-auto flex w-full flex-col px-4 lg:gap-4 lg:pr-16 lg:pl-10 lg:py-6 xl:pr-28 ${flush ? 'gap-0 pb-4' : 'gap-3 py-4'} ${WIDTH}`}>{children}</main>;
 }
 
 /**

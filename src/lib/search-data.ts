@@ -19,6 +19,7 @@ import { loadRequests } from '@/lib/request-data';
 import { viewerScope } from '@/lib/scope';
 import { matchLevel, snippet, sortHits, SEARCH_KINDS, type SearchHit, type SearchKind } from '@/lib/search';
 import { createAdminClient } from '@/lib/supabase/admin';
+import { canViewLogs } from '@/lib/log-access';
 import { loadInbox, loadSent } from '@/lib/work-messages';
 
 export type SearchResult = { q: string; hits: SearchHit[]; counts: Record<SearchKind, { exact: number; related: number }> };
@@ -43,8 +44,9 @@ export async function runSearch(me: Me, rawQ: string): Promise<SearchResult> {
   };
 
   // ── 메뉴 (내가 열 수 있는 공간만) ──
+  const logs = await canViewLogs(me); // 접속 · 변경 기록은 볼 수 있는 사람만 찾는다 (2026-10-30)
   for (const space of (['my', 'admin', 'console'] as const).filter((s) => s === 'my' || (s === 'admin' && staff) || (s === 'console' && role === 'admin'))) {
-    for (const app of appsFor(space, role, isSystemAdminNo(me.employeeNo))) {
+    for (const app of appsFor(space, role, isSystemAdminNo(me.employeeNo), logs)) {
       const appName = tf(space === 'console' ? `app.${app.key}` : `appFull.${app.key}`);
       for (const g of app.groups) {
         const groupName = g.key ? tf(`group.${g.key}`) : '';

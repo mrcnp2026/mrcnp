@@ -18,7 +18,8 @@ function labels(t: T, nf: Intl.NumberFormat, o: { title: string; period: string;
   return {
     title: o.title, company: t('hCompany'), no: t('hNo'), name: t('hName'), group: o.group, period: o.period, payDate: o.payDate, revision: t('hRevision'),
     pay: t('pay'), deduction: t('deduction'), item: t('item'), how: t('how'), amount: t('amount'), payTotal: t('payTotal'), deductionTotal: t('deductionTotal'), net: t('net'), none: t('none'),
-    draft: o.draft, practice: o.practice ? t('practice') : null, correction: o.correction, note: o.note, page: (n, all) => t('page', { n, all }), money: (n) => t('won', { n: nf.format(n) }),
+    // 정정 사유 문장은 종이에 넣지 않는다 — 위에 「정정본」 표시만 (2026-10-30)
+    draft: o.draft, practice: o.practice ? t('practice') : null, correction: null, correctionMark: o.correction ? t('correctionMark') : null, formula: t('formula'), thanks: t('thanks'), note: o.note, page: (n, all) => t('page', { n, all }), money: (n) => t('won', { n: nf.format(n) }),
   };
 }
 

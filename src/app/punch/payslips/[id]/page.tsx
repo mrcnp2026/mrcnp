@@ -14,7 +14,6 @@ import { loadOrgGroups } from '@/lib/org-data';
 import { loadMySlip } from '@/lib/payroll/publish-data';
 import { asSlipTime } from '@/lib/payroll/slip-pdf-response';
 import { createAdminClient } from '@/lib/supabase/admin';
-import { PrintButton } from '@/app/admin/payroll/runs/RunForms';
 
 export default async function MyPayslipPage({ params }: { params: Promise<{ id: string }> }) {
   const me = await getMe();
@@ -59,12 +58,12 @@ export default async function MyPayslipPage({ params }: { params: Promise<{ id: 
           ))}
         </dl>
       </div>
+      {/* 「인쇄 · PDF로 저장」은 「명세서 받기」와 겹쳐 뺐다 (2026-10-30 의뢰인) */}
       <div data-noprint className="flex flex-wrap gap-2">
         <a href={`/api/payslips/${slip.id}/pdf`} className="inline-flex h-9 items-center gap-1.5 rounded-button bg-primary px-3.5 text-sm font-semibold text-on-primary">
           <Download aria-hidden size={16} />
           {t('pdf')}
         </a>
-        <PrintButton label={t('print')} />
       </div>
       {replacedBy && (
         <p className="rounded-card border border-warn bg-warn-tint p-3 text-sm text-warn">

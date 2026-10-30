@@ -1,6 +1,6 @@
 // 직원 상세 (2026-10-05 의뢰인: 샤플 대조) — 한 사람에 관한 일을 한 화면에서: 소속·연락처, 로그인(가입 여부), 기록 바로가기, 정보 수정.
 // 지우는 버튼은 없다 (4-6). 퇴사·권한·로그인 초기화는 아래 「관리」 묶음에서 사유와 함께 한다.
-import { CalendarDays, ChevronDown, KeyRound, Smartphone } from 'lucide-react';
+import { CalendarDays, ChevronDown, IdCard, KeyRound, Smartphone } from 'lucide-react';
 import { getFormatter, getTranslations } from 'next-intl/server';
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
@@ -165,6 +165,13 @@ export default async function MemberDetailPage({ params, searchParams }: { param
           <CalendarDays aria-hidden size={18} strokeWidth={2} />
           {t('toRecords')}
         </Link>
+        {/* 인사기록카드 — 한 장으로 보기 · PDF (2026-10-29 남은 일 9-4) */}
+        {me.role === 'admin' && (
+          <Link href={`/admin/members/${p.id}/card`} className="inline-flex min-h-11 w-full items-center justify-center gap-2 rounded-button border border-border bg-bg px-4 text-sm font-bold text-text lg:w-auto">
+            <IdCard aria-hidden size={18} strokeWidth={2} />
+            {t('toHrCard')}
+          </Link>
+        )}
         {/* 숫자 네 칸: 상자 없이 여백 + 가는 세로선으로만 나눈다 (2026-10-23 의뢰인: 카드 남발) */}
         <dl className="grid w-full grid-cols-2 gap-x-6 gap-y-5 border-t border-border pt-5 md:grid-cols-4 md:gap-x-0 md:divide-x md:divide-border [&>*]:md:px-6 [&>*:first-child]:md:pl-0">
           <div className="flex flex-col gap-1">

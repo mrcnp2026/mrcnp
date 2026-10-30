@@ -17,6 +17,7 @@ import { classifyDay } from '@/lib/today';
 import type { HolidayRow, PunchCorrection, PunchEvent, WorkRule } from '@/lib/types';
 import { weeklyHours } from '@/lib/weekly-hours';
 import { calcWeek } from '@/lib/worktime';
+import { getSettingAt } from '@/lib/settings';
 
 /**
  * 근무규칙 이력 전체 (숨긴 행 제외). 판정은 날짜마다 그날 유효한 규칙으로 한다 (② 4-1 — src/lib/rule-at.ts).
@@ -157,6 +158,7 @@ export async function loadEmployeeToday(employeeId: string, now: Date): Promise<
     const calc = new Map(calcWeek(days, (d) => ruleAt(versions, d) ?? rule).map((r) => [r.workDate, r]));
     week = weeklyHours({
       weekStart,
+      cautionHours: await getSettingAt('week.caution_hours', weekStart),
       // 직원 화면의 이번 주 시간 = 출근부터 퇴근까지 실제 시간의 합 (끝난 출퇴근만, 2026-10-02 의뢰인).
       // 휴게 공제는 급여·관리자 집계(calcWeek)에서 한다 — 합계는 보여 주기용, 정규 = 합계 − 연장.
       dailyWork: days.map((d) => ({
