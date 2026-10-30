@@ -1,6 +1,6 @@
 // 증명서 발급 (2026-10-29 남은 일 9-3 · 2026-10-30 다시 짬) — 최고관리자.
-// 왼쪽: 처리할 신청 → 「미리보기 · 고치기」로 내용을 확인 · 고친 뒤 발급 / 반려. 아래: 발급 대장(보기 · 받기).
-// 오른쪽: 바로 발급(퇴사자 포함) — 사람 · 종류 · 용도를 고르면 같은 미리보기 창이 열린다.
+// 왼쪽: 바로 발급(퇴사자 포함) — 직원 · 종류 · 용도를 고르면 미리보기 창이 열린다 (2026-10-30 의뢰인: 좌우를 바꿈).
+// 오른쪽: 처리할 신청 → 「미리보기 · 고치기」로 내용을 확인 · 고친 뒤 발급 / 반려. 아래: 발급 대장(보기 · 받기).
 // 두 칸은 제목 줄을 맞춘다(2026-10-30 의뢰인: 그리드 정렬 위치가 안 맞는다). 발급한 내용은 고치지 못하고, 내려받으면 기록이 남는다.
 import { getTranslations } from 'next-intl/server';
 import { notFound } from 'next/navigation';
@@ -41,7 +41,15 @@ export default async function AdminCertificatesPage() {
       {missing ? (
         <p className="rounded-card bg-warn-tint p-4 text-sm text-warn">{t('missing')}</p>
       ) : (
-        <div className="flex flex-col gap-6 lg:grid lg:grid-cols-[minmax(0,1fr)_24rem] lg:items-start lg:gap-6">
+        <div className="flex flex-col gap-6 lg:grid lg:grid-cols-[24rem_minmax(0,1fr)] lg:items-start lg:gap-6">
+          {/* 왼쪽: 바로 발급 · 오른쪽: 처리할 신청 · 발급 대장 (2026-10-30 의뢰인: 좌우를 바꾼다) */}
+          <section className="flex flex-col gap-2 lg:sticky lg:top-4">
+            <h2 className="flex min-h-8 items-center font-bold">{t('directTitle')}</h2>
+            <div className="flex flex-col gap-3 rounded-card border border-border bg-bg p-4">
+              <p className="text-xs text-muted">{t('directHint')}</p>
+              <CertRequestForm kinds={CERT_KINDS} people={staff.map((p) => ({ id: p.id as string, name: p.name as string, off: !p.active }))} />
+            </div>
+          </section>
           <div className="flex flex-col gap-6">
             <section className="flex flex-col gap-2">
               <h2 className="flex min-h-8 items-center font-bold">{t('openTitle', { n: open.length })}</h2>
@@ -52,13 +60,6 @@ export default async function AdminCertificatesPage() {
               <CertList rows={done} nameOf={nameOf} />
             </section>
           </div>
-          <section className="flex flex-col gap-2 lg:sticky lg:top-4">
-            <h2 className="flex min-h-8 items-center font-bold">{t('directTitle')}</h2>
-            <div className="flex flex-col gap-3 rounded-card border border-border bg-bg p-4">
-              <p className="text-xs text-muted">{t('directHint')}</p>
-              <CertRequestForm kinds={CERT_KINDS} people={staff.map((p) => ({ id: p.id as string, name: p.name as string, off: !p.active }))} />
-            </div>
-          </section>
         </div>
       )}
     </PageShell>
