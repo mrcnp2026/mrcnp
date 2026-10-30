@@ -132,9 +132,11 @@ export function PushToggle({ mode = 'menu', audience = 'staff', bare = false, ca
           </span>
         </button>
       </div>
-      <p className="text-xs text-muted">
-        {note ?? (state === 'ios-home' ? t('iosHome') : state === 'denied' ? t('denied') : state === 'unsupported' ? t('unsupported') : t(audience === 'employee' ? 'helpEmployee' : 'help'))}
-      </p>
+      {/* 관리자(최고관리자 · 시스템관리자)에게는 「휴가 신청 · 정정 요청 …을 알려 드립니다」 설명을 빼고, 막혔을 때 할 일만 (2026-10-30 의뢰인) */}
+      {(() => {
+        const line = note ?? (state === 'ios-home' ? t('iosHome') : state === 'denied' ? t('denied') : state === 'unsupported' ? t('unsupported') : audience === 'employee' ? t('helpEmployee') : null);
+        return line && <p className="text-xs text-muted">{line}</p>;
+      })()}
     </div>
   );
 }
