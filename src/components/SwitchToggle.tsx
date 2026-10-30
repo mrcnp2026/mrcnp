@@ -6,7 +6,8 @@ import { useState } from 'react';
 import { callApi } from '@/components/client-api';
 
 // pushAdmin: 통합설정 › 알림의 「관리자 폰 알림 받는 사람」 줄 — 회사 스위치 대신 그 관리자의 받기를 켜고 끈다 (2026-10-21, 알림-9)
-export function SwitchToggle({ k, on, label, pushAdmin }: { k: string; on: boolean; label: string; pushAdmin?: string }) {
+// endpoint: 통합설정 밖의 스위치(명세서 산출방식, 2026-10-30)는 다른 주소로 보낸다
+export function SwitchToggle({ k, on, label, pushAdmin, endpoint = '/api/admin/switches' }: { k: string; on: boolean; label: string; pushAdmin?: string; endpoint?: string }) {
   const t = useTranslations('admin.settings.switch');
   const router = useRouter();
   const [value, setValue] = useState(on);
@@ -17,7 +18,7 @@ export function SwitchToggle({ k, on, label, pushAdmin }: { k: string; on: boole
     setValue(next);
     setBusy(true);
     setFailed(false);
-    const r = await callApi('/api/admin/switches', pushAdmin ? { pushAdmin, on: next } : { key: k, on: next });
+    const r = await callApi(endpoint, pushAdmin ? { pushAdmin, on: next } : { key: k, on: next });
     setBusy(false);
     if (!r.ok) {
       setValue(!next);

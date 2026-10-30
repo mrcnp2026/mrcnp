@@ -22,9 +22,10 @@ export const companyProfile = cache(async (): Promise<CompanyProfile> => {
   return { ...EMPTY, ...((data?.[0]?.value as Partial<CompanyProfile> | undefined) ?? {}) };
 });
 
-/** 문서 · 명세서 · 화면 제목에 쓰는 회사 이름 — 비어 있으면 원래 이름 */
+/** 문서 · 명세서 · 화면 제목에 쓰는 회사 이름 — 비어 있거나 영문 약칭(MRCNP)이면 법인 이름 「(주)엠알씨앤피」, 「(주) 」 뒤 띄어쓰기는 붙인다 (2026-10-30 의뢰인) */
 export async function companyName(): Promise<string> {
-  return (await companyProfile()).name.trim() || BRAND.name;
+  const v = (await companyProfile()).name.trim().replace(/^\(\s*주\s*\)\s*/, '(주)');
+  return !v || /^mrcnp$/i.test(v) ? BRAND.legalName : v;
 }
 
 export async function putCompanyProfile(patch: Partial<CompanyProfile>, actorId: string): Promise<CompanyProfile> {

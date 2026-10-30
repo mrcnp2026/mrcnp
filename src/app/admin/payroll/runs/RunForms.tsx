@@ -264,7 +264,7 @@ export function OverrideForm({ id, employeeId, codes, active }: { id: string; em
   );
 }
 
-export function PublishAll({ id, waiting }: { id: string; waiting: number }) {
+export function PublishAll({ id, waiting, aside }: { id: string; waiting: number; aside?: React.ReactNode }) {
   const t = useTranslations('admin.payRuns');
   const { busy, err, send } = useRun(`/api/admin/payroll/runs/${id}`);
   const [msg, setMsg] = useState<string | null>(null);
@@ -283,6 +283,7 @@ export function PublishAll({ id, waiting }: { id: string; waiting: number }) {
         >
           {t('publishAll', { n: waiting })}
         </Button>
+        {aside}
         {msg && <span role="status" className="text-ok">{msg}</span>}
       </div>
       <p className="text-xs text-faint">{t('publishHint')}</p>

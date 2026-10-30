@@ -3,6 +3,7 @@ import 'server-only';
 import { getTranslations } from 'next-intl/server';
 import { companyName } from '@/lib/company'; // 통합설정 › 회사 기본설정의 회사명 (2026-10-18)
 import { groupPath } from '@/lib/org';
+import { slipCalcShown } from '@/lib/switches';
 import { loadOrgGroups } from '@/lib/org-data';
 import { buildSlipPdf } from './slip-pdf';
 
@@ -23,11 +24,12 @@ export const asSlipTime = (v: unknown): SlipTime | null => {
 
 /** 명세서 한 장의 PDF와 파일 이름 — 응답 한 장(slipPdfResponse)과 대장 전체 묶음이 같이 쓴다 */
 export async function slipPdfBytes(a: SlipPdfInput): Promise<{ bytes: Uint8Array; file: string; draftLabel: string; fileLabel: string }> {
-  const [t, groups] = await Promise.all([getTranslations({ locale: a.locale, namespace: 'payslip' }), loadOrgGroups()]);
+  const [t, groups, calcOn] = await Promise.all([getTranslations({ locale: a.locale, namespace: 'payslip' }), loadOrgGroups(), slipCalcShown()]);
   const nf = new Intl.NumberFormat(a.locale, { maximumFractionDigits: 4 });
   const num = (v: string | null) => (v === null ? '' : nf.format(Number(v)));
+  // 산출방식이 꺼져 있으면(관리자 토글, 2026-10-30) 모든 줄이 null → buildSlipPdf가 계산 방법 칸을 그리지 않는다
   const how = (l: SlipPdfInput['lines'][number]) => {
-    if (l.quantity === null) return null;
+    if (!calcOn || l.quantity === null) return null;
     if (l.unitPrice !== null) return l.factor !== null ? t('howHours', { h: num(l.quantity), rate: num(l.unitPrice), factor: l.factor }) : t('howHoursPlain', { h: num(l.quantity), rate: num(l.unitPrice) });
     // 요율은 %로 (0.0475 → 4.75%) — 2026-10-30
     const pct = (f: string) => (Number(f) > 0 && Number(f) < 1 ? `${nf.format(Math.round(Number(f) * 1e6) / 1e4)}%` : f);

@@ -4489,6 +4489,7 @@
       "colPublish": "Published to employee",
       "pubSummary": "Published {on} · not published {off}",
       "publishAll": "Publish to the remaining {n}",
+      "calcToggle": "Show calculation method",
       "publishDone": "Published to {n}.",
       "publishHint": "Once published, each employee sees only their own payslip. Employees get a phone notification, and an email with the locked PDF if they have an email address. No text message is sent. Publishing does not mean the transfer was made.",
       "publishOne": "Publish",

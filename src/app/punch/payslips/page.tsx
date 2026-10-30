@@ -2,9 +2,9 @@
 // 2026-10-15 의뢰인 다시 지적: 「입력칸 뒤에 옅은 파란 칸, 미입력 같은 글은 쓰지 않는다, 숫자는 오른쪽 · 글자는 왼쪽, 명세서는 달력으로 지난달을 고른다,
 //   근로자가 알 필요 없는 내용은 빼고 일반적인 급여명세서 항목만」 →
 //   ① 칸 모양: 왼쪽 이름표(오른쪽 맞춤) + 옅은 파란 칸. 값이 없으면 칸만 비워 둔다 ② 안내 문장 · 「○일부터 적용」 · 환산 설명 · 원천징수 비율은 뺐다
-//   ③ 명세서: [달 고르기(달력)] [조회] → 그해 목록 + 고른 달의 지급 · 공제 항목(PC는 나란히 2칸, 폰은 목록 → 한 장 화면). 계산 방법은 한 장 화면 · PDF에 있다(임금명세서 기재 사항).
+//   ③ 명세서: [달 고르기(달력)] [조회] → 그해 목록 + 고른 달의 지급 · 공제 항목(PC는 나란히 2칸, 폰은 목록 → 한 장 화면). 직원 화면에는 계산 방법(시간 × 단가 × 계수)을 보이지 않는다 (2026-10-30 의뢰인).
 // 계좌 · 주민등록번호는 민감정보 결정(급여-36 · 37) 전이라 칸만 둔다(비어 있음). 관리자가 공개한 명세서만 보인다 (PRD v1.3 E01).
-import { ChevronDown, Download, FileText, Search, Wallet } from 'lucide-react';
+import { ChevronDown, Download, Search, Wallet } from 'lucide-react';
 import { getFormatter, getTranslations } from 'next-intl/server';
 import Link from 'next/link';
 import { redirect } from 'next/navigation';
@@ -111,12 +111,9 @@ export default async function MyPayPage({ searchParams }: { searchParams: Promis
               <dd className="num text-base font-bold text-muted"><CountUp value={n(picked.slip.deduction)} /></dd>
             </div>
           </dl>
-          <div className="flex gap-2 lg:flex-col">
-            <Link href={`/punch/payslips/${picked.slip.id}`} className="inline-flex h-9 items-center justify-center gap-1.5 rounded-button bg-primary px-3.5 text-sm font-semibold text-on-primary">
-              <FileText aria-hidden size={16} />
-              {tm('heroOpen')}
-            </Link>
-            <a href={`/api/payslips/${picked.slip.id}/pdf`} className="inline-flex h-9 items-center justify-center gap-1.5 rounded-button border border-border bg-bg px-3.5 text-sm font-semibold hover:bg-surface">
+          <div className="flex flex-col gap-2">
+            {/* 「명세서 보기」는 뺐다 · 받기 단추는 초록 (2026-10-30 의뢰인). 산출방식 켜기 · 끄기는 급여대장 공개 단추 옆 */}
+            <a href={`/api/payslips/${picked.slip.id}/pdf`} className="inline-flex h-9 items-center justify-center gap-1.5 rounded-button bg-ok px-3.5 text-sm font-semibold text-on-primary hover:opacity-90">
               <Download aria-hidden size={16} />
               {tm('printSlip')}
             </a>
@@ -201,7 +198,7 @@ export default async function MyPayPage({ searchParams }: { searchParams: Promis
           </form>
           <span className="ml-auto flex items-center gap-2">
             {picked && (
-              <a href={`/api/payslips/${picked.slip.id}/pdf`} className="inline-flex h-9 items-center gap-1.5 rounded-button border border-border bg-bg px-3 text-sm font-semibold hover:bg-surface">
+              <a href={`/api/payslips/${picked.slip.id}/pdf`} className="inline-flex h-9 items-center gap-1.5 rounded-button bg-ok px-3 text-sm font-semibold text-on-primary hover:opacity-90">
                 <Download aria-hidden size={14} />
                 {tm('printSlip')}
               </a>
@@ -287,11 +284,6 @@ export default async function MyPayPage({ searchParams }: { searchParams: Promis
                   <span className="text-sm font-bold">{tm('colNet')}</span>
                   <span className="num text-xl font-bold">{n(picked.slip.net)}</span>
                 </div>
-                <p className="px-5 py-2 text-right">
-                  <Link href={`/punch/payslips/${picked.slip.id}`} className="text-sm text-primary">
-                    {tm('open')} ›
-                  </Link>
-                </p>
               </>
             )}
           </div>

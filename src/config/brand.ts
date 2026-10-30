@@ -3,6 +3,7 @@
 // ⚠️ 로고의 빨강은 로고 안에서만 쓴다. 화면 색으로 가져오지 않는다 — 빨강은 위험·오류 신호 전용이다 (부록 R-10-8 색 규칙 5).
 export const BRAND = {
   name: 'MRCNP',
+  legalName: '(주)엠알씨앤피', // 명세서 · 증명서 등 양식에 찍는 회사 이름 (2026-10-30 의뢰인 — 붙여 쓴다)
   appName: 'MRCNP Attendance',
   logo: { src: '/brand/logo.png', width: 926, height: 279 },
   mark: { src: '/brand/mark.png', width: 512, height: 512 },

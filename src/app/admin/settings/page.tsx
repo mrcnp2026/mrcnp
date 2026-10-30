@@ -285,7 +285,7 @@ export default async function SettingsPage({ searchParams }: { searchParams: Pro
             <>
               {/* 회사 정보 (2026-10-18 의뢰인: 휴일 넣고 빼기보다 회사 정보가 먼저 — 휴일은 「휴일」 메뉴로 뺐다) */}
               <SettingGroup>{tco('title')}</SettingGroup>
-              <CompanyForm initial={{ name: company.name || BRAND.name, ceo: company.ceo, bizNo: company.bizNo, address: company.address, phone: company.phone, policy: company.policy, privacyOfficer: company.privacyOfficer ?? '', hasLogo: !!company.logoPath, logoAt: company.logoAt }} />
+              <CompanyForm initial={{ name: company.name || BRAND.legalName, ceo: company.ceo, bizNo: company.bizNo, address: company.address, phone: company.phone, policy: company.policy, privacyOfficer: company.privacyOfficer ?? '', hasLogo: !!company.logoPath, logoAt: company.logoAt }} />
               <SettingGroup>{tco('fixedTitle')}</SettingGroup>
               {(['country', 'unit', 'weekStart', 'timeFormat', 'holidayCountry', 'night'] as const).map((k) => (
                 <SetRow key={k} side label={tco(`fixed.${k}`)}>

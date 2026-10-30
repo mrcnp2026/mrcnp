@@ -14,6 +14,8 @@ import { toKstDate } from '@/lib/time';
 import { loadPublication } from '@/lib/payroll/publish-data';
 import { CorrectionStart, MemberToggle, PublishAll, PublishToggle, RunActions } from '../RunForms';
 import { BulkAdjust } from '../BulkAdjust';
+import { SwitchToggle } from '@/components/SwitchToggle';
+import { SLIP_CALC, slipCalcShown } from '@/lib/switches';
 import { bulkContext } from '@/lib/payroll/bulk-data';
 
 const INFO = new Set(['overtime_unreviewed', 'employer_rate_missing', 'basis_unverified']); // 참고 안내 — 조치가 필요 없다
@@ -108,7 +110,19 @@ export default async function PayRunPage({ params, searchParams }: { params: Pro
           <p className="text-sm text-muted">{t('finalNote')}</p>
           <p className="text-xs text-faint">{t('correctWhen')}</p>
           <p className="num text-sm">{t('pubSummary', { on: pub.size - waiting, off: waiting })}</p>
-          {!replaced && <PublishAll id={run.id} waiting={waiting} />}
+          {/* 공개 단추 옆 산출방식 켜기 · 끄기 (2026-10-30 의뢰인) — 켜면 직원 명세서 화면 · PDF에 계산 방법이 나오고, 끄면 PDF에서 그 칸이 빠진다. 회사 전체 설정 */}
+          {!replaced && (
+            <PublishAll
+              id={run.id}
+              waiting={waiting}
+              aside={
+                <span className="inline-flex h-9 items-center gap-3 rounded-button border border-border bg-bg px-3 text-sm font-semibold whitespace-nowrap" data-calc-toggle>
+                  {t('calcToggle')}
+                  <SwitchToggle k={SLIP_CALC} on={await slipCalcShown()} label={t('calcToggle')} endpoint="/api/admin/payslip-calc" />
+                </span>
+              }
+            />
+          )}
           {!newer && <CorrectionStart id={run.id} />}
         </Card>
       ) : (

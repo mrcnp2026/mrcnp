@@ -39,6 +39,17 @@ export async function putSwitch(k: SwitchKey, on: boolean, actorId: string): Pro
   await putCompanyProfile({ switches: { ...saved, [k]: on } }, actorId);
 }
 
+/** 명세서 산출방식(계산 방법) 보이기 (2026-10-30 의뢰인) — 관리자가 「내 급여 조회」에서 켜고 끈다. 켜면 직원 화면 · 급여명세서 PDF에 계산 방법이 나오고,
+ *  끄면 화면에서 숨기고 PDF에서는 계산 방법 칸이 통째로 빠진다. 다른 스위치와 달리 저장한 적 없으면 꺼짐 */
+export const SLIP_CALC = 'payslip.calcMethod';
+export async function slipCalcShown(): Promise<boolean> {
+  return (await companyProfile()).switches?.[SLIP_CALC] === true;
+}
+export async function putSlipCalc(on: boolean, actorId: string): Promise<void> {
+  const saved = (await companyProfile()).switches ?? {};
+  await putCompanyProfile({ switches: { ...saved, [SLIP_CALC]: on } }, actorId);
+}
+
 /** 직원 요청 API 입구 — 스위치가 꺼져 있으면 403 (화면은 단추를 숨기지만 주소로 바로 보내는 것도 막는다) */
 export async function requireSwitch(k: SwitchKey, code = 'feature_off'): Promise<void> {
   if (!(await switchOn(k))) throw new ApiError(403, code);
