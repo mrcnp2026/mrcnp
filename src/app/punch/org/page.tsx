@@ -75,7 +75,6 @@ export default async function OrgPage({ searchParams }: { searchParams: Promise<
           ))}
         </section>
       ))}
-      <p className="text-xs text-faint">{t('note')}</p>
     </PageShell>
   );
 }

@@ -435,6 +435,9 @@
       "colTitle": "직책",
       "colRole": "권한",
       "colStatus": "가입",
+      "colPush": "알림",
+      "pushOn": "켜짐",
+      "pushOff": "꺼짐",
       "roleEmployee": "직원",
       "leaveShort": "연차",
       "orgShort": "조직도",
@@ -7604,8 +7607,7 @@
       "leave": "오늘 휴가",
       "partLeave": "오늘 부분 휴가",
       "out": "오늘 외근 · 출장 · 재택"
-    },
-    "note": "휴가 종류 · 사유 · 잔여는 보이지 않습니다."
+    }
   },
   "messages": {
     "title": "게시판",
@@ -8323,7 +8325,7 @@
     "notReady": "폰 알림 설정이 아직 끝나지 않았습니다(서버 열쇠 없음)",
     "failed": "켜지 못했습니다. 잠시 뒤 다시 해 주세요",
     "helpEmployee": "출근 · 퇴근을 잊으면 이 폰으로 알려 드립니다",
-    "promptEmployee": "출퇴근을 잊으면 폰으로 알려 드려요",
+    "promptEmployee": "회사 알림을 받도록 폰 알림을 켜 주세요",
     "promptOn": "켜기",
     "promptClose": "안내 닫기"
   },

@@ -2,7 +2,7 @@
 // 위: 전체·가입·미가입 걸러보기 / 가운데: 부서별 묶음 → 팀 → 직원 한 줄 (이름·직급·사번·가입 상태·초대 링크).
 // 이름을 누르면 직원 상세(정보 수정·로그인·기록). 직원 추가와 조직도 관리는 각각 따로 화면이 있다.
 import { loadNewStaffPayDefaults } from '@/lib/payroll/data';
-import { CalendarCheck, Check, ChevronRight, Download, Network } from 'lucide-react';
+import { Bell, BellOff, CalendarCheck, Check, ChevronRight, Download, Network } from 'lucide-react';
 import { getTranslations } from 'next-intl/server';
 import Link from 'next/link';
 import { AddSheet } from '@/components/AddSheet';
@@ -43,7 +43,7 @@ export default async function MembersPage({ searchParams }: { searchParams: Prom
   const filter: Filter = sp.f === 'pending' || sp.f === 'inactive' ? sp.f : 'current';
   const db = createAdminClient();
   const me = (await getMe())!;
-  const [{ data: people }, { data: keys }, groups, { data: roleReqs }, jobs, signups, { data: invs }] = await Promise.all([
+  const [{ data: people }, { data: keys }, groups, { data: roleReqs }, jobs, signups, { data: invs }, { data: pushSubs }] = await Promise.all([
     // (맨 끝) 직무: 표의 직무 열과 추가 팝업의 고르기 칸
     db.from('profiles').select('id, name, employee_no, phone, email, role, active, group_id, job_title, password_set_at, can_view_payroll, joined_on, job_id, admin_level').or(NOT_SYSTEM_ADMIN).order('name'),
     db.from('user_passkeys').select('employee_id').is('revoked_at', null),
@@ -53,7 +53,10 @@ export default async function MembersPage({ searchParams }: { searchParams: Prom
     loadPendingSignups(), // 이메일 가입 신청 (묶음 18)
     // 가입 링크를 보냈는지 · 만료됐는지 (2026-10-17 운영 전환 준비: 23명에게 링크를 돌릴 때 누가 남았는지 보이게)
     db.from('invites').select('employee_id, expires_at, created_at').is('used_at', null).is('revoked_at', null),
+    // 폰 알림을 켠 기기가 있는지 — 「알림」 칸 (2026-10-30 의뢰인: 직원은 끌 수 없고, 누가 아직 안 켰는지 여기서 본다)
+    db.from('push_subscriptions').select('user_id'),
   ]);
+  const pushOn = new Set((pushSubs ?? []).map((s) => s.user_id as string));
   const payDefaults = me.canViewPayroll ? await loadNewStaffPayDefaults(toKstDate(new Date())) : undefined; // 등록 팝업의 급여 칸 (2026-10-25)
   const jobName = new Map(jobs.map((j) => [j.id, j.name]));
   const nowIso = new Date().toISOString();
@@ -115,11 +118,9 @@ export default async function MembersPage({ searchParams }: { searchParams: Prom
                   {t('joined')}
                 </span>
               ) : (
-                <>
-                  <span className="shrink-0 font-bold text-warn">{t('notJoined')}</span>
-                  {inviteNote(p.id) && <span className="shrink-0 text-faint">· {inviteNote(p.id)}</span>}
-                </>
+                <span className="shrink-0 font-bold text-warn" title={inviteNote(p.id) || undefined}>{t('notJoined')}</span>
               )}
+              {p.active && ok && <PushMark on={pushOn.has(p.id)} label={t(pushOn.has(p.id) ? 'pushOn' : 'pushOff')} small />}
             </span>
           </span>
           {/* > 까지 링크 안에 둔다 — 화살표를 눌러도 상세로 간다 (2026-10-06 의뢰인) */}
@@ -213,7 +214,7 @@ export default async function MembersPage({ searchParams }: { searchParams: Prom
             { key: 'job', label: t('colJob') },
             { key: 'joined', label: t('infoJoined'), className: 'max-[90rem]:hidden' },
             { key: 'status', label: t('colStatus') },
-            { key: 'act', label: '', search: false, sort: false, align: 'right' },
+            { key: 'push', label: t('colPush') },
           ]}
           rows={list.map((p) => {
             const ok = withPhone.has(p.id);
@@ -230,8 +231,9 @@ export default async function MembersPage({ searchParams }: { searchParams: Prom
                 title: { text: p.jobTitle ?? '' },
                 job: { text: (p.jobId && jobName.get(p.jobId)) || '', node: <span className="xl:whitespace-nowrap">{(p.jobId && jobName.get(p.jobId)) || ''}</span> },
                 joined: { text: p.joinedOn ?? '', node: <span className="num whitespace-nowrap">{p.joinedOn ?? ''}</span> },
-                status: { text: !p.active ? t('inactive') : ok ? t('joined') : `${t('notJoined')} ${inviteNote(p.id)}`, node: !p.active ? <Chip>{t('inactive')}</Chip> : ok ? <Chip tone="ok">{t('joined')}</Chip> : <span className="inline-flex flex-wrap items-center gap-x-1.5 xl:flex-nowrap xl:whitespace-nowrap"><Chip tone="warn">{t('notJoined')}</Chip>{inviteNote(p.id) && <span className="text-xs text-muted">{inviteNote(p.id)}</span>}</span> },
-                act: { text: '', node: p.active && !ok ? <NewInviteButton employeeId={p.id} name={p.name} compact /> : null },
+                // 가입 칸은 칩 하나 + 링크 보내기 아이콘만 (2026-10-30 의뢰인: 「미가입 · 링크 만료 · 링크 보내기」가 길었다). 링크 날짜 · 만료는 칩에 마우스를 올리면
+                status: { text: !p.active ? t('inactive') : ok ? t('joined') : `${t('notJoined')} ${inviteNote(p.id)}`, node: !p.active ? <Chip>{t('inactive')}</Chip> : ok ? <Chip tone="ok">{t('joined')}</Chip> : <span className="inline-flex items-center gap-1 whitespace-nowrap"><span title={inviteNote(p.id) || undefined}><Chip tone="warn">{t('notJoined')}</Chip></span>{p.active && <NewInviteButton employeeId={p.id} name={p.name} mini />}</span> },
+                push: { text: pushOn.has(p.id) ? t('pushOn') : t('pushOff'), node: !p.active ? null : <PushMark on={pushOn.has(p.id)} label={t(pushOn.has(p.id) ? 'pushOn' : 'pushOff')} /> },
               },
             };
           })}
@@ -270,5 +272,16 @@ export default async function MembersPage({ searchParams }: { searchParams: Prom
       </div>
 
     </PageShell>
+  );
+}
+
+// 「알림」 칸 — 폰 알림을 켠 기기가 있으면 켜짐. 관리자가 대신 켤 수는 없다(폰 주인이 허용해야 한다)
+function PushMark({ on, label, small = false }: { on: boolean; label: string; small?: boolean }) {
+  const Icon = on ? Bell : BellOff;
+  return (
+    <span className={`inline-flex shrink-0 items-center gap-0.5 whitespace-nowrap ${small ? 'text-xs' : 'text-sm'} font-bold ${on ? 'text-primary' : 'text-faint'}`} title={label}>
+      <Icon aria-hidden size={small ? 12 : 14} strokeWidth={2.25} />
+      {small ? <span className="sr-only">{label}</span> : label}
+    </span>
   );
 }

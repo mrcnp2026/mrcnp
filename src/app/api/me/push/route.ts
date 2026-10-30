@@ -1,9 +1,11 @@
-// 이 기기에서 폰 알림 받기 켜기 · 끄기 · 시험 보내기 (2026-10-16). 로그인한 사람 누구나 — 관리자는 요청 · 미출근, 직원은 자기 출퇴근 알림을 받는다.
+// 이 기기에서 폰 알림 받기 켜기 · 끄기 · 시험 보내기 (2026-10-16). 관리자는 요청 · 미출근, 직원은 자기 출퇴근 알림을 받는다.
+// 2026-10-30 의뢰인: 켜기는 누구나. 끄기는 최고관리자 · 시스템관리자만(나머지는 반드시 받는다), 시험 보내기는 시스템관리자만.
 //   POST   { endpoint, keys: { p256dh, auth }, device? }  → 켜기 (같은 주소면 주인 · 열쇠를 새로)
 //   DELETE { endpoint }                                    → 끄기 (자기 것만)
 //   PUT                                                    → 내 기기 전부에 시험 알림
 import { api, ApiError, readJson } from '@/lib/api';
 import { getMe } from '@/lib/auth';
+import { isSystemAdminNo } from '@/lib/system-admin';
 import { pushConfigured, sendPush } from '@/lib/push';
 import { createAdminClient } from '@/lib/supabase/admin';
 
@@ -36,6 +38,7 @@ export const POST = api('push.subscribe', async (req) => {
 export const DELETE = api('push.unsubscribe', async (req) => {
   const me = await getMe();
   if (!me) throw new ApiError(401, 'not_signed_in');
+  if (me.role !== 'admin' && !isSystemAdminNo(me.employeeNo)) throw new ApiError(403, 'push_required');
   const endpoint = str((await readJson(req)).endpoint, 1000);
   if (!endpoint) throw new ApiError(400, 'invalid_input');
   const { error } = await createAdminClient().from('push_subscriptions').delete().eq('endpoint', endpoint).eq('user_id', me.id);
@@ -45,6 +48,7 @@ export const DELETE = api('push.unsubscribe', async (req) => {
 
 export const PUT = api('push.test', async () => {
   const me = await signedIn();
+  if (!isSystemAdminNo(me.employeeNo)) throw new ApiError(403, 'forbidden');
   const staff = me.role === 'admin' || me.role === 'manager';
   const sent = await sendPush([me.id], {
     title: '폰 알림 시험',

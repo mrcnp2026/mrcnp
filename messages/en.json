@@ -435,6 +435,9 @@
       "colTitle": "Job title",
       "colRole": "Role",
       "colStatus": "Sign-up",
+      "colPush": "Alerts",
+      "pushOn": "On",
+      "pushOff": "Off",
       "roleEmployee": "Staff",
       "leaveShort": "Leave",
       "orgShort": "Org chart",
@@ -7604,8 +7607,7 @@
       "leave": "On leave today",
       "partLeave": "Partly on leave today",
       "out": "Off-site today"
-    },
-    "note": "Leave type, reason and balance are not shown."
+    }
   },
   "messages": {
     "title": "Board",
@@ -8323,7 +8325,7 @@
     "notReady": "Phone alerts are not set up on the server yet",
     "failed": "Could not turn on. Please try again shortly",
     "helpEmployee": "We'll remind you on this phone if you forget to clock in or out",
-    "promptEmployee": "Turn on alerts to get a reminder when you forget to clock in or out",
+    "promptEmployee": "Turn on phone alerts to receive company notifications",
     "promptOn": "Turn on",
     "promptClose": "Dismiss"
   },

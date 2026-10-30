@@ -5,7 +5,7 @@
 //   ② 앱마다 한 줄, 누르면 펼친다 — 지금 있는 앱만 펼쳐 둔다. 항목이 하나뿐인 앱은 바로 그 화면으로
 //   ③ 맨 위 「메뉴 찾기」 — 쳐 넣으면 그 모드의 항목을 한 목록으로
 //   ④ 언어 · 로그아웃은 맨 아래 한 줄로 작게, 홈 화면에 추가는 아직 안 했을 때만 작은 단추로
-//   ⑤ 관리자 · 지점관리자는 그 위에 「폰 알림」 켜기 · 끄기 한 줄 (2026-10-16, components/PushToggle)
+//   ⑤ 최고관리자 · 시스템관리자는 그 위에 (2026-10-30 의뢰인: 직원 · 지점관리자는 안 보임) 「폰 알림」 켜기 · 끄기 한 줄 (2026-10-16, components/PushToggle)
 // 이름 · 묶음은 PC 틀과 같은 표(config/nav.ts)에서 읽는다. 통합설정은 관리자 모드 맨 아래 한 줄(전체 메뉴 한 장으로 들어간다).
 // 왼쪽에서 밀려 나오고 닫을 때 밀려 들어간다(2026-10-17 의뢰인, R-10-8을 바꿈). Esc · 바깥 누르기 · 화면 이동으로 닫힌다. body에 직접 붙인다(하단 탭이 가리지 않게).
 import { useSystemNav, useLogNav } from '@/components/SystemNav';
@@ -233,7 +233,8 @@ export function MenuDrawer({ name, role, languages, ops = false }: { name: strin
                   </Link>
                 )}
                 <AddToHomeButton compact />
-                <PushToggle audience={staff ? 'staff' : 'employee'} />
+                {/* 폰 알림 켜기 · 끄기 · 시험 보내기는 최고관리자 · 시스템관리자만 (2026-10-30 의뢰인) */}
+                {(role === 'admin' || ops) && <PushToggle audience="staff" canTest={ops} />}
                 <div className="flex items-center justify-between gap-2">
                   <LanguageSwitcher options={languages} />
                   <SignOutButton compact />

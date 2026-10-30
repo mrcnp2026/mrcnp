@@ -8,7 +8,7 @@ import { ErrorNote } from '@/components/ErrorNote';
 import { Button } from '@/components/ui';
 import { InviteView, type Invite } from './InviteView';
 
-export function NewInviteButton({ employeeId, name, compact = false, again = false, icon = false }: { employeeId: string; name: string; compact?: boolean; again?: boolean; icon?: boolean }) {
+export function NewInviteButton({ employeeId, name, compact = false, again = false, icon = false, mini = false }: { employeeId: string; name: string; compact?: boolean; again?: boolean; icon?: boolean; mini?: boolean }) {
   const t = useTranslations('admin.members');
   const [stage, setStage] = useState<'idle' | 'confirm' | 'busy'>('idle');
   const [invite, setInvite] = useState<Invite | null>(null);
@@ -25,7 +25,12 @@ export function NewInviteButton({ employeeId, name, compact = false, again = fal
   }
   // 카드 안의 작은 버튼. 이미 가입한 사람은 "비밀번호를 잊었을 때" 다시 보내는 것이라 글자를 바꾼다
   const button = (
-    icon ? (
+    mini ? (
+      // PC 표 「가입」 칸 칩 옆: 작은 아이콘만 (2026-10-30 의뢰인)
+      <button type="button" onClick={() => setStage('confirm')} aria-label={`${name} — ${t(again ? 'reInviteShort' : 'inviteShort')}`} title={t(again ? 'reInviteShort' : 'inviteShort')} className="flex size-8 shrink-0 items-center justify-center rounded-button text-primary hover:bg-primary-tint">
+        <Send aria-hidden size={15} strokeWidth={2} />
+      </button>
+    ) : icon ? (
       // 폰 목록 줄: 아이콘만(이름 · 상태 글자가 잘리지 않게, 2026-10-16 디자인)
       <button type="button" onClick={() => setStage('confirm')} aria-label={`${name} — ${t(again ? 'reInviteShort' : 'inviteShort')}`} title={t(again ? 'reInviteShort' : 'inviteShort')} className="flex size-11 shrink-0 items-center justify-center rounded-button bg-primary-tint text-primary">
         <Send aria-hidden size={18} strokeWidth={2} />

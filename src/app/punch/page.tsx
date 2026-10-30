@@ -10,6 +10,7 @@ import { LABOR, resolveDayType } from '@/config/labor-rules';
 import { OFFICE } from '@/config/office';
 import { loadEmployeeToday } from '@/lib/attendance-data';
 import { getMe } from '@/lib/auth';
+import { isSystemAdminNo } from '@/lib/system-admin';
 import { addDays, weekStartOf } from '@/lib/calendar';
 import { fullLeaveSet } from '@/lib/leave';
 import { HOME_COOKIE, WEEKS_AHEAD, WEEKS_BACK, homeCardsOn, pickWeek } from '@/lib/home';
@@ -183,7 +184,8 @@ export default async function PunchPage({ searchParams }: { searchParams: Promis
             위치 허용(2026-10-18 의뢰인) · 폰 알림 켜기(2026-10-16: 출근 · 퇴근을 잊으면 본인에게 알림) */}
         <div className="flex flex-col divide-y divide-border overflow-hidden rounded-card bg-surface empty:hidden">
           <LocationPrompt bare />
-          <PushToggle mode="prompt" audience="employee" bare />
+          {/* 최고관리자 · 시스템관리자는 메뉴 스위치로 켜고 끈다. 나머지는 켤 때까지 이 안내가 남는다 (2026-10-30 의뢰인) */}
+          {me.role !== 'admin' && !isSystemAdminNo(me.employeeNo) && <PushToggle mode="prompt" audience="employee" bare />}
         </div>
         {/* 요청은 오른쪽 아래 + 단추에서 (2026-10-18 의뢰인: 출근 단추 옆 「요청」을 빼고 다른 화면처럼) — 요청 화면의 + 와 같은 목록 */}
         <Fab
