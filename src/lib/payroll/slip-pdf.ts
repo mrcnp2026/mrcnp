@@ -13,7 +13,7 @@ export type SlipPdfLine = { kind: 'PAYMENT' | 'DEDUCTION'; label: string; how: s
 export type SlipPdfLabels = {
   title: string; company: string; no: string; name: string; group: string; period: string; payDate: string; revision: string;
   pay: string; deduction: string; item: string; how: string; amount: string; payTotal: string; deductionTotal: string; net: string; none: string; taxable?: string; exempt?: string;
-  draft: string | null; practice: string | null; correction: string | null; familyTemp?: string | null; note: string; formula?: string; thanks?: string; correctionMark?: string | null; page: (n: number, all: number) => string; money: (n: number) => string; // familyTemp: 부양가족 신고 전 「임시」 문구 (묶음 38)
+  draft: string | null; practice: string | null; correction: string | null; familyTemp?: string | null; note: string; formula?: string; thanks?: string; sum?: string; correctionMark?: string | null; page: (n: number, all: number) => string; money: (n: number) => string; // familyTemp: 부양가족 신고 전 「임시」 문구 (묶음 38)
 };
 // 근로 내역 (임금명세서의 근로일수 · 총 근로시간 · 연장 · 야간 · 휴일 시간, 2026-10-16) — 칸 이름과 값을 이미 글자로 만들어 넘긴다. 없으면 이 칸을 그리지 않는다
 export type SlipPdfWork = { title: string; rows: [string, string][] };
@@ -38,9 +38,9 @@ export async function slim(file: Buffer, text: string): Promise<Uint8Array> {
   }
 }
 
-// 2026-10-30 의뢰인(「서체부터 별로 · 계산식이 왜 본문에 · 정정 안내는 왜」)로 다시 짬 — 회사가 쓰던 명세서(레퍼런스/2025.12)처럼:
-//   명조체 · 테두리 표 · 위 제목(「2026년 9월분 급여명세서」) · 사람 칸 · [근무 | 지급 | 공제] 세 칸 나란히 · 합계 줄 · 실지급액 · 맨 아래 「산출 방법」 칸(법정 기재사항) · 감사 문구와 회사명.
-//   본문에 계산식 · 정정 사유 · 「프로그램에 저장된 값」 같은 안내 문장을 넣지 않는다. 정정본은 위에 「정정본 (N판)」 작은 표시만. 한 장에 들어가게 줄 높이를 맞춘다.
+// 2026-10-30 의뢰인: 「서체만 맘에 들고 엑셀 방식은 싫다 — 급여4처럼, 그보다 잘」 → 회사가 쓰던 명세서(스샷/스샷2/급여4.png) 배치로 다시 짬. 글꼴(나눔명조)은 그대로.
+//   제목 · 회사명칭 · 지급일 → 사원 정보 상자 → 근로시간(이름 위 · 값 아래) → [지급내역] [공제내역] 왼쪽 파란 띠 + 한 줄 6칸(이름 위 · 금액 아래)
+//   → [합계] 지급총액 · 공제총액 · 차인지급액 → 계산방법 표(산출방식 토글이 켜졌을 때만 줄이 있다) → 「귀하의 노고에 감사드립니다.」 · 회사명
 let serif: Promise<[Buffer, Buffer]> | null = null;
 const loadSerif = () => (serif ??= Promise.all(['NanumMyeongjo-Regular.ttf', 'NanumMyeongjo-Bold.ttf'].map((f) => readFile(path.join(process.cwd(), 'src', 'assets', 'fonts', f)))) as Promise<[Buffer, Buffer]>);
 
@@ -49,157 +49,175 @@ export async function buildSlipPdf(d: SlipPdfData): Promise<Uint8Array> {
   const pdf = await PDFDocument.create();
   pdf.registerFontkit(fontkit);
   const [regular, boldFile] = await loadSerif();
-  const m = /^(\d{4})-(\d{2})(.*)$/.exec(L.title); // 「2026-09 급여명세서」 → 「2026년 9월분 급여명세서」
-  const title = m ? `${m[1]}년 ${Number(m[2])}월분${m[3]}` : L.title;
+  const m = /^(\d{4})-(\d{2})(.*)$/.exec(L.title); // 「2026-09 급여명세서」 → 「2026년 09월 급여명세서」
+  const title = m ? `${m[1]}년 ${m[2]}월${m[3]}` : L.title;
+  const nf = new Intl.NumberFormat('ko-KR');
+  const amt = (n: number) => nf.format(n); // 칸 안 금액은 숫자만(원 없이) — 양식과 같게
+  const dot = (v: string) => v.replace(/-/g, '.');
   const payRows = d.lines.filter((l) => l.kind === 'PAYMENT'), dedRows = d.lines.filter((l) => l.kind === 'DEDUCTION');
   const howRows = d.lines.filter((l) => l.how);
   const workRows = d.work?.rows ?? [];
   const thanks = L.thanks ?? '';
-  const words = [title, d.company, d.no, d.name, d.employeeNo, d.group, d.periodFrom, d.periodTo, d.payDate, thanks, L.formula ?? '', L.correctionMark ?? '', L.familyTemp ?? '', d.work?.title ?? '', L.money(d.pay), L.money(d.deduction), L.money(d.net)];
-  for (const l of d.lines) words.push(l.label, l.how ?? '', L.money(l.amount));
+  const sum = L.sum ?? '';
+  const words = [title, d.company, d.no, d.name, d.employeeNo, d.group, dot(d.periodFrom), dot(d.periodTo), dot(d.payDate), thanks, sum, L.formula ?? '', L.correctionMark ?? '', L.familyTemp ?? '', amt(d.pay), amt(d.deduction), amt(d.net)];
+  for (const l of d.lines) words.push(l.label, l.how ?? '', amt(l.amount));
   for (const r of workRows) words.push(...r);
   for (const v of Object.values(L)) if (typeof v === 'string') words.push(v);
-  if (d.tax) words.push(L.money(d.tax.taxable), L.money(d.tax.exempt));
-  const used = [...new Set(words.join(''))].join('') + '0123456789,.-~()% ×원…※';
+  if (d.tax) words.push(amt(d.tax.taxable), amt(d.tax.exempt));
+  const used = [...new Set(words.join(''))].join('') + '0123456789,.-~()% ×원…※·';
   const font = await pdf.embedFont(await slim(regular, used), { subset: false });
   const bold = await pdf.embedFont(await slim(boldFile, used), { subset: false });
   pdf.setTitle(`${title} ${d.no}`);
   pdf.setAuthor(d.company);
   pdf.setSubject(d.no);
   let page = pdf.addPage([W, H]);
-  const BORDER = ink(0.15, 0.15, 0.18), HEAD = ink(0.93, 0.93, 0.94);
-  const text = (s: string, x: number, yy: number, o: { size?: number; f?: PDFFont; color?: ReturnType<typeof ink>; align?: 'left' | 'center' | 'right' } = {}) => {
+  type Ink = ReturnType<typeof ink>;
+  const LINE = ink(0.85, 0.87, 0.9), FRAME = ink(0.62, 0.67, 0.75), BAND_INK = ink(0.2, 0.3, 0.46);
+  const BAND = ink(0.9, 0.93, 0.975), SUM = ink(0.82, 0.87, 0.94), HEAD = ink(0.95, 0.96, 0.97), STRIPE = ink(0.975, 0.978, 0.985);
+  const text = (s: string, x: number, yy: number, o: { size?: number; f?: PDFFont; color?: Ink; align?: 'left' | 'center' | 'right' } = {}) => {
     const size = o.size ?? 9.5, f = o.f ?? font, w = f.widthOfTextAtSize(s, size);
     page.drawText(s, { x: o.align === 'center' ? x - w / 2 : o.align === 'right' ? x - w : x, y: yy, size, font: f, color: o.color ?? INK });
   };
-  const cell = (x: number, yy: number, w: number, h: number, fill?: ReturnType<typeof ink>) => page.drawRectangle({ x, y: yy, width: w, height: h, borderColor: BORDER, borderWidth: 0.6, color: fill });
-  const fit = (s: string, f: PDFFont, size: number, max: number) => {
-    if (f.widthOfTextAtSize(s, size) <= max) return s;
+  const box = (x: number, yy: number, w: number, h: number, o: { fill?: Ink; border?: Ink } = {}) =>
+    page.drawRectangle({ x, y: yy, width: w, height: h, color: o.fill, borderColor: o.border, borderWidth: o.border ? 0.7 : 0 });
+  const hline = (x1: number, x2: number, yy: number, c: Ink = LINE, t = 0.5) => page.drawLine({ start: { x: x1, y: yy }, end: { x: x2, y: yy }, thickness: t, color: c });
+  const vline = (x: number, y1: number, y2: number, c: Ink = LINE) => page.drawLine({ start: { x, y: y1 }, end: { x, y: y2 }, thickness: 0.5, color: c });
+  /** 칸 너비에 맞춰 글자를 줄이고(6.5pt까지), 그래도 넘치면 「…」 */
+  const fitText = (s: string, f: PDFFont, size: number, max: number): [string, number] => {
+    let sz = size;
+    while (sz > 6.5 && f.widthOfTextAtSize(s, sz) > max) sz -= 0.25;
+    if (f.widthOfTextAtSize(s, sz) <= max) return [s, sz];
     let out = s;
-    while (out.length > 1 && f.widthOfTextAtSize(`${out}…`, size) > max) out = out.slice(0, -1);
-    return `${out}…`;
+    while (out.length > 1 && f.widthOfTextAtSize(`${out}…`, sz) > max) out = out.slice(0, -1);
+    return [`${out}…`, sz];
+  };
+  const cText = (s: string, cx: number, yy: number, max: number, o: { size?: number; f?: PDFFont; color?: Ink } = {}) => {
+    if (!s) return;
+    const [t, sz] = fitText(s, o.f ?? font, o.size ?? 9, max);
+    text(t, cx, yy, { size: sz, f: o.f, color: o.color, align: 'center' });
   };
   const L0 = M, R0 = W - M, full = R0 - L0;
-
-  // ── 머리: 왼쪽 명세 번호 · 표시, 가운데 제목, 오른쪽 지급일
   let y = H - M;
-  const marks = [L.correctionMark, L.draft, L.practice].filter((v): v is string => !!v).join(' · ');
-  text(`${L.no} ${d.no}`, L0, y, { size: 8, color: MUTED });
-  if (marks) text(marks, L0, y - 11, { size: 8.5, f: bold, color: WARN });
-  text(`${L.payDate} ${d.payDate}`, R0, y, { size: 9, align: 'right' });
-  y -= 34;
-  text(title, W / 2, y, { size: 19, f: bold, align: 'center' });
-  y -= 22;
-
-  // ── 사람 칸: [성명 | 값 | 소속 | 값] [귀속 기간 | 값 | 회사 | 값]
-  const rowH = 20, kW = 70, vW = full / 2 - kW;
-  const info: [string, string][][] = [
-    [[L.name, `${d.name}${d.employeeNo ? ` (${d.employeeNo})` : ''}`], [L.group, d.group || '—']],
-    [[L.period, `${d.periodFrom} ~ ${d.periodTo}`], [L.company, d.company]],
-  ];
-  for (const row of info) {
-    row.forEach(([k, v], i) => {
-      const x = L0 + i * (full / 2);
-      cell(x, y - rowH, kW, rowH, HEAD);
-      cell(x + kW, y - rowH, vW, rowH);
-      text(k, x + kW / 2, y - 13.5, { size: 9, align: 'center' });
-      text(fit(v, font, 9.5, vW - 12), x + kW + 8, y - 13.5);
-    });
-    y -= rowH;
-  }
-  y -= 10;
-
-  // ── 본문: [근무 내역 | 지급 | 공제] 세 칸 (근무 내역이 없는 종이는 두 칸)
-  const cols: { title: string; rows: [string, string][]; total?: [string, string] }[] = [
-    ...(workRows.length ? [{ title: d.work!.title, rows: workRows }] : []),
-    { title: L.pay, rows: payRows.map((l) => [l.label, L.money(l.amount)] as [string, string]), total: [L.payTotal, L.money(d.pay)] },
-    { title: L.deduction, rows: dedRows.map((l) => [l.label, L.money(l.amount)] as [string, string]), total: [L.deductionTotal, L.money(d.deduction)] },
-  ];
-  const colW = full / cols.length, lineH = 17;
-  const bodyRows = Math.max(...cols.map((c) => c.rows.length), 1);
-  const headRow = () => {
-    cols.forEach((c, i) => {
-      cell(L0 + i * colW, y - lineH - 2, colW, lineH + 2, HEAD);
-      text(c.title, L0 + i * colW + colW / 2, y - 12.5, { size: 10, f: bold, align: 'center' });
-    });
-    y -= lineH + 2;
-  };
-  // 넘치면 다음 쪽 — 위에 「제목 · 이름」과 표 머리를 다시 적는다(항목이 아주 많은 사람만)
   const nextPage = () => {
     page = pdf.addPage([W, H]);
-    y = H - M;
-    text(`${title} · ${d.name}`, L0, y - 4, { size: 11, f: bold });
-    y -= 22;
+    y = H - M - 6;
+    text(`${title} · ${d.name}`, L0, y, { size: 11, f: bold });
+    y -= 20;
   };
-  headRow();
-  for (let r = 0; r < bodyRows; r++) {
-    if (y - lineH < M + 30) {
-      nextPage();
-      headRow();
-    }
-    cols.forEach((c, i) => {
-      const x = L0 + i * colW;
-      cell(x, y - lineH, colW, lineH);
-      const row = c.rows[r];
-      if (row) {
-        text(fit(row[0], font, 9, colW * 0.55), x + 7, y - 12, { size: 9 });
-        text(row[1], x + colW - 7, y - 12, { size: 9.5, align: 'right' });
-      }
-    });
-    y -= lineH;
-  }
-  cols.forEach((c, i) => {
-    const x = L0 + i * colW;
-    cell(x, y - lineH - 2, colW, lineH + 2, HEAD);
-    if (c.total) {
-      text(c.total[0], x + 7, y - 13, { size: 9.5, f: bold });
-      text(c.total[1], x + colW - 7, y - 13, { size: 10, f: bold, align: 'right' });
-    }
+
+  // ── 머리: 가운데 제목, 아래 줄 왼쪽 회사명칭 · 오른쪽 지급일. 정정본 · 검토용 · 연습은 맨 위 왼쪽에 작게
+  const marks = [L.correctionMark, L.draft, L.practice].filter((v): v is string => !!v).join(' · ');
+  if (marks) text(marks, L0, y + 4, { size: 8, f: bold, color: WARN });
+  y -= 18;
+  text(title, W / 2, y, { size: 18, f: bold, align: 'center' });
+  y -= 26;
+  text(L.company, L0, y, { size: 9, color: MUTED });
+  text(d.company, L0 + font.widthOfTextAtSize(L.company, 9) + 6, y, { size: 9.5, f: bold });
+  const pd = dot(d.payDate);
+  text(pd, R0, y, { size: 9.5, f: bold, align: 'right' });
+  text(L.payDate, R0 - bold.widthOfTextAtSize(pd, 9.5) - 6, y, { size: 9, color: MUTED, align: 'right' });
+  y -= 9;
+  hline(L0, R0, y, BAND_INK, 1.2);
+  y -= 8;
+
+  // ── 사원 정보 상자: · 사원코드 · 사원명 / · 부서 · 귀속기간
+  const infoH = 44;
+  box(L0, y - infoH, full, infoH, { border: FRAME });
+  const info: [string, string][] = [[L.no, d.employeeNo || '—'], [L.name, d.name], [L.group, d.group || '—'], [L.period, `${dot(d.periodFrom)} ~ ${dot(d.periodTo)}`]];
+  info.forEach(([k, v], i) => {
+    const x = L0 + 16 + (i % 2) * (full / 2), yy = y - 17 - Math.floor(i / 2) * 17;
+    text(`· ${k}`, x, yy, { size: 9, f: bold });
+    const [t, sz] = fitText(v, font, 9.5, full / 2 - 96);
+    text(t, x + 70, yy, { size: sz });
   });
-  y -= lineH + 2;
+  y -= infoH + 12;
+
+  // ── 근로시간 (근로일수 · 총 근로 · 연장 · 야간 · 휴일 …) — 칸 이름 위 · 값 아래
+  const COLS = 6;
+  if (workRows.length) {
+    const cw = full / COLS, rh = 18;
+    for (let i = 0; i < workRows.length; i += COLS) {
+      box(L0, y - rh, full, rh, { fill: HEAD });
+      box(L0, y - rh * 2, full, rh * 2, { border: FRAME });
+      hline(L0, R0, y - rh);
+      for (let c = 1; c < COLS; c++) vline(L0 + c * cw, y, y - rh * 2);
+      workRows.slice(i, i + COLS).forEach(([k, v], c) => {
+        const cx = L0 + c * cw + cw / 2;
+        cText(k, cx, y - 12.5, cw - 8, { size: 8.5, color: MUTED });
+        cText(v, cx, y - rh - 12.5, cw - 8, { size: 9.5 });
+      });
+      y -= rh * 2;
+    }
+    y -= 12;
+  }
+
+  // ── 지급내역 · 공제내역 · 합계: 왼쪽 띠 + 오른쪽 6칸 격자(이름 줄 · 금액 줄)
+  const bandW = 66, gx = L0 + bandW, gw = full - bandW, cw = gw / COLS, rh = 16;
+  const section = (label: string, cells: ([string, string] | null)[], minPairs: number, fill: Ink, strong = false) => {
+    const pairs = Math.max(minPairs, Math.ceil(cells.length / COLS));
+    if (y - pairs * rh * 2 < M + 40) nextPage();
+    const top = y, h = pairs * rh * 2;
+    for (let p = 0; p < pairs; p++) {
+      const t = top - p * rh * 2;
+      box(gx, t - rh, gw, rh, { fill: strong ? HEAD : STRIPE }); // 이름 줄
+      for (let c = 0; c < COLS; c++) {
+        const cell = cells[p * COLS + c];
+        if (!cell) continue;
+        const cx = gx + c * cw + cw / 2;
+        cText(cell[0], cx, t - 11.5, cw - 6, { size: 8.5, f: bold, color: strong ? INK : MUTED });
+        cText(cell[1], cx, t - rh - 11.5, cw - 6, { size: strong ? 10 : 9.5, f: strong ? bold : font });
+      }
+      if (p < pairs - 1) hline(gx, R0, t - rh * 2);
+    }
+    box(L0, top - h, bandW, h, { fill });
+    text(label, L0 + bandW / 2, top - h / 2 - 3, { size: 9, f: bold, color: BAND_INK, align: 'center' }); // 띠 글자는 작고 차분하게 (2026-10-30 의뢰인: 「너무 크고 촌스럽다」)
+    box(L0, top - h, full, h, { border: FRAME });
+    vline(gx, top, top - h, FRAME);
+    y -= h;
+  };
+  section(L.pay, payRows.map((l) => [l.label, amt(l.amount)]), 3, BAND);
+  section(L.deduction, dedRows.map((l) => [l.label, amt(l.amount)]), 3, BAND);
+  y -= 8;
+  // 합계: 지급총액 · 공제총액 · 차인지급액을 오른쪽 세 칸에 (양식과 같은 자리)
+  section(sum, [null, null, null, [L.payTotal, amt(d.pay)], [L.deductionTotal, amt(d.deduction)], [L.net, amt(d.net)]], 1, SUM, true);
   if (d.tax && L.taxable && L.exempt) {
-    const x = L0 + (workRows.length ? 1 : 0) * colW;
-    text(`${L.taxable} ${L.money(d.tax.taxable)} · ${L.exempt} ${L.money(d.tax.exempt)}`, x + colW - 7, y - 11, { size: 8, color: MUTED, align: 'right' });
+    text(`${L.taxable} ${amt(d.tax.taxable)} · ${L.exempt} ${amt(d.tax.exempt)}`, R0, y - 11, { size: 8, color: MUTED, align: 'right' });
     y -= 14;
   }
-  y -= 6;
-  // 합계 아래(실지급 · 산출 방법 · 감사)가 이 쪽에 다 들어가지 않으면 다음 쪽에
-  if (y - (44 + Math.ceil(howRows.length / 2) * 16 + 70) < M) nextPage();
-  // 실지급액 — 한 줄 크게
-  cell(L0, y - 30, full * 0.6, 30, HEAD);
-  cell(L0 + full * 0.6, y - 30, full * 0.4, 30);
-  text(L.net, L0 + full * 0.3, y - 19.5, { size: 12, f: bold, align: 'center' });
-  text(L.money(d.net), R0 - 12, y - 20, { size: 15, f: bold, align: 'right' });
-  y -= 44;
+  y -= 18;
 
-  // ── 산출 방법 (임금명세서 기재사항 — 근로기준법 시행령 27조의2). 본문이 아니라 여기에만
+  // ── 계산방법 (임금명세서 기재사항 — 근로기준법 시행령 27조의2). 산출방식 토글을 끄면 줄이 없어 이 칸이 통째로 빠진다
   if (howRows.length && L.formula) {
-    const half = full / 2, fh = 16, lw = 84;
-    cell(L0, y - fh - 2, full, fh + 2, HEAD);
-    text(L.formula, W / 2, y - 12, { size: 9.5, f: bold, align: 'center' });
-    y -= fh + 2;
-    for (let i = 0; i < howRows.length; i += 2) {
-      [howRows[i], howRows[i + 1]].forEach((l, j) => {
-        const x = L0 + j * half;
-        cell(x, y - fh, lw, fh, HEAD);
-        cell(x + lw, y - fh, half - lw, fh);
-        if (l) {
-          text(fit(l.label, font, 8.5, lw - 8), x + lw / 2, y - 11, { size: 8.5, align: 'center' });
-          text(fit(l.how ?? '', font, 8.5, half - lw - 12), x + lw + 6, y - 11, { size: 8.5 });
-        }
-      });
+    const fh = 19, c1 = full * 0.26, c3 = full * 0.22, c2 = full - c1 - c3;
+    if (y - (fh * (howRows.length + 1) + 30) < M + 30) nextPage();
+    text(`· ${L.formula}`, L0, y, { size: 10, f: bold });
+    y -= 9;
+    box(L0, y - fh, full, fh, { fill: HEAD });
+    hline(L0, R0, y, BAND_INK, 1.2);
+    text(L.item, L0 + c1 / 2, y - 13, { size: 9, f: bold, align: 'center' });
+    text(L.how, L0 + c1 + c2 / 2, y - 13, { size: 9, f: bold, align: 'center' });
+    text(L.amount, L0 + c1 + c2 + c3 / 2, y - 13, { size: 9, f: bold, align: 'center' });
+    y -= fh;
+    for (const l of howRows) {
+      if (y - fh < M + 30) nextPage();
+      hline(L0, R0, y);
+      cText(l.label, L0 + c1 / 2, y - 13, c1 - 8, { size: 9 });
+      const [t, sz] = fitText(l.how ?? '', font, 9, c2 - 16);
+      text(t, L0 + c1 + c2 / 2, y - 13, { size: sz, align: 'center' });
+      text(amt(l.amount), R0 - 10, y - 13, { size: 9.5, align: 'right' });
       y -= fh;
     }
-    y -= 8;
+    hline(L0, R0, y, FRAME, 0.8);
+    y -= 12;
   }
   if (L.familyTemp) {
     text(`※ ${L.familyTemp}`, L0, y - 4, { size: 8, color: WARN });
     y -= 14;
   }
-  // ── 끝: 감사 문구 · 회사명
-  const endY = Math.max(y - 26, M + 20); // 표 바로 아래 (쪽 맨 아래로 떨어지면 허전하다)
-  if (thanks) text(thanks, L0, endY, { size: 9.5 });
-  text(d.company, R0, endY, { size: 11, f: bold, align: 'right' });
+  // ── 끝: 감사 문구(가운데) · 회사명(오른쪽)
+  const endY = Math.max(y - 20, M + 24);
+  if (thanks) text(thanks, W / 2, endY, { size: 10, align: 'center' });
+  text(d.company, R0, endY - 26, { size: 11, f: bold, align: 'right' });
   const pages = pdf.getPages();
   if (pages.length > 1) pages.forEach((pg, i) => pg.drawText(L.page(i + 1, pages.length), { x: R0 - 30, y: M - 16, size: 8, font, color: MUTED }));
   return pdf.save();

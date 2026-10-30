@@ -196,14 +196,7 @@ export default async function MyPayPage({ searchParams }: { searchParams: Promis
               {tm('search')}
             </button>
           </form>
-          <span className="ml-auto flex items-center gap-2">
-            {picked && (
-              <a href={`/api/payslips/${picked.slip.id}/pdf`} className="inline-flex h-9 items-center gap-1.5 rounded-button bg-ok px-3 text-sm font-semibold text-on-primary hover:opacity-90">
-                <Download aria-hidden size={14} />
-                {tm('printSlip')}
-              </a>
-            )}
-          </span>
+          {/* 「명세서 받기」는 맨 위 실지급액 칸 하나만 (2026-10-30 의뢰인: 단추가 두 개) */}
         </div>
         <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_minmax(0,1fr)] lg:items-start">
           <div className="overflow-hidden rounded-card border border-border bg-bg">

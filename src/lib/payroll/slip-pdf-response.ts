@@ -61,9 +61,10 @@ export async function slipPdfBytes(a: SlipPdfInput): Promise<{ bytes: Uint8Array
     // 사업주 부담은 직원용 면에 넣지 않는다
     lines: a.lines.flatMap((l) => (l.kind === 'EMPLOYER' ? [] : [{ kind: l.kind, label: t.has(`line.${l.code}`) ? t(`line.${l.code}`) : l.label, how: how(l), amount: l.amount }])),
     labels: {
-      title: t('pdfTitle', { month: a.month }), company: t('hCompany'), no: t('hNo'), name: t('hName'), group: t('hGroup'), period: t('hPeriod'), payDate: t('hPayDate'), revision: t('hRevision'),
-      pay: t('pay'), deduction: t('deduction'), item: t('pdfItem'), how: t('pdfHow'), amount: t('pdfAmount'), payTotal: t('pdfPayTotal'), deductionTotal: t('pdfDeductionTotal'), net: t('net'), none: t('none'), taxable: t('taxableTotal'), exempt: t('exemptTotal'),
-      draft: a.draft ? t('pdfDraft') : null, practice: a.practice ? t('practice') : null, correction: null, correctionMark: a.revision > 1 ? t('pdfCorrectionMark', { n: a.revision }) : null, formula: t('pdfFormula'), thanks: t('pdfThanks'), // 정정 사유 문장은 종이에 넣지 않는다(화면에만)
+      // 칸 이름은 회사가 쓰던 명세서(급여4) 그대로 — form.* (2026-10-30 의뢰인)
+      title: t('pdfTitle', { month: a.month }), company: t('form.company'), no: t('form.no'), name: t('form.name'), group: t('form.group'), period: t('form.period'), payDate: t('hPayDate'), revision: t('hRevision'),
+      pay: t('form.pay'), deduction: t('form.deduction'), sum: t('form.sum'), item: t('form.item'), how: t('form.how'), amount: t('form.amount'), payTotal: t('form.payTotal'), deductionTotal: t('form.deductionTotal'), net: t('form.net'), none: t('none'), taxable: t('taxableTotal'), exempt: t('exemptTotal'),
+      draft: a.draft ? t('pdfDraft') : null, practice: a.practice ? t('practice') : null, correction: null, correctionMark: a.revision > 1 ? t('pdfCorrectionMark', { n: a.revision }) : null, formula: t('form.formula'), thanks: t('form.thanks'), // 정정 사유 문장은 종이에 넣지 않는다(화면에만)
       familyTemp: a.familyTemp != null ? t('familyTemp', { n: a.familyTemp }) : null,
       note: t('pdfNote'), page: (n, all) => t('pdfPage', { n, all }), money: (n) => t('won', { n: nf.format(n) }),
     },
