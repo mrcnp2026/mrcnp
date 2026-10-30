@@ -158,12 +158,16 @@ export function TodayCard(props: {
   return (
     <Card className="flex flex-col gap-3 p-4">
       {/* 제목과 날짜를 한 줄로 — 홈이 한 화면에 들어오게 (2026-10-18 의뢰인) */}
-      <div className="flex items-center justify-between gap-2">
-        <h2 className="flex items-baseline gap-2 text-xl font-extrabold tracking-tight">
+      <div className="flex items-start justify-between gap-2">
+        <h2 className="flex min-w-0 items-baseline gap-2 text-xl font-extrabold tracking-tight whitespace-nowrap">
           {t('todayTitle')}
-          <span className="num text-base font-semibold text-muted">{props.dateLabel}</span>
+          <span className="num text-sm font-semibold text-muted sm:text-base">{props.dateLabel}</span>
         </h2>
-        <div className="flex flex-wrap justify-end gap-1">
+        {/* 오늘 일정(07:30 - 17:00)은 제목 줄 오른쪽 위에 (2026-10-30 의뢰인). 지각 · 연습 표시는 그 아래로 */}
+        <div className="flex shrink-0 flex-col items-end gap-1">
+          <span className="num inline-flex items-center rounded-button bg-surface px-2 py-1 text-xs font-bold whitespace-nowrap text-muted">
+            {props.planLine ?? t('noScheduleChip')}
+          </span>
           {props.lateMinutes !== null && <Chip tone="warn">{t('lateBy', { n: props.lateMinutes })}</Chip>}
           {/* 연습 모드 배지: 연한 파랑 + 파랑 글자 — 주황·초록·빨강 금지 (4-6, R-10-8 규칙 7) */}
           {props.practice && <Chip tone="info">{tc('practiceBadge')}</Chip>}
@@ -180,15 +184,8 @@ export function TodayCard(props: {
             {state === 'done' && props.lastOut && time(props.lastOut)}
           </p>
         </div>
-        <p className="num flex flex-wrap items-center gap-x-2 gap-y-1 text-sm text-muted">
-          <span>{props.planLine ?? t('noSchedule')}</span>
-          {!props.planLine && <Chip>{t('noScheduleChip')}</Chip>}
-          {state !== 'before' && props.firstIn && (
-            <>
-              <span aria-hidden className="text-faint">·</span>
-              <span>{t('inAt', { time: time(props.firstIn) })}</span>
-            </>
-          )}
+        <p className="num flex flex-wrap items-center gap-x-2 gap-y-1 text-sm text-muted empty:hidden">
+          {state !== 'before' && props.firstIn && <span>{t('inAt', { time: time(props.firstIn) })}</span>}
           {props.firstInVerified === true && (
             <span className="flex items-center gap-1 text-xs font-medium text-ok">
               <Check aria-hidden size={14} strokeWidth={2.5} />

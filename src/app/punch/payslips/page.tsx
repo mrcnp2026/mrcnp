@@ -6,6 +6,7 @@
 // 계좌 · 주민등록번호는 민감정보 결정(급여-36 · 37) 전이라 칸만 둔다(비어 있음). 관리자가 공개한 명세서만 보인다 (PRD v1.3 E01).
 import { ChevronDown, Download, Search, Wallet } from 'lucide-react';
 import { getFormatter, getTranslations } from 'next-intl/server';
+import { SaveFileLink } from '@/components/SaveFileLink';
 import Link from 'next/link';
 import { redirect } from 'next/navigation';
 import type { ReactNode } from 'react';
@@ -113,10 +114,10 @@ export default async function MyPayPage({ searchParams }: { searchParams: Promis
           </dl>
           <div className="flex flex-col gap-2">
             {/* 「명세서 보기」는 뺐다 · 받기 단추는 초록 (2026-10-30 의뢰인). 산출방식 켜기 · 끄기는 급여대장 공개 단추 옆 */}
-            <a href={`/api/payslips/${picked.slip.id}/pdf`} className="inline-flex h-9 items-center justify-center gap-1.5 rounded-button bg-ok px-3.5 text-sm font-semibold text-on-primary hover:opacity-90">
+            <SaveFileLink href={`/api/payslips/${picked.slip.id}/pdf`} again={t('saveAgain')} className="inline-flex h-9 items-center justify-center gap-1.5 rounded-button bg-ok px-3.5 text-sm font-semibold text-on-primary hover:opacity-90">
               <Download aria-hidden size={16} />
               {tm('printSlip')}
-            </a>
+            </SaveFileLink>
           </div>
         </section>
       ) : (
@@ -293,10 +294,10 @@ export default async function MyPayPage({ searchParams }: { searchParams: Promis
                 <span className="num min-w-0 flex-1 font-semibold">{tm('dailyLine', { month: run.periodFrom.slice(0, 7), n: run.sequence })}</span>
                 <span className="num text-muted">{tm('dailyDays', { n: f.number(line.workDays ?? 0) })}</span>
                 <span className="num font-bold">{n(line.net ?? 0)}</span>
-                <a href={`/api/payslips/daily?run=${run.id}`} className="inline-flex h-9 items-center gap-1.5 rounded-button border border-border bg-bg px-3 font-semibold hover:bg-surface">
+                <SaveFileLink href={`/api/payslips/daily?run=${run.id}`} again={t('saveAgain')} className="inline-flex h-9 items-center gap-1.5 rounded-button border border-border bg-bg px-3 font-semibold hover:bg-surface">
                   <Download aria-hidden size={14} />
                   {t('pdf')}
-                </a>
+                </SaveFileLink>
               </li>
             ))}
           </ul>

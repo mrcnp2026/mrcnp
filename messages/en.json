@@ -7482,6 +7482,7 @@
     "hPeriod": "Period",
     "hPayDate": "Pay date",
     "pdf": "Download payslip (PDF)",
+    "saveAgain": "Tap again to save",
     "form": {
       "company": "Company",
       "no": "Employee code",
@@ -7863,7 +7864,7 @@
       "home": "Home",
       "schedule": "Schedule",
       "records": "Attendance",
-      "leave": "Leave",
+      "leave": "Leave · Out",
       "requests": "Requests",
       "pay": "Pay",
       "talk": "Notices · Messages",
@@ -8763,6 +8764,8 @@
     "back": "Back"
   },
   "certificates": {
+    "inboxTitle": "Certificate requests ({n})",
+    "inboxGo": "Open certificates",
     "editorTitle": "Certificate preview and edit",
     "editorHint": "The right side shows the certificate exactly as issued. Changes appear immediately. Edit names and company details in staff info and company settings.",
     "from": "From",

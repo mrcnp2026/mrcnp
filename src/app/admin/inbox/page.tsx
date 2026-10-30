@@ -29,6 +29,7 @@ import { leaveTypeName } from '@/lib/leave';
 import { loadAllLeaveTypes, loadLeaveGrants, loadLeaveRequests } from '@/lib/leave-data';
 import { loadRequests, REQUEST_WINDOW_DAYS } from '@/lib/request-data';
 import { SignupRequests } from '@/app/admin/members/SignupRequests';
+import { loadCerts } from '@/lib/certificates';
 import { suggestEmployeeNo } from '@/lib/email-rules';
 import { orgOptions } from '@/lib/org';
 import { loadOrgGroups } from '@/lib/org-data';
@@ -51,6 +52,11 @@ export default async function InboxPage({ searchParams }: { searchParams: Promis
   // 전에는 15번 정도를 하나씩 차례로 읽었다). 앞 것의 결과가 있어야 하는 것만 둘째 묶음으로
   const [t, tr, tc, tl, f, meRaw, staffAll, sp] = await Promise.all([getTranslations('admin.inbox'), getTranslations('requests'), getTranslations('common'), getTranslations('leave'), getFormatter(), getMe(), loadStaff(), searchParams]);
   const me = meRaw!;
+  // 증명서 신청 — 발급은 최고관리자만 한다. 검사 계정 · 시스템관리자 것은 아래에서 숨김 목록(hidden)으로 뺀다
+  const [tcert, certRaw] = await Promise.all([
+    getTranslations('certificates'),
+    me.role === 'admin' ? loadCerts({ practice: OFFICE.practiceMode && sp.live !== '1' }).then(({ rows }) => rows.filter((r) => r.state === 'REQUESTED')) : Promise.resolve([]),
+  ]);
   // 최고관리자는 본인 요청도 처리한다 (2026-10-16 권한-10, staff-rules.ts) — 막히는 것은 지점관리자의 본인 것 · 맡지 않은 사람 것
   // 지점관리자는 자기 요청을 처리하지 못한다 — 관리자가 한다
   // 등급별 승인 규칙 (개발-39): 처리할 수 없는 사람의 요청은 단추 대신 안내 — 본인 것 · 상위 등급 것
@@ -415,6 +421,8 @@ export default async function InboxPage({ searchParams }: { searchParams: Promis
 
   const listHref = `/admin/inbox${sp.live === '1' ? '?live=1' : ''}`;
   const names = new Map((staff ?? []).map((p) => [p.id as string, p.name as string]));
+  const certOpen = certRaw.filter((r) => !hidden.has(r.employeeId));
+  const nameOfId = (id: string) => names.get(id) ?? tcert('unknown');
   const gone = (
     <p className="rounded-card bg-surface p-5 text-sm text-muted">
       {t('focusGone')}{' '}
@@ -441,18 +449,39 @@ export default async function InboxPage({ searchParams }: { searchParams: Promis
             <h1 className="flex flex-wrap items-center gap-x-1 text-2xl font-bold">{t('pcTitle')}<HelpTip>{t('pcIntro')}</HelpTip></h1>
           </div>
           <p className="num pt-2 text-sm text-muted">
-            {t('totalCount')} <b className="text-lg text-text">{listed.length + signups.length}</b>
+            {t('totalCount')} <b className="text-lg text-text">{listed.length + signups.length + certOpen.length}</b>
           </p>
         </div>
         <SignupRequests items={signups} groups={signupGroups} suggestNo={signupNo} today={toKstDate(new Date())} />
-        <RequestTabs admin active="pending" live={sp.live === '1'} q={q} counts={{ pending: listed.length + signups.length }} />
+        <RequestTabs admin active="pending" live={sp.live === '1'} q={q} counts={{ pending: listed.length + signups.length + certOpen.length }} />
         {practice && <p className="rounded-card bg-primary-tint p-3 text-sm text-primary">{t('practiceBanner')}</p>}
+        {/* 증명서 신청 — 발급은 「제증명 발급」 화면에서 (2026-10-30 의뢰인: 신청해도 처리할 요청에 안 보인다) */}
+        {certOpen.length > 0 && (
+          <section className="flex flex-col gap-2 rounded-card border border-border bg-bg p-3" data-cert-requests>
+            <div className="flex items-center justify-between gap-2">
+              <h2 className="font-bold">{tcert('inboxTitle', { n: certOpen.length })}</h2>
+              <Link href="/admin/certificates" className="inline-flex h-9 shrink-0 items-center rounded-button bg-primary px-3 text-sm font-semibold text-on-primary hover:opacity-90">
+                {tcert('inboxGo')}
+              </Link>
+            </div>
+            <ul className="flex flex-col divide-y divide-border text-sm">
+              {certOpen.map((r) => (
+                <li key={r.id} className="flex flex-wrap items-center gap-x-2 gap-y-0.5 py-2">
+                  <span className="font-semibold">{nameOfId(r.employeeId)}</span>
+                  <Chip tone="info">{tcert(`kind.${r.kind}`)}</Chip>
+                  <span className="min-w-0 flex-1 truncate text-muted">{r.purpose}</span>
+                  <span className="num text-xs text-faint">{f.dateTime(new Date(r.createdAt), { month: 'numeric', day: 'numeric' })}</span>
+                </li>
+              ))}
+            </ul>
+          </section>
+        )}
         {listed.length > 0 && (
           <div className="hidden lg:block">
             <StatusCards groups={[{ title: t('cardsKind'), cards: RKINDS.map((k) => ({ key: k, label: tr(`kinds.${k}`), n: listed.filter((x) => x.kind === k).length, unit: t('unit'), href: rkLink(rk === k ? null : k), on: rk === k, tone: 'warn' as const })) }]} />
           </div>
         )}
-        {listed.length === 0 && signups.length === 0 && empty}
+        {listed.length === 0 && signups.length === 0 && certOpen.length === 0 && empty}
         <div className="flex flex-col gap-3 lg:hidden">
           <RequestRows items={listPage.items} leaveTypes={leaveTypes} names={names} showName hrefOf={focusHref} />
         </div>

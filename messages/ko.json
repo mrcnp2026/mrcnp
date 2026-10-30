@@ -7482,6 +7482,7 @@
     "hPeriod": "귀속 기간",
     "hPayDate": "지급일",
     "pdf": "명세서 받기 (PDF)",
+    "saveAgain": "한 번 더 눌러 저장",
     "form": {
       "company": "회사명칭",
       "no": "사원코드",
@@ -7863,7 +7864,7 @@
       "home": "홈",
       "schedule": "근무일정",
       "records": "출퇴근기록",
-      "leave": "휴가",
+      "leave": "휴가 · 외근",
       "requests": "요청",
       "pay": "급여",
       "talk": "소통",
@@ -8763,6 +8764,8 @@
     "back": "돌아가기"
   },
   "certificates": {
+    "inboxTitle": "증명서 신청 {n}건",
+    "inboxGo": "제증명 발급에서 처리",
     "editorTitle": "증명서 미리보기 · 고치기",
     "editorHint": "옆에 보이는 것이 실제로 나갈 증명서 모양입니다. 고칠 칸을 바꾸면 바로 반영됩니다. 이름 · 회사 정보는 직원 정보 · 회사 기본설정에서 고칩니다.",
     "from": "시작일",

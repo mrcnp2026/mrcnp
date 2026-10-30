@@ -162,6 +162,16 @@ export async function loadCerts(opts: { employeeId?: string; practice: boolean; 
   return { rows: (data ?? []).map(toRow), missing: false };
 }
 
+/** 처리할 증명서 신청 수 — 최고관리자의 종 · 요청 숫자에 더한다 (2026-10-30 의뢰인: 신청해도 「처리할 요청」에 알림이 없다). 검사 계정(e2e-) 신청은 세지 않는다 */
+export async function pendingCertCount(practice: boolean): Promise<number> {
+  const db = createAdminClient();
+  const { data: test } = await db.from('profiles').select('id').like('employee_no', 'e2e-%');
+  let q = db.from('certificate_issues').select('id', { count: 'exact', head: true }).eq('is_test', practice).eq('state', 'REQUESTED');
+  if (test?.length) q = q.not('employee_id', 'in', `(${test.map((p) => p.id).join(',')})`);
+  const { count, error } = await q;
+  return error ? 0 : (count ?? 0);
+}
+
 export async function loadCert(id: string): Promise<CertRow | null> {
   const { data } = await createAdminClient().from('certificate_issues').select(COLS).eq('id', id).maybeSingle();
   return data ? toRow(data) : null;

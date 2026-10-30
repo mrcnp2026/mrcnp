@@ -15,6 +15,7 @@ import { languageOptions } from '@/i18n/locales';
 import type { Me } from '@/lib/auth';
 import { hasConsent } from '@/lib/consent';
 import { visibleNoticesNow } from '@/lib/notices';
+import { pendingCertCount } from '@/lib/certificates';
 import { pendingCounts } from '@/lib/period-data';
 import { pendingSignupCount } from '@/lib/signup';
 import { switchOn } from '@/lib/switches';
@@ -47,7 +48,7 @@ export async function AppFrame({ me, children, overlay }: { me: Me; children: Re
   const [consented, inboxCount, notices, unreadMsg, decided, inquiry] = await Promise.all([
     hasConsent(me.id), // 관리자도 직원이다 — 같은 동의 창
     // 통합설정 › 알림의 「요청 알림」을 끄면 요청 숫자를 보이지 않는다 (2026-10-19)
-    isAdmin && (await switchOn('notify.request')) ? Promise.all([pendingCounts().then((c) => c.total), me.role === 'admin' ? pendingSignupCount() : 0]).then(([a, b]) => a + b) : 0,
+    isAdmin && (await switchOn('notify.request')) ? Promise.all([pendingCounts().then((c) => c.total), me.role === 'admin' ? pendingSignupCount() : 0, me.role === 'admin' ? pendingCertCount(OFFICE.practiceMode) : 0]).then(([a, b, c]) => a + b + c) : 0, // 증명서 신청도 (2026-10-30)
     visibleNoticesNow(me.id, await getLocale()),
     unreadCount(me.id),
     myDecidedCount(me.id),

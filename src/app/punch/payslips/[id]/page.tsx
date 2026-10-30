@@ -2,6 +2,7 @@
 // 내 것이 아니거나 공개가 회수됐으면 「없는 화면」으로 보인다(있는지 없는지도 알려 주지 않는다). 사업주 부담 항목은 보이지 않는다.
 import { CountUp } from '@/components/CountUp';
 import { getFormatter, getTranslations } from 'next-intl/server';
+import { SaveFileLink } from '@/components/SaveFileLink';
 import { Download } from 'lucide-react';
 import Link from 'next/link';
 import { notFound, redirect } from 'next/navigation';
@@ -62,10 +63,10 @@ export default async function MyPayslipPage({ params }: { params: Promise<{ id: 
       </div>
       {/* 「인쇄 · PDF로 저장」은 「명세서 받기」와 겹쳐 뺐다 (2026-10-30 의뢰인) */}
       <div data-noprint className="flex flex-wrap gap-2">
-        <a href={`/api/payslips/${slip.id}/pdf`} className="inline-flex h-9 items-center gap-1.5 rounded-button bg-ok px-3.5 text-sm font-semibold text-on-primary hover:opacity-90">
+        <SaveFileLink again={t('saveAgain')} href={`/api/payslips/${slip.id}/pdf`} className="inline-flex h-9 items-center gap-1.5 rounded-button bg-ok px-3.5 text-sm font-semibold text-on-primary hover:opacity-90">
           <Download aria-hidden size={16} />
           {t('pdf')}
-        </a>
+        </SaveFileLink>
       </div>
       {replacedBy && (
         <p className="rounded-card border border-warn bg-warn-tint p-3 text-sm text-warn">

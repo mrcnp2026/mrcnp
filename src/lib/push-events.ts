@@ -73,6 +73,25 @@ export async function notifyPunchRequest(id: string): Promise<void> {
   });
 }
 
+const CERT_LABEL: Record<string, string> = { EMPLOYMENT: '재직증명서', CAREER: '경력증명서', RETIREMENT: '퇴직증명서' };
+
+/** 증명서 신청 — 발급하는 최고관리자에게 바로 (2026-10-30 의뢰인). 검사 계정(e2e-) 신청은 보내지 않는다 */
+export async function notifyCertRequest(id: string): Promise<void> {
+  if (!(await pushOn())) return;
+  const db = createAdminClient();
+  const { data: r } = await db.from('certificate_issues').select('employee_id, kind, purpose, copies, state').eq('id', id).maybeSingle();
+  if (!r || r.state !== 'REQUESTED') return;
+  const { data: who } = await db.from('profiles').select('employee_no').eq('id', r.employee_id).maybeSingle();
+  if (who?.employee_no?.startsWith('e2e-')) return;
+  const { data: admins } = await db.from('profiles').select('id, employee_no').eq('role', 'admin').eq('active', true);
+  await sendStaffPush((admins ?? []).filter((a) => !a.employee_no?.startsWith('e2e-')).map((a) => a.id as string), {
+    title: `${await nameOf(r.employee_id)} 님이 ${CERT_LABEL[r.kind as string] ?? '증명서'}를 신청했습니다`,
+    body: `${String(r.purpose ?? '').slice(0, 60)} · ${Number(r.copies ?? 1)}부`,
+    url: '/admin/certificates',
+    tag: `cert-${id}`,
+  }).catch(() => 0);
+}
+
 const WORK_LABEL: Record<string, string> = { outside: '외근', business_trip: '출장', remote: '재택' };
 
 /** 외근 · 출장 · 재택 신청 — 승인할 관리자에게 바로 (알림-10). 직원이 출근 화면에서 바로 낸 「장소 밖 외근」도 같은 길이다 */
