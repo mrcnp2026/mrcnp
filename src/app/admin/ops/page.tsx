@@ -13,6 +13,7 @@ import { backupConfigured, listBackups } from '@/lib/backup/github';
 import { mailConfigured } from '@/lib/backup/mail';
 import { createAdminClient } from '@/lib/supabase/admin';
 import { isSystemAdminNo } from '@/lib/system-admin';
+import { adminPage } from '@/lib/admin-gate';
 
 export const dynamic = 'force-dynamic';
 
@@ -21,6 +22,7 @@ const STALE_DAYS = 8; // 백업 감시(cron/backup-watch)와 같은 기준
 type ErrRow = { id: number; code: string; severity: 'info' | 'warn' | 'error'; route: string | null; occurrences: number; last_seen_at: string; resolved_at: string | null; detail: Record<string, string | number> | null };
 
 export default async function OpsPage() {
+  await adminPage(); // 관리 화면 이중 확인 (lib/admin-gate)
   const me = await getMe();
   if (!me || !isSystemAdminNo(me.employeeNo)) notFound(); // 있다는 것 자체를 알리지 않는다
   const [t, f] = await Promise.all([getTranslations('admin.ops'), getFormatter()]);

@@ -7,8 +7,10 @@ import { canDownloadBackup } from '@/lib/backup/github';
 import { backupPrefix, backupReady } from '@/lib/backup/run';
 import { parseName } from '@/lib/backup/store';
 import { RestorePanel } from './RestorePanel';
+import { adminPage } from '@/lib/admin-gate';
 
 export default async function RestorePage({ searchParams }: { searchParams: Promise<{ name?: string }> }) {
+  await adminPage(); // 관리 화면 이중 확인 (lib/admin-gate)
   const [t, me, sp] = await Promise.all([getTranslations('admin.backups'), getMe(), searchParams]);
   const name = sp.name ?? '';
   const p = parseName(name);

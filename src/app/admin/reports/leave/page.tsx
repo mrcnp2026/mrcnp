@@ -17,6 +17,7 @@ import { orgOptions } from '@/lib/org';
 import { loadOrgGroups } from '@/lib/org-data';
 import { buildLeaveReport, type LeaveSum } from '@/lib/report-leave';
 import { toKstDate } from '@/lib/time';
+import { adminPage } from '@/lib/admin-gate';
 
 type Sum = LeaveSum & { rate: number | null };
 // 세 표(부서별 · 정책 그룹별 · 직원별)의 칸을 위아래로 맞춘다 (2026-10-27 의뢰인: 직원별 칸이 위 표들과 줄이 안 맞는다) —
@@ -25,6 +26,7 @@ type Sum = LeaveSum & { rate: number | null };
 const FIXED = 'w-full xl:table-fixed'; // 1024~1279px는 칸 폭을 내용에 맞춘다 — 같은 폭으로 나누면 숫자 칸이 넘쳤다 (2026-10-29 가로 넘침 검사)
 
 export default async function LeaveReportPage({ searchParams }: { searchParams: Promise<{ to?: string; g?: string; inactive?: string; live?: string; more?: string }> }) {
+  await adminPage(); // 관리 화면 이중 확인 (lib/admin-gate)
   const [t, sp, groups] = await Promise.all([getTranslations('admin.reports'), searchParams, loadOrgGroups()]);
   const [tl, leaveTypes] = await Promise.all([getTranslations('leave'), loadAllLeaveTypes()]);
   const typeName = (code: string) => leaveTypeName(leaveTypes, code, tl);

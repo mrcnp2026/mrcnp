@@ -13,8 +13,10 @@ import { Card, Chip, em, Explain, PageShell } from '@/components/ui';
 import { leaveTypeName } from '@/lib/leave';
 import { loadAllLeaveTypes } from '@/lib/leave-data';
 import { LeaveTypeForm } from './TypeForms';
+import { adminPage } from '@/lib/admin-gate';
 
 export default async function LeaveTypesPage({ searchParams }: { searchParams: Promise<{ tab?: string }> }) {
+  await adminPage(); // 관리 화면 이중 확인 (lib/admin-gate)
   const [t, tl, f, sp] = await Promise.all([getTranslations('admin.leaveTypes'), getTranslations('leave'), getFormatter(), searchParams]);
   const tc = await getTranslations('common');
   const ts = await getTranslations('side');

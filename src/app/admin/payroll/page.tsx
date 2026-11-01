@@ -11,6 +11,7 @@ import { getMe } from '@/lib/auth';
 import { buildMonth, isYearMonth, monthRange } from '@/lib/month-data';
 import { createAdminClient } from '@/lib/supabase/admin';
 import { toKstDate } from '@/lib/time';
+import { adminPage } from '@/lib/admin-gate';
 import { NOT_SYSTEM_ADMIN } from '@/lib/system-admin'; // 시스템관리자는 목록에 보이지 않는다 (2026-10-18)
 
 function shift(ym: string, n: number) {
@@ -19,6 +20,7 @@ function shift(ym: string, n: number) {
 }
 
 export default async function PayrollPage({ searchParams }: { searchParams: Promise<{ m?: string; live?: string }> }) {
+  await adminPage(); // 관리 화면 이중 확인 (lib/admin-gate)
   const t = await getTranslations('admin.payroll');
   const tr = await getTranslations('admin.records');
   const tn = await getTranslations('side');

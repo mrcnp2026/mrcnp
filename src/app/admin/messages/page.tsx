@@ -13,9 +13,11 @@ import { orgOptions } from '@/lib/org';
 import { loadOrgGroups } from '@/lib/org-data';
 import { createAdminClient } from '@/lib/supabase/admin';
 import { loadSent } from '@/lib/work-messages';
+import { adminPage } from '@/lib/admin-gate';
 import { NOT_SYSTEM_ADMIN } from '@/lib/system-admin'; // 시스템관리자는 목록에 보이지 않는다 (2026-10-18)
 
 export default async function AdminMessagesPage() {
+  await adminPage(); // 관리 화면 이중 확인 (lib/admin-gate)
   const me = (await getMe())!;
   const t = await getTranslations('messages');
   const [items, groups, { data: staff }] = await Promise.all([loadSent(me), loadOrgGroups(), createAdminClient().from('profiles').select('id, name, employee_no, active').or(NOT_SYSTEM_ADMIN).order('name')]);

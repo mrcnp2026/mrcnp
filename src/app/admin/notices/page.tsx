@@ -5,8 +5,10 @@ import { getFormatter, getTranslations } from 'next-intl/server';
 import Link from 'next/link';
 import { Card, Chip, PageShell, Empty } from '@/components/ui';
 import { listNoticesForAdmin } from '@/lib/notices';
+import { adminPage } from '@/lib/admin-gate';
 
 export default async function NoticesPage() {
+  await adminPage(); // 관리 화면 이중 확인 (lib/admin-gate)
   const t = await getTranslations('admin.notices');
   const f = await getFormatter();
   const rows = await listNoticesForAdmin(new Date());

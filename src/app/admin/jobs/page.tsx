@@ -13,9 +13,11 @@ import { loadJobs } from '@/lib/job-data';
 import { SHIFT_COLOR_CLASS } from '@/lib/shifts';
 import { createAdminClient } from '@/lib/supabase/admin';
 import { JobForm } from './JobForms';
+import { adminPage } from '@/lib/admin-gate';
 import { NOT_SYSTEM_ADMIN } from '@/lib/system-admin'; // 시스템관리자는 목록에 보이지 않는다 (2026-10-18)
 
 export default async function JobsPage({ searchParams }: { searchParams: Promise<{ tab?: string }> }) {
+  await adminPage(); // 관리 화면 이중 확인 (lib/admin-gate)
   const t = await getTranslations('admin.jobs');
   const tc = await getTranslations('common');
   const ts = await getTranslations('side');

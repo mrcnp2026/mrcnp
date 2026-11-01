@@ -16,9 +16,11 @@ import { loadShiftTemplates } from '@/lib/shift-data';
 import { SHIFT_COLOR_CLASS, spanMinutes } from '@/lib/shifts';
 import { createAdminClient } from '@/lib/supabase/admin';
 import { ShiftAssignForm, ShiftForm, ShiftToggle } from '../ShiftForms';
+import { adminPage } from '@/lib/admin-gate';
 import { NOT_SYSTEM_ADMIN } from '@/lib/system-admin'; // 시스템관리자는 목록에 보이지 않는다 (2026-10-18)
 
 export default async function ShiftPage({ params }: { params: Promise<{ id: string }> }) {
+  await adminPage(); // 관리 화면 이중 확인 (lib/admin-gate)
   const t = await getTranslations('admin.shifts');
   const kindNames = await getShiftKindNames(toKstDate(new Date()));
   const kn = withKindNames((k: string) => t(`kinds.${k}`), kindNames);

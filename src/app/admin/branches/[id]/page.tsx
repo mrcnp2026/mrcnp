@@ -14,9 +14,11 @@ import { Card, Chip, PageShell } from '@/components/ui';
 import { loadGroupLocationLinks, loadOfficeLocations } from '@/lib/geo-data';
 import { createAdminClient } from '@/lib/supabase/admin';
 import { BranchEditForm } from '../BranchForms';
+import { adminPage } from '@/lib/admin-gate';
 import { NOT_SYSTEM_ADMIN } from '@/lib/system-admin'; // 시스템관리자는 목록에 보이지 않는다 (2026-10-18)
 
 export default async function BranchPage({ params }: { params: Promise<{ id: string }> }) {
+  await adminPage(); // 관리 화면 이중 확인 (lib/admin-gate)
   const t = await getTranslations('admin.branches');
   const tc = await getTranslations('common');
   const { id } = await params;

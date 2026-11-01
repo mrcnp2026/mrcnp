@@ -7,11 +7,13 @@ import { createAdminClient } from '@/lib/supabase/admin';
 import { toKstDate, toKstTime } from '@/lib/time';
 import { NoticeEditor } from '../NoticeEditor';
 import { switchOn } from '@/lib/switches';
+import { adminPage } from '@/lib/admin-gate';
 import { NOT_SYSTEM_ADMIN } from '@/lib/system-admin'; // 시스템관리자는 목록에 보이지 않는다 (2026-10-18)
 
 const kstInput = (d: Date) => `${toKstDate(d)}T${toKstTime(d).slice(0, 5)}`;
 
 export default async function EditNoticePage({ params }: { params: Promise<{ id: string }> }) {
+  await adminPage(); // 관리 화면 이중 확인 (lib/admin-gate)
   const { id } = await params;
   const got = await getNotice(id);
   if (!got) notFound();

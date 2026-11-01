@@ -15,8 +15,10 @@ import { RowList } from '@/components/list';
 import { Card, PageShell } from '@/components/ui';
 import { loadGroupLocationLinks, loadOfficeLocations } from '@/lib/geo-data';
 import { PlaceForm } from './PlaceForm';
+import { adminPage } from '@/lib/admin-gate';
 
 export default async function PlacesPage({ searchParams }: { searchParams: Promise<{ tab?: string; q?: string; new?: string }> }) {
+  await adminPage(); // 관리 화면 이중 확인 (lib/admin-gate)
   const t = await getTranslations('admin.places');
   const tc = await getTranslations('common');
   const ts = await getTranslations('side');

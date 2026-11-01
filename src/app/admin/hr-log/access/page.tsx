@@ -13,6 +13,7 @@ import { companyProfile } from '@/lib/company';
 import { canViewLogs } from '@/lib/log-access';
 import { createAdminClient } from '@/lib/supabase/admin';
 import { ReviewButton } from './ReviewButton';
+import { adminPage } from '@/lib/admin-gate';
 
 export const dynamic = 'force-dynamic';
 const RANGES = { '30': 30, '90': 90, '365': 365, '730': 730 } as const;
@@ -22,6 +23,7 @@ const TONE = { OK: 'ok', FAIL: 'warn', THROTTLED: 'danger' } as const;
 type Row = { key: string; when: string; who: string | null; cells: string[]; chip?: { tone: 'ok' | 'warn' | 'danger' | 'neutral' | 'info'; text: string } };
 
 export default async function AccessLogPage({ searchParams }: { searchParams: Promise<{ d?: string; r?: string; p?: string; tab?: string; pg?: string }> }) {
+  await adminPage(); // 관리 화면 이중 확인 (lib/admin-gate)
   const me = await getMe();
   if (!me || !(await canViewLogs(me))) notFound(); // 이상준 최고관리자 · 시스템관리자만 (2026-10-30)
   const [t, tc, f, sp, profile] = await Promise.all([getTranslations('admin.accessLog'), getTranslations('common'), getFormatter(), searchParams, companyProfile()]);

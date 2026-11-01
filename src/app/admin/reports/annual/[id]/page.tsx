@@ -14,10 +14,12 @@ import { groupPath } from '@/lib/org';
 import { loadOrgGroups } from '@/lib/org-data';
 import { ANNUAL_METRICS, buildAnnualReport, empMonths, empTotal, isMetric, metricValue, type AnnualMetric } from '@/lib/report-annual';
 import { toKstDate } from '@/lib/time';
+import { adminPage } from '@/lib/admin-gate';
 
 export const maxDuration = 60;
 
 export default async function AnnualEmployeePage({ params, searchParams }: { params: Promise<{ id: string }>; searchParams: Promise<{ y?: string; k?: string; live?: string }> }) {
+  await adminPage(); // 관리 화면 이중 확인 (lib/admin-gate)
   const [t, { id }, sp, groups] = await Promise.all([getTranslations('admin.annual'), params, searchParams, loadOrgGroups()]);
   if (!/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(id)) notFound();
   const thisYear = Number(toKstDate(new Date()).slice(0, 4));

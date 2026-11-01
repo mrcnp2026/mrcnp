@@ -12,9 +12,11 @@ import { loadOrgGroups } from '@/lib/org-data';
 import { SHIFT_COLOR_CLASS } from '@/lib/shifts';
 import { createAdminClient } from '@/lib/supabase/admin';
 import { JobAssignForm, JobForm, JobToggle } from '../JobForms';
+import { adminPage } from '@/lib/admin-gate';
 import { NOT_SYSTEM_ADMIN } from '@/lib/system-admin'; // 시스템관리자는 목록에 보이지 않는다 (2026-10-18)
 
 export default async function JobPage({ params }: { params: Promise<{ id: string }> }) {
+  await adminPage(); // 관리 화면 이중 확인 (lib/admin-gate)
   const t = await getTranslations('admin.jobs');
   const tc = await getTranslations('common');
   const { id } = await params;

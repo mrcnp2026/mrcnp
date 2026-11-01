@@ -21,6 +21,7 @@ import { RENAMABLE_KINDS } from '@/lib/shift-kind-names';
 import { KindNamesForm } from './KindNamesForm';
 import { createAdminClient } from '@/lib/supabase/admin';
 import { toKstDate } from '@/lib/time';
+import { adminPage } from '@/lib/admin-gate';
 import { NOT_SYSTEM_ADMIN } from '@/lib/system-admin'; // 시스템관리자는 목록에 보이지 않는다 (2026-10-18)
 
 // 이어진 날짜를 「시작 ~ 끝」 묶음으로 (마감 관리의 「마감된 기간들」)
@@ -44,6 +45,7 @@ const TOPICS = { 'shift-kinds': 'shiftKinds', 'leave-groups': 'leaveGroups', 'ac
 const REQUEST_KINDS = ['punch', 'correction', 'overtime', 'shift', 'leave', 'leaveDelete', 'work'] as const;
 
 export default async function ManageInfoPage({ params }: { params: Promise<{ topic: string }> }) {
+  await adminPage(); // 관리 화면 이중 확인 (lib/admin-gate)
   const { topic } = await params;
   if (topic === 'closing') redirect('/admin/closing'); // 2026-10-13: 실제 마감 화면으로 옮겼다
   if (!(topic in TOPICS)) notFound();

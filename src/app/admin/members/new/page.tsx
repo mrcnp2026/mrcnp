@@ -11,8 +11,10 @@ import { loadOrgGroups } from '@/lib/org-data';
 import { toKstDate } from '@/lib/time';
 import { RegisterWizard } from './RegisterWizard';
 import { StaffAddTabs } from '../StaffImport';
+import { adminPage } from '@/lib/admin-gate';
 
 export default async function NewMemberPage() {
+  await adminPage(); // 관리 화면 이중 확인 (lib/admin-gate)
   const t = await getTranslations('admin.members');
   const groups = orgOptions(await loadOrgGroups());
   const localhost = new URL(OFFICE.appOrigin).hostname === 'localhost';

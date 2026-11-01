@@ -17,8 +17,10 @@ import { loadShiftTemplates } from '@/lib/shift-data';
 import { hhmm, SHIFT_COLOR_CLASS } from '@/lib/shifts';
 import { createAdminClient } from '@/lib/supabase/admin';
 import { ShiftForm, ShiftSwitch } from './ShiftForms';
+import { adminPage } from '@/lib/admin-gate';
 
 export default async function ShiftsPage() {
+  await adminPage(); // 관리 화면 이중 확인 (lib/admin-gate)
   const t = await getTranslations('admin.shifts');
   const kindNames = await getShiftKindNames(toKstDate(new Date()));
   const kn = withKindNames((k: string) => t(`kinds.${k}`), kindNames);

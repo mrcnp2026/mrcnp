@@ -15,9 +15,11 @@ import { buildOrgTree, groupPath, MAX_DEPTH } from '@/lib/org';
 import { loadOrgGroups } from '@/lib/org-data';
 import { createAdminClient } from '@/lib/supabase/admin';
 import { BranchAddForm } from './BranchForms';
+import { adminPage } from '@/lib/admin-gate';
 import { NOT_SYSTEM_ADMIN } from '@/lib/system-admin'; // 시스템관리자는 목록에 보이지 않는다 (2026-10-18)
 
 export default async function BranchesPage({ searchParams }: { searchParams: Promise<{ tab?: string; q?: string }> }) {
+  await adminPage(); // 관리 화면 이중 확인 (lib/admin-gate)
   const t = await getTranslations('admin.branches');
   const tc = await getTranslations('common');
   const ts = await getTranslations('side');

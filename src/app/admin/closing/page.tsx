@@ -19,6 +19,7 @@ import { addDays } from '@/lib/calendar';
 import { loadSentFor } from '@/lib/attendance-notify';
 import { CloseBoard, type Line } from './CloseBoard';
 import { ClosingNotice } from './NoticeForm';
+import { adminPage } from '@/lib/admin-gate';
 
 const shift = (ym: string, by: number) => {
   const [y, m] = ym.split('-').map(Number);
@@ -26,6 +27,7 @@ const shift = (ym: string, by: number) => {
 };
 
 export default async function ClosingPage({ searchParams }: { searchParams: Promise<{ m?: string; live?: string }> }) {
+  await adminPage(); // 관리 화면 이중 확인 (lib/admin-gate)
   const tGear = await getTranslations('frame');
   const [t, sp] = await Promise.all([getTranslations('admin.closing'), searchParams]);
   const today = toKstDate(new Date());

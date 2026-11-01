@@ -13,12 +13,14 @@ import { createAdminClient } from '@/lib/supabase/admin';
 import { isSystemAdminNo } from '@/lib/system-admin';
 import { toKstDate } from '@/lib/time';
 import { ResendMails } from './Resend';
+import { adminPage } from '@/lib/admin-gate';
 
 export const dynamic = 'force-dynamic';
 const shift = (ym: string, k: number) => new Date(Date.UTC(Number(ym.slice(0, 4)), Number(ym.slice(5, 7)) - 1 + k, 1)).toISOString().slice(0, 7);
 const TONE = { SENT: 'ok', FAILED: 'danger', NO_EMAIL: 'warn', NO_BIRTH: 'warn', NONE: 'neutral' } as const;
 
 export default async function OpsMailPage({ searchParams }: { searchParams: Promise<{ m?: string }> }) {
+  await adminPage(); // 관리 화면 이중 확인 (lib/admin-gate)
   const me = await getMe();
   if (!me || !isSystemAdminNo(me.employeeNo)) notFound(); // 있다는 것 자체를 알리지 않는다
   const [t, f, sp] = await Promise.all([getTranslations('admin.opsMail'), getFormatter(), searchParams]);

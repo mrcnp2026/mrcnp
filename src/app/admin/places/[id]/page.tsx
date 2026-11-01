@@ -19,8 +19,10 @@ import { isOfficeIp, parseCidr, traceClientIp } from '@/lib/verify-location';
 import { groupPath } from '@/lib/org';
 import { loadOrgGroups } from '@/lib/org-data';
 import { PlaceForm, PlaceToggle } from '../PlaceForm';
+import { adminPage } from '@/lib/admin-gate';
 
 export default async function PlacePage({ params }: { params: Promise<{ id: string }> }) {
+  await adminPage(); // 관리 화면 이중 확인 (lib/admin-gate)
   const t = await getTranslations('admin.places');
   const tc = await getTranslations('common');
   const { id } = await params;

@@ -12,9 +12,11 @@ import { toKstDate } from '@/lib/time';
 import { GroupManager, type TreeRow } from './GroupManager';
 import { OrgDiagram } from './OrgDiagram';
 import { PrintButton } from './PrintButton';
+import { adminPage } from '@/lib/admin-gate';
 import { NOT_SYSTEM_ADMIN } from '@/lib/system-admin'; // 시스템관리자는 목록에 보이지 않는다 (2026-10-18)
 
 export default async function OrgPage() {
+  await adminPage(); // 관리 화면 이중 확인 (lib/admin-gate)
   const t = await getTranslations('admin.org');
   const [groups, { data: people }] = await Promise.all([
     loadOrgGroups(),

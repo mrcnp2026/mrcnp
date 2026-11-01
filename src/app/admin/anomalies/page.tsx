@@ -21,6 +21,7 @@ import { getMe } from '@/lib/auth';
 import { loadSentFor } from '@/lib/attendance-notify';
 import { NotifyButton, PolicyForm, ReviewButton } from './PolicyForm';
 import { TaskEdit, TaskPolicyForm } from './TaskForms';
+import { adminPage } from '@/lib/admin-gate';
 
 const shift = (ym: string, by: number) => {
   const [y, m] = ym.split('-').map(Number);
@@ -28,6 +29,7 @@ const shift = (ym: string, by: number) => {
 };
 
 export default async function AnomaliesPage({ searchParams }: { searchParams: Promise<{ m?: string; live?: string; k?: string; st?: string; p?: string }> }) {
+  await adminPage(); // 관리 화면 이중 확인 (lib/admin-gate)
   const [t, tc, sp] = await Promise.all([getTranslations('admin.anomalies'), getTranslations('common'), searchParams]);
   const today = toKstDate(new Date());
   const month = isMonth(sp.m) && sp.m <= today.slice(0, 7) ? sp.m : today.slice(0, 7);

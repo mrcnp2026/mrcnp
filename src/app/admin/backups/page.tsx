@@ -12,10 +12,12 @@ import { backupReady, backupPrefix, listBackups } from '@/lib/backup/run';
 import { keepRule, KEEP_DAYS, type StoredBackup } from '@/lib/backup/store';
 import { toKstDate } from '@/lib/time';
 import { BackupActions, BackupRow } from './BackupActions';
+import { adminPage } from '@/lib/admin-gate';
 
 const PAGE = 15;
 
 export default async function BackupsPage({ searchParams }: { searchParams: Promise<{ p?: string }> }) {
+  await adminPage(); // 관리 화면 이중 확인 (lib/admin-gate)
   const [t, f, sp, me] = await Promise.all([getTranslations('admin.backups'), getFormatter(), searchParams, getMe()]);
   const mayUse = canDownloadBackup(me);
   const ready = backupReady();

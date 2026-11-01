@@ -16,12 +16,14 @@ import { loadOrgGroups } from '@/lib/org-data';
 import { attendanceRate, type AttSum } from '@/lib/report-attendance';
 import { toKstDate } from '@/lib/time';
 import { reportOnce, TrendCharts } from './TrendCharts';
+import { adminPage } from '@/lib/admin-gate';
 
 // 표에 나오는 칸 번호(cells 배열 기준): 0 인원 · 1 근무 · 2 인정 · 3 연장 · 4 야간 · 5 휴일 · 6 지각 · 7 결근 · 8 유급휴가 · 9 이상 · 10 미처리 · 11 출근율 · 12 마감
 const BASIC = [11, 2, 3, 6, 7, 9] as const; // 기본 — 한눈에 볼 여섯 칸 (+ 인원 · 마감)
 const ALL = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11] as const;
 
 export default async function AttendanceReportPage({ searchParams }: { searchParams: Promise<{ m?: string; g?: string; basis?: string; live?: string; tr?: string; more?: string }> }) {
+  await adminPage(); // 관리 화면 이중 확인 (lib/admin-gate)
   const [t, sp, groups] = await Promise.all([getTranslations('admin.reports'), searchParams, loadOrgGroups()]);
   const today = toKstDate(new Date());
   const month = isMonth(sp.m) && sp.m <= today.slice(0, 7) ? sp.m : today.slice(0, 7);

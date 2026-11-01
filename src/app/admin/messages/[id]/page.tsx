@@ -5,8 +5,10 @@ import { PageShell } from '@/components/ui';
 import { getMe } from '@/lib/auth';
 import { createAdminClient } from '@/lib/supabase/admin';
 import { loadThread } from '@/lib/work-messages';
+import { adminPage } from '@/lib/admin-gate';
 
 export default async function AdminMessagePage({ params }: { params: Promise<{ id: string }> }) {
+  await adminPage(); // 관리 화면 이중 확인 (lib/admin-gate)
   const me = (await getMe())!;
   const { id } = await params;
   if (!/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(id)) notFound();

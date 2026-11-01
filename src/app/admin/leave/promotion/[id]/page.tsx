@@ -11,10 +11,12 @@ import { createAdminClient } from '@/lib/supabase/admin';
 import { toKstDate } from '@/lib/time';
 import { CampaignActions, SecondNotice, TargetControls } from '../PromotionForms';
 import { promotionSchedule, scheduleWarnings } from '@/lib/leave-promotion-schedule';
+import { adminPage } from '@/lib/admin-gate';
 
 const TONE = { CANDIDATE: 'neutral', EXCLUDED: 'neutral', NOTIFIED: 'warn', PLAN_SUBMITTED: 'info', CONFIRMED: 'ok', EXCEPTION: 'warn', DESIGNATED: 'info' } as const;
 
 export default async function PromotionDetailPage({ params }: { params: Promise<{ id: string }> }) {
+  await adminPage(); // 관리 화면 이중 확인 (lib/admin-gate)
   const [t, f, { id }] = await Promise.all([getTranslations('admin.promotion'), getFormatter(), params]);
   if (!/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(id)) notFound();
   const x = await loadCampaign(id);

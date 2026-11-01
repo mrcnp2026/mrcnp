@@ -14,8 +14,10 @@ import { NO_TYPE_RULE } from '@/lib/leave-ledger';
 import { loadTypeRules } from '@/lib/leave-ledger-data';
 import { LeaveTypeForm, LeaveTypeToggle } from '../TypeForms';
 import { TypeRuleForm } from '../TypeRuleForm';
+import { adminPage } from '@/lib/admin-gate';
 
 export default async function LeaveTypePage({ params }: { params: Promise<{ code: string }> }) {
+  await adminPage(); // 관리 화면 이중 확인 (lib/admin-gate)
   const [t, tl, { code }] = await Promise.all([getTranslations('admin.leaveTypes'), getTranslations('leave'), params]);
   const all = await loadAllLeaveTypes();
   const x = all.find((v) => v.code === code);

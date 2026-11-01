@@ -15,8 +15,10 @@ import { LedgerBoard, type BalanceLine, type EntryLine, type LotLine } from './L
 import { Fold } from '@/components/Fold';
 import { PolicyGroups } from './PolicyGroups';
 import { payoutsFor } from '@/lib/leave-payout-data';
+import { adminPage } from '@/lib/admin-gate';
 
 export default async function LeaveLedgerPage({ searchParams }: { searchParams: Promise<{ emp?: string; live?: string; pg?: string }> }) {
+  await adminPage(); // 관리 화면 이중 확인 (lib/admin-gate)
   const tGear = await getTranslations('frame');
   const [t, sp] = await Promise.all([getTranslations('admin.leaveLedger'), searchParams]);
   const today = toKstDate(new Date());

@@ -19,10 +19,12 @@ import { daysFor, leaveDaysFor, loadPeriod, workDaysFor } from '@/lib/period-dat
 import { hhmm, SHIFT_COLOR_CLASS } from '@/lib/shifts';
 import { kstDateTime, toKstDate } from '@/lib/time';
 import { RangeForm } from './RangeForm';
+import { adminPage } from '@/lib/admin-gate';
 
 type Found = { id: string; name: string; sub: string; color: string; workDate: string; kind: MissingKind; start: string; end: string | null; pending: boolean };
 
 export default async function MissingPage({ searchParams }: { searchParams: Promise<{ from?: string; to?: string; tab?: string; live?: string; v?: string }> }) {
+  await adminPage(); // 관리 화면 이중 확인 (lib/admin-gate)
   const [t, f, sp] = await Promise.all([getTranslations('admin.missing'), getFormatter(), searchParams]);
   const practice = OFFICE.practiceMode && sp.live !== '1';
   const now = new Date();

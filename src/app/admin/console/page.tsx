@@ -4,8 +4,10 @@
 import { getTranslations } from 'next-intl/server';
 import { PageShell } from '@/components/ui';
 import { ConsoleBoard } from './ConsoleBoard';
+import { adminPage } from '@/lib/admin-gate';
 
 export default async function ConsolePage() {
+  await adminPage(); // 관리 화면 이중 확인 (lib/admin-gate)
   const t = await getTranslations('frame');
   return (
     <PageShell wide>

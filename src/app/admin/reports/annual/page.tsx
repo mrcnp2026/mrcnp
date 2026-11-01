@@ -16,10 +16,12 @@ import { groupPath, orgOptions } from '@/lib/org';
 import { loadOrgGroups } from '@/lib/org-data';
 import { ANNUAL_METRICS, buildAnnualReport, empMonths, empTotal, isMetric, type AnnualEmp, type AnnualMetric } from '@/lib/report-annual';
 import { toKstDate } from '@/lib/time';
+import { adminPage } from '@/lib/admin-gate';
 
 export const maxDuration = 60;
 
 export default async function AnnualReportPage({ searchParams }: { searchParams: Promise<{ y?: string; g?: string; k?: string; live?: string }> }) {
+  await adminPage(); // 관리 화면 이중 확인 (lib/admin-gate)
   const [t, sp, groups] = await Promise.all([getTranslations('admin.annual'), searchParams, loadOrgGroups()]);
   const thisYear = Number(toKstDate(new Date()).slice(0, 4));
   const y = Number(sp.y);

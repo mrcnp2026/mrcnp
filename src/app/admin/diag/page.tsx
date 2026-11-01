@@ -8,6 +8,7 @@ import { OFFICE } from '@/config/office';
 import { officeCidrs } from '@/lib/attendance-data';
 import { createAdminClient } from '@/lib/supabase/admin';
 import { isOfficeIp, parseCidr, traceClientIp } from '@/lib/verify-location';
+import { adminPage } from '@/lib/admin-gate';
 
 async function outsideRate(sinceHours: number) {
   const since = new Date(Date.now() - sinceHours * 3_600_000).toISOString();
@@ -19,6 +20,7 @@ async function outsideRate(sinceHours: number) {
 }
 
 export default async function DiagPage() {
+  await adminPage(); // 관리 화면 이중 확인 (lib/admin-gate)
   const t = await getTranslations('admin.diag');
   const f = await getFormatter();
   const trace = traceClientIp(await headers(), OFFICE.ipHeaderOrder);

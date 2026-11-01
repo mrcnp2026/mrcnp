@@ -34,8 +34,10 @@ import { WeekLimitCard } from './WeekLimitCard';
 import { switchOn } from '@/lib/switches';
 import { PanelPortal } from '@/components/PanelPortal';
 import { getSettingAt } from '@/lib/settings';
+import { adminPage } from '@/lib/admin-gate';
 
 export default async function AdminHome({ searchParams }: { searchParams: Promise<{ live?: string; np?: string }> }) {
+  await adminPage(); // 관리 화면 이중 확인 (lib/admin-gate)
   const t = await getTranslations('admin.home');
   const th = await getTranslations('home');
   const fmt = await getFormatter();
