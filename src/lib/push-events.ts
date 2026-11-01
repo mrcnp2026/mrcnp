@@ -1,20 +1,23 @@
 // 폰 알림을 보내는 일 (2026-10-16 의뢰인: 휴가 신청 · 미출근자 · 정정 요청 / 2026-10-19: 매주 미처리 요청 다시 알림). 서버 전용.
 // 요청 두 가지는 저장 API가 응답을 돌려준 뒤(after) 부르고, 출퇴근 알림(직원 본인 · 관리자)은 정기 작업 /api/cron/absent-watch가 부른다.
+// 2026-11-02 의뢰인(급여-21): 주 52시간 「주의」 · 초과를 관리자에게 폰 푸시 + 앱 알림 (notifyWeekLimit).
 // 2026-10-21 의뢰인: 외근 · 출장 · 재택 신청을 바로 알림 · 지각 · 조퇴를 찍는 순간 관리자에게 · 승인 · 거절 결과를 직원 본인에게 (결정 사항 알림-10 ~ 12).
 // 관리자에게 가는 알림은 받는 사람을 알림-9 규칙으로 거른다(lib/push-recipients.ts — notifyApprovers · sendStaffPush가 거친다).
 import 'server-only';
 import { resolveDayType } from '@/config/labor-rules';
 import { collectAnomalies, loadAnomalyPolicy } from '@/lib/anomaly-data';
 import { OFFICE } from '@/config/office';
-import { addDays } from '@/lib/calendar';
+import { addDays, weekStartOf } from '@/lib/calendar';
 import { fullLeaveSet } from '@/lib/leave';
 import { findMissingPunches } from '@/lib/missing-punch';
-import { hiddenTestIds, leaveDaysFor, loadPeriod, workDaysFor } from '@/lib/period-data';
+import { daysFor, hiddenTestIds, leaveDaysFor, loadPeriod, workDaysFor } from '@/lib/period-data';
+import { weekTotalMinutes } from '@/lib/period';
 import { planPunchAlerts, type PersonMisses } from '@/lib/punch-alerts';
 import { firstTime, notifyApprovers, pushConfigured, sendPush, sendStaffPush } from '@/lib/push';
 import { staffPushFilter } from '@/lib/push-recipients';
 import { loadRejectReasons } from '@/lib/reject-reason';
 import { approverIdsFor } from '@/lib/scope';
+import { getSettingAt } from '@/lib/settings';
 import { switchOn } from '@/lib/switches';
 import { sendSystem } from '@/lib/work-messages';
 import { SYSTEM_ADMIN_NO } from '@/lib/system-admin';
@@ -141,6 +144,47 @@ export async function notifyLateEarly(employeeId: string, workDate: string, kind
     });
   } catch (e) {
     console.error(JSON.stringify({ route: 'push.lateEarly', detail: String((e as Error)?.message ?? e).slice(0, 200) }));
+  }
+}
+
+/**
+ * 주 52시간 — 이번 주(월~일) 합계가 「주의」 기준(통합설정 › 리포트 기준, 기본 48시간)에 닿거나 52시간을 넘으면
+ * 관리자 폰 알림 받는 사람(알림-9)에게 폰 푸시 + 앱 알림(사내게시판 · 종 숫자) (2026-11-02 의뢰인, 급여-21: 막지 않고 알린다).
+ * 숫자는 관리자 홈 「주 52시간 관리」와 같은 weekTotalMinutes. 같은 사람 · 같은 주 · 같은 단계는 한 번만.
+ * 퇴근을 찍은 직후(출퇴근 API)와 정기 작업(absent-watch — 정정 · 승인으로 늘어난 것)이 부른다. ids를 주지 않으면 전원을 본다.
+ * 최고관리자 · 시스템관리자 · 간주 근무 · 검사 계정은 보지 않는다. 5인 미만 사업장 · 연습 모드 · 「주 52시간 표시」 스위치를 끄면 보내지 않는다.
+ */
+export async function notifyWeekLimit(ids?: string[], now = new Date()): Promise<number> {
+  try {
+    if (OFFICE.practiceMode || OFFICE.workplaceSize !== '5_or_more' || !(await switchOn('report.week52'))) return 0;
+    const today = toKstDate(now);
+    const weekStart = weekStartOf(today);
+    const data = await loadPeriod(weekStart, today, false);
+    if (!data.rule) return 0;
+    const cautionMin = (await getSettingAt('week.caution_hours', today)) * 60;
+    const limitMin = OFFICE.weeklyLimitHours * 60;
+    const hm = (min: number) => [Math.floor(min / 60) ? `${Math.floor(min / 60)}시간` : '', min % 60 ? `${min % 60}분` : ''].filter(Boolean).join(' ') || '0분';
+    const push = await pushOn();
+    let sent = 0;
+    for (const p of data.people.filter((x) => x.active && x.role !== 'admin' && x.employeeNo !== OFFICE.ownerEmployeeNo && !x.employeeNo?.startsWith('e2e-') && (!ids || ids.includes(x.id)))) {
+      if (data.templateOf(p.id)?.kind === 'deemed') continue;
+      const minutes = weekTotalMinutes(daysFor(data, p.id, weekStart, today));
+      const level = minutes > limitMin ? 'over' : minutes >= cautionMin ? 'caution' : null;
+      if (!level) continue;
+      const key = `week52:${level}:${p.id}:${weekStart}`;
+      const to = await staffPushFilter(await approverIdsFor(p.id));
+      if (to.length === 0) continue;
+      const title = level === 'over' ? `${p.name} 님 이번 주 52시간을 넘었습니다` : `${p.name} 님 이번 주 ${hm(minutes)} — 52시간에 가깝습니다`;
+      const body = level === 'over'
+        ? `${md(weekStart)} 주 합계 ${hm(minutes)} (${hm(minutes - limitMin)} 초과). 근무를 조정해 주세요.`
+        : `${md(weekStart)} 주 합계 ${hm(minutes)} · 52시간까지 ${hm(limitMin - minutes)} 남았습니다.`;
+      await sendSystem({ dedupeKey: key, title, body, employeeIds: to, related: { type: 'week52', id: p.id, href: '/admin' }, senderId: null, isTest: false });
+      if (push && (await firstTime(key))) sent += await sendPush(to, { title, body, url: '/admin', tag: `week52-${p.id}-${weekStart}` });
+    }
+    return sent;
+  } catch (e) {
+    console.error(JSON.stringify({ route: 'push.week52', detail: String((e as Error)?.message ?? e).slice(0, 200) }));
+    return 0;
   }
 }
 

@@ -9,7 +9,7 @@
 //    위치는 폰이 보낸 값이라 인터넷 주소보다 약한 증거다 — 확인 수단(verified_by)을 기록에 남긴다. 사무실 밖 좌표는 저장하지 않는다.
 import { after } from 'next/server';
 import { syncOvertimeFor } from '@/lib/period-data';
-import { notifyLateEarly, notifyPunchRequest } from '@/lib/push-events';
+import { notifyLateEarly, notifyPunchRequest, notifyWeekLimit } from '@/lib/push-events';
 import { OFFICE } from '@/config/office';
 import { api, ApiError, readJson } from '@/lib/api';
 import { getMe } from '@/lib/auth';
@@ -119,6 +119,8 @@ export const POST = api('punch', async (req) => {
   if (event.kind === 'out' && !deduped) syncOvertimeFor(who.employeeId, [event.workDate]);
   // 지각 · 조퇴면 관리자 폰으로 (2026-10-21 의뢰인, 알림-11) — 응답을 돌려준 뒤에 본다
   if (!deduped) after(() => notifyLateEarly(who.employeeId, event.workDate, event.kind));
+  // 퇴근하면 이번 주 합계를 보고 「주의」 · 52시간 초과를 관리자에게 (2026-11-02 의뢰인, 급여-21)
+  if (event.kind === 'out' && !deduped) after(() => notifyWeekLimit([who.employeeId]));
   return {
     requested: false,
     kind: event.kind,

@@ -1,6 +1,6 @@
 // 「주 52시간 관리」 카드 (시프티 대조 우선 반영 ②, 2026-10-02 의뢰인).
 // 이번 주 40시간을 넘긴 직원만 많은 순 — 48시간부터 주황, 52시간 넘으면 빨강. 52시간까지 남은 시간을 말로.
-// 5인 미만이면 한도 규정이 없으므로 색 없이 숫자만 (7-13 요점 4). 알림은 보내지 않는다 (요점 3).
+// 5인 미만이면 한도 규정이 없으므로 색 없이 숫자만 (7-13 요점 4). 알림은 2026-11-02 의뢰인(급여-21)부터 보낸다 — lib/push-events notifyWeekLimit.
 import { AlertTriangle, Gauge } from 'lucide-react';
 import { getTranslations } from 'next-intl/server';
 import { Card, CardTitle } from '@/components/ui';
