@@ -4,3 +4,5 @@ shots
 outputs-pc
 scripts/_q.mts
 .env*.local
+.env*
+scripts/.tmp-*
