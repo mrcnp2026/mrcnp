@@ -118,14 +118,20 @@ export function CertDecide({ id, name, draft, copies }: { id: string; name: stri
   const [open, setOpen] = useState(false);
   return (
     <div className="flex flex-col items-start gap-2 sm:items-end">
+      {/* key: 두 줄이 같은 div로 재사용되면 「반려」 단추가 「반려하기」 단추로 이어져, 사유가 비어 잠기는 순간 MorphButton이 처리 중으로 알고 고리를 돌린다 (2026-11-01 의뢰인) */}
       {ask ? (
-        <div className="flex w-full flex-wrap items-center gap-2 sm:w-auto">
-          <input value={reason} onChange={(e) => setReason(e.target.value)} maxLength={200} placeholder={t('rejectPh')} aria-label={t('rejectPh')} className="h-9 min-w-0 flex-1 rounded-button border border-border bg-bg px-3 text-sm" />
-          <Button type="button" size="sm" variant="outline" disabled={busy || reason.trim().length < 2} onClick={() => send({ action: 'reject', id, reason })}>{t('rejectYes')}</Button>
-          <button type="button" className="min-h-9 text-sm text-muted" onClick={() => setAsk(false)}>{t('cancel')}</button>
+        <div key="ask" className="flex w-full flex-col gap-2 sm:w-72">
+          <label className="flex flex-col gap-1 text-sm">
+            <span className="font-bold">{t('rejectLabel')}<span className="text-danger"> *</span></span>
+            <input value={reason} onChange={(e) => setReason(e.target.value)} required autoFocus maxLength={200} placeholder={t('rejectPh')} className="min-h-11 w-full rounded-button border border-border bg-bg px-3 text-base lg:min-h-9 lg:text-sm" autoComplete="off" />
+          </label>
+          <div className="flex items-center justify-end gap-3">
+            <button type="button" className="min-h-9 text-sm text-muted" onClick={() => { setAsk(false); setReason(''); }}>{t('cancel')}</button>
+            <Button type="button" size="sm" variant="outline" disabled={busy || reason.trim().length < 2} onClick={() => send({ action: 'reject', id, reason })}>{t('rejectYes')}</Button>
+          </div>
         </div>
       ) : (
-        <div className="flex gap-2">
+        <div key="pick" className="flex gap-2">
           <Button type="button" size="sm" disabled={busy || !draft} onClick={() => setOpen(true)} aria-label={t('issueOf', { name })}>{t('previewEdit')}</Button>
           <Button type="button" size="sm" variant="outline" disabled={busy} onClick={() => setAsk(true)}>{t('reject')}</Button>
         </div>

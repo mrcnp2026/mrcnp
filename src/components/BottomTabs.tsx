@@ -26,7 +26,7 @@ const MY_TABS: Tab[] = [
 const ADMIN_TABS: Tab[] = [
   { key: 'status', icon: ChartPie, href: '/admin', apps: ['mHome'] },
   { key: 'requests', icon: BellRing, href: '/admin/inbox', apps: ['mRequests'] },
-  { key: 'work', icon: Clock, href: '/admin/records/list', apps: ['mAttendance'] }, // 근태 = 날짜별 기록 목록부터 (일정 · 마감은 그 앱 안 메뉴)
+  { key: 'work', icon: Clock, href: '/admin/records/calendar', apps: ['mAttendance'] }, // 근태 = 출퇴근 달력부터 (2026-11-01 의뢰인. 목록 · 일정은 그 앱 안 메뉴)
   { key: 'leave', icon: CalendarDays, href: '/admin/leave', apps: ['mLeave'] },
 ];
 

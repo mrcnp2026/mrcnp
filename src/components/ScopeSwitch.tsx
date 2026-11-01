@@ -6,7 +6,7 @@ import Link from 'next/link';
 const HREF = {
   requests: { mine: '/punch/requests', all: '/admin/inbox' },
   schedule: { mine: '/punch/records?v=week', all: '/admin/schedule' },
-  attendance: { mine: '/punch/records', all: '/admin/records/list' },
+  attendance: { mine: '/punch/records', all: '/admin/records/calendar' }, // 「전체」 = 출퇴근 달력 (2026-11-01 의뢰인, 하단 근태 탭과 같게)
   leave: { mine: '/punch/leave', all: '/admin/leave' },
 } as const;
 

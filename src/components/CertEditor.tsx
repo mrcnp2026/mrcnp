@@ -8,6 +8,7 @@ import { useRouter } from 'next/navigation';
 import { useEffect, useMemo, useState } from 'react';
 import { callApi } from './client-api';
 import { ErrorNote } from './ErrorNote';
+import { CertPreview } from './CertPreview';
 import { Button } from './ui';
 
 export type CertDraft = {
@@ -64,8 +65,8 @@ export function CertEditor({ draft, copies, issue, onClose }: { draft: CertDraft
             {companyEmpty && <p className="rounded-button bg-warn-tint p-2.5 text-xs text-warn">{t('companyEmpty')}</p>}
             {err && <ErrorNote code={err.code} requestId={err.requestId} namespace="certificates" />}
           </div>
-          {/* 실제 PDF — 받는 종이와 같다 */}
-          <iframe key={shown} src={shown} title={t('editorTitle')} className="min-h-96 w-full rounded-card border border-border bg-surface md:h-full" />
+          {/* 실제 PDF를 그림으로 — 받는 종이와 같다. 누르면 화면 가득 (CertPreview) */}
+          <CertPreview src={shown} title={`${v.name} · ${t(`kind.${v.kind}`)}`} />
         </div>
         <div className="flex flex-wrap items-center justify-end gap-2 border-t border-border px-5 py-3">
           {done ? (
