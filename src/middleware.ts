@@ -1,9 +1,10 @@
-// 로그인 세션 갱신 (Supabase 표준 방식). 권한 판단은 각 화면·API가 서버에서 다시 한다 — 여기서는 지점관리자가 허용 목록 밖의 관리 화면을 여는 것만 돌려보낸다.
+// 로그인 세션 갱신 (Supabase 표준 방식) + 관리자 모드(/admin)의 문 — 로그인 · 등급을 화면을 옮길 때마다 여기서 본다(아래). 각 화면 · API도 서버에서 다시 판단한다.
 import { createClient } from '@supabase/supabase-js';
 import { createServerClient } from '@supabase/ssr';
 import { NextResponse, type NextRequest } from 'next/server';
 import { CONSOLE_COOKIE, isConsolePath } from '@/config/console-paths';
 import { unlockValidEdge } from '@/lib/console-unlock-edge';
+import { authTimeOf, sessionRevoked } from '@/lib/login-rules';
 import { MANAGER_HOME, managerCanOpen } from '@/lib/manager-rules';
 
 export async function middleware(request: NextRequest) {
@@ -33,19 +34,27 @@ export async function middleware(request: NextRequest) {
   );
   // 세션 갱신. getClaims는 만료 전이면 서명만 검사하고(인증 서버 왕복 없음), 만료됐으면 새로 받아 쿠키에 쓴다
   const { data } = await supabase.auth.getClaims();
-  // 지점관리자는 허용한 관리 화면만 연다 (manager-rules.ts). 화면 틀(layout)은 화면 사이를 옮길 때 다시 검사하지 않으므로 여기서 막는다.
-  // 허용 목록 밖의 관리 화면을 열 때만 등급을 한 번 읽는다 — 본인 줄은 본인이 읽을 수 있다(RLS).
+  // 관리자 모드(/admin)의 문 — 화면 틀(layout)은 화면 사이를 옮길 때(RSC 요청) 다시 실행되지 않아, 틀의 확인만으로는
+  // 「화면 이동 요청」으로 꾸민 요청에 관리 화면 본문(서버 권한으로 읽은 자료)이 그대로 나갔다 (2026-11-01 점검 · 개발 서버에서 재현).
+  // 그래서 /admin 요청은 매번 여기서 본다: 로그인 없음 → /login, 퇴사 · 초기화 전 세션 → /login, 직원 → /punch,
+  // 지점관리자는 허용한 화면만(manager-rules.ts). 최고관리자 · 시스템관리자(role admin)는 그대로 통과. 판단 기준은 lib/auth.ts getMe와 같다.
+  // 본인 줄은 본인이 읽을 수 있다(RLS).
   const uid = data?.claims?.sub;
-  if (uid && (pathname === '/admin' || pathname.startsWith('/admin/')) && !managerCanOpen(pathname)) {
-    const { data: p } = await supabase.from('profiles').select('role').eq('id', uid).maybeSingle();
-    if (p?.role === 'manager') {
-      const to = request.nextUrl.clone();
-      to.pathname = MANAGER_HOME;
-      to.search = '';
-      const redirect = NextResponse.redirect(to);
-      response.cookies.getAll().forEach((c) => redirect.cookies.set(c));
-      return redirect;
-    }
+  const go = (path: string) => {
+    const to = request.nextUrl.clone();
+    to.pathname = path;
+    to.search = '';
+    const redirect = NextResponse.redirect(to);
+    response.cookies.getAll().forEach((c) => redirect.cookies.set(c));
+    return redirect;
+  };
+  if (pathname === '/admin' || pathname.startsWith('/admin/')) {
+    if (!uid) return go('/login');
+    const { data: p } = await supabase.from('profiles').select('role, active, sessions_revoked_at').eq('id', uid).maybeSingle();
+    if (!p || !p.active || sessionRevoked(authTimeOf(data.claims), p.sessions_revoked_at)) return go('/login');
+    if (p.role === 'manager') {
+      if (!managerCanOpen(pathname)) return go(MANAGER_HOME);
+    } else if (p.role !== 'admin') return go('/punch');
   }
   // 통합설정(최고관리자 모드) — 숫자 4자리로 연 표가 없으면 잠금 화면을 보여 준다(주소는 그대로). 화면을 옮길 때마다 여기서 본다 (2026-10-14 결정 사항 개발-29)
   if (uid && isConsolePath(pathname)) {
