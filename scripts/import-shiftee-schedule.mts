@@ -1,6 +1,6 @@
 // 시프티 실제 자료 옮기기 — 3단계: 근무 기준 (2026-10-16 의뢰인)
 //   ① 회사 근무 규칙을 2026-01-01부터 (지금 규칙과 같은 값, 지각 10분까지는 지각으로 보지 않음) — 연간 리포트가 1월부터 나온다
-//   ② 1공장 골판지사업부 기본 근무 07:30~17:00 (근무일정 틀로 1공장 직원에게)
+//   ② (2026-11-01부터 기본 꺼짐 — --assign-1factory일 때만) 1공장 골판지사업부 기본 근무 07:30~17:00을 1공장 직원 틀로
 //   ③ 출퇴근 파일의 날마다 근무일정(「08:00 - 17:00」 등)을 그날의 근무일정으로 — 지각 · 연장이 시프티와 같은 기준으로 계산된다
 //      「무일정근무」 · 「간주 근무」는 일정을 만들지 않는다(틀 · 회사 규칙을 따른다). 입사일 전 날은 넣지 않는다.
 //
@@ -49,11 +49,14 @@ if (first.effective_from > '2026-01-01') {
   }
 }
 
-// ② 1공장 기본 근무 틀
+// ② 1공장 기본 근무 틀 — 2026-11-01부터 기본으로 하지 않는다. 직원 평소 틀은 시프티 템플릿 · 실제 적용 인원대로 따로 붙여 두었고
+//   (정규 08:00 · 조기 07:00/07:30/07:40 · 임원 간주, 결정 사항 급여-59 상세), 이 단계가 돌면 1공장 직원을 07:30 틀로 덮어쓴다(11-01 운영에서 실제로 덮어씀).
+//   예전 동작이 꼭 필요할 때만 --assign-1factory
+const ASSIGN_1F = process.argv.includes('--assign-1factory');
 const { data: g1 } = await db.from('org_groups').select('id').eq('name', '1공장 골판지사업부').eq('active', true).single();
 const { data: staff1 } = await db.from('profiles').select('id, name, shift_template_id').eq('group_id', g1!.id).eq('active', true);
-console.log(`1공장 직원 ${staff1?.length}명 → 근무일정 틀 「1공장 기본」 07:30~17:00`);
-if (APPLY) {
+console.log(ASSIGN_1F ? `1공장 직원 ${staff1?.length}명 → 근무일정 틀 「1공장 기본」 07:30~17:00` : '평소 근무 틀은 건드리지 않음 (--assign-1factory 없음)');
+if (APPLY && ASSIGN_1F) {
   let { data: tpl } = await db.from('shift_templates').select('id').eq('name', '1공장 기본').eq('active', true).maybeSingle();
   if (!tpl) {
     const r = await db.from('shift_templates').insert({ name: '1공장 기본', start_time: '07:30', end_time: '17:00', kind: 'normal', color: 'primary', memo: '1공장 골판지사업부 기본 근무 (2026-10-16 의뢰인)', created_by: ADMIN_ID, updated_by: ADMIN_ID }).select('id').single();
