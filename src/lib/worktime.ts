@@ -99,8 +99,9 @@ export function calcWorkMinutes(pairs: PunchPair[], rule: WorkRule, ctx: WorkCtx
   }
   // 일정 시작 전에 일찍 찍은 시간은 근무로 치지 않는다 (2026-10-16 의뢰인 · 26.08 대장: 조기 템플릿이 아니면 07:0x 출근도 08:00부터).
   // 시작 시각은 그날 일정으로 바뀐 rule.startTime — 조기 07:30 템플릿이면 07:30부터 센다
-  // 쉬는 날(토요일 · 공휴일 특근)은 자르지 않고 찍은 시각부터 센다 — 시프티 「무일정근무」와 같게 (2026-11-01: 정규 08:00 틀인 사람의 07:30 특근이 30분씩 빠지던 것)
-  if (rule.clipBeforeStart && ctx.dayType === 'workday' && work.length) {
+  // 쉬는 날도 그날 일정이 있으면 일정 시작부터 센다 — 26.08 대장(토요일 특근도 일정 시작부터)과 처음 승인값에 맞음 (2026-11-01 개발 DB 1~10월 대조).
+  // 그날 일정이 따로 없는 날(시프티 무일정근무)은 period-data에서 clipBeforeStart를 꺼서 찍은 시각부터 센다 (급여-59 임시 · C 방식)
+  if (rule.clipBeforeStart && work.length) {
     const start = kstDateTime(ctx.workDate, rule.startTime.slice(0, 5)).getTime();
     for (let i = work.length - 1; i >= 0; i--) {
       if (work[i][1] <= start) work.splice(i, 1);

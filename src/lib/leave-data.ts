@@ -45,18 +45,24 @@ const toGrant = (g: any): LeaveGrant => ({
 
 /** 기간과 겹치는 휴가 신청 (from~to). employeeId를 주면 그 직원 것만 */
 export async function loadLeaveRequests(opts: { from?: string; to?: string; employeeId?: string; practice?: boolean } = {}): Promise<LeaveRequest[]> {
-  let q = createAdminClient().from('leave_requests').select('*').eq('is_test', opts.practice ?? OFFICE.practiceMode);
-  if (opts.employeeId) q = q.eq('employee_id', opts.employeeId);
-  if (opts.from) q = q.gte('end_date', opts.from);
-  if (opts.to) q = q.lte('start_date', opts.to);
-  const { data } = await readAll((from, to) => q.order('start_date', { ascending: false }).order('id').range(from, to));
+  // 쪽마다 조회를 새로 만든다 (하나를 고쳐 쓰면 여러 쪽을 동시에 물을 때 첫 쪽만 받는다 — 2026-11-01 shift-data와 같은 문제)
+  const q = () => {
+    let b = createAdminClient().from('leave_requests').select('*').eq('is_test', opts.practice ?? OFFICE.practiceMode);
+    if (opts.employeeId) b = b.eq('employee_id', opts.employeeId);
+    if (opts.from) b = b.gte('end_date', opts.from);
+    if (opts.to) b = b.lte('start_date', opts.to);
+    return b;
+  };
+  const { data } = await readAll((from, to) => q().order('start_date', { ascending: false }).order('id').range(from, to));
   return within((data ?? []).map(toRequest), await viewerScope(), (r) => r.employeeId); // 지점관리자면 맡은 지점 직원 것만
 }
 
 export async function loadLeaveGrants(employeeId?: string): Promise<LeaveGrant[]> {
-  let q = createAdminClient().from('leave_grants').select('*');
-  if (employeeId) q = q.eq('employee_id', employeeId);
-  const { data } = await readAll((from, to) => q.order('effective_from', { ascending: false }).order('id').range(from, to));
+  const q = () => {
+    const b = createAdminClient().from('leave_grants').select('*');
+    return employeeId ? b.eq('employee_id', employeeId) : b;
+  };
+  const { data } = await readAll((from, to) => q().order('effective_from', { ascending: false }).order('id').range(from, to));
   return within((data ?? []).map(toGrant), await viewerScope(), (g) => g.employeeId);
 }
 

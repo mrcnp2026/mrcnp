@@ -33,16 +33,19 @@ const toEntry = (r: Row): EntryRow => ({
 });
 
 export async function loadLots(opts: { employeeId?: string; states?: Lot['state'][] } = {}): Promise<LotRow[]> {
-  let q = db().from('leave_grant_lots').select('*');
-  if (opts.employeeId) q = q.eq('employee_id', opts.employeeId);
-  if (opts.states) q = q.in('state', opts.states);
-  const { data } = await readAll((a,b) => q.order('granted_on', { ascending: false }).order('id').range(a,b));
+  // 쪽마다 조회를 새로 만든다 (하나를 고쳐 쓰면 여러 쪽을 동시에 물을 때 첫 쪽 500줄만 받는다 — 2026-11-01)
+  const q = () => {
+    let b = db().from('leave_grant_lots').select('*');
+    if (opts.employeeId) b = b.eq('employee_id', opts.employeeId);
+    if (opts.states) b = b.in('state', opts.states);
+    return b;
+  };
+  const { data } = await readAll((a,b) => q().order('granted_on', { ascending: false }).order('id').range(a,b));
   return (data ?? []).map(toLot);
 }
 export async function loadEntries(employeeId?: string): Promise<EntryRow[]> {
-  let q = db().from('leave_ledger').select('*');
-  if (employeeId) q = q.eq('employee_id', employeeId);
-  const { data } = await readAll((a,b) => q.order('id', { ascending: true }).range(a,b));
+  const q = () => (employeeId ? db().from('leave_ledger').select('*').eq('employee_id', employeeId) : db().from('leave_ledger').select('*'));
+  const { data } = await readAll((a,b) => q().order('id', { ascending: true }).range(a,b));
   return (data ?? []).map(toEntry);
 }
 

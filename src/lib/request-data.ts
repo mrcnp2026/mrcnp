@@ -15,9 +15,12 @@ export async function loadRequests(opts: { employeeId?: string; practice?: boole
   const practice = opts.practice ?? OFFICE.practiceMode;
   const since = new Date(Date.now() - REQUEST_WINDOW_DAYS * 86_400_000).toISOString();
   const read = async (table: string, cols: string) => {
-    let q = db.from(table).select(cols).eq('is_test', practice).or(`status.eq.pending,created_at.gte.${since}`).order('created_at', { ascending: false });
-    if (opts.employeeId) q = q.eq('employee_id', opts.employeeId);
-    const { data } = await readAll((a,b) => q.order('id').range(a,b));
+    // 쪽마다 조회를 새로 만든다 (하나를 고쳐 쓰면 여러 쪽을 동시에 물을 때 첫 쪽 500줄만 받는다 — 2026-11-01)
+    const q = () => {
+      const b = db.from(table).select(cols).eq('is_test', practice).or(`status.eq.pending,created_at.gte.${since}`).order('created_at', { ascending: false });
+      return opts.employeeId ? b.eq('employee_id', opts.employeeId) : b;
+    };
+    const { data } = await readAll((a,b) => q().order('id').range(a,b));
     return (data ?? []) as unknown as Record<string, unknown>[];
   };
   const [co, ot, lv, wk, pr, sh, lc] = await Promise.all([
@@ -44,9 +47,12 @@ export async function loadRequests(opts: { employeeId?: string; practice?: boole
   const importedDays = new Set<string>();
   if (checkDays.length) {
     const dates = checkDays.map((r) => r.work_date as string).sort();
-    let q = db.from('punch_events').select('employee_id, work_date').eq('source', 'import').gte('work_date', dates[0]).lte('work_date', dates[dates.length - 1]);
-    if (opts.employeeId) q = q.eq('employee_id', opts.employeeId);
-    const { data: imp } = await readAll((a, b) => q.order('id').range(a, b));
+    // 쪽마다 조회를 새로 만든다 (하나를 고쳐 쓰면 여러 쪽을 동시에 물을 때 첫 쪽만 받는다 — 2026-11-01)
+    const q = () => {
+      const b = db.from('punch_events').select('employee_id, work_date').eq('source', 'import').gte('work_date', dates[0]).lte('work_date', dates[dates.length - 1]);
+      return opts.employeeId ? b.eq('employee_id', opts.employeeId) : b;
+    };
+    const { data: imp } = await readAll((a, b) => q().order('id').range(a, b));
     for (const e of imp) importedDays.add(`${e.employee_id}|${e.work_date}`);
   }
   const fromImport = (r: Record<string, unknown>) => importedDays.has(`${r.employee_id}|${r.work_date}`);

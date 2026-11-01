@@ -16,10 +16,14 @@ const toWork = (r: any): WorkRequest => ({
 
 /** 기간과 겹치는 외근 신청. employeeId를 주면 그 직원 것만 */
 export async function loadWorkRequests(opts: { from?: string; to?: string; employeeId?: string; practice?: boolean } = {}): Promise<WorkRequest[]> {
-  let q = createAdminClient().from('work_requests').select('*').eq('is_test', opts.practice ?? OFFICE.practiceMode);
-  if (opts.employeeId) q = q.eq('employee_id', opts.employeeId);
-  if (opts.from) q = q.gte('end_date', opts.from);
-  if (opts.to) q = q.lte('start_date', opts.to);
-  const { data } = await readAll((a,b) => q.order('start_date', { ascending: false }).order('id').range(a,b));
+  // 쪽마다 조회를 새로 만든다 (하나를 고쳐 쓰면 여러 쪽을 동시에 물을 때 첫 쪽 500줄만 받는다 — 2026-11-01)
+  const q = () => {
+    let b = createAdminClient().from('work_requests').select('*').eq('is_test', opts.practice ?? OFFICE.practiceMode);
+    if (opts.employeeId) b = b.eq('employee_id', opts.employeeId);
+    if (opts.from) b = b.gte('end_date', opts.from);
+    if (opts.to) b = b.lte('start_date', opts.to);
+    return b;
+  };
+  const { data } = await readAll((a,b) => q().order('start_date', { ascending: false }).order('id').range(a,b));
   return within((data ?? []).map(toWork), await viewerScope(), (w) => w.employeeId); // 지점관리자면 맡은 지점 직원 것만
 }

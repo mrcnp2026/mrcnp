@@ -30,8 +30,11 @@ export async function loadShifts(from: string, to: string, employeeId?: string):
   return [...(await shiftsOnce(from, to, employeeId))];
 }
 const shiftsOnce = cache(async (from: string, to: string, employeeId?: string): Promise<DayShift[]> => {
-  let q = createAdminClient().from('shifts').select('id, employee_id, work_date, start_time, end_time, kind, template_id, note').eq('active', true).gte('work_date', from).lte('work_date', to).order('start_time');
-  if (employeeId) q = q.eq('employee_id', employeeId);
-  const { data } = await readAll((a, b) => q.order('id').range(a, b));
+  // 쪽마다 조회를 새로 만든다 — 하나를 고쳐 쓰면 여러 쪽을 동시에 물을 때 모두 첫 쪽(500줄)만 받았다 (2026-11-01: 석 달 계산에서 일정이 빠짐)
+  const q = () => {
+    const b = createAdminClient().from('shifts').select('id, employee_id, work_date, start_time, end_time, kind, template_id, note').eq('active', true).gte('work_date', from).lte('work_date', to).order('start_time');
+    return employeeId ? b.eq('employee_id', employeeId) : b;
+  };
+  const { data } = await readAll((a, b) => q().order('id').range(a, b));
   return (data ?? []).map((s) => ({ id: s.id, employeeId: s.employee_id, workDate: s.work_date, startTime: s.start_time.slice(0, 5), endTime: s.end_time.slice(0, 5), kind: s.kind, templateId: s.template_id, note: s.note }));
 });

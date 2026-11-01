@@ -146,7 +146,9 @@ export async function loadPeriod(from: string, to: string, practice = OFFICE.pra
     const plan = planDay({ rule, tpl: tplOfPerson.get(employeeId) ?? null, shifts: shiftsOf.get(`${employeeId}|${date}`) ?? [], isWorkday: rule ? resolveDayType(date, rule, holidays) === 'workday' : false, templates: tplById });
     // 시각이 있는 승인 휴가(오전 반차 등)는 그날 판정의 시작·끝 시각을 옮긴다 — 반차 낸 사람이 지각으로 잡히지 않게
     const timed = timedLeaveOf.get(`${employeeId}|${date}`);
-    return timed && plan.rule ? { ...plan, rule: trimRuleByLeave(plan.rule, timed) } : plan;
+    // 시프티 기간에 그날 일정이 따로 없는 날(시프티 무일정근무)은 일찍 온 시간을 자르지 않는다 (OFFICE.shifteeScheduleUntil, 급여-59 임시)
+    const unscheduled = plan.rule && date <= OFFICE.shifteeScheduleUntil && !plan.items.some((i) => i.source === 'shift') ? { ...plan, rule: { ...plan.rule, clipBeforeStart: false } } : plan;
+    return timed && unscheduled.rule ? { ...unscheduled, rule: trimRuleByLeave(unscheduled.rule, timed) } : unscheduled;
   };
   const templateOf = (employeeId: string) => tplOfPerson.get(employeeId) ?? null;
   return {
