@@ -17,7 +17,8 @@ export type CertDraft = {
   company: { name: string; ceo: string; bizNo: string; address: string; phone: string };
 };
 
-const field = 'min-h-10 w-full rounded-button border border-border bg-bg px-3 text-sm';
+// 날짜 칸도 글자 칸과 같은 폭 · 높이로 (2026-11-01 의뢰인: 폰에서 생년월일 · 시작일 칸 폭이 제각각) — iOS 날짜 칸은 appearance-none · min-w-0이 있어야 폭을 따른다
+const field = 'block min-h-11 w-full min-w-0 appearance-none rounded-button border border-border bg-bg px-3 text-base lg:min-h-10 lg:text-sm';
 const b64 = (o: unknown) => btoa(String.fromCharCode(...new TextEncoder().encode(JSON.stringify(o)))).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
 
 export function CertEditor({ draft, copies, issue, onClose }: { draft: CertDraft; copies: number; issue: { id: string } | { employeeId: string }; onClose: () => void }) {
@@ -42,6 +43,13 @@ export function CertEditor({ draft, copies, issue, onClose }: { draft: CertDraft
   }, [target]);
   const companyEmpty = !v.company.ceo || !v.company.bizNo || !v.company.address;
   const shown = done ? `/api/certificates/${done.id}?view=1` : src;
+  // 창이 떠 있는 동안 뒤 화면이 같이 밀리지 않게 (2026-11-01 의뢰인: 폰에서 창 본문 전체가 흔들린다 — 재 보니 창 안을 밀면 뒤 페이지가 536px 같이 내려갔다). Popup.tsx와 같은 방식
+  useEffect(() => {
+    document.body.style.overflow = 'hidden';
+    return () => {
+      document.body.style.overflow = '';
+    };
+  }, []);
 
   return (
     <div className="pop-backdrop fixed inset-0 z-50 flex items-end justify-center bg-text/40 md:items-center md:p-6" role="dialog" aria-modal="true" aria-label={t('editorTitle')}>
@@ -50,14 +58,15 @@ export function CertEditor({ draft, copies, issue, onClose }: { draft: CertDraft
           <h2 className="text-lg font-bold">{t('editorTitle')}</h2>
           <button type="button" onClick={onClose} aria-label={t('cancel')} className="flex size-9 items-center justify-center rounded-button text-muted hover:bg-surface"><X aria-hidden size={20} /></button>
         </div>
-        <div className="grid min-h-0 flex-1 gap-5 overflow-y-auto p-5 md:grid-cols-[18rem_minmax(0,1fr)] md:overflow-hidden">
+        <div className="grid min-h-0 flex-1 gap-5 overflow-x-hidden overflow-y-auto overscroll-contain p-5 md:grid-cols-[18rem_minmax(0,1fr)] md:overflow-hidden">
           <div className="flex flex-col gap-3 text-sm md:overflow-y-auto">
             <p className="text-xs text-muted">{t('editorHint')}</p>
             <p className="rounded-button bg-surface px-3 py-2 font-bold">{v.name} · {t(`kind.${v.kind}`)}</p>
             <label className="flex flex-col gap-1"><span className="font-bold">{tp('birth')}</span><input type="date" value={v.birthDate ?? ''} onChange={set('birthDate')} className={field} disabled={!!done} /></label>
             <label className="flex flex-col gap-1"><span className="font-bold">{tp('group')}</span><input value={v.group ?? ''} onChange={set('group')} maxLength={60} className={field} disabled={!!done} /></label>
             <label className="flex flex-col gap-1"><span className="font-bold">{tp('job')}</span><input value={v.jobTitle ?? ''} onChange={set('jobTitle')} maxLength={60} className={field} disabled={!!done} /></label>
-            <div className="grid grid-cols-2 gap-2">
+            {/* 시작일 하나뿐이면(재직증명서) 한 줄 가득 — 다른 칸과 폭을 맞춘다 */}
+            <div className={`grid gap-2 ${v.kind !== 'EMPLOYMENT' ? 'grid-cols-2' : ''}`}>
               <label className="flex flex-col gap-1"><span className="font-bold">{t('from')}</span><input type="date" value={v.startsOn ?? ''} onChange={set('startsOn')} className={field} disabled={!!done} /></label>
               {v.kind !== 'EMPLOYMENT' && <label className="flex flex-col gap-1"><span className="font-bold">{t('to')}</span><input type="date" value={v.endsOn ?? ''} onChange={set('endsOn')} className={field} disabled={!!done} /></label>}
             </div>
