@@ -11,15 +11,18 @@
 //   --from: 이 날짜부터의 줄만 넣는다(그 전 날짜는 이미 넣고 고친 기록 — 시프티에서 나중에 고친 시각이 다시 들어와 겹치지 않게)
 //   연차 발생(--only=grant)은 처음 한 번만 — 갱신 때는 돌리지 않는다
 //   넣은 뒤에는 scripts/import-followup.mts (연장 승인 · 확정 · 빠진 퇴근 목록)
-import { createClient } from '@supabase/supabase-js';
+// 2026-11-01: --dev 개발 DB에 넣기(scripts/lib/shiftee-target) · --to=YYYY-MM-DD 이 날짜까지의 출퇴근만(시프티가 간주 근무를 앞날까지 미리 만들어 둔다 — 휴가는 앞날 것도 넣는다)
 import ExcelJS from 'exceljs';
-import { readFileSync, writeFileSync } from 'node:fs';
+import { writeFileSync } from 'node:fs';
+import { adminApi, db, targetLabel } from './lib/shiftee-target.ts';
 
 const APPLY = process.argv.includes('--apply');
 const ONLY = process.argv.find((a) => a.startsWith('--only='))?.slice(7); // punch | leave
 const DIR = '../../레퍼런스/참고/';
 const arg = (k: string) => process.argv.find((a) => a.startsWith(`--${k}=`))?.slice(k.length + 3);
 const FROM = arg('from') ?? '0000-01-01';
+const TO = arg('to') ?? '9999-12-31';
+if (!/^\d{4}-\d{2}-\d{2}$/.test(TO)) throw new Error('--to=YYYY-MM-DD');
 const PUNCH_FILE = arg('punch-file');
 const LEAVE_FILE = arg('leave-file');
 if (!/^\d{4}-\d{2}-\d{2}$/.test(FROM)) throw new Error('--from=YYYY-MM-DD');
@@ -35,8 +38,7 @@ async function allOf<T>(page: (a: number, b: number) => PromiseLike<{ data: T[] 
 }
 
 const ADMIN_ID = '635e204b-e5a5-4fee-bacc-95d4d2f4357e';
-const env = Object.fromEntries(readFileSync('.env.local', 'utf8').split(/\r?\n/).filter((l) => l.includes('=') && !l.startsWith('#')).map((l) => { const i = l.indexOf('='); return [l.slice(0, i).trim(), l.slice(i + 1).trim().replace(/^"|"$/g, '')]; }));
-const db = createClient(env.NEXT_PUBLIC_SUPABASE_URL, env.SUPABASE_SERVICE_ROLE_KEY);
+console.log(`대상: ${targetLabel}`);
 
 const val = (c: ExcelJS.CellValue): string | number | null => {
   if (c === null || c === undefined) return null;
@@ -87,6 +89,7 @@ for (const r of punchRows) {
   if (outAt && !/^\d{4}-\d{2}-\d{2}T/.test(outAt)) { note(`출퇴근: 퇴근 칸이 시각이 아님 — 출근만 넣음 ${name} ${inAt.slice(0, 10)} 「${outAt}」`); outAt = ''; }
   if (!/^\d{4}-\d{2}-\d{2}T/.test(inAt)) { note(`출퇴근: 시각이 아닌 줄은 건너뜀 — ${name} ${S(r['날짜'])} 「${inAt}」(시프티 결근 표시)`); continue; }
   const workDate = inAt.slice(0, 10);
+  if (workDate > TO) continue;
   if ((joinedOf.get(name) ?? '0000') > workDate) { pIssues.beforeJoin++; note(`출퇴근: 입사일(${joinedOf.get(name)}) 전 기록은 넣지 않음 ${name} ${workDate} (2026-10-16 의뢰인: 입사일 기준)`); continue; }
   if (outAt && outAt <= inAt) { pIssues.badOrder++; note(`출퇴근: 퇴근이 출근보다 빠름 ${name} ${inAt} ~ ${outAt}`); continue; }
   if (outAt && outAt.slice(0, 10) !== workDate) pIssues.overnight++;
@@ -112,7 +115,7 @@ function mapType(r: Record<string, unknown>) {
   if (/포상|하계/.test(raw)) { const m = Number(S(r['시작 시간']).slice(5, 7)); return byName(m >= 7 && m <= 8 ? '하계 8H' : '포상 8H'); }
   if (/장례|결혼|출산/.test(raw)) return types?.find((t) => raw.startsWith(t.name.slice(0, 5)));
   if (deduct || /연차|반차|외출|조퇴/.test(raw)) {
-    const map: Record<string, string> = { '8': '연차8H', '4': '반차4H', '3': '외출/조퇴 3H', '2': '외출/조퇴 2H', '1': '외출/조퇴 1H', '0.5': '조퇴 0.5H', '5': '11시 조퇴', '6': '10시 조퇴', '7': '09시 조퇴' };
+    const map: Record<string, string> = { '8': '연차8H', '4': '반차4H', '3': '외출/조퇴 3H', '2': '외출/조퇴 2H', '1': '외출/조퇴 1H', '0.5': '조퇴 0.5H', '5': '외출/조퇴 5H', '6': '10시 조퇴', '7': '09시 조퇴' };
     return byName(map[String(h)] ?? '');
   }
   return undefined;
@@ -206,10 +209,7 @@ if (accrualRows.length) {
   console.log(`
 연차 발생 ${accrualRows.length}줄`);
   if (APPLY) {
-    const { request } = await import('playwright-core');
-    const BASE = 'https://mrcnp-saas.vercel.app';
-    const api = await request.newContext({ baseURL: BASE, extraHTTPHeaders: { origin: BASE } });
-    if (!(await api.post('/api/auth/login', { data: { id: process.env.SITE_ID ?? '', password: process.env.SITE_PW ?? '' } })).ok()) throw new Error('관리자 로그인 실패 — 환경 변수 SITE_ID · SITE_PW에 최고관리자 계정을 넣어 주세요(비밀번호는 파일에 적지 않는다, 2026-10-19)');
+    const api = await adminApi();
     const { data: lots } = await db.from('leave_grant_lots').select('note').like('note', '시프티 2026 발생%');
     const have = new Set((lots ?? []).map((l) => l.note as string));
     let added = 0;

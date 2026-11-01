@@ -1,5 +1,5 @@
 // 사내게시판 (직원) — 회사가 보낸 글을 본다. 직원은 글쓰기 · 답글이 없다(2026-10-16 의뢰인 알림-8). 본인이 받은 것만.
-// 2026-10-30 의뢰인 「게시판도 공지처럼 레이아웃」: 전사공지와 같은 틀 — PC는 「전체 · 안 읽음」 탭 + 표(제목 · 상태 · 보낸 사람 · 올린 날),
+// 2026-10-30 의뢰인 「게시판도 공지처럼 레이아웃」: 전사공지와 같은 틀 — PC는 두 칸(2026-11-01) — 왼쪽 「전체 · 안 읽음」 + 오른쪽 표(제목 · 상태 · 보낸 사람 · 올린 날),
 //   폰은 숫자 칸(전체 · 안 읽음) + 목록. 글을 누르면 지금처럼 한 건 보기(/punch/messages/[id])로 간다(열면 읽음으로 남는다).
 import { CountUp } from '@/components/CountUp';
 import { MessagesSquare } from 'lucide-react';
@@ -9,6 +9,7 @@ import Link from 'next/link';
 import { redirect } from 'next/navigation';
 import { MessageList } from '@/components/MessageViews';
 import { PcTable } from '@/components/PcTable';
+import { SideFilter } from '@/components/SideFilter';
 import { Chip, PageShell } from '@/components/ui';
 import { getMe } from '@/lib/auth';
 import { createAdminClient } from '@/lib/supabase/admin';
@@ -35,18 +36,16 @@ export default async function MyMessagesPage({ searchParams }: { searchParams: P
           <HelpTip>{t('intro')}</HelpTip>
         </h1>
       </div>
-      <div className="hidden flex-col gap-3 lg:flex">
-        <nav className="flex items-center gap-1 border-b border-border" aria-label={t('title')}>
-          {([['all', t('tabAll'), all.length], ['unread', t('unread'), unread]] as const).map(([k, label, n]) => {
-            const on = (k === 'unread') === onlyUnread;
-            return (
-              <Link key={k} href={k === 'unread' ? '/punch/messages?f=unread' : '/punch/messages'} aria-current={on ? 'page' : undefined} className={`-mb-px flex min-h-11 items-center gap-2 border-b-2 px-3 text-sm font-bold ${on ? 'border-primary text-primary' : 'border-transparent text-muted hover:text-text'}`}>
-                {label}
-                <span className={`num rounded-chip px-2 text-xs ${k === 'unread' && n > 0 ? 'bg-warn-tint text-warn' : 'bg-surface text-muted'}`}>{n}</span>
-              </Link>
-            );
-          })}
-        </nav>
+      {/* 2026-11-01 의뢰인: 제증명 · 내 프로필처럼 PC는 두 칸 — 왼쪽: 전체 · 안 읽음, 오른쪽: 표 */}
+      <div className="hidden lg:grid lg:grid-cols-[16rem_minmax(0,1fr)] lg:items-start lg:gap-6">
+        <SideFilter
+          title={t('title')}
+          items={[
+            { key: 'all', label: t('tabAll'), n: all.length, href: '/punch/messages', on: !onlyUnread },
+            { key: 'unread', label: t('unread'), n: unread, href: '/punch/messages?f=unread', on: onlyUnread, warn: true },
+          ]}
+        />
+        <div className="min-w-0">
         <PcTable
           labels={{ search: t('searchTitle'), empty: t(onlyUnread ? 'emptyUnread' : 'empty') }}
           cols={[
@@ -82,6 +81,7 @@ export default async function MyMessagesPage({ searchParams }: { searchParams: P
             },
           }))}
         />
+        </div>
       </div>
       <div className="flex flex-col gap-3 lg:hidden">
         <dl className="grid grid-cols-2 gap-2">

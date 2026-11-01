@@ -27,7 +27,7 @@ export async function SituationCard({ today, now }: { today: string; now: Date }
       working: real && !!day?.pairs.some((x) => x.in && !x.out),
       hasPlan: plan.items.length > 0,
       deemed: !!plan.deemed,
-      late: !!firstIn && workday && !!rule && judgeLateness({ punchedAt: firstIn, workDate: today, rule, isHoliday: false }).verdict === 'late',
+      late: !!firstIn && !plan.deemed && workday && !!rule && judgeLateness({ punchedAt: firstIn, workDate: today, rule, isHoliday: false }).verdict === 'late',
       onLeave: isFullDayLeave(leaveDaysFor(data, p.id).get(today)),
     };
   });

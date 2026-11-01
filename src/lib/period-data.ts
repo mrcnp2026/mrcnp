@@ -226,7 +226,7 @@ export function daysFor(data: PeriodData, employeeId: string, from = data.from, 
 
 /** 마감 중인(되열리지 않은) 기간들 — 그 직원의 그 기간 안 날짜는 근태를 바꿀 수 없다 */
 export async function closedSpans(db: ReturnType<typeof createAdminClient>, from: string, to: string, practice: boolean): Promise<{ employeeId: string; from: string; to: string }[]> {
-  const { data } = await db.from('attendance_closes').select('employee_id, period_from, period_to').eq('state', 'CLOSED').eq('is_test', practice).lte('period_from', to).gte('period_to', from);
+  const { data } = await db.from('attendance_closes').select('employee_id, period_from, period_to').eq('state', 'CLOSED').eq('is_test', practice).lte('period_from', to).gt('period_to', from);
   return (data ?? []).map((c) => ({ employeeId: c.employee_id as string, from: c.period_from as string, to: c.period_to as string }));
 }
 
@@ -243,7 +243,8 @@ export async function syncOvertimeRequests(data: PeriodData, upTo: string, only?
   const existing = new Map(data.overtime.map((o) => [`${o.employeeId}|${o.workDate}`, o]));
   // 이미 마감한 직원의 기간은 건드리지 않는다 — DB가 마감된 달의 변경을 막아서, 건드리면 오류가 나 화면이 열리지 않는다 (2026-10-25)
   const closed = await closedSpans(db, data.from, data.to, data.practice);
-  const isClosed = (emp: string, day: string) => closed.some((c) => c.employeeId === emp && c.from <= day && day <= c.to);
+  // 마감 기간 끝(period_to)은 다음 날 0시 — DB의 daterange '[)'와 같이 그날은 마감이 아니다 (2026-11-01: 9월 마감 때문에 10월 1일 연장이 만들어지지 않던 것)
+  const isClosed = (emp: string, day: string) => closed.some((c) => c.employeeId === emp && c.from <= day && day < c.to);
   const inserts: Record<string, unknown>[] = [];
   const reviews: { id: string; o: number; n: number; h: number }[] = [];
 

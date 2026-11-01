@@ -1,5 +1,5 @@
 // 직원 「공지」 목록 — 대상이고 게시 중인 공지 전부 (②-5 7-15). 언어는 메뉴의 언어 버튼을 따른다.
-// PC: 한 칸 — 「전체 · 확인 안 함」 탭 + 표(제목 · 상태 · 내용 · 게시일 · 확인). 제목으로만 찾는다.
+// PC: 두 칸 — 왼쪽 「전체 · 확인 안 함」, 오른쪽 표(제목 · 상태 · 내용 · 게시일 · 확인). 제목으로만 찾는다.
 // 2026-10-16 의뢰인: 시프티 「메시지」를 따라 만든 시작일 · 종료일 칸과 칸마다 붙은 검색, 「업무 메시지」 버튼이 공지에는 필요 없다(업무 메시지는 메뉴 · 알림에서 간다).
 import { CountUp } from '@/components/CountUp';
 import { Megaphone } from 'lucide-react';
@@ -9,6 +9,7 @@ import Link from 'next/link';
 import { redirect } from 'next/navigation';
 import { NoticeBody } from '@/components/NoticeBody';
 import { RichHtml } from '@/components/RichHtml';
+import { SideFilter } from '@/components/SideFilter';
 import { PcTable } from '@/components/PcTable';
 import { Card, Chip, PageShell } from '@/components/ui';
 import { getMe } from '@/lib/auth';
@@ -68,18 +69,15 @@ export default async function EmployeeNoticesPage({ searchParams }: { searchPara
             {t('title')}
           <HelpTip>{t('intro')}</HelpTip></h1>
         </div>
-        <div className="hidden flex-col gap-3 lg:flex">
-          <nav className="flex items-center gap-1 border-b border-border" aria-label={t('title')}>
-            {([['all', t('tabAll'), all.length], ['unread', t('tabUnread'), unread]] as const).map(([k, label, n]) => {
-              const on = (k === 'unread') === onlyUnread;
-              return (
-                <Link key={k} href={k === 'unread' ? '/punch/notices?f=unread' : '/punch/notices'} aria-current={on ? 'page' : undefined} className={`-mb-px flex min-h-11 items-center gap-2 border-b-2 px-3 text-sm font-bold ${on ? 'border-primary text-primary' : 'border-transparent text-muted hover:text-text'}`}>
-                  {label}
-                  <span className={`num rounded-chip px-2 text-xs ${k === 'unread' && n > 0 ? 'bg-warn-tint text-warn' : 'bg-surface text-muted'}`}>{n}</span>
-                </Link>
-              );
-            })}
-          </nav>
+        {/* 2026-11-01 의뢰인: 제증명 · 내 프로필처럼 PC는 두 칸 — 왼쪽: 전체 · 확인 안 함, 오른쪽: 연 공지 + 표 */}
+        <div className="hidden lg:grid lg:grid-cols-[16rem_minmax(0,1fr)] lg:items-start lg:gap-6">
+          <SideFilter
+            title={t('title')}
+            items={[
+              { key: 'all', label: t('tabAll'), n: all.length, href: '/punch/notices', on: !onlyUnread },
+              { key: 'unread', label: t('tabUnread'), n: unread, href: '/punch/notices?f=unread', on: onlyUnread, warn: true },
+            ]}
+          />
           <section className="flex min-w-0 flex-col gap-3">
             {opened && (
               <Card className="flex flex-col gap-2">

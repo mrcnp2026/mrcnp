@@ -151,8 +151,13 @@ export async function RequestRows({ items, leaveTypes, names, showName = false, 
               <span className="flex min-w-0 flex-1 flex-col gap-1">
                 <span className="flex items-start justify-between gap-2">
                   <span className="font-bold">
-                    {r.kind === 'punch' ? t(`punchKind.${r.punchKind ?? 'in'}`) : t(`kinds.${r.kind}`)}
-                    {label && ` · ${label}`}
+                    {/* 외근 요청은 「외근·출장·재택 · 외근」 대신 「외근 · 광교」 — 휴가·외근 화면의 「내 외근 신청」과 같은 모양 (2026-11-01 의뢰인) */}
+                    {r.kind === 'work'
+                      ? [label ?? t('kinds.work'), r.place].filter(Boolean).join(' · ')
+                      : <>
+                          {r.kind === 'punch' ? t(`punchKind.${r.punchKind ?? 'in'}`) : t(`kinds.${r.kind}`)}
+                          {label && ` · ${label}`}
+                        </>}
                     {showName && ` · ${names.get(r.employeeId) ?? ''}`}
                   </span>
                   {a && <span className="num shrink-0 text-sm text-muted">{a.unit === 'now' ? t('ago.now') : t(`ago.${a.unit}`, { n: a.n })}</span>}
@@ -166,7 +171,7 @@ export async function RequestRows({ items, leaveTypes, names, showName = false, 
                     <span className="font-bold text-primary">{r.newAt ? clock(r.newAt) : 'X'}</span>
                   </span>
                 ) : (
-                  <span className="num text-sm">{detail(r)}</span>
+                  <span className="num text-sm">{r.kind === 'work' ? range(r) : detail(r)}</span>
                 )}
                 {r.reason && <span className="truncate text-sm text-muted">{r.reason}</span>}
                 {r.rejectReason && <span className="text-sm break-words text-danger">{t('rejectReason', { why: r.rejectReason })}</span>}

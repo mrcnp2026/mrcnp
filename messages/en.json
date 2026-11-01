@@ -8554,6 +8554,8 @@
   },
   "training": {
     "title": "My training",
+    "filterAll": "All",
+    "filterTodo": "To sign",
     "empty": "No trainings.",
     "todoTitle": "{n} to sign",
     "doneTitle": "Done",

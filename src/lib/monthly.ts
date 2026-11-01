@@ -138,7 +138,8 @@ export function summarizeMonth(args: {
     }
 
     const firstIn = d.pairs.map((p) => p.in).filter((x): x is Date => !!x).sort((a, b) => a.getTime() - b.getTime())[0];
-    if (counted && firstIn && d.dayType === 'workday') {
+    // 간주 근무일은 지각을 세지 않는다 — 찍은 시각이 아니라 일정으로 근무를 본다 (달력 · 목록과 같은 규칙, 2026-11-01 의뢰인)
+    if (counted && firstIn && !d.deemed && d.dayType === 'workday') {
       const l = judgeLateness({ punchedAt: firstIn, workDate: d.workDate, rule: args.ruleAt?.(d.workDate) ?? args.rule, isHoliday: false });
       if (l.verdict === 'late') {
         lateCount++;

@@ -2,16 +2,17 @@
 import { getFormatter, getTranslations } from 'next-intl/server';
 import Link from 'next/link';
 import { redirect } from 'next/navigation';
+import { SideFilter } from '@/components/SideFilter';
 import { Card, Chip, PageShell } from '@/components/ui';
 import { OFFICE } from '@/config/office';
 import { getMe } from '@/lib/auth';
 import { createAdminClient } from '@/lib/supabase/admin';
 import { loadCourses } from '@/lib/training-data';
 
-export default async function MyTrainingPage() {
+export default async function MyTrainingPage({ searchParams }: { searchParams: Promise<{ f?: string }> }) {
   const me = await getMe();
   if (!me) redirect('/login');
-  const [t, f] = await Promise.all([getTranslations('training'), getFormatter()]);
+  const [t, f, sp] = await Promise.all([getTranslations('training'), getFormatter(), searchParams]);
   const db = createAdminClient();
   const { data: rows } = await db.from('training_attendees').select('session_id, signed_at').eq('employee_id', me.id).is('removed_at', null);
   const ids = (rows ?? []).map((r) => r.session_id as string);
@@ -30,22 +31,41 @@ export default async function MyTrainingPage() {
       </Link>
     </li>
   );
-  return (
-    <PageShell>
-      <h1 className="text-2xl font-bold">{t('title')}</h1>
-      {list.length === 0 && <Card><p className="py-6 text-center text-sm text-faint">{t('empty')}</p></Card>}
-      {todo.length > 0 && (
+  // PC 왼쪽 칸의 보기 (?f=todo | done). 폰은 고르지 않고 서명할 것 → 끝난 것 순서로 다 보인다
+  const pick = sp.f === 'todo' || sp.f === 'done' ? sp.f : 'all';
+  const lists = (pc: boolean) => (
+    <>
+      {(pc ? (pick === 'todo' ? todo : pick === 'done' ? done : list) : list).length === 0 && <Card><p className="py-6 text-center text-sm text-faint">{t('empty')}</p></Card>}
+      {todo.length > 0 && (!pc || pick !== 'done') && (
         <Card>
           <p className="pb-1 text-sm font-bold text-warn">{t('todoTitle', { n: todo.length })}</p>
           <ul className="flex flex-col divide-y divide-border">{todo.map(line)}</ul>
         </Card>
       )}
-      {done.length > 0 && (
+      {done.length > 0 && (!pc || pick !== 'todo') && (
         <Card>
           <p className="pb-1 text-sm font-bold">{t('doneTitle')}</p>
           <ul className="flex flex-col divide-y divide-border">{done.map(line)}</ul>
         </Card>
       )}
+    </>
+  );
+  return (
+    <PageShell>
+      <h1 className="text-2xl font-bold">{t('title')}</h1>
+      {/* 2026-11-01 의뢰인: 제증명 · 내 프로필처럼 PC는 두 칸 — 왼쪽: 전체 · 서명할 교육 · 끝난 교육, 오른쪽: 목록 */}
+      <div className="hidden lg:grid lg:grid-cols-[16rem_minmax(0,1fr)] lg:items-start lg:gap-6">
+        <SideFilter
+          title={t('title')}
+          items={[
+            { key: 'all', label: t('filterAll'), n: list.length, href: '/punch/training', on: pick === 'all' },
+            { key: 'todo', label: t('filterTodo'), n: todo.length, href: '/punch/training?f=todo', on: pick === 'todo', warn: true },
+            { key: 'done', label: t('doneTitle'), n: done.length, href: '/punch/training?f=done', on: pick === 'done' },
+          ]}
+        />
+        <div className="flex min-w-0 flex-col gap-3">{lists(true)}</div>
+      </div>
+      <div className="flex flex-col gap-3 lg:hidden">{lists(false)}</div>
     </PageShell>
   );
 }

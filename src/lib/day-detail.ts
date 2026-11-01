@@ -53,7 +53,7 @@ export function buildDayDetails(args: {
     if (!hasRecord && !expected && leave.length === 0 && !work && mine.length === 0) continue;
 
     const rule = args.ruleAt(d.workDate);
-    const late = ins[0] && d.dayType === 'workday' && rule ? judgeLateness({ punchedAt: ins[0], workDate: d.workDate, rule, isHoliday: false }) : null;
+    const late = ins[0] && !d.deemed && d.dayType === 'workday' && rule ? judgeLateness({ punchedAt: ins[0], workDate: d.workDate, rule, isHoliday: false }) : null;
     const firstInEvent = args.events.filter((e) => e.workDate === d.workDate && e.kind === 'in').sort((a, b) => a.punchedAt.getTime() - b.punchedAt.getTime())[0];
     const past = d.workDate < args.today;
 

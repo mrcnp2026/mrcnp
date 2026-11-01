@@ -8,18 +8,17 @@
 //   npx tsx scripts/import-followup.mts --from=2026-10-17 --to=2026-11-15            ← 무엇을 할지만 보여 준다
 //   npx tsx scripts/import-followup.mts --from=2026-10-17 --to=2026-11-15 --apply    ← 실제로 한다
 //   로그인: 환경 변수 SITE_ID · SITE_PW (최고관리자 계정). 비밀번호는 파일에 적지 않는다.
-import { createClient } from '@supabase/supabase-js';
-import { readFileSync } from 'node:fs';
-import { request } from 'playwright-core';
+// 2026-11-01: --dev 개발 DB · 개발 서버로(scripts/lib/shiftee-target, 로그인은 --state=<파일>도 된다)
+//   --fill-out 퇴근이 빠진 날을 관리자 정정으로 채운다 — 그날 일정 끝 시각, 일정이 없으면 1공장 17:00 · 그 외 18:00 (2026-10-17 누락 50일과 같은 기준, 2026-11-01 의뢰인 확인)
+import { adminApi, db, targetLabel } from './lib/shiftee-target.ts';
 
 const APPLY = process.argv.includes('--apply');
 const arg = (k: string) => process.argv.find((a) => a.startsWith(`--${k}=`))?.slice(k.length + 3);
 const FROM = arg('from');
 const TO = arg('to');
 if (!FROM || !TO || !/^\d{4}-\d{2}-\d{2}$/.test(FROM) || !/^\d{4}-\d{2}-\d{2}$/.test(TO) || FROM > TO) throw new Error('--from=YYYY-MM-DD --to=YYYY-MM-DD');
-const BASE = 'https://mrcnp-saas.vercel.app';
-const env = Object.fromEntries(readFileSync('.env.local', 'utf8').split(/\r?\n/).filter((l) => l.includes('=') && !l.startsWith('#')).map((l) => { const i = l.indexOf('='); return [l.slice(0, i).trim(), l.slice(i + 1).trim().replace(/^"|"$/g, '')]; }));
-const db = createClient(env.NEXT_PUBLIC_SUPABASE_URL, env.SUPABASE_SERVICE_ROLE_KEY);
+const FILL_OUT = process.argv.includes('--fill-out');
+console.log(`대상: ${targetLabel}`);
 
 async function allOf<T>(page: (a: number, b: number) => PromiseLike<{ data: T[] | null; error: { message: string } | null }>): Promise<T[]> {
   const out: T[] = [];
@@ -53,17 +52,32 @@ for (const f of fixes) if (f.correction_type === 'add_missing') add(f.employee_i
 console.log(`${FROM} ~ ${TO}: 출퇴근 ${punches.length}개 · ${days.size}일(사람 × 날)`);
 const open = [...days].filter(([, d]) => d.in > d.out).map(([k]) => k.split('|'));
 console.log(`③ 퇴근이 빠진 날 ${open.length}일${open.length ? ':\n   ' + open.map(([id, d]) => `${nameOf.get(id)} ${d}`).sort().join('\n   ') : ''}`);
+// ③-2 채울 시각: 그날 일정 끝, 일정이 없으면 1공장 17:00 · 그 외 18:00
+const fillPlan: { employeeId: string; date: string; time: string; why: string }[] = [];
+if (FILL_OUT && open.length) {
+  const { data: g1 } = await db.from('org_groups').select('id').eq('name', '1공장 골판지사업부').eq('active', true).maybeSingle();
+  const { data: groups } = await db.from('profiles').select('id, group_id').in('id', open.map(([id]) => id));
+  const groupOf = new Map((groups ?? []).map((p) => [p.id as string, p.group_id as string | null]));
+  for (const [employeeId, date] of open) {
+    const { data: s } = await db.from('shifts').select('end_time').eq('employee_id', employeeId).eq('work_date', date).eq('active', true).maybeSingle();
+    const time = s?.end_time ? String(s.end_time).slice(0, 5) : groupOf.get(employeeId) === g1?.id ? '17:00' : '18:00';
+    fillPlan.push({ employeeId, date, time, why: s?.end_time ? '그날 일정 끝' : '일정 없음 → 기본 시각' });
+  }
+  console.log(`③ 채울 퇴근:\n   ${fillPlan.map((f) => `${nameOf.get(f.employeeId)} ${f.date} ${f.time} (${f.why})`).join('\n   ')}`);
+}
 if (!APPLY) {
-  console.log('\n무엇을 할지만 보여 줬습니다. 하려면 --apply (SITE_ID · SITE_PW 필요)');
+  console.log('\n무엇을 할지만 보여 줬습니다. 하려면 --apply (SITE_ID · SITE_PW 또는 --state 필요)');
   process.exit(0);
 }
 
-const id = process.env.SITE_ID;
-const pw = process.env.SITE_PW;
-if (!id || !pw) throw new Error('SITE_ID · SITE_PW 환경 변수에 최고관리자 계정을 넣어 주세요');
-const api = await request.newContext({ baseURL: BASE, extraHTTPHeaders: { origin: BASE } });
-const login = await api.post('/api/auth/login', { data: { id, password: pw } });
-if (!login.ok()) throw new Error(`로그인 실패 ${login.status()}`);
+const api = await adminApi();
+
+// ③ 퇴근 채우기 — 관리자 정정(원본은 남고 누가 · 왜가 기록된다). 확정보다 먼저 해야 그날이 확정된다
+for (const f of fillPlan) {
+  const r = await api.post(`/api/admin/employees/${f.employeeId}/punch`, { data: { workDate: f.date, kind: 'out', time: f.time, reason: `시프티 퇴근 기록 없음 — ${f.why} 시각으로 채움 (2026-11-01 결정)` } });
+  console.log(`③ 퇴근 채움 ${nameOf.get(f.employeeId)} ${f.date} ${f.time}:`, r.status(), r.ok() ? '' : await r.text());
+  if (r.ok()) { const d = days.get(`${f.employeeId}|${f.date}`); if (d) d.out++; }
+}
 
 // ① 그 기간의 연장 요청을 만든다 — 2026-10-19부터 화면을 열어도 계산하지 않아서 맞추기 API를 부른다(한 번에 최대 60일씩)
 for (let d = FROM; d <= TO; ) {

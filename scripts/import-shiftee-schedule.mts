@@ -6,14 +6,15 @@
 //
 //   npx tsx scripts/import-shiftee-schedule.mts            ← 계획만
 //   npx tsx scripts/import-shiftee-schedule.mts --apply    ← 넣기 (이미 있는 것은 건너뜀)
-import { createClient } from '@supabase/supabase-js';
+// 2026-11-01: --dev 개발 DB에 넣기(scripts/lib/shiftee-target) · --to=YYYY-MM-DD 이 날짜까지의 일정만
 import ExcelJS from 'exceljs';
-import { readFileSync } from 'node:fs';
+import { db, targetLabel } from './lib/shiftee-target.ts';
 
 const APPLY = process.argv.includes('--apply');
 // 갱신 (2026-10-17): --from=YYYY-MM-DD 이 날짜부터의 일정만 · --punch-file=<출퇴근 엑셀> (일정은 출퇴근 파일에 들어 있다)
 const arg = (k: string) => process.argv.find((a) => a.startsWith(`--${k}=`))?.slice(k.length + 3);
 const FROM = arg('from') ?? '0000-01-01';
+const TO = arg('to') ?? '9999-12-31';
 const PUNCH_FILE = arg('punch-file') ?? '../../레퍼런스/참고/26년직원별출퇴근기록.xlsx';
 // 이미 들어간 표시를 전부 읽는다 — Supabase는 한 번에 1,000줄까지만 돌려준다(.limit(20000)이어도). 2026-10-17 고침
 async function allOf<T>(page: (a: number, b: number) => PromiseLike<{ data: T[] | null; error: { message: string } | null }>): Promise<T[]> {
@@ -28,8 +29,7 @@ async function allOf<T>(page: (a: number, b: number) => PromiseLike<{ data: T[] 
 
 const ADMIN_ID = '635e204b-e5a5-4fee-bacc-95d4d2f4357e';
 const MARK = '시프티 일정';
-const env = Object.fromEntries(readFileSync('.env.local', 'utf8').split(/\r?\n/).filter((l) => l.includes('=') && !l.startsWith('#')).map((l) => { const i = l.indexOf('='); return [l.slice(0, i).trim(), l.slice(i + 1).trim().replace(/^"|"$/g, '')]; }));
-const db = createClient(env.NEXT_PUBLIC_SUPABASE_URL, env.SUPABASE_SERVICE_ROLE_KEY);
+console.log(`대상: ${targetLabel}`);
 const audit = async (table: string, targetId: string, event: string, detail: Record<string, unknown>) => {
   await db.from('audit_logs').insert({ actor_id: ADMIN_ID, action: 'update', target_table: table, target_id: targetId, after_data: { event, ...detail }, reason: '시프티 실제 자료 옮기기 — 근무 기준 (2026-10-16 의뢰인)' });
 };
@@ -82,7 +82,7 @@ for (let i = 2; i <= ws.rowCount; i++) {
   const p = pid.get(String(r['직원'] ?? ''));
   if (!p) continue;
   const date = String(r['출근시간'] ?? '').slice(0, 10);
-  if (!/^\d{4}-\d{2}-\d{2}$/.test(date)) continue;
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(date) || date > TO) continue;
   if ((p.joined_on ?? '0000') > date) { skip.beforeJoin++; continue; }
   const sch = String(r['근무일정'] ?? '').trim();
   if (sch === '무일정근무') { skip.none++; continue; }
