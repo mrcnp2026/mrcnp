@@ -53,6 +53,7 @@ export default async function InboxPage({ searchParams }: { searchParams: Promis
   const [t, tr, tc, tl, f, meRaw, staffAll, sp] = await Promise.all([getTranslations('admin.inbox'), getTranslations('requests'), getTranslations('common'), getTranslations('leave'), getFormatter(), getMe(), loadStaff(), searchParams]);
   const me = meRaw!;
   // 증명서 신청 — 발급은 최고관리자만 한다. 검사 계정 · 시스템관리자 것은 아래에서 숨김 목록(hidden)으로 뺀다
+  const tm = await getTranslations('migrate');
   const [tcert, certRaw] = await Promise.all([
     getTranslations('certificates'),
     me.role === 'admin' ? loadCerts({ practice: OFFICE.practiceMode && sp.live !== '1' }).then(({ rows }) => rows.filter((r) => r.state === 'REQUESTED')) : Promise.resolve([]),
@@ -111,6 +112,7 @@ export default async function InboxPage({ searchParams }: { searchParams: Promis
   const only = (k: FocusKind, id: string, day?: { e: string; d: string }) =>
     !focus || (focus.k === k && focus.id === id) || (!!day && !!focusDay && DAY_KINDS.includes(k) && focusDay.employee_id === day.e && focusDay.work_date === day.d);
   const ot = (otAll ?? []).filter((o) => hit(o.employee_id) && only('overtime', o.id, { e: o.employee_id, d: o.work_date }));
+  const pastCount = (otAll ?? []).filter((o) => hit(o.employee_id) && o.work_date <= OFFICE.migrationCutoff).length; // 이관 정리 대상 (개발-63)
   const co = (coAll ?? []).filter((c) => hit(c.employee_id) && only('corrections', c.id, { e: c.employee_id, d: c.work_date }));
   const keys = [...(ot ?? []).map((o) => [o.employee_id, o.work_date]), ...(co ?? []).map((c) => [c.employee_id, c.work_date])];
   const empIds = [...new Set(keys.map((k) => k[0]))];
@@ -455,6 +457,13 @@ export default async function InboxPage({ searchParams }: { searchParams: Promis
         <SignupRequests items={signups} groups={signupGroups} suggestNo={signupNo} today={toKstDate(new Date())} />
         <RequestTabs admin active="pending" live={sp.live === '1'} q={q} counts={{ pending: listed.length + signups.length + certOpen.length }} />
         {practice && <p className="rounded-card bg-primary-tint p-3 text-sm text-primary">{t('practiceBanner')}</p>}
+        {/* 기준일 이전 지난 요청 — 「지난 요청 정리」에서 한 번에 닫는다 (개발-63, 최고관리자만) */}
+        {me.role === 'admin' && pastCount > 0 && (
+          <Link href={`/admin/inbox/migrate${sp.live === '1' ? '?live=1' : ''}`} className="flex items-center justify-between gap-3 rounded-card border border-warn bg-warn-tint p-3 text-sm text-warn">
+            <span>{tm('banner', { n: pastCount, date: OFFICE.migrationCutoff.replace(/-/g, '. ') + '.' })}</span>
+            <b className="shrink-0">{tm('bannerGo')} ›</b>
+          </Link>
+        )}
         {/* 증명서 신청 — 발급은 「제증명 발급」 화면에서 (2026-10-30 의뢰인: 신청해도 처리할 요청에 안 보인다) */}
         {certOpen.length > 0 && (
           <section className="flex flex-col gap-2 rounded-card border border-border bg-bg p-3" data-cert-requests>

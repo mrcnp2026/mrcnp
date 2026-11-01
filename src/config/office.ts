@@ -78,6 +78,8 @@ export const OFFICE = {
   // 부록 R-12-2: 계산 모듈(worktime·overtime·lateness·labor-rules)을 바꿀 때마다 올린다.
   // 집계 결과를 저장하는 곳에 함께 남겨 "어느 숫자가 어느 코드로 나왔는지" 알게 한다.
   calcVersion: '2026.10-1',
+  // 개발-63 (2026-11-01 의뢰인): 이 날짜까지의 지난 요청은 「이관 정리」 화면에서 한 번에 닫는다(시프티에서 넘어온 기간). 고객사 이관 때는 그 회사의 이관일로
+  migrationCutoff: '2026-10-31',
 
   // 부록 R-5의 7: 진단용 IP 로그 보존 기간(일). 본문이 값을 비워 둬서 부록이 30일로 정함
   diagIpLogRetentionDays: 30,
