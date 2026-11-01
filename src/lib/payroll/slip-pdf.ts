@@ -64,7 +64,7 @@ export async function buildSlipPdf(d: SlipPdfData): Promise<Uint8Array> {
   for (const r of workRows) words.push(...r);
   for (const v of Object.values(L)) if (typeof v === 'string') words.push(v);
   if (d.tax) words.push(amt(d.tax.taxable), amt(d.tax.exempt));
-  const used = [...new Set(words.join(''))].join('') + '0123456789,.-~()% ×원…※·';
+  const used = [...new Set(words.join(''))].join('') + '0123456789,.-~()% ×원…※·/'; // /: 쪽 번호(1 / 3) — L.page는 함수라 위 words에 안 잡힌다 (2026-11-01)
   const font = await pdf.embedFont(await slim(regular, used), { subset: false });
   const bold = await pdf.embedFont(await slim(boldFile, used), { subset: false });
   pdf.setTitle(`${title} ${d.no}`);

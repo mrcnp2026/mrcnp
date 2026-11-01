@@ -35,8 +35,9 @@ describe('buildSlipPdf', () => {
     if (process.env.SLIP_PDF_OUT) writeFileSync(`${process.env.SLIP_PDF_OUT}-1.pdf`, bytes);
   });
   it('항목이 많으면 다음 쪽으로 넘어가고, 검토용 · 정정 표시가 들어가도 만들어진다', async () => {
+    // 10-30 회사 양식(급여4) 배치부터 지급 · 공제는 한 줄 6칸이라 70개도 1쪽에 든다 — 쪽을 넘기는 것은 계산방법 표(산출방식 켬, 운영과 같게)
     const many = [...Array(70)].map((_, i) => ({ kind: i % 2 ? ('DEDUCTION' as const) : ('PAYMENT' as const), label: `검사 항목 ${i + 1} — 이름이 아주 긴 항목은 줄을 바꿔서 적는다`, how: i % 3 ? `${i}시간 × 10,030원 × 1.5 (계산 설명이 길면 여기도 줄을 바꾼다)` : null, amount: 1000 * (i + 1) }));
-    const bytes = await buildSlipPdf({ ...base, revision: 2, lines: many, labels: { ...labels, draft: '검토용', practice: '연습', correction: '정정된 명세서입니다. 정정 사유: 연장근로 시간 누락' } });
+    const bytes = await buildSlipPdf({ ...base, revision: 2, lines: many, labels: { ...labels, draft: '검토용', practice: '연습', correction: null, correctionMark: '정정본 2판', formula: '계산방법', thanks: '노고에 감사드립니다' } });
     const doc = await PDFDocument.load(bytes);
     expect(doc.getPageCount()).toBeGreaterThan(1);
     if (process.env.SLIP_PDF_OUT) writeFileSync(`${process.env.SLIP_PDF_OUT}-2.pdf`, bytes);
