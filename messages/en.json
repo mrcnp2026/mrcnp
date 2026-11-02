@@ -39,7 +39,17 @@
     "findName": "Find by name",
     "clear": "Clear",
     "screenHelp": "About this screen",
-    "devBanner": "Development server - nothing here affects production"
+    "devBanner": "Development server - nothing here affects production",
+    "range": {
+      "prev": "Previous month",
+      "next": "Next month",
+      "month": "{m}/{y}",
+      "week": "S,M,T,W,T,F,S",
+      "picked": "{s} – {e}",
+      "pickedOne": "{s} only",
+      "hintEnd": "Tap an end date to make a range. Tap the same day for one day.",
+      "hintStart": "Tap another day to start over."
+    }
   },
   "login": {
     "title": "Sign in",
@@ -1360,7 +1370,13 @@
       "invalid_group": "That department was not found. Please refresh."
     },
     "paySettings": {
-      "part": { "payDay": "Pay day", "insurance": "Social insurance deduction basis", "deduct": "Deductions · premium pay", "tax": "Income tax", "apply": "Apply · save" },
+      "part": {
+        "payDay": "Pay day",
+        "insurance": "Social insurance deduction basis",
+        "deduct": "Deductions · premium pay",
+        "tax": "Income tax",
+        "apply": "Apply · save"
+      },
       "title": "Payroll settings",
       "menu": "Payroll settings menu",
       "forbidden": "Only top admins can see this.",
@@ -3083,7 +3099,8 @@
         "allNormal": "✓ Everyone is on a regular shift. No one to check.",
         "allRest": "Day off. Only people with a schedule count as regular."
       },
-      "viewCalendar": "Calendar"
+      "viewCalendar": "Calendar",
+      "skipWeekend": "Skip Sat · Sun ({n} days)"
     },
     "leaveTypes": {
       "title": "Leave types",
@@ -7407,7 +7424,8 @@
     "invalid_time": "The end time must be later than the start time.",
     "past_date": "You cannot request a past date.",
     "reason_required": "Enter a reason (up to 200 characters).",
-    "duplicate_request": "A request for the same date and time is already pending."
+    "duplicate_request": "A request for the same date and time is already pending.",
+    "skipWeekend": "Skip Sat · Sun ({n} days requested)"
   },
   "desk": {
     "workStats": "My work summary",

@@ -8,6 +8,7 @@ import { useState } from 'react';
 import { CLOSE_SHEET_EVENT } from '@/components/AddSheet';
 import { callApi } from '@/components/client-api';
 import { DateTimeInput } from '@/components/DateTimeInput';
+import { RangeCalendar, datesBetween } from '@/components/RangeCalendar';
 import { ErrorNote } from '@/components/ErrorNote';
 import { Button } from '@/components/ui';
 
@@ -21,6 +22,9 @@ export function ShiftRequestForm({ today, templates, sheet, kindNames }: { kindN
   const tk = withKindNames(useTranslations('requests.shiftKind'), kindNames);
   const router = useRouter();
   const [date, setDate] = useState(today);
+  const [dateEnd, setDateEnd] = useState<string | null>(today); // 기간의 끝 (2026-11-03 의뢰인)
+  const [skipWeekend, setSkipWeekend] = useState(true);
+  const dates = datesBetween(date, dateEnd, skipWeekend && dateEnd !== null && dateEnd !== date);
   const [tpl, setTpl] = useState('');
   const [start, setStart] = useState('08:00');
   const [end, setEnd] = useState('17:00');
@@ -35,7 +39,7 @@ export function ShiftRequestForm({ today, templates, sheet, kindNames }: { kindN
         e.preventDefault();
         setBusy(true);
         setErr(null);
-        const r = await callApi<{ id: string; direct?: boolean }>('/api/schedule-requests', { date, startTime: start, endTime: end, kind, reason });
+        const r = await callApi<{ id: string; direct?: boolean }>('/api/schedule-requests', { date: dates[0], dates, startTime: start, endTime: end, kind, reason });
         setBusy(false);
         if (!r.ok) return setErr(r);
         if (sheet) {
@@ -46,10 +50,16 @@ export function ShiftRequestForm({ today, templates, sheet, kindNames }: { kindN
         router.refresh();
       }}
     >
-      <label className="flex flex-col gap-1 text-sm text-muted">
+      <div className="flex flex-col gap-1 text-sm text-muted">
         {t('date')}
-        <DateTimeInput type="date" value={date} onChange={setDate} required className={`num ${field}`} />
-      </label>
+        <RangeCalendar start={date} end={dateEnd} skipWeekend={skipWeekend} min={today} onChange={(s, e) => { setDate(s); setDateEnd(e); }} />
+        {dateEnd !== null && dateEnd !== date && (
+          <label className="flex min-h-11 items-center gap-2 text-text">
+            <input type="checkbox" checked={skipWeekend} onChange={(e) => setSkipWeekend(e.target.checked)} className="size-5 accent-primary" />
+            {t('skipWeekend', { n: dates.length })}
+          </label>
+        )}
+      </div>
       {templates.length > 0 && (
         <label className="flex flex-col gap-1 text-sm text-muted">
           {t('template')}
@@ -100,7 +110,7 @@ export function ShiftRequestForm({ today, templates, sheet, kindNames }: { kindN
         <input value={reason} onChange={(e) => setReason(e.target.value)} maxLength={200} required className={field} autoComplete="off" />
       </label>
       {err && <ErrorNote code={err.code} requestId={err.requestId} namespace="scheduleRequest" />}
-      <Button type="submit" disabled={busy || reason.trim().length < 1}>
+      <Button type="submit" disabled={busy || reason.trim().length < 1 || dates.length === 0}>
         {t('send')}
       </Button>
     </form>

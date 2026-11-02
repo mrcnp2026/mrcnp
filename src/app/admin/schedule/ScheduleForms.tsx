@@ -9,6 +9,7 @@ import { useState } from 'react';
 import { CLOSE_SHEET_EVENT } from '@/components/AddSheet';
 import { callApi } from '@/components/client-api';
 import { DateTimeInput } from '@/components/DateTimeInput';
+import { RangeCalendar, datesBetween } from '@/components/RangeCalendar';
 import { ErrorNote } from '@/components/ErrorNote';
 import { Button } from '@/components/ui';
 import { SHIFT_KINDS, type ShiftKind } from '@/lib/shifts';
@@ -37,6 +38,9 @@ export function ScheduleForm({
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState<Err>(null);
   const [day, setDay] = useState(date);
+  const [dayEnd, setDayEnd] = useState<string | null>(date); // 기간의 끝 (2026-11-03 의뢰인: 시작 · 끝을 눌러 한 번에)
+  const [skipWeekend, setSkipWeekend] = useState(true);
+  const dates = datesBetween(day, dayEnd, skipWeekend && dayEnd !== null && dayEnd !== day);
   const [tpl, setTpl] = useState('');
   const [start, setStart] = useState('08:00');
   const [end, setEnd] = useState('17:00');
@@ -63,7 +67,7 @@ export function ScheduleForm({
         const fd = new FormData(e.currentTarget);
         setBusy(true);
         setErr(null);
-        const res = await callApi('/api/admin/schedule', { date: day, startTime: start, endTime: end, kind, templateId: tpl || null, note: fd.get('note'), employeeIds: [...picked] });
+        const res = await callApi('/api/admin/schedule', { date: dates[0], dates, startTime: start, endTime: end, kind, templateId: tpl || null, note: fd.get('note'), employeeIds: [...picked] });
         setBusy(false);
         if (!res.ok) return setErr(res);
         setPicked(new Set());
@@ -75,10 +79,16 @@ export function ScheduleForm({
       {/* PC: 두 칸 — 왼쪽 일정(날짜 · 템플릿 · 시간 · 유형 · 노트) / 오른쪽 휴게시간 · 직원 (2026-10-11 의뢰인 스샷 `스샷/근무일정 추가하기 팝업.png`) */}
       <div className="flex flex-col gap-3 lg:grid lg:grid-cols-2 lg:items-start lg:gap-6">
       <div className="flex flex-col gap-3">
-      <label className="flex flex-col gap-1 text-sm text-muted">
+      <div className="flex flex-col gap-1 text-sm text-muted">
         {t('date')}
-        <DateTimeInput type="date" value={day} onChange={setDay} required className={`num ${field}`} />
-      </label>
+        <RangeCalendar start={day} end={dayEnd} skipWeekend={skipWeekend} onChange={(s, e) => { setDay(s); setDayEnd(e); }} />
+        {dayEnd !== null && dayEnd !== day && (
+          <label className="flex min-h-11 items-center gap-2 text-text">
+            <input type="checkbox" checked={skipWeekend} onChange={(e) => setSkipWeekend(e.target.checked)} className="size-5 accent-primary" />
+            {t('skipWeekend', { n: dates.length })}
+          </label>
+        )}
+      </div>
       <label className="flex flex-col gap-1 text-sm text-muted">
         {t('template')}
         <Select
@@ -171,7 +181,7 @@ export function ScheduleForm({
       </div>
       </div>
       {err && <ErrorNote code={err.code} requestId={err.requestId} namespace="admin.schedule" />}
-      <Button type="submit" disabled={busy || picked.size === 0}>
+      <Button type="submit" disabled={busy || picked.size === 0 || dates.length === 0}>
         {t('save')}
       </Button>
     </form>

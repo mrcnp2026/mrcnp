@@ -39,7 +39,17 @@
     "findName": "이름으로 찾기",
     "clear": "지우기",
     "screenHelp": "이 화면 설명",
-    "devBanner": "개발 서버입니다 — 여기서 한 일은 운영에 영향을 주지 않습니다"
+    "devBanner": "개발 서버입니다 — 여기서 한 일은 운영에 영향을 주지 않습니다",
+    "range": {
+      "prev": "이전 달",
+      "next": "다음 달",
+      "month": "{y}년 {m}월",
+      "week": "일,월,화,수,목,금,토",
+      "picked": "{s} ~ {e}",
+      "pickedOne": "{s} 하루",
+      "hintEnd": "끝 날짜를 누르면 기간이 됩니다. 같은 날을 누르면 하루만.",
+      "hintStart": "다른 날을 누르면 새로 시작합니다."
+    }
   },
   "login": {
     "title": "로그인",
@@ -1360,7 +1370,13 @@
       "invalid_group": "부서를 찾을 수 없습니다. 새로 고침해 주세요."
     },
     "paySettings": {
-      "part": { "payDay": "지급일", "insurance": "4대보험 공제 기준", "deduct": "차감 · 가산수당", "tax": "근로소득세", "apply": "적용 · 저장" },
+      "part": {
+        "payDay": "지급일",
+        "insurance": "4대보험 공제 기준",
+        "deduct": "차감 · 가산수당",
+        "tax": "근로소득세",
+        "apply": "적용 · 저장"
+      },
       "title": "급여 설정",
       "menu": "급여 설정 메뉴",
       "forbidden": "최고관리자만 볼 수 있습니다.",
@@ -3083,7 +3099,8 @@
         "allNormal": "✓ 모두 정규 근무 일정입니다. 일정을 바꿀 직원이 없습니다.",
         "allRest": "쉬는 날입니다. 일정이 있는 직원만 정규 근무로 셉니다."
       },
-      "viewCalendar": "달력"
+      "viewCalendar": "달력",
+      "skipWeekend": "토 · 일은 빼기 ({n}일에 넣음)"
     },
     "leaveTypes": {
       "title": "휴가 유형",
@@ -7407,7 +7424,8 @@
     "invalid_time": "끝 시각은 시작 시각보다 늦어야 합니다.",
     "past_date": "지난 날짜는 요청할 수 없습니다.",
     "reason_required": "사유를 적어 주세요 (200자 이내).",
-    "duplicate_request": "같은 날 같은 시각의 요청이 이미 대기 중입니다."
+    "duplicate_request": "같은 날 같은 시각의 요청이 이미 대기 중입니다.",
+    "skipWeekend": "토 · 일은 빼기 ({n}일 요청)"
   },
   "desk": {
     "workStats": "내 근로 통계",
