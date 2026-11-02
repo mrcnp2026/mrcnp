@@ -1,19 +1,19 @@
 'use client';
-// 공지 작성·번역·게시 (②-5 7-15, 폰 기준). 사진은 다음 단계(아직 없음).
-// 순서: ① 한국어 제목·본문 저장 → ② 번역 초안(켜진 언어만, 지금은 영어) → 고치고 「확인했음」 → ③ 게시
+// 공지 작성 · 게시 (②-5 7-15, 폰 기준).
+// 2026-11-02 의뢰인: 임시 저장 · 번역 단계를 없앴다 — 쓰고 「게시」 한 번이면 저장과 게시가 같이 된다. 대상은 전체 또는 지점 선택 두 가지.
+//   지점을 고르면 그 지점(하위 팀 포함)의 직원으로 받는 사람이 정해진다(저장할 때 고정).
 // 게시 뒤 고칠 때는 「내용 변경 — 다시 모두에게」(기본) / 「오타 수정」 중 하나 (요점 15). 삭제는 없고 보관만.
 import { DateTimeInput } from '@/components/DateTimeInput';
-import { Archive, Languages, Megaphone, RotateCcw, Save, Send } from 'lucide-react';
+import { Archive, Megaphone, RotateCcw, Save, Send } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 import { useRouter } from 'next/navigation';
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 import { callApi } from '@/components/client-api';
 import { ErrorNote } from '@/components/ErrorNote';
 import { RichEditor } from '@/components/RichEditor';
 import { textToHtml } from '@/lib/rich-text-plain';
-import { Button, Card, CardTitle, Chip } from '@/components/ui';
+import { Button, Card, Chip } from '@/components/ui';
 
-type Tr = { locale: string; title: string; body: string; source: 'machine' | 'human' | null; reviewed: boolean; numbersOk: boolean; stale: boolean };
 type Initial = {
   id: string;
   title: string;
@@ -28,17 +28,23 @@ type Initial = {
   status: 'draft' | 'published' | 'archived';
   state: 'draft' | 'scheduled' | 'live' | 'ended' | 'archived';
   version: number;
-  translations: Tr[];
   confirmed: string;
   notConfirmed: string[];
 };
 
 const field = 'min-h-11 w-full rounded-button border border-border bg-bg px-3 text-base text-text';
-const LANG: Record<string, string> = { en: 'English', vi: 'Tiếng Việt', th: 'ภาษาไทย' };
+type Person = { id: string; name: string; groupId: string | null };
+type Group = { id: string; label: string; parentId: string | null };
 
-export function NoticeEditor({ people, initial, translate: canTranslate = true }: { people: { id: string; name: string }[]; initial: Initial | null; translate?: boolean }) {
+/** 고른 지점(하위 팀 포함)의 직원 */
+function membersOf(groups: Group[], people: Person[], picked: string[]): string[] {
+  const g = new Set(picked);
+  for (let n = 0; n < 3; n++) for (const x of groups) if (x.parentId && g.has(x.parentId)) g.add(x.id);
+  return people.filter((p) => p.groupId && g.has(p.groupId)).map((p) => p.id);
+}
+
+export function NoticeEditor({ people, groups, initial }: { people: Person[]; groups: Group[]; initial: Initial | null }) {
   const t = useTranslations('admin.notices');
-  const tc = useTranslations('common');
   const router = useRouter();
   const [f, setF] = useState({
     title: initial?.title ?? '',
@@ -52,54 +58,65 @@ export function NoticeEditor({ people, initial, translate: canTranslate = true }
     endsAt: initial?.endsAt ?? '',
     mode: 'reshow' as 'reshow' | 'typo',
   });
-  const [trs, setTrs] = useState<Tr[]>(initial?.translations ?? []);
-  // 저장·번역 초안 뒤 서버가 새 값을 주면 칸과 표시(숫자 확인 필요 등)를 새로 채운다
-  const serverTrs = JSON.stringify(initial?.translations ?? []);
-  useEffect(() => setTrs(JSON.parse(serverTrs) as Tr[]), [serverTrs]);
+  // 지점 고르기: 예전에 받는 사람을 정해 둔 공지는 그 사람들이 전부 들어 있는 지점을 골라 둔 것으로 보여 준다
+  const [picked, setPicked] = useState<string[]>(() => {
+    const tg = new Set(initial?.targets ?? []);
+    return groups.filter((g) => { const m = membersOf(groups, people, [g.id]); return m.length > 0 && m.every((id) => tg.has(id)); }).map((g) => g.id);
+  });
   const [busy, setBusy] = useState(false);
   const [msg, setMsg] = useState<string | null>(null);
   const [err, setErr] = useState<{ code: string; requestId?: string } | null>(null);
   const [confirm, setConfirm] = useState<'publish' | 'archive' | null>(null);
   const published = initial?.status === 'published';
-  const [pick, setPick] = useState(!(initial?.targets.length)); // 직원 명부: 이미 고른 사람이 있으면 접어서 시작 (2026-10-23 의뢰인: 고른 뒤에도 명부가 넓게 펴져 있다)
 
-  async function save() {
+  const targets = f.audience === 'all' ? [] : membersOf(groups, people, picked);
+  const body = { ...f, legal: false, targets }; // 법적 · 급여 표시는 번역 확인용이라 번역과 함께 없앴다 (2026-11-02)
+
+  async function save(): Promise<string | null> {
+    const r = await callApi<{ id: string }>(initial ? `/api/admin/notices/${initial.id}` : '/api/admin/notices', body);
+    if (!r.ok) {
+      setErr(r);
+      return null;
+    }
+    return initial?.id ?? r.data.id;
+  }
+
+  // 게시 = 저장 + 게시 (임시 저장 없음)
+  async function publish() {
     setBusy(true);
     setErr(null);
     setMsg(null);
-    const r = await callApi<{ id: string }>(initial ? `/api/admin/notices/${initial.id}` : '/api/admin/notices', f);
+    const id = await save();
+    if (!id) {
+      setBusy(false);
+      setConfirm(null);
+      return;
+    }
+    const r = await callApi(`/api/admin/notices/${id}/status`, { action: 'publish' });
     setBusy(false);
-    if (!r.ok) return setErr(r);
-    if (!initial) return router.replace(`/admin/notices/${r.data.id}`);
+    setConfirm(null);
+    if (!r.ok) {
+      setErr(r);
+      if (!initial) router.replace(`/admin/notices/${id}`); // 저장은 됐다 — 그 화면에서 다시 게시
+      return;
+    }
+    router.push('/admin/notices');
+    router.refresh();
+  }
+
+  // 게시한 공지 고치기
+  async function saveEdit() {
+    setBusy(true);
+    setErr(null);
+    setMsg(null);
+    const id = await save();
+    setBusy(false);
+    if (!id) return;
     setMsg(t('saved'));
     router.refresh();
   }
 
-  async function translate() {
-    if (!initial) return;
-    setBusy(true);
-    setErr(null);
-    setMsg(null);
-    const r = await callApi<{ results: { locale: string; ok: boolean; reason?: string }[] }>(`/api/admin/notices/${initial.id}/translate`);
-    setBusy(false);
-    if (!r.ok) return setErr(r);
-    const failed = r.data.results.filter((x) => !x.ok);
-    setMsg(failed.length ? t(failed[0].reason === 'no_key' ? 'translateNoKey' : 'translateFailed') : t('translated'));
-    router.refresh();
-  }
-
-  async function saveTr(tr: Tr) {
-    if (!initial) return;
-    setBusy(true);
-    setErr(null);
-    const r = await callApi(`/api/admin/notices/${initial.id}/translation`, tr);
-    setBusy(false);
-    if (!r.ok) return setErr(r);
-    setMsg(t('saved'));
-    router.refresh();
-  }
-
-  async function status(action: 'publish' | 'archive' | 'restore') {
+  async function status(action: 'archive' | 'restore') {
     if (!initial) return;
     setBusy(true);
     setErr(null);
@@ -111,7 +128,8 @@ export function NoticeEditor({ people, initial, translate: canTranslate = true }
   }
 
   const upd = (p: Partial<typeof f>) => setF({ ...f, ...p });
-  const audienceCount = f.audience === 'all' ? people.length : f.targets.length;
+  const audienceCount = f.audience === 'all' ? people.length : targets.length;
+  const ready = !!f.title.trim() && !!f.bodyHtml && (f.audience === 'all' || targets.length > 0);
 
   return (
     <div className="flex flex-col gap-4">
@@ -150,57 +168,23 @@ export function NoticeEditor({ people, initial, translate: canTranslate = true }
           <span>{t('important')}</span>
           <span className="text-xs text-faint">{t('importantHint')}</span>
         </label>
-        <label className="flex min-h-11 items-center gap-2">
-          <input type="checkbox" className="size-5" checked={f.legal} onChange={(e) => upd({ legal: e.target.checked })} />
-          <span>{t('legal')}</span>
-          <span className="text-xs text-faint">{t('legalHint')}</span>
-        </label>
         <fieldset className="flex flex-col gap-1">
           <legend className="text-sm text-muted">{t('audience')}</legend>
           {(['all', 'selected'] as const).map((a) => (
             <label key={a} className="flex min-h-11 items-center gap-2">
               <input type="radio" className="size-5" checked={f.audience === a} onChange={() => upd({ audience: a })} />
-              {t(a === 'all' ? 'audienceAll' : 'audienceSelected')}
+              {t(a === 'all' ? 'audienceAll' : 'audienceGroups')}
             </label>
           ))}
-          {f.audience === 'selected' && !pick && (
-            <div className="flex flex-wrap items-center gap-2 rounded-button border border-border p-3">
-              <span className="min-w-0 flex-1 text-sm">
-                <b className="num">{t('pickCount', { n: f.targets.length })}</b>
-                <span className="text-muted"> · {people.filter((p) => f.targets.includes(p.id)).map((p) => p.name).join(', ')}</span>
-              </span>
-              <Button type="button" variant="outline" onClick={() => setPick(true)}>
-                {t('pickEdit')}
-              </Button>
-            </div>
-          )}
-          {f.audience === 'selected' && pick && (
+          {f.audience === 'selected' && (
             <div className="flex flex-col rounded-button border border-border p-2">
-              <div className="flex items-center gap-2 pb-1">
-                <span className="num flex-1 text-sm text-muted">{t('pickCount', { n: f.targets.length })}</span>
-                <button type="button" onClick={() => upd({ targets: people.map((p) => p.id) })} className="min-h-9 rounded-button px-2 text-sm font-semibold text-primary hover:bg-primary-tint">
-                  {t('pickAll')}
-                </button>
-                <button type="button" onClick={() => upd({ targets: [] })} className="min-h-9 rounded-button px-2 text-sm text-muted hover:bg-surface">
-                  {t('pickClear')}
-                </button>
-              </div>
-              <div className="flex max-h-80 flex-col overflow-y-auto">
-              {people.map((p) => (
-                <label key={p.id} className="flex min-h-11 items-center gap-2">
-                  <input
-                    type="checkbox"
-                    className="size-5"
-                    checked={f.targets.includes(p.id)}
-                    onChange={(e) => upd({ targets: e.target.checked ? [...f.targets, p.id] : f.targets.filter((x) => x !== p.id) })}
-                  />
-                  {p.name}
+              <span className="num pb-1 text-sm text-muted">{t('groupCount', { g: picked.length, n: targets.length })}</span>
+              {groups.map((g) => (
+                <label key={g.id} className="flex min-h-11 items-center gap-2">
+                  <input type="checkbox" className="size-5" checked={picked.includes(g.id)} onChange={(e) => setPicked(e.target.checked ? [...picked, g.id] : picked.filter((x) => x !== g.id))} />
+                  <span className="min-w-0 break-words">{g.label}</span>
                 </label>
               ))}
-              </div>
-              <Button type="button" disabled={f.targets.length === 0} onClick={() => setPick(false)} className="mt-2 w-full">
-                {t('pickDone')}
-              </Button>
             </div>
           )}
         </fieldset>
@@ -225,67 +209,22 @@ export function NoticeEditor({ people, initial, translate: canTranslate = true }
             ))}
           </fieldset>
         )}
-        <Button variant="outline" disabled={busy || !f.title.trim() || !f.bodyHtml} onClick={save} className="w-full">
-          <Save aria-hidden size={18} strokeWidth={1.75} />
-          {initial ? t('save') : t('saveDraft')}
-        </Button>
+        {published && (
+          <Button variant="outline" disabled={busy || !ready} onClick={saveEdit} className="w-full">
+            <Save aria-hidden size={18} strokeWidth={1.75} />
+            {t('save')}
+          </Button>
+        )}
       </Card>
-
-      {initial && (
-        <Card className="flex flex-col gap-3">
-          <CardTitle icon={Languages} help={t('translationsHint')}>
-            {t('translations')}
-          </CardTitle>
-          {/* 통합설정 › 메시지 「번역 초안」을 끄면 단추를 보이지 않는다 (2026-10-19) — 이미 있는 번역은 그대로 고칠 수 있다 */}
-          {canTranslate && (
-            <Button variant="outline" disabled={busy} onClick={translate} className="w-full">
-              {t('translate')}
-            </Button>
-          )}
-          {trs.map((tr, i) => (
-            <div key={tr.locale} className="flex flex-col gap-2 rounded-button border border-border p-3">
-              <div className="flex flex-wrap items-center gap-2">
-                <span className="font-semibold">{LANG[tr.locale] ?? tr.locale}</span>
-                {tr.source && <Chip>{t(tr.source === 'machine' ? 'machine' : 'human')}</Chip>}
-                {tr.source && !tr.numbersOk && <Chip tone="warn">{t('numbersCheck')}</Chip>}
-                {tr.stale && <Chip tone="warn">{t('stale')}</Chip>}
-                {tr.reviewed && <Chip tone="ok">{t('reviewed')}</Chip>}
-              </div>
-              <input
-                value={tr.title}
-                lang={tr.locale}
-                aria-label={t('trTitle', { lang: LANG[tr.locale] ?? tr.locale })}
-                onChange={(e) => setTrs(trs.map((x, j) => (j === i ? { ...x, title: e.target.value } : x)))}
-                className={field}
-              />
-              <textarea
-                value={tr.body}
-                lang={tr.locale}
-                rows={6}
-                aria-label={t('trBody', { lang: LANG[tr.locale] ?? tr.locale })}
-                onChange={(e) => setTrs(trs.map((x, j) => (j === i ? { ...x, body: e.target.value } : x)))}
-                className="w-full rounded-button border border-border bg-bg p-3 text-base text-text"
-              />
-              <label className="flex min-h-11 items-center gap-2">
-                <input type="checkbox" className="size-5" checked={tr.reviewed} onChange={(e) => setTrs(trs.map((x, j) => (j === i ? { ...x, reviewed: e.target.checked } : x)))} />
-                {t('reviewedCheck')}
-              </label>
-              <Button variant="outline" disabled={busy || !tr.title.trim() || !tr.body.trim()} onClick={() => saveTr(tr)} className="w-full">
-                {t('saveTranslation')}
-              </Button>
-            </div>
-          ))}
-        </Card>
-      )}
 
       {msg && <p className="text-sm font-semibold text-ok">{msg}</p>}
       {err && <ErrorNote code={err.code} requestId={err.requestId} namespace="admin.notices" />}
 
-      {initial && confirm && (
+      {confirm && (
         <Card className="flex flex-col gap-2 border-primary">
           <p className="text-sm">{confirm === 'publish' ? t('confirmPublish', { n: audienceCount }) : t('confirmArchive')}</p>
           <div className="flex gap-2">
-            <Button disabled={busy} className="flex-1" onClick={() => status(confirm)}>
+            <Button disabled={busy} className="flex-1" onClick={() => (confirm === 'publish' ? publish() : status(confirm))}>
               {t('confirm')}
             </Button>
             <Button variant="outline" className="flex-1" onClick={() => setConfirm(null)}>
@@ -294,21 +233,21 @@ export function NoticeEditor({ people, initial, translate: canTranslate = true }
           </div>
         </Card>
       )}
-      {initial && !confirm && (
+      {!confirm && (
         <div className="flex flex-col gap-2">
-          {initial.status === 'draft' && (
-            <Button disabled={busy} onClick={() => setConfirm('publish')} className="min-h-14 w-full">
+          {(!initial || initial.status === 'draft') && (
+            <Button disabled={busy || !ready} onClick={() => setConfirm('publish')} className="min-h-14 w-full">
               <Send aria-hidden size={20} strokeWidth={1.75} />
               {t('publish')}
             </Button>
           )}
-          {initial.status === 'published' && (
+          {initial?.status === 'published' && (
             <Button variant="outline" disabled={busy} onClick={() => setConfirm('archive')} className="w-full">
               <Archive aria-hidden size={18} strokeWidth={1.75} />
               {t('archiveAction')}
             </Button>
           )}
-          {initial.status === 'archived' && (
+          {initial?.status === 'archived' && (
             <Button variant="outline" disabled={busy} onClick={() => status('restore')} className="w-full">
               <RotateCcw aria-hidden size={18} strokeWidth={1.75} />
               {t('restore')}
@@ -316,7 +255,6 @@ export function NoticeEditor({ people, initial, translate: canTranslate = true }
           )}
         </div>
       )}
-      <p className="text-xs text-faint">{tc('translationNotice')}</p>
     </div>
   );
 }

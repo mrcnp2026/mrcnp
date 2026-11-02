@@ -32,6 +32,12 @@ export function orgOptions(groups: OrgGroup[], includeHidden = false): { id: str
   return buildOrgTree(groups, includeHidden).flatMap((d) => [{ id: d.id, label: d.name }, ...d.teams.map((x) => ({ id: x.id, label: `${d.name} › ${x.label}` }))]);
 }
 
+/** 공지 대상 지점 고르기 (2026-11-02) — 화면 이름(위 조직 › 팀)과 위 조직 번호. 하위 팀은 화면에서 함께 고른 것으로 본다 */
+export function noticeGroups(groups: OrgGroup[]): { id: string; label: string; parentId: string | null }[] {
+  const parent = new Map(groups.map((g) => [g.id, g.parentId]));
+  return orgOptions(groups).map((o) => ({ ...o, parentId: parent.get(o.id) ?? null }));
+}
+
 /** 그 그룹의 맨 위 조직 (자기 자신이 맨 위면 자기 자신) */
 export function topOf<G extends { id: string; parentId: string | null }>(groups: readonly G[], id: string | null | undefined): G | undefined {
   let g = id ? groups.find((x) => x.id === id) : undefined;

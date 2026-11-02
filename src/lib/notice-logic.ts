@@ -86,7 +86,8 @@ export function pickDisplay(
   locale: string,
 ): { locale: string; title: string; body: string; machine: boolean; stale: boolean; translated: boolean } {
   const t = locale === 'ko' ? undefined : translations.find((x) => x.locale === locale);
-  if (!t) return { locale: 'ko', title: n.title, body: n.body, machine: false, stale: false, translated: false };
+  // 2026-11-02: 번역 단계를 없앴다 — 본문이 바뀐 뒤의 낡은 번역은 보이지 않고 한국어 원문을 보인다
+  if (!t || t.basedOnVersion < n.version) return { locale: 'ko', title: n.title, body: n.body, machine: false, stale: false, translated: false };
   return { locale, title: t.title, body: t.body, machine: t.source === 'machine', stale: t.basedOnVersion < n.version, translated: true };
 }
 

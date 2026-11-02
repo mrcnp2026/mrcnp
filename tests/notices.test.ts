@@ -53,8 +53,8 @@ describe('보여 줄 언어 (요점 21) — 상단 언어 버튼을 따른다', 
     expect(pickDisplay(n, [tr({ basedOnVersion: 2 })], 'en')).toMatchObject({ locale: 'en', title: 'T', machine: true, stale: false });
     expect(pickDisplay(n, [], 'en')).toMatchObject({ locale: 'ko', title: '제목' });
   });
-  it('옛 판 번역이면 stale', () => {
-    expect(pickDisplay(n, [tr({ basedOnVersion: 1 })], 'en').stale).toBe(true);
+  it('옛 판 번역은 보이지 않고 한국어 원문 (2026-11-02 번역 단계 없앰)', () => {
+    expect(pickDisplay(n, [tr({ basedOnVersion: 1 })], 'en')).toMatchObject({ locale: 'ko', translated: false });
   });
 });
 

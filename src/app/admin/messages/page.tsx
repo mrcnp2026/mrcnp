@@ -1,4 +1,4 @@
-// 사내게시판 (관리자) — 글 올리기, 올린 글과 읽음 수 (PRD v1.3 37.4, L19). 직원 문의 · 답글은 없다(2026-10-16 의뢰인 알림-8).
+// 전달 (관리자, 옛 사내게시판 — 2026-11-02 이름 바꿈) — 고른 직원에게 보내기, 보낸 것과 읽음 수 (PRD v1.3 37.4, L19). 직원 문의 · 답글은 없다(2026-10-16 의뢰인 알림-8).
 import { getTranslations } from 'next-intl/server';
 import { HelpTip } from '@/components/Help';
 import { NoticeCompose } from '@/components/MessageForms';
@@ -9,8 +9,6 @@ import { Fab } from '@/components/Fab';
 import { SheetOpener } from '@/components/SheetOpener';
 import { Card, Empty, PageShell } from '@/components/ui';
 import { getMe } from '@/lib/auth';
-import { orgOptions } from '@/lib/org';
-import { loadOrgGroups } from '@/lib/org-data';
 import { createAdminClient } from '@/lib/supabase/admin';
 import { loadSent } from '@/lib/work-messages';
 import { adminPage } from '@/lib/admin-gate';
@@ -20,7 +18,7 @@ export default async function AdminMessagesPage() {
   await adminPage(); // 관리 화면 이중 확인 (lib/admin-gate)
   const me = (await getMe())!;
   const t = await getTranslations('messages');
-  const [items, groups, { data: staff }] = await Promise.all([loadSent(me), loadOrgGroups(), createAdminClient().from('profiles').select('id, name, employee_no, active').or(NOT_SYSTEM_ADMIN).order('name')]);
+  const [items, { data: staff }] = await Promise.all([loadSent(me), createAdminClient().from('profiles').select('id, name, employee_no, active').or(NOT_SYSTEM_ADMIN).order('name')]);
   const names = new Map((staff ?? []).map((p) => [p.id as string, p.name as string]));
   return (
     <PageShell wide>
@@ -38,7 +36,6 @@ export default async function AdminMessagesPage() {
         <Card>
           <NoticeCompose
             sheet="board-new"
-            groups={orgOptions(groups)}
             people={(staff ?? []).filter((p) => p.active && p.id !== me.id && (me.employeeNo?.startsWith('e2e-') || !(p.employee_no as string | null)?.startsWith('e2e-'))).map((p) => ({ id: p.id as string, label: p.name as string }))}
           />
         </Card>
