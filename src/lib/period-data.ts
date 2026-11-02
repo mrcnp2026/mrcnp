@@ -20,7 +20,8 @@ import { viewerScope, within } from '@/lib/scope';
 import { loadShifts, loadShiftTemplates } from '@/lib/shift-data';
 import { applyTemplate, deemedPair, planDay, type DayPlan, type DayShift, type ShiftTemplate } from '@/lib/shifts';
 import { createAdminClient } from '@/lib/supabase/admin';
-import { toKstDate } from '@/lib/time';
+import { hhmm, toKstDate } from '@/lib/time';
+import { waiveBreaks } from '@/lib/break-waiver';
 import type { HolidayRow, PunchCorrection, PunchEvent, WorkRule } from '@/lib/types';
 
 // startsOn: 입사일(joined_on), 비어 있으면 계정을 만든 날 — 그 전 날짜는 미기록·결근으로 세지 않는다 (7-8 요점 3)
@@ -122,6 +123,13 @@ export async function loadPeriod(from: string, to: string, practice = OFFICE.pra
     loadShiftTemplates(true),
     loadShifts(readFrom, to),
   ]);
+  // 휴게 안 함 표시 (급여-60, 2026-11-02) — 그날 그 휴게시간대만 빼지 않는다
+  const { data: waiverRows } = await db.from('break_waivers').select('employee_id, work_date, break_start').eq('is_test', practice).eq('active', true).gte('work_date', readFrom).lte('work_date', to);
+  const waivedOf = new Map<string, Set<string>>();
+  for (const w of waiverRows ?? []) {
+    const k = `${w.employee_id}|${w.work_date}`;
+    waivedOf.set(k, (waivedOf.get(k) ?? new Set()).add(hhmm(w.break_start as string)));
+  }
   // 실제 관리자에게는 검사 전용 계정(e2e-)의 사람 · 기록을 빼고 계산한다 — 현황판 · 이상자 · 마감 · 리포트 숫자에 섞이지 않게 (hiddenTestIds)
   const hidden = new Set(await hiddenTestIds());
   const keep = <T,>(rows: T[], idOf: (r: T) => string) => (hidden.size ? rows.filter((r) => !hidden.has(idOf(r))) : rows);
@@ -146,9 +154,11 @@ export async function loadPeriod(from: string, to: string, practice = OFFICE.pra
     const plan = planDay({ rule, tpl: tplOfPerson.get(employeeId) ?? null, shifts: shiftsOf.get(`${employeeId}|${date}`) ?? [], isWorkday: rule ? resolveDayType(date, rule, holidays) === 'workday' : false, templates: tplById });
     // 시각이 있는 승인 휴가(오전 반차 등)는 그날 판정의 시작·끝 시각을 옮긴다 — 반차 낸 사람이 지각으로 잡히지 않게
     const timed = timedLeaveOf.get(`${employeeId}|${date}`);
-    // 시프티 기간에 그날 일정이 따로 없는 날(시프티 무일정근무)은 일찍 온 시간을 자르지 않는다 (OFFICE.shifteeScheduleUntil, 급여-59 임시)
-    const unscheduled = plan.rule && date <= OFFICE.shifteeScheduleUntil && !plan.items.some((i) => i.source === 'shift') ? { ...plan, rule: { ...plan.rule, clipBeforeStart: false } } : plan;
-    return timed && unscheduled.rule ? { ...unscheduled, rule: trimRuleByLeave(unscheduled.rule, timed) } : unscheduled;
+    // 그날 일정이 등록되지 않은 날도 평소 근무 틀 시작부터 센다 (급여-59, 2026-11-02 의뢰인: 「근무일정은 있었는데 등록을 안 한 것」).
+    // 26.10 3공장 대장: 일정 없는 쉬는 날 특근 13건 모두 08:00부터. 예전 임시 방식(일정 없는 날은 실제 출근부터)은 없앴다
+    const waived = waivedOf.get(`${employeeId}|${date}`);
+    const p2 = waived && plan.rule ? { ...plan, rule: waiveBreaks(plan.rule, waived) } : plan;
+    return timed && p2.rule ? { ...p2, rule: trimRuleByLeave(p2.rule, timed) } : p2;
   };
   const templateOf = (employeeId: string) => tplOfPerson.get(employeeId) ?? null;
   return {
@@ -252,8 +262,11 @@ export async function syncOvertimeRequests(data: PeriodData, upTo: string, only?
 
   for (const p of data.people) {
     if (only && !only.has(p.id)) continue; // 한 사람만 맞출 때 (기록이 바뀐 직후, syncOvertimeFor)
+    // 간주 근무는 연장근로와 상관없다 — 평소 틀이 간주인 사람(임원 등)과 간주로 계산한 날은 연장 요청을 만들지 않는다 (2026-11-02 의뢰인)
+    const deemedPerson = data.templateOf(p.id)?.kind === 'deemed';
     for (const d of daysFor(data, p.id, data.from, upTo < data.to ? upTo : data.to)) {
       if (d.pairs.some((x) => x.in && !x.out)) continue; // 근무 중
+      if ((deemedPerson || d.deemed) && !existing.has(`${p.id}|${d.workDate}`)) continue; // 간주 — 새 요청 없음
       if (isClosed(p.id, d.workDate)) continue; // 마감된 날
       const draft = buildOvertimeRequest({ employeeId: p.id, workDate: d.workDate, work: d, thresholdMinutes: OFFICE.overtimeReviewThresholdMin });
       const cur = existing.get(`${p.id}|${d.workDate}`);

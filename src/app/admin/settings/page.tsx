@@ -481,6 +481,8 @@ export default async function SettingsPage({ searchParams }: { searchParams: Pro
       <Link href="/admin/diag" className="inline-flex min-h-11 items-center self-start px-1 text-sm text-muted">
         {tm('diag')} · {tm('diagHint')} ›
       </Link>
+      {/* 개발사 표시 (2026-11-02 의뢰인) — 버전은 오류 기록에 남는 값과 같다 */}
+      <p className="px-1 text-xs text-faint">{(await getTranslations('brand'))('madeBy', { version: OFFICE.calcVersion })}</p>
     </PageShell>
   );
 }

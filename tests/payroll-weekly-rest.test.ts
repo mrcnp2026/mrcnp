@@ -29,10 +29,10 @@ describe('주휴 · 유급휴일 시간', () => {
 describe('일정 전 출근은 근무로 치지 않는다 (clipBeforeStart)', () => {
   const at = (hm: string) => kstDateTime('2026-08-06', hm);
   const ctx = { workDate: '2026-08-06', dayType: 'workday' as const, weekRegularMinutesSoFar: 0, weekTotalMinutesSoFar: 0 };
-  it('정규 08:00 일정, 07:03 출근 – 17:00 퇴근 → 8시간 (예전에는 57분이 연장으로 들어갔다)', () => {
+  it('정규 08:00 일정, 07:03 출근 – 17:00 퇴근 → 8시간 (예전에는 07:15부터 45분이 연장으로 들어갔다)', () => {
     const before = calcWorkMinutes([{ in: at('07:03'), out: at('17:00') }], RULE, ctx);
     const after = calcWorkMinutes([{ in: at('07:03'), out: at('17:00') }], { ...RULE, clipBeforeStart: true }, ctx);
-    expect(before.overtimeMinutes).toBe(57);
+    expect(before.overtimeMinutes).toBe(45); // 연장도 15분 끊은 시간으로 나눈다 (확정-9, 2026-11-02)
     expect([after.regularMinutes, after.overtimeMinutes]).toEqual([480, 0]);
   });
   it('조기 07:30 템플릿(그날 시작 07:30), 07:26 출근 – 17:00 → 07:30부터 8.5시간, 0.5시간 연장(대장의 조기 0.5)', () => {

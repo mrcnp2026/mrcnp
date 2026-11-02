@@ -6,6 +6,7 @@ import { getMe } from '@/lib/auth';
 import { getFormatter, getTranslations } from 'next-intl/server';
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
+import { BreakWaivers, type BreakRow } from '@/components/BreakWaivers';
 import { ConfirmButton } from '@/components/ConfirmRecords';
 import { DetailBar, Field, FieldList } from '@/components/detail';
 import { Chip, PageShell } from '@/components/ui';
@@ -58,6 +59,14 @@ export default async function RecordDetailPage({ params, searchParams }: { param
   // 확정한 사람 — 직원 목록에서 숨긴 시스템관리자(시프티 기록을 옮기며 확정)도 이름이 보이게 직접 찾는다 (2026-10-19 디자인: 「| 10.16 23:55」처럼 이름이 비었다)
   const confirmer = confirm ? (data.people.find((p) => p.id === confirm.confirmedBy)?.name ?? (await createAdminClient().from('profiles').select('name, employee_no').eq('id', confirm.confirmedBy).maybeSingle()).data?.name ?? null) : null;
   const closed = day.pairs.every((p) => p.in && p.out);
+  // 휴게시간대와 「휴게 안 함」 표시 (급여-60) — 그날 규칙의 휴게(표시한 것은 규칙에서 빠져 있다) + 표시한 것
+  const { data: waivers } = await createAdminClient().from('break_waivers').select('id, break_start, break_end, reason').eq('employee_id', id).eq('work_date', date).eq('is_test', practice).eq('active', true);
+  const rule = data.ruleFor(id, date);
+  const breakRows: BreakRow[] = [
+    ...(rule?.breakStart && rule.breakEnd ? [{ start: rule.breakStart.slice(0, 5), end: rule.breakEnd.slice(0, 5), waiver: null }] : []),
+    ...(rule?.extraBreaks ?? []).map((x) => ({ start: x.start.slice(0, 5), end: x.end.slice(0, 5), waiver: null })),
+    ...(waivers ?? []).map((w) => ({ start: (w.break_start as string).slice(0, 5), end: (w.break_end as string).slice(0, 5), waiver: { id: w.id as string, reason: w.reason as string } })),
+  ].sort((a, b) => a.start.localeCompare(b.start));
   const others = day.pairs.map((p, i) => ({ p, i })).filter((x) => x.i !== idx && (x.p.in || x.p.out));
 
   return (
@@ -85,6 +94,7 @@ export default async function RecordDetailPage({ params, searchParams }: { param
         <Field label={t('breakTime')} value={dur(day.breakMinutes)} />
         <Field label={t('schedule')} value={plan.items.length > 0 ? plan.items.map((it) => `${it.startTime} - ${it.endTime}`).join(', ') : t('noSchedule')} href={plan.items.length > 0 ? `/admin/schedule?d=${date}` : undefined} />
       </FieldList>
+      {!deemed && <BreakWaivers employeeId={id} date={date} rows={breakRows} canEdit={canConfirm && !confirm} />}
       <FieldList>
         <Field label={t('inPlace')} value={via(pair.in)} />
         <Field label={t('outPlace')} value={via(pair.out)} />

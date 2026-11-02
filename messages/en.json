@@ -3265,6 +3265,23 @@
       "diffLateOut": "out {n} late",
       "diffEarlyOut": "out {n} early"
     },
+    "breakWaiver": {
+      "title": "Breaks",
+      "rested": "Taken",
+      "waived": "Not taken",
+      "mark": "Mark not taken",
+      "undo": "Undo",
+      "reason": "Reason",
+      "reasonHint": "e.g. kept working through the break",
+      "save": "Save",
+      "cancel": "Cancel",
+      "hint": "If the employee worked through a break, mark it as not taken. That time then counts as work, and any added overtime is re-checked in the overtime inbox. Unconfirm the day first if it is confirmed.",
+      "reason_required": "Please enter a reason.",
+      "day_confirmed": "This day is confirmed. Unconfirm it first.",
+      "period_locked": "This month is closed and cannot be changed.",
+      "already_waived": "This break is already marked as not taken.",
+      "self_decision": "Your own record must be marked by another admin."
+    },
     "recordDetail": {
       "title": "Attendance record",
       "back": "Back to list",
@@ -4439,7 +4456,9 @@
         "family_unreported": "Dependants not yet declared — calculated with {detail} (incl. self) as a provisional value. After the declaration, enter the date under Staff pay › Tax and recalculate.",
         "policy_changed_in_period": "A payroll basis changed during this period ({detail}). Review the period calculation.",
         "leave_duration_mismatch": "Leave duration does not match scheduled work time ({detail}). Review the leave and schedule.",
-        "weekly_rest_with_absence": "There were absent days this month ({detail}). Weekly paid rest was not reduced — whether to drop it for a week with an absence is a company decision. Use an adjustment if needed.",
+        "weekly_rest_with_absence": "There were absent days this month ({detail}). Per company rule, weekly paid rest is kept even for a week with an absence.",
+        "mid_join_hourly": "Joined mid-month, so this month is paid hourly (hourly rate = monthly pay ÷ monthly hours: {detail}).",
+        "perfect_attendance_cut": "There was an unexcused absence this month ({detail}), so the perfect attendance allowance was not paid.",
         "exempt_annual_reached": "Yearly tax-exempt limit reached — the excess was taxed ({detail})",
         "comp_exceeds_overtime": "Converted overtime exceeds this month's approved overtime ({detail} min) — cancel it in Overtime → comp leave or check approvals",
         "overtime_comp_leave": "{detail}h of overtime converted to comp leave and removed from overtime pay",
@@ -8656,6 +8675,10 @@
     "formula": "How amounts are calculated",
     "thanks": "Thank you for your hard work.",
     "correctionMark": "Corrected"
+  },
+  "brand": {
+    "credit": "Made by ONDILABS",
+    "madeBy": "Version {version} · Made by ONDILABS"
   },
   "privacy": {
     "title": "Privacy policy",

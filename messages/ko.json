@@ -3265,6 +3265,23 @@
       "diffLateOut": "{n} 늦게 퇴근",
       "diffEarlyOut": "{n} 일찍 퇴근"
     },
+    "breakWaiver": {
+      "title": "휴게시간",
+      "rested": "쉼",
+      "waived": "휴게 안 함",
+      "mark": "휴게 안 함",
+      "undo": "되돌리기",
+      "reason": "사유",
+      "reasonHint": "예: 휴게시간에 쉬지 않고 작업",
+      "save": "저장",
+      "cancel": "취소",
+      "hint": "휴게시간에 쉬지 않고 일했으면 그 휴게를 「휴게 안 함」으로 표시하세요. 그 시간이 근무로 들어가고, 늘어난 연장은 연장 확인함에서 다시 확인합니다. 확정한 날은 확정을 먼저 풀어야 합니다.",
+      "reason_required": "사유를 적어 주세요.",
+      "day_confirmed": "확정한 날입니다. 확정을 먼저 풀어 주세요.",
+      "period_locked": "마감한 달이라 바꿀 수 없습니다.",
+      "already_waived": "이미 휴게 안 함으로 표시되어 있습니다.",
+      "self_decision": "본인 기록은 다른 관리자가 표시해야 합니다."
+    },
     "recordDetail": {
       "title": "출퇴근기록",
       "back": "목록으로",
@@ -4439,7 +4456,9 @@
         "family_unreported": "부양가족 신고 전 — 가족 수 {detail}명(본인 포함)으로 계산한 임시 값입니다. 신고를 받으면 직원 급여 › 세무에 신고일을 넣고 다시 계산하세요.",
         "policy_changed_in_period": "귀속 기간 중 기준이 바뀌었습니다 ({detail}). 기간별 계산 기준을 검토해 주세요.",
         "leave_duration_mismatch": "휴가 시간과 일정의 순근무시간이 맞지 않습니다 ({detail}). 휴가·일정을 검토해 주세요.",
-        "weekly_rest_with_absence": "이 달에 결근한 날이 있습니다({detail}). 주휴수당은 빼지 않고 그대로 넣었습니다 — 결근한 주의 주휴를 뺄지는 회사가 정해야 합니다(결정 사항 급여-41). 빼야 하면 「금액 조정」으로 고쳐 주세요.",
+        "weekly_rest_with_absence": "이 달에 결근한 날이 있습니다({detail}). 회사 규칙대로 결근한 주에도 주휴수당은 빼지 않았습니다(급여-41).",
+        "mid_join_hourly": "달 중간에 입사해 이 달은 시급제로 계산했습니다(시급 = 월급 ÷ 월 환산 시간: {detail}).",
+        "perfect_attendance_cut": "이 달에 무단결근한 날이 있어({detail}) 만근수당을 주지 않았습니다(급여-46).",
         "exempt_annual_reached": "비과세 연간 한도에 닿아 넘는 금액을 과세로 계산했습니다 ({detail})",
         "comp_exceeds_overtime": "보상휴가로 돌린 연장이 이 달 인정 연장보다 많습니다 ({detail}분) — 연장 → 보상휴가에서 취소하거나 연장 인정을 확인하세요",
         "overtime_comp_leave": "연장 {detail}시간을 보상휴가로 돌려 연장수당에서 뺐습니다",
@@ -8656,6 +8675,10 @@
     "formula": "산출 방법",
     "thanks": "※ 귀하의 노고에 감사드립니다.",
     "correctionMark": "정정본"
+  },
+  "brand": {
+    "credit": "Made by ONDILABS",
+    "madeBy": "버전 {version} · Made by ONDILABS"
   },
   "privacy": {
     "title": "개인정보 처리방침",

@@ -22,7 +22,7 @@ import { toKstDate } from '@/lib/time';
 import { INSURERS, reliefCovers, reliefsForMonth, versionAt } from './contract';
 import { mergeAssigned } from './common-items';
 import { loadCommonItems, loadItems, loadTaxDefaults, loadPolicies, loadReferences, loadSettingHistory, reliefSwitches, sha } from './data';
-import { canonicalItemCode } from './engine/reserved-items';
+import { canonicalItemCode, PERFECT_ATTENDANCE_CODES } from './engine/reserved-items';
 import { leaveDurationMismatch, scheduledMinutes } from './engine/scheduled-attendance';
 import { roundedAttendance } from './engine/rounded-attendance';
 import { timeFromAttendance } from './engine/attendance';
@@ -232,7 +232,7 @@ async function buildInputs(run: RunRow): Promise<Built> {
     const con = versionAt(conRows, last) as (Row & { validFrom: string }) | null;
     const taxRow = versionAt(taxRows.filter((x) => x.employee_id === id).map((x) => ({ ...x, validFrom: x.valid_from as string, validTo: x.valid_to as string | null })), last) as Row | null;
     const inc = ((con?.included ?? {}) as Row) ?? {};
-    const contract: EngineInput['contract'] = con ? { payType: con.pay_type as ContractRow['payType'], amount: Number(con.amount), monthlyHours: con.monthly_hours === null ? null : Number(con.monthly_hours), annualDivisor: con.annual_divisor === null ? null : Number(con.annual_divisor), included: { overtimeHours: inc.overtimeHours == null ? null : Number(inc.overtimeHours), holidayHours: inc.holidayHours == null ? null : Number(inc.holidayHours) } } : null;
+    let contract: EngineInput['contract'] = con ? { payType: con.pay_type as ContractRow['payType'], amount: Number(con.amount), monthlyHours: con.monthly_hours === null ? null : Number(con.monthly_hours), annualDivisor: con.annual_divisor === null ? null : Number(con.annual_divisor), included: { overtimeHours: inc.overtimeHours == null ? null : Number(inc.overtimeHours), holidayHours: inc.holidayHours == null ? null : Number(inc.holidayHours) } } : null;
     const ins = ((taxRow?.insurance ?? {}) as Record<string, { state?: string; reportedWage?: number | null }>) ?? {};
     const dd = basis.taxDefaults?.defaults ?? null;
     const one = (k: string) => ({ state: fillState((ins[k]?.state ?? 'UNKNOWN') as TaxRow['insurance']['pension']['state'], k as 'pension' | 'health' | 'employment' | 'accident', dd), reportedWage: ins[k]?.reportedWage ?? null });
@@ -244,10 +244,19 @@ async function buildInputs(run: RunRow): Promise<Built> {
     // 달 중간에 입사 · 퇴사했거나 계약이 달 중간에 시작됐으면 일할 계산이 필요하다 — 자동으로 나누지 않는다
     const joined = (person?.joined_on as string | null) ?? null;
     const left = (emps ?? []).filter((e) => e.employee_id === id && e.ends_on !== null && (e.ends_on as string) >= from && (e.ends_on as string) < last);
-    const partialMonth = !bonus && ((!!joined && joined > from && joined <= last) || left.length > 0 || (!!con && con.validFrom > from));
+    const joinedMid = !!joined && joined > from && joined <= last;
+    // 월급제가 달 중간에 입사한 달은 그 달만 시급제로 계산한다 — 시급 = 월급 ÷ 월 환산 시간, 일한 시간 · 주휴 · 유급휴일로 준다 (2026-11-02 의뢰인)
+    //   고정 연장 · 휴일이 든 계약은 시급 환산이 달라 자동으로 바꾸지 않는다(예전처럼 일할 계산 필요로 막힘)
+    const midJoinHourly = !bonus && joinedMid && contract?.payType === 'MONTHLY' && !!contract.monthlyHours && !contract.included.overtimeHours && !contract.included.holidayHours;
+    if (midJoinHourly && contract) {
+      notes.push({ code: 'mid_join_hourly', detail: `${Math.round(contract.amount).toLocaleString('en-US')} ÷ ${contract.monthlyHours}` });
+      contract = { ...contract, payType: 'HOURLY', amount: contract.amount / contract.monthlyHours!, monthlyHours: contract.monthlyHours };
+    }
+    const partialMonth = !bonus && !midJoinHourly && (joinedMid || left.length > 0 || (!!con && con.validFrom > from));
     // 근태: 마감한 달만
     const close = (closes ?? []).find((x) => x.employee_id === id);
     let time: EngineInput['time'] = null;
+    let absentDays: string[] = []; // 무단결근일 — 출근 기록도 하루 전부 휴가도 없는 근무일 (만근수당 판단)
     let facts: Row | null = null;
     if (close && contract && !bonus) {
       if (!period.rule) pre.push({ code: 'no_work_rule' });
@@ -261,6 +270,7 @@ async function buildInputs(run: RunRow): Promise<Built> {
           leave: leaveDaysFor(period, id), work: workDaysFor(period, id),
           confirmed: new Set([...confirms.values()].filter((x) => x.employeeId === id).map((x) => x.workDate)),
         });
+        absentDays = s.absentDates;
         const num = (k: keyof typeof s.row) => Number(s.row[k] ?? 0);
         const att = {
           regularMinutes: num('regular_minutes'), netMinutes: s.netMinutes, payableMinutes: s.payableMinutes,
@@ -316,7 +326,7 @@ async function buildInputs(run: RunRow): Promise<Built> {
           const leftOn = left.map((e) => e.ends_on as string).sort()[0] ?? null;
           const r = restAndHolidayMinutes({ from, last, startsOn: p?.startsOn ?? joined, endsOn: leftOn, ruleAt: (d) => period.ruleFor(id, d) ?? period.rule, holidays: period.holidays });
           time = { ...time, weeklyRestMinutes: r.weeklyRestMinutes, paidHolidayMinutes: r.paidHolidayMinutes };
-          // 결근한 주의 주휴를 뺄지는 아직 정하지 않았다(결정 사항 급여-41) — 빼지 않고 담당자가 보게 남긴다
+          // 결근한 주에도 주휴는 빼지 않는다 (급여-41, 2026-11-02 의뢰인: 지금처럼 유지) — 담당자가 보게 안내만 남긴다
           if (s.absentDates.length) notes.push({ code: 'weekly_rest_with_absence', detail: s.absentDates.join(', ') });
         }
         pre.push(...t.blockers);
@@ -330,8 +340,13 @@ async function buildInputs(run: RunRow): Promise<Built> {
     for (const a of bonus ? [] : mergeAssigned(personalNow, common, id, contract?.payType)) {
       const it = itemAt(a.itemCode);
       if (!it) { pre.push({ code: 'item_missing', detail: a.itemCode }); continue; }
-      const amount = a.amount === null ? it.defaultAmount : a.amount;
+      let amount = a.amount === null ? it.defaultAmount : a.amount;
       if (amount === null) { pre.push({ code: 'item_amount_missing', detail: it.code }); continue; }
+      // 만근수당: 그 달에 무단결근이 하루라도 있으면 주지 않는다 (급여-46, 2026-11-02 의뢰인). 지각 · 조퇴로는 빼지 않는다
+      if (PERFECT_ATTENDANCE_CODES.has(it.code) && absentDays.length) {
+        notes.push({ code: 'perfect_attendance_cut', detail: absentDays.join(', ') });
+        amount = 0;
+      }
       const taxable = it.taxTreatment === 'EXEMPT' ? 'EXEMPT' : it.taxTreatment === 'PARTIAL' ? 'PARTIAL' : 'TAXABLE';
       engineItems.push({ code: it.code, kind: it.kind, label: it.koName, amount, taxable, exemptLimit: it.taxExemptLimit, exemptAnnualLimit: it.taxExemptAnnualLimit ?? null, insurable: taxable !== 'EXEMPT', ordinaryWage: it.ordinaryWage, itemVersionId: it.id });
     }

@@ -100,7 +100,7 @@ export function calcWorkMinutes(pairs: PunchPair[], rule: WorkRule, ctx: WorkCtx
   // 일정 시작 전에 일찍 찍은 시간은 근무로 치지 않는다 (2026-10-16 의뢰인 · 26.08 대장: 조기 템플릿이 아니면 07:0x 출근도 08:00부터).
   // 시작 시각은 그날 일정으로 바뀐 rule.startTime — 조기 07:30 템플릿이면 07:30부터 센다
   // 쉬는 날도 그날 일정이 있으면 일정 시작부터 센다 — 26.08 대장(토요일 특근도 일정 시작부터)과 처음 승인값에 맞음 (2026-11-01 개발 DB 1~10월 대조).
-  // 그날 일정이 따로 없는 날(시프티 무일정근무)은 period-data에서 clipBeforeStart를 꺼서 찍은 시각부터 센다 (급여-59 임시 · C 방식)
+  // 그날 일정이 등록되지 않은 날도 평소 근무 틀 시작부터 자른다 (급여-59, 2026-11-02 의뢰인: 일정은 있었는데 등록만 안 한 것)
   if (rule.clipBeforeStart && work.length) {
     const start = kstDateTime(ctx.workDate, rule.startTime.slice(0, 5)).getTime();
     for (let i = work.length - 1; i >= 0; i--) {
@@ -132,13 +132,20 @@ export function calcWorkMinutes(pairs: PunchPair[], rule: WorkRule, ctx: WorkCtx
   let regularMinutes = 0;
   let overtimeMinutes = 0;
   let holidayMinutes = 0;
+  // 끊는 단위가 있으면 소정 · 연장 · 휴일도 끊은 급여용 시간으로 나눈다 (확정-9 · 26.10 3공장 대장: 20:58 퇴근 → 20:45까지 연장, 2026-11-02 의뢰인)
+  const splitMinutes = step ? payableMinutes : netMinutes;
   // 쉬는 날(토요일 등) 근무도 회사 규칙이면 휴일 축으로 (결정 사항 급여-43, 2026-10-16) — 주 40시간 소정에 넣지 않는다
   if (ctx.dayType === 'holiday' || (ctx.dayType === 'rest_off' && rule.restOffAsHoliday)) {
-    holidayMinutes = netMinutes;
+    holidayMinutes = splitMinutes;
   } else {
     const weekLeft = Math.max(0, LABOR.weeklyRegularLimitMin - ctx.weekRegularMinutesSoFar);
-    regularMinutes = Math.min(netMinutes, LABOR.dailyRegularLimitMin, weekLeft);
-    overtimeMinutes = netMinutes - regularMinutes;
+    // 그날 일정이 끝난 뒤 일한 시간은 하루 8시간이 안 돼도 연장이다 (급여-61, 2026-11-02 의뢰인 · 26.10 3공장 대장:
+    //   늦게 온 날 · 반차 쓴 날도 17:30 뒤는 1.5배. 늦게 온 시간은 연차에서 차감하므로 8시간을 채우지 않는다)
+    const endMs = kstDateTime(ctx.workDate, rule.endTime.slice(0, 5)).getTime();
+    const counted = step ? cutBreaks(rounded) : net;
+    const afterEnd = toMin(counted.reduce((a, [s0, e0]) => a + Math.max(0, e0 - Math.max(s0, endMs)), 0));
+    regularMinutes = Math.min(splitMinutes - afterEnd, LABOR.dailyRegularLimitMin, weekLeft);
+    overtimeMinutes = splitMinutes - regularMinutes;
   }
   const holidayWithin8Minutes = Math.min(holidayMinutes, LABOR.holidaySplitMin);
   const holidayOver8Minutes = holidayMinutes - holidayWithin8Minutes;

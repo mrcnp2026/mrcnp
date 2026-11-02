@@ -9,6 +9,6 @@ it('승인시간 총합을 비례 배분하지 않고 끊은 출퇴근의 연장
   const days = computeEmployeeDays({ events: [], approvedCorrections: [], rule, holidays: [], from: date, to: date, deemed: (d) => d === date ? { in: kstDateTime(date, '09:01'), out: kstDateTime(date, '22:14') } : null });
   const rounded = roundedAttendance(days, () => rule).get(date)!;
   expect(rounded.netMinutes).toBe(690);
-  expect(rounded.overtimeMinutes).toBe(210);
+  expect(rounded.overtimeMinutes).toBe(240); // 일정 끝(18:00) 뒤 4시간은 모두 연장 — 늦게 온 30분으로 채우지 않는다 (급여-61, 2026-11-02)
   expect(rounded.nightMinutes).toBe(0);
 });
