@@ -11,8 +11,8 @@ import { SeenRequests } from '@/components/SeenRequests';
 import { Pager, pageOf } from '@/components/Pager';
 import { RequestRows } from '@/components/RequestRows';
 import { RequestTabs } from '@/components/RequestTabs';
+import { SideFilter } from '@/components/SideFilter';
 import { Empty, PageShell } from '@/components/ui';
-import { CountUp } from '@/components/CountUp';
 import { CheckCircle2, Clock } from 'lucide-react';
 import { getMe } from '@/lib/auth';
 import { loadAllLeaveTypes } from '@/lib/leave-data';
@@ -90,21 +90,15 @@ export default async function MyRequestsPage({ searchParams }: { searchParams: P
           )}
         </div>
       </div>
-      {/* PC: 위에 「대기 중 · 처리 완료」 두 칸(누르면 그 목록) + 아래 넓은 목록 (2026-10-22 의뢰인: 「시프티 잔재」 — 왼쪽 좁은 칸에 네모 체크와 숫자만 있어 화면 대부분이 비어 보였다) */}
-      <div className="hidden lg:flex lg:flex-col lg:gap-4">
-        <div className="grid grid-cols-2 gap-3 xl:max-w-2xl">
-          {([['pending', !done, split.pending.length, '/punch/requests', Clock, 'text-warn'], ['done', done, split.done.length, '/punch/requests?tab=done', CheckCircle2, 'text-ok']] as const).map(([k, on, v, href, Icon, tone]) => (
-            <Link key={k} href={href} aria-current={on ? 'page' : undefined} className={`flex items-center gap-4 rounded-card border px-5 py-4 transition-colors ${on ? 'border-primary bg-primary-tint/60 shadow-card' : 'border-border bg-bg hover:bg-surface'}`}>
-              <span className={`flex size-10 shrink-0 items-center justify-center rounded-chip ${on ? 'bg-bg' : 'bg-surface'} ${tone}`}>
-                <Icon aria-hidden size={20} />
-              </span>
-              <span className="flex min-w-0 flex-col">
-                <span className={`text-sm font-semibold ${on ? 'text-primary' : 'text-muted'}`}>{t(k === 'pending' ? 'pcPending' : 'pcDone')}</span>
-                <CountUp value={v} className="num text-2xl font-bold text-text" />
-              </span>
-            </Link>
-          ))}
-        </div>
+      {/* PC: 전사공지 · 교육처럼 두 칸 — 왼쪽: 대기 중 · 처리 완료(건수, 누르면 그 목록), 오른쪽: 목록 (2026-11-03 의뢰인: 통일성) */}
+      <div className="hidden lg:grid lg:grid-cols-[16rem_minmax(0,1fr)] lg:items-start lg:gap-6">
+        <SideFilter
+          title={t('title')}
+          items={[
+            { key: 'pending', label: t('pcPending'), n: split.pending.length, href: '/punch/requests', on: !done, warn: true },
+            { key: 'done', label: t('pcDone'), n: split.done.length, href: '/punch/requests?tab=done', on: done },
+          ]}
+        />
         <section className="flex min-w-0 flex-col gap-3">
           {pcItems.length === 0 ? (
             <Empty icon={done ? CheckCircle2 : Clock} title={done ? t('emptyDone', { days: REQUEST_WINDOW_DAYS }) : t('emptyPending')} />
