@@ -28,6 +28,8 @@ export const SETTINGS = {
   'pay.late_round': { group: 3, kind: 'choice', options: ['minute', 'floor', 'ceil'], default: 'minute' },
   // 근태 점검: 근무일 80% 이상을 이 분 이상 비슷하게 일찍 오면 한 달 1건 「일정 확인 필요」 (2026-11-03 의뢰인)
   'check.pattern_min_early': { group: 3, kind: 'int', min: 0, max: 240, unit: 'min', default: 30 },
+  // 근태 점검: 평소 퇴근보다 이 분 이상 일찍 나간 날(17:30 뒤 퇴근)에 「저녁 휴게를 했는지」 묻는다 (2026-11-04 의뢰인, 기본 60분)
+  'check.break_early_leave_min': { group: 3, kind: 'int', min: 0, max: 600, unit: 'min', default: 60 },
   'week.limit_hours': { group: 3, kind: 'int', min: 1, max: 80, unit: 'hour', default: OFFICE.weeklyLimitHours }, // 법정 한도 — 화면에서 바꾸지 않는다
   // 그룹 9 — 직원 · 초대 (2026-10-29 9-2: 회사가 바꾼다)
   'invite.valid_hours': { group: 9, kind: 'int', min: 1, max: 720, unit: 'hour', default: OFFICE.inviteValidHours },

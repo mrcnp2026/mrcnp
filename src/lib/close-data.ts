@@ -12,7 +12,7 @@ import { confirmKey, loadConfirms } from '@/lib/confirm-data';
 import { canonical } from '@/lib/payroll/reference';
 import { daysFor, loadPeriod, syncOvertimeRequests, type PeriodData } from '@/lib/period-data';
 import { countDays } from '@/lib/attendance-check';
-import { collectChecks, loadEarlyIgnoreAt, loadPatternMinEarly } from '@/lib/attendance-check-data';
+import { collectChecks, loadBreakEarlyLeaveMin, loadEarlyIgnoreAt, loadPatternMinEarly } from '@/lib/attendance-check-data';
 import { loadCheckReviews, reviewState } from '@/lib/attendance-check-reviews';
 import { loadStaff } from '@/lib/staff-data';
 import { needsSecondAdmin } from '@/lib/staff-rules';
@@ -67,6 +67,7 @@ export async function loadCloseBoard(ym: string, practice: boolean): Promise<{ l
     loadCheckReviews(from, last, practice),
     loadEarlyIgnoreAt(),
     loadPatternMinEarly(last),
+    loadBreakEarlyLeaveMin(last),
   ]);
   side.catch(() => {}); // 맞추기를 기다리는 동안 실패해도 「처리 안 된 실패」 경고가 나지 않게 — 아래에서 그대로 기다려 오류를 받는다
   // 맞추기 때 읽은 자료를 그대로 다시 쓴다 — 지난 달이고(같은 기간) 맞추기가 아무것도 바꾸지 않았을 때만. 바뀌었으면 새로 읽는다
@@ -84,10 +85,10 @@ export async function loadCloseBoard(ym: string, practice: boolean): Promise<{ l
     // 맞추기가 안 돼도 화면은 열어야 한다(마감 관리를 못 여는 것이 더 나쁘다). 빠진 확인은 아래 검토에서 「확인 필요」로 보인다
     console.error(JSON.stringify({ route: 'close-board', code: 'sync_failed', detail: String((e as Error)?.message ?? e).slice(0, 200) }));
   }
-  const [data, [confirms, closes, { data: pr }, { data: sr }, checkReviews, earlyAt, patternMin]] = await Promise.all([reuse ? Promise.resolve(reuse) : loadPeriod(from, last, practice), side]);
+  const [data, [confirms, closes, { data: pr }, { data: sr }, checkReviews, earlyAt, patternMin, breakMin]] = await Promise.all([reuse ? Promise.resolve(reuse) : loadPeriod(from, last, practice), side]);
   // 근태 점검(급여-69): 「막음」과 「판단 필요」가 남아 있으면 마감하지 못한다. 「확인만」은 막지 않고 숫자로 보인다
   const anomalies = new Map<string, { block: number; check: number; top: { type: string; n: number } | null }>();
-  for (const c of collectChecks(data, from, last, new Date(), earlyAt, patternMin)) {
+  for (const c of collectChecks(data, from, last, new Date(), earlyAt, patternMin, breakMin)) {
     const { handled } = reviewState(c.days, c.monthly, checkReviews.filter((r) => r.employeeId === c.employeeId));
     const n = countDays(c.days, handled, c.monthly);
     const open = n.block + n.decide + n.monthly;

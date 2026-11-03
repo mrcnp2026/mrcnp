@@ -17,8 +17,6 @@ const hhmm = (t: string) => t.slice(0, 5);
 const breaksOf = (r: WorkRule) => [...(r.breakStart && r.breakEnd ? [{ start: hhmm(r.breakStart), end: hhmm(r.breakEnd) }] : []), ...(r.extraBreaks ?? []).map((b) => ({ start: hhmm(b.start), end: hhmm(b.end) }))];
 const minutesOf = (b: { start: string; end: string }) => { const [h1, m1] = b.start.split(':').map(Number); const [h2, m2] = b.end.split(':').map(Number); return h2 * 60 + m2 - (h1 * 60 + m1); };
 
-/** 평소보다 이만큼 일찍 퇴근한 날에 저녁 휴게를 확인 (2026-11-03: 10월 8건 — 10/7 세 명 · 정원채 5일) */
-export const EARLY_LEAVE_CHECK_MIN = 60;
 
 export type PersonChecks = { employeeId: string; days: DayCheck[]; monthly: MonthCheck[] };
 
@@ -29,6 +27,13 @@ export async function loadEarlyIgnoreAt(): Promise<(date: string) => number> {
   return (date) => Number(pickAt(rows, key, date, SETTINGS[key].default));
 }
 
+/** 「저녁 휴게 확인」 기준 분 — 그 달 끝 날짜에 유효했던 값 */
+export async function loadBreakEarlyLeaveMin(onDate: string): Promise<number> {
+  const key = 'check.break_early_leave_min';
+  const rows = (await settingHistory(key)).map((r) => ({ key, value: r.value, effective_from: r.effectiveFrom }));
+  return Number(pickAt(rows, key, onDate, SETTINGS[key].default));
+}
+
 /** 「일정 확인 필요」 기준 분 — 그 달 끝 날짜에 유효했던 값 */
 export async function loadPatternMinEarly(onDate: string): Promise<number> {
   const key = 'check.pattern_min_early';
@@ -37,7 +42,7 @@ export async function loadPatternMinEarly(onDate: string): Promise<number> {
 }
 
 /** 기간 안 직원마다 확인 필요인 날 (판정 대상이 아닌 사람 · 날은 뺀다: 시스템관리자 · 최고관리자 · 대표 · 입사 전 · 앞날) */
-export function collectChecks(data: PeriodData, from: string, to: string, now = new Date(), earlyIgnoreAt: (date: string) => number = () => SETTINGS['check.early_ignore_min'].default, patternMinEarly: number = SETTINGS['check.pattern_min_early'].default): PersonChecks[] {
+export function collectChecks(data: PeriodData, from: string, to: string, now = new Date(), earlyIgnoreAt: (date: string) => number = () => SETTINGS['check.early_ignore_min'].default, patternMinEarly: number = SETTINGS['check.pattern_min_early'].default, breakEarlyLeaveMin: number = SETTINGS['check.break_early_leave_min'].default): PersonChecks[] {
   const today = toKstDate(now);
   const out: PersonChecks[] = [];
   // 직원별로 한 번만 나눠 둔다 — 날마다 전체 목록을 다시 훑으면 한 달 계산이 0.5초 걸렸다 (2026-11-03 속도)
@@ -77,7 +82,7 @@ export function collectChecks(data: PeriodData, from: string, to: string, now = 
       const base = data.ruleAt(d.workDate);
       const lastOut = d.pairs.some((x) => x.out) ? Math.max(...d.pairs.filter((x) => x.out).map((x) => outMin(x.out!))) : null;
       const evening = base && span ? breaksOf(base).find((b) => b.start >= span.endTime) ?? breaksOf(base).find((b) => b.start >= '17:00') ?? null : null; // 일정 끝 무렵 휴게(17:00–17:30)
-      const breakCheck = evening && !waived.has(evening.start) && usualOut !== null && lastOut !== null && usualOut - lastOut >= EARLY_LEAVE_CHECK_MIN ? evening : null;
+      const breakCheck = evening && !waived.has(evening.start) && usualOut !== null && lastOut !== null && usualOut - lastOut >= breakEarlyLeaveMin ? evening : null; // 회사 설정 check.break_early_leave_min (기본 60분)
       const waivedMin = waived.size && base ? breaksOf(base).filter((b) => waived.has(b.start)).reduce((n, b) => n + minutesOf(b), 0) : 0;
       const check = judgeDay({
         workDate: d.workDate,
