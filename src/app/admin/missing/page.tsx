@@ -36,7 +36,7 @@ export default async function MissingPage({ searchParams }: { searchParams: Prom
 
   const found: Found[] = [];
   for (const p of data.people) {
-    if (!p.active || p.employeeNo?.startsWith('e2e-') || p.employeeNo === OFFICE.ownerEmployeeNo) continue; // 시스템관리자(admin)는 직원이 아니다 — 출퇴근 판정에서 뺀다 (2026-10-17: 연습 모드를 끈 뒤 admin 홈에 「출근 기록 없음」이 떴다)
+    if (!p.active || p.employeeNo?.startsWith('e2e-') || p.employeeNo === OFFICE.ownerEmployeeNo || p.role === 'admin') continue; // 최고관리자도 뺀다 (2026-11-03 의뢰인) // 시스템관리자(admin)는 직원이 아니다 — 출퇴근 판정에서 뺀다 (2026-10-17: 연습 모드를 끈 뒤 admin 홈에 「출근 기록 없음」이 떴다)
     const fullLeave = fullLeaveSet(leaveDaysFor(data, p.id));
     const away = workDaysFor(data, p.id);
     const job = p.jobId ? jobOf.get(p.jobId) : undefined;

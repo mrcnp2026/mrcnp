@@ -70,7 +70,8 @@ export default async function AdminHome({ searchParams }: { searchParams: Promis
   const tc = await getTranslations('common');
 
   // 시스템관리자(admin)는 직원이 아니다 — 출퇴근 판정에서 뺀다 (2026-10-17: 연습 모드를 끈 뒤 admin 홈에 「출근 기록 없음」이 떴다)
-  const active = data.people.filter((p) => p.active && p.employeeNo !== OFFICE.ownerEmployeeNo);
+  // 최고관리자(admin 등급)도 뺀다 — 출근 · 연장과 상관없이 현황 숫자 · 명단에 넣지 않는다 (2026-11-03 의뢰인: 이상준(간주)은 미출근, 차지영 · 차재준은 근무중으로 섞여 보였다)
+  const active = data.people.filter((p) => p.active && p.employeeNo !== OFFICE.ownerEmployeeNo && p.role !== 'admin');
   const dayType = data.rule ? resolveDayType(today, data.rule, data.holidays) : 'workday';
   const weekStart = weekStartOf(today);
   const dayTypes = Object.fromEntries(

@@ -9,7 +9,7 @@ import { useState } from 'react';
 import { CLOSE_SHEET_EVENT } from '@/components/AddSheet';
 import { callApi } from '@/components/client-api';
 import { DateTimeInput } from '@/components/DateTimeInput';
-import { RangeCalendar, datesBetween } from '@/components/RangeCalendar';
+import { RangeCalendar, datesBetween, datesOfWeekdays, type WeekdayPick } from '@/components/RangeCalendar';
 import { ErrorNote } from '@/components/ErrorNote';
 import { Button } from '@/components/ui';
 import { SHIFT_KINDS, type ShiftKind } from '@/lib/shifts';
@@ -40,7 +40,8 @@ export function ScheduleForm({
   const [day, setDay] = useState(date);
   const [dayEnd, setDayEnd] = useState<string | null>(date); // 기간의 끝 (2026-11-03 의뢰인: 시작 · 끝을 눌러 한 번에)
   const [skipWeekend, setSkipWeekend] = useState(true);
-  const dates = datesBetween(day, dayEnd, skipWeekend && dayEnd !== null && dayEnd !== day);
+  const [pick, setPick] = useState<WeekdayPick | null>(null); // 요일로 고르기 (2026-11-03 의뢰인)
+  const dates = pick ? datesOfWeekdays(pick, undefined) : datesBetween(day, dayEnd, skipWeekend && dayEnd !== null && dayEnd !== day);
   const [tpl, setTpl] = useState('');
   const [start, setStart] = useState('08:00');
   const [end, setEnd] = useState('17:00');
@@ -81,8 +82,8 @@ export function ScheduleForm({
       <div className="flex flex-col gap-3">
       <div className="flex flex-col gap-1 text-sm text-muted">
         {t('date')}
-        <RangeCalendar start={day} end={dayEnd} skipWeekend={skipWeekend} onChange={(s, e) => { setDay(s); setDayEnd(e); }} />
-        {dayEnd !== null && dayEnd !== day && (
+        <RangeCalendar start={day} end={dayEnd} skipWeekend={skipWeekend} onChange={(s, e) => { setDay(s); setDayEnd(e); }} pick={pick} onPick={setPick} />
+        {!pick && dayEnd !== null && dayEnd !== day && (
           <label className="flex min-h-11 items-center gap-2 text-text">
             <input type="checkbox" checked={skipWeekend} onChange={(e) => setSkipWeekend(e.target.checked)} className="size-5 accent-primary" />
             {t('skipWeekend', { n: dates.length })}

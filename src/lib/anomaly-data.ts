@@ -35,6 +35,7 @@ export function collectAnomalies(data: PeriodData, from: string, to: string, now
   const out: AnomalyItem[] = [];
   for (const p of data.people) {
     if (p.employeeNo === OFFICE.ownerEmployeeNo) continue; // 시스템관리자(admin)는 직원이 아니다 (2026-10-17)
+    if (p.role === 'admin') continue; // 최고관리자도 뺀다 — 이상자 관리 · 마감 · 통보 · 리포트의 이상 기록 대상이 아니다 (2026-11-03 의뢰인)
     // 검사 계정(e2e-)은 loadPeriod가 보는 사람에 따라 이미 뺀다(실제 관리자 → 전부 뺌, 검사 계정 → 꺼진 것만 뺌) — 여기서 또 빼면 검사 계정으로도 확인할 수 없다
     const fullLeave = fullLeaveSet(leaveDaysFor(data, p.id));
     const away = workDaysFor(data, p.id);
