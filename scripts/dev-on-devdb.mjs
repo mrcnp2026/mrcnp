@@ -18,6 +18,7 @@ const env = {
   NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY: dev.DEV_SUPABASE_PUBLISHABLE_KEY,
   SUPABASE_SERVICE_ROLE_KEY: dev.DEV_SUPABASE_SERVICE_ROLE_KEY,
   SUPABASE_DB_URL: dev.DEV_SUPABASE_DB_URL,
+  OPERATION_MODE: 'live', // 운영과 같은 모드(실제 기록) — 개발에서 확인한 것을 그대로 운영에 올린다 (2026-11-03 의뢰인: 「운영서버와 동일하게 세팅」)
   VERCEL_ENV: 'preview', // 「개발 서버입니다」 빨간 띠와 백업 보관 위치(dev/)가 미리보기와 똑같이 동작하게 (2026-10-26 의뢰인)
   VAPID_PRIVATE_KEY: '', // 폰 알림 끔
   GEMINI_API_KEY: '', // 번역 호출 끔
