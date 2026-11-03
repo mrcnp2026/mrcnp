@@ -9193,7 +9193,9 @@
       "no_work_rule": "근무 규칙 없음",
       "reported_wage_missing": "신고한 보수월액 없음",
       "insurance_unknown": "보험 가입 여부 모름",
-      "no_monthly_hours": "월 환산 시간 없음"
+      "no_monthly_hours": "월 환산 시간 없음",
+      "negative_net": "실지급이 0원보다 적음",
+      "proration_policy": "일할 계산 기준 필요"
     },
     "global": {
       "basis_unverified": "급여 기준 일부가 임시 값입니다({n}명)",

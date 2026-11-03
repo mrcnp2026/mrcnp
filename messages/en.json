@@ -9193,7 +9193,9 @@
       "no_work_rule": "No work rule",
       "reported_wage_missing": "Reported wage missing",
       "insurance_unknown": "Insurance status unknown",
-      "no_monthly_hours": "Monthly hours missing"
+      "no_monthly_hours": "Monthly hours missing",
+      "negative_net": "Net pay below zero",
+      "proration_policy": "Pro-rating rule needed"
     },
     "global": {
       "basis_unverified": "Some payroll bases are temporary ({n})",

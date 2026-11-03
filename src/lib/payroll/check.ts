@@ -104,7 +104,8 @@ export async function buildPayCheck(ym: string, practice: boolean): Promise<{ pe
     // ⑦ 근태 마감 · 계산이 막힌 것 — 고쳐야만 사라진다
     const isClosed = closedSet.has(r.employeeId);
     if (!isClosed) items.push({ key: 'not_closed', code: 'not_closed', level: 'must_fix', fix: 'closing' });
-    if (r.result.state === 'BLOCKED') {
+    // 근태 마감 전에는 근무시간이 0이라 「실지급 마이너스」 같은 막힘이 덤으로 생긴다 — 마감부터 하라는 한 줄만 둔다
+    if (r.result.state === 'BLOCKED' && isClosed) {
       // 같은 사유가 여러 번(보험마다 등) 나오면 한 줄로 — 자세한 값은 이어 붙인다
       const byCode = new Map<string, string[]>();
       for (const b of r.result.blockers) {
