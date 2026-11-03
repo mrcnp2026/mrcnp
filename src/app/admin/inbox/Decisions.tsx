@@ -99,12 +99,16 @@ export function ApproveDay({ name, day, count, items, punchFirst, employeeId, wo
   );
 }
 
-export function OvertimeDecision({ id, name, facts, compact = false }: { id: string; name: string; facts: Facts; compact?: boolean }) {
+// now: 재확인 건의 지금 계산 — 주면 「승인」이 「지금 계산대로 승인」이 된다(집계분을 지금 계산으로 바꾸고 전액 인정, 늘어난 몫까지). 2026-11-03 의뢰인
+export function OvertimeDecision({ id, name, facts, now, compact = false }: { id: string; name: string; facts: Facts; now?: Facts; compact?: boolean }) {
   const size = compact ? 'sm' : 'md';
   const grow = compact ? '' : 'flex-1';
   const t = useTranslations('admin.inbox');
-  const { busy, err, done, send } = useDecide(`/api/admin/overtime/${id}/decide`);
+  const plain = useDecide(`/api/admin/overtime/${id}/decide`);
+  const accept = useDecide(`/api/admin/overtime/${id}/accept`);
   const [pending, setPending] = useState<Pending | null>(null);
+  const useNow = !!now && pending?.decision === 'approved' && !pending.partial;
+  const { busy, err, done, send } = useNow ? accept : { ...plain, done: plain.done ?? accept.done };
   const [partial, setPartial] = useState<Facts | null>(null);
   const [why, setWhy] = useState('');
 
@@ -117,7 +121,9 @@ export function OvertimeDecision({ id, name, facts, compact = false }: { id: str
         ? t('confirmReject', { name })
         : p
           ? t('confirmPartial', { name, o: p.overtime, n: p.night, h: p.holiday })
-          : t('confirmApprove', { name, o: facts.overtime, n: facts.night, h: facts.holiday });
+          : now
+            ? t('confirmApproveNow', { name, o: now.overtime, n: now.night, h: now.holiday })
+            : t('confirmApprove', { name, o: facts.overtime, n: facts.night, h: facts.holiday });
     return (
       <div className="flex flex-col gap-2 rounded-card border border-border p-3">
         <p className="text-sm">{summary}</p>
@@ -182,7 +188,7 @@ export function OvertimeDecision({ id, name, facts, compact = false }: { id: str
   return (
     <div className="flex flex-wrap gap-2">
       <Button size={size} className={grow} onClick={() => setPending({ decision: 'approved' })}>
-        {t('approve')}
+        {t(now ? 'approveNow' : 'approve')}
       </Button>
       <Button size={size} variant="outline" className={grow} onClick={() => setPartial({ ...facts })}>
         {t('partial')}

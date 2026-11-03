@@ -330,7 +330,7 @@ export default async function InboxPage({ searchParams }: { searchParams: Promis
             {o.status !== 'pending' && (
               <p className="text-xs text-muted">{t('decidedBy', { status: t(`status.${o.status}`), who: name.get(o.approved_by) ?? '—' })}</p>
             )}
-            {cannot(o.employee_id) ? (o.employee_id === me.id ? ownNote : rankNote) : <OvertimeDecision id={o.id} name={name.get(o.employee_id) ?? ''} facts={{ overtime: o.overtime_minutes, night: o.night_minutes, holiday: o.holiday_minutes }} />}
+            {cannot(o.employee_id) ? (o.employee_id === me.id ? ownNote : rankNote) : <OvertimeDecision id={o.id} name={name.get(o.employee_id) ?? ''} facts={{ overtime: o.overtime_minutes, night: o.night_minutes, holiday: o.holiday_minutes }} now={o.needs_review && o.status !== 'rejected' ? { overtime: o.recomputed_overtime_minutes ?? o.overtime_minutes, night: o.recomputed_night_minutes ?? o.night_minutes, holiday: o.recomputed_holiday_minutes ?? o.holiday_minutes } : undefined} />}
           </Card>
         ))}
       </div>

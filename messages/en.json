@@ -949,7 +949,9 @@
       "bulkDone": "{n} approved",
       "bulkFailed": "{n} could not be processed — open each row to check",
       "bulkBlocked": "Your own or higher-level requests are handled by another admin",
-      "emptyDesc": "Leave, correction, field-work and schedule requests from staff gather here. You also get a phone notification for new ones."
+      "emptyDesc": "Leave, correction, field-work and schedule requests from staff gather here. You also get a phone notification for new ones.",
+      "approveNow": "Approve as now counted",
+      "confirmApproveNow": "Approve all of {name}'s overtime {o} min · night {n} min · holiday {h} min (as now counted)? Time added since the first count is included."
     },
     "records": {
       "title": "Monthly totals",
