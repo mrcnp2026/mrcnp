@@ -3,6 +3,7 @@
 import { useTranslations } from 'next-intl';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
+import { TriangleAlert } from 'lucide-react';
 import { useState } from 'react';
 import { callApi } from '@/components/client-api';
 import { ErrorNote } from '@/components/ErrorNote';
@@ -243,12 +244,12 @@ export function CloseBoard({ month, live, lines, canClose }: { month: string; li
       {canClose && (
         <div className="flex flex-col gap-2 lg:flex-row lg:items-center lg:justify-end">
           {ask ? (
-            <div className="flex flex-col gap-2 rounded-card border border-warn bg-warn-tint p-3 lg:flex-row lg:items-center">
+            <div className="flex flex-col gap-3 rounded-card bg-bg p-4 shadow-pop lg:flex-row lg:items-center">
               <span className="flex flex-col gap-2">
-                <span className="text-sm font-bold text-warn">{t('closeConfirm', { n: picked.size, month })}</span>
+                <span className="flex items-start gap-2 text-sm font-semibold text-text"><TriangleAlert aria-hidden size={16} className="mt-0.5 shrink-0 text-warn" />{t('closeConfirm', { n: picked.size, month })}</span>
                 {/* 급여-67: 관리자가 넣은 무급 · 연차 차감은 급여 · 연차가 줄어드는 일이라 마감 전에 한 번 더 본다 */}
                 {pickedLeaves.length > 0 && (
-                  <span className="flex flex-col gap-1 rounded-button bg-bg p-2 text-sm">
+                  <span className="flex flex-col gap-1 rounded-button bg-surface/60 p-3 text-sm">
                     <span className="font-bold">{t('adminLeavesTitle')}</span>
                     {pickedLeaves.map((x, i) => (
                       <span key={i} className="num">· {x.name} {x.date.slice(5)} {x.label}{x.unpaid ? ` (${t('unpaidTag')})` : ` (${t('annualTag')})`}</span>

@@ -77,7 +77,7 @@ export default async function PayCheckPage({ searchParams }: { searchParams: Pro
         <Link href={`/admin/records/${r.p.employeeId}?m=${ym}${lv}`} className="font-bold hover:underline">{r.p.name}<span className="ml-2 text-xs font-normal text-muted">{r.p.group ?? ''}</span></Link>
         <span className="num text-sm text-muted">{r.p.state === 'OK' ? t('netLine', { pay: won(r.p.pay), net: won(r.p.net) }) : t('notCalculated')}</span>
       </div>
-      <ul className="flex flex-col gap-1.5">
+      <ul className="flex flex-col">
         {r.items.map((i) => <CheckItemRow key={i.key} month={ym} employeeId={r.p.employeeId} item={i} live={live} />)}
       </ul>
     </Card>

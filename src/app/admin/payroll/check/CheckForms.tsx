@@ -40,21 +40,22 @@ export function CheckItemRow({ month, employeeId, item, live }: { month: string;
     setNote('');
     router.refresh();
   };
-  const tone = item.decided ? 'border-border bg-bg' : item.must ? 'border-danger/40 bg-danger-tint/40' : 'border-warn/40 bg-warn-tint/40';
+  // 줄 모양: 칠한 상자 대신 구분선 한 줄 — 상태는 앞의 점과 오른쪽 글자색으로만 (2026-11-03 의뢰인: 「확인 필요 사각형 박스가 촌스럽다」)
   return (
-    <li className={`rounded-button border ${tone}`}>
-      <button type="button" onClick={() => setOpen(!open)} aria-expanded={open} className="flex min-h-12 w-full items-center gap-2 px-3 text-left">
-        {item.decided ? <Check aria-hidden size={16} className="shrink-0 text-ok" /> : <span aria-hidden className={`size-2 shrink-0 rounded-full ${item.must ? 'bg-danger' : 'bg-warn'}`} />}
-        <span className={`min-w-0 flex-1 text-sm font-semibold ${item.decided ? 'text-muted' : 'text-text'}`}>{item.title}</span>
-        {item.decided && <span className="shrink-0 rounded-chip bg-ok-tint px-2 py-0.5 text-xs font-bold text-ok">{t(item.decided.decision === 'as_is' ? 'doneAsIs' : 'doneAdjust')}</span>}
-        {!item.decided && <span className="shrink-0 text-xs font-bold text-primary">{t(item.must ? 'needFix' : 'needCheck')}</span>}
-        <ChevronDown aria-hidden size={16} className={`shrink-0 text-muted transition-transform ${open ? 'rotate-180' : ''}`} />
+    <li className="border-t border-border first:border-t-0">
+      <button type="button" onClick={() => setOpen(!open)} aria-expanded={open} className="group flex min-h-12 w-full items-center gap-2.5 rounded-button px-1 text-left hover:bg-surface/70">
+        {item.decided ? <Check aria-hidden size={15} strokeWidth={2.5} className="shrink-0 text-ok" /> : <span aria-hidden className={`size-1.5 shrink-0 rounded-full ${item.must ? 'bg-danger' : 'bg-warn'}`} />}
+        <span className={`min-w-0 flex-1 text-sm ${item.decided ? 'text-muted' : 'font-semibold text-text'}`}>{item.title}</span>
+        <span className={`shrink-0 text-xs font-semibold ${item.decided ? 'text-ok' : item.must ? 'text-danger' : 'text-warn'}`}>
+          {item.decided ? t(item.decided.decision === 'as_is' ? 'doneAsIs' : 'doneAdjust') : t(item.must ? 'needFix' : 'needCheck')}
+        </span>
+        <ChevronDown aria-hidden size={15} className={`shrink-0 text-faint transition-transform group-hover:text-muted ${open ? 'rotate-180' : ''}`} />
       </button>
       {open && (
-        <div className="flex flex-col gap-3 border-t border-border px-3 py-3">
+        <div className="mb-2 ml-4 flex flex-col gap-3 rounded-button bg-surface/60 px-3 py-3">
           {/* 근거 — 무엇 때문에 이렇게 계산됐는지 */}
           <div className="flex flex-col gap-1 text-sm">
-            <span className="text-xs font-bold text-muted">{t('evidence')}</span>
+            <span className="text-xs font-semibold text-faint">{t('evidence')}</span>
             {item.evidence.map((e, i) => <p key={i} className="break-words">{e}</p>)}
             {item.dates.length > 0 && (
               <p className="flex flex-wrap gap-1.5 pt-1">
@@ -71,7 +72,7 @@ export function CheckItemRow({ month, employeeId, item, live }: { month: string;
             </div>
           ) : (
             <div className="flex flex-col gap-2">
-              <span className="text-xs font-bold text-muted">{t('howTitle')}</span>
+              <span className="text-xs font-semibold text-faint">{t('howTitle')}</span>
               <div className="grid gap-1.5 sm:grid-cols-3">
                 {!item.must && (
                   <Button type="button" size="sm" disabled={busy} onClick={() => send({ action: 'decide', decision: 'as_is' })}>{t('asIs')}</Button>

@@ -57,29 +57,30 @@ export function LateResolve({ employeeId, workDate, lateMinutes, startTime, unpa
   }
 
   return (
-    <div className="flex flex-col gap-2 rounded-button border border-warn/40 bg-warn-tint/40 p-3">
-      <p className="text-sm font-bold text-warn">{t('title', { n: lateMinutes })}</p>
+    // 노란 상자 대신 가는 윗선 + 점 하나 — 색은 「지각」 신호에만 (2026-11-03 의뢰인: 확인 상자가 촌스럽다)
+    <div className="mt-1 flex flex-col gap-2 border-t border-border pt-2.5">
+      <p className="flex items-center gap-2 text-sm font-semibold text-text"><span aria-hidden className="size-1.5 rounded-full bg-warn" />{t('title', { n: lateMinutes })}</p>
       {confirmedHref && (
         <p className="text-sm text-muted">
           {t('confirmedNote')}{' '}
           <Link href={confirmedHref} className="font-bold text-primary underline">{t('confirmedGo')}</Link>
         </p>
       )}
-      <div className="grid grid-cols-2 gap-1.5 lg:flex lg:flex-wrap">
+      <div className="flex flex-wrap gap-1.5">
         {opts.map((o) => (
           <button
             key={o}
             type="button"
             aria-pressed={opt === o}
             onClick={() => { setOpt(opt === o ? null : o); setErr(null); }}
-            className={`min-h-11 rounded-button border px-3 text-sm font-semibold lg:min-h-9 ${opt === o ? 'border-primary bg-primary-tint text-primary' : 'border-border bg-bg text-text hover:bg-surface'}`}
+            className={`min-h-10 rounded-chip border px-3.5 text-sm font-medium transition-colors lg:min-h-8 ${opt === o ? 'border-primary bg-primary text-on-primary' : 'border-border bg-bg text-text hover:border-primary/40 hover:bg-surface'}`}
           >
             {t(`opt.${o}`, { h: (o === 'unpaid' ? unpaid?.hours : annual?.hours) ?? 0 })}
           </button>
         ))}
       </div>
       {opt && (
-        <div className="flex flex-col gap-2 rounded-button bg-bg p-3">
+        <div className="flex flex-col gap-2 rounded-button bg-surface/60 p-3">
           <p className="text-sm text-muted">
             {leave ? t('leaveWill', { name: leave.name, from: startTime, to: end(leave.hours) }) : opt === 'fix' ? t('fixWill') : t('excuseWill')}
           </p>
