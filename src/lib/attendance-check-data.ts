@@ -40,17 +40,23 @@ export async function loadPatternMinEarly(onDate: string): Promise<number> {
 export function collectChecks(data: PeriodData, from: string, to: string, now = new Date(), earlyIgnoreAt: (date: string) => number = () => SETTINGS['check.early_ignore_min'].default, patternMinEarly: number = SETTINGS['check.pattern_min_early'].default): PersonChecks[] {
   const today = toKstDate(now);
   const out: PersonChecks[] = [];
+  // 직원별로 한 번만 나눠 둔다 — 날마다 전체 목록을 다시 훑으면 한 달 계산이 0.5초 걸렸다 (2026-11-03 속도)
+  const group = <T extends { employeeId: string }>(rows: readonly T[]) => { const m = new Map<string, T[]>(); for (const r of rows) { const a = m.get(r.employeeId); if (a) a.push(r); else m.set(r.employeeId, [r]); } return m; };
+  const otOf = group(data.overtime), coOf = group(data.corrections), lvOf = group(data.leaveRequests), wkOf = group(data.workRequests);
   for (const p of data.people) {
     if (p.employeeNo === OFFICE.ownerEmployeeNo || p.role === 'admin') continue;
+    if (!p.groupId) continue; // 소속 지점이 없는 계정(시험용 「테스트 관리자」 등)은 점검 대상 아님 — 담당 지점관리자도 없다 (2026-11-03 의뢰인)
     const fullLeave = fullLeaveSet(leaveDaysFor(data, p.id));
     const away = workDaysFor(data, p.id);
     const days: DayCheck[] = [];
     // 평소 퇴근 시각 = 그 기간 퇴근(일정 있는 근무일) 가운데값 — 이보다 60분 이상 일찍 나간 날에 저녁 휴게를 확인한다
     const outMin = (dt: Date) => { const s = new Date(dt.getTime() + 9 * 3600_000).toISOString().slice(11, 16); return +s.slice(0, 2) * 60 + +s.slice(3); };
-    const outs = daysFor(data, p.id, from, to).filter((d) => data.planFor(p.id, d.workDate).items.length && d.pairs.some((x) => x.out) && !d.pairs.some((x) => x.in && !x.out)).map((d) => Math.max(...d.pairs.filter((x) => x.out).map((x) => outMin(x.out!)))).sort((a, b) => a - b);
+    const allDays = daysFor(data, p.id, from, to); // 계산이 무거워 한 번만
+    const outs = allDays.filter((d) => data.planFor(p.id, d.workDate).items.length && d.pairs.some((x) => x.out) && !d.pairs.some((x) => x.in && !x.out)).map((d) => Math.max(...d.pairs.filter((x) => x.out).map((x) => outMin(x.out!)))).sort((a, b) => a - b);
     const usualOut = outs.length ? outs[Math.floor(outs.length / 2)] : null;
     let worked = 0; // 일정 있고 출근한 날 — 「한 달 80%」의 바닥
-    for (const d of daysFor(data, p.id, from, to)) {
+    const myOt = otOf.get(p.id) ?? [], myCo = coOf.get(p.id) ?? [], myLv = lvOf.get(p.id) ?? [], myWk = wkOf.get(p.id) ?? [];
+    for (const d of allDays) {
       if (d.workDate < p.startsOn || d.workDate > today) continue;
       const plan = data.planFor(p.id, d.workDate);
       const rule = plan.items.length && plan.rule ? plan.rule : null;
@@ -58,14 +64,13 @@ export function collectChecks(data: PeriodData, from: string, to: string, now = 
       const excused = fullLeave.has(d.workDate) || away.has(d.workDate);
       const deemed = !!plan.deemed || !!d.deemed;
       if (span && !excused && !deemed && d.pairs.some((x) => x.in)) worked++;
-      const same = <T extends { employeeId: string; workDate?: string }>(r: T) => r.employeeId === p.id && r.workDate === d.workDate;
-      const ot = data.overtime.filter((o) => same(o));
+      const ot = myOt.filter((o) => o.workDate === d.workDate);
       const onDay = (s: string, e: string) => s <= d.workDate && d.workDate <= e;
       const pending =
         ot.some((o) => o.status === 'pending') ||
-        data.corrections.some((c) => same(c) && c.status === 'pending') ||
-        data.leaveRequests.some((r) => r.employeeId === p.id && r.status === 'pending' && onDay(r.startDate, r.endDate)) ||
-        data.workRequests.some((r) => r.employeeId === p.id && r.status === 'pending' && onDay(r.startDate, r.endDate));
+        myCo.some((c) => c.workDate === d.workDate && c.status === 'pending') ||
+        myLv.some((r) => r.status === 'pending' && onDay(r.startDate, r.endDate)) ||
+        myWk.some((r) => r.status === 'pending' && onDay(r.startDate, r.endDate));
       const approved = ot.filter((o) => o.status === 'approved').reduce((n, o) => n + (o.approvedMinutes ?? o.overtimeMinutes) + (o.approvedHolidayMinutes ?? o.holidayMinutes), 0);
       // 휴게 안 함 — 회사 규칙의 휴게시간대 중 표시한 것의 분
       const waived = data.waivedFor(p.id, d.workDate);

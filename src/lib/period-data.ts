@@ -212,7 +212,20 @@ function toOvertimeRow(o: any): OvertimeRow {
 }
 
 /** 한 직원의 기간 날짜별 계산. 근무규칙이 없으면 빈 배열 (계산 근거가 없다 — 추측하지 않음) */
+// 같은 자료(PeriodData) · 같은 직원 · 같은 기간이면 한 번만 계산한다 — 근태 마감 한 화면이 같은 계산을 여러 번 해 1초 가까이 걸렸다 (2026-11-03 속도).
+// 자료가 바뀌면 loadPeriod가 새 객체를 돌려주므로 기억은 자료 객체에 묶어 둔다(WeakMap — 화면이 끝나면 같이 사라진다). 받는 쪽은 결과를 고치지 않는다
+const daysMemo = new WeakMap<PeriodData, Map<string, DayRow[]>>();
 export function daysFor(data: PeriodData, employeeId: string, from = data.from, to = data.to): DayRow[] {
+  let m = daysMemo.get(data);
+  if (!m) daysMemo.set(data, (m = new Map()));
+  const key = `${employeeId}|${from}|${to}`;
+  const hit = m.get(key);
+  if (hit) return hit;
+  const rows = daysForUncached(data, employeeId, from, to);
+  m.set(key, rows);
+  return rows;
+}
+function daysForUncached(data: PeriodData, employeeId: string, from: string, to: string): DayRow[] {
   if (!data.rule) return [];
   const tpl = data.templateOf(employeeId);
   // 간주 근무: 입사 전 날짜와 하루 전부 휴가인 날은 빼고, 찍지 않은 근무일을 근무로 본다 (now는 여기서 한 번만 읽는다)
