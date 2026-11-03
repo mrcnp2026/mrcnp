@@ -25,6 +25,9 @@ export type ReqItem = {
   decidedAt: string | null;
   decidedBy: string | null;
   rejectReason?: string | null; // 관리자가 적은 거절 사유 (2026-10-21, decision_log) — loadRequests가 채운다
+  // 두 단계 승인(권한-13): 대기 중인 요청의 1차 단계 — waiting = 지점관리자 확인 전, done = 지점관리자 확인 완료(최고관리자 승인 대기), 없음 = 한 단계
+  firstStage?: 'waiting' | 'done' | null;
+  firstLate?: boolean; // 지점관리자 확인이 FIRST_DELAY_HOURS 넘게 늦다
   recheck?: boolean; // 연장근로: 처리했지만 기록이 바뀌어 다시 확인해야 함 (목록에 「재확인 필요」, 2026-10-19 디자인)
 };
 

@@ -16,12 +16,13 @@ import { addDays, weekStartOf } from '@/lib/calendar';
 import { buildOvertimeRequest } from '@/lib/overtime';
 import { computeEmployeeDays, type DayRow } from '@/lib/period';
 import { ruleAt } from '@/lib/rule-at';
-import { viewerScope, within } from '@/lib/scope';
+import { stagedEmployees, viewerScope, within } from '@/lib/scope';
 import { loadShifts, loadShiftTemplates } from '@/lib/shift-data';
 import { applyTemplate, deemedPair, planDay, type DayPlan, type DayShift, type ShiftTemplate } from '@/lib/shifts';
 import { createAdminClient } from '@/lib/supabase/admin';
 import { hhmm, toKstDate } from '@/lib/time';
 import { waiveBreaks } from '@/lib/break-waiver';
+import { FIRST_TABLES, loadFirstApprovals, type FirstTable } from '@/lib/first-approval';
 import type { HolidayRow, PunchCorrection, PunchEvent, WorkRule } from '@/lib/types';
 
 // startsOn: 입사일(joined_on), 비어 있으면 계정을 만든 날 — 그 전 날짜는 미기록·결근으로 세지 않는다 (7-8 요점 3)
@@ -376,9 +377,29 @@ const countsOnce = cache(async (practice: boolean): Promise<{ overtime: number; 
     db.from('shift_requests').select('id', { count: 'exact', head: true }).eq('is_test', practice).eq('status', 'pending').not('employee_id', 'in', skip),
     db.from('leave_change_requests').select('id', { count: 'exact', head: true }).eq('is_test', practice).eq('status', 'pending').not('employee_id', 'in', skip),
   ]);
-  const r = { overtime: (a ?? 0) + (b ?? 0), corrections: c ?? 0, leave: l ?? 0, work: w ?? 0, punch: pr ?? 0, shift: sh ?? 0, leaveDelete: lc ?? 0 };
+  const x = await firstStageAdjust(practice, 'top');
+  const r = { overtime: (a ?? 0) + (b ?? 0) - x.overtime_requests, corrections: (c ?? 0) - x.punch_corrections, leave: (l ?? 0) - x.leave_requests, work: (w ?? 0) - x.work_requests, punch: (pr ?? 0) - x.punch_requests, shift: (sh ?? 0) - x.shift_requests, leaveDelete: (lc ?? 0) - x.leave_change_requests };
   return { ...r, total: r.overtime + r.corrections + r.leave + r.work + r.punch + r.shift + r.leaveDelete };
 });
+
+/**
+ * 두 단계 승인(권한-13) — 요청 숫자에서 뺄 것. top(최고관리자): 아직 지점관리자 확인 전인 것 / manager: 이미 1차 확인한 것(최고관리자 승인 대기).
+ * 맡은 지점관리자가 없는 직원의 요청은 그대로 센다.
+ */
+async function firstStageAdjust(practice: boolean, who: 'top' | 'manager', scope?: Set<string>): Promise<Record<FirstTable, number>> {
+  const out = Object.fromEntries(FIRST_TABLES.map((t) => [t, 0])) as Record<FirstTable, number>;
+  const staged = await stagedEmployees();
+  const ids = [...staged].filter((id) => !scope || scope.has(id));
+  if (ids.length === 0) return out;
+  const db = createAdminClient();
+  for (const t of FIRST_TABLES) {
+    const { data } = await db.from(t).select('id').eq('is_test', practice).eq('status', 'pending').in('employee_id', ids);
+    const rows = (data ?? []).map((r) => r.id as string);
+    const done = await loadFirstApprovals(t, rows);
+    out[t] = who === 'top' ? rows.filter((id) => !done.has(id)).length : rows.filter((id) => done.has(id)).length;
+  }
+  return out;
+}
 
 /** 지점관리자의 대기 요청 수 — 맡은 지점 직원 것만. 자기 요청은 세지 않는다(관리자가 처리한다) */
 async function pendingCountsIn(practice: boolean, scope: Set<string>) {
@@ -394,6 +415,7 @@ async function pendingCountsIn(practice: boolean, scope: Set<string>) {
     return (await q).count ?? 0;
   };
   const [a, b, c, l, w, pr, sh, lc] = await Promise.all([n('overtime_requests'), n('overtime_requests', true), n('punch_corrections'), n('leave_requests'), n('work_requests'), n('punch_requests'), n('shift_requests'), n('leave_change_requests')]);
-  const r = { overtime: a + b, corrections: c, leave: l, work: w, punch: pr, shift: sh, leaveDelete: lc };
+  const x = await firstStageAdjust(practice, 'manager', new Set(ids)); // 이미 1차 확인한 것은 지점관리자의 할 일이 아니다
+  const r = { overtime: a + b - x.overtime_requests, corrections: c - x.punch_corrections, leave: l - x.leave_requests, work: w - x.work_requests, punch: pr - x.punch_requests, shift: sh - x.shift_requests, leaveDelete: lc - x.leave_change_requests };
   return { ...r, total: r.overtime + r.corrections + r.leave + r.work + r.punch + r.shift + r.leaveDelete };
 }

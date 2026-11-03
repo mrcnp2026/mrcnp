@@ -41,6 +41,10 @@
       "schedule": "5 0 * * *"
     },
     {
+      "path": "/api/cron/first-approval-delay",
+      "schedule": "10 0 * * *"
+    },
+    {
       "path": "/api/cron/backup-daily",
       "schedule": "0 17 * * *"
     },

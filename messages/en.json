@@ -955,7 +955,8 @@
       "bulkBlocked": "Your own or higher-level requests are handled by another admin",
       "emptyDesc": "Leave, correction, field-work and schedule requests from staff gather here. You also get a phone notification for new ones.",
       "approveNow": "Approve as now counted",
-      "confirmApproveNow": "Approve all of {name}'s overtime {o} min · night {n} min · holiday {h} min (as now counted)? Time added since the first count is included."
+      "confirmApproveNow": "Approve all of {name}'s overtime {o} min · night {n} min · holiday {h} min (as now counted)? Time added since the first count is included.",
+      "firstOkMsg": "Checked. Waiting for final approval."
     },
     "records": {
       "title": "Monthly totals",
@@ -7409,7 +7410,10 @@
     "hideHint": "Removing only hides it from your list. The request record (leave, correction, etc.) stays. Pending requests can't be removed.",
     "hideFailed": "Couldn't remove. Please try again shortly.",
     "recheck": "Recheck",
-    "rejectReason": "Reason: {why}"
+    "rejectReason": "Reason: {why}",
+    "firstDone": "Checked by branch manager",
+    "firstWaiting": "Awaiting branch manager",
+    "firstLate": "Branch manager delayed"
   },
   "scheduleRequest": {
     "title": "Schedule request",

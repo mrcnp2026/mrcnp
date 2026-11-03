@@ -112,7 +112,7 @@ export function OvertimeDecision({ id, name, facts, now, compact = false }: { id
   const [partial, setPartial] = useState<Facts | null>(null);
   const [why, setWhy] = useState('');
 
-  if (done) return <p className="text-sm font-semibold text-muted">{t(done === 'already' ? 'already' : 'doneMsg')}</p>;
+  if (done) return <p className="text-sm font-semibold text-muted">{t(done === 'already' ? 'already' : done === 'first_ok' ? 'firstOkMsg' : 'doneMsg')}</p>;
 
   if (pending) {
     const p = pending.partial;
@@ -227,7 +227,7 @@ export function LeaveDecision({
   const { busy, err, done, send } = useDecide(url ?? `/api/admin/leave/${id}/decide`);
   const [pending, setPending] = useState<'approved' | 'rejected' | null>(null);
   const [why, setWhy] = useState('');
-  if (done) return <p className="text-sm font-semibold text-muted">{t(done === 'already' ? 'already' : 'doneMsg')}</p>;
+  if (done) return <p className="text-sm font-semibold text-muted">{t(done === 'already' ? 'already' : done === 'first_ok' ? 'firstOkMsg' : 'doneMsg')}</p>;
   if (pending) {
     return (
       <div className="flex flex-col gap-2 rounded-card border border-border p-3">
@@ -262,7 +262,7 @@ export function LeaveCancel({ id, name, compact = false }: { id: string; name: s
   const t = useTranslations('admin.inbox');
   const { busy, err, done, send } = useDecide(`/api/admin/leave/${id}/decide`);
   const [ask, setAsk] = useState(false);
-  if (done) return <p className="text-sm font-semibold text-muted">{t(done === 'already' ? 'already' : 'doneMsg')}</p>;
+  if (done) return <p className="text-sm font-semibold text-muted">{t(done === 'already' ? 'already' : done === 'first_ok' ? 'firstOkMsg' : 'doneMsg')}</p>;
   if (!ask)
     return (
       compact ? (
@@ -299,7 +299,7 @@ export function CorrectionDecision({ id, name, compact = false }: { id: string; 
   const { busy, err, done, send } = useDecide(`/api/admin/corrections/${id}/decide`);
   const [pending, setPending] = useState<'approved' | 'rejected' | null>(null);
   const [why, setWhy] = useState('');
-  if (done) return <p className="text-sm font-semibold text-muted">{t(done === 'already' ? 'already' : done === 'conflict' ? 'conflict' : 'doneMsg')}</p>;
+  if (done) return <p className="text-sm font-semibold text-muted">{t(done === 'already' ? 'already' : done === 'first_ok' ? 'firstOkMsg' : done === 'conflict' ? 'conflict' : 'doneMsg')}</p>;
   if (pending) {
     return (
       <div className="flex flex-col gap-2 rounded-card border border-border p-3">

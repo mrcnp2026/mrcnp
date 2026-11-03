@@ -3,7 +3,8 @@ import 'server-only';
 import { readAll } from '@/lib/read-all';
 import { OFFICE } from '@/config/office';
 import { fromCorrection, fromLeave, fromLeaveChange, fromOvertime, fromPunchRequest, fromShiftRequest, fromWork, type ReqItem } from '@/lib/requests';
-import { viewerScope, within } from '@/lib/scope';
+import { FIRST_DELAY_HOURS, loadFirstApprovals, type FirstTable } from '@/lib/first-approval';
+import { stagedEmployees, viewerScope, within } from '@/lib/scope';
 import { loadRejectReasons } from '@/lib/reject-reason';
 import { createAdminClient } from '@/lib/supabase/admin';
 
@@ -65,5 +66,16 @@ export async function loadRequests(opts: { employeeId?: string; practice?: boole
   const rejected = all.filter((r) => r.status === 'rejected');
   const why = await loadRejectReasons(rejected.map((r) => ({ table: TABLE[r.kind], id: r.id })));
   for (const r of rejected) r.rejectReason = why.get(`${TABLE[r.kind]}:${r.id}`) ?? null;
+  // 두 단계 승인(권한-13): 맡은 지점관리자가 있는 직원의 대기 요청에 1차 단계를 붙인다
+  const staged = await stagedEmployees();
+  const waiting = all.filter((r) => r.status === 'pending' && staged.has(r.employeeId));
+  for (const kind of [...new Set(waiting.map((r) => r.kind))]) {
+    const of = waiting.filter((r) => r.kind === kind);
+    const done = await loadFirstApprovals(TABLE[kind] as FirstTable, of.map((r) => r.id));
+    for (const r of of) {
+      r.firstStage = done.has(r.id) ? 'done' : 'waiting';
+      r.firstLate = !done.has(r.id) && !!r.createdAt && Date.now() - Date.parse(r.createdAt) > FIRST_DELAY_HOURS * 3600_000;
+    }
+  }
   return within(all, await viewerScope(), (r) => r.employeeId); // 지점관리자면 맡은 지점 직원 것만
 }

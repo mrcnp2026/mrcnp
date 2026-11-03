@@ -103,6 +103,7 @@ export async function RequestRows({ items, leaveTypes, names, showName = false, 
                   </td>
                   <td className={`${td} whitespace-nowrap`}>
                     {r.recheck ? <Chip tone="warn">{t('recheck')}</Chip> : <Chip tone={r.status === 'approved' ? 'ok' : r.status === 'pending' ? 'warn' : 'neutral'}>{t(`status.${r.status}`)}</Chip>}
+                    {r.status === 'pending' && r.firstStage && <Chip tone={r.firstStage === 'done' ? 'info' : r.firstLate ? 'danger' : 'neutral'}>{t(r.firstStage === 'done' ? 'firstDone' : r.firstLate ? 'firstLate' : 'firstWaiting')}</Chip>}
                     {r.status !== 'pending' && who && <span className="num ml-2 text-xs text-muted">{t('by', { name: who })}</span>}
                   </td>
                   <td className={`${td} num whitespace-nowrap text-muted`}>{r.createdAt ? stamp(r.createdAt) : ''}</td>
@@ -177,6 +178,7 @@ export async function RequestRows({ items, leaveTypes, names, showName = false, 
                 {r.rejectReason && <span className="text-sm break-words text-danger">{t('rejectReason', { why: r.rejectReason })}</span>}
                 <span className="num flex flex-wrap items-center gap-x-2 gap-y-1 text-sm">
                   {r.recheck ? <Chip tone="warn">{t('recheck')}</Chip> : <Chip tone={r.status === 'approved' ? 'ok' : r.status === 'pending' ? 'warn' : 'neutral'}>{t(`status.${r.status}`)}</Chip>}
+                    {r.status === 'pending' && r.firstStage && <Chip tone={r.firstStage === 'done' ? 'info' : r.firstLate ? 'danger' : 'neutral'}>{t(r.firstStage === 'done' ? 'firstDone' : r.firstLate ? 'firstLate' : 'firstWaiting')}</Chip>}
                   {/* 처리한 사람 · 때는 한 덩어리 — 「| 10.18 23:34」만 다음 줄로 떨어지던 것 (2026-10-19 디자인) */}
                   {r.status !== 'pending' && (who || r.decidedAt) && (
                     <span className="whitespace-nowrap text-muted">{[who ? t('by', { name: who }) : null, r.decidedAt ? stamp(r.decidedAt) : null].filter(Boolean).join(' · ')}</span>

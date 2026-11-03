@@ -7,6 +7,7 @@ import { rejectReasonOf } from '@/lib/reject-reason';
 import { notifyDecision } from '@/lib/push-events';
 import { assertNotConfirmed } from '@/lib/confirm-data';
 import { isPeriodLocked } from '@/lib/punch';
+import { firstGate } from '@/lib/first-approval';
 import { requireApprover, requireStaffViewer } from '@/lib/scope';
 import { createAdminClient } from '@/lib/supabase/admin';
 
@@ -22,6 +23,8 @@ export const POST = api<{ params: Promise<{ id: string }> }>('admin.corrections.
   const { data: c } = await db.from('punch_corrections').select('employee_id, work_date').eq('id', id).maybeSingle();
   if (!c) throw new ApiError(404, 'not_found');
   await requireApprover(c.employee_id); // 최고관리자는 본인 요청도 처리한다(권한-10) · 지점관리자는 맡은 지점 직원만, 자기 것은 못 한다
+  const gate = await firstGate(viewer.me, 'punch_corrections', id, c.employee_id, b.decision); // 두 단계 승인(권한-13): 지점관리자의 승인은 1차 확인만
+  if (gate) return gate;
   if (await isPeriodLocked(c.employee_id, c.work_date)) throw new ApiError(409, 'period_locked');
   await assertNotConfirmed(c.employee_id, c.work_date); // 확정된 날의 기록은 바뀌지 않는다 — 먼저 확정을 푼다
   const { data, error } = await db.rpc('decide_correction', {

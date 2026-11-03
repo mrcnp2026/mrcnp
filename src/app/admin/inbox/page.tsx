@@ -235,7 +235,8 @@ export default async function InboxPage({ searchParams }: { searchParams: Promis
   });
   // 폰의 한 목록: 대기 중인 요청 전부 + 다시 확인할 연장근로(상태는 처리됨이지만 재확인 필요)
   const listed = [
-    ...splitRequests(reqs.filter((x) => hit(x.employeeId))).pending,
+    // 두 단계 승인(권한-13): 지점관리자는 이미 1차 확인한 것을 다시 보지 않는다(최고관리자 승인 대기)
+    ...splitRequests(reqs.filter((x) => hit(x.employeeId) && !(me.role === 'manager' && x.firstStage === 'done'))).pending,
     ...(otAll ?? []).filter((o) => hit(o.employee_id) && o.status !== 'pending').map((o) => ({ ...fromOvertime(o), status: 'pending' as const })),
   ];
   // 종류 카드로 거르기 (목록 틀 — components/listframe). ?rk= 는 한 건 보기(?k=)와 겹치지 않는 이름

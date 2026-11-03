@@ -5,7 +5,6 @@ import 'server-only';
 import webpush from 'web-push';
 import { OFFICE } from '@/config/office';
 import { staffPushFilter } from '@/lib/push-recipients';
-import { approverIdsFor } from '@/lib/scope';
 import { createAdminClient } from '@/lib/supabase/admin';
 
 export type PushPayload = { title: string; body: string; url: string; tag?: string };
@@ -78,7 +77,9 @@ export async function notifyApprovers(employeeId: string, payload: PushPayload):
   try {
     const { data } = await createAdminClient().from('profiles').select('employee_no').eq('id', employeeId).maybeSingle();
     if (data?.employee_no?.startsWith('e2e-')) return;
-    await sendStaffPush(await approverIdsFor(employeeId), payload);
+    // 두 단계 승인(권한-13): 맡은 지점관리자가 있으면 그 사람에게만 — 최고관리자는 1차 확인 뒤에 받는다(first-approval.ts)
+    const { newRequestRecipients } = await import('@/lib/first-approval');
+    await sendStaffPush((await newRequestRecipients(employeeId)).ids, payload);
   } catch (e) {
     log('notify_failed', e);
   }

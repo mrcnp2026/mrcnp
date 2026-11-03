@@ -61,6 +61,44 @@ export async function approverIdsFor(employeeId: string): Promise<string[]> {
   return out;
 }
 
+/**
+ * 두 단계 승인(권한-13, 2026-11-03): 그 직원을 맡은 지점관리자. 있으면 그 직원의 요청은 지점관리자가 1차 확인, 최고관리자가 최종 승인.
+ * 일반직원만 해당한다(지점관리자 · 최고관리자 본인의 요청은 최고관리자가 바로 처리).
+ */
+export async function branchManagersFor(employeeId: string): Promise<string[]> {
+  const all = await loadStaff();
+  const target = all.find((s) => s.id === employeeId);
+  if (!target || target.role !== 'employee') return [];
+  const out: string[] = [];
+  for (const actor of all) {
+    if (actor.id === employeeId || !actor.active || actor.role !== 'manager') continue;
+    if (approvalBlocked(actor, target, all)) continue;
+    if (!(await managerScope(actor.id)).has(employeeId)) continue;
+    out.push(actor.id);
+  }
+  return out;
+}
+
+/** 맡은 지점관리자가 있는 일반직원 전원 — 목록 · 숫자를 한 번에 거를 때 (branchManagersFor와 같은 규칙) */
+export const stagedEmployees = cache(async (): Promise<Set<string>> => {
+  const all = await loadStaff();
+  const out = new Set<string>();
+  for (const m of all.filter((s) => s.active && s.role === 'manager')) {
+    for (const id of await managerScope(m.id)) {
+      const t = all.find((s) => s.id === id);
+      if (t && t.id !== m.id && t.role === 'employee' && !approvalBlocked(m, t, all)) out.add(id);
+    }
+  }
+  return out;
+});
+
+/** 최고관리자(관리자 등급) 가운데 그 직원의 요청을 최종 승인할 수 있는 사람 — 폰 알림은 staffPushFilter(알림-9 켜기 · 끄기)가 다시 거른다 */
+export async function topApproversFor(employeeId: string): Promise<string[]> {
+  const all = await loadStaff();
+  const ids = await approverIdsFor(employeeId);
+  return ids.filter((id) => all.find((s) => s.id === id)?.role === 'admin');
+}
+
 /** 관리 화면에 들어올 수 있는 사람 (관리자 · 지점관리자). 화면에서 고치는 버튼을 숨길지는 readOnly로 */
 export async function requireStaffViewer(): Promise<{ me: Me; readOnly: boolean } | null> {
   const me = await getMe();

@@ -4,6 +4,7 @@ import { after } from 'next/server';
 import { api, ApiError, readJson } from '@/lib/api';
 import { rejectReasonOf } from '@/lib/reject-reason';
 import { notifyDecision } from '@/lib/push-events';
+import { firstGate } from '@/lib/first-approval';
 import { requireApprover, requireStaffViewer } from '@/lib/scope';
 import { createAdminClient } from '@/lib/supabase/admin';
 
@@ -23,6 +24,8 @@ export const POST = api<{ params: Promise<{ id: string }> }>('admin.overtime.dec
   const { data: row } = await db.from('overtime_requests').select('employee_id').eq('id', id).maybeSingle();
   if (!row) throw new ApiError(404, 'not_found');
   await requireApprover(row.employee_id); // 최고관리자는 본인 요청도 처리한다(권한-10) · 지점관리자는 맡은 지점 직원만, 자기 것은 못 한다
+  const gate = await firstGate(viewer.me, 'overtime_requests', id, row.employee_id, b.decision); // 두 단계 승인(권한-13): 지점관리자의 승인은 1차 확인만
+  if (gate) return gate;
   const { data, error } = await db.rpc('decide_overtime', {
     p_id: id,
     p_decision: b.decision,

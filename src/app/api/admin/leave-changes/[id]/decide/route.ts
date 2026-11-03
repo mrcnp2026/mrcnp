@@ -10,7 +10,8 @@ import { atomicRpc } from '@/lib/atomic-rpc';
 import { assertAttendanceEditable } from '@/lib/confirm-data';
 import { insertApprovedLeave } from '@/lib/leave-direct';
 import { planLeave, type LeavePlan } from '@/lib/leave-request';
-import { requireStaffViewer } from '@/lib/scope';
+import { requireApprover, requireStaffViewer } from '@/lib/scope';
+import { firstGate } from '@/lib/first-approval';
 import { createAdminClient } from '@/lib/supabase/admin';
 
 export const POST = api<{ params: Promise<{ id: string }> }>('admin.leaveChanges.decide', async (req, ctx) => {
@@ -20,6 +21,14 @@ export const POST = api<{ params: Promise<{ id: string }> }>('admin.leaveChanges
   if (!/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(id)) throw new ApiError(404, 'not_found');
   const b = await readJson(req);
   if (b.decision !== 'approved' && b.decision !== 'rejected') throw new ApiError(400, 'invalid_input');
+  if (viewer.me.role === 'manager') {
+    // 두 단계 승인(권한-13): 지점관리자의 승인은 1차 확인만
+    const { data: lr } = await createAdminClient().from('leave_change_requests').select('employee_id').eq('id', id).maybeSingle();
+    if (!lr) throw new ApiError(404, 'not_found');
+    await requireApprover(lr.employee_id as string);
+    const gate = await firstGate(viewer.me, 'leave_change_requests', id, lr.employee_id as string, b.decision);
+    if (gate) return gate;
+  }
 
   // 정정 요청을 승인하려면 새 휴가를 먼저 계획한다 — 여기서 막히면 기존 휴가는 그대로다
   let change: { employeeId: string; plan: LeavePlan; why: string } | null = null;
