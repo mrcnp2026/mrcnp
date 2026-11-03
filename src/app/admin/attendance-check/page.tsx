@@ -223,7 +223,7 @@ export default async function AttendanceCheckPage({ searchParams }: { searchPara
       {listed.length === 0 && <p className="py-8 text-center text-sm text-muted">{t('empty')}</p>}
       {/* 날짜 눈금 — 아래 칸들과 같은 칸 나누기 */}
       {listed.length > 0 && (
-        <span aria-hidden className="num grid gap-[2px] px-2 pb-1 text-[10px] leading-none text-faint" style={{ gridTemplateColumns: `repeat(${dates.length}, minmax(0, 1fr))` }}>
+        <span aria-hidden className="num grid gap-0.5 px-2 pb-1 text-xs leading-none text-faint" style={{ gridTemplateColumns: `repeat(${dates.length}, minmax(0, 1fr))` }}>
           {dates.map((d) => <span key={d} className="overflow-visible whitespace-nowrap">{[1, 8, 15, 22, 29].includes(Number(d.slice(8))) ? Number(d.slice(8)) : ''}</span>)}
         </span>
       )}
@@ -243,8 +243,8 @@ export default async function AttendanceCheckPage({ searchParams }: { searchPara
                   </span>
                 </span>
                 {/* 그달 날짜 칸 — 색만 봐도 어느 날이 남았는지 */}
-                <span aria-hidden className="grid gap-[2px]" style={{ gridTemplateColumns: `repeat(${dates.length}, minmax(0, 1fr))` }}>
-                  {dates.map((d) => <span key={d} className={`h-2.5 rounded-[2px] ${cellTone(r, d)}`} />)}
+                <span aria-hidden className="grid gap-0.5" style={{ gridTemplateColumns: `repeat(${dates.length}, minmax(0, 1fr))` }}>
+                  {dates.map((d) => <span key={d} className={`h-2.5 rounded-xs ${cellTone(r, d)}`} />)}
                 </span>
                 {r.monthly.some((m) => !r.st.handled.has(monthKey(m))) && (
                   <span className="text-xs text-muted">{r.monthly.filter((m) => !r.st.handled.has(monthKey(m))).map((m) => t(`kind.${m.kind}`)).join(' · ')}</span>
@@ -255,10 +255,10 @@ export default async function AttendanceCheckPage({ searchParams }: { searchPara
         })}
       </ul>
       <p className="flex flex-wrap items-center gap-x-3 gap-y-1 pt-2 text-xs text-muted">
-        <span className="inline-flex items-center gap-1"><span aria-hidden className="size-2.5 rounded-[2px] bg-warn" />{t('legend.decide')}</span>
-        <span className="inline-flex items-center gap-1"><span aria-hidden className="size-2.5 rounded-[2px] bg-danger" />{t('legend.block')}</span>
-        <span className="inline-flex items-center gap-1"><span aria-hidden className="size-2.5 rounded-[2px] bg-primary/25" />{t('legend.confirm')}</span>
-        <span className="inline-flex items-center gap-1"><span aria-hidden className="size-2.5 rounded-[2px] bg-ok" />{t('legend.handled')}</span>
+        <span className="inline-flex items-center gap-1"><span aria-hidden className="size-2.5 rounded-xs bg-warn" />{t('legend.decide')}</span>
+        <span className="inline-flex items-center gap-1"><span aria-hidden className="size-2.5 rounded-xs bg-danger" />{t('legend.block')}</span>
+        <span className="inline-flex items-center gap-1"><span aria-hidden className="size-2.5 rounded-xs bg-primary/25" />{t('legend.confirm')}</span>
+        <span className="inline-flex items-center gap-1"><span aria-hidden className="size-2.5 rounded-xs bg-ok" />{t('legend.handled')}</span>
       </p>
     </section>
   );
