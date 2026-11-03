@@ -27,6 +27,9 @@ export async function syncStaffHistory(employeeId: string, actorId: string | nul
       // 퇴사 처리했다가 다시 켰다(복직) — 끝난 기간 뒤로 새 기간. 시작일은 새 입사일이 그 뒤면 그것, 아니면 오늘
       const start = p.joined_on && p.joined_on > last.ends_on ? p.joined_on : today > last.ends_on ? today : null;
       if (start) await db.from('staff_employment_periods').insert({ employee_id: employeeId, starts_on: start, created_by: actorId });
+      // 퇴사한 그날(또는 앞날로 잡힌 퇴사)에 바로 복직 — 새 기간을 만들 날이 없으니 닫았던 기간을 다시 연다.
+      // 예전에는 아무것도 하지 않아 「현재직원인데 재직 기간은 끝난」 상태로 남았다 (2026-11-04, 강상목 10-27 사례)
+      else await db.from('staff_employment_periods').update({ ends_on: null, end_reason: null, updated_by: actorId }).eq('id', last.id);
     } else if (p.joined_on) {
       await db.from('staff_employment_periods').insert({ employee_id: employeeId, starts_on: p.joined_on, created_by: actorId });
     }
