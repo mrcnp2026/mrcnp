@@ -153,3 +153,13 @@ export async function loadThread(id: string, me: Me): Promise<Thread | null> {
     replies: (rep ?? []).filter((r) => canSeeAll || (rec ?? []).length <= 1 || r.author_id === me.id).map((r) => ({ id: r.id as string, authorId: r.author_id as string, body: r.body as string, createdAt: r.created_at as string })),
   };
 }
+
+/** 요청 처리 결과 글(「○○가 승인되었습니다」)은 이만큼 지나면 자동으로 숨긴다 (2026-11-03 의뢰인: 「계속 누적해서 볼 필요는 없다」) */
+export const DECISION_MESSAGE_DAYS = 7;
+/** 매일 아침 — 오래된 처리 결과 글을 숨긴다(지우지 않는다, 0085). 숨긴 수 */
+export async function hideOldDecisionMessages(now = new Date()): Promise<number> {
+  const before = new Date(now.getTime() - DECISION_MESSAGE_DAYS * 86_400_000).toISOString();
+  const { data, error } = await db().from('work_messages').update({ hidden_at: now.toISOString() }).eq('related->>type', 'decision').is('hidden_at', null).lt('created_at', before).select('id');
+  if (error) boom('hideOldDecisionMessages', error);
+  return data?.length ?? 0;
+}

@@ -45,6 +45,10 @@
       "schedule": "10 0 * * *"
     },
     {
+      "path": "/api/cron/message-tidy",
+      "schedule": "20 0 * * *"
+    },
+    {
       "path": "/api/cron/backup-daily",
       "schedule": "0 17 * * *"
     },

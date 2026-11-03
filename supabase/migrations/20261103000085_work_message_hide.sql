@@ -13,3 +13,6 @@ alter table public.work_messages
 drop trigger work_messages_guard on public.work_messages;
 create trigger work_messages_guard before update or delete on public.work_messages
   for each row execute function public.guard_columns('hidden_at', 'hidden_by');
+
+-- 숨기지 않은 글만 찾는 목록 · 매일 아침 정리(7일 지난 처리 결과 숨기기)가 숨긴 글을 훑지 않게
+create index work_messages_shown on public.work_messages (created_at desc) where hidden_at is null;
