@@ -108,7 +108,8 @@ async function decorate(rows: Row[], meId: string): Promise<MessageLine[]> {
 /** 내가 받은 메시지 (새 것부터) */
 export async function loadInbox(me: Me, limit = 100): Promise<MessageLine[]> {
   const c = db();
-  const { data: mine, error } = await c.from('work_message_recipients').select('message_id').eq('employee_id', me.id).order('created_at', { ascending: false }).limit(limit);
+  // 숨긴 글(0085, 2026-11-03)은 빼고 센다 — 받은 쪽에서 걸러야 숨긴 글이 개수를 차지하지 않는다
+  const { data: mine, error } = await c.from('work_message_recipients').select('message_id, work_messages!inner(hidden_at)').eq('employee_id', me.id).is('work_messages.hidden_at', null).order('created_at', { ascending: false }).limit(limit);
   if (error) boom('loadInbox', error);
   const ids = (mine ?? []).map((r) => r.message_id as string);
   if (ids.length === 0) return [];
@@ -117,7 +118,7 @@ export async function loadInbox(me: Me, limit = 100): Promise<MessageLine[]> {
 }
 /** 내가 보낸 메시지. 관리자는 관리자들이 보낸 통지 전부를 본다(누가 보냈든 같이 관리한다) */
 export async function loadSent(me: Me, limit = 100): Promise<MessageLine[]> {
-  let q = db().from('work_messages').select('*').eq('is_test', isTestNo(me.employeeNo)).order('created_at', { ascending: false }).limit(limit);
+  let q = db().from('work_messages').select('*').eq('is_test', isTestNo(me.employeeNo)).is('hidden_at', null).order('created_at', { ascending: false }).limit(limit);
   q = me.role === 'admin' ? q.or(`sender_id.eq.${me.id},kind.eq.notice`) : q.eq('sender_id', me.id);
   const { data, error } = await q;
   if (error) boom('loadSent', error);
@@ -125,7 +126,7 @@ export async function loadSent(me: Me, limit = 100): Promise<MessageLine[]> {
 }
 /** 읽지 않은 받은 메시지 수 */
 export async function unreadCount(employeeId: string): Promise<number> {
-  const { count } = await db().from('work_message_recipients').select('id', { count: 'exact', head: true }).eq('employee_id', employeeId).is('read_at', null);
+  const { count } = await db().from('work_message_recipients').select('id, work_messages!inner(hidden_at)', { count: 'exact', head: true }).eq('employee_id', employeeId).is('read_at', null).is('work_messages.hidden_at', null);
   return count ?? 0;
 }
 
@@ -134,7 +135,7 @@ export type Thread = { id: string; kind: MessageLine['kind']; needsReply: boolea
 export async function loadThread(id: string, me: Me): Promise<Thread | null> {
   const c = db();
   const { data: m } = await c.from('work_messages').select('*').eq('id', id).maybeSingle();
-  if (!m) return null;
+  if (!m || m.hidden_at) return null; // 숨긴 글은 열리지 않는다
   const { data: rec } = await c.from('work_message_recipients').select('id, employee_id, read_at').eq('message_id', id);
   const mine = (rec ?? []).find((r) => r.employee_id === me.id);
   if (!mine && m.sender_id !== me.id && (me.role !== 'admin' || (m.is_test as boolean) !== isTestNo(me.employeeNo))) return null;
