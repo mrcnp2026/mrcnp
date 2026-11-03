@@ -3912,7 +3912,7 @@
       "cntClear": "끝",
       "legend": {
         "decide": "처리할 날",
-        "month": "한 달 1건에 묶인 날",
+        "month": "일찍 출근 반복(참고) · 한 달 묶음",
         "block": "기록 오류",
         "confirm": "승인된 날",
         "handled": "처리 완료",
@@ -3926,7 +3926,7 @@
       "min": "{n}분",
       "monthOne": "한 달 1건",
       "dates": "해당 날짜 {n}일",
-      "scheduleCheckLine": "근무일 {of}일 중 {n}일을 일정보다 {span} 일찍 출근했습니다. 실제 출근 시각이 일정과 다르면 일정을 고쳐 주세요.",
+      "scheduleCheckLine": "근무일 {of}일 중 {n}일을 일정보다 {span} 일찍 출근했습니다. 일정 전 시간은 급여에 들어가지 않으므로 따로 처리하지 않아도 됩니다. 실제 출근 시각이 일정과 다르다면 일정을 고쳐 주세요.",
       "earlyBundleLine": "{n}일을 일정보다 {from}~{to} 일찍 출근했습니다. 일정 시작 전 시간은 급여에 들어가지 않습니다.",
       "planLine": "일정 {span}",
       "noPlan": "일정 없음",
@@ -4034,9 +4034,10 @@
         "title": "왼쪽에서 직원을 고르세요",
         "pick": "그 직원의 처리할 날이 여기에 나옵니다."
       },
-      "rowSchedule": "한 달 1건 · {n}일을 매일 {span} 일찍 출근 — 일정 확인",
+      "rowSchedule": "참고 · {n}일을 매일 {span} 일찍 출근 (급여에는 안 들어감)",
       "rowEarly": "한 달 1건 · {n}일 1시간 넘게 일찍 출근",
-      "minRange": "{from}~{to}분"
+      "minRange": "{from}~{to}분",
+      "infoOnly": "참고 · 처리하지 않아도 됨"
     },
     "anomalies": {
       "title": "이상자 관리",

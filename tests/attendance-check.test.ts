@@ -100,12 +100,13 @@ describe('2026-11-03 의뢰인 — 시작 시각 기준 · 일찍 출근 기준 
     expect(judgeDay({ ...base, earlyIgnoreMin: 60, pairs: [{ in: at('06:10'), out: at('17:00') }] }).state).toBe('decide');
   });
   const day = (date: string, inAt: string) => judgeDay({ ...base, workDate: date, earlyIgnoreMin: 60, pairs: [{ in: at(inAt, date), out: at('17:00', date) }] });
-  it('근무일 80% 이상을 비슷한 분(15분 폭)만큼 일찍 → 한 달 1건 「일정 확인 필요」', () => {
+  it('근무일 80% 이상을 비슷한 분(15분 폭)만큼 일찍 → 한 달 1건 「일정 확인」(참고)', () => {
     const days = ['2026-10-01', '2026-10-02', '2026-10-05', '2026-10-06', '2026-10-07'].map((d, i) => day(d, i === 4 ? '07:20' : i % 2 ? '06:45' : '07:00'));
     const b = bundleMonth('2026-10', days, 5);
     expect(b.monthly).toEqual([expect.objectContaining({ kind: 'schedule_check', fromMin: 30, toMin: 45, patternDays: 4, workedDays: 5 })]);
-    expect(countDays(b.days, new Set(), b.monthly)).toMatchObject({ decide: 0, monthly: 1, open: 1, top: 'schedule_check' });
-    expect(countDays(b.days, new Set(['2026-10:schedule_check']), b.monthly).open).toBe(0);
+    // 참고만 — 처리할 것에 세지 않는다 (급여-72: 대장도 30~45분 일찍 온 시간을 넣지 않았다)
+    expect(b.monthly[0].info).toBe(true);
+    expect(countDays(b.days, new Set(), b.monthly)).toMatchObject({ decide: 0, monthly: 0, open: 0 });
   });
   it('기준 넘은 날(정원채 님처럼 2~3시간)은 그날 건이 아니라 한 달 1건 묶음, 날짜는 목록으로', () => {
     const days = [day('2026-10-01', '04:30'), day('2026-10-02', '05:00'), day('2026-10-05', '07:30')];

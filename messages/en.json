@@ -3912,7 +3912,7 @@
       "cntClear": "done",
       "legend": {
         "decide": "To handle",
-        "month": "In a monthly item",
+        "month": "Early again and again (reference) · monthly",
         "block": "Record error",
         "confirm": "Approved",
         "handled": "Done",
@@ -3926,7 +3926,7 @@
       "min": "{n}m",
       "monthOne": "One item for the month",
       "dates": "{n} dates",
-      "scheduleCheckLine": "Arrived {span} before the schedule on {n} of {of} workdays. If the real start differs, fix the schedule.",
+      "scheduleCheckLine": "Arrived {span} before the schedule on {n} of {of} workdays. Time before the schedule is not paid, so no action is needed. If the real start differs, fix the schedule.",
       "earlyBundleLine": "Arrived {from}–{to} early on {n} days. Time before the schedule is not paid.",
       "planLine": "Schedule {span}",
       "noPlan": "No schedule",
@@ -4034,9 +4034,10 @@
         "title": "Pick an employee on the left",
         "pick": "Their days to handle appear here."
       },
-      "rowSchedule": "Monthly · early by {span} on {n} days — check schedule",
+      "rowSchedule": "Reference · early by {span} on {n} days (not paid)",
       "rowEarly": "Monthly · over 1h early on {n} days",
-      "minRange": "{from}–{to} min"
+      "minRange": "{from}–{to} min",
+      "infoOnly": "For reference · no action needed"
     },
     "anomalies": {
       "title": "Attendance exceptions",

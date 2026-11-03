@@ -137,7 +137,8 @@ export function judgeDay(a: DayCheckInput): DayCheck {
 
 /** 한 달 1건 — 일정 확인 필요(같은 시간대로 매일 일찍 옴) · 일찍 출근 묶음(기준 넘은 날들) */
 export type MonthKind = 'schedule_check' | 'early_bundle';
-export type MonthCheck = { kind: MonthKind; month: string; dates: string[]; fromMin: number; toMin: number; patternDays: number; workedDays: number };
+// info = 참고만(처리할 것에 세지 않고 마감도 막지 않는다) — 일정 확인 필요: 10월 대장에서 30~45분 일찍 온 시간은 그대로 급여에 넣지 않았다 (2026-11-04 의뢰인, 급여-72)
+export type MonthCheck = { kind: MonthKind; month: string; dates: string[]; fromMin: number; toMin: number; patternDays: number; workedDays: number; info?: boolean };
 /** 「비슷한 분」 = 15분 폭 안 (2026-11-03 의뢰인: 정재호 님 30~45분) · 「80% 이상」 = 그달 일정 있고 출근한 날 기준 */
 export const PATTERN_WINDOW_MIN = 15;
 export const PATTERN_SHARE = 0.8;
@@ -159,7 +160,7 @@ export function bundleMonth(month: string, days: readonly DayCheck[], workedDays
   if (!picked.length) return { days: [...days], monthly: [] };
   const dates = [...new Set(picked.map((e) => e.date))].sort();
   const mins = picked.map((e) => e.minutes);
-  const item: MonthCheck = { kind: pattern ? 'schedule_check' : 'early_bundle', month, dates, fromMin: pattern ? best.from : Math.min(...mins), toMin: pattern ? Math.max(...steady.filter(inWindow).map((e) => e.minutes)) : Math.max(...mins), patternDays: pattern ? best.n : 0, workedDays };
+  const item: MonthCheck = { kind: pattern ? 'schedule_check' : 'early_bundle', month, dates, fromMin: pattern ? best.from : Math.min(...mins), toMin: pattern ? Math.max(...steady.filter(inWindow).map((e) => e.minutes)) : Math.max(...mins), patternDays: pattern ? best.n : 0, workedDays, info: pattern };
   const out = days.map((d) => {
     if (!dates.includes(d.workDate)) return d;
     const parts = d.parts.map((p) => (p.kind === 'before_start' && take({ minutes: p.minutes, quiet: !!p.quiet }) ? { ...p, bundled: true } : p));
@@ -182,7 +183,7 @@ export function countDays(days: readonly DayCheck[], handled: ReadonlySet<string
     for (const p of d.parts) if (!p.quiet && !p.bundled && (p.state !== 'confirm' || d.state === 'confirm')) kinds.set(p.kind, (kinds.get(p.kind) ?? 0) + 1);
   }
   // 한 달 1건은 판단 필요 1건으로 센다 — 처리 표시는 'YYYY-MM:종류'로 (마감을 막는다)
-  const openMonthly = monthly.filter((m) => !handled.has(`${m.month}:${m.kind}`));
+  const openMonthly = monthly.filter((m) => !m.info && !handled.has(`${m.month}:${m.kind}`));
   const month = openMonthly.length;
   const dayTop = [...kinds].sort((x, y) => y[1] - x[1] || CHECK_KINDS.indexOf(x[0]) - CHECK_KINDS.indexOf(y[0]))[0]?.[0] ?? null;
   // 대표 사유: 막음이 있으면 그날 사유, 아니면 한 달 1건(판단 필요)이 먼저

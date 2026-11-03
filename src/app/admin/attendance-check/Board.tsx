@@ -27,7 +27,7 @@ export function Board({ rows, initial, top, head, axis, empty }: { rows: BoardRo
     <>
     {/* 폰에서 직원을 고르면 위쪽(달 · 건수 · 칩)은 숨기고 항목부터 (2026-11-03 폰 확인: 위쪽이 화면 절반을 차지했다) */}
     <div className={`flex flex-col gap-3 lg:gap-4 ${sel ? 'max-lg:hidden' : ''}`}>{top}</div>
-    <div className="grid gap-6 lg:grid-cols-[9fr_11fr] lg:items-start">
+    <div className="grid gap-6 lg:grid-cols-2 lg:items-start">
       <section aria-label={t('listLabel')} className={`flex flex-col lg:sticky lg:top-20 lg:max-h-[calc(100vh-6rem)] lg:overflow-y-auto ${sel ? 'max-lg:hidden' : ''}`}>
         {head}
         {/* 색 뜻 — 목록 바로 위에 (2026-11-03 의뢰인: 색이 무슨 뜻인지 모르겠다) */}

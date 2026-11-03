@@ -98,7 +98,7 @@ export async function loadCloseBoard(ym: string, practice: boolean): Promise<{ l
       for (const k of new Set(d.parts.filter((p) => !p.quiet && !p.bundled && p.state !== 'confirm').map((p) => p.kind))) kinds.set(k, (kinds.get(k) ?? 0) + 1);
     }
     const dayTop = [...kinds].sort((a, b) => b[1] - a[1])[0];
-    const monthTop = c.monthly.find((m) => !handled.has(`${m.month}:${m.kind}`));
+    const monthTop = c.monthly.find((m) => !m.info && !handled.has(`${m.month}:${m.kind}`));
     const top = dayTop ? { type: dayTop[0], n: dayTop[1] } : monthTop ? { type: monthTop.kind, n: 1 } : null;
     anomalies.set(c.employeeId, { block: open, check: n.confirm, top: open ? top : null });
   }

@@ -91,7 +91,7 @@ export default async function AttendanceCheckPage({ searchParams }: { searchPara
       const shownDays = c.days.filter((d) => showDay(d, st.handled.has(d.workDate), st.changed.has(d.workDate)));
       const shownMonths = c.monthly.filter((m) => (kindFilter ? m.kind === kindFilter : true)).filter((m) => {
         const done = st.handled.has(monthKey(m));
-        return view === 'all' || (view === 'handled' ? done : view === 'open' ? !done : false);
+        return view === 'all' || (view === 'handled' ? done : view === 'open' ? !done && !m.info : false); // 참고는 「전체」에서만
       });
       return { ...c, st, n, shownDays, shownMonths, open: n.block + n.decide + n.monthly };
     })
@@ -106,7 +106,7 @@ export default async function AttendanceCheckPage({ searchParams }: { searchPara
       if (!(d.state === 'block' || (d.state === 'decide' && !r.st.handled.has(d.workDate)))) continue;
       for (const k of new Set(live(d).filter((p) => p.state !== 'confirm').map((p) => p.kind))) kindCount.set(k, (kindCount.get(k) ?? 0) + 1);
     }
-    for (const m of r.monthly) if (!r.st.handled.has(monthKey(m))) kindCount.set(m.kind, (kindCount.get(m.kind) ?? 0) + 1);
+    for (const m of r.monthly) if (!m.info && !r.st.handled.has(monthKey(m))) kindCount.set(m.kind, (kindCount.get(m.kind) ?? 0) + 1);
   }
   const kindOrder = [...CHECK_KINDS, ...MONTH_KINDS].filter((k) => kindCount.get(k));
 
@@ -123,7 +123,7 @@ export default async function AttendanceCheckPage({ searchParams }: { searchPara
     if (date > upTo) return 'border border-dashed border-border';
     if (d?.state === 'block') return 'bg-danger';
     if (d?.state === 'decide' && !r.st.handled.has(date)) return 'bg-warn';
-    const monthOpen = r.monthly.some((m) => !r.st.handled.has(monthKey(m)));
+    const monthOpen = r.monthly.some((m) => !r.st.handled.has(monthKey(m))); // 참고(일정 확인)도 칸에는 옅은 주황으로 남긴다
     if (monthOpen && d?.parts.some((p) => p.bundled)) return 'bg-warn/45'; // 한 달 1건으로 묶인 날
     if (d?.state && r.st.handled.has(date)) return 'bg-ok';
     if (d?.state === 'confirm') return 'bg-primary/30'; // 승인된 날(연장 · 휴일근로 승인이 다 덮음)
@@ -226,31 +226,59 @@ export default async function AttendanceCheckPage({ searchParams }: { searchPara
       </div>
     </>
   );
+  const ROW_COLS = 'lg:grid-cols-[6.5rem_1fr_3rem]';
+  const axisNums = (
+    <span className="num grid gap-0.5 text-xs leading-none text-faint" style={{ gridTemplateColumns: `repeat(${dates.length}, minmax(0, 1fr))` }}>
+      {dates.map((d) => <span key={d} className="overflow-visible whitespace-nowrap">{[1, 8, 15, 22, 29].includes(Number(d.slice(8))) ? Number(d.slice(8)) : ''}</span>)}
+    </span>
+  );
   const listAxis = listed.length > 0 ? (
-        <span aria-hidden className="num grid gap-0.5 px-2 pb-1 text-xs leading-none text-faint" style={{ gridTemplateColumns: `repeat(${dates.length}, minmax(0, 1fr))` }}>
-          {dates.map((d) => <span key={d} className="overflow-visible whitespace-nowrap">{[1, 8, 15, 22, 29].includes(Number(d.slice(8))) ? Number(d.slice(8)) : ''}</span>)}
-        </span>
+    <span aria-hidden className={`grid px-2 pb-1 lg:gap-2 ${ROW_COLS}`}>
+      <span className="max-lg:hidden" />
+      {axisNums}
+      <span className="max-lg:hidden" />
+    </span>
   ) : null;
+  // PC: 이름 · 날짜 칸 · 건수를 한 줄에 — 목록이 화면 높이에 들어가 왼쪽은 고정, 스크롤은 오른쪽 하나 (2026-11-04 의뢰인: 「틀 고정, 스크롤 두 개가 아니라」)
+  // 폰: 이름 줄 아래 날짜 칸, 그 아래 한 달 1건 이유
+  const strip = (r: (typeof rows)[number]) => (
+    <span aria-hidden className="grid gap-0.5" style={{ gridTemplateColumns: `repeat(${dates.length}, minmax(0, 1fr))` }}>
+      {dates.map((d) => <span key={d} className={`h-3 rounded-xs ${cellTone(r, d)}`} />)}
+    </span>
+  );
   const rowOf = (r: (typeof rows)[number]) => {
     const p = person.get(r.employeeId)!;
     const openMonths = r.monthly.filter((m) => !r.st.handled.has(monthKey(m)));
-    return (
-      <span className="flex flex-col gap-1.5">
-        <span className="flex items-baseline gap-2">
-          <b>{p.name}</b>
-          <span className="min-w-0 truncate text-xs text-muted">{groupPath(groups, p.groupId)}</span>
-          <span className="num ml-auto flex shrink-0 items-baseline gap-2 text-sm">
-            {r.n.block > 0 && <span className="font-bold text-danger">{t('cntBlock', { n: r.n.block })}</span>}
-            {r.n.decide + r.n.monthly > 0 ? <span className="font-bold text-warn">{t('cntDecide', { n: r.n.decide + r.n.monthly })}</span> : r.n.block === 0 && <span className="text-ok">{t('cntClear')}</span>}
-          </span>
-        </span>
-        <span aria-hidden className="grid gap-0.5" style={{ gridTemplateColumns: `repeat(${dates.length}, minmax(0, 1fr))` }}>
-          {dates.map((d) => <span key={d} className={`h-3 rounded-xs ${cellTone(r, d)}`} />)}
-        </span>
-        {openMonths.map((m) => <span key={m.kind} className="text-xs text-warn">{m.kind === 'schedule_check' ? t('rowSchedule', { n: m.patternDays, span: m.fromMin === m.toMin ? t('min', { n: m.fromMin }) : t('minRange', { from: m.fromMin, to: m.toMin }) }) : t('rowEarly', { n: m.dates.length })}</span>)}
+    const why = openMonths.map((m) => (m.kind === 'schedule_check' ? t('rowSchedule', { n: m.patternDays, span: m.fromMin === m.toMin ? t('min', { n: m.fromMin }) : t('minRange', { from: m.fromMin, to: m.toMin }) }) : t('rowEarly', { n: m.dates.length }))).join(' · ');
+    const count = (
+      <span className="num flex shrink-0 items-baseline justify-end gap-2 text-sm">
+        {r.n.block > 0 && <span className="font-bold text-danger">{t('cntBlock', { n: r.n.block })}</span>}
+        {r.n.decide + r.n.monthly > 0 ? <span className="font-bold text-warn">{t('cntDecide', { n: r.n.decide + r.n.monthly })}</span> : r.n.block === 0 && <span className="text-ok">{t('cntClear')}</span>}
       </span>
     );
+    return (
+      <>
+        <span className="flex flex-col gap-1.5 lg:hidden">
+          <span className="flex items-baseline gap-2">
+            <b>{p.name}</b>
+            <span className="min-w-0 truncate text-xs text-muted">{groupPath(groups, p.groupId)}</span>
+            <span className="ml-auto">{count}</span>
+          </span>
+          {strip(r)}
+          {why && <span className="text-xs text-muted">{why}</span>}
+        </span>
+        <span className={`grid items-center gap-2 max-lg:hidden ${ROW_COLS}`} title={why || undefined}>
+          <span className="flex min-w-0 flex-col">
+            <b className="truncate">{p.name}</b>
+            <span className="truncate text-xs text-muted">{openMonths.length ? t(`kind.${openMonths[0].kind}`) : groupPath(groups, p.groupId)}</span>
+          </span>
+          {strip(r)}
+          {count}
+        </span>
+      </>
+    );
   };
+
 
   // 오른쪽: 직원 한 명의 항목 (아무도 안 골랐으면 모든 직원이 차례로)
   const detailOf = (sel: (typeof rows)[number]) => {
@@ -278,9 +306,9 @@ export default async function AttendanceCheckPage({ searchParams }: { searchPara
             return (
               <li key={m.kind} className="flex flex-col gap-1.5 py-3">
                 <p className="flex flex-wrap items-baseline gap-x-2">
-                  <span aria-hidden className={`size-2 shrink-0 self-center rounded-full ${done ? 'bg-ok' : 'bg-warn'}`} />
+                  <span aria-hidden className={`size-2 shrink-0 self-center rounded-full ${done ? 'bg-ok' : m.info ? 'bg-warn/45' : 'bg-warn'}`} />
                   <b>{t(`kind.${m.kind}`)}</b>
-                  <span className="text-xs text-muted">{t('monthOne')}</span>
+                  <span className="text-xs text-muted">{m.info ? t('infoOnly') : t('monthOne')}</span>
                 </p>
                 <p className="num pl-4 text-sm">
                   {m.kind === 'schedule_check'
