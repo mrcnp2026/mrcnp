@@ -129,3 +129,14 @@ describe('늦은 출근 차감 방식 · 일정 확인 필요 30분 기준 (2026
     expect(bundleMonth('2026-10', days, 3, 0).monthly[0]?.kind).toBe('schedule_check');
   });
 });
+
+describe('저녁 휴게 확인 (2026-11-03 의뢰인: 10/7 휴게 없이 일함)', () => {
+  it('평소보다 일찍 나간 날(breakCheck 있음) · 휴게를 가로질러 일함 → 판단 필요', () => {
+    const r = judgeDay({ ...base, breakCheck: { start: '17:00', end: '17:30' }, pairs: [{ in: at('07:26'), out: at('18:51') }], approvedExtraMin: 75 });
+    expect(kinds(r)).toEqual(['after_end:75:confirm', 'break_check:30:decide']);
+    expect(r.state).toBe('decide');
+  });
+  it('휴게 시작 전에 나갔으면 묻지 않는다', () => {
+    expect(judgeDay({ ...base, breakCheck: { start: '17:00', end: '17:30' }, pairs: [{ in: at('07:26'), out: at('17:10') }] }).parts.some((p) => p.kind === 'break_check')).toBe(false);
+  });
+});

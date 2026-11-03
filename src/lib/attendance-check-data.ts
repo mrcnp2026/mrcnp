@@ -17,6 +17,9 @@ const hhmm = (t: string) => t.slice(0, 5);
 const breaksOf = (r: WorkRule) => [...(r.breakStart && r.breakEnd ? [{ start: hhmm(r.breakStart), end: hhmm(r.breakEnd) }] : []), ...(r.extraBreaks ?? []).map((b) => ({ start: hhmm(b.start), end: hhmm(b.end) }))];
 const minutesOf = (b: { start: string; end: string }) => { const [h1, m1] = b.start.split(':').map(Number); const [h2, m2] = b.end.split(':').map(Number); return h2 * 60 + m2 - (h1 * 60 + m1); };
 
+/** 평소보다 이만큼 일찍 퇴근한 날에 저녁 휴게를 확인 (2026-11-03: 10월 8건 — 10/7 세 명 · 정원채 5일) */
+export const EARLY_LEAVE_CHECK_MIN = 60;
+
 export type PersonChecks = { employeeId: string; days: DayCheck[]; monthly: MonthCheck[] };
 
 /** 날짜별 「일찍 출근 — 확인 필요에서 빼는 시간」 — 바꾼 날부터 적용(지난 날은 예전 값) */
@@ -42,6 +45,10 @@ export function collectChecks(data: PeriodData, from: string, to: string, now = 
     const fullLeave = fullLeaveSet(leaveDaysFor(data, p.id));
     const away = workDaysFor(data, p.id);
     const days: DayCheck[] = [];
+    // 평소 퇴근 시각 = 그 기간 퇴근(일정 있는 근무일) 가운데값 — 이보다 60분 이상 일찍 나간 날에 저녁 휴게를 확인한다
+    const outMin = (dt: Date) => { const s = new Date(dt.getTime() + 9 * 3600_000).toISOString().slice(11, 16); return +s.slice(0, 2) * 60 + +s.slice(3); };
+    const outs = daysFor(data, p.id, from, to).filter((d) => data.planFor(p.id, d.workDate).items.length && d.pairs.some((x) => x.out) && !d.pairs.some((x) => x.in && !x.out)).map((d) => Math.max(...d.pairs.filter((x) => x.out).map((x) => outMin(x.out!)))).sort((a, b) => a - b);
+    const usualOut = outs.length ? outs[Math.floor(outs.length / 2)] : null;
     let worked = 0; // 일정 있고 출근한 날 — 「한 달 80%」의 바닥
     for (const d of daysFor(data, p.id, from, to)) {
       if (d.workDate < p.startsOn || d.workDate > today) continue;
@@ -63,6 +70,9 @@ export function collectChecks(data: PeriodData, from: string, to: string, now = 
       // 휴게 안 함 — 회사 규칙의 휴게시간대 중 표시한 것의 분
       const waived = data.waivedFor(p.id, d.workDate);
       const base = data.ruleAt(d.workDate);
+      const lastOut = d.pairs.some((x) => x.out) ? Math.max(...d.pairs.filter((x) => x.out).map((x) => outMin(x.out!))) : null;
+      const evening = base && span ? breaksOf(base).find((b) => b.start >= span.endTime) ?? breaksOf(base).find((b) => b.start >= '17:00') ?? null : null; // 일정 끝 무렵 휴게(17:00–17:30)
+      const breakCheck = evening && !waived.has(evening.start) && usualOut !== null && lastOut !== null && usualOut - lastOut >= EARLY_LEAVE_CHECK_MIN ? evening : null;
       const waivedMin = waived.size && base ? breaksOf(base).filter((b) => waived.has(b.start)).reduce((n, b) => n + minutesOf(b), 0) : 0;
       const check = judgeDay({
         workDate: d.workDate,
@@ -79,6 +89,7 @@ export function collectChecks(data: PeriodData, from: string, to: string, now = 
         waivedBreakMin: waivedMin,
         earlyIgnoreMin: earlyIgnoreAt(d.workDate),
         lateRound: (rule ?? base)?.lateRound,
+        breakCheck,
       });
       if (check.parts.length) days.push(check); // 흐리게만 남은 날도 둔다 — 기록 화면 표시 · 한 달 묶음 판단에 쓴다
     }

@@ -8,7 +8,7 @@
 import { kstDateTime } from '@/lib/time';
 import type { LateRound, PunchPair } from '@/lib/types';
 
-export const CHECK_KINDS = ['pending_request', 'record_error', 'missing_out', 'missing_in', 'leave_day_punch', 'no_plan_work', 'before_start', 'late_in', 'early_out', 'after_end'] as const;
+export const CHECK_KINDS = ['pending_request', 'record_error', 'missing_out', 'missing_in', 'leave_day_punch', 'no_plan_work', 'before_start', 'late_in', 'early_out', 'after_end', 'break_check'] as const;
 export type CheckKind = (typeof CHECK_KINDS)[number];
 /** block = 마감 막음(기록을 고치거나 요청을 처리해야 빠짐) · decide = 판단 필요 · confirm = 확인만(승인이 전부 덮음) */
 export type CheckState = 'block' | 'decide' | 'confirm';
@@ -38,6 +38,7 @@ export type DayCheckInput = {
   pending: boolean; // 그날 처리 전 요청(휴가 · 정정 · 연장 · 외근 · 일정)이 있다
   approvedExtraMin: number; // 승인된 연장 · 휴일근로 인정 분 — 일정 후 근무 · 일정 없는 날 근무를 덮는다
   waivedBreakMin: number; // 관리자가 표시한 「휴게 안 함」 분 — 늦은 출근 · 이른 퇴근을 덮는다
+  breakCheck?: { start: string; end: string } | null; // 평소보다 일찍 퇴근한 날 — 이 휴게를 정말 했는지 담당자가 확인 (2026-11-03 의뢰인: 10/7 휴게 없이 일함). 「휴게 안 함」 표시가 있으면 넘기지 않는다
   lateRound?: LateRound; // 늦은 출근 끊기 (회사 설정 pay.late_round) — 급여 계산과 같게. 없으면 올림
   earlyIgnoreMin?: number; // 그날 유효한 「일찍 출근 — 확인 필요에서 빼는 시간」(분). 없으면 0 = 다 띄움
 };
@@ -47,6 +48,8 @@ const hm = (d: Date) => new Date(d.getTime() + 9 * 3600_000).toISOString().slice
 // 초는 먼저 버린다 (확정-9, worktime.ts와 같게 — 05:00:39 출근은 05:00)
 const ceilTo = (ms: number, step: number) => { const m = Math.floor(ms / MIN) * MIN; return step > 1 ? Math.ceil(m / (step * MIN)) * step * MIN : m; };
 const floorTo = (ms: number, step: number) => (step > 1 ? Math.floor(ms / (step * MIN)) * step * MIN : Math.floor(ms / MIN) * MIN);
+
+const minutesBetween = (s: string, e: string) => { const [a, b] = s.split(':').map(Number); const [c, d] = e.split(':').map(Number); return c * 60 + d - (a * 60 + b); };
 
 /** [s, e) 구간의 분에서 휴게시간대와 겹친 분을 뺀다 */
 function netMinutes(s: number, e: number, breaks: readonly [number, number][]): number {
@@ -121,6 +124,11 @@ export function judgeDay(a: DayCheckInput): DayCheck {
     const at = { plan: a.plan.endTime.slice(0, 5), punched: hm(new Date(last)), counted: hm(new Date(f)) };
     if (f < end) push('early_out', netMinutes(Math.max(f, start), end, breaks), 'waived', at);
     if (f > end) push('after_end', netMinutes(end, f, breaks), 'extra', at);
+    // 저녁 휴게를 가로질러 일했고 평소보다 일찍 나간 날 — 앱은 휴게를 뺐지만 실제로 쉬었는지는 모른다
+    const bc = a.breakCheck;
+    if (bc && f > kstDateTime(a.workDate, bc.end).getTime() && Math.min(...ins) < kstDateTime(a.workDate, bc.start).getTime()) {
+      parts.push({ kind: 'break_check', minutes: minutesBetween(bc.start, bc.end), covered: 0, state: 'decide', plan: `${bc.start}–${bc.end}` });
+    }
   }
   return out();
 }

@@ -271,7 +271,9 @@ export async function syncOvertimeRequests(data: PeriodData, upTo: string, only?
       if (d.pairs.some((x) => x.in && !x.out)) continue; // 근무 중
       if ((deemedPerson || d.deemed) && !existing.has(`${p.id}|${d.workDate}`)) continue; // 간주 — 새 요청 없음
       if (isClosed(p.id, d.workDate)) continue; // 마감된 날
-      if (d.workDate <= OFFICE.migrationCutoff) continue; // 시프티로 급여를 낸 날(이관 기준일까지)은 새 요청 · 다시 볼 것을 만들지 않는다 (2026-11-03 의뢰인: 「이미 지난 일, 앱에 다시 알람을 만들 필요 없다」)
+      // 시프티로 급여를 낸 날(이관 기준일까지)은 정기 맞춤에서 새 요청 · 다시 볼 것을 만들지 않는다 (2026-11-03 의뢰인: 「이미 지난 일, 앱에 다시 알람을 만들 필요 없다」).
+      // 단 관리자가 그날 기록을 직접 바꾼 직후(only — syncOvertimeFor)는 다시 계산한다 — 무급 처리 · 휴게 안 함 뒤 연장을 고칠 길이 없었다 (2026-11-03 정재호 10/6 · 10/7)
+      if (d.workDate <= OFFICE.migrationCutoff && !only) continue;
       const draft = buildOvertimeRequest({ employeeId: p.id, workDate: d.workDate, work: d, thresholdMinutes: OFFICE.overtimeReviewThresholdMin });
       const cur = existing.get(`${p.id}|${d.workDate}`);
       if (!cur) {
@@ -285,7 +287,9 @@ export async function syncOvertimeRequests(data: PeriodData, upTo: string, only?
       }
       const [o, n, h] = draft ? [draft.overtimeMinutes, draft.nightMinutes, draft.holidayMinutes] : [d.overtimeMinutes, d.nightMinutes, d.holidayMinutes];
       const baseline = [cur.recomputedOvertimeMinutes ?? cur.overtimeMinutes, cur.recomputedNightMinutes ?? cur.nightMinutes, cur.recomputedHolidayMinutes ?? cur.holidayMinutes];
-      if (o !== baseline[0] || n !== baseline[1] || h !== baseline[2]) reviews.push({ id: cur.id, o, n, h });
+      // 관리자가 바꾼 직후: 지금 계산이 집계와 다른데 재확인이 꺼져 있으면(이관 기준일 전이라 건너뛰었던 것) 다시 켠다
+      const stale = !!only && !cur.needsReview && (o !== (cur.approvedMinutes ?? cur.overtimeMinutes) || n !== (cur.approvedNightMinutes ?? cur.nightMinutes) || h !== (cur.approvedHolidayMinutes ?? cur.holidayMinutes)); // 인정분과 지금 계산이 다를 때만
+      if (o !== baseline[0] || n !== baseline[1] || h !== baseline[2] || stale) reviews.push({ id: cur.id, o, n, h });
     }
   }
   if (inserts.length) {
