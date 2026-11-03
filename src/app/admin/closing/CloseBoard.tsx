@@ -174,7 +174,7 @@ export function CloseBoard({ month, live, lines, canClose }: { month: string; li
               const res = resultOf(l.employeeId);
               return (
                 <tr key={l.employeeId} className="border-b border-border align-top">
-                  <td className="px-3 py-3">{canClose && l.ready && !l.close && <input type="checkbox" checked={picked.has(l.employeeId)} onChange={() => toggle(l.employeeId)} aria-label={t('pick', { name: l.name })} className="size-5 accent-primary" />}</td>
+                  <td className="px-3 py-3">{canClose && !l.close && (l.ready ? <input type="checkbox" checked={picked.has(l.employeeId)} onChange={() => toggle(l.employeeId)} aria-label={t('pick', { name: l.name })} className="size-5 accent-primary" /> : <input type="checkbox" disabled title={t('notReadyTip')} aria-label={t('notReadyTip')} className="size-5 cursor-not-allowed opacity-30" />)}</td>
                   <td data-label={t('colName')} className="px-3 py-3">
                     <Link href={`/admin/members/${l.employeeId}`} className="font-bold hover:text-primary">
                       {l.name}
@@ -305,7 +305,7 @@ export function CloseBoard({ month, live, lines, canClose }: { month: string; li
           const compact = !!l.close && !l.reopenRequest && reopen !== l.close.id;
           return (
             <li key={l.employeeId} className="flex gap-3 px-3 py-2.5">
-              <span className="flex w-5 shrink-0 pt-0.5">{canClose && l.ready && !l.close && <input type="checkbox" checked={picked.has(l.employeeId)} onChange={() => toggle(l.employeeId)} aria-label={t('pick', { name: l.name })} className="size-5 accent-primary" />}</span>
+              <span className="flex w-5 shrink-0 pt-0.5">{canClose && !l.close && (l.ready ? <input type="checkbox" checked={picked.has(l.employeeId)} onChange={() => toggle(l.employeeId)} aria-label={t('pick', { name: l.name })} className="size-5 accent-primary" /> : <input type="checkbox" disabled title={t('notReadyTip')} aria-label={t('notReadyTip')} className="size-5 cursor-not-allowed opacity-30" />)}</span>
               <div className="flex min-w-0 flex-1 flex-col gap-1">
                 <div className="flex items-center gap-2">
                   <Link href={`/admin/members/${l.employeeId}`} className="shrink-0 font-bold">

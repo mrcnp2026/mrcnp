@@ -5,7 +5,6 @@
 // 지난달과 다른 것은 이슈가 아니다 — 비교 · 교차 분석(compareMonth)은 참고용으로 따로 낸다.
 import 'server-only';
 import { OFFICE } from '@/config/office';
-import { loadCloseBoard } from '@/lib/close-data';
 import { createAdminClient } from '@/lib/supabase/admin';
 import { canonicalItemCode } from './engine/reserved-items';
 import { previewMonth } from './run-data';
@@ -63,9 +62,13 @@ export async function buildPayCheck(ym: string, practice: boolean): Promise<{ pe
   const [y, m] = ym.split('-').map(Number);
   const last = new Date(Date.UTC(y, m, 0)).toISOString().slice(0, 10);
   const db = createAdminClient();
-  const [preview, board, { data: people }, { data: groups }, { data: cons }, { data: terms }] = await Promise.all([
+  // 근태 마감 화면 자료(loadCloseBoard)는 한 달 근태를 다시 계산하고 연장 맞추기까지 해서 무겁다 — 여기서는 마감 여부와 관리자가 넣은 휴가만 가볍게 읽는다 (2026-11-03 속도)
+  const to = new Date(Date.UTC(y, m, 1)).toISOString().slice(0, 10);
+  const [preview, { data: closes }, { data: adminLv }, { data: leaveTypes }, { data: people }, { data: groups }, { data: cons }, { data: terms }] = await Promise.all([
     previewMonth(ym, practice),
-    loadCloseBoard(ym, practice),
+    db.from('attendance_closes').select('employee_id').eq('state', 'CLOSED').eq('is_test', practice).eq('period_from', from).eq('period_to', to),
+    db.from('leave_requests').select('employee_id, requested_by, type_code, start_date').eq('status', 'approved').eq('is_test', practice).lte('start_date', last).gte('end_date', from),
+    db.from('leave_types').select('code, is_paid, deducts_balance'),
     db.from('profiles').select('id, name, group_id, employee_no'),
     db.from('org_groups').select('id, name'),
     db.from('payroll_contract_versions').select('employee_id, valid_from').eq('status', 'active').gt('valid_from', from).lte('valid_from', last),
@@ -73,7 +76,10 @@ export async function buildPayCheck(ym: string, practice: boolean): Promise<{ pe
   ]);
   const person = new Map((people ?? []).map((p) => [p.id as string, p]));
   const groupName = new Map((groups ?? []).map((g) => [g.id as string, g.name as string]));
-  const lineOf = new Map(board.lines.map((l) => [l.employeeId, l]));
+  const closedSet = new Set((closes ?? []).map((c) => c.employee_id as string));
+  const typeOf = new Map((leaveTypes ?? []).map((lt) => [lt.code as string, lt]));
+  // 관리자가 직접 넣은 무급 · 연차 차감 휴가 (급여-67과 같은 기준)
+  const adminLeavesOf = (id: string) => (adminLv ?? []).filter((l) => l.employee_id === id && l.requested_by && l.requested_by !== id && (() => { const lt = typeOf.get(l.type_code as string); return !!lt && (!lt.is_paid || lt.deducts_balance); })()).map((l) => ({ date: l.start_date as string }));
   const otHours = (snap: Record<string, unknown>) => {
     const a = (snap.attendance as { approved?: { overtime?: number; holidayWithin8?: number; holidayOver8?: number } } | null)?.approved;
     return a ? Math.round((((a.overtime ?? 0) + (a.holidayWithin8 ?? 0) + (a.holidayOver8 ?? 0)) / 60) * 10) / 10 : 0;
@@ -94,15 +100,15 @@ export async function buildPayCheck(ym: string, practice: boolean): Promise<{ pe
     const p = person.get(r.employeeId);
     if (!p || (p.employee_no as string | null) === OFFICE.ownerEmployeeNo) continue;
     const items: CheckItem[] = [];
-    const line = lineOf.get(r.employeeId);
     const gid = (p.group_id as string | null) ?? null;
     // ⑦ 근태 마감 · 계산이 막힌 것 — 고쳐야만 사라진다
-    if (!line?.close) items.push({ key: 'not_closed', code: 'not_closed', level: 'must_fix', fix: 'closing' });
+    const isClosed = closedSet.has(r.employeeId);
+    if (!isClosed) items.push({ key: 'not_closed', code: 'not_closed', level: 'must_fix', fix: 'closing' });
     if (r.result.state === 'BLOCKED') {
       // 같은 사유가 여러 번(보험마다 등) 나오면 한 줄로 — 자세한 값은 이어 붙인다
       const byCode = new Map<string, string[]>();
       for (const b of r.result.blockers) {
-        if (b.code === 'no_attendance' && !line?.close) continue; // 위 「근태 마감 안 됨」과 같은 것
+        if (b.code === 'no_attendance' && !isClosed) continue; // 위 「근태 마감 안 됨」과 같은 것
         byCode.set(b.code, [...(byCode.get(b.code) ?? []), ...(b.detail ? [b.detail] : [])]);
       }
       for (const [code, details] of byCode) {
@@ -114,7 +120,7 @@ export async function buildPayCheck(ym: string, practice: boolean): Promise<{ pe
     const att = r.snapshot.attendance as { unpaidLeaveDays?: number; lateMinutes?: number; pendingMinutes?: number } | null;
     const lines = r.result.state === 'OK' ? r.result.lines : [];
     const cutAmount = lines.filter((l) => CUT.has(canonicalItemCode(l.code))).reduce((a, l) => a + Math.abs(l.amount), 0);
-    const adminLeaves = line?.adminLeaves ?? [];
+    const adminLeaves = adminLeavesOf(r.employeeId);
     if ((att?.unpaidLeaveDays ?? 0) > 0 || cutAmount > 0 || adminLeaves.length > 0) {
       items.push({ key: 'unpaid', code: 'unpaid', level: 'review', values: { days: Math.round((att?.unpaidLeaveDays ?? 0) * 1000) / 1000, amount: cutAmount, admin: adminLeaves.length }, dates: [...new Set(adminLeaves.map((a) => a.date))], fix: 'leave' });
     }
@@ -149,7 +155,7 @@ export async function buildPayCheck(ym: string, practice: boolean): Promise<{ pe
     });
   }
   out.sort((a, b) => Number(b.items.some((i) => i.level === 'must_fix')) - Number(a.items.some((i) => i.level === 'must_fix')) || b.items.length - a.items.length || a.name.localeCompare(b.name));
-  return { people: out, globalNotes: [...globals].map(([code, n]) => ({ code, n })), closed: board.lines.filter((l) => l.close).length, total: board.lines.length };
+  return { people: out, globalNotes: [...globals].map(([code, n]) => ({ code, n })), closed: out.filter((p) => closedSet.has(p.employeeId)).length, total: out.length };
 }
 
 /** 그 달 점검 결정 (직원 → 항목 → 결정) */

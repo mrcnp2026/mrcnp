@@ -3621,7 +3621,8 @@
       "adminLeavesTitle": "Unpaid / annual-leave deductions entered by an admin — pay and leave balance go down. Please confirm.",
       "adminLeavesAck": "I have checked the above",
       "unpaidTag": "unpaid",
-      "annualTag": "annual leave"
+      "annualTag": "annual leave",
+      "notReadyTip": "Handle the items in red first, then it can be closed"
     },
     "leaveLedger": {
       "title": "Leave ledger",
