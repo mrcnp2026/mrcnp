@@ -438,7 +438,7 @@ export async function notifyBoardPost(id: string): Promise<void> {
     const { data: m } = await db.from('work_messages').select('id, kind, title, sender_id, is_test').eq('id', id).maybeSingle();
     if (!m || m.kind !== 'notice' || m.is_test) return;
     const { data: rs } = await db.from('work_message_recipients').select('employee_id').eq('message_id', id);
-    await pushNewPost(`board:${id}`, (rs ?? []).map((r) => r.employee_id as string), m.sender_id as string | null, { title: `[사내게시판] ${String(m.title).slice(0, 80)}`, url: `/punch/messages/${id}`, tag: `board-${id}` });
+    await pushNewPost(`board:${id}`, (rs ?? []).map((r) => r.employee_id as string), m.sender_id as string | null, { title: `[전달] ${String(m.title).slice(0, 80)}`, url: `/punch/messages/${id}`, tag: `board-${id}` });
   } catch (e) {
     console.error(JSON.stringify({ route: 'push.board', detail: String((e as Error)?.message ?? e).slice(0, 200) }));
   }

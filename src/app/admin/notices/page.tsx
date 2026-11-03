@@ -3,6 +3,7 @@ import { ChevronDown, ChevronRight, Megaphone } from 'lucide-react';
 import { HelpTip } from '@/components/Help';
 import { getFormatter, getTranslations } from 'next-intl/server';
 import Link from 'next/link';
+import { Fab } from '@/components/Fab';
 import { Card, Chip, PageShell, Empty } from '@/components/ui';
 import { listNoticesForAdmin } from '@/lib/notices';
 import { adminPage } from '@/lib/admin-gate';
@@ -42,7 +43,8 @@ export default async function NoticesPage() {
         <div className="min-w-0">
           <h1 className="flex flex-wrap items-center gap-x-1 text-2xl font-bold">{t('title')}<HelpTip>{t('intro')}</HelpTip></h1>
         </div>
-        <Link href="/admin/notices/new" className="inline-flex min-h-11 items-center gap-1 rounded-button bg-primary px-4 font-semibold text-on-primary lg:h-9 lg:min-h-0 lg:gap-1.5 lg:px-3.5 lg:text-sm lg:font-semibold">
+        {/* 폰에서는 위 단추 대신 오른쪽 아래 「+ 새 공지」 (2026-11-03 의뢰인: 공지 · 전달 둘 다 「+ 새 요청」처럼 아래 단추 하나로) */}
+        <Link href="/admin/notices/new" className="hidden h-9 items-center gap-1.5 rounded-button bg-primary px-3.5 text-sm font-semibold text-on-primary lg:inline-flex">
           <Megaphone aria-hidden size={16} />
           {t('new')}
         </Link>
@@ -107,6 +109,7 @@ export default async function NoticesPage() {
           <ul className="flex flex-col gap-3 pb-3">{archived.map(item)}</ul>
         </details>
       )}
+      <Fab label={t('new')} href="/admin/notices/new" />
     </PageShell>
   );
 }

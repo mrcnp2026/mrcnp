@@ -25,7 +25,7 @@ export default async function AdminMessagesPage() {
       {/* 2026-10-22: 올린 글 목록이 먼저, 글쓰기는 「+ 새 글」 팝업 — 쓰지 않을 때도 편집기가 화면 위를 차지하고 있었다 */}
       <div className="flex items-start gap-3">
         <h1 className="flex min-w-0 flex-1 flex-wrap items-center gap-x-1 text-2xl font-bold">{t('adminTitle')}<HelpTip>{t('adminIntro')}</HelpTip></h1>
-        <SheetOpener id="board-new" label={t('composeTitle')} />
+        <SheetOpener id="board-new" label={t('composeTitle')} className="hidden lg:inline-flex" />
       </div>
       {items.length === 0 ? (
         <Empty icon={Megaphone} title={t('boardEmpty')} desc={t('boardEmptyDesc')} />

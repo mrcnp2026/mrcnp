@@ -7672,7 +7672,7 @@
     "pickClear": "Clear all",
     "pickAll": "Select all",
     "pickedCount": "{n} selected",
-    "title": "Board",
+    "title": "Messages",
     "intro": "Posts from the company. Opening one records that you read it.",
     "adminTitle": "Messages",
     "adminIntro": "Send messages to chosen employees and see who has read them. Employees cannot reply. Sent messages cannot be edited or deleted.",
