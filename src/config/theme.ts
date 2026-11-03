@@ -86,6 +86,9 @@ export const SHADOW_CARD = '0 1px 2px #28221a0a, 0 10px 28px -22px #28221a33'; /
 export const MOTION_MS = 150; // 상태 변화만. 등장 애니메이션 없음
 
 /** layout.tsx의 :root 스타일 — 토큰을 CSS 변수로 */
+// PC 글자 · 모서리는 rem으로 낸다 — 큰 모니터에서 화면 전체를 같은 비율로 키우기 위해(globals.css의 「큰 모니터」). 1920 이하에서는 16px 기준이라 px와 똑같다
+const rem = (v: string) => (v.endsWith('px') ? `${Number.parseFloat(v) / 16}rem` : v);
+
 export function themeCssVariables(): string {
   const lines: string[] = [];
   for (const [k, v] of Object.entries(COLORS)) lines.push(`--t-color-${k}:${v}`);
@@ -93,9 +96,9 @@ export function themeCssVariables(): string {
   for (const [k, v] of Object.entries(FONT_SIZES)) lines.push(`--t-text-${k}:${v}`);
   lines.push(`--t-shadow-card:${SHADOW_CARD}`, `--t-shadow-pop:${SHADOW_POP}`, `--t-shadow-hover:${SHADOW_HOVER}`, `--t-shadow-glass:${SHADOW_GLASS}`, `--t-shadow-sheet:${SHADOW_SHEET}`, `--t-motion:${MOTION_MS}ms`);
   const pc = [
-    ...Object.entries(RADII_PC).map(([k, v]) => `--t-radius-${k}:${v}`),
+    ...Object.entries(RADII_PC).map(([k, v]) => `--t-radius-${k}:${rem(v)}`),
     ...Object.entries(COLORS_PC).map(([k, v]) => `--t-color-${k}:${v}`),
-    ...Object.entries(FONT_SIZES_PC).map(([k, v]) => `--t-text-${k}:${v}`),
+    ...Object.entries(FONT_SIZES_PC).map(([k, v]) => `--t-text-${k}:${rem(v)}`),
     `--t-shadow-card:${SHADOW_CARD_PC}`,
   ];
   return `:root{${lines.join(';')}}@media (min-width:${PC_MIN_WIDTH}){:root{${pc.join(';')}}}`;

@@ -7,9 +7,9 @@ export function Logo({ height = 28, variant = 'full', priority = false, classNam
   if (variant === 'full') {
     // 올린 로고는 가로세로 비율을 미리 모른다 — 높이만 정하고 너비는 그림에 맡긴다
     // eslint-disable-next-line @next/next/no-img-element
-    return <img src="/api/brand/logo" alt={BRAND.name} style={{ height, width: 'auto', maxWidth: height * 6 }} fetchPriority={priority ? 'high' : undefined} className={`object-contain ${className}`} />;
+    return <img src="/api/brand/logo" alt={BRAND.name} style={{ height, width: 'auto', maxWidth: height * 6 }} fetchPriority={priority ? 'high' : undefined} className={`ui-px object-contain ${className}`} />;
   }
   const img = BRAND.mark;
   const width = Math.round((img.width / img.height) * height);
-  return <Image src={img.src} alt={BRAND.name} width={width} height={height} priority={priority} className={className} />;
+  return <Image src={img.src} alt={BRAND.name} width={width} height={height} priority={priority} className={`ui-px ${className}`} />;
 }
