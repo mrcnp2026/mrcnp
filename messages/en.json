@@ -1287,6 +1287,8 @@
       "dayOff": "Day off",
       "noRecord": "No record",
       "noRecordOk": "No punch record",
+      "earlyQuiet": "Early {t} · not counted",
+      "earlyBundled": "Early {t} · checked once for the month",
       "extra": "Overtime & holiday {t}",
       "rawTitle": "Original punches & corrections ({n})",
       "rawPunched": "Punched in the app",
@@ -2838,6 +2840,8 @@
         "saved": "Saved — applies from today",
         "range": "Enter a value from {min} to {max}",
         "hours": "hours",
+        "minutes": "min",
+        "earlyIgnore": {"label": "Early arrival — leave out of checks up to", "desc": "Days when someone arrives no more than this much before the schedule start are not raised in the attendance check. Time before the start is never counted as work, so pay is unchanged, and the record page still shows it greyed. Staff who arrive about the same amount early on 80% or more of the month's workdays get one “check schedule” item for the month. Applies from today; past days keep the old value."},
         "caution": {
           "label": "Weekly hours “caution” level",
           "desc": "When weekly working hours pass this, the admin board, the 52-hour view and the staff week bar show a caution colour. The limit is fixed by law at {limit} hours. Applies from today; past weeks keep the old value."

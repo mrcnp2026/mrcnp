@@ -20,6 +20,8 @@ export type CheckPart = {
   plan?: string; // 비교한 일정 시각 'HH:MM'
   punched?: string; // 찍힌 시각 'HH:MM'
   counted?: string; // 계산 시각 'HH:MM' (올림 · 내림 뒤)
+  quiet?: boolean; // 회사 설정 기준 이내의 일찍 출근 — 숫자에서 빠지고 기록 화면에만 흐리게 (check.early_ignore_min)
+  bundled?: boolean; // 한 달 1건(일정 확인 필요 · 일찍 출근 묶음)으로 옮겨 감 — 그날 숫자에서는 빠진다
 };
 export type DayCheck = { workDate: string; state: CheckState | null; parts: CheckPart[] };
 
@@ -36,6 +38,7 @@ export type DayCheckInput = {
   pending: boolean; // 그날 처리 전 요청(휴가 · 정정 · 연장 · 외근 · 일정)이 있다
   approvedExtraMin: number; // 승인된 연장 · 휴일근로 인정 분 — 일정 후 근무 · 일정 없는 날 근무를 덮는다
   waivedBreakMin: number; // 관리자가 표시한 「휴게 안 함」 분 — 늦은 출근 · 이른 퇴근을 덮는다
+  earlyIgnoreMin?: number; // 그날 유효한 「일찍 출근 — 확인 필요에서 빼는 시간」(분). 없으면 0 = 다 띄움
 };
 
 const MIN = 60_000;
@@ -52,9 +55,15 @@ function netMinutes(s: number, e: number, breaks: readonly [number, number][]): 
   return Math.max(0, Math.round(ms / MIN));
 }
 
+/** 그날 상태 — 흐리게만 남은 것 · 한 달 1건으로 옮겨 간 것은 세지 않는다 */
+function stateOf(parts: readonly CheckPart[]): CheckState | null {
+  const live = parts.filter((p) => !p.quiet && !p.bundled);
+  return live.some((p) => p.state === 'block') ? 'block' : live.some((p) => p.state === 'decide') ? 'decide' : live.length ? 'confirm' : null;
+}
+
 export function judgeDay(a: DayCheckInput): DayCheck {
   const parts: CheckPart[] = [];
-  const out = (): DayCheck => ({ workDate: a.workDate, state: parts.some((p) => p.state === 'block') ? 'block' : parts.some((p) => p.state === 'decide') ? 'decide' : parts.length ? 'confirm' : null, parts });
+  const out = (): DayCheck => ({ workDate: a.workDate, state: stateOf(parts), parts });
   if (a.deemed) return out();
   const done = a.pairs.filter((p): p is { in: Date; out: Date } => !!p.in && !!p.out);
   const ins = a.pairs.filter((p) => p.in).map((p) => (p.in as Date).getTime());
@@ -92,10 +101,16 @@ export function judgeDay(a: DayCheckInput): DayCheck {
   const start = kstDateTime(a.workDate, a.plan.startTime).getTime();
   const end = kstDateTime(a.workDate, a.plan.endTime).getTime();
   if (ins.length) {
-    const first = Math.min(...ins);
-    const c = ceilTo(first, step);
+    const first = Math.floor(Math.min(...ins) / MIN) * MIN;
+    // 일정 시작 전(포함)에 오면 계산은 일정 시작부터 — 시작이 끊는 단위에 맞지 않아도(07:40) 늦은 출근이 아니다 (2026-11-03 의뢰인)
+    const up = ceilTo(first, step);
+    const c = first <= start && up > start ? start : up;
     const at = { plan: a.plan.startTime.slice(0, 5), punched: hm(new Date(first)), counted: hm(new Date(c)) };
-    if (c < start) push('before_start', netMinutes(c, start, breaks), null, at); // 일찍 시작을 덮는 요청은 없다 — 일정 변경으로만 기준이 바뀐다
+    if (c < start) {
+      push('before_start', netMinutes(c, start, breaks), null, at); // 일찍 시작을 덮는 요청은 없다 — 일정 변경으로만 기준이 바뀐다
+      const last = parts[parts.length - 1];
+      if (last?.kind === 'before_start' && last.minutes <= Math.max(0, a.earlyIgnoreMin ?? 0)) last.quiet = true;
+    }
     if (c > start) push('late_in', netMinutes(start, Math.min(c, end), breaks), 'waived', at);
   }
   const open = a.pairs.some((p) => p.in && !p.out);
@@ -109,8 +124,40 @@ export function judgeDay(a: DayCheckInput): DayCheck {
   return out();
 }
 
+/** 한 달 1건 — 일정 확인 필요(같은 시간대로 매일 일찍 옴) · 일찍 출근 묶음(기준 넘은 날들) */
+export type MonthKind = 'schedule_check' | 'early_bundle';
+export type MonthCheck = { kind: MonthKind; month: string; dates: string[]; fromMin: number; toMin: number; patternDays: number; workedDays: number };
+/** 「비슷한 분」 = 15분 폭 안 (2026-11-03 의뢰인: 정재호 님 30~45분) · 「80% 이상」 = 그달 일정 있고 출근한 날 기준 */
+export const PATTERN_WINDOW_MIN = 15;
+export const PATTERN_SHARE = 0.8;
+
+export function bundleMonth(month: string, days: readonly DayCheck[], workedDays: number): { days: DayCheck[]; monthly: MonthCheck[] } {
+  const early = days.flatMap((d) => d.parts.filter((p) => p.kind === 'before_start').map((p) => ({ date: d.workDate, minutes: p.minutes, quiet: !!p.quiet })));
+  if (!early.length) return { days: [...days], monthly: [] };
+  // 가장 많은 날이 들어가는 15분 폭
+  let best = { from: 0, n: 0 };
+  for (const m of [...new Set(early.map((e) => e.minutes))].sort((x, y) => x - y)) {
+    const n = early.filter((e) => e.minutes >= m && e.minutes <= m + PATTERN_WINDOW_MIN).length;
+    if (n > best.n) best = { from: m, n };
+  }
+  const pattern = workedDays > 0 && best.n / workedDays >= PATTERN_SHARE;
+  const inWindow = (e: { minutes: number }) => e.minutes >= best.from && e.minutes <= best.from + PATTERN_WINDOW_MIN;
+  const take = (e: { minutes: number; quiet: boolean }) => !e.quiet || (pattern && inWindow(e));
+  const picked = early.filter(take);
+  if (!picked.length) return { days: [...days], monthly: [] };
+  const dates = [...new Set(picked.map((e) => e.date))].sort();
+  const mins = picked.map((e) => e.minutes);
+  const item: MonthCheck = { kind: pattern ? 'schedule_check' : 'early_bundle', month, dates, fromMin: pattern ? best.from : Math.min(...mins), toMin: pattern ? Math.max(...early.filter(inWindow).map((e) => e.minutes)) : Math.max(...mins), patternDays: pattern ? best.n : 0, workedDays };
+  const out = days.map((d) => {
+    if (!dates.includes(d.workDate)) return d;
+    const parts = d.parts.map((p) => (p.kind === 'before_start' && take({ minutes: p.minutes, quiet: !!p.quiet }) ? { ...p, bundled: true } : p));
+    return { ...d, parts, state: stateOf(parts) };
+  });
+  return { days: out, monthly: [item] };
+}
+
 /** 여러 날을 직원 줄 숫자로 — 근태 마감 · 근태 점검 · 이상자 관리가 같은 숫자를 쓰게 한 곳에서 센다 */
-export function countDays(days: readonly DayCheck[], handled: ReadonlySet<string> = new Set()): { block: number; decide: number; confirm: number; open: number; top: CheckKind | null } {
+export function countDays(days: readonly DayCheck[], handled: ReadonlySet<string> = new Set(), monthly: readonly MonthCheck[] = []): { block: number; decide: number; confirm: number; monthly: number; open: number; top: CheckKind | MonthKind | null } {
   let block = 0, decide = 0, confirm = 0;
   const kinds = new Map<CheckKind, number>();
   for (const d of days) {
@@ -120,8 +167,13 @@ export function countDays(days: readonly DayCheck[], handled: ReadonlySet<string
     if (d.state === 'block') block++;
     else if (d.state === 'decide') decide++;
     else confirm++;
-    for (const p of d.parts) if (p.state !== 'confirm' || d.state === 'confirm') kinds.set(p.kind, (kinds.get(p.kind) ?? 0) + 1);
+    for (const p of d.parts) if (!p.quiet && !p.bundled && (p.state !== 'confirm' || d.state === 'confirm')) kinds.set(p.kind, (kinds.get(p.kind) ?? 0) + 1);
   }
-  const top = [...kinds].sort((x, y) => y[1] - x[1] || CHECK_KINDS.indexOf(x[0]) - CHECK_KINDS.indexOf(y[0]))[0]?.[0] ?? null;
-  return { block, decide, confirm, open: block + decide + confirm, top };
+  // 한 달 1건은 판단 필요 1건으로 센다 — 처리 표시는 'YYYY-MM:종류'로 (마감을 막는다)
+  const openMonthly = monthly.filter((m) => !handled.has(`${m.month}:${m.kind}`));
+  const month = openMonthly.length;
+  const dayTop = [...kinds].sort((x, y) => y[1] - x[1] || CHECK_KINDS.indexOf(x[0]) - CHECK_KINDS.indexOf(y[0]))[0]?.[0] ?? null;
+  // 대표 사유: 막음이 있으면 그날 사유, 아니면 한 달 1건(판단 필요)이 먼저
+  const top = block ? dayTop : (openMonthly[0]?.kind ?? dayTop);
+  return { block, decide, confirm, monthly: month, open: block + decide + confirm + month, top };
 }

@@ -101,8 +101,10 @@ export function calcWorkMinutes(pairs: PunchPair[], rule: WorkRule, ctx: WorkCtx
   // 시작 시각은 그날 일정으로 바뀐 rule.startTime — 조기 07:30 템플릿이면 07:30부터 센다
   // 쉬는 날도 그날 일정이 있으면 일정 시작부터 센다 — 26.08 대장(토요일 특근도 일정 시작부터)과 처음 승인값에 맞음 (2026-11-01 개발 DB 1~10월 대조).
   // 그날 일정이 등록되지 않은 날도 평소 근무 틀 시작부터 자른다 (급여-59, 2026-11-02 의뢰인: 일정은 있었는데 등록만 안 한 것)
+  let clipStart: number | null = null;
   if (rule.clipBeforeStart && work.length) {
     const start = kstDateTime(ctx.workDate, rule.startTime.slice(0, 5)).getTime();
+    clipStart = start;
     for (let i = work.length - 1; i >= 0; i--) {
       if (work[i][1] <= start) work.splice(i, 1);
       else if (work[i][0] < start) work[i] = [start, work[i][1]];
@@ -117,7 +119,8 @@ export function calcWorkMinutes(pairs: PunchPair[], rule: WorkRule, ctx: WorkCtx
   // 급여용 시간 (확정-9): 출근은 끊는 단위로 올리고 퇴근은 내린다. 내린 퇴근이 올린 출근보다 이르면 0분(음수 금지).
   // 한국 시간은 UTC와 9시간 차이라 1·5·10·15·30·60분 단위는 시각을 그대로 끊어도 한국 시각 기준과 같다.
   const step = rule.roundStepMin && rule.roundStepMin > 1 ? rule.roundStepMin : 0;
-  const rounded: Iv[] = step ? work.map(([s, e]) => { const rs = ceilTo(s, step); return [rs, Math.max(rs, floorTo(e, step))] as Iv; }).filter(([s, e]) => e > s) : work;
+  // 일정 시작 전(포함)에 온 근무는 일정 시작부터 그대로 센다 — 시작이 끊는 단위에 맞지 않아도(07:40) 올리지 않는다 (2026-11-03 의뢰인)
+  const rounded: Iv[] = step ? work.map(([s, e]) => { const rs = clipStart !== null && s <= clipStart ? s : ceilTo(s, step); return [rs, Math.max(rs, floorTo(e, step))] as Iv; }).filter(([s, e]) => e > s) : work;
   const payableMinutes = step ? toMin(sumMs(cutBreaks(rounded))) : toMin(sumMs(net));
 
   const grossMinutes = toMin(sumMs(work));

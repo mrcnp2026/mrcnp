@@ -1,6 +1,6 @@
 // 근태 점검 — 하루 판정 (급여-69 · 근태 점검 문서의 1단계 시험 사례)
 import { describe, expect, it } from 'vitest';
-import { countDays, judgeDay, type DayCheckInput } from '@/lib/attendance-check';
+import { bundleMonth, countDays, judgeDay, type DayCheckInput } from '@/lib/attendance-check';
 
 const D = '2026-10-28';
 const at = (hms: string, d = D) => new Date(`${d}T${hms.length === 5 ? hms + ':00' : hms}+09:00`);
@@ -84,5 +84,33 @@ describe('직원 줄 숫자', () => {
   it('하루 = 1건으로 센다, 처리한 날은 빠지고 막음은 처리 표시로 풀리지 않는다', () => {
     expect(countDays(days)).toMatchObject({ block: 1, decide: 2, confirm: 1, open: 4, top: 'late_in' });
     expect(countDays(days, new Set(['2026-10-01', '2026-10-05']))).toMatchObject({ block: 1, decide: 1, confirm: 1, open: 3 });
+  });
+});
+
+describe('2026-11-03 의뢰인 — 시작 시각 기준 · 일찍 출근 기준 · 한 달 1건', () => {
+  const at740 = { ...base, plan: { startTime: '07:40', endTime: '17:00' } };
+  it('일정 07:40, 07:35 출근 → 늦은 출근 아님(계산 07:40), 07:41 출근 → 늦은 출근 5분(07:45)', () => {
+    expect(judgeDay({ ...at740, pairs: [{ in: at('07:35'), out: at('17:00') }] }).state).toBeNull();
+    expect(kinds(judgeDay({ ...at740, pairs: [{ in: at('07:41'), out: at('17:00') }] }))).toEqual(['late_in:5:decide']);
+  });
+  it('일찍 출근이 기준(60분) 이내면 흐리게만 — 숫자에서 빠짐, 넘으면 판단 필요', () => {
+    const r = judgeDay({ ...base, earlyIgnoreMin: 60, pairs: [{ in: at('06:40'), out: at('17:00') }] });
+    expect(r.state).toBeNull();
+    expect(r.parts[0]).toMatchObject({ kind: 'before_start', minutes: 45, quiet: true });
+    expect(judgeDay({ ...base, earlyIgnoreMin: 60, pairs: [{ in: at('06:10'), out: at('17:00') }] }).state).toBe('decide');
+  });
+  const day = (date: string, inAt: string) => judgeDay({ ...base, workDate: date, earlyIgnoreMin: 60, pairs: [{ in: at(inAt, date), out: at('17:00', date) }] });
+  it('근무일 80% 이상을 비슷한 분(15분 폭)만큼 일찍 → 한 달 1건 「일정 확인 필요」', () => {
+    const days = ['2026-10-01', '2026-10-02', '2026-10-05', '2026-10-06', '2026-10-07'].map((d, i) => day(d, i === 4 ? '07:20' : i % 2 ? '06:45' : '07:00'));
+    const b = bundleMonth('2026-10', days, 5);
+    expect(b.monthly).toEqual([expect.objectContaining({ kind: 'schedule_check', fromMin: 30, toMin: 45, patternDays: 4, workedDays: 5 })]);
+    expect(countDays(b.days, new Set(), b.monthly)).toMatchObject({ decide: 0, monthly: 1, open: 1, top: 'schedule_check' });
+    expect(countDays(b.days, new Set(['2026-10:schedule_check']), b.monthly).open).toBe(0);
+  });
+  it('기준 넘은 날(정원채 님처럼 2~3시간)은 그날 건이 아니라 한 달 1건 묶음, 날짜는 목록으로', () => {
+    const days = [day('2026-10-01', '04:30'), day('2026-10-02', '05:00'), day('2026-10-05', '07:30')];
+    const b = bundleMonth('2026-10', days.filter((d) => d.parts.length), 10);
+    expect(b.monthly).toEqual([expect.objectContaining({ kind: 'early_bundle', dates: ['2026-10-01', '2026-10-02'], fromMin: 150, toMin: 180 })]);
+    expect(b.days.every((d) => d.state === null)).toBe(true);
   });
 });

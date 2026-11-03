@@ -84,7 +84,7 @@ export default async function SettingsPage({ searchParams }: { searchParams: Pro
   const info = INFO[tab];
   const tsm = await getTranslations('admin.settings.scheduleMode');
   const scheduleMode = (await getSettingAt('schedule.request_mode', toKstDate(new Date()))) as 'approval' | 'direct';
-  const [cautionHours, inviteHours] = await Promise.all([getSettingAt('week.caution_hours', toKstDate(new Date())), getSettingAt('invite.valid_hours', toKstDate(new Date()))]); // 9-2 (2026-10-29)
+  const [cautionHours, inviteHours, earlyIgnoreMin] = await Promise.all([getSettingAt('week.caution_hours', toKstDate(new Date())), getSettingAt('invite.valid_hours', toKstDate(new Date())), getSettingAt('check.early_ignore_min', toKstDate(new Date()))]); // 9-2 (2026-10-29)
   const tns = await getTranslations('admin.settings.numberSetting');
   // 권한 한 화면 (2026-10-14 문서 07 ④-4): 관리자 · 지점관리자 · 급여 담당을 표로. 바꾸기는 직원 화면에서(다른 관리자 확인 규칙을 그대로 쓴다)
   const access =
@@ -326,6 +326,10 @@ export default async function SettingsPage({ searchParams }: { searchParams: Pro
                   </SetRow>
                 </>
               )}
+              {/* 근태 점검 — 일찍 출근을 확인 필요에서 빼는 기준 (2026-11-03 의뢰인, 바꾼 날부터) */}
+              <SettingRow label={tns('earlyIgnore.label')} desc={tns('earlyIgnore.desc')}>
+                <NumberSettingForm k="check.early_ignore_min" value={earlyIgnoreMin} min={0} max={240} unit={tns('minutes')} />
+              </SettingRow>
               <SetRow label={tp('deemed')}>
                 <UseMark on label={tp('use')} />
                 <p className="text-muted">{tp('deemedNote')}</p>

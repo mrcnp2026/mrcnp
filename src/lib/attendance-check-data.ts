@@ -2,7 +2,10 @@
 // 근태 마감이 이미 읽는 자료만 쓴다 — 따로 더 읽지 않는다.
 import 'server-only';
 import { OFFICE } from '@/config/office';
-import { judgeDay, type DayCheck } from '@/lib/attendance-check';
+import { SETTINGS } from '@/config/settings-catalog';
+import { bundleMonth, judgeDay, type DayCheck, type MonthCheck } from '@/lib/attendance-check';
+import { settingHistory } from '@/lib/settings';
+import { pickAt } from '@/lib/settings-pick';
 import { fullLeaveSet } from '@/lib/leave';
 import { missingOfDay } from '@/lib/missing-list';
 import { FLAG } from '@/lib/flags';
@@ -14,10 +17,17 @@ const hhmm = (t: string) => t.slice(0, 5);
 const breaksOf = (r: WorkRule) => [...(r.breakStart && r.breakEnd ? [{ start: hhmm(r.breakStart), end: hhmm(r.breakEnd) }] : []), ...(r.extraBreaks ?? []).map((b) => ({ start: hhmm(b.start), end: hhmm(b.end) }))];
 const minutesOf = (b: { start: string; end: string }) => { const [h1, m1] = b.start.split(':').map(Number); const [h2, m2] = b.end.split(':').map(Number); return h2 * 60 + m2 - (h1 * 60 + m1); };
 
-export type PersonChecks = { employeeId: string; days: DayCheck[] };
+export type PersonChecks = { employeeId: string; days: DayCheck[]; monthly: MonthCheck[] };
+
+/** 날짜별 「일찍 출근 — 확인 필요에서 빼는 시간」 — 바꾼 날부터 적용(지난 날은 예전 값) */
+export async function loadEarlyIgnoreAt(): Promise<(date: string) => number> {
+  const key = 'check.early_ignore_min';
+  const rows = (await settingHistory(key)).map((r) => ({ key, value: r.value, effective_from: r.effectiveFrom }));
+  return (date) => Number(pickAt(rows, key, date, SETTINGS[key].default));
+}
 
 /** 기간 안 직원마다 확인 필요인 날 (판정 대상이 아닌 사람 · 날은 뺀다: 시스템관리자 · 최고관리자 · 대표 · 입사 전 · 앞날) */
-export function collectChecks(data: PeriodData, from: string, to: string, now = new Date()): PersonChecks[] {
+export function collectChecks(data: PeriodData, from: string, to: string, now = new Date(), earlyIgnoreAt: (date: string) => number = () => SETTINGS['check.early_ignore_min'].default): PersonChecks[] {
   const today = toKstDate(now);
   const out: PersonChecks[] = [];
   for (const p of data.people) {
@@ -25,6 +35,7 @@ export function collectChecks(data: PeriodData, from: string, to: string, now = 
     const fullLeave = fullLeaveSet(leaveDaysFor(data, p.id));
     const away = workDaysFor(data, p.id);
     const days: DayCheck[] = [];
+    let worked = 0; // 일정 있고 출근한 날 — 「한 달 80%」의 바닥
     for (const d of daysFor(data, p.id, from, to)) {
       if (d.workDate < p.startsOn || d.workDate > today) continue;
       const plan = data.planFor(p.id, d.workDate);
@@ -32,6 +43,7 @@ export function collectChecks(data: PeriodData, from: string, to: string, now = 
       const span = rule ? { startTime: hhmm(rule.startTime), endTime: hhmm(rule.endTime) } : null;
       const excused = fullLeave.has(d.workDate) || away.has(d.workDate);
       const deemed = !!plan.deemed || !!d.deemed;
+      if (span && !excused && !deemed && d.pairs.some((x) => x.in)) worked++;
       const same = <T extends { employeeId: string; workDate?: string }>(r: T) => r.employeeId === p.id && r.workDate === d.workDate;
       const ot = data.overtime.filter((o) => same(o));
       const onDay = (s: string, e: string) => s <= d.workDate && d.workDate <= e;
@@ -58,10 +70,12 @@ export function collectChecks(data: PeriodData, from: string, to: string, now = 
         pending,
         approvedExtraMin: approved,
         waivedBreakMin: waivedMin,
+        earlyIgnoreMin: earlyIgnoreAt(d.workDate),
       });
-      if (check.state) days.push(check);
+      if (check.parts.length) days.push(check); // 흐리게만 남은 날도 둔다 — 기록 화면 표시 · 한 달 묶음 판단에 쓴다
     }
-    out.push({ employeeId: p.id, days });
+    const b = bundleMonth(from.slice(0, 7), days, worked);
+    out.push({ employeeId: p.id, days: b.days, monthly: b.monthly });
   }
   return out;
 }

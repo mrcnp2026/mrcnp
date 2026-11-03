@@ -15,6 +15,7 @@ import { buildMonth, isYearMonth, monthRange } from '@/lib/month-data';
 import { daysFor, leaveDaysFor, workDaysFor } from '@/lib/period-data';
 import { toKstDate } from '@/lib/time';
 import { anomalyKey } from '@/lib/anomaly';
+import { collectChecks, loadEarlyIgnoreAt } from '@/lib/attendance-check-data';
 import { loadAnomalyReviews } from '@/lib/anomaly-data';
 import { confirmKey, loadConfirms } from '@/lib/confirm-data';
 import { LateResolve } from './LateResolve';
@@ -68,6 +69,10 @@ export default async function EmployeeRecordsPage({ params, searchParams }: { pa
       }).reverse()
     : [];
 
+  // 근태 점검 — 일찍 출근 중 기준 이내(흐리게) · 한 달 1건으로 묶인 날 (2026-11-03 의뢰인)
+  const earlyOf = new Map<string, { minutes: number; bundled: boolean }>();
+  for (const c of collectChecks({ ...data, people: [person] }, from, upTo, new Date(), await loadEarlyIgnoreAt()))
+    for (const d of c.days) for (const p of d.parts) if (p.kind === 'before_start' && (p.quiet || p.bundled)) earlyOf.set(d.workDate, { minutes: p.minutes, bundled: !!p.bundled });
   const hm = (d: Date) => f.dateTime(d, { hour: '2-digit', minute: '2-digit', hourCycle: 'h23' });
   const dur = (min: number) => tr('hm', { h: Math.floor(min / 60), m: min % 60 });
   const dayLabel = (d: string) => f.dateTime(new Date(`${d}T12:00:00+09:00`), { month: 'short', day: 'numeric', weekday: 'short' });
@@ -160,6 +165,7 @@ export default async function EmployeeRecordsPage({ params, searchParams }: { pa
           const raw = events.filter((e) => e.workDate === d.workDate);
           const corr = corrections.filter((c) => c.workDate === d.workDate);
           const none = !d.firstIn && !d.lastOut;
+          const early = earlyOf.get(d.workDate);
           return (
             <li key={d.workDate}>
               <Card className="flex flex-col gap-1.5 py-3">
@@ -182,7 +188,7 @@ export default async function EmployeeRecordsPage({ params, searchParams }: { pa
                   </p>
                 )}
                 {/* 표시 · 원래 기록을 한 줄에 — 폰에서 날마다 「원래 기록 · 정정 내역」 줄이 따로 있어 한 달이 3,000px를 넘었다 (2026-10-19 디자인). 펼치면 아래로 한 줄 전체 */}
-                {(d.lateMinutes > 0 || d.leave.length > 0 || d.work || d.outside || d.corrected || d.pendingCorrection || d.proxy || d.extraMinutes > 0 || raw.length > 0 || corr.length > 0) && (
+                {(d.lateMinutes > 0 || !!early || d.leave.length > 0 || d.work || d.outside || d.corrected || d.pendingCorrection || d.proxy || d.extraMinutes > 0 || raw.length > 0 || corr.length > 0) && (
                   <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
                     {d.lateMinutes > 0 && <Chip tone="warn">{th('lateBy', { n: d.lateMinutes })}</Chip>}
                     {d.outside && <Chip tone="warn">{th('outside')}</Chip>}
@@ -192,6 +198,7 @@ export default async function EmployeeRecordsPage({ params, searchParams }: { pa
                     {d.corrected && <Chip tone="info">{tr('corrected')}</Chip>}
                     {d.pendingCorrection && <Chip>{tr('correctionPending')}</Chip>}
                     {d.extraMinutes > 0 && <span className="num text-xs text-muted">{t('extra', { t: dur(d.extraMinutes) })}</span>}
+                    {early && <span className={`num text-xs ${early.bundled ? 'text-muted' : 'text-faint'}`}>{t(early.bundled ? 'earlyBundled' : 'earlyQuiet', { t: dur(early.minutes) })}</span>}
                 {(raw.length > 0 || corr.length > 0) && (
                   <details className="ml-auto text-sm open:ml-0 open:basis-full">
                     <summary className="flex min-h-9 cursor-pointer items-center justify-end text-xs text-muted">{t('rawTitle', { n: raw.length + corr.length })}</summary>

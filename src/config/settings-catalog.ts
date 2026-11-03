@@ -22,6 +22,8 @@ export const SETTINGS = {
   'missing.out_grace_hours': { group: 3, kind: 'int', min: 0, max: 12, unit: 'hour', default: OFFICE.missingOutGraceHours },
   'missing.in_grace_min': { group: 3, kind: 'int', min: 0, max: 240, unit: 'min', default: OFFICE.missingInGraceMin },
   'week.caution_hours': { group: 3, kind: 'int', min: 1, max: 80, unit: 'hour', default: OFFICE.weeklyCautionHours },
+  // 근태 점검: 일정 시작 전 이 분까지 일찍 온 날은 확인 필요에서 뺀다(기록 화면엔 흐리게 남김). 0 = 다 띄움 (2026-11-03 의뢰인)
+  'check.early_ignore_min': { group: 3, kind: 'int', min: 0, max: 240, unit: 'min', default: 60 },
   'week.limit_hours': { group: 3, kind: 'int', min: 1, max: 80, unit: 'hour', default: OFFICE.weeklyLimitHours }, // 법정 한도 — 화면에서 바꾸지 않는다
   // 그룹 9 — 직원 · 초대 (2026-10-29 9-2: 회사가 바꾼다)
   'invite.valid_hours': { group: 9, kind: 'int', min: 1, max: 720, unit: 'hour', default: OFFICE.inviteValidHours },
