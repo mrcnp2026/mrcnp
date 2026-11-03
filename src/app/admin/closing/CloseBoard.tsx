@@ -23,7 +23,8 @@ export type Line = {
   reopenRequest: { id: string; reason: string; by: string; mine: boolean } | null; // 다른 관리자의 확인을 기다리는 다시 열기 요청
   anomalyBlocks: number; // 마감을 막는 이상 기록(일 수)
   anomalyChecks: number; // 확인만 하는 이상 기록(일 수)
-  anomalyTop: { type: string; n: number } | null; // 가장 많은 사유 — 마우스를 올리면(폰은 아래 글씨) 보인다
+  anomalyTop: { type: string; n: number } | null;
+  adminLeaves: { date: string; label: string; unpaid: boolean }[]; // 관리자가 넣은 무급 · 연차 차감 — 마감 때 한 번 더 확인(급여-67) // 가장 많은 사유 — 마우스를 올리면(폰은 아래 글씨) 보인다
   close: { id: string; revision: number; by: string; at: string } | null;
   reopened: { revision: number; at: string; reason: string }[];
 };
@@ -41,6 +42,7 @@ export function CloseBoard({ month, live, lines, canClose }: { month: string; li
   const [results, setResults] = useState<Result[]>([]);
   const [reopen, setReopen] = useState<string | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
+  const [ack, setAck] = useState(false); // 관리자가 넣은 무급 · 연차를 확인했다
   const ready = lines.filter((l) => l.ready && !l.close);
   // 확인이 필요한 직원을 맨 위로, 마감 가능한 직원 다음, 이미 마감한 직원은 접어 둔다 (2026-10-26 의뢰인: 이슈만 먼저, 나머지는 더보기)
   const open = lines.filter((l) => !l.close).sort((a, b) => Number(a.ready) - Number(b.ready));
@@ -149,6 +151,11 @@ export function CloseBoard({ month, live, lines, canClose }: { month: string; li
         {t(`pendingOf.${p.key}`, { n: p.n })}
       </Link>
     )),
+    l.adminLeaves.length > 0 && (
+      <Link key="al" href={`/admin/records/${l.employeeId}?m=${month}&f=leave${q}`} title={l.adminLeaves.map((a) => `${a.date.slice(5)} ${a.label}`).join(' · ')} className="font-bold text-warn underline">
+        {t('adminLeaves', { n: l.adminLeaves.length })}
+      </Link>
+    ),
     l.anomalyBlocks > 0 && (
       <Link key="ab" href={`/admin/anomalies?m=${month}&e=${l.employeeId}${q}`} title={why(l)} className="font-bold text-warn underline">
         {t('anomalyBlock', { n: l.anomalyBlocks })}
@@ -202,6 +209,11 @@ export function CloseBoard({ month, live, lines, canClose }: { month: string; li
                     )}
                   </td>
                   <td data-label={t('colAnomaly')} className="num px-3 py-3">
+                    {l.adminLeaves.length > 0 && (
+                      <Link href={`/admin/records/${l.employeeId}?m=${month}&f=leave${q}`} title={l.adminLeaves.map((a) => `${a.date.slice(5)} ${a.label}`).join(' · ')} className="mb-1 block font-bold text-warn underline">
+                        {t('adminLeaves', { n: l.adminLeaves.length })}
+                      </Link>
+                    )}
                     {l.anomalyBlocks + l.anomalyChecks === 0 ? (
                       <span className="text-faint">–</span>
                     ) : (
@@ -224,18 +236,35 @@ export function CloseBoard({ month, live, lines, canClose }: { month: string; li
               );
   };
 
+  const pickedLeaves = lines.filter((l) => picked.has(l.employeeId)).flatMap((l) => l.adminLeaves.map((a) => ({ ...a, name: l.name })));
+
   return (
     <div className="flex flex-col gap-3">
       {canClose && (
         <div className="flex flex-col gap-2 lg:flex-row lg:items-center lg:justify-end">
           {ask ? (
             <div className="flex flex-col gap-2 rounded-card border border-warn bg-warn-tint p-3 lg:flex-row lg:items-center">
-              <span className="text-sm font-bold text-warn">{t('closeConfirm', { n: picked.size, month })}</span>
+              <span className="flex flex-col gap-2">
+                <span className="text-sm font-bold text-warn">{t('closeConfirm', { n: picked.size, month })}</span>
+                {/* 급여-67: 관리자가 넣은 무급 · 연차 차감은 급여 · 연차가 줄어드는 일이라 마감 전에 한 번 더 본다 */}
+                {pickedLeaves.length > 0 && (
+                  <span className="flex flex-col gap-1 rounded-button bg-bg p-2 text-sm">
+                    <span className="font-bold">{t('adminLeavesTitle')}</span>
+                    {pickedLeaves.map((x, i) => (
+                      <span key={i} className="num">· {x.name} {x.date.slice(5)} {x.label}{x.unpaid ? ` (${t('unpaidTag')})` : ` (${t('annualTag')})`}</span>
+                    ))}
+                    <label className="flex min-h-11 items-center gap-2 font-semibold">
+                      <input type="checkbox" checked={ack} onChange={(e) => setAck(e.target.checked)} className="size-5 accent-primary" />
+                      {t('adminLeavesAck')}
+                    </label>
+                  </span>
+                )}
+              </span>
               <span className="flex gap-2">
-                <Button type="button" className="flex-1" disabled={busy} onClick={() => run({ action: 'close', month, live, items: lines.filter((l) => picked.has(l.employeeId)).map((l) => ({ employeeId: l.employeeId, hash: l.hash })) })}>
+                <Button type="button" className="flex-1" disabled={busy || (pickedLeaves.length > 0 && !ack)} onClick={() => run({ action: 'close', month, live, items: lines.filter((l) => picked.has(l.employeeId)).map((l) => ({ employeeId: l.employeeId, hash: l.hash })) })}>
                   {busy ? t('closing') : t('yes')}
                 </Button>
-                <Button type="button" variant="outline" className="flex-1" disabled={busy} onClick={() => setAsk(false)}>
+                <Button type="button" variant="outline" className="flex-1" disabled={busy} onClick={() => { setAsk(false); setAck(false); }}>
                   {t('no')}
                 </Button>
               </span>

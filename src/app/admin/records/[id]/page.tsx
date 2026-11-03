@@ -14,6 +14,10 @@ import { buildDayDetails } from '@/lib/day-detail';
 import { buildMonth, isYearMonth, monthRange } from '@/lib/month-data';
 import { daysFor, leaveDaysFor, workDaysFor } from '@/lib/period-data';
 import { toKstDate } from '@/lib/time';
+import { anomalyKey } from '@/lib/anomaly';
+import { loadAnomalyReviews } from '@/lib/anomaly-data';
+import { confirmKey, loadConfirms } from '@/lib/confirm-data';
+import { LateResolve } from './LateResolve';
 import { CancelCorrection } from './CancelCorrection';
 import { DirectFix } from './DirectFix';
 import { ProxyEntry } from './ProxyEntry';
@@ -23,7 +27,7 @@ function shift(ym: string, n: number) {
   return new Date(Date.UTC(y, m - 1 + n, 1)).toISOString().slice(0, 7);
 }
 
-export default async function EmployeeRecordsPage({ params, searchParams }: { params: Promise<{ id: string }>; searchParams: Promise<{ m?: string; live?: string }> }) {
+export default async function EmployeeRecordsPage({ params, searchParams }: { params: Promise<{ id: string }>; searchParams: Promise<{ m?: string; live?: string; f?: string }> }) {
   const t = await getTranslations('admin.detail');
   const tr = await getTranslations('records');
   const th = await getTranslations('home');
@@ -68,6 +72,20 @@ export default async function EmployeeRecordsPage({ params, searchParams }: { pa
   const dur = (min: number) => tr('hm', { h: Math.floor(min / 60), m: min % 60 });
   const dayLabel = (d: string) => f.dateTime(new Date(`${d}T12:00:00+09:00`), { month: 'short', day: 'numeric', weekday: 'short' });
   const missingDays = details.filter((d) => d.missing).length;
+  // 요약 칸을 누르면 그 날만 (2026-11-03 의뢰인: 「지각 1회를 눌러도 반응이 없고 스크롤해서 찾아야 해」)
+  const F = ['late', 'missing', 'leave'] as const;
+  const pick = (F as readonly string[]).includes(sp.f ?? '') ? (sp.f as (typeof F)[number]) : null;
+  const shownDays = pick === 'late' ? details.filter((d) => d.lateMinutes > 0) : pick === 'missing' ? details.filter((d) => d.missing) : pick === 'leave' ? details.filter((d) => d.leave.length > 0) : details;
+  const fq = (k: string | null) => `${q(ym)}${k ? `&f=${k}` : ''}#days`;
+  // 지각 처리 칸 (2026-11-03): 처리한 날(확인완료 · 사유)은 칸 대신 사유를 보인다. 늦은 시간에 맞는 무급 지각 · 시간 연차 종류를 고른다
+  const [reviews, confirms] = canEnter ? await Promise.all([loadAnomalyReviews(from, upTo, practice), loadConfirms(from, upTo, practice)]) : [new Map(), new Map()];
+  const hourTypes = data.leaveTypes.filter((lt) => lt.active !== false && typeof lt.hours === 'number' && lt.hours > 0 && lt.hours < 8);
+  const pickType = (min: number, paid: boolean) =>
+    hourTypes
+      .filter((lt) => (paid ? lt.isPaid && lt.deductsBalance : !lt.isPaid && !lt.deductsBalance) && !lt.startTime)
+      .filter((lt) => (lt.hours ?? 0) * 60 >= min)
+      .sort((a, b) => (a.hours ?? 0) - (b.hours ?? 0))[0] ?? null;
+  const asOpt = (lt: (typeof hourTypes)[number] | null) => (lt ? { code: lt.code, name: leaveTypeName(data.leaveTypes, lt.code, tl), hours: lt.hours ?? 0 } : null);
 
   return (
     <PageShell wide>
@@ -110,19 +128,35 @@ export default async function EmployeeRecordsPage({ params, searchParams }: { pa
             { k: 'sumLate', v: String(summary.row.late_count), warn: Number(summary.row.late_count) > 0 },
             { k: 'sumMissing', v: String(missingDays), warn: missingDays > 0 },
             { k: 'sumLeave', v: String(summary.paidLeaveDays + Number(summary.row.unpaid_leave_days ?? 0)), warn: false },
-          ].map((x) => (
-            <div key={x.k} className="flex min-h-16 flex-col items-center justify-center px-1">
-              <span className={`num text-lg leading-tight font-extrabold ${x.warn ? 'text-warn' : ''}`}>{x.v}</span>
-              <span className="mt-1 text-xs text-muted">{t(x.k)}</span>
-            </div>
-          ))}
+          ].map((x) => {
+            const key = x.k === 'sumLate' ? 'late' : x.k === 'sumMissing' ? 'missing' : x.k === 'sumLeave' ? 'leave' : null;
+            const body = (
+              <>
+                <span className={`num text-lg leading-tight font-extrabold ${x.warn ? 'text-warn' : ''}`}>{x.v}</span>
+                <span className="mt-1 text-xs text-muted">{t(x.k)}</span>
+              </>
+            );
+            return key && x.v !== '0' ? (
+              <Link key={x.k} href={fq(pick === key ? null : key)} scroll={false} aria-pressed={pick === key} className={`flex min-h-16 flex-col items-center justify-center rounded-button px-1 hover:bg-surface ${pick === key ? 'bg-primary-tint ring-2 ring-primary' : ''}`}>
+                {body}
+              </Link>
+            ) : (
+              <div key={x.k} className="flex min-h-16 flex-col items-center justify-center px-1">{body}</div>
+            );
+          })}
         </Card>
       )}
 
-      <div className="flex flex-col gap-3 lg:col-span-2">
+      <div id="days" className="flex scroll-mt-20 flex-col gap-3 lg:col-span-2">
+      {pick && (
+        <div className="flex items-center justify-between gap-2 rounded-button bg-primary-tint px-3 py-2 text-sm">
+          <span className="font-semibold text-primary">{t(`only.${pick}`, { n: shownDays.length })}</span>
+          <Link href={fq(null)} scroll={false} className="inline-flex min-h-9 items-center font-bold text-primary">{t('showAllDays')}</Link>
+        </div>
+      )}
       {data.rule && details.length === 0 && <p className="text-muted">{tr('emptyMonth')}</p>}
       <ul className="flex flex-col gap-2">
-        {details.map((d) => {
+        {shownDays.map((d) => {
           const raw = events.filter((e) => e.workDate === d.workDate);
           const corr = corrections.filter((c) => c.workDate === d.workDate);
           const none = !d.firstIn && !d.lastOut;
@@ -196,6 +230,26 @@ export default async function EmployeeRecordsPage({ params, searchParams }: { pa
                 )}
                   </div>
                 )}
+                {canEnter && d.lateMinutes > 0 && (() => {
+                  const rv = reviews.get(anomalyKey(id, d.workDate));
+                  if (rv) return <p className="text-sm text-muted">{t('lateReviewed', { why: rv.note ?? '—' })}</p>;
+                  const plan = data.planFor(id, d.workDate);
+                  const start = plan.items[0]?.startTime?.slice(0, 5) ?? plan.rule?.startTime?.slice(0, 5) ?? '08:00';
+                  const inEv = raw.filter((e) => e.kind === 'in').sort((a, b) => a.punchedAt.getTime() - b.punchedAt.getTime())[0];
+                  return (
+                    <LateResolve
+                      employeeId={id}
+                      workDate={d.workDate}
+                      lateMinutes={d.lateMinutes}
+                      startTime={start}
+                      unpaid={canFix ? asOpt(pickType(d.lateMinutes, false)) : null}
+                      annual={canFix ? asOpt(pickType(d.lateMinutes, true)) : null}
+                      inEvent={canFix && inEv ? { id: inEv.id, time: hm(inEv.punchedAt) } : null}
+                      confirmedHref={confirms.has(confirmKey(id, d.workDate)) ? `/admin/records/${id}/${d.workDate}${liveQ ? '?live=1' : ''}` : null}
+                      live={!practice}
+                    />
+                  );
+                })()}
                 {canEnter && d.canAdd.length > 0 && (
                   <ProxyEntry key={(d.missing === 'out' ? ['out'] : d.canAdd).join()} employeeId={id} name={person.name} workDate={d.workDate} dateLabel={dayLabel(d.workDate)} kinds={d.missing === 'out' ? ['out'] : d.canAdd} today={today} />
                 )}

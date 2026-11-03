@@ -29,7 +29,9 @@ export async function loadCloses(ym: string, practice: boolean): Promise<CloseRo
   return (data ?? []).map(toClose);
 }
 
-export type CloseLine = { employeeId: string; name: string; employeeNo: string | null; groupId: string | null; jobId: string | null; active: boolean; review: CloseReview; hash: string; close: CloseRow | null; history: CloseRow[] };
+// adminLeaves: 관리자가 직접 넣은 무급 · 연차 차감 휴가(지각 처리 등) — 급여 · 연차가 줄어드는 중요한 일이라 마감 때 한 번 더 확인한다 (2026-11-03 의뢰인 「꼭 기억해」, 급여-67)
+export type AdminLeave = { date: string; typeCode: string; days: number; startTime: string | null; endTime: string | null; unpaid: boolean; deducts: boolean };
+export type CloseLine = { employeeId: string; name: string; employeeNo: string | null; groupId: string | null; jobId: string | null; active: boolean; review: CloseReview; hash: string; close: CloseRow | null; history: CloseRow[]; adminLeaves: AdminLeave[] };
 
 /** 마감할 때 본 근태 자료의 해시 — 그 직원 · 그 달의 사실들. 검토 뒤 자료가 바뀌었는지 알아낸다 */
 function inputHash(data: PeriodData, employeeId: string, from: string, last: string, confirmed: string[]): string {
@@ -84,6 +86,15 @@ export async function loadCloseBoard(ym: string, practice: boolean): Promise<{ l
   // 이상자 관리에서 「마감 차단」으로 정한 유형이 남아 있으면 마감하지 못한다
   const anomalies = summarizeAnomalies(collectAnomalies(data, from, last), anomalyPolicy.policy, new Set(reviews.keys())).byEmployee;
   const count = (rows: { employee_id: string }[] | null, id: string) => (rows ?? []).filter((r) => r.employee_id === id).length;
+  // 관리자가 직접 넣은(요청한 사람 ≠ 본인) 승인된 휴가 중 무급이거나 연차를 깎는 것
+  const { data: adminLv } = await createAdminClient().from('leave_requests').select('employee_id, requested_by, type_code, start_date, end_date, start_time, end_time, days').eq('status', 'approved').eq('is_test', practice).lte('start_date', last).gte('end_date', from);
+  const typeOf = new Map(data.leaveTypes.map((lt) => [lt.code, lt]));
+  const adminLeavesOf = (id: string): AdminLeave[] =>
+    (adminLv ?? [])
+      .filter((l) => l.employee_id === id && l.requested_by && l.requested_by !== id)
+      .map((l) => ({ l, lt: typeOf.get(l.type_code as string) }))
+      .filter(({ lt }) => !!lt && (!lt.isPaid || lt.deductsBalance))
+      .map(({ l, lt }) => ({ date: l.start_date as string, typeCode: l.type_code as string, days: Number(l.days), startTime: (l.start_time as string | null)?.slice(0, 5) ?? null, endTime: (l.end_time as string | null)?.slice(0, 5) ?? null, unpaid: !lt!.isPaid, deducts: lt!.deductsBalance }));
   const inMonth = (d: string) => d >= from && d <= last;
   const lines: CloseLine[] = [];
   for (const p of data.people) {
@@ -104,7 +115,7 @@ export async function loadCloseBoard(ym: string, practice: boolean): Promise<{ l
     };
     const review = reviewMonth({ days: days.map((d) => ({ workDate: d.workDate, hasRecord: eventDays.has(d.workDate) || d.pairs.length > 0, deemed: !!d.deemed, payableMinutes: d.payableMinutes, netMinutes: d.netMinutes })), confirmed, pending, anomalies: anomalies.get(p.id) });
     const history = closes.filter((c) => c.employeeId === p.id);
-    lines.push({ employeeId: p.id, name: p.name, employeeNo: p.employeeNo, groupId: p.groupId, jobId: p.jobId, active: p.active, review, hash: inputHash(data, p.id, from, last, [...confirmed]), close: history.find((c) => c.state === 'CLOSED') ?? null, history });
+    lines.push({ employeeId: p.id, name: p.name, employeeNo: p.employeeNo, groupId: p.groupId, jobId: p.jobId, active: p.active, review, hash: inputHash(data, p.id, from, last, [...confirmed]), close: history.find((c) => c.state === 'CLOSED') ?? null, history, adminLeaves: adminLeavesOf(p.id) });
   }
   return { lines, data, from, last, syncFailed };
 }

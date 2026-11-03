@@ -8,6 +8,7 @@ import Link from 'next/link';
 import { SettingsLink } from '@/components/listframe';
 import { PageShell } from '@/components/ui';
 import { OFFICE } from '@/config/office';
+import { leaveTypeName } from '@/lib/leave';
 import { loadCloseBoard, loadReopenRequests } from '@/lib/close-data';
 import { getMe } from '@/lib/auth';
 import { isMonth, monthSpan } from '@/lib/close-review';
@@ -35,7 +36,7 @@ export default async function ClosingPage({ searchParams }: { searchParams: Prom
   const month = isMonth(sp.m) && sp.m <= today.slice(0, 7) ? sp.m : shift(today.slice(0, 7), -1);
   const practice = OFFICE.practiceMode && sp.live !== '1';
   const live = sp.live === '1';
-  const [{ lines }, groups] = await Promise.all([loadCloseBoard(month, practice), loadOrgGroups()]);
+  const [{ lines, data: period }, groups, tl] = await Promise.all([loadCloseBoard(month, practice), loadOrgGroups(), getTranslations('leave')]);
   const requests = await loadReopenRequests(lines.flatMap((l) => (l.close ? [l.close.id] : [])));
   const meId = (await getMe())?.id;
   const ids = [...new Set([...lines.flatMap((l) => l.history.map((h) => h.closedBy)), ...[...requests.values()].map((r) => r.requestedBy)])];
@@ -60,6 +61,8 @@ export default async function ClosingPage({ searchParams }: { searchParams: Prom
     anomalyBlocks: l.review.anomalyBlocks,
     anomalyChecks: l.review.anomalyChecks,
     anomalyTop: l.review.anomalyTop,
+    // 관리자가 직접 넣은 무급 · 연차 차감 휴가 — 마감 때 한 번 더 확인 (급여-67)
+    adminLeaves: l.adminLeaves.map((a) => ({ date: a.date, label: `${leaveTypeName(period.leaveTypes, a.typeCode, tl)}${a.startTime && a.endTime ? ` ${a.startTime}~${a.endTime}` : ''}`, unpaid: a.unpaid })),
     close: l.close ? { id: l.close.id, revision: l.close.revision, by: nameOf.get(l.close.closedBy) ?? '', at: toKstDate(new Date(l.close.closedAt)) } : null,
     reopened: l.history.filter((h) => h.state === 'REOPENED').map((h) => ({ revision: h.revision, at: h.reopenedAt ? toKstDate(new Date(h.reopenedAt)) : '', reason: h.reopenReason ?? '' })),
   }));

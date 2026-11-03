@@ -1353,7 +1353,14 @@
       "fixVoidWarn": "이 기록을 없는 것으로 칩니다. 원래 찍은 기록과 사유는 남습니다.",
       "fixSave": "바꾸기",
       "fixVoidConfirm": "지우기",
-      "imported": "시프티에서 옮김"
+      "imported": "시프티에서 옮김",
+      "only": {
+        "late": "지각한 날 {n}일",
+        "missing": "기록이 빠진 날 {n}일",
+        "leave": "휴가 쓴 날 {n}일"
+      },
+      "showAllDays": "모든 날 보기",
+      "lateReviewed": "지각 확인완료 · 사유: {why}"
     },
     "org": {
       "title": "조직도",
@@ -3609,7 +3616,12 @@
         "unverified_place": "위치 확인 안 된 출퇴근",
         "leave_day_punch": "휴가 날 출퇴근"
       },
-      "reasonLine": "{why} {n}일"
+      "reasonLine": "{why} {n}일",
+      "adminLeaves": "관리자 처리 휴가 {n}건",
+      "adminLeavesTitle": "관리자가 넣은 무급 · 연차 차감 — 급여와 연차가 줄어듭니다. 맞는지 확인해 주세요.",
+      "adminLeavesAck": "위 내용을 확인했습니다",
+      "unpaidTag": "무급",
+      "annualTag": "연차 차감"
     },
     "leaveLedger": {
       "title": "휴가 원장",
@@ -6762,6 +6774,34 @@
         "login_events": "접속 기록"
       },
       "system": "(앱 자동)"
+    },
+    "lateResolve": {
+      "title": "지각 {n}분 — 어떻게 처리할까요?",
+      "opt": {
+        "unpaid": "무급으로 ({h}시간)",
+        "annual": "연차에서 빼기 ({h}시간)",
+        "fix": "출근 시각 고치기",
+        "excuse": "지각 아님 (사유만)"
+      },
+      "leaveWill": "「{name}」를 {from}~{to}에 넣습니다. 그 시간은 지각으로 잡히지 않습니다.",
+      "fixWill": "실제로 제시간에 일했다면 찍힌 출근 시각을 고칩니다. 사유는 고치는 창에 적습니다.",
+      "excuseWill": "외근 · 회의처럼 정당한 사유를 남기고 확인완료합니다. 시간 · 급여는 바뀌지 않습니다.",
+      "fixLabel": "출근 {time}",
+      "reasonPh": "사유 (선택 — 비우면 기본 사유)",
+      "excusePh": "사유 (예: 거래처 방문 후 출근)",
+      "reasonLabel": "사유",
+      "reasonUnpaid": "지각 — 무급 처리",
+      "reasonAnnual": "지각 — 연차에서 차감",
+      "do": {
+        "unpaid": "무급으로 넣기",
+        "annual": "연차로 넣기",
+        "excuse": "확인완료"
+      },
+      "confirmedNote": "이 날은 확정돼 있어 무급 · 연차 · 시각 고치기를 할 수 없습니다.",
+      "confirmedGo": "확정 풀러 가기 ›",
+      "day_confirmed": "이 날은 확정돼 있어 바꿀 수 없습니다. 그날 상세에서 확정을 풀고 다시 해 주세요.",
+      "period_locked": "마감된 달이라 바꿀 수 없습니다.",
+      "overlap": "그 시간에 이미 다른 휴가가 있습니다."
     }
   },
   "side": {

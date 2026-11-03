@@ -1353,7 +1353,14 @@
       "fixVoidWarn": "This record will count as not made. The original punch and the reason are kept.",
       "fixSave": "Change",
       "fixVoidConfirm": "Delete",
-      "imported": "Imported from Shiftee"
+      "imported": "Imported from Shiftee",
+      "only": {
+        "late": "{n} late days",
+        "missing": "{n} days with missing records",
+        "leave": "{n} leave days"
+      },
+      "showAllDays": "Show all days",
+      "lateReviewed": "Late reviewed · reason: {why}"
     },
     "org": {
       "title": "Org chart",
@@ -3609,7 +3616,12 @@
         "unverified_place": "Unverified location",
         "leave_day_punch": "Punched on a leave day"
       },
-      "reasonLine": "{why}: {n} days"
+      "reasonLine": "{why}: {n} days",
+      "adminLeaves": "{n} admin-entered leaves",
+      "adminLeavesTitle": "Unpaid / annual-leave deductions entered by an admin — pay and leave balance go down. Please confirm.",
+      "adminLeavesAck": "I have checked the above",
+      "unpaidTag": "unpaid",
+      "annualTag": "annual leave"
     },
     "leaveLedger": {
       "title": "Leave ledger",
@@ -6762,6 +6774,34 @@
         "login_events": "Sign-in log"
       },
       "system": "(app)"
+    },
+    "lateResolve": {
+      "title": "{n} min late — how should it be handled?",
+      "opt": {
+        "unpaid": "Unpaid ({h}h)",
+        "annual": "Use annual leave ({h}h)",
+        "fix": "Fix clock-in time",
+        "excuse": "Not late (reason only)"
+      },
+      "leaveWill": "Adds “{name}” from {from} to {to}. That time no longer counts as late.",
+      "fixWill": "If they actually started on time, correct the recorded clock-in. Enter the reason in the edit window.",
+      "excuseWill": "Records a valid reason and marks it reviewed. Hours and pay stay the same.",
+      "fixLabel": "Clock-in {time}",
+      "reasonPh": "Reason (optional)",
+      "excusePh": "Reason (e.g. client visit first)",
+      "reasonLabel": "Reason",
+      "reasonUnpaid": "Late — unpaid",
+      "reasonAnnual": "Late — from annual leave",
+      "do": {
+        "unpaid": "Add unpaid leave",
+        "annual": "Add annual leave",
+        "excuse": "Mark reviewed"
+      },
+      "confirmedNote": "This day is confirmed, so unpaid/annual leave or time fixes are blocked.",
+      "confirmedGo": "Unconfirm it ›",
+      "day_confirmed": "This day is confirmed. Unconfirm it on the day page first.",
+      "period_locked": "This month is closed.",
+      "overlap": "Another leave already covers that time."
     }
   },
   "side": {
