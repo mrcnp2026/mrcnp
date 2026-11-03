@@ -3569,7 +3569,7 @@
       "period_locked": "마감된 달입니다.",
       "colAnomaly": "이상 기록",
       "anomalyBlock": "차단 {n}일",
-      "anomalyCheck": "참고 {n}일 · 마감에 영향 없음",
+      "anomalyCheck": "확인필요 {n}일",
       "reopenRequested": "다른 관리자에게 다시 열기 확인을 요청했습니다. 그 관리자가 확인하면 열립니다.",
       "reopenWaiting": "다시 열기 확인 대기 · 요청 {name}",
       "reopenApprove": "확인하고 열기",
@@ -3596,7 +3596,20 @@
       "closeSelected": "선택한 {n}명 마감",
       "clearPick": "선택 해제",
       "nextCheck": "급여 점검",
-      "allClosed": "확인이 필요한 직원이 없습니다. 모두 마감했습니다."
+      "allClosed": "확인이 필요한 직원이 없습니다. 모두 마감했습니다.",
+      "reason": {
+        "missing_in": "출근 기록 없음",
+        "missing_out": "퇴근 기록 없음",
+        "orphan_out": "짝 없는 퇴근",
+        "overlap": "시간이 겹친 기록",
+        "duplicate": "두 번 찍힌 기록",
+        "late": "지각",
+        "early": "조퇴",
+        "no_plan_work": "쉬는 날 요청 없이 근무",
+        "unverified_place": "위치 확인 안 된 출퇴근",
+        "leave_day_punch": "휴가 날 출퇴근"
+      },
+      "reasonLine": "{why} {n}일"
     },
     "leaveLedger": {
       "title": "휴가 원장",

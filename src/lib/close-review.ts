@@ -11,12 +11,13 @@ export type CloseReview = {
   pendingTotal: number;
   anomalyBlocks: number; // 마감을 막는 이상 기록(일 수) — 이상자 관리의 「마감 차단」 유형
   anomalyChecks: number; // 확인만 하는 이상 기록(일 수) — 마감을 막지 않는다
+  anomalyTop: { type: string; n: number } | null; // 남은 이상 기록 중 가장 많은 사유 (근태 마감 칸에 마우스를 올리면 보인다)
   blockers: number; // 0이어야 마감할 수 있다
   payableMinutes: number;
   netMinutes: number;
 };
 
-export function reviewMonth(args: { days: { workDate: string; hasRecord: boolean; deemed: boolean; payableMinutes: number; netMinutes: number }[]; confirmed: ReadonlySet<string>; pending: PendingCounts; anomalies?: { block: number; check: number } }): CloseReview {
+export function reviewMonth(args: { days: { workDate: string; hasRecord: boolean; deemed: boolean; payableMinutes: number; netMinutes: number }[]; confirmed: ReadonlySet<string>; pending: PendingCounts; anomalies?: { block: number; check: number; top?: { type: string; n: number } | null } }): CloseReview {
   const recordDays = args.days.filter((d) => d.hasRecord && !d.deemed).map((d) => d.workDate);
   const unconfirmed = recordDays.filter((d) => !args.confirmed.has(d));
   const pendingTotal = Object.values(args.pending).reduce((a, b) => a + b, 0);
@@ -28,6 +29,7 @@ export function reviewMonth(args: { days: { workDate: string; hasRecord: boolean
     pendingTotal,
     anomalyBlocks: args.anomalies?.block ?? 0,
     anomalyChecks: args.anomalies?.check ?? 0,
+    anomalyTop: args.anomalies?.top ?? null,
     blockers: unconfirmed.length + pendingTotal + (args.anomalies?.block ?? 0),
     payableMinutes: args.days.reduce((a, d) => a + d.payableMinutes, 0),
     netMinutes: args.days.reduce((a, d) => a + d.netMinutes, 0),

@@ -23,6 +23,7 @@ export type Line = {
   reopenRequest: { id: string; reason: string; by: string; mine: boolean } | null; // 다른 관리자의 확인을 기다리는 다시 열기 요청
   anomalyBlocks: number; // 마감을 막는 이상 기록(일 수)
   anomalyChecks: number; // 확인만 하는 이상 기록(일 수)
+  anomalyTop: { type: string; n: number } | null; // 가장 많은 사유 — 마우스를 올리면(폰은 아래 글씨) 보인다
   close: { id: string; revision: number; by: string; at: string } | null;
   reopened: { revision: number; at: string; reason: string }[];
 };
@@ -30,6 +31,8 @@ type Result = { employeeId: string; result: string };
 
 export function CloseBoard({ month, live, lines, canClose }: { month: string; live: boolean; lines: Line[]; canClose: boolean }) {
   const t = useTranslations('admin.closing');
+  // 남은 이상 기록의 가장 많은 사유 한 줄 (2026-11-03 의뢰인: 마우스를 올리면 짧게 — 여러 사유면 가장 많은 것 하나)
+  const why = (l: Line) => (l.anomalyTop ? t('reasonLine', { why: t(`reason.${l.anomalyTop.type}`), n: l.anomalyTop.n }) : undefined);
   const router = useRouter();
   const [picked, setPicked] = useState<Set<string>>(new Set());
   const [ask, setAsk] = useState(false);
@@ -147,13 +150,15 @@ export function CloseBoard({ month, live, lines, canClose }: { month: string; li
       </Link>
     )),
     l.anomalyBlocks > 0 && (
-      <Link key="ab" href={`/admin/anomalies?m=${month}${q}`} className="font-bold text-warn underline">
+      <Link key="ab" href={`/admin/anomalies?m=${month}${q}`} title={why(l)} className="font-bold text-warn underline">
         {t('anomalyBlock', { n: l.anomalyBlocks })}
       </Link>
     ),
     l.anomalyChecks > 0 && (
-      <Link key="ac" href={`/admin/anomalies?m=${month}${q}`} className="text-muted underline">
+      <Link key="ac" href={`/admin/anomalies?m=${month}${q}`} title={why(l)} className="text-muted underline">
         {t('anomalyCheck', { n: l.anomalyChecks })}
+        {/* 폰은 마우스가 없어 사유를 괄호 글씨로 */}
+        {why(l) && <span className="ml-1 text-xs text-faint no-underline lg:hidden">({why(l)})</span>}
       </Link>
     ),
   ].filter(Boolean);
@@ -200,9 +205,11 @@ export function CloseBoard({ month, live, lines, canClose }: { month: string; li
                     {l.anomalyBlocks + l.anomalyChecks === 0 ? (
                       <span className="text-faint">–</span>
                     ) : (
-                      <Link href={`/admin/anomalies?m=${month}${q}`} className="flex flex-col underline">
+                      <Link href={`/admin/anomalies?m=${month}${q}`} title={why(l)} className="flex flex-col underline">
                         {l.anomalyBlocks > 0 && <span className="font-bold text-warn">{t('anomalyBlock', { n: l.anomalyBlocks })}</span>}
                         {l.anomalyChecks > 0 && <span className="text-muted">{t('anomalyCheck', { n: l.anomalyChecks })}</span>}
+                        {/* 폰은 마우스가 없어 사유를 글씨로 */}
+                        {why(l) && <span className="text-xs text-faint no-underline lg:hidden">{why(l)}</span>}
                       </Link>
                     )}
                   </td>

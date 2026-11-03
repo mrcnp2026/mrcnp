@@ -45,7 +45,8 @@ describe('정책', () => {
   ];
   it('기본: 퇴근 누락은 마감을 막고 지각은 확인만', () => {
     const s = summarizeAnomalies(items, DEFAULT_ANOMALY_POLICY);
-    expect(Object.fromEntries(s.byEmployee)).toEqual({ a: { block: 1, check: 1 }, b: { block: 0, check: 1 } });
+    // top: 남은 날의 가장 많은 사유 (근태 마감에 마우스를 올리면 보인다, 2026-11-03) — a는 지각 2일, b는 조퇴 1일
+    expect(Object.fromEntries(s.byEmployee)).toEqual({ a: { block: 1, check: 1, top: { type: 'late', n: 2 } }, b: { block: 0, check: 1, top: { type: 'early', n: 1 } } });
     expect(s.shown.map((x) => x.block)).toEqual([false, true, false]);
   });
   it('끈 유형은 목록에서 빠지지만 건수는 센다', () => {

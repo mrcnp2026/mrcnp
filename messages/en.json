@@ -3569,7 +3569,7 @@
       "period_locked": "This month is closed.",
       "colAnomaly": "Exceptions",
       "anomalyBlock": "Blocking {n}",
-      "anomalyCheck": "{n} days to note · does not block closing",
+      "anomalyCheck": "To check: {n} days",
       "reopenRequested": "Asked another admin to confirm reopening. It opens once they confirm.",
       "reopenWaiting": "Waiting for confirmation · requested by {name}",
       "reopenApprove": "Confirm and reopen",
@@ -3596,7 +3596,20 @@
       "closeSelected": "Close {n} selected",
       "clearPick": "Clear selection",
       "nextCheck": "Pay check",
-      "allClosed": "Nobody needs attention. Everyone is closed."
+      "allClosed": "Nobody needs attention. Everyone is closed.",
+      "reason": {
+        "missing_in": "No clock-in",
+        "missing_out": "No clock-out",
+        "orphan_out": "Clock-out without clock-in",
+        "overlap": "Overlapping records",
+        "duplicate": "Duplicate punches",
+        "late": "Late",
+        "early": "Left early",
+        "no_plan_work": "Worked on a day off without a request",
+        "unverified_place": "Unverified location",
+        "leave_day_punch": "Punched on a leave day"
+      },
+      "reasonLine": "{why}: {n} days"
     },
     "leaveLedger": {
       "title": "Leave ledger",

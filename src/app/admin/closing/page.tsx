@@ -59,6 +59,7 @@ export default async function ClosingPage({ searchParams }: { searchParams: Prom
     reopenRequest: l.close && requests.has(l.close.id) ? { id: requests.get(l.close.id)!.id, reason: requests.get(l.close.id)!.reason, by: nameOf.get(requests.get(l.close.id)!.requestedBy) ?? '', mine: requests.get(l.close.id)!.requestedBy === meId } : null,
     anomalyBlocks: l.review.anomalyBlocks,
     anomalyChecks: l.review.anomalyChecks,
+    anomalyTop: l.review.anomalyTop,
     close: l.close ? { id: l.close.id, revision: l.close.revision, by: nameOf.get(l.close.closedBy) ?? '', at: toKstDate(new Date(l.close.closedAt)) } : null,
     reopened: l.history.filter((h) => h.state === 'REOPENED').map((h) => ({ revision: h.revision, at: h.reopenedAt ? toKstDate(new Date(h.reopenedAt)) : '', reason: h.reopenReason ?? '' })),
   }));
