@@ -49,8 +49,9 @@ export default async function NoticesPage() {
           {t('new')}
         </Link>
       </header>
-      <dl className="grid grid-cols-4 gap-2 lg:gap-4">
-        {(['live', 'scheduled', 'draft'] as const).map((k) => (
+      {/* 임시 저장 칸은 뺐다 — 저장하면 바로 게시라 임시 저장이 없다 (2026-11-03 의뢰인). 예전에 남은 임시 글은 아래 목록에 그대로 보인다 */}
+      <dl className="grid grid-cols-3 gap-2 lg:gap-4">
+        {(['live', 'scheduled'] as const).map((k) => (
           <div key={k} className="flex flex-col gap-1 rounded-card bg-bg p-3 lg:gap-2 lg:p-5">
             <dt className="text-xs text-muted lg:text-sm">{t(`state.${k}`)}</dt>
             <dd className="num text-xl leading-none font-extrabold lg:text-3xl">{current.filter((r) => r.state === k).length}</dd>
