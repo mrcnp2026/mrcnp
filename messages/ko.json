@@ -3619,7 +3619,7 @@
         "early_out": "조퇴",
         "after_end": "연장 근무",
         "break_check": "저녁 휴게 확인",
-        "schedule_check": "근무 일정 확인",
+        "schedule_check": "조기출근(참고)",
         "early_bundle": "매일 일찍 출근",
         "missing_in": "출근 기록 없음",
         "missing_out": "퇴근 기록 없음",
@@ -3912,12 +3912,11 @@
       "cntClear": "끝",
       "legend": {
         "decide": "처리할 날",
-        "month": "일찍 출근 반복(참고) · 한 달 묶음",
+        "month": "조기출근(참고)",
         "block": "기록 오류",
         "confirm": "승인된 날",
         "handled": "처리 완료",
-        "fine": "이상 없음",
-        "off": "쉬는 날 · 기록 없음"
+        "fine": "이상 없음"
       },
       "confirmLeft": "승인된 날 {n}일 보기",
       "usual": "평소 {span}",
@@ -3975,7 +3974,7 @@
         "early_out": "조퇴",
         "after_end": "연장 근무",
         "break_check": "저녁 휴게 확인",
-        "schedule_check": "근무 일정 확인",
+        "schedule_check": "조기출근(참고)",
         "early_bundle": "매일 일찍 출근"
       },
       "act": {

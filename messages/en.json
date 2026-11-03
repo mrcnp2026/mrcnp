@@ -3619,7 +3619,7 @@
         "early_out": "Early leave",
         "after_end": "Work after schedule",
         "break_check": "Evening break check",
-        "schedule_check": "Check schedule",
+        "schedule_check": "Early arrival (reference)",
         "early_bundle": "Early arrivals",
         "missing_in": "No clock-in",
         "missing_out": "No clock-out",
@@ -3912,12 +3912,11 @@
       "cntClear": "done",
       "legend": {
         "decide": "To handle",
-        "month": "Early again and again (reference) · monthly",
+        "month": "Early arrival (reference)",
         "block": "Record error",
         "confirm": "Approved",
         "handled": "Done",
-        "fine": "No issue",
-        "off": "Day off · no record"
+        "fine": "No issue"
       },
       "confirmLeft": "Show {n} approved days",
       "usual": "Usually {span}",
@@ -3975,7 +3974,7 @@
         "early_out": "Left early",
         "after_end": "Overtime",
         "break_check": "Evening break check",
-        "schedule_check": "Check schedule",
+        "schedule_check": "Early arrival (reference)",
         "early_bundle": "Early every day"
       },
       "act": {

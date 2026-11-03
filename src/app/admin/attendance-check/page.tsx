@@ -117,7 +117,6 @@ export default async function AttendanceCheckPage({ searchParams }: { searchPara
   const dates: string[] = [];
   for (let d = from; d <= to; d = addDays(d, 1)) dates.push(d);
   // 칸 색 (2026-11-03 의뢰인: 색을 다 빼라는 게 아니라 뜻을 알게 해 달라 · 한 달 1건이 칸에 안 보인다) — 뜻은 목록 위 범례(Board)
-  const worked = new Map(rows.map((r) => [r.employeeId, new Set(daysFor(data, r.employeeId, from, to).filter((d) => d.pairs.length).map((d) => d.workDate))]));
   const cellTone = (r: (typeof rows)[number], date: string) => {
     const d = r.days.find((x) => x.workDate === date);
     if (date > upTo) return 'border border-dashed border-border';
@@ -127,8 +126,7 @@ export default async function AttendanceCheckPage({ searchParams }: { searchPara
     if (monthOpen && d?.parts.some((p) => p.bundled)) return 'bg-warn/45'; // 한 달 1건으로 묶인 날
     if (d?.state && r.st.handled.has(date)) return 'bg-ok';
     if (d?.state === 'confirm') return 'bg-primary/30'; // 승인된 날(연장 · 휴일근로 승인이 다 덮음)
-    if (worked.get(r.employeeId)?.has(date)) return 'bg-border'; // 이상 없음
-    return 'bg-surface'; // 쉬는 날 · 기록 없음
+    return 'bg-border'; // 이상 없음 — 쉬는 날 · 기록 없는 날도 같은 칸 (2026-11-04 의뢰인: 따로 나눌 필요 없다)
   };
 
   const ctxOf = (employeeId: string, d: DayCheck): DayCtx => {

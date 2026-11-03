@@ -34,9 +34,9 @@ export function Board({ rows, initial, top, head, axis, empty }: { rows: BoardRo
         {head}
         {/* 색 뜻 — 목록 바로 위에 (2026-11-03 의뢰인: 색이 무슨 뜻인지 모르겠다) */}
         <p className="flex flex-wrap items-center gap-x-3 gap-y-1 px-2 pb-2 text-xs text-muted">
-          {(['decide', 'month', 'block', 'confirm', 'handled', 'fine', 'off'] as const).map((k) => (
+          {(['decide', 'month', 'block', 'confirm', 'handled', 'fine'] as const).map((k) => ( // 쉬는 날 · 기록 없음은 이상 없음과 같은 칸 (2026-11-04 의뢰인)
             <span key={k} className="inline-flex items-center gap-1">
-              <span aria-hidden className={`size-3 rounded-xs ${{ decide: 'bg-warn', month: 'bg-warn/45', block: 'bg-danger', confirm: 'bg-primary/30', handled: 'bg-ok', fine: 'bg-border', off: 'bg-surface ring-1 ring-border' }[k]}`} />
+              <span aria-hidden className={`size-3 rounded-xs ${{ decide: 'bg-warn', month: 'bg-warn/45', block: 'bg-danger', confirm: 'bg-primary/30', handled: 'bg-ok', fine: 'bg-border' }[k]}`} />
               {t(`legend.${k}`)}
             </span>
           ))}
