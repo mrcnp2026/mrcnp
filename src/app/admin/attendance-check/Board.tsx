@@ -27,8 +27,10 @@ export function Board({ rows, initial, top, head, axis, empty }: { rows: BoardRo
     <>
     {/* 폰에서 직원을 고르면 위쪽(달 · 건수 · 칩)은 숨기고 항목부터 (2026-11-03 폰 확인: 위쪽이 화면 절반을 차지했다) */}
     <div className={`flex flex-col gap-3 lg:gap-4 ${sel ? 'max-lg:hidden' : ''}`}>{top}</div>
-    <div className="grid gap-6 lg:grid-cols-2 lg:items-start">
-      <section aria-label={t('listLabel')} className={`flex flex-col lg:sticky lg:top-20 lg:max-h-[calc(100vh-6rem)] lg:overflow-y-auto ${sel ? 'max-lg:hidden' : ''}`}>
+    {/* PC: 왼쪽 목록 | 세로선 | 오른쪽 항목 — 두 칸은 같은 높이(세로선이 끝까지), 왼쪽은 화면에 고정 (2026-11-04 의뢰인: 좌우 높이 · 구분) */}
+    <div className="grid gap-6 lg:grid-cols-2 lg:gap-0 lg:border-t lg:border-border">
+      <div className={`lg:border-r lg:border-border lg:pt-4 lg:pr-6 ${sel ? 'max-lg:hidden' : ''}`}>
+      <section aria-label={t('listLabel')} className="flex flex-col lg:sticky lg:top-20 lg:max-h-[calc(100vh-6rem)] lg:overflow-y-auto">
         {head}
         {/* 색 뜻 — 목록 바로 위에 (2026-11-03 의뢰인: 색이 무슨 뜻인지 모르겠다) */}
         <p className="flex flex-wrap items-center gap-x-3 gap-y-1 px-2 pb-2 text-xs text-muted">
@@ -53,7 +55,8 @@ export function Board({ rows, initial, top, head, axis, empty }: { rows: BoardRo
           </ul>
         )}
       </section>
-      <div className={sel ? '' : 'max-lg:hidden'}>
+      </div>
+      <div className={`lg:min-h-[calc(100vh-14rem)] lg:pt-4 lg:pl-6 ${sel ? '' : 'max-lg:hidden'}`}>
         {shown ? (
           <>
             <button type="button" onClick={() => setSel(null)} className="inline-flex min-h-11 items-center gap-1 text-sm font-medium text-muted hover:text-text lg:hidden">
