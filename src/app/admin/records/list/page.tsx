@@ -9,7 +9,6 @@ import { SheetOpener } from '@/components/SheetOpener';
 import { CircleCheck, Download } from 'lucide-react';
 import { getFormatter, getTranslations } from 'next-intl/server';
 import Link from 'next/link';
-import { DeemedNote } from '@/components/DeemedNote';
 import { AddSheet } from '@/components/AddSheet';
 import { ConfirmAll } from '@/components/ConfirmRecords';
 import { Fab } from '@/components/Fab';
@@ -54,14 +53,8 @@ export default async function RecordListPage({ searchParams }: { searchParams: P
   const q = (sp.q ?? '').trim().slice(0, 40);
   // 간주 근무자(근무일정 틀이 간주 근무 — 임원 등)는 기본으로 뺀다. 이름으로 찾거나 dm=1이면 보인다 (2026-10-17 의뢰인)
   const deemedPeople = data.people.filter((p) => p.active && isDeemedPerson(data, p.id, from, to < today ? to : today)); // 틀 또는 날짜별 일정으로 간주 근무인 사람
-  const showDeemed = sp.dm === '1' || !!q;
+  const showDeemed = !!q; // 간주 근무자(임원 등)는 늘 일정대로라 뺀다 — 안내 문구 · 「함께 보기」도 없앴다(2026-11-03 의뢰인). 이름으로 찾으면 보인다
   const hideDeemed = new Set(showDeemed ? [] : deemedPeople.map((p) => p.id));
-  const dmHref = (() => {
-    const qs = new URLSearchParams(Object.entries(sp).filter(([k, v]) => k !== 'dm' && typeof v === 'string' && v) as [string, string][]);
-    if (sp.dm !== '1') qs.set('dm', '1');
-    return `?${qs}`;
-  })();
-  const deemedNote = <DeemedNote names={deemedPeople.map((p) => p.name)} shown={showDeemed} href={dmHref} labels={{ hidden: tc('deemedHidden', { n: deemedPeople.length, names: deemedPeople.map((p) => p.name).join(' · ') }), show: tc('deemedShow'), hide: tc('deemedHide') }} />;
   const clock = (d: Date) => f.dateTime(d, { hour: '2-digit', minute: '2-digit', hourCycle: 'h23' });
 
   const lines: Line[] = [];
@@ -337,7 +330,6 @@ export default async function RecordListPage({ searchParams }: { searchParams: P
           <Fab label={t('add')} items={[{ id: 'record', label: t('add') }]} />
         </>
       )}
-      {deemedNote}
     </PageShell>
   );
 }
