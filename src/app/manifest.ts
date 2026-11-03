@@ -12,9 +12,10 @@ export default function manifest(): MetadataRoute.Manifest {
     background_color: COLORS.bg,
     theme_color: COLORS.bg,
     icons: [
-      { src: '/brand/icon-192.png', sizes: '192x192', type: 'image/png' },
-      { src: '/brand/icon-512.png', sizes: '512x512', type: 'image/png' },
-      { src: '/brand/icon-maskable-512.png', sizes: '512x512', type: 'image/png', purpose: 'maskable' },
+      // 통합설정 › 회사 기본설정에서 올린 앱 아이콘(없으면 원래 파일) — 2026-11-03
+      { src: '/api/brand/icon?s=s192', sizes: '192x192', type: 'image/png' },
+      { src: '/api/brand/icon?s=s512', sizes: '512x512', type: 'image/png' },
+      { src: '/api/brand/icon?s=mask512', sizes: '512x512', type: 'image/png', purpose: 'maskable' },
     ],
   };
 }

@@ -53,6 +53,25 @@
       "hintDays": "Tap a weekday again to remove it. Tap a date to pick a range.",
       "hintWeekday": "Tap a weekday above to pick all of them this month.",
       "pickDayHint": "Every {d} this month"
+    },
+    "cropper": {
+      "loading": "Reading the image…",
+      "frame": "Crop frame",
+      "dragHint": "Drag the image inside the frame. The checkerboard is transparent.",
+      "aspect": "Frame",
+      "aspect_auto": "As is",
+      "aspect_r4": "4:1",
+      "aspect_r3": "3:1",
+      "aspect_r2": "2:1",
+      "aspect_square": "Square",
+      "zoom": "Size",
+      "trim": "Trim empty margins automatically",
+      "bg": "Background",
+      "bgNone": "Transparent",
+      "bgWhite": "White",
+      "reset": "Reset",
+      "cancel": "Cancel",
+      "save": "Save"
     }
   },
   "login": {
@@ -2746,7 +2765,25 @@
           "timeFormat": "24-hour",
           "holidayCountry": "South Korea",
           "night": "22:00 – 06:00 (Labor Standards Act)"
-        }
+        },
+        "icon": "App icon",
+        "iconPick": "Change icon",
+        "iconReset": "Use the original icon",
+        "logoEdit": "Adjust logo",
+        "iconEdit": "Adjust app icon",
+        "logoGuide": "Recommended: wide PNG with transparent background, 800px+ wide, 2:1–5:1. You will adjust it and see how it looks before saving. Shows everywhere within 5 minutes.",
+        "iconGuide": "Recommended: square PNG, 512×512px+, artwork within the center 80%. Used for the browser tab and “Add to Home Screen”. Phones that already added the app must add it again.",
+        "previewTitle": "How it will look",
+        "pvPc": "PC top bar (28px high, left)",
+        "pvPhone": "Phone top bar",
+        "pvLogin": "Sign-in screen (center)",
+        "pvHome": "Phone home screen",
+        "pvTab": "Browser tab",
+        "pvTabTitle": "Attendance",
+        "warnSquare": "A near-square logo looks small in the top bar. A wide logo or the 4:1 / 3:1 frame works better.",
+        "warnLong": "Too wide — it will shrink in the top bar. Use the 4:1 frame or keep just the wordmark.",
+        "warnSmall": "The image is small (under 400px wide) and may look blurry.",
+        "warnBg": "This image has a background color. A transparent PNG fits the screens better."
       },
       "switch": {
         "on": "On",

@@ -7,6 +7,7 @@ import { createAdminClient } from '@/lib/supabase/admin';
 
 export type CompanyProfile = {
   name: string; ceo: string; bizNo: string; address: string; phone: string; policy: string; privacyOfficer?: string; logoPath: string | null; logoMime: string | null; logoAt: string | null;
+  iconPath?: string | null; iconAt?: string | null; // 앱 아이콘(2026-11-03): 사진 저장소의 brand/icon-…/ 폴더 — 그 안에 s64 · s180 · s192 · s512 · mask512.png
   switches?: Record<string, boolean>; // 통합설정 스위치 (2026-10-19, lib/switches.ts) — 회사 정보와 같은 이력 줄에 함께 남긴다(DB 변경 없음)
   pushAlways?: string | null; // 관리자 폰 알림을 「항상」 받는 최고관리자 id (2026-10-29 9-2). 없으면(undefined) 예전처럼 OFFICE.pushAlwaysEmployeeNo, null이면 아무도 없음
   pushAdmins?: Record<string, boolean>;

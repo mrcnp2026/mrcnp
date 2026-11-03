@@ -18,7 +18,8 @@ const kr = Noto_Sans_KR({ weight: ['400', '500', '700', '800'], variable: '--fon
 
 export async function generateMetadata(): Promise<Metadata> {
   const t = await getTranslations('common');
-  return { title: `${await companyName()} ${t('appName')}` };
+  // 탭 · 홈 화면 아이콘 — 통합설정에서 올린 앱 아이콘(없으면 원래 파일, /api/brand/icon). 2026-11-03: app/icon.png 고정 파일 대신
+  return { title: `${await companyName()} ${t('appName')}`, icons: { icon: [{ url: '/api/brand/icon?s=s64', sizes: '64x64', type: 'image/png' }], apple: [{ url: '/api/brand/icon?s=s180', sizes: '180x180' }] } };
 }
 
 export const viewport: Viewport = { width: 'device-width', initialScale: 1, viewportFit: 'cover' };

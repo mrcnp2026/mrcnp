@@ -50,6 +50,8 @@ export const COLORS = {
 // 8px 격자: 4·8·12·16·24·32·48 (Tailwind 1·2·3·4·6·8·12 단계만 쓴다)
 // 메일(HTML)에 쓰는 색 — 메일 앱은 CSS 변수를 못 읽어 값을 그대로 적어야 한다. 앱 화면 색과 따로 두되 이 파일에만 둔다.
 export const MAIL_COLORS = { page: '#f4f6fa', card: '#ffffff', text: '#1f2937', body: '#374151', muted: '#6b7280', faint: '#9ca3af', action: '#2563eb', onAction: '#ffffff' } as const;
+// 앱 아이콘 · 로고 맞추기의 흰 바탕 — 폰 홈 화면 아이콘은 투명이면 기종마다 검게 보여서 순백으로 채운다 (2026-11-03)
+export const ICON_BG = '#FFFFFF';
 export const RADII = { card: '14px', button: '11px', punch: '11px', chip: '9999px' } as const; // 2026-10-27 키트: 둥근 카드 (이전 6/4px)
 // PC(1024px~) 디자인 기준 — 2026-10-14 의뢰인이 견본 「나 · 파랑」을 골랐다 (결정 사항 개발-22, `09 디자인 기준 견본 (2026-10-14).html`).
 //   본문 14px · 카드 모서리 12px · 버튼 8px · 옅은 선 · 강조색 한 가지(파랑) · 상태는 옅은 바탕 + 진한 글자 딱지.

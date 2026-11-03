@@ -26,7 +26,7 @@ export const POST = api('admin.company.logo', async (req) => {
   const mime = sniff(bytes);
   if (!mime) throw new ApiError(415, 'logo_type');
   // 지금 로고처럼 다듬는다 — 여백 자르기 · 높이 240px · PNG (lib/logo-image.ts). 그림으로 읽히지 않으면 거절
-  const tidy = await tidyLogo(bytes).catch(() => null);
+  const tidy = await tidyLogo(bytes, { trim: form?.get('edited') !== '1' }).catch(() => null); // 편집 창에서 맞춘 그림은 여백을 다시 자르지 않는다
   if (!tidy) throw new ApiError(415, 'logo_type');
   const path = `brand/logo-${randomUUID()}.png`;
   const up = await createAdminClient().storage.from('content').upload(path, tidy.bytes, { contentType: 'image/png', upsert: false });
