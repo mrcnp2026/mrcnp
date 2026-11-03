@@ -2,7 +2,6 @@
 // 근태 점검 — 그 자리 처리 (결정 급여-71). 고를 것을 누르면 무엇이 바뀌는지 한 줄로 보여 주고, 실행하면 다시 계산한다.
 // 확정된 날은 기록 · 휴가를 바꿀 수 없어서(DB가 막는다) 확정을 잠깐 풀고 처리한 뒤 다시 확정한다 — 담당자가 확정 화면을 따로 찾지 않게.
 import { useTranslations } from 'next-intl';
-import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useState } from 'react';
 import { callApi } from '@/components/client-api';
@@ -126,15 +125,15 @@ export function DayActions({ ctx, reviewId }: { ctx: DayCtx; reviewId: string | 
     <div className="flex flex-col gap-2 pl-4">
       {reviewId && <p className="text-xs text-warn">{t('changedNote')}</p>}
       {blocked ? (
-        <Link href={has('pending_request') ? '/admin/inbox' : dayHref} className="inline-flex min-h-11 items-center self-start text-sm font-bold text-primary lg:min-h-9">
+        <a href={has('pending_request') ? '/admin/inbox' : dayHref} className="inline-flex min-h-11 items-center self-start text-sm font-bold text-primary lg:min-h-9">
           {t(has('pending_request') ? 'goInbox' : 'goDay')} ›
-        </Link>
+        </a>
       ) : (
         <>
           <div className="flex flex-wrap items-center gap-x-3 gap-y-2">
             <Pills opts={opts} pick={pick} setPick={(o) => { setPick(o); setErr(null); }} label={label} />
             {ctx.overtime?.status === 'pending' && ctx.extraOpen && (
-              <Link href={`/admin/inbox?k=overtime&id=${ctx.overtime.id}`} className="inline-flex min-h-11 items-center text-sm font-bold text-primary lg:min-h-9">{t('goOvertime')} ›</Link>
+              <a href={`/admin/inbox?k=overtime&id=${ctx.overtime.id}`} className="inline-flex min-h-11 items-center text-sm font-bold text-primary lg:min-h-9">{t('goOvertime')} ›</a>
             )}
           </div>
           {pick && (
@@ -170,7 +169,7 @@ export function MonthActions({ employeeId, month, kind, live }: { employeeId: st
         if (!r.ok) return setErr(r);
         router.refresh();
       }}>{t(kind === 'schedule_check' ? 'scheduleOk' : 'earlyNotWork')}</Button>
-      <Link href={`/admin/shifts?m=${month}&e=${employeeId}${live ? '' : ''}`} className="inline-flex min-h-11 items-center text-sm font-bold text-primary lg:min-h-9">{t('goShifts')} ›</Link>
+      <a href={`/admin/shifts?m=${month}&e=${employeeId}${live ? '' : ''}`} className="inline-flex min-h-11 items-center text-sm font-bold text-primary lg:min-h-9">{t('goShifts')} ›</a>
       {err && <ErrorNote code={err.code} requestId={err.requestId} namespace="admin.attendanceCheck.err" />}
     </div>
   );

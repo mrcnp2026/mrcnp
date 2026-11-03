@@ -1,10 +1,10 @@
 // 근태 점검 — 확인 필요 항목을 담당자가 근거를 보고 그 자리에서 처리한다 (결정 급여-69 · 급여-70 · 급여-71, 루트 문서 「근태 점검 — 확인 필요 항목 처리 흐름과 담당자 배정」).
 // 항목은 저장하지 않고 근태 기록으로 그때그때 계산한다(lib/attendance-check). 담당자의 판단만 attendance_check_reviews에 남는다.
+// 링크는 모두 보통 <a> — 이 화면에서 화면 안 이동(next/link)이 빠른 모드에서 넘어가지 않는 일이 반복됐다(원인 미확인, 2026-11-03). 이동은 약 1초.
 // 한눈에 (2026-11-03 의뢰인: 「스크롤을 계속 내려야 해, 한눈에 딱 들어오게」): 왼쪽 = 직원 한 줄 + 그달 날짜 칸(색 = 상태), 오른쪽 = 고른 직원의 남은 항목만.
 //   폰은 직원 목록 → 누르면 그 직원 항목(뒤로 가기). 사유 칩으로 유형을 거른다. 대표자는 보기만 한다.
 import { ChevronDown, ChevronLeft, ChevronRight, X } from 'lucide-react';
 import { getFormatter, getTranslations } from 'next-intl/server';
-import Link from 'next/link';
 import { HelpTip } from '@/components/Help';
 import { PageShell } from '@/components/ui';
 import { OFFICE } from '@/config/office';
@@ -170,14 +170,14 @@ export default async function AttendanceCheckPage({ searchParams }: { searchPara
       </div>
       <div className="flex flex-wrap items-center gap-x-4 gap-y-2">
         <span className="inline-flex items-center">
-          <Link href={q({ m: shift(month, -1), e: null })} aria-label={t('prev')} className="inline-flex size-11 items-center justify-center rounded-l-button border border-border bg-bg text-muted lg:size-9">
+          <a href={q({ m: shift(month, -1), e: null })} aria-label={t('prev')} className="inline-flex size-11 items-center justify-center rounded-l-button border border-border bg-bg text-muted lg:size-9">
             <ChevronLeft aria-hidden size={18} />
-          </Link>
+          </a>
           <span className="num -ml-px inline-flex h-11 items-center border border-border bg-bg px-4 font-bold lg:h-9">{month}</span>
           {month < thisMonth ? (
-            <Link href={q({ m: shift(month, 1), e: null })} aria-label={t('next')} className="-ml-px inline-flex size-11 items-center justify-center rounded-r-button border border-border bg-bg text-muted lg:size-9">
+            <a href={q({ m: shift(month, 1), e: null })} aria-label={t('next')} className="-ml-px inline-flex size-11 items-center justify-center rounded-r-button border border-border bg-bg text-muted lg:size-9">
               <ChevronRight aria-hidden size={18} />
-            </Link>
+            </a>
           ) : (
             <span className="-ml-px inline-flex size-11 rounded-r-button border border-border bg-surface lg:size-9" />
           )}
@@ -194,9 +194,9 @@ export default async function AttendanceCheckPage({ searchParams }: { searchPara
             </>
           )}
         </p>
-        <Link href={`/admin/closing?m=${month}${sp.live === '1' ? '&live=1' : ''}`} className="ml-auto inline-flex min-h-11 items-center rounded-button border border-border bg-bg px-3.5 text-sm font-semibold text-text hover:border-primary/40 lg:min-h-9">
+        <a href={`/admin/closing?m=${month}${sp.live === '1' ? '&live=1' : ''}`} className="ml-auto inline-flex min-h-11 items-center rounded-button border border-border bg-bg px-3.5 text-sm font-semibold text-text hover:border-primary/40 lg:min-h-9">
           {t('toClosing')} ›
-        </Link>
+        </a>
       </div>
       {/* 사유 칩 — 무엇이 몇 건 남았는지 한 줄에. 누르면 그 사유만. 화면 안 이동(Link)이 빠른 모드에서 넘어가지 않아 주소 이동으로 둔다 (2026-11-03) */}
       {kindOrder.length > 0 && (
@@ -268,7 +268,7 @@ export default async function AttendanceCheckPage({ searchParams }: { searchPara
         <div className="flex flex-wrap items-baseline gap-x-3 gap-y-1 border-b border-border pb-2">
           <h2 className="text-lg font-bold">{p.name}</h2>
           <span className="text-sm text-muted">{[groupPath(groups, p.groupId), usual ? t('usual', { span: usual }) : null].filter(Boolean).join(' · ')}</span>
-          <Link href={`/admin/records/${sel.employeeId}?m=${month}${sp.live === '1' ? '&live=1' : ''}`} className="ml-auto text-sm font-bold text-primary">{t('monthRecord')} ›</Link>
+          <a href={`/admin/records/${sel.employeeId}?m=${month}${sp.live === '1' ? '&live=1' : ''}`} className="ml-auto text-sm font-bold text-primary">{t('monthRecord')} ›</a>
         </div>
         {sel.shownDays.length === 0 && sel.shownMonths.length === 0 && <p className="py-8 text-center text-sm text-muted">{t('emptyPerson')}</p>}
         <ul className="flex flex-col divide-y divide-border">
@@ -295,7 +295,7 @@ export default async function AttendanceCheckPage({ searchParams }: { searchPara
                   <p className="num flex flex-wrap gap-x-3 gap-y-1 pt-1 text-muted">
                     {m.dates.map((d) => {
                       const part = sel.days.find((x) => x.workDate === d)?.parts.find((x) => x.kind === 'before_start');
-                      return <Link key={d} href={`/admin/records/${sel.employeeId}/${d}${sp.live === '1' ? '?live=1' : ''}`} className="hover:text-primary">{dayLabel(d)} {part?.punched ?? ''}</Link>;
+                      return <a key={d} href={`/admin/records/${sel.employeeId}/${d}${sp.live === '1' ? '?live=1' : ''}`} className="hover:text-primary">{dayLabel(d)} {part?.punched ?? ''}</a>;
                     })}
                   </p>
                 </details>
@@ -331,7 +331,7 @@ export default async function AttendanceCheckPage({ searchParams }: { searchPara
               <li key={d.workDate} id={`d-${d.workDate}`} className="flex scroll-mt-24 flex-col gap-1 py-3">
                 <div className="flex flex-wrap items-baseline gap-x-2 gap-y-1">
                   <span aria-hidden className={`size-2 shrink-0 self-center rounded-full ${tone}`} />
-                  <Link href={`/admin/records/${sel.employeeId}/${d.workDate}${sp.live === '1' ? '?live=1' : ''}`} className="num font-bold hover:text-primary">{dayLabel(d.workDate)}</Link>
+                  <a href={`/admin/records/${sel.employeeId}/${d.workDate}${sp.live === '1' ? '?live=1' : ''}`} className="num font-bold hover:text-primary">{dayLabel(d.workDate)}</a>
                   {/* 걸린 이유 — 사유마다 덮는 승인 */}
                   {live(d).map((x, i) => {
                     const pt = partText(x);
@@ -357,7 +357,7 @@ export default async function AttendanceCheckPage({ searchParams }: { searchPara
           })}
         </ul>
         {canAct && confirmLeft > 0 && (view === 'confirm' || view === 'all') && <ConfirmAll employeeId={sel.employeeId} month={month} n={confirmLeft} />}
-        {view === 'open' && confirmLeft > 0 && <Link href={q({ s: 'confirm' })} className="pt-3 text-sm text-muted hover:text-primary">{t('confirmLeft', { n: confirmLeft })} ›</Link>}
+        {view === 'open' && confirmLeft > 0 && <a href={q({ s: 'confirm' })} className="pt-3 text-sm text-muted hover:text-primary">{t('confirmLeft', { n: confirmLeft })} ›</a>}
       </section>
     );
   };
