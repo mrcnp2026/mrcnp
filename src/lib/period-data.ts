@@ -268,6 +268,7 @@ export async function syncOvertimeRequests(data: PeriodData, upTo: string, only?
       if (d.pairs.some((x) => x.in && !x.out)) continue; // 근무 중
       if ((deemedPerson || d.deemed) && !existing.has(`${p.id}|${d.workDate}`)) continue; // 간주 — 새 요청 없음
       if (isClosed(p.id, d.workDate)) continue; // 마감된 날
+      if (d.workDate <= OFFICE.migrationCutoff) continue; // 시프티로 급여를 낸 날(이관 기준일까지)은 새 요청 · 다시 볼 것을 만들지 않는다 (2026-11-03 의뢰인: 「이미 지난 일, 앱에 다시 알람을 만들 필요 없다」)
       const draft = buildOvertimeRequest({ employeeId: p.id, workDate: d.workDate, work: d, thresholdMinutes: OFFICE.overtimeReviewThresholdMin });
       const cur = existing.get(`${p.id}|${d.workDate}`);
       if (!cur) {
