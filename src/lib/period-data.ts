@@ -71,6 +71,7 @@ export type PeriodData = {
   ruleFor: (employeeId: string, date: string) => WorkRule | null;
   shifts: DayShift[]; // 날짜별 일정 (특근·잔업 등, 2단계)
   planFor: (employeeId: string, date: string) => DayPlan; // 그 직원의 그날 일정: 날짜별 일정 → 평소 틀 → 회사 규칙
+  waivedFor: (employeeId: string, date: string) => ReadonlySet<string>; // 그날 「휴게 안 함」으로 표시한 휴게 시작 시각 'HH:MM' (근태 점검이 덮는 분을 센다)
   holidays: HolidayRow[];
   people: Person[];
   events: EventRow[];
@@ -173,6 +174,7 @@ export async function loadPeriod(from: string, to: string, practice = OFFICE.pra
     ruleFor: (employeeId: string, date: string) => planFor(employeeId, date).rule,
     shifts,
     planFor,
+    waivedFor: (employeeId: string, date: string) => waivedOf.get(`${employeeId}|${date}`) ?? new Set<string>(),
     holidays,
     people: (ppl ?? []).map((p) => ({
       id: p.id, name: p.name, employeeNo: p.employee_no, role: p.role, active: p.active, joinedOn: p.joined_on,
