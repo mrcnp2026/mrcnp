@@ -3879,7 +3879,7 @@
       "cardsType": "By type",
       "state": {
         "block": "Blocks closing",
-        "check": "To check",
+        "check": "Unchecked",
         "done": "Checked",
         "overdue": "Overdue",
         "mine": "To check"
