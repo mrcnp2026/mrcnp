@@ -65,6 +65,7 @@ export function dayAnomalies(args: {
   plan: { startTime: string; endTime: string; graceMin: number } | null; // 그날 일정 (반차가 반영된 시각). 없으면 쉬는 날
   deemed: boolean; // 간주 근무 — 찍은 기록으로 따지지 않는다
   excused: boolean; // 하루 전부 휴가 · 승인된 외근/출장/재택
+  approvedWork?: boolean; // 그날 연장 · 휴일근로가 승인됐다 — 일정이 없어도 「일정 밖 기록」이 아니다(쉬는 날 특근, 2026-11-03 의뢰인)
   missing: 'in' | 'out' | null; // 누락 목록과 같은 기준 (missing-list.ts)
   unverified: number; // 사무실 인터넷 · 위치 어느 쪽으로도 확인되지 않은 기록 수 (관리자 대리 입력 제외)
 }): AnomalyType[] {
@@ -79,7 +80,7 @@ export function dayAnomalies(args: {
   if (done.some((p, i) => p.out.getTime() < p.in.getTime() || (i > 0 && p.in.getTime() < done[i - 1].out.getTime()))) out.add('overlap');
   const ins = args.pairs.filter((p) => p.in).map((p) => (p.in as Date).getTime());
   if (ins.length > 0 && args.excused) out.add('leave_day_punch');
-  if (ins.length > 0 && !args.plan && !args.excused) out.add('no_plan_work');
+  if (ins.length > 0 && !args.plan && !args.excused && !args.approvedWork) out.add('no_plan_work');
   if (args.plan && !args.excused && ins.length > 0) {
     const start = kstDateTime(args.workDate, args.plan.startTime).getTime() + args.plan.graceMin * 60_000;
     if (Math.min(...ins) > start) out.add('late');

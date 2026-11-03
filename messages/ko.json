@@ -3569,7 +3569,7 @@
       "period_locked": "마감된 달입니다.",
       "colAnomaly": "이상 기록",
       "anomalyBlock": "차단 {n}일",
-      "anomalyCheck": "확인 {n}일",
+      "anomalyCheck": "참고 {n}일 · 마감에 영향 없음",
       "reopenRequested": "다른 관리자에게 다시 열기 확인을 요청했습니다. 그 관리자가 확인하면 열립니다.",
       "reopenWaiting": "다시 열기 확인 대기 · 요청 {name}",
       "reopenApprove": "확인하고 열기",

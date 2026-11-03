@@ -3569,7 +3569,7 @@
       "period_locked": "This month is closed.",
       "colAnomaly": "Exceptions",
       "anomalyBlock": "Blocking {n}",
-      "anomalyCheck": "Check {n}",
+      "anomalyCheck": "{n} days to note · does not block closing",
       "reopenRequested": "Asked another admin to confirm reopening. It opens once they confirm.",
       "reopenWaiting": "Waiting for confirmation · requested by {name}",
       "reopenApprove": "Confirm and reopen",

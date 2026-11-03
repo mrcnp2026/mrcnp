@@ -48,6 +48,7 @@ export function collectAnomalies(data: PeriodData, from: string, to: string, now
       const deemed = !!plan.deemed || !!d.deemed;
       const types = dayAnomalies({
         workDate: d.workDate, pairs: d.pairs, flags: d.flags, plan: span, deemed, excused,
+        approvedWork: data.overtime.some((o) => o.employeeId === p.id && o.workDate === d.workDate && o.status === 'approved'),
         missing: missingOfDay({ workDate: d.workDate, pairs: d.pairs, plan: span, deemed, excused, now, outGraceHours: OFFICE.missingOutGraceHours, inGraceMin: OFFICE.missingInGraceMin }),
         unverified: mine.filter((e) => e.workDate === d.workDate && !e.ipVerified && !e.verifiedBy && e.source !== 'admin' && e.source !== 'import').length, // 시프티에서 옮긴 기록은 앱의 위치 확인을 거치지 않았다 — 근무지 미확인으로 보지 않는다
       });
