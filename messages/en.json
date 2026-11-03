@@ -287,11 +287,11 @@
       "phIn": "e.g. bus delay / visited a client first",
       "phOut": "e.g. delivery deadline / equipment check",
       "label": "Reason",
-      "askWork": "Request outside work for today",
+      "askWork": "You clocked in outside the office, so this is sent as a field work request",
       "placePh": "Where are you working?",
-      "note": "Saved to today's work note. You can edit it later on the Attendance screen.",
+      "note": "Your note is saved to today and sent to your admin.",
       "save": "Save",
-      "later": "Later"
+      "saveWork": "Send field work request"
     }
   },
   "errors": {

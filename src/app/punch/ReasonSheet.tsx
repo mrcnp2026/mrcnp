@@ -1,9 +1,9 @@
 'use client';
 // 출근 · 퇴근을 찍은 뒤 사유를 묻는 창 (2026-10-18 의뢰인: 지각 · 사무실 밖 · 휴일 · 연장 · 야간일 때 자연스럽게 안내해 한 번에).
-// - 기록은 이미 남은 뒤에 뜬다(찍기를 늦추지 않는다). 쓰기를 권하지만 「나중에」로 건너뛸 수 있다(의뢰인 결정).
+// - 기록은 이미 남은 뒤에 뜬다(찍기를 늦추지 않는다). 사유를 적어야 닫힌다 — 「나중에」는 뺐다(2026-11-04 의뢰인: 「나중에가 있으니 제시간에 제대로 안 한다」).
 // - 직원은 연장 · 야간 · 휴일 중 무엇을 요청할지 고르지 않는다 — 앱이 시각으로 계산하고, 관리자가 하루 카드에서 한 번에 승인한다.
 // - 쓴 내용은 그날 근무노트에 덧붙여 저장되고 관리자의 요청 카드에 「직원이 남긴 사유」로 보인다.
-// - 사무실 밖에서 출근했고 승인된 외근이 없으면 「외근으로 신청」을 같이 낼 수 있다.
+// - 사무실 밖에서 출근했고 승인된 외근이 없으면 일하는 곳을 적어 외근 신청까지 바로 보낸다(고르는 칸 없음, 2026-11-04 의뢰인).
 import { useTranslations } from 'next-intl';
 import { useRouter } from 'next/navigation';
 import { useState } from 'react';
@@ -21,7 +21,6 @@ export function ReasonSheet({ ask, today, note, canAskWork, onClose }: { ask: Re
   const t = useTranslations('home.reason');
   const router = useRouter();
   const [text, setText] = useState('');
-  const [work, setWork] = useState(false);
   const [place, setPlace] = useState('');
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState<{ code: string; requestId?: string } | null>(null);
@@ -39,7 +38,7 @@ export function ReasonSheet({ ask, today, note, canAskWork, onClose }: { ask: Re
         return setErr(r);
       }
     }
-    if (offerWork && work) {
+    if (offerWork) {
       const r = await callApi('/api/work', { kind: 'outside', startDate: today, endDate: today, startTime: null, endTime: null, place: place.trim() || line.slice(0, 100), reason: line || null, geo: await currentPosition() });
       if (!r.ok && r.code !== 'duplicate_request') {
         setBusy(false);
@@ -73,31 +72,21 @@ export function ReasonSheet({ ask, today, note, canAskWork, onClose }: { ask: Re
         />
         {offerWork && (
           <div className="flex flex-col gap-2 rounded-button bg-surface p-3">
-            <label className="flex min-h-11 items-center gap-2 text-sm font-semibold">
-              <input type="checkbox" checked={work} onChange={(e) => setWork(e.target.checked)} className="size-5" />
-              {t('askWork')}
-            </label>
-            {work && (
-              <input
-                value={place}
-                onChange={(e) => setPlace(e.target.value.slice(0, 100))}
-                placeholder={t('placePh')}
-                aria-label={t('placePh')}
-                className="min-h-11 rounded-button border border-border bg-bg px-3 text-base"
-              />
-            )}
+            <p className="text-sm font-semibold">{t('askWork')}</p>
+            <input
+              value={place}
+              onChange={(e) => setPlace(e.target.value.slice(0, 100))}
+              placeholder={t('placePh')}
+              aria-label={t('placePh')}
+              className="min-h-11 rounded-button border border-border bg-bg px-3 text-base"
+            />
           </div>
         )}
         <p className="text-xs text-faint">{t('note')}</p>
         {err && <ErrorNote code={err.code} requestId={err.requestId} />}
-        <div className="flex gap-2">
-          <Button className="flex-1" disabled={busy || (!text.trim() && !(offerWork && work && place.trim()))} onClick={save}>
-            {t('save')}
-          </Button>
-          <Button variant="outline" className="flex-1" onClick={onClose}>
-            {t('later')}
-          </Button>
-        </div>
+        <Button className="w-full" disabled={busy || !text.trim() || (offerWork && !place.trim())} onClick={save}>
+          {t(offerWork ? 'saveWork' : 'save')}
+        </Button>
       </div>
     </div>
   );
