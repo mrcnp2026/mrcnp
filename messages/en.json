@@ -4032,9 +4032,7 @@
       "showAll": "Show all employees",
       "guide": {
         "title": "Pick an employee on the left",
-        "pick": "That employee's days to handle appear here, with punches and approvals, and you can handle them in place.",
-        "colors": "Cells are the days of the month. Dark orange = to handle, light orange = part of a monthly item, red = record error, light green = overtime approved, green = done, gray = no issue.",
-        "done": "When nothing is left to handle, you can close attendance."
+        "pick": "Their days to handle appear here."
       },
       "rowSchedule": "Monthly · early by {span} on {n} days — check schedule",
       "rowEarly": "Monthly · over 1h early on {n} days",

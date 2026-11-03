@@ -24,7 +24,7 @@ export function Board({ rows, initial, head, axis, empty }: { rows: BoardRow[]; 
   const shown = sel ? rows.find((r) => r.id === sel) ?? null : null;
 
   return (
-    <div className="grid gap-6 lg:grid-cols-[2fr_3fr] lg:items-start">
+    <div className="grid gap-6 lg:grid-cols-[9fr_11fr] lg:items-start">
       <section aria-label={t('listLabel')} className={`flex flex-col lg:sticky lg:top-20 lg:max-h-[calc(100vh-6rem)] lg:overflow-y-auto ${sel ? 'max-lg:hidden' : ''}`}>
         {head}
         {/* 색 뜻 — 목록 바로 위에 (2026-11-03 의뢰인: 색이 무슨 뜻인지 모르겠다) */}
@@ -61,11 +61,9 @@ export function Board({ rows, initial, head, axis, empty }: { rows: BoardRow[]; 
           </>
         ) : (
           // 아무도 안 골랐을 때 — 무엇을 하는 곳인지 한 번에
-          <div className="flex flex-col gap-3 rounded-card bg-surface px-6 py-10 text-sm text-muted">
+          <div className="flex flex-col gap-1 rounded-card bg-surface px-6 py-8 text-sm text-muted">
             <p className="text-base font-bold text-text">{t('guide.title')}</p>
             <p>{t('guide.pick')}</p>
-            <p>{t('guide.colors')}</p>
-            <p>{t('guide.done')}</p>
           </div>
         )}
       </div>
