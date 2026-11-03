@@ -22,7 +22,7 @@ import { addDays, isoWeekday } from '@/lib/calendar';
 import { isFullDayLeave } from '@/lib/leave';
 import { groupPath, groupScope, orgOptions } from '@/lib/org';
 import { loadOrgGroups } from '@/lib/org-data';
-import { daysFor, leaveDaysFor, loadPeriod } from '@/lib/period-data';
+import { daysFor, isDeemedPerson, leaveDaysFor, loadPeriod } from '@/lib/period-data';
 import { kstDateTime, toKstDate } from '@/lib/time';
 
 const YM = /^\d{4}-(0[1-9]|1[0-2])$/;
@@ -45,7 +45,7 @@ export default async function RecordCalendarPage({ searchParams }: { searchParam
   const scope = g ? groupScope(groups, g) : null;
   const q = (sp.q ?? '').trim().slice(0, 40);
   // 간주 근무자(근무일정 틀이 간주 근무 — 임원 등)는 기본으로 뺀다. 이름으로 찾거나 dm=1이면 보인다 (2026-10-17 의뢰인)
-  const deemedPeople = data.people.filter((p) => p.active && data.templateOf(p.id)?.kind === 'deemed');
+  const deemedPeople = data.people.filter((p) => p.active && isDeemedPerson(data, p.id, from, to < today ? to : today)); // 틀 또는 날짜별 일정으로 간주 근무인 사람
   const showDeemed = sp.dm === '1' || !!q;
   const hideDeemed = new Set(showDeemed ? [] : deemedPeople.map((p) => p.id));
   const dmHref = (() => {

@@ -419,3 +419,19 @@ async function pendingCountsIn(practice: boolean, scope: Set<string>) {
   const r = { overtime: a + b - x.overtime_requests, corrections: c - x.punch_corrections, leave: l - x.leave_requests, work: w - x.work_requests, punch: pr - x.punch_requests, shift: sh - x.shift_requests, leaveDelete: lc - x.leave_change_requests };
   return { ...r, total: r.overtime + r.corrections + r.leave + r.work + r.punch + r.shift + r.leaveDelete };
 }
+
+/**
+ * 간주 근무자인가 — 평소 근무 틀이 간주이거나, 그 기간 일정이 있는 날의 절반 이상이 간주 근무로 잡힌 사람 (2026-11-03 의뢰인:
+ * 「이상준도 간주근무인데 왜 빠져 있냐」 — 틀이 아니라 날짜별 일정으로 간주 근무를 넣은 사람이 안내에서 빠졌다)
+ */
+export function isDeemedPerson(data: PeriodData, employeeId: string, from: string, to: string): boolean {
+  if (data.templateOf(employeeId)?.kind === 'deemed') return true;
+  let planned = 0, deemed = 0;
+  for (let d = from; d <= to; d = addDays(d, 1)) {
+    const plan = data.planFor(employeeId, d);
+    if (!plan.deemed && plan.items.length === 0) continue;
+    planned++;
+    if (plan.deemed) deemed++;
+  }
+  return planned > 0 && deemed * 2 >= planned;
+}

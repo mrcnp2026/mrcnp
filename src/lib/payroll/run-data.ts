@@ -107,13 +107,7 @@ export async function createRun(args: { ym: string; kind?: 'REGULAR' | 'BONUS'; 
   const [y, m] = args.ym.split('-').map(Number);
   const to = new Date(Date.UTC(y, m, 1)).toISOString().slice(0, 10);
   const l = await ledger(prevDay(to));
-  const [{ data: people }, { data: cons }] = await Promise.all([
-    c.from('profiles').select('id, employee_no, active'),
-    c.from('payroll_contract_versions').select('employee_id, valid_from, valid_to').eq('status', 'active').lt('valid_from', to),
-  ]);
-  const contracted = new Set((cons ?? []).filter((x) => x.valid_to === null || (x.valid_to as string) > from).map((x) => x.employee_id as string));
-  // 시스템관리자는 직원이 아니라 급여 대상이 아니다 (2026-10-26 의뢰인)
-  const members = (people ?? []).filter((p) => p.employee_no !== OFFICE.ownerEmployeeNo && (contracted.has(p.id as string) || (p.active && !(p.employee_no as string | null)?.startsWith('e2e-')))).map((p) => p.id as string);
+  const members = await monthMembers(from, to);
   if (members.length === 0) throw new ApiError(409, 'payroll_no_members');
   const kind = args.kind ?? 'REGULAR';
   // 상여는 한 달에 여러 번 줄 수 있다 — 차수를 올린다. 정규 대장은 한 달에 하나(정정은 판 번호로)
@@ -189,11 +183,12 @@ export async function loadCalcBasis(last: string) {
   return { taxDefaults, defaultRatio, ledgerRow, policies, refs, premiumTimeBasis: l.premiumTimeBasis ?? 'ACTUAL', items, policy, reference, missing, bundle, withholding, insuranceBasis, insuranceBasisOf, reliefOn, minimumHourly };
 }
 
-async function buildInputs(run: RunRow): Promise<Built> {
+async function buildInputs(run: RunRow, memberIds?: string[]): Promise<Built> {
   const c = db();
   const from = run.periodFrom, last = prevDay(run.periodTo), ym = from.slice(0, 7);
   const [{ data: mem }, { data: cons }, { data: taxes }, { data: assigns }, { data: closes }, { data: ovs }, { data: people }, { data: emps }, basis, period, confirms] = await Promise.all([
-    readAll((a,b) => c.from('payroll_run_members').select('employee_id, inclusion_state').eq('run_id', run.id).order('id').range(a,b)),
+    // 급여 점검의 미리 계산(previewMonth)은 대장이 없다 — 대상자를 직접 넘긴다
+    memberIds ? Promise.resolve({ data: memberIds.map((id) => ({ employee_id: id, inclusion_state: 'INCLUDED' })) }) : readAll((a,b) => c.from('payroll_run_members').select('employee_id, inclusion_state').eq('run_id', run.id).order('id').range(a,b)),
     readAll((a,b) => c.from('payroll_contract_versions').select('*').eq('status', 'active').order('id').range(a,b)),
     readAll((a,b) => c.from('payroll_employee_tax_versions').select('*').eq('status', 'active').order('id').range(a,b)),
     readAll((a,b) => c.from('payroll_employee_items').select('*').eq('active', true).order('id').range(a,b)),
@@ -534,6 +529,31 @@ export async function calculateRun(args: { id: string; expectedVersion: number; 
     await c.from('payroll_calculation_generations').update({ state: 'FAILED', error_code: e instanceof ApiError ? e.code : 'unhandled', ended_at: new Date().toISOString() }).eq('id', genId).eq('state', 'RUNNING');
     throw e;
   }
+}
+
+/** 그 달의 급여 대상자 — 그 달에 걸친 계약이 있거나 재직 중인 직원. 시스템관리자는 직원이 아니다 (2026-10-26 의뢰인) */
+async function monthMembers(from: string, to: string): Promise<string[]> {
+  const c = db();
+  const [{ data: people }, { data: cons }] = await Promise.all([
+    c.from('profiles').select('id, employee_no, active'),
+    c.from('payroll_contract_versions').select('employee_id, valid_from, valid_to').eq('status', 'active').lt('valid_from', to),
+  ]);
+  const contracted = new Set((cons ?? []).filter((x) => x.valid_to === null || (x.valid_to as string) > from).map((x) => x.employee_id as string));
+  return (people ?? []).filter((p) => p.employee_no !== OFFICE.ownerEmployeeNo && (contracted.has(p.id as string) || (p.active && !(p.employee_no as string | null)?.startsWith('e2e-')))).map((p) => p.id as string);
+}
+
+/**
+ * 급여 점검의 미리 계산 (결정 급여-68) — 대장을 만들지 않고, 그 달 대상자 전원을 급여대장과 같은 입력 · 같은 엔진으로 계산한다.
+ * 아무것도 저장하지 않는다. 근태 마감을 한 사람만 금액이 나오고, 마감 전인 사람은 「근태 마감 안 됨」으로 막힌 결과가 나온다.
+ */
+export async function previewMonth(ym: string, practice: boolean): Promise<{ employeeId: string; result: EngineResult; snapshot: Row; contractId: string | null }[]> {
+  const from = `${ym}-01`;
+  const [y, m] = ym.split('-').map(Number);
+  const to = new Date(Date.UTC(y, m, 1)).toISOString().slice(0, 10);
+  const members = await monthMembers(from, to);
+  const run: RunRow = { id: '00000000-0000-0000-0000-000000000000', kind: 'REGULAR', title: null, periodFrom: from, periodTo: to, payDate: to, sequence: 1, isTest: practice, revision: 1, status: 'DRAFT' as RunStatus, version: 0, generationId: null, totals: {}, createdBy: '', createdAt: '', reviewedBy: null, reviewedAt: null, finalizedBy: null, finalizedAt: null, supersedesId: null, correctionReason: null };
+  const built = await buildInputs(run, members);
+  return built.members.map((x) => ({ employeeId: x.employeeId, result: compute(x, built.withholding), snapshot: x.snapshot, contractId: x.contractId }));
 }
 
 /** 지금 가리키는 계산 세대가 지금 입력과 같은가. 다르면 「오래됨」 — 다시 계산해야 검토 · 확정할 수 있다 */
