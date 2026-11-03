@@ -1,6 +1,6 @@
 // 직원 상세 (2026-10-05 의뢰인: 샤플 대조) — 한 사람에 관한 일을 한 화면에서: 소속·연락처, 로그인(가입 여부), 기록 바로가기, 정보 수정.
 // 지우는 버튼은 없다 (4-6). 퇴사·권한·로그인 초기화는 아래 「관리」 묶음에서 사유와 함께 한다.
-import { CalendarDays, ChevronDown, IdCard, KeyRound, Smartphone } from 'lucide-react';
+import { CalendarDays, ChevronDown, Clock, IdCard, KeyRound, Smartphone } from 'lucide-react';
 import { getFormatter, getTranslations } from 'next-intl/server';
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
@@ -18,6 +18,9 @@ import { loadManagedGroups } from '@/lib/scope';
 import { resignChecklist } from '@/lib/staff-data';
 import { createAdminClient } from '@/lib/supabase/admin';
 import { toKstDate } from '@/lib/time';
+import { addDays } from '@/lib/calendar';
+import { loadShiftTemplates } from '@/lib/shift-data';
+import { hhmm } from '@/lib/shifts';
 import { NewInviteButton } from '../NewInviteButton';
 import { ManageAction } from './ManageAction';
 import { RoleRequestCard } from './RoleRequestCard';
@@ -52,6 +55,16 @@ export default async function MemberDetailPage({ params, searchParams }: { param
     loadOrgGroups(),
   ]);
   if (!p) notFound();
+  // 평소 근무시간 — 최근 5주 일정에서 가장 많은 시작–끝, 일정이 없으면 근무 틀 (2026-11-03 의뢰인: 이름 옆에 몇 시부터 몇 시 근무자인지)
+  const usualHours = await (async () => {
+    const { data: rows } = await db.from('shifts').select('start_time, end_time, kind').eq('employee_id', p.id).eq('active', true).gte('work_date', addDays(toKstDate(new Date()), -35)).lte('work_date', toKstDate(new Date()));
+    const count = new Map<string, number>();
+    for (const r of rows ?? []) if (r.kind === 'normal' || r.kind === 'extra') { const k = `${hhmm(r.start_time)}–${hhmm(r.end_time)}`; count.set(k, (count.get(k) ?? 0) + 1); }
+    const top = [...count].sort((x, y) => y[1] - x[1])[0]?.[0];
+    if (top) return top;
+    const tpl = p.shift_template_id ? (await loadShiftTemplates(true)).find((x) => x.id === p.shift_template_id) : null;
+    return tpl ? `${tpl.startTime}–${tpl.endTime}` : null;
+  })();
   const [details, foreign] = await Promise.all([loadStaffDetails(p.id), loadForeignInfo(p.id)]); // 개인 정보 (묶음 17) — 직원이 넣고 관리자도 고친다 · 외국인 정보 (묶음 31) — 관리자만
   // 부양가족 · 자녀 수 (미팅 2026-10-15): 급여 세무 판(사원별 급여 › 세금)에 있는 값을 여기서도 보여 준다 — 고치는 곳은 급여 한 곳
   const today = toKstDate(new Date());
@@ -151,7 +164,10 @@ export default async function MemberDetailPage({ params, searchParams }: { param
         </span>
         <div className="min-w-0 flex-1">
           <h1 className="truncate text-2xl font-extrabold tracking-tight">{p.name}</h1>
-          <p className="truncate text-sm text-muted">{[p.job_title, path ?? t('unassigned')].filter(Boolean).join(' · ')}</p>
+          <p className="flex flex-wrap items-center gap-x-2 text-sm text-muted">
+            <span className="truncate">{[p.job_title, path ?? t('unassigned')].filter(Boolean).join(' · ')}</span>
+            {usualHours && <span className="num inline-flex items-center gap-1 font-semibold text-text"><Clock aria-hidden size={14} className="text-faint" />{t('usualHours', { h: usualHours })}</span>}
+          </p>
           <p className="mt-1 flex flex-wrap items-center gap-1.5">
             <span className="num text-xs text-faint">{[...new Set([p.employee_no, p.phone, p.email].filter(Boolean))].join(' · ')}</span>
             {p.role === 'admin' && <Chip tone="info">{t(p.admin_level === 'ceo' ? 'levelCeo' : 'levelSuper')}</Chip>}

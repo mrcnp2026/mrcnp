@@ -51,18 +51,19 @@ export default async function AnomaliesPage({ searchParams }: { searchParams: Pr
   const st = sp.st === 'block' || sp.st === 'check' || sp.st === 'done' || sp.st === 'overdue' || sp.st === 'mine' ? sp.st : null;
   const stateOf = (x: (typeof sum.shown)[number]) => (x.block ? 'block' : x.reviewed ? 'done' : 'check');
   // 담당 · 기한 (2026-10-19)
-  const [task, overrides, { data: staffRows }] = await Promise.all([loadTaskPolicy(), loadOverrides(from, last, practice), createAdminClient().from('profiles').select('id, name, role, active, employee_no').in('role', ['admin', 'manager'])]);
-  const tasks = tasksFor(sum.shown.map((x) => ({ employeeId: x.employeeId, workDate: x.workDate, open: x.block || !x.reviewed })), { today, policy: task.policy, overrides, approvers: await approverMap(sum.shown.map((x) => x.employeeId)) });
-  const handlers = (staffRows ?? []).filter((p) => p.active && p.employee_no !== OFFICE.ownerEmployeeNo).map((p) => ({ id: p.id as string, name: p.name as string })).sort((a, b) => a.name.localeCompare(b.name));
+  const [task, overrides, { data: staffRows }] = await Promise.all([loadTaskPolicy(), loadOverrides(from, last, practice), createAdminClient().from('profiles').select('id, name, role, active, employee_no, admin_level').in('role', ['admin', 'manager'])]);
+  const approvers = await approverMap(sum.shown.map((x) => x.employeeId));
+  const tasks = tasksFor(sum.shown.map((x) => ({ employeeId: x.employeeId, workDate: x.workDate, open: x.block || !x.reviewed })), { today, policy: task.policy, overrides, approvers });
+  // 담당자로 고를 수 있는 사람 — 최고관리자 · 지점관리자. 대표자는 이런 확인을 직접 하지 않는다 (2026-11-03 의뢰인)
+  const handlers = (staffRows ?? []).filter((p) => p.active && p.employee_no !== OFFICE.ownerEmployeeNo && p.admin_level !== 'ceo').map((p) => ({ id: p.id as string, name: p.name as string })).sort((a, b) => a.name.localeCompare(b.name));
   const handlerName = new Map((staffRows ?? []).map((p) => [p.id as string, p.name as string]));
   const taskOfRow = (x: { employeeId: string; workDate: string }) => tasks.get(anomalyKey(x.employeeId, x.workDate))!;
   const isOpen = (x: (typeof sum.shown)[number]) => x.block || !x.reviewed;
   const match = (x: (typeof sum.shown)[number], s: string) => (s === 'overdue' ? taskOfRow(x).overdueDays > 0 : s === 'mine' ? isOpen(x) && taskOfRow(x).assignees.includes(me.id) : stateOf(x) === s);
-  const who = (x: { employeeId: string; workDate: string }) => {
-    const o = overrides?.get(anomalyKey(x.employeeId, x.workDate));
-    if (!o?.assigneeId && task.policy.assignee === 'approvers') return t('task.approversShort');
-    return taskOfRow(x).assignees.map((id) => handlerName.get(id) ?? '').join(', ');
-  };
+  // 담당자는 「요청 승인자」 같은 말 대신 실제 이름으로 (2026-11-03 의뢰인: 기본이면 누가 하는 건지 모르겠다)
+  const namesOf = (ids: string[]) => ids.map((id) => handlerName.get(id) ?? '').filter(Boolean).join(' · ');
+  const defaultNames = (employeeId: string) => namesOf(task.policy.assignee === 'approvers' ? (approvers.get(employeeId) ?? []) : [task.policy.assignee]);
+  const who = (x: { employeeId: string; workDate: string }) => namesOf(taskOfRow(x).assignees);
   const taskCell = (x: (typeof sum.shown)[number]) => {
     const tk = taskOfRow(x);
     const o = overrides?.get(anomalyKey(x.employeeId, x.workDate));
@@ -73,7 +74,7 @@ export default async function AnomaliesPage({ searchParams }: { searchParams: Pr
         {tk.due && <span className="num">{t('task.dueOn', { date: tk.due.slice(5) })}</span>}
         {tk.overdueDays > 0 && <Chip tone="warn">{t('task.overdue', { n: tk.overdueDays })}</Chip>}
         {tk.note && <span className="text-xs text-faint">{tk.note}</span>}
-        {isOpen(x) && <TaskEdit employeeId={x.employeeId} workDate={x.workDate} assigneeId={o?.assigneeId ?? null} dueOn={o?.dueOn ?? null} note={o?.note ?? null} people={handlers} live={sp.live === '1'} ready={overrides !== null} short />}
+        {isOpen(x) && <TaskEdit employeeId={x.employeeId} workDate={x.workDate} assigneeId={o?.assigneeId ?? null} dueOn={o?.dueOn ?? null} note={o?.note ?? null} people={handlers} defaultNames={defaultNames(x.employeeId)} live={sp.live === '1'} ready={overrides !== null} short />}
       </span>
     );
   };
@@ -220,7 +221,7 @@ export default async function AnomaliesPage({ searchParams }: { searchParams: Pr
                 ) : (
                   (r.block || !r.reviewed) && <NotifyButton month={month} employeeIds={[r.employeeId]} live={sp.live === '1'} label={t('notify.one')} confirm={t('notify.confirmOne', { name: p?.name ?? '' })} />
                 )}
-                    {isOpen(r) && <TaskEdit employeeId={r.employeeId} workDate={r.workDate} assigneeId={overrides?.get(anomalyKey(r.employeeId, r.workDate))?.assigneeId ?? null} dueOn={overrides?.get(anomalyKey(r.employeeId, r.workDate))?.dueOn ?? null} note={overrides?.get(anomalyKey(r.employeeId, r.workDate))?.note ?? null} people={handlers} live={sp.live === '1'} ready={overrides !== null} short />}
+                    {isOpen(r) && <TaskEdit employeeId={r.employeeId} workDate={r.workDate} assigneeId={overrides?.get(anomalyKey(r.employeeId, r.workDate))?.assigneeId ?? null} dueOn={overrides?.get(anomalyKey(r.employeeId, r.workDate))?.dueOn ?? null} note={overrides?.get(anomalyKey(r.employeeId, r.workDate))?.note ?? null} people={handlers} defaultNames={defaultNames(r.employeeId)} live={sp.live === '1'} ready={overrides !== null} short />}
                     <Link href={`/admin/records/${r.employeeId}?m=${month}${live}`} className="ml-auto inline-flex min-h-10 items-center px-1 font-bold text-primary">
                       {t('toRecords')} ›
                     </Link>

@@ -660,7 +660,8 @@
       "bulkFailed": "보내지 못한 직원 {n}명: {names} — 한 명씩 다시 보내 주세요.",
       "bulkNotReady": "메일 보내는 계정이 아직 설정되지 않아 한꺼번에 보낼 수 없습니다. 직원 한 명씩 링크를 복사해서 보내 주세요.",
       "bulkNoneSendable": "이메일이 등록된 미가입 직원이 없습니다. 이메일이 없는 직원 {none}명은 직원 정보에 이메일을 넣어 주세요.",
-      "toHrCard": "인사기록카드"
+      "toHrCard": "인사기록카드",
+      "usualHours": "근무 {h}"
     },
     "more": {
       "title": "전체 메뉴",
@@ -3957,11 +3958,11 @@
         "how": "내 화면 › 출퇴근기록에서 해당 날짜를 확인하고, 잘못된 기록은 [출퇴근기록 정정 요청]으로 알려 주세요.",
         "all": "남은 이상 기록 {n}명에게 직원알림",
         "confirmAll": "이상 기록이 남아 있는 {n}명에게 전달로 통보합니다. 보낸 메시지는 고치거나 지울 수 없습니다. 보낼까요?",
-        "one": "직원알림",
+        "one": "알림 보내기",
         "confirmOne": "{name}님에게 이 달의 남은 이상 기록을 전달로 통보합니다. 보낼까요?",
         "sent": "{n}명에게 보냈습니다.",
         "sentOn": "통보함 {date}",
-        "col": "직원알림"
+        "col": "직원에게"
       },
       "task": {
         "col": "담당자",
@@ -3970,7 +3971,7 @@
         "overdue": "{n}일 지남",
         "change": "담당자",
         "assignee": "담당자",
-        "assigneeDefault": "기본(정한 대로)",
+        "assigneeDefault": "기본 담당 (승인자)",
         "due": "처리 기한",
         "dueHint": "비우면 기본(이상이 생긴 날 + 정한 일수)",
         "note": "메모(선택)",
@@ -3988,7 +3989,8 @@
         "invalid_assignee": "관리자 · 지점관리자만 담당자로 정할 수 있습니다.",
         "invalid_due": "기한은 이상이 생긴 날 이후여야 합니다.",
         "db_update_required": "DB 변경(묶음 27) 적용이 필요합니다.",
-        "changeShort": "담당자"
+        "changeShort": "담당자",
+        "assigneeDefaultNames": "기본 담당 — {names}"
       },
       "searchPh": "이름 · 부서 · 사번으로 찾기",
       "onlyOne": "{name}님 기록만",

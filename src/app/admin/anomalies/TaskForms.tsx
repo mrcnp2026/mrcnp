@@ -12,7 +12,7 @@ import type { AnomalyTaskPolicy } from '@/lib/anomaly';
 const field = 'min-h-11 w-full rounded-button border border-border bg-bg px-3 text-sm lg:min-h-9';
 type Person = { id: string; name: string };
 
-export function TaskEdit({ employeeId, workDate, assigneeId, dueOn, note, people, live, ready, short = false }: { employeeId: string; workDate: string; assigneeId: string | null; dueOn: string | null; note: string | null; people: Person[]; live: boolean; ready: boolean; short?: boolean }) {
+export function TaskEdit({ employeeId, workDate, assigneeId, dueOn, note, people, defaultNames = '', live, ready, short = false }: { employeeId: string; workDate: string; assigneeId: string | null; dueOn: string | null; note: string | null; people: Person[]; defaultNames?: string; live: boolean; ready: boolean; short?: boolean }) {
   const t = useTranslations('admin.anomalies.task');
   const router = useRouter();
   const [open, setOpen] = useState(false);
@@ -43,7 +43,7 @@ export function TaskEdit({ employeeId, workDate, assigneeId, dueOn, note, people
       <label className="flex flex-col gap-1">
         <span className="text-muted">{t('assignee')}</span>
         <Select name="assignee" defaultValue={assigneeId ?? ''} className={field}>
-          <option value="">{t('assigneeDefault')}</option>
+          <option value="">{defaultNames ? t('assigneeDefaultNames', { names: defaultNames }) : t('assigneeDefault')}</option>
           {people.map((p) => (
             <option key={p.id} value={p.id}>
               {p.name}

@@ -660,7 +660,8 @@
       "bulkFailed": "{n} employees could not be sent: {names} — please send them one by one.",
       "bulkNotReady": "The sending mail account is not set up yet, so bulk sending is unavailable. Copy each employee link and send it.",
       "bulkNoneSendable": "No unregistered employee has an email. Add an email to the {none} employees without one.",
-      "toHrCard": "Personnel card"
+      "toHrCard": "Personnel card",
+      "usualHours": "Works {h}"
     },
     "more": {
       "title": "All menus",
@@ -3957,11 +3958,11 @@
         "how": "Check those dates under Attendance and send a [Correction request] for anything wrong.",
         "all": "Notify staff ({n} people)",
         "confirmAll": "Send a messages post to the {n} people who still have exceptions. Sent messages cannot be edited or deleted. Send?",
-        "one": "Notify staff",
+        "one": "Notify",
         "confirmOne": "Send {name} a messages post about this month’s open exceptions?",
         "sent": "Sent to {n}.",
         "sentOn": "Notified {date}",
-        "col": "Notify staff"
+        "col": "To employee"
       },
       "task": {
         "col": "Owner",
@@ -3970,7 +3971,7 @@
         "overdue": "{n} days overdue",
         "change": "Owner",
         "assignee": "Owner",
-        "assigneeDefault": "Default (as set)",
+        "assigneeDefault": "Default (approvers)",
         "due": "Due date",
         "dueHint": "Leave blank for the default (day of the issue + set days)",
         "note": "Note (optional)",
@@ -3988,7 +3989,8 @@
         "invalid_assignee": "Only admins or branch managers can be owners.",
         "invalid_due": "The due date must be on or after the day of the issue.",
         "db_update_required": "DB change set 27 needs to be applied.",
-        "changeShort": "Owner"
+        "changeShort": "Owner",
+        "assigneeDefaultNames": "Default — {names}"
       },
       "searchPh": "Search by name, team, or ID",
       "onlyOne": "Only {name}",

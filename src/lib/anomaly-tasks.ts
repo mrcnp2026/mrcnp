@@ -53,10 +53,17 @@ export async function setOverride(args: { employeeId: string; workDate: string; 
   if (error) throw new Error(`setOverride: ${error.code}`);
 }
 
-/** 직원마다 기본 담당(요청 승인자) — 여러 번 부르지 않게 모아서 */
+/** 이상 기록을 맡을 수 없는 관리자 — 대표자(직접 처리하지 않는다, 2026-11-03 의뢰인)와 시스템관리자(직원이 아니다) */
+export async function nonHandlerIds(): Promise<Set<string>> {
+  const { data } = await db().from('profiles').select('id, employee_no, admin_level').eq('role', 'admin');
+  return new Set((data ?? []).filter((p) => p.admin_level === 'ceo' || p.employee_no === OFFICE.ownerEmployeeNo).map((p) => p.id as string));
+}
+
+/** 직원마다 기본 담당(요청 승인자에서 대표자 · 시스템관리자를 뺀 사람) — 여러 번 부르지 않게 모아서 */
 export async function approverMap(employeeIds: string[]): Promise<Map<string, string[]>> {
   const out = new Map<string, string[]>();
-  for (const id of new Set(employeeIds)) out.set(id, await approverIdsFor(id));
+  const skip = await nonHandlerIds();
+  for (const id of new Set(employeeIds)) out.set(id, (await approverIdsFor(id)).filter((a) => !skip.has(a)));
   return out;
 }
 

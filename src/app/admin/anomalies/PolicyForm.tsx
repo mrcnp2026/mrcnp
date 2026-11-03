@@ -1,5 +1,6 @@
 'use client';
 // 이상 유형마다 마감을 막을지 · 확인만 할지 · 보지 않을지 고른다. 저장하면 새 판이 쌓이고 마감 관리가 바로 이 기준을 쓴다.
+import { Send } from 'lucide-react';
 import { Select } from '@/components/Select';
 import { useTranslations } from 'next-intl';
 import { useRouter } from 'next/navigation';
@@ -154,8 +155,9 @@ export function NotifyButton({ month, employeeIds, label, confirm, live, primary
             router.refresh();
           }
         }}
-        className={primary ? 'inline-flex h-9 items-center rounded-button bg-primary px-3.5 text-sm font-bold text-on-primary disabled:opacity-50' : 'inline-flex min-h-8 items-center text-sm font-bold whitespace-nowrap text-primary hover:underline disabled:opacity-50 max-lg:min-h-10 max-lg:px-1 max-lg:font-semibold max-lg:text-muted'}
+        className={primary ? 'inline-flex h-9 items-center gap-1.5 rounded-button bg-primary px-3.5 text-sm font-bold text-on-primary disabled:opacity-50' : 'inline-flex min-h-8 items-center gap-1 text-sm font-bold whitespace-nowrap text-primary hover:underline disabled:opacity-50 max-lg:min-h-10 max-lg:px-1 max-lg:font-semibold max-lg:text-muted'}
       >
+        <Send aria-hidden size={14} strokeWidth={2.2} />
         {label}
       </button>
       {done !== null && primary && <span role="status" className="text-sm text-ok">{t('notify.sent', { n: done })}</span>}

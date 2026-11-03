@@ -158,15 +158,14 @@ export function CloseBoard({ month, live, lines, canClose }: { month: string; li
       </Link>
     ),
     l.anomalyBlocks > 0 && (
-      <Link key="ab" href={`/admin/anomalies?m=${month}&e=${l.employeeId}${q}`} title={why(l)} className="font-bold text-warn underline">
+      <Link key="ab" href={`/admin/anomalies?m=${month}&e=${l.employeeId}${q}`} className="font-bold text-warn underline">
         {t('anomalyBlock', { n: l.anomalyBlocks })}
       </Link>
     ),
     l.anomalyChecks > 0 && (
-      <Link key="ac" href={`/admin/anomalies?m=${month}&e=${l.employeeId}${q}`} title={why(l)} className="text-muted underline">
+      <Link key="ac" href={`/admin/anomalies?m=${month}&e=${l.employeeId}${q}`} className="text-muted underline">
         {t('anomalyCheck', { n: l.anomalyChecks })}
-        {/* 폰은 마우스가 없어 사유를 괄호 글씨로 */}
-        {why(l) && <span className="ml-1 text-xs text-faint no-underline lg:hidden">({why(l)})</span>}
+        {why(l) && <span className="ml-1 text-xs text-muted no-underline">({why(l)})</span>}
       </Link>
     ),
   ].filter(Boolean);
@@ -218,11 +217,11 @@ export function CloseBoard({ month, live, lines, canClose }: { month: string; li
                     {l.anomalyBlocks + l.anomalyChecks === 0 ? (
                       <span className="text-faint">–</span>
                     ) : (
-                      <Link href={`/admin/anomalies?m=${month}&e=${l.employeeId}${q}`} title={why(l)} className="flex flex-col underline">
-                        {l.anomalyBlocks > 0 && <span className="font-bold text-warn">{t('anomalyBlock', { n: l.anomalyBlocks })}</span>}
-                        {l.anomalyChecks > 0 && <span className="text-muted">{t('anomalyCheck', { n: l.anomalyChecks })}</span>}
-                        {/* 폰은 마우스가 없어 사유를 글씨로 */}
-                        {why(l) && <span className="text-xs text-faint no-underline lg:hidden">{why(l)}</span>}
+                      <Link href={`/admin/anomalies?m=${month}&e=${l.employeeId}${q}`} className="group flex flex-col">
+                        {l.anomalyBlocks > 0 && <span className="font-bold text-warn underline group-hover:text-primary">{t('anomalyBlock', { n: l.anomalyBlocks })}</span>}
+                        {l.anomalyChecks > 0 && <span className="text-text underline group-hover:text-primary">{t('anomalyCheck', { n: l.anomalyChecks })}</span>}
+                        {/* 사유는 마우스를 올리지 않아도 보이게 글씨로 — 브라우저 기본 안내 상자는 쓰지 않는다 (2026-11-03 의뢰인) */}
+                        {why(l) && <span className="text-xs text-muted">{why(l)}</span>}
                       </Link>
                     )}
                   </td>
