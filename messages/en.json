@@ -2275,7 +2275,8 @@
       "gradeTopNow": "Now {n} of max 3 — {names}",
       "super_full": "Up to 3 super admins (including the CEO). Change one of them to employee first.",
       "ceo_taken": "There can be only one CEO. Change the current CEO to top admin first.",
-      "gradeNowLine": "Now: {grade}"
+      "gradeNowLine": "Now: {grade}",
+      "scope_required": "Pick at least one branch for a branch manager."
     },
     "settings": {
       "title": "Settings",

@@ -12,7 +12,8 @@ import { SHOWN_GRADES } from '@/lib/staff-rules';
 
 export type GradeKey = 'super' | 'ceo' | 'manager' | 'employee';
 
-export function GradeForm({ employeeId, current, allowed, topNames, ceoName }: { employeeId: string; current: GradeKey; allowed: GradeKey[]; topNames: string[]; ceoName?: string }) {
+// 지점관리자를 고르면 맡을 지점 체크 칸이 바로 아래 나오고, 저장 한 번에 등급과 지점을 같이 저장한다 (2026-11-03 의뢰인). 이미 지점관리자면 지점만 바꿔 저장할 수 있다
+export function GradeForm({ employeeId, current, allowed, topNames, ceoName, groups = [], managed = [] }: { employeeId: string; current: GradeKey; allowed: GradeKey[]; topNames: string[]; ceoName?: string; groups?: { id: string; label: string }[]; managed?: string[] }) {
   const t = useTranslations('admin.manage');
   const router = useRouter();
   const [pick, setPick] = useState<GradeKey>(current);
@@ -20,17 +21,32 @@ export function GradeForm({ employeeId, current, allowed, topNames, ceoName }: {
   const [busy, setBusy] = useState(false);
   const [done, setDone] = useState<'pending' | 'ok' | null>(null);
   const [err, setErr] = useState<{ code: string; requestId?: string } | null>(null);
+  const [sel, setSel] = useState<Set<string>>(new Set(managed));
   const changed = pick !== current;
+  const scopeChanged = pick === 'manager' && (sel.size !== managed.length || managed.some((g) => !sel.has(g)));
+  const needScope = pick === 'manager' && sel.size === 0;
+  const canSave = !busy && !needScope && (changed ? reason.trim().length >= 2 : scopeChanged);
+  const toggle = (id: string) => {
+    setDone(null);
+    setSel((x) => {
+      const n = new Set(x);
+      if (n.has(id)) n.delete(id);
+      else n.add(id);
+      return n;
+    });
+  };
   return (
     <form
       className="flex flex-col gap-3 px-5 pb-4"
       data-grade-form
       onSubmit={async (e) => {
         e.preventDefault();
-        if (!changed || reason.trim().length < 2) return;
+        if (!canSave) return;
         setBusy(true);
         setErr(null);
-        const r = await callApi<{ pending?: boolean }>(`/api/admin/employees/${employeeId}/grade`, { grade: pick, reason });
+        const r = changed
+          ? await callApi<{ pending?: boolean }>(`/api/admin/employees/${employeeId}/grade`, { grade: pick, reason, groupIds: pick === 'manager' ? [...sel] : undefined })
+          : await callApi<{ pending?: boolean }>(`/api/admin/employees/${employeeId}/manager-scope`, { groupIds: [...sel] }); // 이미 지점관리자 — 지점만
         setBusy(false);
         if (!r.ok) return setErr({ code: r.code, requestId: r.requestId });
         setDone(r.data.pending ? 'pending' : 'ok');
@@ -58,16 +74,30 @@ export function GradeForm({ employeeId, current, allowed, topNames, ceoName }: {
           );
         })}
       </fieldset>
+      {pick === 'manager' && (
+        <fieldset className="flex flex-col gap-1 rounded-button border border-border p-3">
+          <legend className="px-1 text-sm font-bold">{t('scopeTitle')}</legend>
+          <p className="text-xs text-muted">{t('scopeHint')}</p>
+          {groups.length === 0 && <p className="text-sm text-warn">{t('scopeNoGroups')}</p>}
+          {groups.map((g) => (
+            <label key={g.id} className="flex min-h-9 items-center gap-2 text-sm">
+              <input type="checkbox" checked={sel.has(g.id)} onChange={() => toggle(g.id)} className="size-5 accent-primary" />
+              {g.label}
+            </label>
+          ))}
+          {needScope && <p className="text-sm text-warn">{t('scopeEmpty')}</p>}
+        </fieldset>
+      )}
       {changed && (
         <>
           <textarea value={reason} onChange={(e) => setReason(e.target.value)} required maxLength={200} rows={2} placeholder={t('reason')} aria-label={t('reason')} className="w-full rounded-button border border-border bg-bg p-3 text-base text-text" />
           <span className="text-xs text-faint">{t('gradeNote')}</span>
         </>
       )}
-      {done && <p className="text-sm font-semibold text-ok">{t(done === 'pending' ? 'gradePending' : 'gradeDone')}</p>}
+      {done && <p role="status" className="text-sm font-semibold text-ok">{t(done === 'pending' ? 'gradePending' : changed || pick !== 'manager' ? 'gradeDone' : 'scopeSaved')}</p>}
       {err && <ErrorNote code={err.code} requestId={err.requestId} namespace="admin.manage" />}
-      <Button type="submit" disabled={!changed || busy || reason.trim().length < 2}>
-        {t('gradeSave')}
+      <Button type="submit" disabled={!canSave}>
+        {t(!changed && pick === 'manager' ? 'scopeSave' : 'gradeSave')}
       </Button>
     </form>
   );

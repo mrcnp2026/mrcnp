@@ -19,7 +19,6 @@ import { resignChecklist } from '@/lib/staff-data';
 import { createAdminClient } from '@/lib/supabase/admin';
 import { toKstDate } from '@/lib/time';
 import { NewInviteButton } from '../NewInviteButton';
-import { ManagerScope } from '../ManagerScope';
 import { ManageAction } from './ManageAction';
 import { RoleRequestCard } from './RoleRequestCard';
 import { loadJobs } from '@/lib/job-data';
@@ -349,11 +348,12 @@ export default async function MemberDetailPage({ params, searchParams }: { param
                   allowed={SHOWN_GRADES.filter((g) => g !== grade && (!(g === 'super' || g === 'ceo') || targetTop || topNames.length < MAX_TOP) && (g !== 'ceo' || !ceoName))}
                   topNames={topNames}
                   ceoName={ceoName}
+                  groups={orgOptions(groups)}
+                  managed={managed}
                 />
               </details>
             )}
             {!pendingRole && p.active && targetTop && !me.top && <p className="px-5 py-3 text-sm text-muted">{tm('owner_only')}</p>}
-            {p.active && p.role === 'manager' && <ManagerScope employeeId={p.id} groups={orgOptions(groups)} picked={managed} />}
             {key && (
               <ManageAction title={tm('revokeDevice')} hint={tm('revokeDeviceHint')} confirmLabel={tm('revokeDevice')} endpoint={`${api}/device`} body={{}} presets={[tm('preset.lost'), tm('preset.newPhone')]} notes={[tm('revokeDeviceNote')]} danger />
             )}

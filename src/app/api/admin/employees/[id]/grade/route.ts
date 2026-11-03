@@ -3,6 +3,7 @@
 //   등급(role)이 바뀌면 권한 변경 함수(request_staff_role_atomic — 최소 관리자 수)를 탄다. 최고관리자 ↔ 대표자는 바로 반영한다.
 import { api, ApiError, readJson } from '@/lib/api';
 import { atomicRpc } from '@/lib/atomic-rpc';
+import { saveManagerScope } from '@/lib/manager-scope-save';
 import { requireAdmin } from '@/lib/auth';
 import { auditStaffAction, loadStaff } from '@/lib/staff-data';
 import { cleanReason, gradeOf, MAX_CEO, MAX_TOP, SHOWN_GRADES, type Grade } from '@/lib/staff-rules';
@@ -32,11 +33,23 @@ export const POST = api<{ params: Promise<{ id: string }> }>('admin.employees.gr
   if (top(grade) && !top(now) && all.filter((s) => s.active && top(gradeOf(s))).length >= MAX_TOP) throw new ApiError(409, 'super_full');
   if (grade === 'ceo' && all.filter((s) => s.active && s.id !== id && gradeOf(s) === 'ceo').length >= MAX_CEO) throw new ApiError(409, 'ceo_taken');
 
+  // 지점관리자로 바꿀 때 맡을 지점을 같이 받는다 (2026-11-03 의뢰인: 고르고 한 번 저장) — 하나 이상
+  const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+  const groupIds = Array.isArray(b.groupIds) && b.groupIds.length <= 200 && b.groupIds.every((x) => typeof x === 'string' && UUID.test(x)) ? (b.groupIds as string[]) : null;
+  if (grade === 'manager' && (!groupIds || groupIds.length === 0)) throw new ApiError(400, 'scope_required');
   const role = top(grade) ? 'admin' : grade;
   const db = createAdminClient();
   if (role !== target.role) {
-    const r = await atomicRpc<{ ok: boolean; pending?: boolean }>('request_staff_role_atomic', { p_actor: me.id, p_target: id, p_role: role, p_pay: role === 'admin', p_reason: reason, p_request_id: ctx.requestId });
-    if (r.pending) return { ok: true, pending: true };
+    const r = await atomicRpc<{ ok: boolean; pending?: boolean; requestId?: string }>('request_staff_role_atomic', { p_actor: me.id, p_target: id, p_role: role, p_pay: role === 'admin', p_reason: reason, p_request_id: ctx.requestId });
+    if (r.pending) {
+      // 다른 관리자 확인을 기다린다 — 고른 지점을 요청과 함께 남겨 두고, 승인되면 그대로 반영한다(role-requests/[id], 0086)
+      if (grade === 'manager' && r.requestId) {
+        const { error: e2 } = await db.from('role_request_scopes').insert({ request_id: r.requestId, group_ids: groupIds, created_by: me.id });
+        if (e2) throw new Error(`grade.scope: ${e2.code}`);
+      }
+      return { ok: true, pending: true };
+    }
+    if (grade === 'manager') await saveManagerScope(id, groupIds!, me.id); // 등급이 바뀐 바로 뒤에 맡은 지점까지
     if (!top(grade)) return { ok: true, grade };
   }
   // 관리자 안의 구분
