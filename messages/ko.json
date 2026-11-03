@@ -3609,7 +3609,7 @@
       "closeAll": "마감 가능한 {n}명 모두 마감",
       "closeSelected": "선택한 {n}명 마감",
       "clearPick": "선택 해제",
-      "nextCheck": "급여 점검",
+      "nextCheck": "급여대장으로",
       "allClosed": "확인이 필요한 직원이 없습니다. 모두 마감했습니다.",
       "reason": {
         "pending_request": "대기 중인 요청",
@@ -8480,8 +8480,8 @@
       "insuranceNote": "공단 고지액과 급여에서 뗀 돈 비교",
       "labor": "인건비 현황",
       "laborNote": "달 · 부서별 그래프로 보기",
-      "check": "급여 점검",
-      "checkNote": "막히는 곳 미리 확인"
+      "check": "근태 점검",
+      "checkNote": "일정과 다른 날 처리"
     },
     "daily": {
       "payee": "대상자 등록",

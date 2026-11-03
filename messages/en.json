@@ -3609,7 +3609,7 @@
       "closeAll": "Close all {n} ready",
       "closeSelected": "Close {n} selected",
       "clearPick": "Clear selection",
-      "nextCheck": "Pay check",
+      "nextCheck": "Go to payroll ledger",
       "allClosed": "Nobody needs attention. Everyone is closed.",
       "reason": {
         "pending_request": "Pending request",
@@ -8480,8 +8480,8 @@
       "insuranceNote": "Compare notices with amounts withheld",
       "labor": "Labor cost",
       "laborNote": "Monthly and department charts",
-      "check": "Pay check",
-      "checkNote": "Spot blockers early"
+      "check": "Attendance check",
+      "checkNote": "Handle differing days"
     },
     "daily": {
       "payee": "Register payees",

@@ -5,7 +5,6 @@ import { getFormatter, getTranslations } from 'next-intl/server';
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import { Card, CardTitle, Chip, PageShell } from '@/components/ui';
-import { ContractTermForm } from '../../check/CheckForms';
 import { getMe } from '@/lib/auth';
 import { groupPath } from '@/lib/org';
 import { loadOrgGroups } from '@/lib/org-data';
@@ -115,7 +114,6 @@ export default async function StaffPayDetailPage({ params, searchParams }: { par
       </Card>
   );
 
-  const term = ((await createAdminClient().from('payroll_contract_terms').select('ends_on').eq('employee_id', id).eq('active', true).maybeSingle()).data?.ends_on as string | undefined) ?? null;
   return (
     <PageShell wide>
       <Link href="/admin/payroll/staff" className="inline-flex min-h-9 items-center self-start text-sm font-medium text-muted">
@@ -173,10 +171,6 @@ export default async function StaffPayDetailPage({ params, searchParams }: { par
         )}
         {pay.contracts[0] && pay.contracts[0].validFrom > today && <p className="mt-3 rounded-card bg-primary-tint p-3 text-sm text-primary">{t('scheduledNote', { from: pay.contracts[0].validFrom })}</p>}
         <ContractForm employeeId={id} today={today} version={pay.contracts[0]?.version ?? 0} last={pay.contracts[0] ?? null} />
-        {/* 근로계약 만료일 — 급여 점검의 「계약 만료」 확인 (급여-68, 2026-11-03) */}
-        <div className="mt-4 border-t border-border pt-3">
-          <ContractTermForm employeeId={id} endsOn={term} />
-        </div>
         {pay.contracts.length > 0 && (
           <ul className="num mt-4 flex flex-col gap-1 border-t border-border pt-3 text-xs text-faint">
             {pay.contracts.map((c, i) => (

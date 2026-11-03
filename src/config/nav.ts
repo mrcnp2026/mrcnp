@@ -61,7 +61,7 @@ export const ADMIN_APPS: App[] = [
     icon: Wallet,
     groups: [
       { key: 'gPayBasis', items: [{ href: '/admin/payroll/staff', key: 'payStaff' }] }, // 기준 — 입사 · 인상 · 변경 때만 고친다. 매달 하는 일이 아니다 (2026-10-26 의뢰인)
-      { key: 'gPayPrep', items: [{ href: '/admin/attendance-check', key: 'attCheck' }, { href: '/admin/closing', key: 'closing' }, { href: '/admin/payroll/check', key: 'payCheck' }] }, // ① 매달: 근태 점검 → 근태 마감 → 급여 미리 보기 (2026-11-03 급여-69: 급여 점검을 근태 점검으로)
+      { key: 'gPayPrep', items: [{ href: '/admin/attendance-check', key: 'attCheck' }, { href: '/admin/closing', key: 'closing' }] }, // ① 매달: 근태 점검 → 근태 마감 → (급여대장). 급여 미리 보기는 뺐다 — 근태 점검 · 급여대장과 겹친다 (2026-11-04 의뢰인)
       { key: 'gPayRun', items: [{ href: '/admin/payroll/runs', key: 'payRuns' }, { href: '/admin/payroll/daily', key: 'payDaily' }] }, // ② 급여대장 생성 → 계산 → 검토 → 확정 → 공개
       { key: 'gPaySettle', items: [{ href: '/admin/payroll/insurance', key: 'payInsurance' }, { href: '/admin/payroll/retirement', key: 'payRetirement' }, { href: '/admin/payroll/pension', key: 'payPension' }] }, // ③ 연장 → 보상휴가는 뺐다 (2026-10-21 의뢰인: 「보상휴가를 사용하지 않아」)
       { key: 'gPayView', items: [{ href: '/admin/payroll/labor-cost', key: 'payLabor' }, { href: '/admin/payroll', key: 'payHours' }] }, // ④ 보고 싶을 때 보는 자료

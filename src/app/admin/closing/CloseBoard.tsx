@@ -270,7 +270,7 @@ export function CloseBoard({ month, live, lines, canClose }: { month: string; li
               </span>
             </div>
           ) : allClosed ? (
-            <Link href={`/admin/payroll/check?m=${month}${q}`} className="inline-flex min-h-12 items-center justify-center rounded-button bg-primary px-5 text-base font-bold text-on-primary">
+            <Link href={`/admin/payroll/runs${q ? `?${q.replace(/^&/, '')}` : ''}`} className="inline-flex min-h-12 items-center justify-center rounded-button bg-primary px-5 text-base font-bold text-on-primary">
               {t('nextCheck')} ›
             </Link>
           ) : (
