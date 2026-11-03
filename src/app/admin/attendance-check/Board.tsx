@@ -8,7 +8,7 @@ import { useEffect, useState, type ReactNode } from 'react';
 
 export type BoardRow = { id: string; row: ReactNode; detail: ReactNode };
 
-export function Board({ rows, initial, head, empty }: { rows: BoardRow[]; initial: string | null; head: ReactNode; empty: ReactNode }) {
+export function Board({ rows, initial, head, axis, empty }: { rows: BoardRow[]; initial: string | null; head: ReactNode; axis: ReactNode; empty: ReactNode }) {
   const t = useTranslations('admin.attendanceCheck');
   const [sel, setSel] = useState<string | null>(rows.some((r) => r.id === initial) ? initial : null);
   useEffect(() => {
@@ -29,13 +29,14 @@ export function Board({ rows, initial, head, empty }: { rows: BoardRow[]; initia
         {head}
         {/* 색 뜻 — 목록 바로 위에 (2026-11-03 의뢰인: 색이 무슨 뜻인지 모르겠다) */}
         <p className="flex flex-wrap items-center gap-x-3 gap-y-1 px-2 pb-2 text-xs text-muted">
-          {(['decide', 'block', 'handled', 'fine'] as const).map((k) => (
+          {(['decide', 'month', 'block', 'confirm', 'handled', 'fine', 'off'] as const).map((k) => (
             <span key={k} className="inline-flex items-center gap-1">
-              <span aria-hidden className={`size-3 rounded-xs ${{ decide: 'bg-warn', block: 'bg-danger', handled: 'bg-ok', fine: 'bg-border/50' }[k]}`} />
+              <span aria-hidden className={`size-3 rounded-xs ${{ decide: 'bg-warn', month: 'bg-warn/45', block: 'bg-danger', confirm: 'bg-primary/30', handled: 'bg-ok', fine: 'bg-border', off: 'bg-surface ring-1 ring-border' }[k]}`} />
               {t(`legend.${k}`)}
             </span>
           ))}
         </p>
+        {axis}
         {rows.length === 0 ? empty : (
           <ul className="flex flex-col divide-y divide-border border-y border-border">
             {rows.map((r) => (

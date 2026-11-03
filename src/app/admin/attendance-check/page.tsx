@@ -116,14 +116,19 @@ export default async function AttendanceCheckPage({ searchParams }: { searchPara
   // 그달 날짜 칸
   const dates: string[] = [];
   for (let d = from; d <= to; d = addDays(d, 1)) dates.push(d);
+  // 칸 색 (2026-11-03 의뢰인: 색을 다 빼라는 게 아니라 뜻을 알게 해 달라 · 한 달 1건이 칸에 안 보인다) — 뜻은 목록 위 범례(Board)
+  const worked = new Map(rows.map((r) => [r.employeeId, new Set(daysFor(data, r.employeeId, from, to).filter((d) => d.pairs.length).map((d) => d.workDate))]));
   const cellTone = (r: (typeof rows)[number], date: string) => {
     const d = r.days.find((x) => x.workDate === date);
-    // 색은 셋만: 처리할 날 · 기록 오류 · 처리 완료. 나머지(이상 없음 · 승인된 날 · 쉬는 날)는 같은 옅은 칸 (2026-11-03 의뢰인: 파랑 · 크림색은 무슨 뜻인지 모르겠다)
-    if (date > upTo) return 'bg-transparent border border-dashed border-border';
+    if (date > upTo) return 'border border-dashed border-border';
     if (d?.state === 'block') return 'bg-danger';
     if (d?.state === 'decide' && !r.st.handled.has(date)) return 'bg-warn';
+    const monthOpen = r.monthly.some((m) => !r.st.handled.has(monthKey(m)));
+    if (monthOpen && d?.parts.some((p) => p.bundled)) return 'bg-warn/45'; // 한 달 1건으로 묶인 날
     if (d?.state && r.st.handled.has(date)) return 'bg-ok';
-    return 'bg-border/50';
+    if (d?.state === 'confirm') return 'bg-primary/30'; // 승인된 날(연장 · 휴일근로 승인이 다 덮음)
+    if (worked.get(r.employeeId)?.has(date)) return 'bg-border'; // 이상 없음
+    return 'bg-surface'; // 쉬는 날 · 기록 없음
   };
 
   const ctxOf = (employeeId: string, d: DayCheck): DayCtx => {
@@ -193,16 +198,16 @@ export default async function AttendanceCheckPage({ searchParams }: { searchPara
           {t('toClosing')} ›
         </Link>
       </div>
-      {/* 사유 칩 — 무엇이 몇 건 남았는지 한 줄에. 누르면 그 사유만 */}
+      {/* 사유 칩 — 무엇이 몇 건 남았는지 한 줄에. 누르면 그 사유만. 화면 안 이동(Link)이 빠른 모드에서 넘어가지 않아 주소 이동으로 둔다 (2026-11-03) */}
       {kindOrder.length > 0 && (
         <div className="-mx-4 flex gap-2 overflow-x-auto px-4 pb-1 lg:mx-0 lg:flex-wrap lg:px-0">
           {kindOrder.map((k) => (
-            <Link key={k} href={q({ k: kindFilter === k ? null : k, e: null })} aria-current={kindFilter === k ? 'true' : undefined}
+            <a key={k} href={q({ k: kindFilter === k ? null : k, e: null })} aria-current={kindFilter === k ? 'true' : undefined}
               className={`inline-flex min-h-11 shrink-0 items-center gap-1.5 rounded-chip px-3 text-sm lg:min-h-9 ${kindFilter === k ? 'bg-primary font-semibold text-on-primary' : 'border border-border bg-bg text-text hover:border-primary/40'}`}>
               {t(`kind.${k}`)}
               <span className={`num font-bold ${kindFilter === k ? '' : 'text-warn'}`}>{kindCount.get(k)}</span>
               {kindFilter === k && <X aria-hidden size={14} />}
-            </Link>
+            </a>
           ))}
         </div>
       )}
@@ -214,18 +219,18 @@ export default async function AttendanceCheckPage({ searchParams }: { searchPara
     <>
       <div className="flex flex-wrap gap-1.5 pb-3">
         {STATES.map((s) => (
-          <Link key={s} href={q({ s, e: null })} aria-current={view === s ? 'page' : undefined} className={`inline-flex min-h-10 items-center rounded-chip px-3 text-sm font-semibold lg:min-h-8 ${view === s ? 'bg-text text-bg' : 'text-muted hover:text-text'}`}>
+          <a key={s} href={q({ s, e: null })} aria-current={view === s ? 'page' : undefined} className={`inline-flex min-h-10 items-center rounded-chip px-3 text-sm font-semibold lg:min-h-8 ${view === s ? 'bg-text text-bg' : 'text-muted hover:text-text'}`}>
             {t(`view.${s}`)}
-          </Link>
+          </a>
         ))}
       </div>
-      {listed.length > 0 && (
+    </>
+  );
+  const listAxis = listed.length > 0 ? (
         <span aria-hidden className="num grid gap-0.5 px-2 pb-1 text-xs leading-none text-faint" style={{ gridTemplateColumns: `repeat(${dates.length}, minmax(0, 1fr))` }}>
           {dates.map((d) => <span key={d} className="overflow-visible whitespace-nowrap">{[1, 8, 15, 22, 29].includes(Number(d.slice(8))) ? Number(d.slice(8)) : ''}</span>)}
         </span>
-      )}
-    </>
-  );
+  ) : null;
   const rowOf = (r: (typeof rows)[number]) => {
     const p = person.get(r.employeeId)!;
     const openMonths = r.monthly.filter((m) => !r.st.handled.has(monthKey(m)));
@@ -242,7 +247,7 @@ export default async function AttendanceCheckPage({ searchParams }: { searchPara
         <span aria-hidden className="grid gap-0.5" style={{ gridTemplateColumns: `repeat(${dates.length}, minmax(0, 1fr))` }}>
           {dates.map((d) => <span key={d} className={`h-3 rounded-xs ${cellTone(r, d)}`} />)}
         </span>
-        {openMonths.length > 0 && <span className="text-xs text-muted">{t('plusMonth', { list: openMonths.map((m) => t(`kind.${m.kind}`)).join(' · ') })}</span>}
+        {openMonths.map((m) => <span key={m.kind} className="text-xs text-warn">{m.kind === 'schedule_check' ? t('rowSchedule', { n: m.patternDays, span: m.fromMin === m.toMin ? t('min', { n: m.fromMin }) : t('minRange', { from: m.fromMin, to: m.toMin }) }) : t('rowEarly', { n: m.dates.length })}</span>)}
       </span>
     );
   };
@@ -279,7 +284,7 @@ export default async function AttendanceCheckPage({ searchParams }: { searchPara
                 </p>
                 <p className="num pl-4 text-sm">
                   {m.kind === 'schedule_check'
-                    ? t('scheduleCheckLine', { n: m.patternDays, of: m.workedDays, from: m.fromMin, to: m.toMin })
+                    ? t('scheduleCheckLine', { n: m.patternDays, of: m.workedDays, span: m.fromMin === m.toMin ? t('min', { n: m.fromMin }) : t('minRange', { from: m.fromMin, to: m.toMin }) })
                     : t('earlyBundleLine', { n: m.dates.length, from: dur(m.fromMin), to: dur(m.toMin) })}
                 </p>
                 <details className="group pl-4 text-sm">
@@ -364,6 +369,7 @@ export default async function AttendanceCheckPage({ searchParams }: { searchPara
         rows={listed.map((r) => ({ id: r.employeeId, row: rowOf(r), detail: detailOf(r) }))}
         initial={sp.e ?? null}
         head={listHead}
+        axis={listAxis}
         empty={<p className="py-8 text-center text-sm text-muted">{t('empty')}</p>}
       />
     </PageShell>
