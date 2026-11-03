@@ -140,3 +140,10 @@ describe('저녁 휴게 확인 (2026-11-03 의뢰인: 10/7 휴게 없이 일함)
     expect(judgeDay({ ...base, breakCheck: { start: '17:00', end: '17:30' }, pairs: [{ in: at('07:26'), out: at('17:10') }] }).parts.some((p) => p.kind === 'break_check')).toBe(false);
   });
 });
+
+describe('일정 없는 날 근무는 평소 시작부터 (급여-59 ①)', () => {
+  it('쉬는 날 07:29→17:05, 평소 08:00 시작 · 휴일 승인 8시간 → 확인만', () => {
+    const r = judgeDay({ ...base, plan: null, clipStart: '08:00', pairs: [{ in: at('07:29'), out: at('17:05') }], approvedExtraMin: 480 });
+    expect(kinds(r)).toEqual(['no_plan_work:480:confirm']);
+  });
+});

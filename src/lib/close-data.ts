@@ -11,8 +11,9 @@ import { monthSpan, reviewMonth, type CloseReview, type PendingCounts } from '@/
 import { confirmKey, loadConfirms } from '@/lib/confirm-data';
 import { canonical } from '@/lib/payroll/reference';
 import { daysFor, loadPeriod, syncOvertimeRequests, type PeriodData } from '@/lib/period-data';
-import { summarizeAnomalies } from '@/lib/anomaly';
-import { collectAnomalies, loadAnomalyPolicy, loadAnomalyReviews } from '@/lib/anomaly-data';
+import { countDays } from '@/lib/attendance-check';
+import { collectChecks, loadEarlyIgnoreAt, loadPatternMinEarly } from '@/lib/attendance-check-data';
+import { loadCheckReviews, reviewState } from '@/lib/attendance-check-reviews';
 import { loadStaff } from '@/lib/staff-data';
 import { needsSecondAdmin } from '@/lib/staff-rules';
 import { createAdminClient } from '@/lib/supabase/admin';
@@ -63,8 +64,9 @@ export async function loadCloseBoard(ym: string, practice: boolean): Promise<{ l
     loadCloses(ym, practice),
     db.from('punch_requests').select('employee_id').eq('is_test', practice).eq('status', 'pending').gte('work_date', from).lt('work_date', to),
     db.from('shift_requests').select('employee_id').eq('is_test', practice).eq('status', 'pending').gte('work_date', from).lt('work_date', to),
-    loadAnomalyPolicy(),
-    loadAnomalyReviews(from, last, practice),
+    loadCheckReviews(from, last, practice),
+    loadEarlyIgnoreAt(),
+    loadPatternMinEarly(last),
   ]);
   side.catch(() => {}); // 맞추기를 기다리는 동안 실패해도 「처리 안 된 실패」 경고가 나지 않게 — 아래에서 그대로 기다려 오류를 받는다
   // 맞추기 때 읽은 자료를 그대로 다시 쓴다 — 지난 달이고(같은 기간) 맞추기가 아무것도 바꾸지 않았을 때만. 바뀌었으면 새로 읽는다
@@ -82,9 +84,24 @@ export async function loadCloseBoard(ym: string, practice: boolean): Promise<{ l
     // 맞추기가 안 돼도 화면은 열어야 한다(마감 관리를 못 여는 것이 더 나쁘다). 빠진 확인은 아래 검토에서 「확인 필요」로 보인다
     console.error(JSON.stringify({ route: 'close-board', code: 'sync_failed', detail: String((e as Error)?.message ?? e).slice(0, 200) }));
   }
-  const [data, [confirms, closes, { data: pr }, { data: sr }, anomalyPolicy, reviews]] = await Promise.all([reuse ? Promise.resolve(reuse) : loadPeriod(from, last, practice), side]);
-  // 이상자 관리에서 「마감 차단」으로 정한 유형이 남아 있으면 마감하지 못한다
-  const anomalies = summarizeAnomalies(collectAnomalies(data, from, last), anomalyPolicy.policy, new Set(reviews.keys())).byEmployee;
+  const [data, [confirms, closes, { data: pr }, { data: sr }, checkReviews, earlyAt, patternMin]] = await Promise.all([reuse ? Promise.resolve(reuse) : loadPeriod(from, last, practice), side]);
+  // 근태 점검(급여-69): 「막음」과 「판단 필요」가 남아 있으면 마감하지 못한다. 「확인만」은 막지 않고 숫자로 보인다
+  const anomalies = new Map<string, { block: number; check: number; top: { type: string; n: number } | null }>();
+  for (const c of collectChecks(data, from, last, new Date(), earlyAt, patternMin)) {
+    const { handled } = reviewState(c.days, c.monthly, checkReviews.filter((r) => r.employeeId === c.employeeId));
+    const n = countDays(c.days, handled, c.monthly);
+    const open = n.block + n.decide + n.monthly;
+    // 대표 사유 — 남은(막음 · 판단 필요) 날에서 가장 많은 사유와 그 날 수. 한 달 1건만 남았으면 그 이름
+    const kinds = new Map<string, number>();
+    for (const d of c.days) {
+      if (!(d.state === 'block' || (d.state === 'decide' && !handled.has(d.workDate)))) continue;
+      for (const k of new Set(d.parts.filter((p) => !p.quiet && !p.bundled && p.state !== 'confirm').map((p) => p.kind))) kinds.set(k, (kinds.get(k) ?? 0) + 1);
+    }
+    const dayTop = [...kinds].sort((a, b) => b[1] - a[1])[0];
+    const monthTop = c.monthly.find((m) => !handled.has(`${m.month}:${m.kind}`));
+    const top = dayTop ? { type: dayTop[0], n: dayTop[1] } : monthTop ? { type: monthTop.kind, n: 1 } : null;
+    anomalies.set(c.employeeId, { block: open, check: n.confirm, top: open ? top : null });
+  }
   const count = (rows: { employee_id: string }[] | null, id: string) => (rows ?? []).filter((r) => r.employee_id === id).length;
   // 관리자가 직접 넣은(요청한 사람 ≠ 본인) 승인된 휴가 중 무급이거나 연차를 깎는 것
   const { data: adminLv } = await createAdminClient().from('leave_requests').select('employee_id, requested_by, type_code, start_date, end_date, start_time, end_time, days').eq('status', 'approved').eq('is_test', practice).lte('start_date', last).gte('end_date', from);
