@@ -24,6 +24,10 @@ export const SETTINGS = {
   'week.caution_hours': { group: 3, kind: 'int', min: 1, max: 80, unit: 'hour', default: OFFICE.weeklyCautionHours },
   // 근태 점검: 일정 시작 전 이 분까지 일찍 온 날은 확인 필요에서 뺀다(기록 화면엔 흐리게 남김). 0 = 다 띄움 (2026-11-03 의뢰인)
   'check.early_ignore_min': { group: 3, kind: 'int', min: 0, max: 240, unit: 'min', default: 60 },
+  // 늦은 출근 차감 — 1분 단위(실제 늦은 만큼) / 15분 내림 / 15분 올림(시프티 때). 지각 판정(1분부터)과는 따로다 (2026-11-03 대표 확인: 1분 단위)
+  'pay.late_round': { group: 3, kind: 'choice', options: ['minute', 'floor', 'ceil'], default: 'minute' },
+  // 근태 점검: 근무일 80% 이상을 이 분 이상 비슷하게 일찍 오면 한 달 1건 「일정 확인 필요」 (2026-11-03 의뢰인)
+  'check.pattern_min_early': { group: 3, kind: 'int', min: 0, max: 240, unit: 'min', default: 30 },
   'week.limit_hours': { group: 3, kind: 'int', min: 1, max: 80, unit: 'hour', default: OFFICE.weeklyLimitHours }, // 법정 한도 — 화면에서 바꾸지 않는다
   // 그룹 9 — 직원 · 초대 (2026-10-29 9-2: 회사가 바꾼다)
   'invite.valid_hours': { group: 9, kind: 'int', min: 1, max: 720, unit: 'hour', default: OFFICE.inviteValidHours },

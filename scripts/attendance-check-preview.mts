@@ -1,7 +1,7 @@
 // 근태 점검 2단계 — 한 달을 판정해 사람별 · 유형별 건수와 예시를 보고한다. 읽기 전용(DB에 쓰지 않는다).
 //   node --import ./scripts/lib/server-stub-hooks.mjs --import tsx scripts/attendance-check-preview.mts 2026-10
 import { CHECK_KINDS, countDays } from '@/lib/attendance-check';
-import { collectChecks, loadEarlyIgnoreAt } from '@/lib/attendance-check-data';
+import { collectChecks, loadEarlyIgnoreAt, loadPatternMinEarly } from '@/lib/attendance-check-data';
 import { loadPeriod } from '@/lib/period-data';
 import { monthRange } from '@/lib/month-data';
 
@@ -9,7 +9,7 @@ const month = process.argv[2] ?? '2026-10';
 const { from, to } = monthRange(month);
 const data = await loadPeriod(from, to, false);
 const name = new Map(data.people.map((p) => [p.id, p.name]));
-const checks = collectChecks(data, from, to, new Date(), await loadEarlyIgnoreAt());
+const checks = collectChecks(data, from, to, new Date(), await loadEarlyIgnoreAt(), await loadPatternMinEarly(to));
 const kindTotal = new Map<string, { days: number; minutes: number }>();
 console.log(`# ${month} 근태 점검 모의 실행 — 사람 ${checks.length}명`);
 console.log('이름 | 막음 | 판단 | 확인만 | 한 달 1건 | 합계 | 대표 사유');

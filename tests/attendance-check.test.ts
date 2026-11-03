@@ -114,3 +114,18 @@ describe('2026-11-03 의뢰인 — 시작 시각 기준 · 일찍 출근 기준 
     expect(b.days.every((d) => d.state === null)).toBe(true);
   });
 });
+
+describe('늦은 출근 차감 방식 · 일정 확인 필요 30분 기준 (2026-11-03 대표 확인)', () => {
+  it('1분 단위: 07:31 출근 → 1분 · 15분 내림: 07:44 → 0, 07:46 → 15 · 올림: 07:31 → 15', () => {
+    const late = (t: string, lateRound: 'minute' | 'floor' | 'ceil') => judgeDay({ ...base, lateRound, pairs: [{ in: at(t), out: at('17:00') }] });
+    expect(kinds(late('07:31', 'minute'))).toEqual(['late_in:1:decide']);
+    expect(late('07:44', 'floor').state).toBeNull();
+    expect(kinds(late('07:46', 'floor'))).toEqual(['late_in:15:decide']);
+    expect(kinds(late('07:31', 'ceil'))).toEqual(['late_in:15:decide']);
+  });
+  it('매일 15분씩 일찍 오는 사람은 30분 기준 아래라 일정 확인 필요가 아니다', () => {
+    const days = ['2026-10-01', '2026-10-02', '2026-10-05'].map((d) => judgeDay({ ...base, workDate: d, earlyIgnoreMin: 60, pairs: [{ in: at('07:14', d), out: at('17:00', d) }] }));
+    expect(bundleMonth('2026-10', days, 3, 30).monthly).toEqual([]);
+    expect(bundleMonth('2026-10', days, 3, 0).monthly[0]?.kind).toBe('schedule_check');
+  });
+});

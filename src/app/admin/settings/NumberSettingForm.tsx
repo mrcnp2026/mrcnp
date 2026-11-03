@@ -8,7 +8,7 @@ import { callApi } from '@/components/client-api';
 import { ErrorNote } from '@/components/ErrorNote';
 import { Button } from '@/components/ui';
 
-export function NumberSettingForm({ k, value, min, max, unit }: { k: 'week.caution_hours' | 'invite.valid_hours' | 'check.early_ignore_min'; value: number; min: number; max: number; unit: string }) {
+export function NumberSettingForm({ k, value, min, max, unit }: { k: 'week.caution_hours' | 'invite.valid_hours' | 'check.early_ignore_min' | 'check.pattern_min_early'; value: number; min: number; max: number; unit: string }) {
   const t = useTranslations('admin.settings.numberSetting');
   const router = useRouter();
   const [v, setV] = useState(String(value));

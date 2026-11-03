@@ -8,28 +8,29 @@ import { addDays, weekStartOf } from '@/lib/calendar';
 import { trimRuleByLeave } from '@/lib/leave';
 import { loadLeaveRequests } from '@/lib/leave-data';
 import { pairsByWorkDate } from '@/lib/pairs';
-import { ruleAt, type RuleVersion } from '@/lib/rule-at';
+import { ruleAt, withLateRound, type RuleVersion } from '@/lib/rule-at';
+import { SETTINGS } from '@/config/settings-catalog';
 import { loadShifts, loadTemplateOf } from '@/lib/shift-data';
 import { deemedPair, planDay } from '@/lib/shifts';
 import { createAdminClient } from '@/lib/supabase/admin';
 import { toKstDate } from '@/lib/time';
 import { classifyDay } from '@/lib/today';
-import type { HolidayRow, PunchCorrection, PunchEvent, WorkRule } from '@/lib/types';
+import type { HolidayRow, LateRound, PunchCorrection, PunchEvent, WorkRule } from '@/lib/types';
 import { weeklyHours } from '@/lib/weekly-hours';
 import { calcWeek } from '@/lib/worktime';
-import { getSettingAt } from '@/lib/settings';
+import { getSettingAt, settingHistory } from '@/lib/settings';
 
 /**
  * 근무규칙 이력 전체 (숨긴 행 제외). 판정은 날짜마다 그날 유효한 규칙으로 한다 (② 4-1 — src/lib/rule-at.ts).
  * 없으면 빈 배열 — ② 설정 화면 전에는 없을 수 있다. 0이나 기본값으로 지어내지 않는다 (7-14)
  */
 export const loadRuleVersions = cache(async (): Promise<RuleVersion[]> => {
-  const { data } = await readAll((a,b) => createAdminClient()
+  const [{ data }, lateHist] = await Promise.all([ readAll((a,b) => createAdminClient()
     .from('work_rules')
     .select('start_time, end_time, late_grace_min, break_start, break_end, extra_breaks, round_step_min, workdays, weekly_rest_day, effective_from')
     .eq('active', true)
-    .order('effective_from', { ascending: false }).order('id').range(a,b));
-  return (data ?? []).map((d) => ({
+    .order('effective_from', { ascending: false }).order('id').range(a,b)), settingHistory('pay.late_round')]);
+  return withLateRound((data ?? []).map((d) => ({
     effectiveFrom: d.effective_from,
     rule: {
       startTime: d.start_time,
@@ -44,7 +45,7 @@ export const loadRuleVersions = cache(async (): Promise<RuleVersion[]> => {
       workdays: d.workdays,
       weeklyRestDay: d.weekly_rest_day,
     },
-  }));
+  })), lateHist, SETTINGS['pay.late_round'].default as LateRound);
 });
 
 /** 오늘(KST) 유효한 근무규칙 */

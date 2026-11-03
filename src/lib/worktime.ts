@@ -75,6 +75,13 @@ const toMin = (ms: number) => Math.floor(ms / 60_000);
 const floorTo = (ms: number, stepMin: number) => Math.floor(ms / (stepMin * 60_000)) * stepMin * 60_000;
 const ceilTo = (ms: number, stepMin: number) => Math.ceil(ms / (stepMin * 60_000)) * stepMin * 60_000;
 
+/** 늦게(일정 시작 뒤) 들어온 출근 — 회사 설정 pay.late_round. 1분 = 그대로 · 내림 = 끊는 단위로 내리되 일정 시작보다 앞으로 가지 않음 · 올림(예전) (2026-11-03 대표 확인: 1분) */
+export function lateIn(ms: number, stepMin: number, rule: Pick<WorkRule, 'lateRound'>, start: number | null): number {
+  if (rule.lateRound === 'minute') return ms;
+  if (rule.lateRound === 'floor') return Math.max(start ?? -Infinity, floorTo(ms, stepMin));
+  return ceilTo(ms, stepMin);
+}
+
 /** 그 근무에 걸리는 휴게시간대들. 근무일에 놓고, 근무가 자정을 넘기면 다음 날에도 놓는다 */
 function breakWindows(rule: WorkRule, workDate: string, work: Iv[]): Iv[] {
   const list = [...(rule.breakStart && rule.breakEnd ? [{ start: rule.breakStart, end: rule.breakEnd }] : []), ...(rule.extraBreaks ?? [])];
@@ -120,7 +127,7 @@ export function calcWorkMinutes(pairs: PunchPair[], rule: WorkRule, ctx: WorkCtx
   // 한국 시간은 UTC와 9시간 차이라 1·5·10·15·30·60분 단위는 시각을 그대로 끊어도 한국 시각 기준과 같다.
   const step = rule.roundStepMin && rule.roundStepMin > 1 ? rule.roundStepMin : 0;
   // 일정 시작 전(포함)에 온 근무는 일정 시작부터 그대로 센다 — 시작이 끊는 단위에 맞지 않아도(07:40) 올리지 않는다 (2026-11-03 의뢰인)
-  const rounded: Iv[] = step ? work.map(([s, e]) => { const rs = clipStart !== null && s <= clipStart ? s : ceilTo(s, step); return [rs, Math.max(rs, floorTo(e, step))] as Iv; }).filter(([s, e]) => e > s) : work;
+  const rounded: Iv[] = step ? work.map(([s, e]) => { const rs = clipStart !== null && s <= clipStart ? s : lateIn(s, step, rule, clipStart); return [rs, Math.max(rs, floorTo(e, step))] as Iv; }).filter(([s, e]) => e > s) : work;
   const payableMinutes = step ? toMin(sumMs(cutBreaks(rounded))) : toMin(sumMs(net));
 
   const grossMinutes = toMin(sumMs(work));

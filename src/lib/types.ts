@@ -3,6 +3,9 @@
 
 export type DayType = 'workday' | 'rest_off' | 'holiday'; // 7-6 요점 7
 
+/** 늦은 출근 끊기: minute = 실제 늦은 만큼(1분) · floor = 끊는 단위로 내림 · ceil = 올림(시프티 때 방식) */
+export type LateRound = 'minute' | 'floor' | 'ceil';
+
 export type WorkRule = {
   startTime: string; // 'HH:MM' 또는 'HH:MM:SS' (DB time 그대로)
   endTime: string;
@@ -12,6 +15,7 @@ export type WorkRule = {
   extraBreaks?: { start: string; end: string }[]; // 둘째 휴게시간대부터 (예: 17:00~17:30) — 확정-9. 없으면 휴게시간대 하나
   roundStepMin?: number; // 급여용 시간의 끊는 단위(분). 출근은 올림 · 퇴근은 내림 — 확정-9. 0이나 없음 = 끊지 않는다
   restOffAsHoliday?: boolean; // 쉬는 날(rest_off, 보통 토요일) 근무를 휴일근로로 센다 (OFFICE.restOffWorkAsHoliday, 결정 사항 급여-43)
+  lateRound?: LateRound; // 늦은 출근을 끊는 방식 — 회사 설정 pay.late_round (2026-11-03 대표 확인: 1분 단위). 없으면 예전대로 올림
   clipBeforeStart?: boolean; // 일정 시작 전 출근 시간을 근무로 치지 않는다 (OFFICE.earlyArrivalCounts=false, 2026-10-16). 시작 시각은 그날 일정으로 바뀐 startTime
   workdays: number[]; // ISO 1=월 … 7=일
   weeklyRestDay: number; // 주휴일 (기본 7=일)

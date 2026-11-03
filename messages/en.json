@@ -2841,6 +2841,8 @@
         "range": "Enter a value from {min} to {max}",
         "hours": "hours",
         "minutes": "min",
+        "patternMin": {"label": "Check schedule — daily early arrival of at least", "desc": "Staff who arrive about the same amount early (within 15 minutes), at least this much, on 80% or more of the month's workdays get one “check schedule” item for the month. Applies from today."},
+        "lateRound": {"label": "Late arrival deduction", "desc": "Sets where work starts counting on a late day. Lateness is still recorded from 1 minute whatever you choose. Applies from today; past days keep the old method.", "minute": "By the minute (actual lateness)", "floor": "Round down to 15 min", "ceil": "Round up to 15 min"},
         "earlyIgnore": {"label": "Early arrival — leave out of checks up to", "desc": "Days when someone arrives no more than this much before the schedule start are not raised in the attendance check. Time before the start is never counted as work, so pay is unchanged, and the record page still shows it greyed. Staff who arrive about the same amount early on 80% or more of the month's workdays get one “check schedule” item for the month. Applies from today; past days keep the old value."},
         "caution": {
           "label": "Weekly hours “caution” level",

@@ -1,7 +1,7 @@
 import type { DayRow } from '@/lib/period';
 import { weekStartOf } from '@/lib/calendar';
 import { kstDateTime } from '@/lib/time';
-import { calcWeek } from '@/lib/worktime';
+import { calcWeek, lateIn } from '@/lib/worktime';
 import type { WorkRule } from '@/lib/types';
 
 /** 원본과 승인량은 보존하고, 끊은 출퇴근을 같은 주 전체에서 다시 분류한다. */
@@ -18,7 +18,7 @@ export function roundedAttendance(days: DayRow[], ruleOf: (d: string) => WorkRul
       return { ...d, pairs: d.pairs.map((p) => {
         if (!step || !p.in || !p.out) return p;
         const inMs = Math.floor(p.in.getTime() / 60_000) * 60_000;
-        const start = planStart !== null && inMs <= planStart && p.out.getTime() > planStart ? planStart : Math.ceil(inMs / step) * step;
+        const start = planStart !== null && inMs <= planStart && p.out.getTime() > planStart ? planStart : lateIn(inMs, step / 60_000, rule, planStart);
         const end = Math.max(start, Math.floor(Math.floor(p.out.getTime() / 60_000) * 60_000 / step) * step);
         return { in: new Date(start), out: new Date(end) };
       }) };

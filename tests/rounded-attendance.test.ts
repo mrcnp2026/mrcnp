@@ -24,3 +24,15 @@ it('일정 07:40 · 15분 끊기 — 07:35에 오면 07:40부터, 07:41에 오�
   expect(pay('07:35')).toBe(500);
   expect(pay('07:41')).toBe(495);
 });
+
+it('늦은 출근 1분 단위 설정 — 07:31 출근은 07:31부터 (일정 07:30 · 15분 끊기, 퇴근은 내림 그대로)', async () => {
+  const { calcWorkMinutes } = await import('@/lib/worktime');
+  const r: WorkRule = { startTime: '07:30', endTime: '17:00', lateGraceMin: 0, breakStart: '12:00', breakEnd: '13:00', roundStepMin: 15, clipBeforeStart: true, lateRound: 'minute', workdays: [1,2,3,4,5], weeklyRestDay: 7 };
+  const date = '2026-10-12';
+  const pay = (inAt: string, rule: WorkRule) => calcWorkMinutes([{ in: kstDateTime(date, inAt), out: kstDateTime(date, '17:10') }], rule, { workDate: date } as never).payableMinutes;
+  expect(pay('07:31', r)).toBe(509); // 07:31–17:00(17:10 내림) − 점심 60
+  expect(pay('07:46', { ...r, lateRound: 'floor' })).toBe(495);
+  expect(pay('07:31', { ...r, lateRound: 'ceil' })).toBe(495);
+  const day = computeEmployeeDays({ events: [], approvedCorrections: [], rule: r, holidays: [], from: date, to: date, deemed: (d) => d === date ? { in: kstDateTime(date, '07:31'), out: kstDateTime(date, '17:10') } : null });
+  expect(roundedAttendance(day, () => r).get(date)!.netMinutes).toBe(509);
+});

@@ -4,6 +4,8 @@ import { getFormatter, getTranslations } from 'next-intl/server';
 import { getSettingAt } from '@/lib/settings';
 import { ScheduleModeForm } from './ScheduleModeForm';
 import { NumberSettingForm } from './NumberSettingForm';
+import { ChoiceSettingForm } from './ChoiceSettingForm';
+import { SETTINGS } from '@/config/settings-catalog';
 import { HelpTip } from '@/components/Help';
 import { headers } from 'next/headers';
 import Link from 'next/link';
@@ -84,7 +86,8 @@ export default async function SettingsPage({ searchParams }: { searchParams: Pro
   const info = INFO[tab];
   const tsm = await getTranslations('admin.settings.scheduleMode');
   const scheduleMode = (await getSettingAt('schedule.request_mode', toKstDate(new Date()))) as 'approval' | 'direct';
-  const [cautionHours, inviteHours, earlyIgnoreMin] = await Promise.all([getSettingAt('week.caution_hours', toKstDate(new Date())), getSettingAt('invite.valid_hours', toKstDate(new Date())), getSettingAt('check.early_ignore_min', toKstDate(new Date()))]); // 9-2 (2026-10-29)
+  const [cautionHours, inviteHours, earlyIgnoreMin] = await Promise.all([getSettingAt('week.caution_hours', toKstDate(new Date())), getSettingAt('invite.valid_hours', toKstDate(new Date())), getSettingAt('check.early_ignore_min', toKstDate(new Date()))]);
+  const [lateRound, patternMinEarly] = await Promise.all([getSettingAt('pay.late_round', toKstDate(new Date())), getSettingAt('check.pattern_min_early', toKstDate(new Date()))]); // 9-2 (2026-10-29)
   const tns = await getTranslations('admin.settings.numberSetting');
   // 권한 한 화면 (2026-10-14 문서 07 ④-4): 관리자 · 지점관리자 · 급여 담당을 표로. 바꾸기는 직원 화면에서(다른 관리자 확인 규칙을 그대로 쓴다)
   const access =
@@ -329,6 +332,13 @@ export default async function SettingsPage({ searchParams }: { searchParams: Pro
               {/* 근태 점검 — 일찍 출근을 확인 필요에서 빼는 기준 (2026-11-03 의뢰인, 바꾼 날부터) */}
               <SettingRow label={tns('earlyIgnore.label')} desc={tns('earlyIgnore.desc')}>
                 <NumberSettingForm k="check.early_ignore_min" value={earlyIgnoreMin} min={0} max={240} unit={tns('minutes')} />
+              </SettingRow>
+              <SettingRow label={tns('patternMin.label')} desc={tns('patternMin.desc')}>
+                <NumberSettingForm k="check.pattern_min_early" value={patternMinEarly} min={0} max={240} unit={tns('minutes')} />
+              </SettingRow>
+              {/* 늦은 출근 차감 방식 (2026-11-03 대표 확인: 1분 단위) — 지각 판정(1분부터)은 그대로 */}
+              <SettingRow label={tns('lateRound.label')} desc={tns('lateRound.desc')}>
+                <ChoiceSettingForm k="pay.late_round" value={lateRound} options={SETTINGS['pay.late_round'].options} labels={{ minute: tns('lateRound.minute'), floor: tns('lateRound.floor'), ceil: tns('lateRound.ceil') }} />
               </SettingRow>
               <SetRow label={tp('deemed')}>
                 <UseMark on label={tp('use')} />

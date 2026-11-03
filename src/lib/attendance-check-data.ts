@@ -26,8 +26,15 @@ export async function loadEarlyIgnoreAt(): Promise<(date: string) => number> {
   return (date) => Number(pickAt(rows, key, date, SETTINGS[key].default));
 }
 
+/** 「일정 확인 필요」 기준 분 — 그 달 끝 날짜에 유효했던 값 */
+export async function loadPatternMinEarly(onDate: string): Promise<number> {
+  const key = 'check.pattern_min_early';
+  const rows = (await settingHistory(key)).map((r) => ({ key, value: r.value, effective_from: r.effectiveFrom }));
+  return Number(pickAt(rows, key, onDate, SETTINGS[key].default));
+}
+
 /** 기간 안 직원마다 확인 필요인 날 (판정 대상이 아닌 사람 · 날은 뺀다: 시스템관리자 · 최고관리자 · 대표 · 입사 전 · 앞날) */
-export function collectChecks(data: PeriodData, from: string, to: string, now = new Date(), earlyIgnoreAt: (date: string) => number = () => SETTINGS['check.early_ignore_min'].default): PersonChecks[] {
+export function collectChecks(data: PeriodData, from: string, to: string, now = new Date(), earlyIgnoreAt: (date: string) => number = () => SETTINGS['check.early_ignore_min'].default, patternMinEarly: number = SETTINGS['check.pattern_min_early'].default): PersonChecks[] {
   const today = toKstDate(now);
   const out: PersonChecks[] = [];
   for (const p of data.people) {
@@ -71,10 +78,11 @@ export function collectChecks(data: PeriodData, from: string, to: string, now = 
         approvedExtraMin: approved,
         waivedBreakMin: waivedMin,
         earlyIgnoreMin: earlyIgnoreAt(d.workDate),
+        lateRound: (rule ?? base)?.lateRound,
       });
       if (check.parts.length) days.push(check); // 흐리게만 남은 날도 둔다 — 기록 화면 표시 · 한 달 묶음 판단에 쓴다
     }
-    const b = bundleMonth(from.slice(0, 7), days, worked);
+    const b = bundleMonth(from.slice(0, 7), days, worked, patternMinEarly);
     out.push({ employeeId: p.id, days: b.days, monthly: b.monthly });
   }
   return out;

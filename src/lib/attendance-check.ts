@@ -6,7 +6,7 @@
 // 차이를 잡는 기준값(15분 등)은 따로 두지 않는다: 출근은 끊는 단위로 올리고 퇴근은 내린 「계산 시각」으로 비교한다(확정-9).
 //   → 끊는 단위 15분이면 늦은 출근 · 이른 퇴근은 1분부터, 이른 출근 · 늦은 퇴근은 15분부터 걸린다.
 import { kstDateTime } from '@/lib/time';
-import type { PunchPair } from '@/lib/types';
+import type { LateRound, PunchPair } from '@/lib/types';
 
 export const CHECK_KINDS = ['pending_request', 'record_error', 'missing_out', 'missing_in', 'leave_day_punch', 'no_plan_work', 'before_start', 'late_in', 'early_out', 'after_end'] as const;
 export type CheckKind = (typeof CHECK_KINDS)[number];
@@ -38,6 +38,7 @@ export type DayCheckInput = {
   pending: boolean; // 그날 처리 전 요청(휴가 · 정정 · 연장 · 외근 · 일정)이 있다
   approvedExtraMin: number; // 승인된 연장 · 휴일근로 인정 분 — 일정 후 근무 · 일정 없는 날 근무를 덮는다
   waivedBreakMin: number; // 관리자가 표시한 「휴게 안 함」 분 — 늦은 출근 · 이른 퇴근을 덮는다
+  lateRound?: LateRound; // 늦은 출근 끊기 (회사 설정 pay.late_round) — 급여 계산과 같게. 없으면 올림
   earlyIgnoreMin?: number; // 그날 유효한 「일찍 출근 — 확인 필요에서 빼는 시간」(분). 없으면 0 = 다 띄움
 };
 
@@ -104,7 +105,7 @@ export function judgeDay(a: DayCheckInput): DayCheck {
     const first = Math.floor(Math.min(...ins) / MIN) * MIN;
     // 일정 시작 전(포함)에 오면 계산은 일정 시작부터 — 시작이 끊는 단위에 맞지 않아도(07:40) 늦은 출근이 아니다 (2026-11-03 의뢰인)
     const up = ceilTo(first, step);
-    const c = first <= start && up > start ? start : up;
+    const c = first <= start ? (up > start ? start : up) : a.lateRound === 'minute' ? first : a.lateRound === 'floor' ? Math.max(start, floorTo(first, step)) : up;
     const at = { plan: a.plan.startTime.slice(0, 5), punched: hm(new Date(first)), counted: hm(new Date(c)) };
     if (c < start) {
       push('before_start', netMinutes(c, start, breaks), null, at); // 일찍 시작을 덮는 요청은 없다 — 일정 변경으로만 기준이 바뀐다
@@ -131,23 +132,24 @@ export type MonthCheck = { kind: MonthKind; month: string; dates: string[]; from
 export const PATTERN_WINDOW_MIN = 15;
 export const PATTERN_SHARE = 0.8;
 
-export function bundleMonth(month: string, days: readonly DayCheck[], workedDays: number): { days: DayCheck[]; monthly: MonthCheck[] } {
+export function bundleMonth(month: string, days: readonly DayCheck[], workedDays: number, patternMinEarly = 0): { days: DayCheck[]; monthly: MonthCheck[] } {
   const early = days.flatMap((d) => d.parts.filter((p) => p.kind === 'before_start').map((p) => ({ date: d.workDate, minutes: p.minutes, quiet: !!p.quiet })));
+  const steady = early.filter((e) => e.minutes >= patternMinEarly); // 「매일 30분 이상」 — 이보다 적게 일찍 온 날은 일정 확인 필요의 근거가 아니다 (회사 설정 check.pattern_min_early)
   if (!early.length) return { days: [...days], monthly: [] };
   // 가장 많은 날이 들어가는 15분 폭
   let best = { from: 0, n: 0 };
-  for (const m of [...new Set(early.map((e) => e.minutes))].sort((x, y) => x - y)) {
-    const n = early.filter((e) => e.minutes >= m && e.minutes <= m + PATTERN_WINDOW_MIN).length;
+  for (const m of [...new Set(steady.map((e) => e.minutes))].sort((x, y) => x - y)) {
+    const n = steady.filter((e) => e.minutes >= m && e.minutes <= m + PATTERN_WINDOW_MIN).length;
     if (n > best.n) best = { from: m, n };
   }
   const pattern = workedDays > 0 && best.n / workedDays >= PATTERN_SHARE;
   const inWindow = (e: { minutes: number }) => e.minutes >= best.from && e.minutes <= best.from + PATTERN_WINDOW_MIN;
-  const take = (e: { minutes: number; quiet: boolean }) => !e.quiet || (pattern && inWindow(e));
+  const take = (e: { minutes: number; quiet: boolean }) => !e.quiet || (pattern && e.minutes >= patternMinEarly && inWindow(e));
   const picked = early.filter(take);
   if (!picked.length) return { days: [...days], monthly: [] };
   const dates = [...new Set(picked.map((e) => e.date))].sort();
   const mins = picked.map((e) => e.minutes);
-  const item: MonthCheck = { kind: pattern ? 'schedule_check' : 'early_bundle', month, dates, fromMin: pattern ? best.from : Math.min(...mins), toMin: pattern ? Math.max(...early.filter(inWindow).map((e) => e.minutes)) : Math.max(...mins), patternDays: pattern ? best.n : 0, workedDays };
+  const item: MonthCheck = { kind: pattern ? 'schedule_check' : 'early_bundle', month, dates, fromMin: pattern ? best.from : Math.min(...mins), toMin: pattern ? Math.max(...steady.filter(inWindow).map((e) => e.minutes)) : Math.max(...mins), patternDays: pattern ? best.n : 0, workedDays };
   const out = days.map((d) => {
     if (!dates.includes(d.workDate)) return d;
     const parts = d.parts.map((p) => (p.kind === 'before_start' && take({ minutes: p.minutes, quiet: !!p.quiet }) ? { ...p, bundled: true } : p));
