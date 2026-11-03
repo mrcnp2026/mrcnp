@@ -126,7 +126,7 @@ export function ReviewButton({ employeeId, workDate, types, reviewed, live }: { 
         setBusy(false);
         router.refresh();
       }}
-      className={`inline-flex min-h-8 items-center text-sm font-bold whitespace-nowrap disabled:opacity-50 ${reviewed ? 'text-muted hover:text-text' : 'text-primary hover:underline'}`}
+      className={`inline-flex min-h-8 items-center text-sm font-bold whitespace-nowrap disabled:opacity-50 max-lg:min-h-10 ${reviewed ? 'text-muted hover:text-text' : 'text-primary hover:underline max-lg:rounded-button max-lg:border max-lg:border-primary max-lg:px-3 max-lg:no-underline'}`}
     >
       {t(reviewed ? 'reviewedUndo' : 'reviewDo')}
     </button>
@@ -154,7 +154,7 @@ export function NotifyButton({ month, employeeIds, label, confirm, live, primary
             router.refresh();
           }
         }}
-        className={primary ? 'inline-flex h-9 items-center rounded-button bg-primary px-3.5 text-sm font-bold text-on-primary disabled:opacity-50' : 'inline-flex min-h-8 items-center text-sm font-bold whitespace-nowrap text-primary hover:underline disabled:opacity-50'}
+        className={primary ? 'inline-flex h-9 items-center rounded-button bg-primary px-3.5 text-sm font-bold text-on-primary disabled:opacity-50' : 'inline-flex min-h-8 items-center text-sm font-bold whitespace-nowrap text-primary hover:underline disabled:opacity-50 max-lg:min-h-10 max-lg:px-1 max-lg:font-semibold max-lg:text-muted'}
       >
         {label}
       </button>

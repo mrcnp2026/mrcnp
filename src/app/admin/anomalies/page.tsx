@@ -1,9 +1,11 @@
 // 이상자 관리 — 달마다 누락 · 겹침 · 일정과 다른 기록 · 확인 안 된 근무지를 한 목록으로 보고, 유형마다 마감을 막을지 정한다 (PRD v1.3 A15).
 // 여기서는 보여 주기만 한다. 고치는 길은 그 직원의 기록 화면(정정 승인 · 대리 입력)이다.
 // 담당자 · 처리 기한 · 기한 지남(2026-10-19 의뢰인): 건마다 담당 · 기한을 보이고, 기한이 지나면 「n일 지남」 — 매일 아침 담당자 폰으로도 알린다(lib/anomaly-tasks.ts).
-import { ChevronDown, ChevronLeft, ChevronRight } from 'lucide-react';
+import { ChevronDown, ChevronLeft, ChevronRight, X } from 'lucide-react';
 import { getTranslations } from 'next-intl/server';
 import Link from 'next/link';
+import { LiveSearchInput } from '@/components/LiveSearchInput';
+import { matchLevel } from '@/lib/search';
 import { FilterBar, ListHead, ListTable, StatusCards } from '@/components/listframe';
 import { Card, CardTitle, Chip, PageShell } from '@/components/ui';
 import { Pager, pageOf } from '@/components/Pager';
@@ -28,7 +30,7 @@ const shift = (ym: string, by: number) => {
   return new Date(Date.UTC(y, m - 1 + by, 1)).toISOString().slice(0, 7);
 };
 
-export default async function AnomaliesPage({ searchParams }: { searchParams: Promise<{ m?: string; live?: string; k?: string; st?: string; p?: string }> }) {
+export default async function AnomaliesPage({ searchParams }: { searchParams: Promise<{ m?: string; live?: string; k?: string; st?: string; p?: string; q?: string; e?: string }> }) {
   await adminPage(); // 관리 화면 이중 확인 (lib/admin-gate)
   const [t, tc, sp] = await Promise.all([getTranslations('admin.anomalies'), getTranslations('common'), searchParams]);
   const today = toKstDate(new Date());
@@ -76,13 +78,23 @@ export default async function AnomaliesPage({ searchParams }: { searchParams: Pr
     );
   };
   const nameOf = new Map(data.people.map((p) => [p.id, p]));
+  // 이름으로 찾기 · 한 사람만 (2026-11-03 의뢰인: 근태 마감에서 누르면 전 직원이 날짜순으로 나왔다 — e=직원, q=이름 · 부서 · 사번)
+  const q = (sp.q ?? '').trim().slice(0, 50);
+  const one = sp.e && nameOf.has(sp.e) ? sp.e : null;
+  const hitPerson = (id: string) => {
+    if (one && id !== one) return false;
+    if (!q) return true;
+    const pp = nameOf.get(id);
+    return !!matchLevel(q, [pp?.name, pp?.employeeNo, groupPath(groups, pp?.groupId) ?? '']);
+  };
   const rows = sum.shown
-    .filter((x) => (!only || x.types.some((ty) => groupOfType(ty) === only)) && (!st || match(x, st)))
+    .filter((x) => hitPerson(x.employeeId) && (!only || x.types.some((ty) => groupOfType(ty) === only)) && (!st || match(x, st)))
     .sort((a, b) => Number(b.block) - Number(a.block) || b.workDate.localeCompare(a.workDate) || (nameOf.get(a.employeeId)?.name ?? '').localeCompare(nameOf.get(b.employeeId)?.name ?? ''));
   // 한 쪽에 20일씩 (2026-10-16 디자인: 실제 기록을 넣고 보니 폰에서 249일이 한 줄로 이어져 6만 px가 넘었다)
   const paged = pageOf(rows, sp.p, 20);
   const live = sp.live === '1' ? '&live=1' : '';
-  const link = (m: string, k?: string | null, s?: string | null) => `/admin/anomalies?m=${m}${k ? `&k=${k}` : ''}${s ? `&st=${s}` : ''}${live}`;
+  const keepWho = `${sp.e && nameOf.has(sp.e) ? `&e=${sp.e}` : ''}${sp.q ? `&q=${encodeURIComponent(sp.q)}` : ''}`; // 고른 사람 · 찾는 말은 달 · 거르기를 바꿔도 그대로
+  const link = (m: string, k?: string | null, s?: string | null, who = keepWho) => `/admin/anomalies?m=${m}${k ? `&k=${k}` : ''}${s ? `&st=${s}` : ''}${who}${live}`;
   const count = (s: string) => sum.shown.filter((x) => match(x, s)).length;
   // 유형 카드는 이 달에 한 건이라도 있었던 유형 + 마감을 막는 유형만 (꺼 둔 유형은 아래 기준표에서 본다)
   // 아직 처리하지 않은 이상 기록이 있는 사람(통보 대상)
@@ -107,7 +119,7 @@ export default async function AnomaliesPage({ searchParams }: { searchParams: Pr
         {practice && <span className="text-sm text-faint">{t('practice')}</span>}
         {openPeople.length > 0 && (
           <span className="ml-auto">
-            <NotifyButton primary month={month} live={sp.live === '1'} label={t('notify.all', { n: openPeople.length })} confirm={t('notify.confirmAll', { n: openPeople.length })} />
+            <NotifyButton month={month} live={sp.live === '1'} label={t('notify.all', { n: openPeople.length })} confirm={t('notify.confirmAll', { n: openPeople.length })} />
           </span>
         )}
         <Link href={`/admin/closing?m=${month}${live}`} className={`${openPeople.length > 0 ? '' : 'ml-auto '}inline-flex h-9 items-center rounded-button border border-border bg-bg px-3.5 text-sm font-semibold text-text hover:bg-surface`}>
@@ -115,8 +127,20 @@ export default async function AnomaliesPage({ searchParams }: { searchParams: Pr
         </Link>
       </FilterBar>
 
-      <StatusCards
-        groups={[
+      {/* 이름 · 부서 · 사번으로 찾기 — 입력하는 동안 바로 (LiveSearchInput) */}
+      <div className="flex flex-wrap items-center gap-2">
+        <LiveSearchInput initial={q} placeholder={t('searchPh')} />
+        {one && (
+          <Link href={link(month, only, st, q ? `&q=${encodeURIComponent(q)}` : '')} className="inline-flex min-h-11 items-center gap-1 rounded-chip bg-primary-tint px-3 text-sm font-semibold text-primary lg:min-h-9">
+            {t('onlyOne', { name: nameOf.get(one)?.name ?? '' })} <X aria-hidden size={14} />
+          </Link>
+        )}
+      </div>
+
+      {/* 폰: 처리 상태만 펼치고 유형별은 접어 둔다 — 카드가 첫 화면을 다 차지해 목록이 보이지 않았다 (2026-11-03 디자인 점검) */}
+      <div className="max-lg:hidden">
+        <StatusCards
+          groups={[
           {
             title: t('cardsState'),
             cards: (['block', 'check', 'done', 'overdue', 'mine'] as const).map((s) => ({ key: s, label: t(`state.${s}`), n: count(s), unit: t('unitDay'), href: link(month, only, st === s ? null : s), on: st === s, tone: s === 'block' || s === 'overdue' ? ('warn' as const) : s === 'done' ? ('ok' as const) : s === 'check' || s === 'mine' ? ('info' as const) : undefined })),
@@ -125,15 +149,42 @@ export default async function AnomaliesPage({ searchParams }: { searchParams: Pr
             title: t('cardsType'),
             cards: typeCards.map((k) => ({ key: k, label: t(`type.${k}`), n: byGroup[k], unit: t('unitDay'), href: link(month, only === k ? null : k, st), on: only === k, tone: groupLevel(saved.policy, k) === 'block' ? ('warn' as const) : undefined })),
           },
-        ]}
-      />
+          ]}
+        />
+      </div>
+      <div className="flex flex-col gap-2 lg:hidden">
+        <StatusCards
+          groups={[
+          {
+            title: t('cardsState'),
+            cards: (['block', 'check', 'done', 'overdue', 'mine'] as const).map((s) => ({ key: s, label: t(`state.${s}`), n: count(s), unit: t('unitDay'), href: link(month, only, st === s ? null : s), on: st === s, tone: s === 'block' || s === 'overdue' ? ('warn' as const) : s === 'done' ? ('ok' as const) : s === 'check' || s === 'mine' ? ('info' as const) : undefined })),
+          },
+          ]}
+        />
+        {typeCards.length > 0 && (
+          <details className="group rounded-card bg-surface">
+            <summary className="flex min-h-11 cursor-pointer list-none items-center justify-between px-3 text-sm font-bold text-muted [&::-webkit-details-marker]:hidden">
+              {t('cardsTypeOpen')}
+              <ChevronDown aria-hidden size={16} className="transition-transform group-open:rotate-180" />
+            </summary>
+            <StatusCards
+              groups={[
+              {
+            title: t('cardsType'),
+            cards: typeCards.map((k) => ({ key: k, label: t(`type.${k}`), n: byGroup[k], unit: t('unitDay'), href: link(month, only === k ? null : k, st), on: only === k, tone: groupLevel(saved.policy, k) === 'block' ? ('warn' as const) : undefined })),
+          },
+              ]}
+            />
+          </details>
+        )}
+      </div>
 
       <ListTable
         count={
           <>
             {t('listTitle', { n: rows.length })}
-            {(only || st) && (
-              <Link href={link(month)} className="pl-3 font-bold text-primary">
+            {(only || st || q || one) && (
+              <Link href={link(month, null, null, '')} className="pl-3 font-bold text-primary">
                 {t('showAll')}
               </Link>
             )}
@@ -151,8 +202,8 @@ export default async function AnomaliesPage({ searchParams }: { searchParams: Pr
                 <span className="max-lg:hidden">{r.workDate}</span>
                 <span className="flex w-full flex-col gap-1.5 lg:hidden">
                   <span className="flex flex-wrap items-center gap-x-2 gap-y-1">
-                    <span className="text-sm">{r.workDate.slice(5)}</span>
-                    <b>{p?.name}</b>
+                    <b className="text-base">{p?.name}</b>
+                    <span className="num text-sm text-muted">{r.workDate.slice(5)}</span>
                     {r.types.map((k) => (
                       <Chip key={k} tone={saved.policy[k] === 'block' ? 'warn' : 'neutral'}>
                         {t(`type.${k}`)}
@@ -162,7 +213,7 @@ export default async function AnomaliesPage({ searchParams }: { searchParams: Pr
                     {taskOfRow(r).overdueDays > 0 && <Chip tone="warn">{t('task.overdue', { n: taskOfRow(r).overdueDays })}</Chip>}
                     {taskOfRow(r).custom && <span className="text-xs text-muted">{[who(r), taskOfRow(r).due ? t('task.dueOn', { date: taskOfRow(r).due!.slice(5) }) : null].filter(Boolean).join(' · ')}</span>}
                   </span>
-                  <span className="flex flex-wrap items-center gap-x-3 gap-y-1 text-sm">
+                  <span className="-mx-1 flex flex-wrap items-center gap-x-2 gap-y-1 border-t border-border pt-1.5 text-sm">
                     {r.block ? <Chip tone="warn">{t('effectBlock')}</Chip> : <ReviewButton employeeId={r.employeeId} workDate={r.workDate} types={r.types} reviewed={r.reviewed} live={sp.live === '1'} />}
                     {sentAt.has(r.employeeId) ? (
                   <span className="text-xs text-muted">{t('notify.sentOn', { date: toKstDate(new Date(sentAt.get(r.employeeId)!)) })}</span>
@@ -170,7 +221,7 @@ export default async function AnomaliesPage({ searchParams }: { searchParams: Pr
                   (r.block || !r.reviewed) && <NotifyButton month={month} employeeIds={[r.employeeId]} live={sp.live === '1'} label={t('notify.one')} confirm={t('notify.confirmOne', { name: p?.name ?? '' })} />
                 )}
                     {isOpen(r) && <TaskEdit employeeId={r.employeeId} workDate={r.workDate} assigneeId={overrides?.get(anomalyKey(r.employeeId, r.workDate))?.assigneeId ?? null} dueOn={overrides?.get(anomalyKey(r.employeeId, r.workDate))?.dueOn ?? null} note={overrides?.get(anomalyKey(r.employeeId, r.workDate))?.note ?? null} people={handlers} live={sp.live === '1'} ready={overrides !== null} short />}
-                    <Link href={`/admin/records/${r.employeeId}?m=${month}${live}`} className="ml-auto font-bold text-primary">
+                    <Link href={`/admin/records/${r.employeeId}?m=${month}${live}`} className="ml-auto inline-flex min-h-10 items-center px-1 font-bold text-primary">
                       {t('toRecords')} ›
                     </Link>
                   </span>
@@ -207,7 +258,7 @@ export default async function AnomaliesPage({ searchParams }: { searchParams: Pr
           );
         })}
       </ListTable>
-      <Pager page={paged.page} pages={paged.pages} param="p" params={{ m: month, k: only ?? undefined, st: st ?? undefined, live: sp.live === '1' ? '1' : undefined }} label={tc('pages')} />
+      <Pager page={paged.page} pages={paged.pages} param="p" params={{ m: month, k: only ?? undefined, st: st ?? undefined, q: q || undefined, e: one ?? undefined, live: sp.live === '1' ? '1' : undefined }} label={tc('pages')} />
 
       <Card className="scroll-mt-20">
         <span id="task-policy" />

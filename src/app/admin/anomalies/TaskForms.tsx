@@ -20,7 +20,7 @@ export function TaskEdit({ employeeId, workDate, assigneeId, dueOn, note, people
   const [err, setErr] = useState<{ code: string; requestId?: string } | null>(null);
   if (!open)
     return (
-      <button type="button" onClick={() => setOpen(true)} className="inline-flex min-h-8 items-center text-sm font-bold whitespace-nowrap text-primary hover:underline">
+      <button type="button" onClick={() => setOpen(true)} className="inline-flex min-h-8 items-center text-sm font-bold whitespace-nowrap text-primary hover:underline max-lg:min-h-10 max-lg:px-1 max-lg:font-semibold max-lg:text-muted">
         {t(short ? 'changeShort' : 'change')}
       </button>
     );

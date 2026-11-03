@@ -3976,7 +3976,10 @@
         "invalid_due": "The due date must be on or after the day of the issue.",
         "db_update_required": "DB change set 27 needs to be applied.",
         "changeShort": "Owner"
-      }
+      },
+      "searchPh": "Search by name, team, or ID",
+      "onlyOne": "Only {name}",
+      "cardsTypeOpen": "By type"
     },
     "leaveTypeRule": {
       "title": "Request rules",

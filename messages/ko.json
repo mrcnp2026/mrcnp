@@ -3976,7 +3976,10 @@
         "invalid_due": "기한은 이상이 생긴 날 이후여야 합니다.",
         "db_update_required": "DB 변경(묶음 27) 적용이 필요합니다.",
         "changeShort": "담당자"
-      }
+      },
+      "searchPh": "이름 · 부서 · 사번으로 찾기",
+      "onlyOne": "{name}님 기록만",
+      "cardsTypeOpen": "유형별 보기"
     },
     "leaveTypeRule": {
       "title": "신청 규칙",
