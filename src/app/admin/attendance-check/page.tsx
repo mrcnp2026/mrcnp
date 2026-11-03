@@ -21,6 +21,7 @@ import { groupPath } from '@/lib/org';
 import { loadOrgGroups } from '@/lib/org-data';
 import { daysFor, loadPeriod } from '@/lib/period-data';
 import { toKstDate } from '@/lib/time';
+import { Board } from './Board';
 import { ConfirmAll, DayActions, MonthActions, type DayCtx } from './CheckActions';
 
 const shift = (ym: string, by: number) => {
@@ -109,22 +110,20 @@ export default async function AttendanceCheckPage({ searchParams }: { searchPara
   }
   const kindOrder = [...CHECK_KINDS, ...MONTH_KINDS].filter((k) => kindCount.get(k));
 
-  // 고른 직원 — 없으면 보기에 걸리는 첫 직원(PC는 오른쪽에 바로 보인다)
+  // 이 보기에 걸리는 직원 — 고르기는 화면 안에서 바로(Board.tsx). 처음에는 아무도 고르지 않고 전체가 보인다
   const listed = rows.filter((r) => r.shownDays.length || r.shownMonths.length);
-  const sel = rows.find((r) => r.employeeId === sp.e) ?? listed[0] ?? null;
-  const picked = !!sp.e && !!rows.find((r) => r.employeeId === sp.e);
 
   // 그달 날짜 칸
   const dates: string[] = [];
   for (let d = from; d <= to; d = addDays(d, 1)) dates.push(d);
   const cellTone = (r: (typeof rows)[number], date: string) => {
     const d = r.days.find((x) => x.workDate === date);
-    if (date > upTo) return 'bg-transparent';
-    if (!d?.state) return 'bg-border/60';
-    if (d.state === 'block') return 'bg-danger';
-    if (r.st.handled.has(date)) return 'bg-ok';
-    if (d.state === 'decide') return 'bg-warn';
-    return 'bg-primary/25'; // 확인만
+    // 색은 셋만: 처리할 날 · 기록 오류 · 처리 완료. 나머지(이상 없음 · 승인된 날 · 쉬는 날)는 같은 옅은 칸 (2026-11-03 의뢰인: 파랑 · 크림색은 무슨 뜻인지 모르겠다)
+    if (date > upTo) return 'bg-transparent border border-dashed border-border';
+    if (d?.state === 'block') return 'bg-danger';
+    if (d?.state === 'decide' && !r.st.handled.has(date)) return 'bg-warn';
+    if (d?.state && r.st.handled.has(date)) return 'bg-ok';
+    return 'bg-border/50';
   };
 
   const ctxOf = (employeeId: string, d: DayCheck): DayCtx => {
@@ -210,61 +209,46 @@ export default async function AttendanceCheckPage({ searchParams }: { searchPara
     </>
   );
 
-  // 왼쪽: 직원 목록 + 날짜 칸
-  const list = (
-    <section aria-label={t('listLabel')} className="flex flex-col">
-      <div className="flex flex-wrap gap-1.5 pb-2">
+  // 왼쪽: 보기 탭 · 날짜 눈금(목록 위) · 직원 한 줄(Board가 단추로 감싼다) · 색 뜻
+  const listHead = (
+    <>
+      <div className="flex flex-wrap gap-1.5 pb-3">
         {STATES.map((s) => (
           <Link key={s} href={q({ s, e: null })} aria-current={view === s ? 'page' : undefined} className={`inline-flex min-h-10 items-center rounded-chip px-3 text-sm font-semibold lg:min-h-8 ${view === s ? 'bg-text text-bg' : 'text-muted hover:text-text'}`}>
             {t(`view.${s}`)}
           </Link>
         ))}
       </div>
-      {listed.length === 0 && <p className="py-8 text-center text-sm text-muted">{t('empty')}</p>}
-      {/* 날짜 눈금 — 아래 칸들과 같은 칸 나누기 */}
       {listed.length > 0 && (
         <span aria-hidden className="num grid gap-0.5 px-2 pb-1 text-xs leading-none text-faint" style={{ gridTemplateColumns: `repeat(${dates.length}, minmax(0, 1fr))` }}>
           {dates.map((d) => <span key={d} className="overflow-visible whitespace-nowrap">{[1, 8, 15, 22, 29].includes(Number(d.slice(8))) ? Number(d.slice(8)) : ''}</span>)}
         </span>
       )}
-      <ul className="flex flex-col divide-y divide-border border-y border-border">
-        {listed.map((r) => {
-          const p = person.get(r.employeeId)!;
-          const on = sel?.employeeId === r.employeeId;
-          return (
-            <li key={r.employeeId}>
-              <Link href={q({ e: r.employeeId })} aria-current={on ? 'true' : undefined} className={`flex flex-col gap-1.5 px-2 py-2.5 transition-colors ${on ? 'bg-primary-tint' : 'hover:bg-surface'}`}>
-                <span className="flex items-baseline gap-2">
-                  <b className={on ? 'text-primary' : ''}>{p.name}</b>
-                  <span className="min-w-0 truncate text-xs text-muted">{groupPath(groups, p.groupId)}</span>
-                  <span className="num ml-auto flex shrink-0 items-baseline gap-2 text-sm">
-                    {r.n.block > 0 && <span className="font-bold text-danger">{t('cntBlock', { n: r.n.block })}</span>}
-                    {r.n.decide + r.n.monthly > 0 ? <span className="font-bold text-warn">{t('cntDecide', { n: r.n.decide + r.n.monthly })}</span> : r.n.block === 0 && <span className="text-ok">{t('cntClear')}</span>}
-                  </span>
-                </span>
-                {/* 그달 날짜 칸 — 색만 봐도 어느 날이 남았는지 */}
-                <span aria-hidden className="grid gap-0.5" style={{ gridTemplateColumns: `repeat(${dates.length}, minmax(0, 1fr))` }}>
-                  {dates.map((d) => <span key={d} className={`h-2.5 rounded-xs ${cellTone(r, d)}`} />)}
-                </span>
-                {r.monthly.some((m) => !r.st.handled.has(monthKey(m))) && (
-                  <span className="text-xs text-muted">{r.monthly.filter((m) => !r.st.handled.has(monthKey(m))).map((m) => t(`kind.${m.kind}`)).join(' · ')}</span>
-                )}
-              </Link>
-            </li>
-          );
-        })}
-      </ul>
-      <p className="flex flex-wrap items-center gap-x-3 gap-y-1 pt-2 text-xs text-muted">
-        <span className="inline-flex items-center gap-1"><span aria-hidden className="size-2.5 rounded-xs bg-warn" />{t('legend.decide')}</span>
-        <span className="inline-flex items-center gap-1"><span aria-hidden className="size-2.5 rounded-xs bg-danger" />{t('legend.block')}</span>
-        <span className="inline-flex items-center gap-1"><span aria-hidden className="size-2.5 rounded-xs bg-primary/25" />{t('legend.confirm')}</span>
-        <span className="inline-flex items-center gap-1"><span aria-hidden className="size-2.5 rounded-xs bg-ok" />{t('legend.handled')}</span>
-      </p>
-    </section>
+    </>
   );
+  const rowOf = (r: (typeof rows)[number]) => {
+    const p = person.get(r.employeeId)!;
+    const openMonths = r.monthly.filter((m) => !r.st.handled.has(monthKey(m)));
+    return (
+      <span className="flex flex-col gap-1.5">
+        <span className="flex items-baseline gap-2">
+          <b>{p.name}</b>
+          <span className="min-w-0 truncate text-xs text-muted">{groupPath(groups, p.groupId)}</span>
+          <span className="num ml-auto flex shrink-0 items-baseline gap-2 text-sm">
+            {r.n.block > 0 && <span className="font-bold text-danger">{t('cntBlock', { n: r.n.block })}</span>}
+            {r.n.decide + r.n.monthly > 0 ? <span className="font-bold text-warn">{t('cntDecide', { n: r.n.decide + r.n.monthly })}</span> : r.n.block === 0 && <span className="text-ok">{t('cntClear')}</span>}
+          </span>
+        </span>
+        <span aria-hidden className="grid gap-0.5" style={{ gridTemplateColumns: `repeat(${dates.length}, minmax(0, 1fr))` }}>
+          {dates.map((d) => <span key={d} className={`h-3 rounded-xs ${cellTone(r, d)}`} />)}
+        </span>
+        {openMonths.length > 0 && <span className="text-xs text-muted">{t('plusMonth', { list: openMonths.map((m) => t(`kind.${m.kind}`)).join(' · ') })}</span>}
+      </span>
+    );
+  };
 
-  // 오른쪽: 고른 직원의 항목
-  const detail = sel && (() => {
+  // 오른쪽: 직원 한 명의 항목 (아무도 안 골랐으면 모든 직원이 차례로)
+  const detailOf = (sel: (typeof rows)[number]) => {
     const p = person.get(sel.employeeId)!;
     const spans = new Map<string, number>();
     for (const d of daysFor(data, sel.employeeId, from, upTo)) {
@@ -276,11 +260,6 @@ export default async function AttendanceCheckPage({ searchParams }: { searchPara
     const dayRows = daysFor(data, sel.employeeId, from, to);
     return (
       <section aria-label={p.name} className="flex flex-col">
-        {picked && (
-          <Link href={q({ e: null })} className="inline-flex min-h-11 items-center gap-1 self-start text-sm font-medium text-muted lg:hidden">
-            <ChevronLeft aria-hidden size={16} />{t('backToList')}
-          </Link>
-        )}
         <div className="flex flex-wrap items-baseline gap-x-3 gap-y-1 border-b border-border pb-2">
           <h2 className="text-lg font-bold">{p.name}</h2>
           <span className="text-sm text-muted">{[groupPath(groups, p.groupId), usual ? t('usual', { span: usual }) : null].filter(Boolean).join(' · ')}</span>
@@ -376,16 +355,17 @@ export default async function AttendanceCheckPage({ searchParams }: { searchPara
         {view === 'open' && confirmLeft > 0 && <Link href={q({ s: 'confirm' })} className="pt-3 text-sm text-muted hover:text-primary">{t('confirmLeft', { n: confirmLeft })} ›</Link>}
       </section>
     );
-  })();
+  };
 
   return (
     <PageShell wide>
       {head}
-      <div className="grid gap-6 lg:grid-cols-[minmax(320px,420px)_1fr] lg:items-start">
-        {/* 폰: 직원을 고르면 목록 대신 그 직원 항목만 (뒤로 가기) */}
-        <div className={`lg:sticky lg:top-20 lg:max-h-[calc(100vh-6rem)] lg:overflow-y-auto ${picked ? 'max-lg:hidden' : ''}`}>{list}</div>
-        <div className={picked ? '' : 'max-lg:hidden'}>{detail}</div>
-      </div>
+      <Board
+        rows={listed.map((r) => ({ id: r.employeeId, row: rowOf(r), detail: detailOf(r) }))}
+        initial={sp.e ?? null}
+        head={listHead}
+        empty={<p className="py-8 text-center text-sm text-muted">{t('empty')}</p>}
+      />
     </PageShell>
   );
 }

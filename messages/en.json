@@ -3914,7 +3914,8 @@
         "decide": "To handle",
         "block": "Record error",
         "confirm": "Approved",
-        "handled": "Done"
+        "handled": "Done",
+        "fine": "No issue"
       },
       "confirmLeft": "Show {n} approved days",
       "usual": "Usually {span}",
@@ -4025,6 +4026,14 @@
         "period_locked": "The month is closed. Reopen it in attendance close.",
         "overlap": "Another leave already covers that time.",
         "forbidden": "You cannot handle this employee."
+      },
+      "showAll": "Show all employees",
+      "plusMonth": "Monthly: {list}",
+      "guide": {
+        "title": "Pick an employee on the left",
+        "pick": "That employee's days to handle appear here, with punches and approvals, and you can handle them in place.",
+        "colors": "The small cells are the days of the month. Orange = to handle, red = record error, green = done, gray = no issue.",
+        "done": "When nothing is left to handle, you can close attendance."
       }
     },
     "anomalies": {
