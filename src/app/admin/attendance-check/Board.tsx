@@ -8,7 +8,7 @@ import { useEffect, useState, type ReactNode } from 'react';
 
 export type BoardRow = { id: string; row: ReactNode; detail: ReactNode };
 
-export function Board({ rows, initial, head, axis, empty }: { rows: BoardRow[]; initial: string | null; head: ReactNode; axis: ReactNode; empty: ReactNode }) {
+export function Board({ rows, initial, top, head, axis, empty }: { rows: BoardRow[]; initial: string | null; top: ReactNode; head: ReactNode; axis: ReactNode; empty: ReactNode }) {
   const t = useTranslations('admin.attendanceCheck');
   const [sel, setSel] = useState<string | null>(rows.some((r) => r.id === initial) ? initial : null);
   useEffect(() => {
@@ -24,6 +24,9 @@ export function Board({ rows, initial, head, axis, empty }: { rows: BoardRow[]; 
   const shown = sel ? rows.find((r) => r.id === sel) ?? null : null;
 
   return (
+    <>
+    {/* 폰에서 직원을 고르면 위쪽(달 · 건수 · 칩)은 숨기고 항목부터 (2026-11-03 폰 확인: 위쪽이 화면 절반을 차지했다) */}
+    <div className={`flex flex-col gap-3 lg:gap-4 ${sel ? 'max-lg:hidden' : ''}`}>{top}</div>
     <div className="grid gap-6 lg:grid-cols-[9fr_11fr] lg:items-start">
       <section aria-label={t('listLabel')} className={`flex flex-col lg:sticky lg:top-20 lg:max-h-[calc(100vh-6rem)] lg:overflow-y-auto ${sel ? 'max-lg:hidden' : ''}`}>
         {head}
@@ -68,5 +71,6 @@ export function Board({ rows, initial, head, axis, empty }: { rows: BoardRow[]; 
         )}
       </div>
     </div>
+    </>
   );
 }

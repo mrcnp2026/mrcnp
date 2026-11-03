@@ -364,8 +364,8 @@ export default async function AttendanceCheckPage({ searchParams }: { searchPara
 
   return (
     <PageShell wide>
-      {head}
       <Board
+        top={head}
         rows={listed.map((r) => ({ id: r.employeeId, row: rowOf(r), detail: detailOf(r) }))}
         initial={sp.e ?? null}
         head={listHead}
