@@ -13,6 +13,7 @@ import { loadItems } from '@/lib/payroll/data';
 import { AUTO_PAYMENT_CODES } from '@/lib/payroll/engine/reserved-items';
 import { loadStaffPayBoard } from '@/lib/payroll/staff-data';
 import { addDays } from '@/lib/calendar';
+import { createAdminClient } from '@/lib/supabase/admin';
 import { toKstDate } from '@/lib/time';
 import { BulkAll, BulkCheck, BulkPanel } from './BulkPanel';
 import { ImportPanel } from './ImportPanel';
@@ -26,6 +27,9 @@ export default async function StaffPayPage({ searchParams }: { searchParams: Pro
   const taxTab = sp.v === 'tax'; // 「세액감면 · 공제등록」 탭 (2026-10-20)
   if (!me || me.role !== 'admin' || !me.canViewPayroll) return <PageShell><p className="rounded-card bg-warn-tint p-4 text-sm text-warn">{t('forbidden')}</p></PageShell>;
   const today = toKstDate(new Date());
+  // 근로계약 만료 30일 전 · 만료 — 목록에 「계약 갱신 필요」 (2026-11-04 의뢰인, 알림은 push-events notifyContractRenewal)
+  const { data: termRows } = await createAdminClient().from('payroll_contract_terms').select('employee_id, ends_on').eq('active', true).lte('ends_on', addDays(today, 30));
+  const renewOf = new Map((termRows ?? []).map((r) => [r.employee_id as string, (r.ends_on as string) < today ? 'over' : 'soon'] as const));
   const [board, groups, allItems] = await Promise.all([loadStaffPayBoard(today), loadOrgGroups(), loadItems()]);
   // 설정이 덜 된 직원을 맨 위로 (2026-10-26 의뢰인: 이슈 먼저) — 나머지 순서는 그대로
   const lines = [...board].sort((a, b) => Number(b.gaps.length > 0) - Number(a.gaps.length > 0));
@@ -77,6 +81,7 @@ export default async function StaffPayPage({ searchParams }: { searchParams: Pro
         <Chip tone="info">{t('sumAll', { n: lines.length })}</Chip>
         <Chip tone="ok">{t('sumReady', { n: ready })}</Chip>
         <Chip tone={lines.length - ready > 0 ? 'warn' : 'neutral'}>{t('sumGap', { n: lines.length - ready })}</Chip>
+        {[...renewOf.keys()].some((id) => lines.some((l) => l.employeeId === id && l.active)) && <Chip tone="warn">{t('sumRenew', { n: lines.filter((l) => l.active && renewOf.has(l.employeeId)).length })}</Chip>}
       </div>
       {/* 폰: 직원마다 한 줄 — 이름 · 급여 형태 · 금액 · 상태, 누르면 그 직원 화면 (2026-10-15: 표 오른쪽이 잘리던 것) */}
       {lines.length > 6 && (
@@ -101,6 +106,7 @@ export default async function StaffPayPage({ searchParams }: { searchParams: Pro
                   <span className="flex items-center gap-2">
                     <b className="truncate">{l.name}</b>
                     {!l.active && <span className="text-xs text-faint">{t('inactive')}</span>}
+                    {l.active && renewOf.has(l.employeeId) && <Chip tone="warn">{t(renewOf.get(l.employeeId) === 'over' ? 'renewOver' : 'renewSoon')}</Chip>}
                   </span>
                   <span className="num truncate text-xs text-muted">{c ? `${t(`payType.${c.payType}`)} · ${won(c.amount)}` : (groupPath(groups, l.groupId) ?? '')}</span>
                 </span>
@@ -135,6 +141,7 @@ export default async function StaffPayPage({ searchParams }: { searchParams: Pro
                       {l.name}
                     </Link>
                     {!l.active && <span className="ml-2 text-xs text-faint">{t('inactive')}</span>}
+                    {l.active && renewOf.has(l.employeeId) && <span className="ml-2"><Chip tone="warn">{t(renewOf.get(l.employeeId) === 'over' ? 'renewOver' : 'renewSoon')}</Chip></span>}
                   </td>
                   <td className="num px-3 py-3 text-muted">{l.employeeNo}</td>
                   <td className="px-3 py-3 text-muted">{groupPath(groups, l.groupId) ?? ''}</td>

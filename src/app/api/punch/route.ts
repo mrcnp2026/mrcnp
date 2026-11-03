@@ -8,6 +8,7 @@
 // ★ GPS (2026-10-05): 인터넷 주소로 사무실이 확인되지 않을 때만, 폰이 함께 보낸 위치(body.geo)로 한 번 더 본다.
 //    위치는 폰이 보낸 값이라 인터넷 주소보다 약한 증거다 — 확인 수단(verified_by)을 기록에 남긴다. 사무실 밖 좌표는 저장하지 않는다.
 import { after } from 'next/server';
+import { breakToAsk } from '@/lib/break-skip';
 import { syncOvertimeFor } from '@/lib/period-data';
 import { notifyLateEarly, notifyPunchRequest, notifyWeekLimit } from '@/lib/push-events';
 import { OFFICE } from '@/config/office';
@@ -121,7 +122,10 @@ export const POST = api('punch', async (req) => {
   if (!deduped) after(() => notifyLateEarly(who.employeeId, event.workDate, event.kind));
   // 퇴근하면 이번 주 합계를 보고 「주의」 · 52시간 초과를 관리자에게 (2026-11-02 의뢰인, 급여-21)
   if (event.kind === 'out' && !deduped) after(() => notifyWeekLimit([who.employeeId]));
+  // 저녁 휴게를 지나 퇴근했으면 「쉬었나요?」를 물을 휴게 (2026-11-04 의뢰인) — 실패해도 퇴근 기록은 이미 남았다
+  const breakAsk = event.kind === 'out' && !deduped ? await breakToAsk(who.employeeId, event.workDate).catch(() => null) : null;
   return {
+    breakAsk,
     requested: false,
     kind: event.kind,
     punchedAt: event.punchedAt, // 서버가 정한 시각 그대로 화면에 크게 보여 준다 (R-10-8 신뢰 장치)

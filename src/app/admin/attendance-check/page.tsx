@@ -145,6 +145,7 @@ export default async function AttendanceCheckPage({ searchParams }: { searchPara
       late: late ? { minutes: late.minutes - late.covered, unpaid: pickType(late.minutes - late.covered, false), annual: pickType(late.minutes - late.covered, true) } : null,
       early: early ? { minutes: early.minutes - early.covered, unpaid: pickType(early.minutes - early.covered, false), annual: pickType(early.minutes - early.covered, true) } : null,
       evening: evening?.plan ? { start: evening.plan.split('–')[0], end: evening.plan.split('–')[1] } : null,
+      breakSkip: (() => { const b = data.breakSkipFor(employeeId, d.workDate); return b && b.status === 'pending' ? { id: b.id, start: b.start, end: b.end } : null; })(),
       overtime: ot ? { id: ot.id, status: ot.status, needsReview: !!ot.needsReview, recomputed: ot.recomputedOvertimeMinutes ?? null } : null,
       extraOpen: d.parts.some((p) => (p.kind === 'after_end' || p.kind === 'no_plan_work') && p.state === 'decide'),
       kinds: live(d).map((p) => p.kind),
@@ -154,8 +155,9 @@ export default async function AttendanceCheckPage({ searchParams }: { searchPara
     };
   };
   const partText = (p: DayCheck['parts'][number]) => {
-    const name = `${t(`kind.${p.kind}`)}${p.minutes > 0 && p.kind !== 'break_check' ? ` ${dur(p.minutes)}` : ''}`;
-    if (p.state === 'block' || p.minutes === 0 || p.kind === 'break_check') return { name, cover: null };
+    const ask = p.kind === 'break_check' || p.kind === 'break_request'; // 물어보는 항목 — 분 · 승인 표시 없이
+    const name = `${t(`kind.${p.kind}`)}${p.minutes > 0 && !ask ? ` ${dur(p.minutes)}` : ''}`;
+    if (p.state === 'block' || p.minutes === 0 || ask) return { name, cover: null };
     return { name, cover: p.covered >= p.minutes ? t('cover.full') : p.covered > 0 ? t('cover.part', { c: dur(p.covered), r: dur(p.minutes - p.covered) }) : t('cover.none') };
   };
 
@@ -372,6 +374,7 @@ export default async function AttendanceCheckPage({ searchParams }: { searchPara
                   {(handled || changed) && <span className="text-xs text-muted">{handled ? t('state.handled') : t('state.changed')}</span>}
                 </div>
                 <p className="num pl-4 text-xs leading-relaxed text-muted">{evidence.join(' · ')}</p>
+                {live(d).some((x) => x.kind === 'break_request') && <p className="pl-4 text-xs text-warn">{t('breakRequestWhy', { span: live(d).find((x) => x.kind === 'break_request')!.plan ?? '' })}</p>}
                 {live(d).some((x) => x.kind === 'break_check') && <p className="pl-4 text-xs text-warn">{t('breakCheckWhy', { span: live(d).find((x) => x.kind === 'break_check')!.plan ?? '' })}</p>}
                 {handled && rv ? (
                   <p className="pl-4 text-sm text-ok">{t(`decided.${rv.decision}`)}{rv.note ? ` — ${rv.note}` : ''}</p>

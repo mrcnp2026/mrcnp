@@ -2,7 +2,7 @@
 // vercel.json의 crons — Vercel 무료 요금제는 하루 한 번씩만 돼서 지금은 아침 09시대 · 밤 21시대(한국 시간) 두 번. Pro로 바꾸면 10분마다(*/10 * * * *) 하나로 바꾼다(2026-10-16).
 // 같은 알림은 한 번만. 연습 모드에서는 보내지 않는다.
 import { timingSafeEqual } from 'node:crypto';
-import { notifyPunchAlerts, notifyStartedNotices, notifyWeekLimit } from '@/lib/push-events';
+import { notifyContractRenewal, notifyPunchAlerts, notifyStartedNotices, notifyWeekLimit } from '@/lib/push-events';
 
 export const maxDuration = 60;
 export const dynamic = 'force-dynamic';
@@ -15,6 +15,7 @@ export async function GET(req: Request): Promise<Response> {
   if (got.length !== want.length || !timingSafeEqual(got, want)) return Response.json({ error: 'forbidden' }, { status: 403 });
   try {
     await notifyStartedNotices().catch((e) => console.error(JSON.stringify({ route: 'cron.absent-watch', code: 'notices', detail: String((e as Error)?.message ?? e).slice(0, 200) }))); // 앞날로 잡아 둔 공지의 폰 알림 (2026-10-21)
+    await notifyContractRenewal(); // 근로계약 만료 30일 전 · 만료 — 최고관리자에게 (2026-11-04 의뢰인)
     await notifyWeekLimit(); // 정정 · 승인으로 늘어난 주 합계도 본다 — 주 52시간 「주의」 · 초과 (2026-11-02, 급여-21)
     return Response.json(await notifyPunchAlerts());
   } catch (e) {

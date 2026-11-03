@@ -263,6 +263,14 @@
       "empty": "No news.",
       "unread": "Unread"
     },
+    "breakAsk": {
+      "question": "Did you take the evening break ({start}–{end}) today?",
+      "why": "If you worked through it, let us know. Once an admin confirms, that time counts as work.",
+      "rested": "I took it",
+      "worked": "I worked through it",
+      "sent": "Sent to your admin. It counts as work once confirmed.",
+      "close": "Close"
+    },
     "reason": {
       "titleIn": "Clock-in recorded",
       "titleOut": "Clock-out recorded",
@@ -3613,6 +3621,7 @@
       "nextCheck": "Go to payroll ledger",
       "allClosed": "Nobody needs attention. Everyone is closed.",
       "reason": {
+        "break_request": "Evening break skipped (employee)",
         "pending_request": "Pending request",
         "record_error": "Record error",
         "before_start": "Work before schedule",
@@ -3976,7 +3985,8 @@
         "after_end": "Overtime",
         "break_check": "Evening break check",
         "schedule_check": "Early arrival (reference)",
-        "early_bundle": "Early every day"
+        "early_bundle": "Early every day",
+        "break_request": "Evening break skipped (employee)"
       },
       "act": {
         "lateUnpaid": "Unpaid {h}h",
@@ -4018,7 +4028,12 @@
         "scheduleOk": "Keep schedule",
         "earlyNotWork": "Don't pay",
         "confirmAll": "Check all {n} approved days",
-        "changedNote": "This day changed after it was handled. Please check again."
+        "changedNote": "This day changed after it was handled. Please check again.",
+        "skipApprove": "Approve — no break",
+        "skipReject": "Reject — break taken",
+        "skipApproveWill": "Marks the break as not taken so it counts as work. Then approve the extra overtime.",
+        "skipRejectWill": "Keeps the break as taken. The employee answer stays in the record.",
+        "reasonSkip": "Employee: evening break not taken"
       },
       "err": {
         "check_gone": "The record changed and nothing is left to handle. Refresh the page.",
@@ -4037,7 +4052,8 @@
       "rowSchedule": "Reference · early by {span} on {n} days (not paid)",
       "rowEarly": "Monthly · over 1h early on {n} days",
       "minRange": "{from}–{to} min",
-      "infoOnly": "For reference · no action needed"
+      "infoOnly": "For reference · no action needed",
+      "breakRequestWhy": "The employee said at clock-out that they worked through the {span} evening break. Approving counts it as work; then approve the extra overtime."
     },
     "anomalies": {
       "title": "Attendance exceptions",
@@ -4194,6 +4210,9 @@
       "evidence": "Evidence required — cannot be approved without a file (can still be requested)"
     },
     "staffPay": {
+      "sumRenew": "Contract renewal {n}",
+      "renewOver": "Contract expired — renew",
+      "renewSoon": "Contract renewal due",
       "title": "Pay by employee",
       "intro": "Each employee's current contract and tax settings. Open an employee to enter the contract, tax and personal items. Anything still needed for payroll shows as incomplete.",
       "forbidden": "Only top admins can see this.",

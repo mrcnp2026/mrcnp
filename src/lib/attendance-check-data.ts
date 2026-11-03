@@ -82,7 +82,10 @@ export function collectChecks(data: PeriodData, from: string, to: string, now = 
       const base = data.ruleAt(d.workDate);
       const lastOut = d.pairs.some((x) => x.out) ? Math.max(...d.pairs.filter((x) => x.out).map((x) => outMin(x.out!))) : null;
       const evening = base && span ? breaksOf(base).find((b) => b.start >= span.endTime) ?? breaksOf(base).find((b) => b.start >= '17:00') ?? null : null; // 일정 끝 무렵 휴게(17:00–17:30)
-      const breakCheck = evening && !waived.has(evening.start) && usualOut !== null && lastOut !== null && usualOut - lastOut >= breakEarlyLeaveMin ? evening : null; // 회사 설정 check.break_early_leave_min (기본 60분)
+      const skip = data.breakSkipFor(p.id, d.workDate);
+      const breakRequest = skip?.status === 'pending' && !waived.has(skip.start) ? { start: skip.start, end: skip.end } : null;
+      // 안전장치(평소보다 일찍 퇴근) — 직원이 이미 답한 날(대기 · 승인 · 반려)은 묻지 않는다
+      const breakCheck = !skip && evening && !waived.has(evening.start) && usualOut !== null && lastOut !== null && usualOut - lastOut >= breakEarlyLeaveMin ? evening : null; // 회사 설정 check.break_early_leave_min (기본 60분)
       const waivedMin = waived.size && base ? breaksOf(base).filter((b) => waived.has(b.start)).reduce((n, b) => n + minutesOf(b), 0) : 0;
       const check = judgeDay({
         workDate: d.workDate,
@@ -100,6 +103,7 @@ export function collectChecks(data: PeriodData, from: string, to: string, now = 
         earlyIgnoreMin: earlyIgnoreAt(d.workDate),
         lateRound: (rule ?? base)?.lateRound,
         breakCheck,
+        breakRequest,
         clipStart: span ? null : (plan.rule ?? base)?.startTime ? hhmm((plan.rule ?? base)!.startTime) : null,
       });
       if (check.parts.length) days.push(check); // 흐리게만 남은 날도 둔다 — 기록 화면 표시 · 한 달 묶음 판단에 쓴다

@@ -263,6 +263,14 @@
       "empty": "새 소식이 없습니다.",
       "unread": "안 읽음"
     },
+    "breakAsk": {
+      "question": "오늘 저녁 휴게({start}~{end}) 쉬셨나요?",
+      "why": "쉬지 못하고 일했다면 알려 주세요. 관리자가 확인하면 그 시간이 근무시간에 들어갑니다.",
+      "rested": "쉬었어요",
+      "worked": "못 쉬고 일했어요",
+      "sent": "관리자에게 보냈어요. 확인되면 근무시간에 들어갑니다.",
+      "close": "닫기"
+    },
     "reason": {
       "titleIn": "출근이 기록됐어요",
       "titleOut": "퇴근이 기록됐어요",
@@ -3613,6 +3621,7 @@
       "nextCheck": "급여대장으로",
       "allClosed": "확인이 필요한 직원이 없습니다. 모두 마감했습니다.",
       "reason": {
+        "break_request": "저녁 휴게 못 쉼(직원 답)",
         "pending_request": "대기 중인 요청",
         "record_error": "기록 오류",
         "before_start": "일찍 출근",
@@ -3976,7 +3985,8 @@
         "after_end": "연장 근무",
         "break_check": "저녁 휴게 확인",
         "schedule_check": "조기출근(참고)",
-        "early_bundle": "매일 일찍 출근"
+        "early_bundle": "매일 일찍 출근",
+        "break_request": "저녁 휴게 못 쉼(직원 답)"
       },
       "act": {
         "lateUnpaid": "무급 {h}시간",
@@ -4018,7 +4028,12 @@
         "scheduleOk": "일정 그대로 둠",
         "earlyNotWork": "급여에 안 넣음",
         "confirmAll": "승인된 날 {n}일 모두 확인",
-        "changedNote": "처리한 뒤 이 날 기록이 바뀌었습니다. 다시 확인해 주세요."
+        "changedNote": "처리한 뒤 이 날 기록이 바뀌었습니다. 다시 확인해 주세요.",
+        "skipApprove": "승인 — 휴게 안 함",
+        "skipReject": "반려 — 쉬었음",
+        "skipApproveWill": "그 휴게를 「휴게 안 함」으로 표시해 근무시간에 넣습니다. 늘어난 연장은 이어서 「연장 승인」으로 나옵니다.",
+        "skipRejectWill": "휴게를 했다고 보고 그대로 둡니다. 직원의 답은 기록에 남습니다.",
+        "reasonSkip": "직원 답: 저녁 휴게 못 쉼"
       },
       "err": {
         "check_gone": "그사이 기록이 바뀌어 처리할 것이 없어졌습니다. 화면을 새로 고쳐 주세요.",
@@ -4037,7 +4052,8 @@
       "rowSchedule": "참고 · {n}일을 매일 {span} 일찍 출근 (급여에는 안 들어감)",
       "rowEarly": "한 달 1건 · {n}일 1시간 넘게 일찍 출근",
       "minRange": "{from}~{to}분",
-      "infoOnly": "참고 · 처리하지 않아도 됨"
+      "infoOnly": "참고 · 처리하지 않아도 됨",
+      "breakRequestWhy": "직원이 퇴근할 때 「{span} 저녁 휴게를 못 쉬고 일했다」고 답했습니다. 승인하면 그 시간이 근무로 들어가고, 늘어난 연장은 이어서 「연장 승인」으로 처리합니다."
     },
     "anomalies": {
       "title": "이상자 관리",
@@ -4194,6 +4210,9 @@
       "evidence": "증빙 파일 필수 — 파일이 없으면 승인할 수 없습니다(신청은 됩니다)"
     },
     "staffPay": {
+      "sumRenew": "계약 갱신 필요 {n}명",
+      "renewOver": "계약 만료 — 갱신 필요",
+      "renewSoon": "계약 갱신 필요",
       "title": "사원별 급여",
       "intro": "직원마다 지금 적용되는 계약과 세무 설정입니다. 직원 이름을 눌러 계약 · 세무 · 개인 항목을 넣습니다. 급여 계산에 더 필요한 것이 있으면 「설정 미완료」로 보입니다.",
       "forbidden": "최고관리자만 볼 수 있습니다.",

@@ -468,3 +468,36 @@ export async function notifyInquiryAnswer(id: string): Promise<void> {
   const { data: p } = await db.from('profiles').select('role').eq('id', q.employee_id).maybeSingle();
   await sendPush([q.employee_id as string], { title: '문의에 답변이 왔습니다', body: String(q.title).slice(0, 70), url: p?.role === 'admin' ? '/admin/inquiry' : '/punch/inquiry', tag: `inquiry-answer-${id}` });
 }
+
+/**
+ * 근로계약 갱신 필요 (2026-11-04 의뢰인: 「재계약이 필요하면 최고관리자에게 누구누구가 갱신이 필요한지 앱 푸시 · 요청사항 알림으로」).
+ * 사원별 급여의 「계약 만료일」이 30일 안이거나 지난 재직자. 받는 사람 = 최고관리자(대표자 · 시스템관리자 제외).
+ * 사람 · 만료일 · 단계(만료 예정 · 만료)마다 한 번만 — 새로 걸린 사람이 있을 때 그날 걸린 전원을 한 통으로 보낸다. 연습 모드에서는 보내지 않는다.
+ */
+export async function notifyContractRenewal(now = new Date()): Promise<number> {
+  try {
+    if (OFFICE.practiceMode) return 0;
+    const today = toKstDate(now);
+    const db = createAdminClient();
+    const { data: terms } = await db.from('payroll_contract_terms').select('employee_id, ends_on').eq('active', true).lte('ends_on', addDays(today, 30));
+    if (!terms?.length) return 0;
+    const { data: ppl } = await db.from('profiles').select('id, name, active').in('id', terms.map((x) => x.employee_id as string));
+    const nameOf = new Map((ppl ?? []).filter((p) => p.active).map((p) => [p.id as string, p.name as string]));
+    const due = terms.filter((x) => nameOf.has(x.employee_id as string)).map((x) => ({ id: x.employee_id as string, name: nameOf.get(x.employee_id as string)!, ends: x.ends_on as string, over: (x.ends_on as string) < today })).sort((a, b) => a.ends.localeCompare(b.ends));
+    if (!due.length) return 0;
+    const { data: admins } = await db.from('profiles').select('id, admin_level, employee_no').eq('role', 'admin').eq('active', true);
+    const to = await staffPushFilter((admins ?? []).filter((a) => a.admin_level !== 'ceo' && a.employee_no !== SYSTEM_ADMIN_NO && !String(a.employee_no ?? '').startsWith('e2e-')).map((a) => a.id as string));
+    if (!to.length) return 0;
+    let fresh = 0;
+    for (const d of due) if (await firstTime(`contract:${d.over ? 'over' : 'soon'}:${d.id}:${d.ends}`)) fresh++;
+    if (!fresh) return 0;
+    const list = due.map((d) => `${d.name}(${md(d.ends)} ${d.over ? '만료' : '만료 예정'})`).join(', ');
+    const title = `근로계약서 갱신이 필요합니다 — ${due.length}명`;
+    const body = `${list}. 사원별 급여에서 새 계약을 넣어 주세요.`;
+    await sendSystem({ dedupeKey: `contract:${today}`, title, body, employeeIds: to, related: { type: 'contract', id: due[0].id, href: '/admin/payroll/staff' }, senderId: null, isTest: false });
+    return (await pushOn()) ? await sendPush(to, { title, body, url: '/admin/payroll/staff', tag: `contract-${today}` }) : 0;
+  } catch (e) {
+    console.error(JSON.stringify({ route: 'push.contract', detail: String((e as Error)?.message ?? e).slice(0, 200) }));
+    return 0;
+  }
+}

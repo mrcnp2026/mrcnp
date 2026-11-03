@@ -1,6 +1,8 @@
 // 사원별 급여 상세 — 맨 위 요약(급여 · 통상시급 · 예상 실수령 · 상태) + 탭(계약 · 세무/보험 · 고정 수당/공제 · 지급 이력) (PRD v1.3 18.1, 2026-10-25 의뢰인: 한 화면이 너무 길다).
 // 계약 · 세무/보험 · 고정 수당/공제 탭에는 예상 지급 · 공제를 같이 보여 준다 — 고치고 바로 결과를 본다. 최고관리자(관리자 전원)만.
 // 계약 · 세무는 고치면 새 판이 쌓인다. 주민번호 · 계좌번호는 이 화면에 없다(암호화 저장 영역이 생긴 뒤).
+import { ContractTermForm } from '../../check/CheckForms';
+import { addDays } from '@/lib/calendar';
 import { getFormatter, getTranslations } from 'next-intl/server';
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
@@ -50,6 +52,7 @@ export default async function StaffPayDetailPage({ params, searchParams }: { par
   if (!p) notFound();
   const foreign = await loadForeignInfo(id); // 외국인 직원이면 세무에 단일세율 19% 칸을 보인다 (묶음 31)
   const today = toKstDate(new Date());
+  const term = ((await createAdminClient().from('payroll_contract_terms').select('ends_on').eq('employee_id', id).eq('active', true).maybeSingle()).data?.ends_on as string | undefined) ?? null; // 근로계약 만료일
   const contract = versionAt(pay.contracts, today);
   const tax = versionAt(pay.taxes, today);
   const taxDefaults = (await loadTaxDefaults(today))?.defaults ?? null; // 4대보험 회사 기본값
@@ -123,6 +126,7 @@ export default async function StaffPayDetailPage({ params, searchParams }: { par
         <h1 className="flex flex-wrap items-center gap-2 text-2xl font-bold">
           {p.name}
           {gaps.length === 0 ? <Chip tone="ok">{t('stateReady')}</Chip> : <Chip tone="warn">{t('stateGap', { n: gaps.length })}</Chip>}
+          {term && term <= addDays(today, 30) && <Chip tone="warn">{t(term < today ? 'renewOver' : 'renewSoon')}</Chip>}
         </h1>
         <p className="num pt-1 text-sm text-faint">{[p.employee_no, groupPath(groups, p.group_id), p.joined_on ? t('joined', { date: p.joined_on }) : t('gap.no_joined_on')].filter(Boolean).join(' · ')}</p>
         {gaps.length > 0 && (
@@ -171,6 +175,10 @@ export default async function StaffPayDetailPage({ params, searchParams }: { par
         )}
         {pay.contracts[0] && pay.contracts[0].validFrom > today && <p className="mt-3 rounded-card bg-primary-tint p-3 text-sm text-primary">{t('scheduledNote', { from: pay.contracts[0].validFrom })}</p>}
         <ContractForm employeeId={id} today={today} version={pay.contracts[0]?.version ?? 0} last={pay.contracts[0] ?? null} />
+        {/* 근로계약 만료일 — 30일 전부터 최고관리자에게 갱신 알림 (2026-11-04 의뢰인, push-events notifyContractRenewal) */}
+        <div className="mt-4 border-t border-border pt-3">
+          <ContractTermForm employeeId={id} endsOn={term} />
+        </div>
         {pay.contracts.length > 0 && (
           <ul className="num mt-4 flex flex-col gap-1 border-t border-border pt-3 text-xs text-faint">
             {pay.contracts.map((c, i) => (

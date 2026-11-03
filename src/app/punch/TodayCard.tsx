@@ -19,10 +19,11 @@ import { callApi, passkeyBrowserError } from '@/components/client-api';
 import { ErrorNote } from '@/components/ErrorNote';
 import { InAppWarning, RegisterTroubleshoot } from '@/components/PasskeyHelp';
 import { currentPosition } from '@/components/current-position';
+import { BreakAsk } from './BreakAsk';
 import { ReasonSheet, reasonAsk, type ReasonAsk } from './ReasonSheet';
 import { Card, Chip } from '@/components/ui';
 
-type Result = { requested?: boolean; kind: 'in' | 'out'; punchedAt: string; ipVerified: boolean; verifiedBy?: 'ip' | 'gps' | null; isTest: boolean; deduped: boolean };
+type Result = { requested?: boolean; kind: 'in' | 'out'; punchedAt: string; ipVerified: boolean; verifiedBy?: 'ip' | 'gps' | null; isTest: boolean; deduped: boolean; breakAsk?: { start: string; end: string } | null };
 
 // 이 브라우저가 등록에 쓰인 기기인지 기억해 두는 표시 (등록·확인에 성공하면 적는다). 보안 장치가 아니라 안내용이다 —
 // 진짜 확인은 서버가 기기의 서명으로 한다. 브라우저 데이터를 지우면 사라지므로 "이 기기가 맞습니다"로 다시 확인할 수 있다.
@@ -103,6 +104,7 @@ export function TodayCard(props: {
   // 출근 요청이 승인을 기다리는 동안에는 다음에 누를 것이 퇴근이다 (승인이 늦어도 퇴근 요청을 낼 수 있게, 2026-10-11)
   const [sentIn, setSentIn] = useState(false);
   const [ask, setAsk] = useState<ReasonAsk | null>(null);
+  const [breakAsk, setBreakAsk] = useState<{ start: string; end: string } | null>(null); // 퇴근 뒤 저녁 휴게 질문 (2026-11-04)
   const waitingIn = props.pendingPunch?.kind === 'in' || sentIn;
   const kind: 'in' | 'out' = props.isOpen || waitingIn ? 'out' : 'in';
 
@@ -140,6 +142,7 @@ export function TodayCard(props: {
       cancels.current = 0;
       setJustRegistered(false);
       setResult(r.data);
+      if (r.data.kind === 'out' && r.data.breakAsk) setBreakAsk(r.data.breakAsk);
       if (r.data.requested && r.data.kind === 'in') setSentIn(true);
       // 기록이 남은 뒤 사유를 묻는다(두 번 누른 같은 기록이면 묻지 않는다)
       if (props.reason && !r.data.deduped) {
@@ -283,6 +286,7 @@ export function TodayCard(props: {
         </MorphButton>
       )}
 
+      {breakAsk && props.reason && <BreakAsk date={props.reason.today} start={breakAsk.start} end={breakAsk.end} onClose={() => setBreakAsk(null)} />}
       {ask && props.reason && <ReasonSheet ask={ask} today={props.reason.today} note={props.reason.note} canAskWork={props.reason.canAskWork} onClose={() => setAsk(null)} />}
       {err && <ErrorNote code={err.code} requestId={err.requestId} namespace="home" />}
       {err && !device && ['register_failed', 'unsupported', 'verification_failed', 'user_verification_missing'].includes(err.code) && <RegisterTroubleshoot />}

@@ -59,6 +59,8 @@ export type OvertimeRow = {
   calcVersion: string | null;
 };
 
+export type BreakSkip = { id: string; status: 'pending' | 'approved' | 'rejected'; start: string; end: string };
+
 export type PeriodData = {
   from: string;
   to: string;
@@ -71,7 +73,8 @@ export type PeriodData = {
   ruleFor: (employeeId: string, date: string) => WorkRule | null;
   shifts: DayShift[]; // 날짜별 일정 (특근·잔업 등, 2단계)
   planFor: (employeeId: string, date: string) => DayPlan; // 그 직원의 그날 일정: 날짜별 일정 → 평소 틀 → 회사 규칙
-  waivedFor: (employeeId: string, date: string) => ReadonlySet<string>; // 그날 「휴게 안 함」으로 표시한 휴게 시작 시각 'HH:MM' (근태 점검이 덮는 분을 센다)
+  waivedFor: (employeeId: string, date: string) => ReadonlySet<string>;
+  breakSkipFor: (employeeId: string, date: string) => BreakSkip | null; // 퇴근할 때 직원이 답한 저녁 휴게(대기 · 승인 · 반려) // 그날 「휴게 안 함」으로 표시한 휴게 시작 시각 'HH:MM' (근태 점검이 덮는 분을 센다)
   holidays: HolidayRow[];
   people: Person[];
   events: EventRow[];
@@ -132,6 +135,14 @@ export async function loadPeriod(from: string, to: string, practice = OFFICE.pra
     const k = `${w.employee_id}|${w.work_date}`;
     waivedOf.set(k, (waivedOf.get(k) ?? new Set()).add(hhmm(w.break_start as string)));
   }
+  // 퇴근할 때 직원이 답한 「저녁 휴게 못 쉬었어요」 (2026-11-04, DB 0089) — 표가 아직 없으면(운영 적용 전) 비어 있는 것으로 본다
+  const { data: skipRows } = await db.from('break_skip_requests').select('id, employee_id, work_date, break_start, break_end, status').eq('is_test', practice).in('status', ['pending', 'approved', 'rejected']).gte('work_date', readFrom).lte('work_date', to);
+  const skipOf = new Map<string, BreakSkip>();
+  for (const r of skipRows ?? []) {
+    const k = `${r.employee_id}|${r.work_date}`;
+    const cur = skipOf.get(k);
+    if (!cur || cur.status === 'rejected') skipOf.set(k, { id: r.id as string, status: r.status as BreakSkip['status'], start: hhmm(r.break_start as string), end: hhmm(r.break_end as string) });
+  }
   // 실제 관리자에게는 검사 전용 계정(e2e-)의 사람 · 기록을 빼고 계산한다 — 현황판 · 이상자 · 마감 · 리포트 숫자에 섞이지 않게 (hiddenTestIds)
   const hidden = new Set(await hiddenTestIds());
   const keep = <T,>(rows: T[], idOf: (r: T) => string) => (hidden.size ? rows.filter((r) => !hidden.has(idOf(r))) : rows);
@@ -175,6 +186,7 @@ export async function loadPeriod(from: string, to: string, practice = OFFICE.pra
     shifts,
     planFor,
     waivedFor: (employeeId: string, date: string) => waivedOf.get(`${employeeId}|${date}`) ?? new Set<string>(),
+    breakSkipFor: (employeeId: string, date: string) => skipOf.get(`${employeeId}|${date}`) ?? null,
     holidays,
     people: (ppl ?? []).map((p) => ({
       id: p.id, name: p.name, employeeNo: p.employee_no, role: p.role, active: p.active, joinedOn: p.joined_on,

@@ -19,6 +19,7 @@ export type DayCtx = {
   late: { minutes: number; unpaid: LeaveOpt; annual: LeaveOpt } | null;
   early: { minutes: number; unpaid: LeaveOpt; annual: LeaveOpt } | null;
   evening: { start: string; end: string } | null;
+  breakSkip: { id: string; start: string; end: string } | null; // 직원이 퇴근할 때 「못 쉬었어요」라고 답한 것(대기)
   overtime: { id: string; status: string; needsReview: boolean; recomputed: number | null } | null;
   extraOpen: boolean;
   kinds: CheckKind[];
@@ -28,7 +29,7 @@ export type DayCtx = {
 };
 type Opt =
   | { k: 'lateUnpaid' | 'lateAnnual' | 'earlyUnpaid' | 'earlyAnnual'; leave: NonNullable<LeaveOpt> }
-  | { k: 'notLate' | 'notEarly' | 'waive' | 'breakTaken' | 'accept' | 'notRecognized' | 'absentOk' | 'confirm' };
+  | { k: 'notLate' | 'notEarly' | 'waive' | 'breakTaken' | 'accept' | 'notRecognized' | 'absentOk' | 'confirm' | 'skipApprove' | 'skipReject' };
 
 const addMin = (hhmm: string, min: number) => { const [h, m] = hhmm.split(':').map(Number); const x = h * 60 + m + min; return `${String(Math.floor(x / 60)).padStart(2, '0')}:${String(x % 60).padStart(2, '0')}`; };
 const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
@@ -66,6 +67,7 @@ export function DayActions({ ctx, reviewId }: { ctx: DayCtx; reviewId: string | 
     if (ctx.early.annual) opts.push({ k: 'earlyAnnual', leave: ctx.early.annual });
     opts.push({ k: 'notEarly' });
   }
+  if (has('break_request') && ctx.breakSkip) opts.push({ k: 'skipApprove' }, { k: 'skipReject' });
   if (has('break_check') && ctx.evening) opts.push({ k: 'waive' }, { k: 'breakTaken' });
   if (ctx.extraOpen) {
     if (ctx.overtime?.needsReview) opts.push({ k: 'accept' });
@@ -92,7 +94,7 @@ export function DayActions({ ctx, reviewId }: { ctx: DayCtx; reviewId: string | 
     setBusy(true);
     setErr(null);
     const step = async (path: string, body: unknown) => { const r = await callApi(path, body); if (!r.ok) throw r; return r; };
-    const unconfirm = ['lateUnpaid', 'lateAnnual', 'earlyUnpaid', 'earlyAnnual', 'waive', 'accept'].includes(o.k) && ctx.confirmed;
+    const unconfirm = ['lateUnpaid', 'lateAnnual', 'earlyUnpaid', 'earlyAnnual', 'waive', 'accept', 'skipApprove'].includes(o.k) && ctx.confirmed;
     try {
       if (unconfirm) await step('/api/admin/records/confirm', { confirm: false, items: [{ employeeId: ctx.employeeId, date: ctx.date }] });
       if ('leave' in o) {
@@ -104,6 +106,13 @@ export function DayActions({ ctx, reviewId }: { ctx: DayCtx; reviewId: string | 
       } else if (o.k === 'waive' && ctx.evening) {
         await step('/api/admin/break-waivers', { action: 'add', employeeId: ctx.employeeId, date: ctx.date, start: ctx.evening.start, end: ctx.evening.end, reason: why.trim() || t('reasonWaive') });
         await sleep(1200);
+      } else if (o.k === 'skipApprove' && ctx.breakSkip) {
+        // 직원 답 승인 = 그 휴게에 「휴게 안 함」 표시 → 답을 승인으로. 늘어난 연장은 이어서 「연장 승인」
+        await step('/api/admin/break-waivers', { action: 'add', employeeId: ctx.employeeId, date: ctx.date, start: ctx.breakSkip.start, end: ctx.breakSkip.end, reason: why.trim() || t('reasonSkip') });
+        await step('/api/admin/break-skip', { id: ctx.breakSkip.id, decision: 'approved' });
+        await sleep(1200);
+      } else if (o.k === 'skipReject' && ctx.breakSkip) {
+        await step('/api/admin/break-skip', { id: ctx.breakSkip.id, decision: 'rejected' });
       } else if (o.k === 'accept' && ctx.overtime) {
         await step(`/api/admin/overtime/${ctx.overtime.id}/accept`, {});
       } else {
@@ -138,7 +147,7 @@ export function DayActions({ ctx, reviewId }: { ctx: DayCtx; reviewId: string | 
           </div>
           {pick && (
             <div className="flex flex-col gap-2 rounded-button bg-surface/60 p-3 text-sm">
-              <p className="text-muted">{will(pick)}{ctx.confirmed && ['lateUnpaid', 'lateAnnual', 'earlyUnpaid', 'earlyAnnual', 'waive', 'accept'].includes(pick.k) ? ` ${t('reconfirmNote')}` : ''}</p>
+              <p className="text-muted">{will(pick)}{ctx.confirmed && ['lateUnpaid', 'lateAnnual', 'earlyUnpaid', 'earlyAnnual', 'waive', 'accept', 'skipApprove'].includes(pick.k) ? ` ${t('reconfirmNote')}` : ''}</p>
               {pick.k !== 'accept' && (
                 <input value={why} onChange={(e) => setWhy(e.target.value)} maxLength={300} aria-label={t('reasonLabel')} placeholder={t(needsWhy(pick) ? 'reasonNeeded' : 'reasonOptional')}
                   className="h-11 rounded-button border border-border bg-bg px-3 lg:h-9" />

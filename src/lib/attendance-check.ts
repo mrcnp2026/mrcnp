@@ -8,7 +8,7 @@
 import { kstDateTime } from '@/lib/time';
 import type { LateRound, PunchPair } from '@/lib/types';
 
-export const CHECK_KINDS = ['pending_request', 'record_error', 'missing_out', 'missing_in', 'leave_day_punch', 'no_plan_work', 'before_start', 'late_in', 'early_out', 'after_end', 'break_check'] as const;
+export const CHECK_KINDS = ['pending_request', 'record_error', 'missing_out', 'missing_in', 'leave_day_punch', 'no_plan_work', 'before_start', 'late_in', 'early_out', 'after_end', 'break_check', 'break_request'] as const;
 export type CheckKind = (typeof CHECK_KINDS)[number];
 /** block = 마감 막음(기록을 고치거나 요청을 처리해야 빠짐) · decide = 판단 필요 · confirm = 확인만(승인이 전부 덮음) */
 export type CheckState = 'block' | 'decide' | 'confirm';
@@ -39,6 +39,7 @@ export type DayCheckInput = {
   approvedExtraMin: number; // 승인된 연장 · 휴일근로 인정 분 — 일정 후 근무 · 일정 없는 날 근무를 덮는다
   waivedBreakMin: number; // 관리자가 표시한 「휴게 안 함」 분 — 늦은 출근 · 이른 퇴근을 덮는다
   clipStart?: string | null; // 일정 없는 날: 이 시각 전 근무는 세지 않는다 — 급여 계산과 같게 평소 근무 틀 시작 (급여-59 ①: 쉬는 날 특근은 08:00부터)
+  breakRequest?: { start: string; end: string } | null; // 직원이 퇴근할 때 「못 쉬었어요」라고 답했고 아직 처리 전 (DB 0089) — 관리자가 승인 · 반려
   breakCheck?: { start: string; end: string } | null; // 평소보다 일찍 퇴근한 날 — 이 휴게를 정말 했는지 담당자가 확인 (2026-11-03 의뢰인: 10/7 휴게 없이 일함). 「휴게 안 함」 표시가 있으면 넘기지 않는다
   lateRound?: LateRound; // 늦은 출근 끊기 (회사 설정 pay.late_round) — 급여 계산과 같게. 없으면 올림
   earlyIgnoreMin?: number; // 그날 유효한 「일찍 출근 — 확인 필요에서 빼는 시간」(분). 없으면 0 = 다 띄움
@@ -127,7 +128,8 @@ export function judgeDay(a: DayCheckInput): DayCheck {
     if (f < end) push('early_out', netMinutes(Math.max(f, start), end, breaks), 'waived', at);
     if (f > end) push('after_end', netMinutes(end, f, breaks), 'extra', at);
     // 저녁 휴게를 가로질러 일했고 평소보다 일찍 나간 날 — 앱은 휴게를 뺐지만 실제로 쉬었는지는 모른다
-    const bc = a.breakCheck;
+    if (a.breakRequest) parts.push({ kind: 'break_request', minutes: minutesBetween(a.breakRequest.start, a.breakRequest.end), covered: 0, state: 'decide', plan: `${a.breakRequest.start}–${a.breakRequest.end}` });
+    const bc = a.breakRequest ? null : a.breakCheck; // 직원이 답한 날은 앱이 따로 짐작하지 않는다
     if (bc && f > kstDateTime(a.workDate, bc.end).getTime() && Math.min(...ins) < kstDateTime(a.workDate, bc.start).getTime()) {
       parts.push({ kind: 'break_check', minutes: minutesBetween(bc.start, bc.end), covered: 0, state: 'decide', plan: `${bc.start}–${bc.end}` });
     }
