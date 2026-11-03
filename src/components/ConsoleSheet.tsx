@@ -32,7 +32,7 @@ export function SpaceShell({ role, children }: { role: NavRole; children: ReactN
     <>
       {/* 막 · 판은 맨 위 머리(높이 14) 아래에서 시작 (2026-10-22 의뢰인: 「통합설정에 들어가면 위쪽이 블러 처리된다」 — 막이 머리까지 덮어 흐려 보였다) */}
       <div aria-hidden className="fade-from fixed inset-x-0 top-14 bottom-0 z-30 hidden bg-text/40 lg:block" />
-      <div data-console-sheet className="sheet-up lg:glass-sheet lg:fixed lg:inset-x-3 lg:top-17 lg:bottom-4 lg:z-40 lg:flex lg:overflow-hidden lg:rounded-3xl lg:shadow-sheet xl:inset-x-4 2xl:inset-x-[max(1.5rem,calc((100%-1920px)/2))]">
+      <div data-console-sheet className="sheet-up lg:glass-sheet lg:fixed lg:inset-x-3 lg:top-17 lg:bottom-4 lg:z-40 lg:flex lg:overflow-hidden lg:rounded-3xl lg:shadow-sheet xl:inset-x-4 2xl:inset-x-[max(1.5rem,calc((100%-120rem)/2))]">
         {children}
       </div>
     </>
