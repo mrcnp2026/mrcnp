@@ -8982,10 +8982,124 @@
     "credit": "Made by ONDILABS",
     "madeBy": "Version {version} · Made by ONDILABS"
   },
+  "locationTerms": {
+    "title": "Location-Based Service Terms",
+    "link": "Location-Based Service Terms",
+    "draft": "This is a draft under review. The effective date will be set and this notice removed once the remaining checks are done.",
+    "chapters": [
+      {
+        "title": "Chapter 1. General",
+        "articles": [
+          {
+            "title": "Article 1 (Purpose)",
+            "p": "These terms set out the rights, duties and responsibilities of ONDILABS (the “Company”) and the person whose location is used (the “User”) for the location-based service (the “Service”) within the Company's attendance service."
+          },
+          {
+            "title": "Article 2 (Other rules)",
+            "p": "Matters not covered here follow the Act on the Protection, Use, etc. of Location Information, the Personal Information Protection Act, the Network Act and other laws, and the Company's privacy policy."
+          },
+          {
+            "title": "Article 3 (Service and fees)",
+            "li": [
+              "When the User presses clock-in or clock-out, the Company collects the device location once and checks whether it is within the radius of the workplace registered by the User's employer (the “Customer”).",
+              "When the User sends a clock-in request, a record correction request, or a field work, business trip or remote work request, the location at that moment is also recorded once so the Customer can check the request.",
+              "The Company does not track the User's location otherwise and does not collect location in other features such as leave requests.",
+              "There is no fee for the User. The Customer pays under its contract with the Company. Mobile data charges follow the User's carrier."
+            ]
+          }
+        ]
+      },
+      {
+        "title": "Chapter 2. Collection, use and provision of personal location information",
+        "articles": [
+          {
+            "title": "Article 4 (Collection and use)",
+            "li": [
+              "Items: the device location (latitude, longitude) and time when clocking in/out or sending a request in Article 3(2)",
+              "Method: only when the User allows it, through the location function of the browser and device operating system (GPS, Wi-Fi, cell towers).",
+              "Purpose: checking the workplace radius, recording attendance, and checking requests",
+              "The Company does not collect personal location information without consent or use it for other purposes."
+            ]
+          },
+          {
+            "title": "Article 5 (Provision to third parties and notice)",
+            "li": [
+              "For attendance management the Company provides the following to the Customer's administrators. Recipient: the User's employer (administrators) · Items: punch and request times, within-radius result, location at that time · Purpose: recording working hours and calculating pay",
+              "The Company does not provide personal location information to anyone other than the Customer without consent.",
+              "When location is provided to the Customer, the Company notifies the User in the app of the recipient, date and purpose. With the User's consent, notices may be bundled for up to 30 days."
+            ]
+          },
+          {
+            "title": "Article 6 (Retention and deletion)",
+            "li": [
+              "Locations at punch or request time are kept for 1 year from the processing date and then deleted without delay.",
+              "Attendance records such as punch times are kept for the period required by law (3 years).",
+              "Under Article 16(2) of the Location Information Act, records of collection, use and provision are logged automatically and kept for at least 6 months.",
+              "If the User withdraws consent or leaves the company, personal location information other than the records in (2) and (3) is deleted without delay."
+            ]
+          }
+        ]
+      },
+      {
+        "title": "Chapter 3. User rights and Company duties",
+        "articles": [
+          {
+            "title": "Article 7 (User rights)",
+            "li": [
+              "The User may withdraw all or part of the consent at any time.",
+              "The User may ask to temporarily stop collection, use or provision.",
+              "The User may request access to the records of collection, use and provision and the reasons for and contents of provision to third parties, and may request correction of errors.",
+              "Requests can be made through “Contact” in the app or the contact in Article 10. If consent is withdrawn, location-based punching cannot be used and attendance is handled by another method set by the Customer."
+            ]
+          },
+          {
+            "title": "Article 8 (Children under 14)",
+            "p": "The Service is for managing workers' attendance and is not intended for children under 14. The Company does not collect their location information."
+          },
+          {
+            "title": "Article 9 (Change or suspension)",
+            "p": "The Company may change or suspend the Service for maintenance, communication failures or the end of a Customer contract, with notice in the app in advance, or afterwards if unavoidable."
+          },
+          {
+            "bullets": true, "title": "Article 10 (Location information manager)",
+            "p": "The Company designates the following person to manage and protect location information and handle complaints.",
+            "li": [
+              "Name: Jung Indae (CEO)",
+              "Contact: 010-4865-7799 · ondilabs@gmail.com"
+            ]
+          },
+          {
+            "title": "Article 11 (Damages)",
+            "p": "If the Company violates the Location Information Act and the User suffers damage, the User may claim damages. The Company is liable unless it proves no intent or negligence."
+          },
+          {
+            "title": "Article 12 (Exemption)",
+            "p": "The Company is not liable when the Service cannot be provided due to force majeure, the device's location function being off or broken, or the User's fault."
+          },
+          {
+            "title": "Article 13 (Dispute resolution)",
+            "p": "If no agreement is reached on a location dispute, the parties may apply for a ruling to the Korea Media and Communications Commission under Article 28 of the Location Information Act, or for mediation to the Personal Information Dispute Mediation Committee under Article 43 of the Personal Information Protection Act."
+          },
+          {
+            "bullets": true, "title": "Article 14 (Business information)",
+            "li": [
+              "Company: ONDILABS · CEO: Jung Indae",
+              "Address: 902, 50 Daehak 3-ro 4beon-gil, Yeongtong-gu, Suwon-si, Gyeonggi-do",
+              "Business registration number: 630-76-00688",
+              "Contact: 010-4865-7799 · ondilabs@gmail.com"
+            ]
+          }
+        ]
+      }
+    ],
+    "effective": "Addendum — These terms take effect on January 1, 2027. (Draft — effective date not yet confirmed)",
+    "back": "Back to privacy policy"
+  },
   "privacy": {
     "title": "Privacy policy",
     "link": "Privacy policy",
     "fullLink": "Read the full privacy policy",
+    "locationLink": "View the location-based service terms",
     "draft": "This is a draft under review. The effective date will be added and this notice removed after labour and privacy review.",
     "intro": "{company} (the company) processes personal information in this app to manage staff attendance and pay. This page explains what is collected, why, and for how long.",
     "itemsTitle": "1. What we collect",

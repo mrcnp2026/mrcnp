@@ -1,7 +1,7 @@
 // 개인정보 처리방침 (2026-10-29 의뢰인: 「없으면 넣어 줘」 — 부록 1.5판 R-5의 4). 로그인 없이도 열린다(동의 창에서 전체를 보러 온다).
 // 아직 검토 전 초안이라 맨 위에 「초안」 표시를 둔다 — 노무 · 개인정보 검토(결정 운영-4)를 마치면 시행일을 적고 표시를 지운다.
 // 보관 기간은 결정 운영-3의 임시 기준(검증 대기 기록 6장). 안내문을 고쳐도 동의 판(src/config/consent.ts)은 올리지 않는다 — 동의 창 문구가 따로다.
-import { ArrowLeft, ShieldCheck } from 'lucide-react';
+import { ArrowLeft, MapPin, ShieldCheck } from 'lucide-react';
 import { getTranslations } from 'next-intl/server';
 import Link from 'next/link';
 import type { ReactNode } from 'react';
@@ -55,6 +55,11 @@ export default async function PrivacyPage() {
             ))}
           </ul>
           <p className="text-muted">{t('notCollected')}</p>
+          {/* 위치는 따로 약관이 있다 (2026-11-04 의뢰인) */}
+          <Link href="/privacy/location" className="inline-flex min-h-11 items-center gap-1 self-start font-semibold text-primary">
+            <MapPin aria-hidden size={16} />
+            {t('locationLink')} ›
+          </Link>
         </Section>
 
         <Section title={t('purposeTitle')}>
