@@ -2,7 +2,7 @@
 // 읽기: "그 날짜 이전(포함)에 시작한 것 중 가장 최근" — 최신 행을 그냥 읽으면 과거 판정이 바뀐다 (② 4-1, B-1).
 // 쓰기: 기존 행을 고치지 않고 새 행을 넣는다 (DB 트리거가 update를 막는다). 변경 기록은 DB 트리거가 남긴다 (4-3).
 import 'server-only';
-import { cache } from 'react';
+import { cache } from '@/lib/request-cache'; // API에서도 한 요청 한 번 (2026-11-05)
 import { SETTINGS, type SettingKey, type SettingValue } from '@/config/settings-catalog';
 import { pickAt } from '@/lib/settings-pick';
 import type { KindNames } from '@/lib/shift-kind-names';

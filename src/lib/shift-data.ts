@@ -1,6 +1,6 @@
 // 근무일정 틀 읽기. 서버 전용.
 import 'server-only';
-import { cache } from 'react';
+import { cache } from '@/lib/request-cache'; // API에서도 한 요청 한 번 (2026-11-05)
 import { readAll } from '@/lib/read-all';
 import type { DayShift, ShiftTemplate } from '@/lib/shifts';
 import { createAdminClient } from '@/lib/supabase/admin';

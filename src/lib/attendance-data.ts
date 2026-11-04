@@ -1,7 +1,7 @@
 // DB 행 → 계산 모듈 입력. 서버 전용. 계산은 순수함수(worktime·today·weekly-hours)가 하고 여기서는 읽기만 한다.
 import 'server-only';
 import { readAll } from '@/lib/read-all';
-import { cache } from 'react';
+import { cache } from '@/lib/request-cache'; // API에서도 한 요청 한 번 (2026-11-05)
 import { resolveDayType } from '@/config/labor-rules';
 import { OFFICE } from '@/config/office';
 import { addDays, weekStartOf } from '@/lib/calendar';

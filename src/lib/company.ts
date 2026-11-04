@@ -1,7 +1,7 @@
 // 회사 정보 (2026-10-18 의뢰인: 회사 기본설정은 휴일보다 회사 정보가 먼저) — DB 묶음 24의 company_profile_versions.
 // 고칠 때마다 한 줄을 더하고 가장 최근 줄을 쓴다(이력). 표가 비어 있으면 지금까지의 고정 값(config/brand)을 쓴다. 서버 전용.
 import 'server-only';
-import { cache } from 'react';
+import { cache } from '@/lib/request-cache'; // API에서도 한 요청 한 번 (2026-11-05)
 import { BRAND } from '@/config/brand';
 import { createAdminClient } from '@/lib/supabase/admin';
 

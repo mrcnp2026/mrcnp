@@ -2,7 +2,7 @@
 // 「요청」 화면을 마지막으로 연 뒤에 처리된 것만 센다. 연 시각은 이 기기의 쿠키(req_seen)에 둔다 — 처음이면 최근 3일. 서버 전용.
 import 'server-only';
 import { cookies } from 'next/headers';
-import { cache } from 'react';
+import { cache } from '@/lib/request-cache'; // API에서도 한 요청 한 번 (2026-11-05)
 import { OFFICE } from '@/config/office';
 import { createAdminClient } from '@/lib/supabase/admin';
 

@@ -4,7 +4,7 @@
 // ★ 자료를 읽는 함수(loadPeriod · loadRequests · loadLeaveRequests · loadLeaveGrants · loadWorkRequests · pendingCounts)가 이 범위를 스스로 건다.
 //   화면마다 따로 거르지 않게 해서, 한 화면에서 빠뜨려 다른 지점이 보이는 일을 막는다. 화면이 표를 직접 읽을 때는 inScope로 거른다.
 import 'server-only';
-import { cache } from 'react';
+import { cache } from '@/lib/request-cache'; // API에서도 한 요청 한 번 (2026-11-05)
 import { ApiError } from '@/lib/api';
 import { getMe, type Me } from '@/lib/auth';
 import { scopeIds } from '@/lib/manager-rules';
@@ -19,9 +19,14 @@ export async function loadManagedGroups(managerId: string): Promise<string[]> {
   return (data ?? []).map((r) => r.group_id as string);
 }
 
-async function managerScope(managerId: string): Promise<Set<string>> {
+// 지점 나무 · 직원 소속은 지점관리자마다 같다 — 한 요청에서 한 번만 읽는다 (2026-11-05: 관리자 숫자 한 번에 지점관리자 수만큼 다시 읽었다)
+const orgOnce = cache(() => {
   const db = createAdminClient();
-  const [managed, { data: groups }, { data: people }] = await Promise.all([loadManagedGroups(managerId), db.from('org_groups').select('id, parent_id'), db.from('profiles').select('id, group_id')]);
+  return Promise.all([db.from('org_groups').select('id, parent_id'), db.from('profiles').select('id, group_id')]);
+});
+
+async function managerScope(managerId: string): Promise<Set<string>> {
+  const [managed, [{ data: groups }, { data: people }]] = await Promise.all([loadManagedGroups(managerId), orgOnce()]);
   return scopeIds({
     managerId,
     managed,

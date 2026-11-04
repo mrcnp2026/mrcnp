@@ -1,7 +1,7 @@
 // 기간 데이터 읽기 + 연장 확인 대상 만들기. 서버 전용.
 // 예약 작업(cron)을 만들지 않는다 (3장) — 처리함·현황판·월간 집계를 **열 때** 계산하고 필요한 요청 행을 만든다.
 import 'server-only';
-import { cache } from 'react';
+import { cache } from '@/lib/request-cache'; // API에서도 한 요청 한 번 (2026-11-05)
 import { after } from 'next/server';
 import { readAll } from '@/lib/read-all';
 import { resolveDayType } from '@/config/labor-rules';

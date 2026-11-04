@@ -1,6 +1,6 @@
 // 조직도 읽기. 서버 전용.
 import 'server-only';
-import { cache } from 'react';
+import { cache } from '@/lib/request-cache'; // API에서도 한 요청 한 번 (2026-11-05)
 import type { OrgGroup } from '@/lib/org';
 import { createAdminClient } from '@/lib/supabase/admin';
 

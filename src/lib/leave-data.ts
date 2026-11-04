@@ -2,7 +2,7 @@
 import 'server-only';
 import { readAll } from '@/lib/read-all';
 import { addDays } from '@/lib/calendar';
-import { cache } from 'react';
+import { cache } from '@/lib/request-cache'; // API에서도 한 요청 한 번 (2026-11-05)
 import { resolveDayType } from '@/config/labor-rules';
 import { OFFICE } from '@/config/office';
 import { loadHolidays, loadRuleVersions } from '@/lib/attendance-data';

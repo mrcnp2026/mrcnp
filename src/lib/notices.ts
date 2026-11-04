@@ -1,6 +1,6 @@
 // 공지 — 서버 전용 읽기·쓰기 (②-5 7-15). 쓰기는 전부 여기를 거친다 (브라우저 쓰기 권한 없음).
 import 'server-only';
-import { cache } from 'react';
+import { cache } from '@/lib/request-cache'; // API에서도 한 요청 한 번 (2026-11-05)
 import { selectableLocales, type Locale } from '@/i18n/locales';
 import { noticeState, numbersMatch, pickDisplay, popupOrder, type NoticeRow, type TranslationRow } from '@/lib/notice-logic';
 import { ApiError } from '@/lib/api';

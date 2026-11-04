@@ -1,6 +1,6 @@
 // 출퇴근 장소(GPS)·지점 연결 읽기. 서버 전용.
 import 'server-only';
-import { cache } from 'react';
+import { cache } from '@/lib/request-cache'; // API에서도 한 요청 한 번 (2026-11-05)
 import { OFFICE } from '@/config/office';
 import { FREE_PLACE_GROUP } from '@/lib/punch-requests';
 import { loadTemplateOf } from '@/lib/shift-data';

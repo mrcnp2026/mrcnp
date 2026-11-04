@@ -1,6 +1,6 @@
 // 동의 기록 읽기·쓰기. 서버 전용. 동의는 덧붙이기만 한다 (DB 0018).
 import 'server-only';
-import { cache } from 'react';
+import { cache } from '@/lib/request-cache'; // API에서도 한 요청 한 번 (2026-11-05)
 import { CONSENT } from '@/config/consent';
 import { createAdminClient } from '@/lib/supabase/admin';
 
