@@ -114,7 +114,8 @@ export function collectChecks(data: PeriodData, from: string, to: string, now = 
         lateRound: (rule ?? base)?.lateRound,
         breakCheck,
         breakRequest,
-        clipStart: span ? null : (plan.rule ?? base)?.startTime ? hhmm((plan.rule ?? base)!.startTime) : null,
+        unscheduled: data.templateOf(p.id)?.kind === 'free',
+        clipStart: span || data.templateOf(p.id)?.kind === 'free' ? null : (plan.rule ?? base)?.startTime ? hhmm((plan.rule ?? base)!.startTime) : null,
       });
       if (check.parts.length) days.push(check); // 흐리게만 남은 날도 둔다 — 기록 화면 표시 · 한 달 묶음 판단에 쓴다
     }

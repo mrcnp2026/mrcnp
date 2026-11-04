@@ -43,6 +43,7 @@ export type DayCheckInput = {
   breakCheck?: { start: string; end: string } | null; // 평소보다 일찍 퇴근한 날 — 이 휴게를 정말 했는지 담당자가 확인 (2026-11-03 의뢰인: 10/7 휴게 없이 일함). 「휴게 안 함」 표시가 있으면 넘기지 않는다
   lateRound?: LateRound; // 늦은 출근 끊기 (회사 설정 pay.late_round) — 급여 계산과 같게. 없으면 올림
   earlyIgnoreMin?: number; // 그날 유효한 「일찍 출근 — 확인 필요에서 빼는 시간」(분). 없으면 0 = 다 띄움
+  unscheduled?: boolean; // 무일정 근무자(템플릿 「일정 없음」) — 일정 없는 날 근무가 평소라 「쉬는 날 근무」로 띄우지 않는다
   offDay?: boolean; // 달력상 쉬는 날 · 공휴일(특근 일정이 있어도) — 일한 시간만 급여에 들어가 조퇴를 따지지 않는다 (2026-11-04 의뢰인)
   lateIgnoreMin?: number; // 그날 유효한 「지각 — 확인 필요에서 빼는 시간」(분, 실제 늦은 분 기준). 없으면 0 = 1분 지각도 띄움 (급여-75)
 };
@@ -103,7 +104,7 @@ export function judgeDay(a: DayCheckInput): DayCheck {
     // 쉬는 날 · 일정 없는 날 근무 — 계산 시각으로 센 근무 분 전부
     const clip = a.clipStart ? kstDateTime(a.workDate, a.clipStart).getTime() : null;
     const worked = done.reduce((n, p) => { const s = clip !== null && p.in.getTime() <= clip ? clip : ceilTo(p.in.getTime(), step); return n + netMinutes(s, floorTo(p.out.getTime(), step), breaks); }, 0);
-    if (worked > 0) push('no_plan_work', worked, 'extra', {});
+    if (worked > 0 && !a.unscheduled) push('no_plan_work', worked, 'extra', {});
     return out();
   }
 

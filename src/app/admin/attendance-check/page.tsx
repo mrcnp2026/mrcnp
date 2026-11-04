@@ -382,8 +382,8 @@ export default async function AttendanceCheckPage({ searchParams }: { searchPara
                     </div>
                   ))}
                 </dl>
-                {live(d).some((x) => x.kind === 'break_request') && <p className="pl-4 text-xs text-warn">{t('breakRequestWhy', { span: live(d).find((x) => x.kind === 'break_request')!.plan ?? '' })}</p>}
-                {live(d).some((x) => x.kind === 'break_check') && <p className="pl-4 text-xs text-warn">{t('breakCheckWhy', { span: live(d).find((x) => x.kind === 'break_check')!.plan ?? '' })}</p>}
+                {live(d).some((x) => x.kind === 'break_request') && <p className="pl-4 text-xs leading-5 whitespace-pre-line text-warn">{t('breakRequestWhy', { span: live(d).find((x) => x.kind === 'break_request')!.plan ?? '' })}</p>}
+                {live(d).some((x) => x.kind === 'break_check') && <p className="pl-4 text-xs leading-5 whitespace-pre-line text-warn">{t('breakCheckWhy', { span: live(d).find((x) => x.kind === 'break_check')!.plan ?? '' })}</p>}
                 {handled && rv ? (
                   <p className="pl-4 text-sm text-ok">{t(`decided.${rv.decision}`)}{rv.note ? ` — ${rv.note}` : ''}</p>
                 ) : (

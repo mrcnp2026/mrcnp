@@ -5,7 +5,7 @@
 import { kstDateTime } from '@/lib/time';
 import type { PunchPair, WorkRule } from '@/lib/types';
 
-export const SHIFT_KINDS = ['none', 'normal', 'deemed', 'outside', 'remote', 'holiday', 'extra'] as const;
+export const SHIFT_KINDS = ['none', 'normal', 'deemed', 'outside', 'remote', 'holiday', 'extra', 'free'] as const; // free = 무일정 근무(템플릿에만 — 정해진 시간 없이 찍은 시간만 센다, 2026-11-04 의뢰인: 강혜주)
 export type ShiftKind = (typeof SHIFT_KINDS)[number];
 // 색은 디자인 토큰에 있는 것만 (새 색은 토큰을 먼저 더한다). DB check도 같은 목록 (마이그레이션 0090)
 export const SHIFT_COLORS = ['primary', 'blue', 'sky', 'purple', 'pink', 'orange', 'warn', 'danger', 'ok', 'text', 'muted'] as const;
@@ -98,7 +98,9 @@ export function planDay(args: { rule: WorkRule | null; tpl: ShiftTemplate | null
     const d = main.filter((s) => s.kind === 'deemed');
     if (d.length) deemed = { startTime: d.map((s) => s.startTime).reduce(minT), endTime: d.map((s) => s.endTime).reduce(maxT) };
   } else if (isWorkday) {
-    if (tpl) {
+    if (tpl?.kind === 'free') {
+      // 무일정 근무자 — 그날 계획 없음: 지각 · 조퇴 · 미출근을 따지지 않고 찍은 시간만 센다 (2026-11-04 의뢰인: 강혜주)
+    } else if (tpl) {
       span = { startTime: tpl.startTime, endTime: tpl.endTime };
       if (tpl.kind === 'deemed') deemed = { ...span };
       items.push({ startTime: tpl.startTime, endTime: tpl.endTime, kind: tpl.kind, name: tpl.name, color: tpl.color, shiftId: null, note: null, source: 'template' });
@@ -116,7 +118,8 @@ export function planDay(args: { rule: WorkRule | null; tpl: ShiftTemplate | null
     if (last && s.startTime <= last.endTime) last.endTime = maxT(last.endTime, s.endTime);
     else deemedIntervals.push({ startTime: s.startTime, endTime: s.endTime });
   }
-  return { deemedIntervals, rule: rule && span ? { ...rule, startTime: span.startTime, endTime: span.endTime } : applyTemplate(rule, tpl), deemed, items };
+  const free = tpl?.kind === 'free' && !span; // 무일정 근무자 — 시작 시각이 없으니 출근 전 시간을 자르지 않는다
+  return { deemedIntervals, rule: rule && span ? { ...rule, startTime: span.startTime, endTime: span.endTime } : free ? (rule ? { ...rule, clipBeforeStart: false } : null) : applyTemplate(rule, tpl), deemed, items };
 }
 
 export type ShiftInput = { date: string; startTime: string; endTime: string; kind: ShiftKind; templateId: string | null; note: string | null; employeeIds: string[] };
@@ -127,7 +130,7 @@ export function validateShift(b: Record<string, unknown>): { ok: true; value: Sh
   if (typeof b.date !== 'string' || !/^\d{4}-\d{2}-\d{2}$/.test(b.date) || Number.isNaN(Date.parse(`${b.date}T00:00:00Z`))) return { ok: false, code: 'invalid_date' };
   const { startTime, endTime } = b;
   if (typeof startTime !== 'string' || typeof endTime !== 'string' || !TIME.test(startTime) || !TIME.test(endTime) || startTime >= endTime) return { ok: false, code: 'invalid_time' };
-  const kind = (SHIFT_KINDS as readonly unknown[]).includes(b.kind) ? (b.kind as ShiftKind) : null;
+  const kind = b.kind !== 'free' && (SHIFT_KINDS as readonly unknown[]).includes(b.kind) ? (b.kind as ShiftKind) : null; // 무일정은 템플릿에만
   if (!kind) return { ok: false, code: 'invalid_input' };
   const templateId = b.templateId === undefined || b.templateId === null || b.templateId === '' ? null : typeof b.templateId === 'string' && UUID.test(b.templateId) ? b.templateId : undefined;
   if (templateId === undefined) return { ok: false, code: 'invalid_input' };

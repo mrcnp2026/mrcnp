@@ -85,6 +85,11 @@ describe('하루 일정 정하기 (날짜별 일정 → 평소 틀 → 회사 �
     expect(b.items).toMatchObject([{ source: 'rule', startTime: '09:00', endTime: '18:00' }]);
     expect(b.rule).toEqual(RULE);
   });
+  it('무일정 근무(free) 템플릿: 근무일에도 계획이 없고, 출근 전 시간을 자르지 않는다 (2026-11-04 강혜주)', () => {
+    const f = planDay({ rule: { ...RULE, clipBeforeStart: true }, tpl: { ...TPL, kind: 'free' }, shifts: [], isWorkday: true });
+    expect(f.items).toEqual([]);
+    expect(f.rule!.clipBeforeStart).toBe(false);
+  });
   it('일정이 없는 휴일: 보일 일정이 없다', () => {
     expect(planDay({ rule: RULE, tpl: TPL, shifts: [], isWorkday: false }).items).toEqual([]);
   });

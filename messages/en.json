@@ -3047,7 +3047,8 @@
         "outside": "Off-site",
         "remote": "Remote",
         "holiday": "Holiday work",
-        "extra": "Overtime block"
+        "extra": "Overtime block",
+        "free": "No fixed schedule"
       },
       "colors": {
         "primary": "Green",
@@ -7696,7 +7697,8 @@
       "outside": "Off-site",
       "remote": "Remote work",
       "holiday": "Holiday work",
-      "extra": "Extra hours"
+      "extra": "Extra hours",
+      "free": "No fixed schedule"
     },
     "colKind": "Type",
     "colWho": "From",

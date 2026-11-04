@@ -126,7 +126,7 @@ export function ScheduleForm({
       <label className="flex flex-col gap-1 text-sm text-muted">
         {t('kind')}
         <Select value={kind} onChange={(e) => setKind(e.target.value as ShiftKind)} className={field}>
-          {SHIFT_KINDS.map((k) => (
+          {SHIFT_KINDS.filter((k) => k !== 'free').map((k) => ( // 무일정은 템플릿에만
             <option key={k} value={k}>
               {tk(k)}
             </option>
