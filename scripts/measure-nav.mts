@@ -1,5 +1,5 @@
 // 화면 이동 속도 재기 — 하단 탭을 실제로 눌러 ① 화면이 바뀌기 시작할 때까지 ② 내용이 다 찰 때까지 시간을 잰다.
-//   BASE=https://mrcnp-saas.vercel.app npx tsx scripts/measure-nav.mts   (기본: http://localhost:4123)
+//   npx tsx scripts/measure-nav.mts   (기본: http://localhost:4123 — 운영 주소로 재려면 먼저 의뢰인에게 묻는다: 운영 사용량을 쓴다, 2026-11-04)
 // 검사 전용 직원(e2e-audit)만 쓴다. 끝나면 이 스크립트가 만든 가짜 폰 등록을 해제하고 e2e-audit을 다시 끈다.
 import { createClient } from '@supabase/supabase-js';
 import { config } from 'dotenv';

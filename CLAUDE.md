@@ -7,4 +7,5 @@
 - 개발 서버: `npm run dev` (http://localhost:4123). 개발 DB로: `npm run dev:devdb`.
 - 화면 문구를 바꾸면 `messages/ko.json`·`messages/en.json`을 같이 고친다.
 - 새 DB 변경은 `supabase/migrations/`에 새 번호 파일로. 이미 있는 파일은 고치지 않는다.
+- `scripts/`의 자동 시험·캡처·측정은 localhost에서만 돌린다(`BASE` 기본값). 운영 주소(`BASE=https://…vercel.app`)로 돌려야 하면 먼저 묻는다 — 매번 로그인부터 해서 운영 사용량을 쓴다 (2026-11-04 Vercel 한도 초과로 운영 정지).
 - `.claude/worktrees/` 안은 작업 사본이다. 거기 있는 파일을 원본으로 착각하지 않는다.
