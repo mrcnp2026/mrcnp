@@ -3,7 +3,7 @@
 //   접혀 있어도 한 줄 요약이 보인다. 내 정보가 비어 있으면 펼친 채로 열어 넣게 한다. 비밀번호는 드물게 바꾸므로 접어 둔다.
 // 지문 로그인만 쓰던 사람(비밀번호 없음)은 여기서 비밀번호를 처음 만든다 — 그래야 PC·다른 폰에서도 로그인할 수 있다(그때는 펼친 채로).
 import { getFormatter, getTranslations } from 'next-intl/server';
-import { ChevronRight, Settings, ShieldCheck } from 'lucide-react';
+import { ChevronRight, MapPin, Settings, ShieldCheck } from 'lucide-react';
 import Link from 'next/link';
 import { redirect } from 'next/navigation';
 import { Fold } from '@/components/Fold';
@@ -20,7 +20,7 @@ import { toKstDate } from '@/lib/time';
 export default async function AccountPage() {
   const me = await getMe();
   if (!me) redirect('/login');
-  const [t, td, f, th, tp] = await Promise.all([getTranslations('account'), getTranslations('details'), getFormatter(), getTranslations('home'), getTranslations('privacy')]);
+  const [t, td, f, th, tp, tl] = await Promise.all([getTranslations('account'), getTranslations('details'), getFormatter(), getTranslations('home'), getTranslations('privacy'), getTranslations('locationTerms')]);
   const [details, { data: p }, groups] = await Promise.all([
     loadStaffDetails(me.id),
     createAdminClient().from('profiles').select('password_set_at, phone, email, group_id, job_title').eq('id', me.id).maybeSingle(),
@@ -99,6 +99,12 @@ export default async function AccountPage() {
           <Link href="/privacy" className={link}>
             <ShieldCheck aria-hidden size={18} className="shrink-0 text-muted" />
             <span className="flex-1">{tp('link')}</span>
+            <ChevronRight aria-hidden size={18} className="text-faint" />
+          </Link>
+          {/* 위치기반서비스 약관은 개인정보 처리방침 바로 아래 (2026-11-04 의뢰인) */}
+          <Link href="/privacy/location" className={link}>
+            <MapPin aria-hidden size={18} className="shrink-0 text-muted" />
+            <span className="flex-1">{tl('title')}</span>
             <ChevronRight aria-hidden size={18} className="text-faint" />
           </Link>
         </nav>
