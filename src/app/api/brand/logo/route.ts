@@ -9,7 +9,8 @@ import { createAdminClient } from '@/lib/supabase/admin';
 
 export async function GET(req: Request): Promise<Response> {
   const p = await companyProfile();
-  const fallback = () => Response.redirect(new URL(BRAND.logo.src, req.url), 302);
+  // 올린 로고가 없을 때 넘겨 주는 것도 CDN이 들고 있게 — Response.redirect는 캐시 설정을 못 붙여 매번 함수가 돌았다 (2026-11-04)
+  const fallback = () => new Response(null, { status: 302, headers: { location: new URL(BRAND.logo.src, req.url).href, 'cache-control': 'public, max-age=300, s-maxage=300, stale-while-revalidate=86400' } });
   // 통합설정 › 고급 옵션의 「회사 로고」를 끄면 로고 대신 회사 이름 글자 그림을 보낸다 (2026-10-19) — 화면 쪽은 그대로 이 주소를 쓴다
   if (!(await switchOn('advanced.brand'))) {
     const name = (await companyName()).replace(/[<>&"']/g, '');

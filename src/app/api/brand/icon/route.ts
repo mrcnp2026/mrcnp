@@ -10,7 +10,7 @@ export async function GET(req: Request): Promise<Response> {
   const q = new URL(req.url).searchParams.get('s') ?? 's192';
   const size: IconSize = q in ICON_SIZES ? (q as IconSize) : 's192';
   const p = await companyProfile();
-  const fallback = () => Response.redirect(new URL(FALLBACK[size], req.url), 302);
+  const fallback = () => new Response(null, { status: 302, headers: { location: new URL(FALLBACK[size], req.url).href, 'cache-control': 'public, max-age=300, s-maxage=300, stale-while-revalidate=86400' } }); // 넘겨 주기도 CDN 캐시 (2026-11-04)
   if (!p.iconPath) return fallback();
   const { data, error } = await createAdminClient().storage.from('content').download(`${p.iconPath}/${size}.png`);
   if (error || !data) return fallback();
