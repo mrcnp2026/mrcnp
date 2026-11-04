@@ -9,7 +9,7 @@ function merge(args: BalanceArgs, ledger: LedgerSummary | null | undefined) {
   const old = calcLeaveBalance(args);
   if (!ledger) return { ...old, ledger: false };
   const pending = roundDays(args.requests.filter((r) => r.status === 'pending' && (r.typeSnapshot?.deductsBalance ?? args.types.find((t) => t.code === r.typeCode)?.deductsBalance)).reduce((a, r) => a + r.days, 0));
-  return { ...old, ledger: true, granted: ledger.grantedDays, used: ledger.usedDays, remaining: ledger.remainingDays, pending };
+  return { ...old, ledger: true, granted: ledger.grantedDays, used: roundDays(ledger.usedDays + ledger.advanceDays), remaining: ledger.remainingDays, pending }; // 사용 = 받은 연차에서 쓴 것 + 선사용(받기 전에 쓴 것) — 받은 − 사용 = 잔여가 맞게 (2026-11-04 시프티 대조: 황병도 3 → 3.5)
 }
 
 /** 여러 직원을 한 번에 (같은 기준일) — 관리자 휴가 화면 (검수 R21) */
@@ -23,5 +23,5 @@ export async function leaveBalanceFor(args: { employeeId: string; asOf: string; 
   const ledger = await ledgerFor(args.employeeId, args.asOf, args.practice);
   if (!ledger) return { ...old, ledger: false };
   const pending = roundDays(args.requests.filter((r) => r.status === 'pending' && (r.typeSnapshot?.deductsBalance ?? args.types.find((t) => t.code === r.typeCode)?.deductsBalance)).reduce((a, r) => a + r.days, 0));
-  return { ...old, ledger: true, granted: ledger.grantedDays, used: ledger.usedDays, remaining: ledger.remainingDays, pending };
+  return { ...old, ledger: true, granted: ledger.grantedDays, used: roundDays(ledger.usedDays + ledger.advanceDays), remaining: ledger.remainingDays, pending }; // 사용 = 받은 연차에서 쓴 것 + 선사용(받기 전에 쓴 것) — 받은 − 사용 = 잔여가 맞게 (2026-11-04 시프티 대조: 황병도 3 → 3.5)
 }
