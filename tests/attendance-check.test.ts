@@ -99,6 +99,11 @@ describe('2026-11-03 의뢰인 — 시작 시각 기준 · 일찍 출근 기준 
     expect(r.parts[0]).toMatchObject({ kind: 'before_start', minutes: 45, quiet: true });
     expect(judgeDay({ ...base, earlyIgnoreMin: 60, pairs: [{ in: at('06:10'), out: at('17:00') }] }).state).toBe('decide');
   });
+  it('쉬는 날 · 공휴일 특근은 일정보다 일찍 나가도 조퇴로 띄우지 않는다 — 일한 시간만 급여에 (2026-11-04 의뢰인, 정원채 10/3)', () => {
+    const sat = { ...base, plan: { startTime: '08:00', endTime: '12:00' }, breaks: [] };
+    expect(kinds(judgeDay({ ...sat, offDay: true, pairs: [{ in: at('08:00'), out: at('11:28') }] }))).toEqual([]);
+    expect(kinds(judgeDay({ ...sat, pairs: [{ in: at('08:00'), out: at('11:28') }] }))).toEqual(['early_out:45:decide']);
+  });
   it('짧은 지각(기준 10분 이내)은 흐리게만 — 끊는 방식과 상관없이 실제 늦은 분으로, 넘으면 판단 필요 (급여-75)', () => {
     const r = judgeDay({ ...base, lateIgnoreMin: 10, pairs: [{ in: at('07:40'), out: at('17:00') }] }); // 10분 늦음 → 15분 올림으로 15분 차감이어도 흐리게
     expect(r.state).toBeNull();

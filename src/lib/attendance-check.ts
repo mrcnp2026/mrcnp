@@ -43,6 +43,7 @@ export type DayCheckInput = {
   breakCheck?: { start: string; end: string } | null; // 평소보다 일찍 퇴근한 날 — 이 휴게를 정말 했는지 담당자가 확인 (2026-11-03 의뢰인: 10/7 휴게 없이 일함). 「휴게 안 함」 표시가 있으면 넘기지 않는다
   lateRound?: LateRound; // 늦은 출근 끊기 (회사 설정 pay.late_round) — 급여 계산과 같게. 없으면 올림
   earlyIgnoreMin?: number; // 그날 유효한 「일찍 출근 — 확인 필요에서 빼는 시간」(분). 없으면 0 = 다 띄움
+  offDay?: boolean; // 달력상 쉬는 날 · 공휴일(특근 일정이 있어도) — 일한 시간만 급여에 들어가 조퇴를 따지지 않는다 (2026-11-04 의뢰인)
   lateIgnoreMin?: number; // 그날 유효한 「지각 — 확인 필요에서 빼는 시간」(분, 실제 늦은 분 기준). 없으면 0 = 1분 지각도 띄움 (급여-75)
 };
 
@@ -131,7 +132,7 @@ export function judgeDay(a: DayCheckInput): DayCheck {
     const last = Math.max(...done.map((p) => p.out.getTime()));
     const f = floorTo(last, step);
     const at = { plan: a.plan.endTime.slice(0, 5), punched: hm(new Date(last)), counted: hm(new Date(f)) };
-    if (f < end) push('early_out', netMinutes(Math.max(f, start), end, breaks), 'waived', at);
+    if (f < end && !a.offDay) push('early_out', netMinutes(Math.max(f, start), end, breaks), 'waived', at);
     if (f > end) push('after_end', netMinutes(end, f, breaks), 'extra', at);
     // 저녁 휴게를 가로질러 일했고 평소보다 일찍 나간 날 — 앱은 휴게를 뺐지만 실제로 쉬었는지는 모른다
     if (a.breakRequest) parts.push({ kind: 'break_request', minutes: minutesBetween(a.breakRequest.start, a.breakRequest.end), covered: 0, state: 'decide', plan: `${a.breakRequest.start}–${a.breakRequest.end}` });

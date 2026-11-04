@@ -1,6 +1,7 @@
 // 근태 점검 — 기간 자료(loadPeriod)를 하루 판정(judgeDay) 입력으로 바꾼다. 서버 전용, DB에 쓰지 않는다 (급여-69).
 // 근태 마감이 이미 읽는 자료만 쓴다 — 따로 더 읽지 않는다.
 import 'server-only';
+import { resolveDayType } from '@/config/labor-rules';
 import { OFFICE } from '@/config/office';
 import { SETTINGS } from '@/config/settings-catalog';
 import { bundleMonth, judgeDay, type DayCheck, type MonthCheck } from '@/lib/attendance-check';
@@ -109,6 +110,7 @@ export function collectChecks(data: PeriodData, from: string, to: string, now = 
         waivedBreakMin: waivedMin,
         earlyIgnoreMin: earlyIgnoreAt(d.workDate),
         lateIgnoreMin: lateIgnoreAt(d.workDate),
+        offDay: base ? resolveDayType(d.workDate, base, data.holidays) !== 'workday' : false,
         lateRound: (rule ?? base)?.lateRound,
         breakCheck,
         breakRequest,
