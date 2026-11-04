@@ -5,7 +5,7 @@ import { requirePayroll } from '@/lib/payroll/data';
 import { AUTO_CODES, PAY_BASES, toDailyItems, toMonthlyItems, type DailyTerms, type PayBasis } from '@/lib/payroll/daily';
 import { addAdjustment, addEngagement, addPayee, addWork, calculateDaily, createDailyRun, deletePayee, editWork, finalizeDaily, removeAdjustment, reviewDaily, setEngagement, setPayeeActive, setWorkStatus, startDailyCorrection, updatePayee, type PayeeInfo } from '@/lib/payroll/daily-data';
 
-export const maxDuration = 60;
+export const maxDuration = 300; // 직원 · 기록이 늘어도 시간 제한에 조용히 끊기지 않게 (2026-11-04, Fluid는 실제 계산 시간만 과금)
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 const isId = (v: unknown): v is string => typeof v === 'string' && UUID.test(v);
 const isDate = (v: unknown): v is string => typeof v === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(v) && !Number.isNaN(Date.parse(`${v}T00:00:00Z`));

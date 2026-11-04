@@ -25,8 +25,11 @@ self.addEventListener('push', (event) => {
 });
 
 // 앱 아이콘 숫자 (2026-10-21 의뢰인: 카카오톡처럼) — 앱이 닫혀 있어도 알림이 오면 종과 같은 숫자로 바꾼다. 못 세면 그대로 둔다
+// 알림이 한꺼번에 여러 개 오면 1분에 한 번만 센다 — 알림마다 서버를 부르지 않게 (2026-11-04 Vercel 사용량)
+let badgeAt = 0;
 async function updateBadge() {
-  if (!self.navigator.setAppBadge) return;
+  if (!self.navigator.setAppBadge || Date.now() - badgeAt < 60_000) return;
+  badgeAt = Date.now();
   try {
     const r = await fetch('/api/me/alerts', { cache: 'no-store', credentials: 'same-origin' });
     if (!r.ok) return;

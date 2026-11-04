@@ -49,11 +49,16 @@ export async function listNoticesForAdmin(now: Date) {
   // 자동 검사 계정(e2e-audit…)이 만든 것, 제목이 [점검]으로 시작하는 것, 글자가 깨진 채 저장된 점검 글. 게시 중·임시 저장은 그대로 보인다
   const checkAccounts = new Set((people ?? []).filter((p) => p.employee_no?.startsWith('e2e-audit')).map((p) => p.id));
   const isCheck = (r: { status: string; created_by: string; title: string }) => r.status === 'archived' && (checkAccounts.has(r.created_by) || r.title.startsWith('[점검]') || r.title.includes(String.fromCharCode(0xfffd)));
+  // 공지 · 확인 기록이 쌓여도 공지마다 전부를 다시 훑지 않게 미리 묶는다 (2026-11-04)
+  const targetsOf = new Map<string, Set<string>>();
+  for (const t of targets ?? []) targetsOf.set(t.notice_id, (targetsOf.get(t.notice_id) ?? new Set()).add(t.employee_id));
+  const readsOf = new Map<string, Set<string>>();
+  for (const x of reads ?? []) readsOf.set(`${x.notice_id}|${x.version}`, (readsOf.get(`${x.notice_id}|${x.version}`) ?? new Set()).add(x.employee_id));
   return (ns ?? []).filter((r) => !isCheck(r)).map((r) => {
     const n = toNotice(r);
     // 확인 현황: 현재 판 기준 · 대상 재직자 기준 (요점 17)
-    const audience = n.audience === 'all' ? active : active.filter((p) => (targets ?? []).some((t) => t.notice_id === n.id && t.employee_id === p.id));
-    const confirmed = new Set((reads ?? []).filter((x) => x.notice_id === n.id && x.version === n.version).map((x) => x.employee_id));
+    const audience = n.audience === 'all' ? active : active.filter((p) => targetsOf.get(n.id)?.has(p.id));
+    const confirmed = readsOf.get(`${n.id}|${n.version}`) ?? new Set<string>();
     return {
       notice: n,
       state: noticeState(n, now),
@@ -165,7 +170,8 @@ export async function pendingNoticesFor(employeeId: string, locale: string) {
 export async function visibleNoticesFor(employeeId: string, locale: string, now: Date) {
   const db = createAdminClient();
   const [{ data: ns }, { data: tg }, { data: reads }] = await Promise.all([
-    db.from('notices').select('*').eq('status', 'published').lte('starts_at', now.toISOString()),
+    // 끝난 공지는 DB에서 거른다 — noticeState의 'ended'와 같은 기준. 안 거르면 공지가 쌓일수록 3분마다 묻는 팝업 · 종이 전부 읽는다 (2026-11-04)
+    db.from('notices').select('*').eq('status', 'published').lte('starts_at', now.toISOString()).or(`ends_at.is.null,ends_at.gt.${now.toISOString()}`),
     db.from('notice_targets').select('notice_id').eq('employee_id', employeeId),
     db.from('notice_reads').select('notice_id, version').eq('employee_id', employeeId),
   ]);

@@ -11,7 +11,7 @@ import { slipFamilyTemp } from '@/lib/payroll/tax-defaults';
 import { payrollAudit } from '@/lib/payroll/staff-data';
 import { createAdminClient } from '@/lib/supabase/admin';
 
-export const maxDuration = 60;
+export const maxDuration = 300; // 직원 · 기록이 늘어도 시간 제한에 조용히 끊기지 않게 (2026-11-04, Fluid는 실제 계산 시간만 과금)
 const MAX_PEOPLE = 300; // 한 파일에 너무 많으면 시간 안에 못 만든다 — 그때는 한 사람씩
 
 export async function GET(_req: Request, ctx: { params: Promise<{ id: string }> }): Promise<Response> {

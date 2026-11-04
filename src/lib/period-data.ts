@@ -324,21 +324,23 @@ export async function syncOvertimeRequests(data: PeriodData, upTo: string, only?
     const { error } = await db.from('overtime_requests').upsert(inserts, { onConflict: 'employee_id,work_date,is_test', ignoreDuplicates: true });
     if (error) throw new Error(`syncOvertime.insert: ${error.message}`);
   }
-  for (const r of reviews) {
-    const same = (() => {
-      const cur = data.overtime.find((x) => x.id === r.id)!;
-      return r.o === cur.overtimeMinutes && r.n === cur.nightMinutes && r.h === cur.holidayMinutes;
-    })();
-    const { error } = await db
-      .from('overtime_requests')
-      .update({
-        recomputed_overtime_minutes: same ? null : r.o,
-        recomputed_night_minutes: same ? null : r.n,
-        recomputed_holiday_minutes: same ? null : r.h,
-        needs_review: !same,
-      })
-      .eq('id', r.id);
-    if (error) throw new Error(`syncOvertime.review: ${error.message}`);
+  // 10줄씩 동시에 고친다 — 하나씩 기다리면 근무규칙을 바꾼 다음 날처럼 수백 줄이 바뀔 때 정기 작업 시간 제한을 넘는다 (2026-11-04)
+  const otById = new Map(data.overtime.map((x) => [x.id, x]));
+  for (let i = 0; i < reviews.length; i += 10) {
+    await Promise.all(reviews.slice(i, i + 10).map(async (r) => {
+      const cur = otById.get(r.id)!;
+      const same = r.o === cur.overtimeMinutes && r.n === cur.nightMinutes && r.h === cur.holidayMinutes;
+      const { error } = await db
+        .from('overtime_requests')
+        .update({
+          recomputed_overtime_minutes: same ? null : r.o,
+          recomputed_night_minutes: same ? null : r.n,
+          recomputed_holiday_minutes: same ? null : r.h,
+          needs_review: !same,
+        })
+        .eq('id', r.id);
+      if (error) throw new Error(`syncOvertime.review: ${error.message}`);
+    }));
   }
   return inserts.length + reviews.length;
 }

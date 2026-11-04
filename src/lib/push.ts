@@ -38,13 +38,12 @@ export async function sendPush(userIds: string[], payload: PushPayload): Promise
   }
   const title = OFFICE.practiceMode ? `[연습] ${payload.title}` : payload.title;
   const body = JSON.stringify({ ...payload, title });
-  let sent = 0;
+  const ok: string[] = [];
   await Promise.all(
     (data ?? []).map(async (s) => {
       try {
         await webpush.sendNotification({ endpoint: s.endpoint, keys: { p256dh: s.p256dh, auth: s.auth } }, body, { TTL: 6 * 3600, urgency: 'high' });
-        sent++;
-        await db.from('push_subscriptions').update({ last_sent_at: new Date().toISOString(), fail_count: 0 }).eq('id', s.id);
+        ok.push(s.id);
       } catch (e) {
         const status = (e as { statusCode?: number }).statusCode;
         // 404 · 410 = 그 기기에서 알림을 끄거나 앱을 지움 → 주소를 지운다. 다른 실패는 5번 연속이면 지운다
@@ -54,7 +53,9 @@ export async function sendPush(userIds: string[], payload: PushPayload): Promise
       }
     }),
   );
-  return sent;
+  // 보낸 기기는 한 번에 표시한다 — 전 직원 공지에서 기기마다 따로 고치지 않게 (2026-11-04)
+  if (ok.length) await db.from('push_subscriptions').update({ last_sent_at: new Date().toISOString(), fail_count: 0 }).in('id', ok);
+  return ok.length;
 }
 
 /** 관리자에게 가는 알림 — 꺼진 최고관리자(대표자 · 켜지 않은 사람)는 뺀다 (알림-9). 본인 알림은 sendPush를 그대로 쓴다 */

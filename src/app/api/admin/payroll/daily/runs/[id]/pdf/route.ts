@@ -7,7 +7,7 @@ import { loadDailyBoard } from '@/lib/payroll/daily-data';
 import { dailyPdfBytes, pdfResponse } from '@/lib/payroll/paper-pdf';
 import { payrollAudit } from '@/lib/payroll/staff-data';
 
-export const maxDuration = 60;
+export const maxDuration = 300; // 직원 · 기록이 늘어도 시간 제한에 조용히 끊기지 않게 (2026-11-04, Fluid는 실제 계산 시간만 과금)
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
 export async function GET(req: Request, ctx: { params: Promise<{ id: string }> }): Promise<Response> {
