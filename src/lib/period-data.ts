@@ -353,7 +353,8 @@ export async function syncOvertimeRange(from: string, to: string, practice = OFF
   const today = toKstDate(new Date());
   const upTo = to < today ? to : today;
   if (from > upTo) return 0;
-  return syncOvertimeRequests(await loadPeriod(from, upTo, practice), upTo, only);
+  // 한 사람만 맞출 때(승인 · 정정 직후)는 그 사람 기록만 읽는다 — 회사 전체를 읽던 것 (2026-11-04 사용량)
+  return syncOvertimeRequests(await loadPeriod(from, upTo, practice, only?.size === 1 ? [...only][0] : undefined), upTo, only);
 }
 
 /**
@@ -401,6 +402,8 @@ const countsOnce = cache(async (practice: boolean): Promise<{ overtime: number; 
   const db = createAdminClient();
   const scope = await viewerScope();
   if (scope) return pendingCountsIn(practice, scope);
+  const xP = firstStageAdjust(practice, 'top'); // 아래 숫자 세기와 같이 시작한다 (2026-11-04: 차례로 기다렸다)
+  xP.catch(() => {}); // 기다리기 전에 실패해도 경고가 나지 않게 — 아래에서 그대로 받는다
   const hide = await hiddenTestIds();
   const skip = hide.length ? `(${hide.join(',')})` : '(00000000-0000-0000-0000-000000000000)';
   const [{ count: a }, { count: b }, { count: c }, { count: l }, { count: w }, { count: pr }, { count: sh }, { count: lc }] = await Promise.all([
@@ -413,7 +416,7 @@ const countsOnce = cache(async (practice: boolean): Promise<{ overtime: number; 
     db.from('shift_requests').select('id', { count: 'exact', head: true }).eq('is_test', practice).eq('status', 'pending').not('employee_id', 'in', skip),
     db.from('leave_change_requests').select('id', { count: 'exact', head: true }).eq('is_test', practice).eq('status', 'pending').not('employee_id', 'in', skip),
   ]);
-  const x = await firstStageAdjust(practice, 'top');
+  const x = await xP;
   const r = { overtime: (a ?? 0) + (b ?? 0) - x.overtime_requests, corrections: (c ?? 0) - x.punch_corrections, leave: (l ?? 0) - x.leave_requests, work: (w ?? 0) - x.work_requests, punch: (pr ?? 0) - x.punch_requests, shift: (sh ?? 0) - x.shift_requests, leaveDelete: (lc ?? 0) - x.leave_change_requests };
   return { ...r, total: r.overtime + r.corrections + r.leave + r.work + r.punch + r.shift + r.leaveDelete };
 });
@@ -428,12 +431,13 @@ async function firstStageAdjust(practice: boolean, who: 'top' | 'manager', scope
   const ids = [...staged].filter((id) => !scope || scope.has(id));
   if (ids.length === 0) return out;
   const db = createAdminClient();
-  for (const t of FIRST_TABLES) {
+  // 표 7개를 동시에 본다 (2026-11-04: 하나씩 기다려 관리자 화면 틀이 열릴 때마다 14번을 차례로 왕복했다)
+  await Promise.all(FIRST_TABLES.map(async (t) => {
     const { data } = await db.from(t).select('id').eq('is_test', practice).eq('status', 'pending').in('employee_id', ids);
     const rows = (data ?? []).map((r) => r.id as string);
     const done = await loadFirstApprovals(t, rows);
     out[t] = who === 'top' ? rows.filter((id) => !done.has(id)).length : rows.filter((id) => done.has(id)).length;
-  }
+  }));
   return out;
 }
 

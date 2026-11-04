@@ -34,7 +34,7 @@ async function updateBadge() {
     const r = await fetch('/api/me/alerts', { cache: 'no-store', credentials: 'same-origin' });
     if (!r.ok) return;
     const c = await r.json();
-    const n = (c.notices || 0) + (c.messages || 0) + (c.decided || 0) + (c.requests || 0);
+    const n = (c.notices || 0) + (c.messages || 0) + (c.decided || 0) + (c.requests || 0) + (c.inquiry || 0); // 문의도 — 종 숫자(Alerts.tsx)와 같게 (2026-11-04)
     await (n > 0 ? self.navigator.setAppBadge(n) : self.navigator.clearAppBadge());
   } catch {
     // 연결이 끊겼으면 다음 알림이나 앱을 열 때 맞춘다

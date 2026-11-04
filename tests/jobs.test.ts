@@ -7,7 +7,7 @@ describe('validateJob', () => {
     expect(validateJob({ name: '  1. 시급제 ', color: 'warn' })).toEqual({ ok: true, value: { name: '1. 시급제', color: 'warn' } });
     expect(validateJob({ name: '', color: 'warn' })).toEqual({ ok: false, code: 'invalid_job_name' });
     expect(validateJob({ name: 'x'.repeat(41), color: 'warn' })).toEqual({ ok: false, code: 'invalid_job_name' });
-    expect(validateJob({ name: '임원', color: 'pink' })).toEqual({ ok: false, code: 'invalid_input' });
+    expect(validateJob({ name: '임원', color: 'rainbow' })).toEqual({ ok: false, code: 'invalid_input' });
     expect(validateJob({ name: 3, color: 'ok' })).toEqual({ ok: false, code: 'invalid_job_name' });
   });
 });
