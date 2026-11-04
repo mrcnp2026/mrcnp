@@ -2,7 +2,7 @@
 // 판단할 때 보였던 항목 요약(fingerprint)은 화면이 보낸 값을 믿지 않고 서버가 지금 자료로 다시 계산해 남긴다.
 import { OFFICE } from '@/config/office';
 import { api, ApiError, readJson } from '@/lib/api';
-import { collectChecks, loadBreakEarlyLeaveMin, loadEarlyIgnoreAt, loadPatternMinEarly } from '@/lib/attendance-check-data';
+import { collectChecks, loadBreakEarlyLeaveMin, loadEarlyIgnoreAt, loadLateIgnoreAt, loadPatternMinEarly } from '@/lib/attendance-check-data';
 import { CHECK_DECISIONS, dayFingerprint, loadCheckReviews, monthFingerprint, releaseCheckReview, reviewState, saveCheckReview, type CheckDecision } from '@/lib/attendance-check-reviews';
 import { monthRange } from '@/lib/month-data';
 import { loadPeriod } from '@/lib/period-data';
@@ -32,7 +32,7 @@ export const POST = api('admin.attendanceCheck', async (req) => {
     const data = await loadPeriod(from, to, practice);
     const person = data.people.find((p) => p.id === b.employeeId);
     if (!person) throw new ApiError(404, 'not_found');
-    const [c] = collectChecks({ ...data, people: [person] }, from, to, new Date(), await loadEarlyIgnoreAt(), await loadPatternMinEarly(to), await loadBreakEarlyLeaveMin(to));
+    const [c] = collectChecks({ ...data, people: [person] }, from, to, new Date(), await loadEarlyIgnoreAt(), await loadPatternMinEarly(to), await loadBreakEarlyLeaveMin(to), await loadLateIgnoreAt());
     const { handled } = reviewState(c?.days ?? [], c?.monthly ?? [], await loadCheckReviews(from, to, practice, [person.id]));
     let n = 0;
     for (const d of c?.days ?? []) {
@@ -57,7 +57,7 @@ export const POST = api('admin.attendanceCheck', async (req) => {
   const data = await loadPeriod(from, to, practice);
   const person = data.people.find((p) => p.id === employeeId);
   if (!person) throw new ApiError(404, 'not_found');
-  const [checks] = collectChecks({ ...data, people: [person] }, from, to, new Date(), await loadEarlyIgnoreAt(), await loadPatternMinEarly(to), await loadBreakEarlyLeaveMin(to));
+  const [checks] = collectChecks({ ...data, people: [person] }, from, to, new Date(), await loadEarlyIgnoreAt(), await loadPatternMinEarly(to), await loadBreakEarlyLeaveMin(to), await loadLateIgnoreAt());
   let fingerprint: string;
   if (scope === 'day') {
     const day = checks?.days.find((d) => d.workDate === date);

@@ -20,7 +20,7 @@ export type CheckPart = {
   plan?: string; // 비교한 일정 시각 'HH:MM'
   punched?: string; // 찍힌 시각 'HH:MM'
   counted?: string; // 계산 시각 'HH:MM' (올림 · 내림 뒤)
-  quiet?: boolean; // 회사 설정 기준 이내의 일찍 출근 — 숫자에서 빠지고 기록 화면에만 흐리게 (check.early_ignore_min)
+  quiet?: boolean; // 회사 설정 기준 이내의 일찍 출근 · 짧은 지각 — 숫자에서 빠지고 기록 화면에만 흐리게 (check.early_ignore_min · check.late_ignore_min)
   bundled?: boolean; // 한 달 1건(일정 확인 필요 · 일찍 출근 묶음)으로 옮겨 감 — 그날 숫자에서는 빠진다
 };
 export type DayCheck = { workDate: string; state: CheckState | null; parts: CheckPart[] };
@@ -43,6 +43,7 @@ export type DayCheckInput = {
   breakCheck?: { start: string; end: string } | null; // 평소보다 일찍 퇴근한 날 — 이 휴게를 정말 했는지 담당자가 확인 (2026-11-03 의뢰인: 10/7 휴게 없이 일함). 「휴게 안 함」 표시가 있으면 넘기지 않는다
   lateRound?: LateRound; // 늦은 출근 끊기 (회사 설정 pay.late_round) — 급여 계산과 같게. 없으면 올림
   earlyIgnoreMin?: number; // 그날 유효한 「일찍 출근 — 확인 필요에서 빼는 시간」(분). 없으면 0 = 다 띄움
+  lateIgnoreMin?: number; // 그날 유효한 「지각 — 확인 필요에서 빼는 시간」(분, 실제 늦은 분 기준). 없으면 0 = 1분 지각도 띄움 (급여-75)
 };
 
 const MIN = 60_000;
@@ -118,7 +119,12 @@ export function judgeDay(a: DayCheckInput): DayCheck {
       const last = parts[parts.length - 1];
       if (last?.kind === 'before_start' && last.minutes <= Math.max(0, a.earlyIgnoreMin ?? 0)) last.quiet = true;
     }
-    if (c > start) push('late_in', netMinutes(start, Math.min(c, end), breaks), 'waived', at);
+    if (c > start) {
+      push('late_in', netMinutes(start, Math.min(c, end), breaks), 'waived', at);
+      // 짧은 지각은 차감만 하고 확인 필요에서 뺀다 — 끊는 방식(15분 올림 등)과 상관없이 실제 늦은 분으로 본다 (급여-75)
+      const last = parts[parts.length - 1];
+      if (last?.kind === 'late_in' && first - start <= Math.max(0, a.lateIgnoreMin ?? 0) * MIN) last.quiet = true;
+    }
   }
   const open = a.pairs.some((p) => p.in && !p.out);
   if (!open && done.length) {

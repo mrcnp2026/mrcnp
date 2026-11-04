@@ -99,6 +99,13 @@ describe('2026-11-03 의뢰인 — 시작 시각 기준 · 일찍 출근 기준 
     expect(r.parts[0]).toMatchObject({ kind: 'before_start', minutes: 45, quiet: true });
     expect(judgeDay({ ...base, earlyIgnoreMin: 60, pairs: [{ in: at('06:10'), out: at('17:00') }] }).state).toBe('decide');
   });
+  it('짧은 지각(기준 10분 이내)은 흐리게만 — 끊는 방식과 상관없이 실제 늦은 분으로, 넘으면 판단 필요 (급여-75)', () => {
+    const r = judgeDay({ ...base, lateIgnoreMin: 10, pairs: [{ in: at('07:40'), out: at('17:00') }] }); // 10분 늦음 → 15분 올림으로 15분 차감이어도 흐리게
+    expect(r.state).toBeNull();
+    expect(r.parts[0]).toMatchObject({ kind: 'late_in', minutes: 15, quiet: true });
+    expect(judgeDay({ ...base, lateIgnoreMin: 10, pairs: [{ in: at('07:41'), out: at('17:00') }] }).state).toBe('decide');
+    expect(judgeDay({ ...base, lateIgnoreMin: 0, pairs: [{ in: at('07:31'), out: at('17:00') }] }).state).toBe('decide');
+  });
   const day = (date: string, inAt: string) => judgeDay({ ...base, workDate: date, earlyIgnoreMin: 60, pairs: [{ in: at(inAt, date), out: at('17:00', date) }] });
   it('근무일 80% 이상을 비슷한 분(15분 폭)만큼 일찍 → 한 달 1건 「일정 확인」(참고)', () => {
     const days = ['2026-10-01', '2026-10-02', '2026-10-05', '2026-10-06', '2026-10-07'].map((d, i) => day(d, i === 4 ? '07:20' : i % 2 ? '06:45' : '07:00'));

@@ -27,6 +27,13 @@ export async function loadEarlyIgnoreAt(): Promise<(date: string) => number> {
   return (date) => Number(pickAt(rows, key, date, SETTINGS[key].default));
 }
 
+/** 날짜별 「지각 — 확인 필요에서 빼는 시간」(분) — 바꾼 날부터 (급여-75) */
+export async function loadLateIgnoreAt(): Promise<(date: string) => number> {
+  const key = 'check.late_ignore_min';
+  const rows = (await settingHistory(key)).map((r) => ({ key, value: r.value, effective_from: r.effectiveFrom }));
+  return (date) => Number(pickAt(rows, key, date, SETTINGS[key].default));
+}
+
 /** 「저녁 휴게 확인」 기준 분 — 그 달 끝 날짜에 유효했던 값 */
 export async function loadBreakEarlyLeaveMin(onDate: string): Promise<number> {
   const key = 'check.break_early_leave_min';
@@ -42,7 +49,7 @@ export async function loadPatternMinEarly(onDate: string): Promise<number> {
 }
 
 /** 기간 안 직원마다 확인 필요인 날 (판정 대상이 아닌 사람 · 날은 뺀다: 시스템관리자 · 최고관리자 · 대표 · 입사 전 · 앞날) */
-export function collectChecks(data: PeriodData, from: string, to: string, now = new Date(), earlyIgnoreAt: (date: string) => number = () => SETTINGS['check.early_ignore_min'].default, patternMinEarly: number = SETTINGS['check.pattern_min_early'].default, breakEarlyLeaveMin: number = SETTINGS['check.break_early_leave_min'].default): PersonChecks[] {
+export function collectChecks(data: PeriodData, from: string, to: string, now = new Date(), earlyIgnoreAt: (date: string) => number = () => SETTINGS['check.early_ignore_min'].default, patternMinEarly: number = SETTINGS['check.pattern_min_early'].default, breakEarlyLeaveMin: number = SETTINGS['check.break_early_leave_min'].default, lateIgnoreAt: (date: string) => number = () => SETTINGS['check.late_ignore_min'].default): PersonChecks[] {
   const today = toKstDate(now);
   const out: PersonChecks[] = [];
   // 직원별로 한 번만 나눠 둔다 — 날마다 전체 목록을 다시 훑으면 한 달 계산이 0.5초 걸렸다 (2026-11-03 속도)
@@ -101,6 +108,7 @@ export function collectChecks(data: PeriodData, from: string, to: string, now = 
         approvedExtraMin: approved,
         waivedBreakMin: waivedMin,
         earlyIgnoreMin: earlyIgnoreAt(d.workDate),
+        lateIgnoreMin: lateIgnoreAt(d.workDate),
         lateRound: (rule ?? base)?.lateRound,
         breakCheck,
         breakRequest,

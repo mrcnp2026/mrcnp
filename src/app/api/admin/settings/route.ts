@@ -39,7 +39,7 @@ export const POST = api('admin.settings', async (req, ctx) => {
     }
     case 'setting.int': {
       // 숫자 설정 — 회사가 바꿔도 되는 것만 (2026-10-29 9-2). 주 52시간 「한도」는 법이라 여기 없다
-      if (b.key !== 'week.caution_hours' && b.key !== 'invite.valid_hours' && b.key !== 'check.early_ignore_min' && b.key !== 'check.pattern_min_early' && b.key !== 'check.break_early_leave_min') throw new ApiError(400, 'invalid_input');
+      if (b.key !== 'week.caution_hours' && b.key !== 'invite.valid_hours' && b.key !== 'check.early_ignore_min' && b.key !== 'check.late_ignore_min' && b.key !== 'check.pattern_min_early' && b.key !== 'check.break_early_leave_min') throw new ApiError(400, 'invalid_input');
       const v = checkSetting(b.key, b.value);
       if (typeof v !== 'number') throw new ApiError(400, 'invalid_input');
       if (b.key === 'week.caution_hours' && v >= OFFICE.weeklyLimitHours) throw new ApiError(400, 'invalid_input'); // 주의는 한도보다 낮아야 한다

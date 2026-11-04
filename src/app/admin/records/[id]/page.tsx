@@ -15,7 +15,7 @@ import { buildMonth, isYearMonth, monthRange } from '@/lib/month-data';
 import { daysFor, leaveDaysFor, workDaysFor } from '@/lib/period-data';
 import { toKstDate } from '@/lib/time';
 import { anomalyKey } from '@/lib/anomaly';
-import { collectChecks, loadBreakEarlyLeaveMin, loadEarlyIgnoreAt, loadPatternMinEarly } from '@/lib/attendance-check-data';
+import { collectChecks, loadBreakEarlyLeaveMin, loadEarlyIgnoreAt, loadLateIgnoreAt, loadPatternMinEarly } from '@/lib/attendance-check-data';
 import { loadAnomalyReviews } from '@/lib/anomaly-data';
 import { confirmKey, loadConfirms } from '@/lib/confirm-data';
 import { LateResolve } from './LateResolve';
@@ -71,7 +71,7 @@ export default async function EmployeeRecordsPage({ params, searchParams }: { pa
 
   // 근태 점검 — 일찍 출근 중 기준 이내(흐리게) · 한 달 1건으로 묶인 날 (2026-11-03 의뢰인)
   const earlyOf = new Map<string, { minutes: number; bundled: boolean }>();
-  for (const c of collectChecks({ ...data, people: [person] }, from, upTo, new Date(), await loadEarlyIgnoreAt(), await loadPatternMinEarly(to), await loadBreakEarlyLeaveMin(to)))
+  for (const c of collectChecks({ ...data, people: [person] }, from, upTo, new Date(), await loadEarlyIgnoreAt(), await loadPatternMinEarly(to), await loadBreakEarlyLeaveMin(to), await loadLateIgnoreAt()))
     for (const d of c.days) for (const p of d.parts) if (p.kind === 'before_start' && (p.quiet || p.bundled)) earlyOf.set(d.workDate, { minutes: p.minutes, bundled: !!p.bundled });
   const hm = (d: Date) => f.dateTime(d, { hour: '2-digit', minute: '2-digit', hourCycle: 'h23' });
   const dur = (min: number) => tr('hm', { h: Math.floor(min / 60), m: min % 60 });

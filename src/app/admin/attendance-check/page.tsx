@@ -10,7 +10,7 @@ import { PageShell } from '@/components/ui';
 import { OFFICE } from '@/config/office';
 import { adminPage } from '@/lib/admin-gate';
 import { CHECK_KINDS, countDays, type CheckKind, type DayCheck, type MonthKind } from '@/lib/attendance-check';
-import { collectChecks, loadBreakEarlyLeaveMin, loadEarlyIgnoreAt, loadPatternMinEarly } from '@/lib/attendance-check-data';
+import { collectChecks, loadBreakEarlyLeaveMin, loadEarlyIgnoreAt, loadLateIgnoreAt, loadPatternMinEarly } from '@/lib/attendance-check-data';
 import { loadCheckReviews, monthKey, reviewState } from '@/lib/attendance-check-reviews';
 import { addDays } from '@/lib/calendar';
 import { getMe } from '@/lib/auth';
@@ -47,8 +47,8 @@ export default async function AttendanceCheckPage({ searchParams }: { searchPara
   const { from, to } = monthRange(month);
   const upTo = to < today ? to : today;
 
-  const [data, groups, earlyAt, patternMin, breakMin, confirms, reviews] = await Promise.all([loadPeriod(from, to, practice), loadOrgGroups(), loadEarlyIgnoreAt(), loadPatternMinEarly(to), loadBreakEarlyLeaveMin(to), loadConfirms(from, to, practice), loadCheckReviews(from, to, practice)]);
-  const checks = collectChecks(data, from, upTo, new Date(), earlyAt, patternMin, breakMin);
+  const [data, groups, earlyAt, patternMin, breakMin, confirms, reviews, lateAt] = await Promise.all([loadPeriod(from, to, practice), loadOrgGroups(), loadEarlyIgnoreAt(), loadPatternMinEarly(to), loadBreakEarlyLeaveMin(to), loadConfirms(from, to, practice), loadCheckReviews(from, to, practice), loadLateIgnoreAt()]);
+  const checks = collectChecks(data, from, upTo, new Date(), earlyAt, patternMin, breakMin, lateAt);
   const person = new Map(data.people.map((p) => [p.id, p]));
   const dur = (min: number) => (min >= 60 ? (min % 60 ? t('hm', { h: Math.floor(min / 60), m: min % 60 }) : t('h', { h: min / 60 })) : t('min', { n: min }));
   const dayLabel = (d: string) => f.dateTime(new Date(`${d}T12:00:00+09:00`), { month: 'numeric', day: 'numeric', weekday: 'short' });

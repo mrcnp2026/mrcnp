@@ -24,6 +24,8 @@ export const SETTINGS = {
   'week.caution_hours': { group: 3, kind: 'int', min: 1, max: 80, unit: 'hour', default: OFFICE.weeklyCautionHours },
   // 근태 점검: 일정 시작 전 이 분까지 일찍 온 날은 확인 필요에서 뺀다(기록 화면엔 흐리게 남김). 0 = 다 띄움 (2026-11-03 의뢰인)
   'check.early_ignore_min': { group: 3, kind: 'int', min: 0, max: 240, unit: 'min', default: 60 },
+  // 근태 점검: 이 분까지 늦은 날은 확인 필요에서 뺀다 — 차감(pay.late_round)은 그대로, 마감을 막지 않는다. 0 = 1분 지각도 띄움 (2026-11-04 의뢰인 · 결정 급여-75)
+  'check.late_ignore_min': { group: 3, kind: 'int', min: 0, max: 120, unit: 'min', default: 10 },
   // 늦은 출근 차감 — 1분 단위(실제 늦은 만큼) / 15분 내림 / 15분 올림(시프티 때). 지각 판정(1분부터)과는 따로다 (2026-11-03 대표 확인: 1분 단위)
   'pay.late_round': { group: 3, kind: 'choice', options: ['minute', 'floor', 'ceil'], default: 'minute' },
   // 근태 점검: 근무일 80% 이상을 이 분 이상 비슷하게 일찍 오면 한 달 1건 「일정 확인 필요」 (2026-11-03 의뢰인)
