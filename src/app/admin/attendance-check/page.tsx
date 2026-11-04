@@ -67,10 +67,11 @@ export default async function AttendanceCheckPage({ searchParams }: { searchPara
 
   // 무급 · 연차 시간 휴가 — 늦은 시간에 맞는 가장 짧은 것 (기록 화면 LateResolve와 같은 고르기)
   const hourTypes = data.leaveTypes.filter((lt) => lt.active !== false && typeof lt.hours === 'number' && lt.hours > 0 && lt.hours < 8 && !lt.startTime);
-  const pickType = (min: number, paid: boolean) => {
-    const lt = hourTypes.filter((x) => (paid ? x.isPaid && x.deductsBalance : !x.isPaid && !x.deductsBalance) && (x.hours ?? 0) * 60 >= min).sort((a, b) => (a.hours ?? 0) - (b.hours ?? 0))[0];
-    return lt ? { code: lt.code, name: leaveTypeName(data.leaveTypes, lt.code, tl), hours: lt.hours ?? 0 } : null;
-  };
+  // 늦은 시간을 덮는 시간 휴가 전부 — 짧은 것부터, 처리 단추에서 시간을 고른다 (2026-11-04 의뢰인)
+  const pickType = (min: number, paid: boolean) =>
+    hourTypes.filter((x) => (paid ? x.isPaid && x.deductsBalance : !x.isPaid && !x.deductsBalance) && (x.hours ?? 0) * 60 >= min).sort((a, b) => (a.hours ?? 0) - (b.hours ?? 0))
+      .filter((x, i, all) => all.findIndex((y) => y.hours === x.hours) === i) // 같은 시간 종류가 둘이면 하나만
+      .map((lt) => ({ code: lt.code, name: leaveTypeName(data.leaveTypes, lt.code, tl), hours: lt.hours ?? 0 }));
 
   // 날 하나가 지금 보기에 들어가는가
   const live = (d: DayCheck) => d.parts.filter((x) => !x.quiet && !x.bundled);

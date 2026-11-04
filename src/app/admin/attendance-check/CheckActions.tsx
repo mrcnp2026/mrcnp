@@ -9,15 +9,16 @@ import { ErrorNote } from '@/components/ErrorNote';
 import { Button } from '@/components/ui';
 import type { CheckKind, CheckState, MonthKind } from '@/lib/attendance-check';
 
-type LeaveOpt = { code: string; name: string; hours: number } | null;
+type LeaveOpt = { code: string; name: string; hours: number };
 export type DayCtx = {
   employeeId: string;
   date: string;
   confirmed: boolean;
   planStart: string | null;
   planEnd: string | null;
-  late: { minutes: number; unpaid: LeaveOpt; annual: LeaveOpt } | null;
-  early: { minutes: number; unpaid: LeaveOpt; annual: LeaveOpt } | null;
+  // 늦은 · 이른 시간을 덮는 시간 휴가 — 짧은 것부터 (2026-11-04 의뢰인: 단추는 「무급휴가」 「연차」 두 개, 누르면 시간을 고른다)
+  late: { minutes: number; unpaid: LeaveOpt[]; annual: LeaveOpt[] } | null;
+  early: { minutes: number; unpaid: LeaveOpt[]; annual: LeaveOpt[] } | null;
   evening: { start: string; end: string } | null;
   breakSkip: { id: string; start: string; end: string } | null; // 직원이 퇴근할 때 「못 쉬었어요」라고 답한 것(대기)
   overtime: { id: string; status: string; needsReview: boolean; recomputed: number | null } | null;
@@ -28,8 +29,8 @@ export type DayCtx = {
   live: boolean;
 };
 type Opt =
-  | { k: 'lateUnpaid' | 'lateAnnual' | 'earlyUnpaid' | 'earlyAnnual'; leave: NonNullable<LeaveOpt> }
-  | { k: 'notLate' | 'notEarly' | 'waive' | 'breakTaken' | 'accept' | 'notRecognized' | 'absentOk' | 'confirm' | 'skipApprove' | 'skipReject' };
+  | { k: 'lateUnpaid' | 'lateAnnual' | 'earlyUnpaid' | 'earlyAnnual'; leaves: LeaveOpt[] }
+  | { k: 'lateAck' | 'notLate' | 'notEarly' | 'waive' | 'breakTaken' | 'accept' | 'notRecognized' | 'absentOk' | 'confirm' | 'skipApprove' | 'skipReject' };
 
 const addMin = (hhmm: string, min: number) => { const [h, m] = hhmm.split(':').map(Number); const x = h * 60 + m + min; return `${String(Math.floor(x / 60)).padStart(2, '0')}:${String(x % 60).padStart(2, '0')}`; };
 const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
@@ -51,6 +52,8 @@ export function DayActions({ ctx, reviewId }: { ctx: DayCtx; reviewId: string | 
   const t = useTranslations('admin.attendanceCheck.act');
   const router = useRouter();
   const [pick, setPick] = useState<Opt | null>(null);
+  const [hour, setHour] = useState(0); // 고른 시간 휴가(짧은 것부터 몇 번째)
+  const leaveOf = (o: Extract<Opt, { leaves: LeaveOpt[] }>) => o.leaves[hour] ?? o.leaves[0];
   const [why, setWhy] = useState('');
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState<{ code: string; requestId?: string } | null>(null);
@@ -58,14 +61,14 @@ export function DayActions({ ctx, reviewId }: { ctx: DayCtx; reviewId: string | 
 
   const opts: Opt[] = [];
   if (has('late_in') && ctx.late) {
-    if (ctx.late.unpaid) opts.push({ k: 'lateUnpaid', leave: ctx.late.unpaid });
-    if (ctx.late.annual) opts.push({ k: 'lateAnnual', leave: ctx.late.annual });
-    opts.push({ k: 'notLate' });
+    // 지각은 이미 늦은 만큼 자동으로 빠진다(급여-70) — 무급휴가로 덮으면 시간 단위라 더 빠질 수 있어 「확인」으로 (2026-11-04 의뢰인)
+    opts.push({ k: 'lateAck' }, { k: 'notLate' });
+    if (ctx.late.annual.length) opts.push({ k: 'lateAnnual', leaves: ctx.late.annual }); // 연차는 직원이 요청했을 때만 — 사유 필수
   }
   if (has('early_out') && ctx.early) {
-    if (ctx.early.unpaid) opts.push({ k: 'earlyUnpaid', leave: ctx.early.unpaid });
-    if (ctx.early.annual) opts.push({ k: 'earlyAnnual', leave: ctx.early.annual });
+    if (ctx.early.unpaid.length) opts.push({ k: 'earlyUnpaid', leaves: ctx.early.unpaid });
     opts.push({ k: 'notEarly' });
+    if (ctx.early.annual.length) opts.push({ k: 'earlyAnnual', leaves: ctx.early.annual });
   }
   if (has('break_request') && ctx.breakSkip) opts.push({ k: 'skipApprove' }, { k: 'skipReject' });
   if (has('break_check') && ctx.evening) opts.push({ k: 'waive' }, { k: 'breakTaken' });
@@ -79,16 +82,17 @@ export function DayActions({ ctx, reviewId }: { ctx: DayCtx; reviewId: string | 
   const dayHref = `/admin/records/${ctx.employeeId}/${ctx.date}${ctx.live ? '' : ''}`;
 
   const label = (o: Opt) =>
-    'leave' in o ? t(o.k, { h: o.leave.hours }) : o.k === 'accept' && ctx.overtime?.recomputed != null ? t('acceptN', { n: ctx.overtime.recomputed }) : t(o.k);
+    'leaves' in o ? t(o.k.endsWith('Unpaid') ? 'unpaidBtn' : 'annualBtn') : o.k === 'accept' && ctx.overtime?.recomputed != null ? t('acceptN', { n: ctx.overtime.recomputed }) : t(o.k);
   const will = (o: Opt) => {
-    if ('leave' in o) {
+    if ('leaves' in o) {
+      const lv = leaveOf(o);
       const late = o.k.startsWith('late');
-      const from = late ? ctx.planStart ?? '' : addMin(ctx.planEnd ?? '', -o.leave.hours * 60);
-      return t('leaveWill', { name: o.leave.name, from, to: addMin(from, o.leave.hours * 60) });
+      const from = late ? ctx.planStart ?? '' : addMin(ctx.planEnd ?? '', -lv.hours * 60);
+      return t('leaveWill', { name: lv.name, from, to: addMin(from, lv.hours * 60) });
     }
     return t(`${o.k}Will`);
   };
-  const needsWhy = (o: Opt) => o.k === 'notLate' || o.k === 'notEarly';
+  const needsWhy = (o: Opt) => o.k === 'notLate' || o.k === 'notEarly' || o.k === 'lateAnnual' || o.k === 'earlyAnnual'; // 연차는 직원 요청 내용을 남긴다
 
   async function run(o: Opt) {
     setBusy(true);
@@ -97,11 +101,12 @@ export function DayActions({ ctx, reviewId }: { ctx: DayCtx; reviewId: string | 
     const unconfirm = ['lateUnpaid', 'lateAnnual', 'earlyUnpaid', 'earlyAnnual', 'waive', 'accept', 'skipApprove'].includes(o.k) && ctx.confirmed;
     try {
       if (unconfirm) await step('/api/admin/records/confirm', { confirm: false, items: [{ employeeId: ctx.employeeId, date: ctx.date }] });
-      if ('leave' in o) {
+      if ('leaves' in o) {
+        const lv = leaveOf(o);
         const late = o.k.startsWith('late');
-        const startTime = late ? ctx.planStart : addMin(ctx.planEnd ?? '', -o.leave.hours * 60);
+        const startTime = late ? ctx.planStart : addMin(ctx.planEnd ?? '', -lv.hours * 60);
         const reason = t(late ? (o.k === 'lateUnpaid' ? 'reasonLateUnpaid' : 'reasonLateAnnual') : o.k === 'earlyUnpaid' ? 'reasonEarlyUnpaid' : 'reasonEarlyAnnual');
-        await step('/api/admin/leave/direct', { employeeId: ctx.employeeId, typeCode: o.leave.code, startDate: ctx.date, endDate: ctx.date, startTime, reason, adminReason: why.trim() || reason });
+        await step('/api/admin/leave/direct', { employeeId: ctx.employeeId, typeCode: lv.code, startDate: ctx.date, endDate: ctx.date, startTime, reason, adminReason: why.trim() || reason });
         await sleep(1200); // 연장 다시 계산(응답 뒤에 돈다)을 기다린다
       } else if (o.k === 'waive' && ctx.evening) {
         await step('/api/admin/break-waivers', { action: 'add', employeeId: ctx.employeeId, date: ctx.date, start: ctx.evening.start, end: ctx.evening.end, reason: why.trim() || t('reasonWaive') });
@@ -116,7 +121,7 @@ export function DayActions({ ctx, reviewId }: { ctx: DayCtx; reviewId: string | 
       } else if (o.k === 'accept' && ctx.overtime) {
         await step(`/api/admin/overtime/${ctx.overtime.id}/accept`, {});
       } else {
-        const decision = { notLate: 'not_late', notEarly: 'not_late', breakTaken: 'break_taken', notRecognized: 'not_recognized', absentOk: 'confirmed', confirm: 'confirmed' }[o.k as 'notLate'] as string;
+        const decision = { lateAck: 'confirmed', notLate: 'not_late', notEarly: 'not_late', breakTaken: 'break_taken', notRecognized: 'not_recognized', absentOk: 'confirmed', confirm: 'confirmed' }[o.k as 'notLate'] as string;
         await step('/api/admin/attendance-check', { action: 'decide', employeeId: ctx.employeeId, date: ctx.date, scope: 'day', kind: 'day', decision, note: why.trim() || null });
       }
       if (unconfirm) await step('/api/admin/records/confirm', { confirm: true, items: [{ employeeId: ctx.employeeId, date: ctx.date }] }).catch(() => null); // 다시 확정 — 남은 대기 요청이 있으면 그날 상세에서
@@ -140,16 +145,27 @@ export function DayActions({ ctx, reviewId }: { ctx: DayCtx; reviewId: string | 
       ) : (
         <>
           <div className="flex flex-wrap items-center gap-x-3 gap-y-2">
-            <Pills opts={opts} pick={pick} setPick={(o) => { setPick(o); setErr(null); }} label={label} />
+            <Pills opts={opts} pick={pick} setPick={(o) => { setPick(o); setHour(0); setErr(null); }} label={label} />
             {ctx.overtime?.status === 'pending' && ctx.extraOpen && (
               <a href={`/admin/inbox?k=overtime&id=${ctx.overtime.id}`} className="inline-flex min-h-11 items-center text-sm font-bold text-primary lg:min-h-9">{t('goOvertime')} ›</a>
             )}
           </div>
           {pick && (
             <div className="flex flex-col gap-2 rounded-button bg-surface/60 p-3 text-sm">
+              {'leaves' in pick && (
+                <div role="radiogroup" aria-label={t('hoursPick')} className="flex flex-wrap items-center gap-1.5">
+                  <span className="pr-1 text-xs text-muted">{t('hoursPick')}</span>
+                  {pick.leaves.map((lv, i) => (
+                    <button key={lv.code} type="button" role="radio" aria-checked={leaveOf(pick).code === lv.code} onClick={() => setHour(i)}
+                      className={`num min-h-11 rounded-chip border px-3 text-sm font-semibold lg:min-h-8 ${leaveOf(pick).code === lv.code ? 'border-primary bg-primary-tint text-primary' : 'border-border bg-bg text-text hover:border-primary/40'}`}>
+                      {t('hourOpt', { h: lv.hours })}
+                    </button>
+                  ))}
+                </div>
+              )}
               <p className="text-muted">{will(pick)}{ctx.confirmed && ['lateUnpaid', 'lateAnnual', 'earlyUnpaid', 'earlyAnnual', 'waive', 'accept', 'skipApprove'].includes(pick.k) ? ` ${t('reconfirmNote')}` : ''}</p>
               {pick.k !== 'accept' && (
-                <input value={why} onChange={(e) => setWhy(e.target.value)} maxLength={300} aria-label={t('reasonLabel')} placeholder={t(needsWhy(pick) ? 'reasonNeeded' : 'reasonOptional')}
+                <input value={why} onChange={(e) => setWhy(e.target.value)} maxLength={300} aria-label={t('reasonLabel')} placeholder={t(pick.k === 'lateAnnual' || pick.k === 'earlyAnnual' ? 'reasonAnnual' : needsWhy(pick) ? 'reasonNeeded' : 'reasonOptional')}
                   className="h-11 rounded-button border border-border bg-bg px-3 lg:h-9" />
               )}
               <Button type="button" size="sm" className="self-start" disabled={busy || (needsWhy(pick) && !why.trim())} onClick={() => run(pick)}>{t('do')}</Button>

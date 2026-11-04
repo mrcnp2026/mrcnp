@@ -4019,6 +4019,13 @@
         "break_request": "Evening break skipped (employee)"
       },
       "act": {
+        "unpaidBtn": "Unpaid leave",
+        "annualBtn": "Annual leave (employee asked)",
+        "lateAck": "Confirm (keep deduction)",
+        "lateAckWill": "The late time stays deducted from work hours. Only records that it was checked.",
+        "reasonAnnual": "What the employee asked for (required)",
+        "hoursPick": "Hours",
+        "hourOpt": "{h}h",
         "lateUnpaid": "Unpaid {h}h",
         "lateAnnual": "Annual {h}h",
         "earlyUnpaid": "Unpaid {h}h",

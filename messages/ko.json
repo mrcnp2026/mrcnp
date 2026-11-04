@@ -4019,6 +4019,13 @@
         "break_request": "저녁 휴게 못 쉼(직원 답)"
       },
       "act": {
+        "unpaidBtn": "무급휴가",
+        "annualBtn": "연차 (직원 요청)",
+        "lateAck": "확인 (차감 그대로)",
+        "lateAckWill": "늦은 만큼 근무시간에서 빠진 그대로 둡니다. 확인했다고만 남깁니다.",
+        "reasonAnnual": "직원이 요청한 내용 (꼭 적어 주세요)",
+        "hoursPick": "몇 시간",
+        "hourOpt": "{h}시간",
         "lateUnpaid": "무급 {h}시간",
         "lateAnnual": "연차 {h}시간",
         "earlyUnpaid": "무급 {h}시간",
