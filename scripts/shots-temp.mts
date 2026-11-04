@@ -1,9 +1,10 @@
 // 화면 사진 — 임시 계정으로 로그인해 찍고, 끝나면 계정을 지운다.
 //   npx tsx scripts/shots-temp.mts <폴더> "<employee|admin>|<너비>|<주소>|<이름>,..."
+//   CONSOLE=1 이면 관리자는 통합설정 숫자를 정하고 연 뒤 찍는다
 import path from 'node:path';
 import { chromium } from 'playwright-core';
-import { createPassword } from './lib/e2e-password.ts';
-import { dropAccounts, tempAccount } from './lib/e2e-temp.mts';
+import { createPassword, unlockConsole } from './lib/e2e-password.ts';
+import { db, dropAccounts, tempAccount } from './lib/e2e-temp.mts';
 
 const [dir, spec] = process.argv.slice(2);
 const BASE = process.env.BASE ?? 'http://localhost:4123';
@@ -19,6 +20,7 @@ try {
     const p = await ctx.newPage();
     await p.goto(`${BASE}/register?token=${acc[who].token}`);
     await createPassword(p);
+    if (who === 'admin' && process.env.CONSOLE) await unlockConsole(p, db, acc.admin.id);
     for (const [, w, url, name] of jobs) {
       await p.setViewportSize({ width: Number(w), height: 900 });
       await p.goto(`${BASE}${url}`);

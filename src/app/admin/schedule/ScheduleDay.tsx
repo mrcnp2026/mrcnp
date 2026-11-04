@@ -3,12 +3,12 @@
 // 막대 자리는 15분 한 칸(하루 96칸)으로 잡는다. 계산은 하지 않는다 — 부르는 쪽(page.tsx)이 만든 줄을 그리기만 한다.
 import { Plane } from 'lucide-react';
 import Link from 'next/link';
-import { SHIFT_COLOR_CLASS, type ShiftColor } from '@/lib/shifts';
+import { SHIFT_TINT_CLASS, SHIFT_COLOR_CLASS, type ShiftColor } from '@/lib/shifts';
 
 export type DayBar = { key: string; start: string; end: string; href: string; color: ShiftColor | null; tag: string | null };
 export type DayLine = { id: string; name: string; sub: string; total: string; leave: string | null; bars: DayBar[] };
 
-const TINT: Record<ShiftColor, string> = { primary: 'bg-primary/10', ok: 'bg-ok/10', warn: 'bg-warn/15', danger: 'bg-danger/10', text: 'bg-text/10', muted: 'bg-muted/10' };
+const TINT = SHIFT_TINT_CLASS;
 const slot = (hhmm: string) => Math.round((Number(hhmm.slice(0, 2)) * 60 + Number(hhmm.slice(3, 5))) / 15);
 const TRACK = { gridTemplateColumns: 'repeat(96, minmax(0, 1fr))' } as const;
 

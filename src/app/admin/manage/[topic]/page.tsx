@@ -42,7 +42,7 @@ function dayRanges(days: string[]): string[] {
 }
 
 const TOPICS = { 'shift-kinds': 'shiftKinds', 'leave-groups': 'leaveGroups', 'accrual-rule': 'accrualRule', 'approval-rules': 'approvalRules', 'work-info': 'workInfo', 'message-templates': 'messageTemplates', 'message-rules': 'messageRules', 'schedule-patterns': 'schedulePatterns', 'report-templates': 'reportTemplates', 'report-snapshots': 'reportSnapshots', closing: 'closing' } as const;
-const REQUEST_KINDS = ['punch', 'correction', 'overtime', 'shift', 'leave', 'leaveDelete', 'work'] as const;
+const REQUEST_KINDS = ['punch', 'correction', 'missing', 'overtime', 'shift', 'leave', 'leaveDelete', 'work'] as const;
 
 export default async function ManageInfoPage({ params }: { params: Promise<{ topic: string }> }) {
   await adminPage(); // 관리 화면 이중 확인 (lib/admin-gate)

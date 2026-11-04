@@ -4,14 +4,14 @@
 // 계산은 하지 않는다 — 부르는 쪽(page.tsx)이 만든 줄을 그리기만 한다.
 import { Plane } from 'lucide-react';
 import Link from 'next/link';
-import { SHIFT_COLOR_CLASS, type PlanItem, type ShiftColor } from '@/lib/shifts';
+import { SHIFT_TINT_CLASS, SHIFT_COLOR_CLASS, type PlanItem, type ShiftColor } from '@/lib/shifts';
 
 export type GridCell = { leave: string | null; items: { it: PlanItem; href: string; color: ShiftColor | null; tag: string | null; place?: string | null }[] };
 export type GridRow = { id: string; name: string; sub: string; total: string; cells: GridCell[] };
 export type GridDay = { date: string; label: string; holiday: string | null; red: boolean; today: boolean; count: number };
 
 // 카드 바탕: 직무 색을 옅게 (시프티 주 보기의 카드 — 왼쪽 색 띠 + 같은 색의 옅은 바탕)
-const TINT: Record<ShiftColor, string> = { primary: 'bg-primary/10', ok: 'bg-ok/10', warn: 'bg-warn/15', danger: 'bg-danger/10', text: 'bg-text/10', muted: 'bg-muted/10' };
+const TINT = SHIFT_TINT_CLASS;
 
 export function ScheduleGrid({ days, rows, dense, labels }: { days: GridDay[]; rows: GridRow[]; dense: boolean; labels: { employee: string; people: string; empty: string } }) {
   // 주 보기 칸 128px — 160px이면 1440px 화면에서 한 주 7일이 다 안 들어가 옆으로 밀어야 했다 (2026-10-18 디자인)

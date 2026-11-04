@@ -2162,6 +2162,7 @@
         "effect": {
           "punch": "The clock-in or clock-out record is created.",
           "correction": "The attendance record is corrected.",
+          "missing": "The missed clock-in or clock-out is added at the time given.",
           "overtime": "Overtime, night and holiday work are recognised.",
           "shift": "A shift is created on that date.",
           "leave": "The leave is booked and deducted from the balance.",
@@ -2562,7 +2563,12 @@
           "correction": {
             "label": "Attendance corrections",
             "value": "On",
-            "note": "Requests to add a missing record or fix a wrong time."
+            "note": "Requests to fix a wrong time or void a wrong record."
+          },
+          "missing": {
+            "label": "Missed clock-in / clock-out",
+            "value": "On",
+            "note": "Requests to add the real time of a clock-in or clock-out that was missed. Turned off, staff cannot send new ones (admins can still add records)."
           },
           "overtime": {
             "label": "Overtime confirmation",
@@ -3043,12 +3049,17 @@
         "extra": "Overtime block"
       },
       "colors": {
-        "primary": "Blue",
+        "primary": "Green",
         "ok": "Green",
-        "warn": "Orange",
+        "warn": "Ochre",
         "danger": "Red",
         "text": "Black",
-        "muted": "Gray"
+        "muted": "Gray",
+        "blue": "Blue",
+        "sky": "Sky",
+        "purple": "Purple",
+        "pink": "Pink",
+        "orange": "Orange"
       },
       "showOff": "Show deactivated shift templates",
       "colName": "Template",
@@ -7615,6 +7626,7 @@
     "newWork": "Off-site / trip / remote request",
     "kinds": {
       "correction": "Punch correction",
+      "missing": "Missed clock-in / out",
       "overtime": "Overtime review",
       "leave": "Leave",
       "work": "Off-site / trip / remote",

@@ -43,7 +43,7 @@ const INFO: Partial<Record<Tab, { k: string; on: boolean; href?: string }[]>> = 
   branch: [{ k: 'parent', on: true }, { k: 'places', on: true, href: '/admin/branches' }],
   staff: [{ k: 'number', on: true }, { k: 'invite', on: true }, { k: 'device', on: true, href: '/admin/members' }],
   leave: [{ k: 'hourly', on: true, href: '/admin/leave/types' }, { k: 'pending', on: true }, { k: 'accrual', on: true, href: '/admin/manage/accrual-rule' }, { k: 'payoutAllowances', on: true, href: '/admin/leave/ledger' }],
-  request: [{ k: 'punch', on: true }, { k: 'correction', on: true }, { k: 'overtime', on: true }, { k: 'shift', on: true }, { k: 'leave', on: true }, { k: 'leaveDelete', on: true }, { k: 'work', on: true }, { k: 'approver', on: true, href: '/admin/manage/approval-rules' }, { k: 'custom', on: false }],
+  request: [{ k: 'punch', on: true }, { k: 'correction', on: true }, { k: 'missing', on: true }, { k: 'overtime', on: true }, { k: 'shift', on: true }, { k: 'leave', on: true }, { k: 'leaveDelete', on: true }, { k: 'work', on: true }, { k: 'approver', on: true, href: '/admin/manage/approval-rules' }, { k: 'custom', on: false }],
   message: [{ k: 'notice', on: true, href: '/admin/notices' }, { k: 'translate', on: true }, { k: 'auto', on: false }],
   closing: [{ k: 'day', on: true }, { k: 'month', on: true, href: '/admin/closing' }],
   report: [{ k: 'monthly', on: true, href: '/admin/records' }, { k: 'week52', on: true }],

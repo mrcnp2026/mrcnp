@@ -51,7 +51,7 @@ export default async function MyRequestsPage({ searchParams }: { searchParams: P
     { id: 'correction', label: t('newCorrection'), href: '/punch/corrections?new=1' },
     { id: 'leave', label: t('newLeave'), href: '/punch/leave?new=leave' },
     { id: 'work', label: t('newWork'), href: '/punch/leave?new=work' },
-  ].filter((x) => sw[`request.${x.id}` as keyof typeof sw]);
+  ].filter((x) => sw[`request.${x.id}` as keyof typeof sw] || (x.id === 'correction' && sw['request.missing']));
 
   // PC: 시프티 직원 모드의 「요청 내역」 — 왼쪽 좁은 칸(대기/완료 수 · 보기 고르기) + 오른쪽 표 (2026-10-11 의뢰인 스샷 `스샷/직원모드 요청내역.png`)
   const pcPage = pageOf(done ? split.done : split.pending, sp.p, PAGE);

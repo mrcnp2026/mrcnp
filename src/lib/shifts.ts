@@ -7,10 +7,14 @@ import type { PunchPair, WorkRule } from '@/lib/types';
 
 export const SHIFT_KINDS = ['none', 'normal', 'deemed', 'outside', 'remote', 'holiday', 'extra'] as const;
 export type ShiftKind = (typeof SHIFT_KINDS)[number];
-// 색은 디자인 토큰에 있는 것만 (새 색은 토큰을 먼저 더한다)
-export const SHIFT_COLORS = ['primary', 'ok', 'warn', 'danger', 'text', 'muted'] as const;
+// 색은 디자인 토큰에 있는 것만 (새 색은 토큰을 먼저 더한다). DB check도 같은 목록 (마이그레이션 0090)
+export const SHIFT_COLORS = ['primary', 'blue', 'sky', 'purple', 'pink', 'orange', 'warn', 'danger', 'ok', 'text', 'muted'] as const;
 export type ShiftColor = (typeof SHIFT_COLORS)[number];
-export const SHIFT_COLOR_CLASS: Record<ShiftColor, string> = { primary: 'bg-primary', ok: 'bg-ok', warn: 'bg-warn', danger: 'bg-danger', text: 'bg-text', muted: 'bg-muted' };
+// 고르는 칸 — ok는 primary와 같은 초록이라 뺀다(이미 ok인 템플릿 · 직무는 그 칸에만 보인다)
+export const pickableColors = (current: ShiftColor) => SHIFT_COLORS.filter((c) => c !== 'ok' || current === 'ok');
+export const SHIFT_COLOR_CLASS: Record<ShiftColor, string> = { primary: 'bg-primary', ok: 'bg-ok', warn: 'bg-warn', danger: 'bg-danger', text: 'bg-text', muted: 'bg-muted', blue: 'bg-shift-blue', purple: 'bg-shift-purple', orange: 'bg-shift-orange', sky: 'bg-shift-sky', pink: 'bg-shift-pink' };
+// 일정 칸의 연한 바탕 (일 · 주 · 월 일정 화면이 같이 쓴다)
+export const SHIFT_TINT_CLASS: Record<ShiftColor, string> = { primary: 'bg-primary/10', ok: 'bg-ok/10', warn: 'bg-warn/15', danger: 'bg-danger/10', text: 'bg-text/10', muted: 'bg-muted/10', blue: 'bg-shift-blue/10', purple: 'bg-shift-purple/10', orange: 'bg-shift-orange/15', sky: 'bg-shift-sky/15', pink: 'bg-shift-pink/10' };
 
 export type ShiftTemplate = { id: string; name: string; startTime: string; endTime: string; kind: ShiftKind; color: ShiftColor; memo: string | null; active: boolean };
 

@@ -12,6 +12,7 @@ import { Chip, PageShell } from '@/components/ui';
 import { getMe } from '@/lib/auth';
 import { loadEmployeeRecent } from '@/lib/employee-data';
 import { loadRejectReasons } from '@/lib/reject-reason';
+import { switches } from '@/lib/switches';
 import { toKstDate } from '@/lib/time';
 import { CorrectionForm, type TodoItem } from './CorrectionForm';
 
@@ -22,11 +23,13 @@ export default async function CorrectionsPage({ searchParams }: { searchParams: 
   const tc = await getTranslations('common');
   const f = await getFormatter();
   const sp = await searchParams;
-  const r = await loadEmployeeRecent(me.id, new Date());
+  const [r, sw] = await Promise.all([loadEmployeeRecent(me.id, new Date()), switches()]);
+  // 통합설정에서 끈 종류는 고를 수 없다 — 빠진 기록 = 미출근 · 미퇴근 요청, 시각 수정 · 무효 = 정정 요청 (2026-11-04)
+  const types = [...(sw['request.missing'] ? ['add_missing' as const] : []), ...(sw['request.correction'] ? ['modify' as const, 'void' as const] : [])];
   const hm = (d: Date | null) => (d ? f.dateTime(d, { hour: '2-digit', minute: '2-digit', hourCycle: 'h23' }) : '—');
   const day = (d: string) => f.dateTime(new Date(`${d}T12:00:00+09:00`), { month: 'short', day: 'numeric', weekday: 'short' });
   // 정정이 필요한 기록 (2026-10-21 의뢰인) — 빠진 것은 「빠진 기록 추가」, 지각 · 조퇴는 「시각 수정」으로 미리 채운다
-  const todo: TodoItem[] = r.todo.map((x) => ({
+  const todo: TodoItem[] = r.todo.filter((x) => types.includes(x.issue === 'missing' ? 'add_missing' : 'modify')).map((x) => ({
     key: `${x.workDate}-${x.kind}-${x.issue}`,
     type: x.issue === 'missing' ? 'add_missing' : 'modify',
     workDate: x.workDate,
@@ -64,6 +67,7 @@ export default async function CorrectionsPage({ searchParams }: { searchParams: 
         initialDate={wantDate}
         initialKind={wantKind}
         todo={todo}
+        types={types}
         initialTodo={initialTodo}
         events={[...r.events].reverse().map((e) => ({ id: e.id, label: `${day(e.workDate)} · ${t(`kind.${e.kind}`)} ${hm(e.punchedAt)}` }))}
       />

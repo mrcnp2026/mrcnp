@@ -10,7 +10,7 @@ import { callApi } from '@/components/client-api';
 import { DateTimeInput } from '@/components/DateTimeInput';
 import { ErrorNote } from '@/components/ErrorNote';
 import { Button } from '@/components/ui';
-import { SHIFT_COLOR_CLASS, SHIFT_COLORS, SHIFT_KINDS, type ShiftColor, type ShiftKind } from '@/lib/shifts';
+import { SHIFT_COLOR_CLASS, pickableColors, SHIFT_KINDS, type ShiftColor, type ShiftKind } from '@/lib/shifts';
 
 const field = 'min-h-11 w-full rounded-button border border-border bg-bg px-3 text-base text-text';
 type Err = { code: string; requestId?: string } | null;
@@ -72,7 +72,7 @@ export function ShiftForm({ initial, sheet, kindNames }: { initial?: ShiftValues
       <fieldset className="flex flex-col gap-1">
         <legend className="text-sm text-muted">{t('color')}</legend>
         <div className="flex flex-wrap gap-1">
-          {SHIFT_COLORS.map((c) => (
+          {pickableColors(color).map((c) => (
             <label key={c} className={`flex size-11 cursor-pointer items-center justify-center rounded-button border-2 ${color === c ? 'border-text' : 'border-transparent'}`}>
               <input type="radio" name="color" value={c} checked={color === c} onChange={() => setColor(c)} aria-label={t(`colors.${c}`)} className="sr-only" />
               <span aria-hidden className={`size-7 rounded-button ${SHIFT_COLOR_CLASS[c]}`} />

@@ -10,7 +10,8 @@ export const SWITCHES = [
   'notify.request', // 관리자 메뉴의 대기 요청 숫자
   'notify.push', // 폰 알림 보내기 (출퇴근 · 휴가 · 정정)
   'request.punch', // 출퇴근 장소 밖 출근/퇴근 요청 (끄면 장소 밖에서는 찍히지 않는다)
-  'request.correction', // 출퇴근기록 정정 요청
+  'request.correction', // 출퇴근기록 정정 요청 (시각 수정 · 무효)
+  'request.missing', // 미출근 · 미퇴근 요청 = 빠진 출근 · 퇴근 넣기 (2026-11-04 의뢰인: 정정과 따로 켜고 끈다)
   'request.shift', // 근무일정 생성 요청
   'request.leave', // 휴가 신청
   'request.leaveDelete', // 휴가 삭제 요청

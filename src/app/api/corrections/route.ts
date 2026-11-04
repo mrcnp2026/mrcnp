@@ -19,10 +19,10 @@ import { kstDateTime, toKstDate } from '@/lib/time';
 export const POST = api('corrections.create', async (req) => {
   const me = await getMe();
   if (!me) throw new ApiError(401, 'not_signed_in');
-  await requireSwitch('request.correction'); // 통합설정 › 요청 스위치 (2026-10-19)
   const b = await readJson(req);
   const type = b.type;
   if (type !== 'add_missing' && type !== 'modify' && type !== 'void') throw new ApiError(400, 'invalid_input');
+  await requireSwitch(type === 'add_missing' ? 'request.missing' : 'request.correction'); // 통합설정 › 요청 스위치 (2026-10-19, 빠진 기록은 2026-11-04 따로)
   const reason = cleanText(b.reason);
   if (reason.length < 1 || reason.length > 200) throw new ApiError(400, 'reason_required');
   const db = createAdminClient();

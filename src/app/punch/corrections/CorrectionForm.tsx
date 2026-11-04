@@ -31,6 +31,7 @@ export function CorrectionForm(props: {
   initialKind: 'in' | 'out' | null;
   events: { id: string; label: string }[];
   todo: TodoItem[];
+  types: Type[]; // 통합설정에서 켠 종류만
   initialTodo: string | null; // 알림 · 배너에서 날짜와 종류를 들고 오면 그 줄을 미리 골라 둔다
 }) {
   const t = useTranslations('corrections');
@@ -43,7 +44,7 @@ export function CorrectionForm(props: {
   const [step, setStep] = useState<Step>(first ? (first.type === 'add_missing' ? 'quick' : 'form') : 'notice');
   const [off, setOff] = useState<Set<string>>(() => new Set(first?.type === 'add_missing' ? missing.filter((x) => x.workDate !== first.workDate).map((x) => x.key) : []));
   const shown: Step = step !== 'form' && missing.length === 0 ? 'form' : step; // 다 보내고 나면 원래 양식
-  const [type, setType] = useState<Type>(first?.type ?? 'add_missing');
+  const [type, setType] = useState<Type>(first?.type ?? props.types[0] ?? 'add_missing');
   const [preset, setPreset] = useState<Preset>(first ?? { key: null, workDate: props.initialDate, kind: props.initialKind, eventId: null, time: null });
   const [round, setRound] = useState(0); // 고를 때마다 입력 칸을 새로 그려 미리 채운 값이 들어가게
   const pick = (x: TodoItem) => {
@@ -270,7 +271,7 @@ export function CorrectionForm(props: {
           )}
           <fieldset className="flex flex-col gap-2">
             <legend className="mb-1 text-sm text-muted">{t('typeLabel')}</legend>
-            {(['add_missing', 'modify', 'void'] as const).map((k) => (
+            {props.types.map((k) => (
               <label key={k} className="flex min-h-11 items-center gap-2">
                 <input type="radio" name="type" checked={type === k} onChange={() => setType(k)} className="size-5" />
                 <span>{t(`type.${k}`)}</span>

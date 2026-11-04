@@ -4,14 +4,14 @@
 // 계산은 하지 않는다 — 부르는 쪽(page.tsx)이 만든 칸을 그리기만 한다.
 import { Plane } from 'lucide-react';
 import Link from 'next/link';
-import { SHIFT_COLOR_CLASS, type ShiftColor } from '@/lib/shifts';
+import { SHIFT_TINT_CLASS, SHIFT_COLOR_CLASS, type ShiftColor } from '@/lib/shifts';
 
 export type MonthEntry = { key: string; name: string; time: string | null; href: string | null; color: ShiftColor | null; tag: string | null; sub?: string | null };
 export type MonthCell = { date: string; day: string; inMonth: boolean; red: boolean; today: boolean; holiday: string | null; entries: MonthEntry[] };
 
 const SHOW = 4;
 // 일정 카드 바탕: 직무 색을 옅게 (선 대신 색 면으로 구분 — 2026-10-23 의뢰인: 격자가 엑셀 같다)
-const TINT: Record<ShiftColor, string> = { primary: 'bg-primary/10', ok: 'bg-ok/10', warn: 'bg-warn/15', danger: 'bg-danger/10', text: 'bg-text/10', muted: 'bg-muted/10' };
+const TINT = SHIFT_TINT_CLASS;
 
 function EntryCard({ e }: { e: MonthEntry }) {
   const body = (

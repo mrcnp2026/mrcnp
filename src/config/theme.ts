@@ -45,6 +45,12 @@ export const COLORS = {
   'tile-3': '#DBE3EC',
   'tile-4': '#EFDCD5',
   'accent-2': '#5FA58A', // 곡선 그라데이션 시작색 (primary보다 밝게)
+  // 근무일정 템플릿 · 직무 색 (2026-11-04 의뢰인: 템플릿마다 다르게) — 색 띠 · 점에만, 글자 색으로 쓰지 않는다
+  'shift-blue': '#3D6A9E',
+  'shift-purple': '#7656A0',
+  'shift-orange': '#C46A2B',
+  'shift-sky': '#4E9BB8',
+  'shift-pink': '#B85C84',
 } as const;
 
 // 8px 격자: 4·8·12·16·24·32·48 (Tailwind 1·2·3·4·6·8·12 단계만 쓴다)
