@@ -284,7 +284,7 @@ export default async function AdminHome({ searchParams }: { searchParams: Promis
 
       {/* ④ 그래프 줄 */}
       {/* 그래프 줄 (2026-10-11 의뢰인: 막대·선·동그라미 그래프로 집계를 보는 현황판) — 동그라미: 오늘 근무 현황 · 선: 최근 14일 출근 인원 */}
-      <div className="flex flex-col gap-3 lg:grid lg:grid-cols-4 lg:gap-4">
+      <div className="flex flex-col gap-3 lg:grid lg:grid-cols-2 lg:gap-4 min-[90rem]:grid-cols-4">
         <Card className="flex flex-col">
           <LiveFeed title={t('liveTitle')} empty={t('liveNone')} rows={feed} />
         </Card>
@@ -318,7 +318,8 @@ export default async function AdminHome({ searchParams }: { searchParams: Promis
       {/* PC: ① 오늘 직원 현황(넓게) + 처리할 일 ② 30일 추이 + 14일 지각 ③ 주 52시간 + 근무노트 — 줄마다 높이를 맞춘다 (2026-10-06 의뢰인: 흩어져 난잡했다) · 폰: 한 칸 */}
       {/* ⑤ PC 카드 줄 — 폰에서는 숨긴다 (2026-10-29 의뢰인: 같은 날 폰에도 보이게 했다가 「오늘 현황이 너무 길어졌다」 → 누락은 「처리할 일」에 이미 있고, 관리 필요 직원은 홈에서 볼 필요 없음) */}
       {/* PC 카드 줄: 공지사항 · 출퇴근 누락 · 관리가 필요한 직원 · 휴가 현황 (2026-10-23 의뢰인: 공지사항과 출퇴근 누락 자리 바꿈) */}
-      <div className="hidden gap-4 lg:grid lg:grid-cols-4">
+      {/* 1024~1439는 두 칸씩 (2026-11-04 의뢰인: 네 칸이면 카드가 150~200px라 글자가 꺾이고 잘렸다), 1440부터 네 칸 */}
+      <div className="hidden gap-4 lg:grid lg:grid-cols-2 min-[90rem]:grid-cols-4">
         <Card className="flex flex-col gap-2">
           <CardTitle>{t('cardNotices')}</CardTitle>
           {(latestNotices ?? []).length === 0 ? (
