@@ -1,5 +1,6 @@
 // 근무일정 템플릿 정리 · 차지영 연차 제외 풀기 (2026-11-04 의뢰인: 「진행해」).
-//   npx tsx --conditions=react-server scripts/ops-shift-cleanup-1104.mts [--prod] [--apply]   — 기본은 개발 DB, 보기만
+//   npx tsx --conditions=react-server scripts/ops-shift-cleanup-1104.mts [--prod] [--apply] [--keep-cha-shift]   — 기본은 개발 DB, 보기만
+//   --keep-cha-shift: 차지영 템플릿은 그대로 둔다 — 임원 템플릿이 간주 근무라 옮기면 마감 전 10월 계산이 바뀐다(10월 마감 뒤 다시 돌린다)
 // ① 템플릿 색: 정규 초록 · 조기 07:00 주황 · 07:30 파랑 · 07:40 하늘 · 임원 회색 (마이그레이션 0090 뒤에)
 // ② 테스트 관리자: 「조기근무」 → 「조기 07:30+정규근무」(같은 07:30~17:00)
 // ③ 차지영: 임원 아님(의뢰인) — 「임원 (판정 제외)」 → 「정규 근무」, 「임원 (연차 생성 제외)」 묶음은 오늘로 끝(지우지 않는다)
@@ -47,7 +48,7 @@ const move = (who: string, from: string, to: string) => {
   p.shift_template_id = b.id; // ④ 계산에 반영
 };
 move('테스트 관리자', '조기근무', '조기 07:30+정규근무');
-move('차지영', '임원 (판정 제외)', '정규 근무');
+if (!process.argv.includes('--keep-cha-shift')) move('차지영', '임원 (판정 제외)', '정규 근무');
 const cha = ppl?.find((x) => x.name === '차지영');
 const { data: ex } = await db.from('leave_policy_groups').select('id').eq('excluded', true).eq('active', true);
 const { data: mem } = cha ? await db.from('leave_policy_members').select('id, valid_from').eq('employee_id', cha.id).eq('active', true).in('group_id', (ex ?? []).map((g) => g.id)).is('valid_to', null) : { data: [] };
