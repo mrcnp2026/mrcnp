@@ -19,7 +19,7 @@ export function ListHead({ title, desc, settingsHref, settingsLabel, actions }: 
           <span data-dup-title>{title}</span>
           {desc && <HelpTip phone>{desc}</HelpTip>}
           {settingsHref && (
-            <Link href={settingsHref} aria-label={settingsLabel} title={settingsLabel} className="flex size-8 items-center justify-center rounded-button text-faint hover:bg-surface hover:text-primary">
+            <Link prefetch={false} href={settingsHref} aria-label={settingsLabel} title={settingsLabel} className="flex size-8 items-center justify-center rounded-button text-faint hover:bg-surface hover:text-primary">
               <Settings aria-hidden size={18} strokeWidth={1.75} />
             </Link>
           )}
@@ -48,7 +48,7 @@ export function StatusCards({ groups }: { groups: { title: string; cards: Status
           {/* 폰: 한 줄에 셋, 작게 (2026-10-16 디자인: 카드만으로 첫 화면이 찼다) — 넷이면 한 줄에 넷, 둘이면 둘(한 칸만 다음 줄로 떨어지지 않게, 2026-10-19) · PC: 칸 폭에 맞춰 */}
           <div className={`grid ${g.cards.length === 4 ? 'grid-cols-4' : g.cards.length === 2 ? 'grid-cols-2' : 'grid-cols-3'} gap-1.5 lg:grid-cols-[repeat(auto-fill,minmax(7rem,1fr))] lg:gap-2`}>
             {g.cards.map((c) => (
-              <Link
+              <Link prefetch={false}
                 key={c.key}
                 href={c.href}
                 scroll={false}
@@ -110,7 +110,7 @@ export function ListTable({ head, children, empty, count }: { head: { label: str
 /** 제목 옆 ⚙ — 이 화면의 기준이 있는 통합설정으로 (관리자에게만 보이게 부르는 쪽이 정한다) */
 export function SettingsLink({ href, label }: { href: string; label: string }) {
   return (
-    <Link href={href} aria-label={label} title={label} className="flex size-8 items-center justify-center rounded-button text-faint hover:bg-surface hover:text-primary">
+    <Link prefetch={false} href={href} aria-label={label} title={label} className="flex size-8 items-center justify-center rounded-button text-faint hover:bg-surface hover:text-primary">
       <Settings aria-hidden size={18} strokeWidth={1.75} />
     </Link>
   );
@@ -159,7 +159,7 @@ export function Steps({ steps, label }: { steps: Step[]; label: string }) {
           return (
             <li key={s.key}>
               {s.href && s.state !== 'now' ? (
-                <Link href={s.href} className="flex min-h-11 items-center gap-2 rounded-button px-2 text-sm active:bg-bg">
+                <Link prefetch={false} href={s.href} className="flex min-h-11 items-center gap-2 rounded-button px-2 text-sm active:bg-bg">
                   {mark}
                   {text}
                 </Link>
@@ -191,7 +191,7 @@ export function Steps({ steps, label }: { steps: Step[]; label: string }) {
             <li key={s.key} className="flex items-center gap-1">
               {i > 0 && <span aria-hidden className="text-faint">›</span>}
               {s.href && s.state !== 'now' ? (
-                <Link href={s.href} className={`${cls} hover:bg-surface`}>
+                <Link prefetch={false} href={s.href} className={`${cls} hover:bg-surface`}>
                   {body}
                 </Link>
               ) : (

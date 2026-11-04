@@ -30,7 +30,7 @@ export type EmployeeRecent = {
 export async function loadEmployeeRecent(employeeId: string, now: Date, lookback = 14): Promise<EmployeeRecent> {
   const today = toKstDate(now);
   const from = addDays(today, -(lookback - 1));
-  const data = await loadPeriod(from, today, OFFICE.practiceMode);
+  const data = await loadPeriod(from, today, OFFICE.practiceMode, employeeId); // 본인 것만 (2026-11-04 사용량)
   const events = data.events.filter((e) => e.employeeId === employeeId);
   const corrections = data.corrections.filter((c) => c.employeeId === employeeId);
   const me = data.people.find((p) => p.id === employeeId);

@@ -26,7 +26,7 @@ export function KpiRow({ kpis }: { kpis: Kpi[] }) {
         }`;
         if (k.href)
           return (
-            <Link key={k.label} href={k.href} className={cls}>
+            <Link prefetch={false} key={k.label} href={k.href} className={cls}>
               {body}
             </Link>
           );

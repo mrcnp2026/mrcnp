@@ -124,7 +124,7 @@ const LATE_EARLY_PUSH = false;
 export async function notifyLateEarly(employeeId: string, workDate: string, kind: 'in' | 'out', now = new Date()): Promise<void> {
   try {
     if (!LATE_EARLY_PUSH || !(await pushOn()) || OFFICE.practiceMode) return;
-    const data = await loadPeriod(workDate, workDate, false);
+    const data = await loadPeriod(workDate, workDate, false, employeeId);
     const p = data.people.find((x) => x.id === employeeId);
     if (!p || !p.active || p.role === 'admin' || p.employeeNo === OFFICE.ownerEmployeeNo || p.employeeNo?.startsWith('e2e-')) return;
     const type = kind === 'in' ? 'late' : 'early';
@@ -159,7 +159,7 @@ export async function notifyWeekLimit(ids?: string[], now = new Date()): Promise
     if (OFFICE.practiceMode || OFFICE.workplaceSize !== '5_or_more' || !(await switchOn('report.week52'))) return 0;
     const today = toKstDate(now);
     const weekStart = weekStartOf(today);
-    const data = await loadPeriod(weekStart, today, false);
+    const data = await loadPeriod(weekStart, today, false, ids?.length === 1 ? ids[0] : undefined); // 퇴근 한 명이면 그 사람 것만 (2026-11-04 사용량)
     if (!data.rule) return 0;
     const cautionMin = (await getSettingAt('week.caution_hours', today)) * 60;
     const limitMin = OFFICE.weeklyLimitHours * 60;

@@ -107,12 +107,12 @@ export default async function AnomaliesPage({ searchParams }: { searchParams: Pr
       <ListHead title={t('title')} desc={t('intro')} settingsHref="#policy" settingsLabel={t('policyTitle')} />
       <FilterBar>
         <span className="inline-flex items-center">
-          <Link href={link(shift(month, -1), only, st)} aria-label={t('prev')} className="inline-flex size-9 items-center justify-center rounded-l-button border border-border bg-bg text-muted">
+          <Link prefetch={false} href={link(shift(month, -1), only, st)} aria-label={t('prev')} className="inline-flex size-9 items-center justify-center rounded-l-button border border-border bg-bg text-muted">
             <ChevronLeft aria-hidden size={18} />
           </Link>
           <span className="num -ml-px inline-flex h-9 items-center border border-border bg-bg px-4 font-bold">{month}</span>
           {shift(month, 1) <= today.slice(0, 7) && (
-            <Link href={link(shift(month, 1), only, st)} aria-label={t('next')} className="-ml-px inline-flex size-9 items-center justify-center rounded-r-button border border-border bg-bg text-muted">
+            <Link prefetch={false} href={link(shift(month, 1), only, st)} aria-label={t('next')} className="-ml-px inline-flex size-9 items-center justify-center rounded-r-button border border-border bg-bg text-muted">
               <ChevronRight aria-hidden size={18} />
             </Link>
           )}
@@ -123,7 +123,7 @@ export default async function AnomaliesPage({ searchParams }: { searchParams: Pr
             <NotifyButton month={month} live={sp.live === '1'} label={t('notify.all', { n: openPeople.length })} confirm={t('notify.confirmAll', { n: openPeople.length })} />
           </span>
         )}
-        <Link href={`/admin/closing?m=${month}${live}`} className={`${openPeople.length > 0 ? '' : 'ml-auto '}inline-flex h-9 items-center rounded-button border border-border bg-bg px-3.5 text-sm font-semibold text-text hover:bg-surface`}>
+        <Link prefetch={false} href={`/admin/closing?m=${month}${live}`} className={`${openPeople.length > 0 ? '' : 'ml-auto '}inline-flex h-9 items-center rounded-button border border-border bg-bg px-3.5 text-sm font-semibold text-text hover:bg-surface`}>
           {t('toClosing')} ›
         </Link>
       </FilterBar>
@@ -132,7 +132,7 @@ export default async function AnomaliesPage({ searchParams }: { searchParams: Pr
       <div className="flex flex-wrap items-center gap-2">
         <LiveSearchInput initial={q} placeholder={t('searchPh')} />
         {one && (
-          <Link href={link(month, only, st, q ? `&q=${encodeURIComponent(q)}` : '')} className="inline-flex min-h-11 items-center gap-1 rounded-chip bg-primary-tint px-3 text-sm font-semibold text-primary lg:min-h-9">
+          <Link prefetch={false} href={link(month, only, st, q ? `&q=${encodeURIComponent(q)}` : '')} className="inline-flex min-h-11 items-center gap-1 rounded-chip bg-primary-tint px-3 text-sm font-semibold text-primary lg:min-h-9">
             {t('onlyOne', { name: nameOf.get(one)?.name ?? '' })} <X aria-hidden size={14} />
           </Link>
         )}
@@ -185,7 +185,7 @@ export default async function AnomaliesPage({ searchParams }: { searchParams: Pr
           <>
             {t('listTitle', { n: rows.length })}
             {(only || st || q || one) && (
-              <Link href={link(month, null, null, '')} className="pl-3 font-bold text-primary">
+              <Link prefetch={false} href={link(month, null, null, '')} className="pl-3 font-bold text-primary">
                 {t('showAll')}
               </Link>
             )}
@@ -222,7 +222,7 @@ export default async function AnomaliesPage({ searchParams }: { searchParams: Pr
                   (r.block || !r.reviewed) && <NotifyButton month={month} employeeIds={[r.employeeId]} live={sp.live === '1'} label={t('notify.one')} confirm={t('notify.confirmOne', { name: p?.name ?? '' })} />
                 )}
                     {isOpen(r) && <TaskEdit employeeId={r.employeeId} workDate={r.workDate} assigneeId={overrides?.get(anomalyKey(r.employeeId, r.workDate))?.assigneeId ?? null} dueOn={overrides?.get(anomalyKey(r.employeeId, r.workDate))?.dueOn ?? null} note={overrides?.get(anomalyKey(r.employeeId, r.workDate))?.note ?? null} people={handlers} defaultNames={defaultNames(r.employeeId)} live={sp.live === '1'} ready={overrides !== null} short />}
-                    <Link href={`/admin/records/${r.employeeId}?m=${month}${live}`} className="ml-auto inline-flex min-h-10 items-center px-1 font-bold text-primary">
+                    <Link prefetch={false} href={`/admin/records/${r.employeeId}?m=${month}${live}`} className="ml-auto inline-flex min-h-10 items-center px-1 font-bold text-primary">
                       {t('toRecords')} ›
                     </Link>
                   </span>
@@ -251,7 +251,7 @@ export default async function AnomaliesPage({ searchParams }: { searchParams: Pr
                 )}
               </td>
               <td className="text-right whitespace-nowrap max-lg:hidden!">
-                <Link href={`/admin/records/${r.employeeId}?m=${month}${live}`} className="font-bold text-primary hover:underline">
+                <Link prefetch={false} href={`/admin/records/${r.employeeId}?m=${month}${live}`} className="font-bold text-primary hover:underline">
                   {t('toRecords')} ›
                 </Link>
               </td>

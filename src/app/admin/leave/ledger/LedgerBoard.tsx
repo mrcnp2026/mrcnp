@@ -206,7 +206,7 @@ export function LedgerBoard(props: { lastRun: { at: string; created: number } | 
         <ul className="-mx-1 flex flex-col divide-y divide-border lg:hidden">
           {props.balances.map((b) => (
             <li key={b.employeeId}>
-              <Link href={`/admin/leave/ledger?emp=${b.employeeId}${q}#detail`} className="flex min-h-14 items-center gap-3 px-1 py-2">
+              <Link prefetch={false} href={`/admin/leave/ledger?emp=${b.employeeId}${q}#detail`} className="flex min-h-14 items-center gap-3 px-1 py-2">
                 <span className="flex min-w-0 flex-1 flex-col">
                   <span className="truncate font-bold">
                     {b.name}
@@ -246,7 +246,7 @@ export function LedgerBoard(props: { lastRun: { at: string; created: number } | 
               <td className="num px-3 py-2">{b.started ? day(b.expired) : ''}</td>
               <td className="num px-3 py-2">{b.payout !== null ? t('won', { n: b.payout.toLocaleString('ko-KR') }) : b.payoutState && b.payoutState !== 'OK' ? <span className="text-xs text-faint">{t('payoutNoContract')}</span> : ''}</td>
               <td className="px-3 py-2">
-                <Link href={`/admin/leave/ledger?emp=${b.employeeId}${q}#detail`} className="font-bold text-primary hover:underline">
+                <Link prefetch={false} href={`/admin/leave/ledger?emp=${b.employeeId}${q}#detail`} className="font-bold text-primary hover:underline">
                   {t('detail')}
                 </Link>
               </td>

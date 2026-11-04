@@ -36,13 +36,13 @@ export default async function OpsMailPage({ searchParams }: { searchParams: Prom
 
   return (
     <PageShell wide>
-      <Link href="/admin/ops" className="inline-flex min-h-9 items-center self-start text-sm font-medium text-muted">‹ {t('back')}</Link>
+      <Link prefetch={false} href="/admin/ops" className="inline-flex min-h-9 items-center self-start text-sm font-medium text-muted">‹ {t('back')}</Link>
       <h1 className="text-2xl font-bold">{t('title')}</h1>
       <p className="px-1 text-sm text-muted">{t('only')}</p>
       <nav className="flex items-center gap-1 self-start rounded-button bg-bg" aria-label={t('month')}>
-        <Link href={`?m=${shift(m, -1)}`} aria-label={t('prev')} className="flex size-11 items-center justify-center text-primary"><ChevronLeft aria-hidden size={22} strokeWidth={2} /></Link>
+        <Link prefetch={false} href={`?m=${shift(m, -1)}`} aria-label={t('prev')} className="flex size-11 items-center justify-center text-primary"><ChevronLeft aria-hidden size={22} strokeWidth={2} /></Link>
         <span className="num px-1 text-lg font-bold">{t('monthOf', { m })}</span>
-        <Link href={`?m=${shift(m, 1)}`} aria-label={t('next')} className="flex size-11 items-center justify-center text-primary"><ChevronRight aria-hidden size={22} strokeWidth={2} /></Link>
+        <Link prefetch={false} href={`?m=${shift(m, 1)}`} aria-label={t('next')} className="flex size-11 items-center justify-center text-primary"><ChevronRight aria-hidden size={22} strokeWidth={2} /></Link>
       </nav>
       {!mailReady() && <p className="rounded-card border border-warn bg-warn-tint p-3 text-sm text-warn">{t('notReady')}</p>}
       {tableMissing ? (

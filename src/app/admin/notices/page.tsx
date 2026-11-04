@@ -19,7 +19,7 @@ export default async function NoticesPage() {
 
   const item = (r: (typeof rows)[number]) => (
     <li key={r.notice.id}>
-      <Link href={`/admin/notices/${r.notice.id}`} className="block">
+      <Link prefetch={false} href={`/admin/notices/${r.notice.id}`} className="block">
         <Card className="flex flex-col gap-2">
           <div className="flex items-start justify-between gap-2">
             <p className="min-w-0 font-semibold break-words">{r.notice.title}</p>
@@ -44,7 +44,7 @@ export default async function NoticesPage() {
           <h1 className="flex flex-wrap items-center gap-x-1 text-2xl font-bold">{t('title')}<HelpTip>{t('intro')}</HelpTip></h1>
         </div>
         {/* 폰에서는 위 단추 대신 오른쪽 아래 「+ 새 공지」 (2026-11-03 의뢰인: 공지 · 전달 둘 다 「+ 새 요청」처럼 아래 단추 하나로) */}
-        <Link href="/admin/notices/new" className="hidden h-9 items-center gap-1.5 rounded-button bg-primary px-3.5 text-sm font-semibold text-on-primary lg:inline-flex">
+        <Link prefetch={false} href="/admin/notices/new" className="hidden h-9 items-center gap-1.5 rounded-button bg-primary px-3.5 text-sm font-semibold text-on-primary lg:inline-flex">
           <Megaphone aria-hidden size={16} />
           {t('new')}
         </Link>
@@ -78,7 +78,7 @@ export default async function NoticesPage() {
               {current.map((r) => (
                 <tr key={r.notice.id}>
                   <td className="px-4 py-3">
-                    <Link href={`/admin/notices/${r.notice.id}`} className="inline-flex min-h-9 items-center font-semibold break-words text-primary">
+                    <Link prefetch={false} href={`/admin/notices/${r.notice.id}`} className="inline-flex min-h-9 items-center font-semibold break-words text-primary">
                       {r.notice.title}
                     </Link>
                   </td>

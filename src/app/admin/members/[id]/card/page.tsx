@@ -17,7 +17,7 @@ export default async function HrCardPage({ params }: { params: Promise<{ id: str
   if (!card) notFound();
   return (
     <PageShell>
-      <Link href={`/admin/members/${id}`} className="inline-flex min-h-9 items-center gap-1 self-start text-sm font-medium text-muted">
+      <Link prefetch={false} href={`/admin/members/${id}`} className="inline-flex min-h-9 items-center gap-1 self-start text-sm font-medium text-muted">
         <ChevronLeft aria-hidden size={16} />
         {t('back')}
       </Link>

@@ -32,7 +32,7 @@ export default async function TrainingPage() {
         <h1 className="flex flex-wrap items-center gap-x-1 text-2xl font-bold">{t('title')}<HelpTip>{t('intro')}</HelpTip></h1>
         <div className="flex flex-wrap items-center gap-2">
           <a href={`/api/admin/training/export?m=${today.slice(0, 7)}`} className="inline-flex h-8 items-center rounded-button border border-border bg-bg px-3.5 text-sm font-semibold text-text hover:bg-surface">{t('exportMonth', { m: today.slice(0, 7) })}</a>
-          <Link href="/admin/training/courses" className="inline-flex h-8 items-center rounded-button border border-border bg-bg px-3.5 text-sm font-semibold text-text hover:bg-surface">{t('coursesLink')}</Link>
+          <Link prefetch={false} href="/admin/training/courses" className="inline-flex h-8 items-center rounded-button border border-border bg-bg px-3.5 text-sm font-semibold text-text hover:bg-surface">{t('coursesLink')}</Link>
           <SheetOpener id="training-new" label={t('newSession')} />
         </div>
       </header>
@@ -89,7 +89,7 @@ export default async function TrainingPage() {
               const signed = mine.filter((a) => a.signedAt).length;
               return (
                 <li key={s.id}>
-                  <Link href={`/admin/training/${s.id}`} className="flex flex-wrap items-center gap-x-3 gap-y-1 py-2.5 text-sm hover:bg-surface">
+                  <Link prefetch={false} href={`/admin/training/${s.id}`} className="flex flex-wrap items-center gap-x-3 gap-y-1 py-2.5 text-sm hover:bg-surface">
                     <span className="num w-24 shrink-0 font-semibold">{f.dateTime(new Date(`${s.heldOn}T00:00:00+09:00`), { month: 'short', day: 'numeric', weekday: 'short' })}</span>
                     <span className="min-w-0 flex-1 truncate">{courseOf.get(s.courseId)?.name ?? ''}</span>
                     {s.cancelled ? <Chip tone="neutral">{t('cancelled')}</Chip> : <Chip tone={signed === mine.length && mine.length ? 'ok' : 'warn'}>{t('signedValue', { signed, all: mine.length })}</Chip>}

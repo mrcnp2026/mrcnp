@@ -13,7 +13,7 @@ export function MineBar({ menu, title, side, children, flush = false }: { menu: 
         <span data-dup-menu className="contents"><MenuButton label={menu} /></span>
         <span data-dup-bar className="min-w-0 flex-1 truncate text-lg font-bold">{title}</span>
         {side && (
-          <Link href={side.href} aria-pressed="true" className="inline-flex min-h-11 shrink-0 items-center rounded-button border border-primary bg-primary px-4 text-sm font-bold text-on-primary">
+          <Link prefetch={false} href={side.href} aria-pressed="true" className="inline-flex min-h-11 shrink-0 items-center rounded-button border border-primary bg-primary px-4 text-sm font-bold text-on-primary">
             {side.label}
           </Link>
         )}

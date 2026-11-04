@@ -14,7 +14,7 @@ export async function NewsCard({ items }: { items: NewsItem[] }) {
     <Card className="flex flex-col gap-1 p-4">
       <div className="-my-1 flex items-center justify-between gap-2">
         <h2 className="text-lg font-bold">{t('title')}</h2>
-        <Link href="/punch/notices" className="inline-flex min-h-11 items-center gap-0.5 text-sm text-muted">
+        <Link prefetch={false} href="/punch/notices" className="inline-flex min-h-11 items-center gap-0.5 text-sm text-muted">
           {t('all')}
           <ChevronRight aria-hidden size={16} />
         </Link>
@@ -27,7 +27,7 @@ export async function NewsCard({ items }: { items: NewsItem[] }) {
             const Icon = n.kind === 'notice' ? Megaphone : MessagesSquare;
             return (
               <li key={`${n.kind}${n.id}`}>
-                <Link href={n.href} className="flex min-h-11 items-center gap-2 rounded-button px-1 hover:bg-surface">
+                <Link prefetch={false} href={n.href} className="flex min-h-11 items-center gap-2 rounded-button px-1 hover:bg-surface">
                   <Icon aria-hidden size={16} className="shrink-0 text-muted" />
                   <span className="shrink-0 text-xs text-muted">{t(n.kind)}</span>
                   <span className={`min-w-0 flex-1 truncate text-sm ${n.unread ? 'font-bold' : ''}`}>{n.title}</span>

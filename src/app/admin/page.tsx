@@ -49,12 +49,21 @@ export default async function AdminHome({ searchParams }: { searchParams: Promis
   const cautionMin = (await getSettingAt('week.caution_hours', today)) * 60; // 주 52시간 「주의」 기준 — 통합설정 › 리포트 기준 (2026-10-29 9-2)
   // 서로 상관없는 조회는 한꺼번에 시작한다 (2026-10-23 의뢰인: 화면 이동이 느리다 — 예전에는 아홉 개를 하나씩 기다렸다)
   const db = createAdminClient();
+  const grantsP = loadLeaveGrants();
   const later = {
     roleReqs: getMe().then((m) => db.from('role_change_requests').select('target_id').eq('status', 'pending').neq('requested_by', m!.id).order('created_at')),
     latestNotices: Promise.resolve(db.from('notices').select('id, title, created_at').eq('status', 'published').order('created_at', { ascending: false }).limit(30)),
     keys: Promise.resolve(db.from('user_passkeys').select('employee_id').is('revoked_at', null)),
-    grants: loadLeaveGrants(),
-    leaveReqs: loadLeaveRequests({ practice: practiceView }),
+    grants: grantsP,
+    // 잔여 계산이 쓰는 신청만 읽는다 (2026-11-04: 2분마다 새로 그리며 지난 휴가 신청을 전부 읽어, 쓸수록 사용량이 늘었다)
+    //   예전 부여 방식(calcLeaveBalance)은 지금 적용 중인 부여일 이후 신청만, 원장 방식(leave-balance-data merge)은 대기 중인 신청만 쓴다
+    leaveReqs: grantsP.then(async (gs) => {
+      const current = new Map<string, string>();
+      for (const g of gs) if (g.effectiveFrom <= today && g.effectiveFrom > (current.get(g.employeeId) ?? '')) current.set(g.employeeId, g.effectiveFrom);
+      const from = [...current.values()].sort()[0];
+      const [since, pending] = await Promise.all([from ? loadLeaveRequests({ practice: practiceView, from }) : [], loadLeaveRequests({ practice: practiceView, status: 'pending' })]);
+      return [...new Map([...since, ...pending].map((r) => [r.id, r])).values()];
+    }),
     leaveTypes: loadAllLeaveTypes(),
   };
   const [data, counts, { data: noteRows }] = await Promise.all([
@@ -196,7 +205,7 @@ export default async function AdminHome({ searchParams }: { searchParams: Promis
 
   return (
     <PageShell wide>
-      <AutoRefresh seconds={30} />
+      <AutoRefresh seconds={120} />
       {/* PC: 오늘 요약은 옆 메뉴 판에 — 출근 고리 · 숫자 · 지각/미출근/휴가 (2026-10-30 의뢰인: 「카드 위 글을 옆 판으로, 텍스트만은 별로 — 심플하지만 비어 보이지 않게, 본문은 그만큼 위로」) */}
       <PanelPortal>
         <div className="flex flex-col gap-4 px-3 pb-4">
@@ -213,9 +222,9 @@ export default async function AdminHome({ searchParams }: { searchParams: Promis
             ))}
           </ul>
           <div className="flex flex-col items-start">
-            <Link href="/punch" className="inline-flex min-h-9 items-center text-sm font-bold text-primary">{t('myPunch')} ›</Link>
+            <Link prefetch={false} href="/punch" className="inline-flex min-h-9 items-center text-sm font-bold text-primary">{t('myPunch')} ›</Link>
             {OFFICE.practiceMode && (
-              <Link href={practiceView ? '/admin?live=1' : '/admin'} className="inline-flex min-h-9 items-center text-sm text-muted">
+              <Link prefetch={false} href={practiceView ? '/admin?live=1' : '/admin'} className="inline-flex min-h-9 items-center text-sm text-muted">
                 {practiceView ? t('showLive') : t('showPractice')}
               </Link>
             )}
@@ -226,14 +235,14 @@ export default async function AdminHome({ searchParams }: { searchParams: Promis
       <header className="flex flex-col gap-1 px-1 pt-2 lg:hidden">
         <div className="flex items-center justify-between gap-2">
           <p className="num text-sm text-muted">{t('asOf', { date: fmt.dateTime(now, { month: 'long', day: 'numeric', weekday: 'short' }), time: fmt.dateTime(now, { hour: '2-digit', minute: '2-digit', hourCycle: 'h23' }) })}</p>
-          <Link href="/punch" className="-my-2 inline-flex min-h-11 items-center text-sm font-medium text-muted">
+          <Link prefetch={false} href="/punch" className="-my-2 inline-flex min-h-11 items-center text-sm font-medium text-muted">
             {t('myPunch')} ›
           </Link>
         </div>
         <h1 className="num text-2xl font-extrabold tracking-tight"><CountUp value={t('headline', { total: active.length, n: inCount })} /></h1>
         {rate !== null && <p className="num text-sm text-muted">{t('rate', { target, p: rate })}</p>}
         {OFFICE.practiceMode && (
-          <Link href={practiceView ? '/admin?live=1' : '/admin'} className="inline-flex min-h-11 items-center self-start text-sm text-primary">
+          <Link prefetch={false} href={practiceView ? '/admin?live=1' : '/admin'} className="inline-flex min-h-11 items-center self-start text-sm text-primary">
             {practiceView ? t('showLive') : t('showPractice')}
           </Link>
         )}
@@ -265,7 +274,7 @@ export default async function AdminHome({ searchParams }: { searchParams: Promis
         <PagedList
           items={todo.filter((x) => x.n > 0).map((x) => (
             <li key={x.key}>
-              <Link href={!practiceView && OFFICE.practiceMode && x.href.startsWith('/admin/inbox') ? x.href.replace('/admin/inbox', '/admin/inbox?live=1') : x.href} className="mx-2 flex min-h-14 items-center gap-3 rounded-button px-3 transition-colors hover:bg-surface">
+              <Link prefetch={false} href={!practiceView && OFFICE.practiceMode && x.href.startsWith('/admin/inbox') ? x.href.replace('/admin/inbox', '/admin/inbox?live=1') : x.href} className="mx-2 flex min-h-14 items-center gap-3 rounded-button px-3 transition-colors hover:bg-surface">
                 <IconTile icon={(TODO_ICON[x.key] ?? TODO_ICON.pendingWork).icon} tone={(TODO_ICON[x.key] ?? TODO_ICON.pendingWork).tone} />
                 <span className="flex-1">{t(x.key)}</span>
                 <span className={`num inline-flex min-w-6 items-center justify-center rounded-chip px-2 text-sm font-bold ${x.n > 0 ? 'bg-primary text-on-primary' : 'text-faint'}`}>{x.n}</span>
@@ -329,7 +338,7 @@ export default async function AdminHome({ searchParams }: { searchParams: Promis
               className="flex-1 divide-y divide-border text-sm"
               items={(latestNotices ?? []).map((x) => (
                 <li key={x.id}>
-                  <Link href={`/admin/notices/${x.id}`} className="flex items-center gap-2 py-1.5 hover:text-primary">
+                  <Link prefetch={false} href={`/admin/notices/${x.id}`} className="flex items-center gap-2 py-1.5 hover:text-primary">
                     <span className="min-w-0 flex-1 truncate">{x.title}</span>
                     <span className="num shrink-0 text-xs text-faint">{toKstDate(new Date(x.created_at as string))}</span>
                   </Link>
@@ -337,7 +346,7 @@ export default async function AdminHome({ searchParams }: { searchParams: Promis
               ))}
             />
           )}
-          <Link href="/admin/notices" className={cardLink}>{t('cardNoticesAll')} ›</Link>
+          <Link prefetch={false} href="/admin/notices" className={cardLink}>{t('cardNoticesAll')} ›</Link>
         </Card>
         <Card className="flex flex-col gap-2">
           <CardTitle aside={<span className={`num text-lg font-bold ${missingPeople > 0 ? 'text-warn' : 'text-faint'}`}>{missingPeople}</span>}>{t('cardMissing')}</CardTitle>
@@ -346,7 +355,7 @@ export default async function AdminHome({ searchParams }: { searchParams: Promis
           ) : (
             <PagedList className="flex-1 divide-y divide-border text-sm" items={missingNames.map((x) => <li key={x} className="py-1.5 font-bold">{x}</li>)} />
           )}
-          <Link href="/admin/missing" className={cardLink}>{t('cardMissingMore')} ›</Link>
+          <Link prefetch={false} href="/admin/missing" className={cardLink}>{t('cardMissingMore')} ›</Link>
         </Card>
         <Card className="flex flex-col gap-2">
           <CardTitle aside={<span className="num text-sm text-muted">{t('totalStaff')} <b className="text-text">{real.length}</b></span>}>{t('cardCare')}</CardTitle>
@@ -354,7 +363,7 @@ export default async function AdminHome({ searchParams }: { searchParams: Promis
             className="flex-1 text-sm"
             items={care.map((x) => (
               <li key={x.key}>
-                <Link href="/admin/members" className="-mx-2 flex items-center gap-3 rounded-button px-2 py-1.5 transition-colors hover:bg-surface">
+                <Link prefetch={false} href="/admin/members" className="-mx-2 flex items-center gap-3 rounded-button px-2 py-1.5 transition-colors hover:bg-surface">
                   <IconTile icon={CARE_ICON[x.key].icon} tone={CARE_ICON[x.key].tone} size={32} />
                   <span className="flex-1">{t(x.key)}</span>
                   <span className={`num inline-flex h-6 min-w-8 items-center justify-center rounded-button px-1 font-bold ${x.n > 0 ? 'bg-warn-tint text-warn' : 'bg-surface text-faint'}`}>{x.n}</span>
@@ -387,7 +396,7 @@ export default async function AdminHome({ searchParams }: { searchParams: Promis
               })}
             />
           )}
-          <Link href="/admin/leave?v=accrual" className={cardLink}>{t('cardLeaveAll')} ›</Link>
+          <Link prefetch={false} href="/admin/leave?v=accrual" className={cardLink}>{t('cardLeaveAll')} ›</Link>
         </Card>
       </div>
 

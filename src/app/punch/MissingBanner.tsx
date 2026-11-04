@@ -21,7 +21,7 @@ export async function MissingBanner({ items }: { items: MissingPunch[] }) {
           {m.hasPendingRequest ? (
             <span className="shrink-0 text-xs">{t('reviewing')}</span>
           ) : (
-            <Link
+            <Link prefetch={false}
               href={`/punch/corrections?date=${m.workDate}&kind=${m.kind}`}
               className="inline-flex min-h-11 shrink-0 items-center rounded-button border border-warn bg-bg px-3 text-sm font-semibold"
             >

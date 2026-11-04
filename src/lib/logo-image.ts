@@ -4,6 +4,7 @@
 // 화면은 높이만 정하고 너비는 비율대로 그린다(components/Logo) — 여백이 없으니 어떤 그림이든 지금 로고와 같은 높이로 보인다. 서버 전용.
 import 'server-only';
 import sharp from 'sharp';
+import { ICON_SIZES, type IconSize } from '@/config/brand';
 import { ICON_BG } from '@/config/theme';
 
 export const LOGO_HEIGHT = 240;
@@ -23,8 +24,7 @@ export async function tidyLogo(input: Uint8Array, opts: { trim?: boolean } = {})
 }
 
 /** 앱 아이콘 (2026-11-03 의뢰인) — 정사각 그림에서 폰 홈 화면 · 탭 아이콘 크기들을 만든다. maskable은 안전 영역(가운데 80%) 안에 들어가게 여백을 둔다 */
-export const ICON_SIZES = { s64: 64, s180: 180, s192: 192, s512: 512, mask512: 512 } as const;
-export type IconSize = keyof typeof ICON_SIZES;
+export { ICON_SIZES, type IconSize };
 export async function makeIcons(input: Uint8Array): Promise<Record<IconSize, Uint8Array>> {
   const base = sharp(input, { limitInputPixels: 40_000_000 }).rotate();
   const meta = await base.metadata();

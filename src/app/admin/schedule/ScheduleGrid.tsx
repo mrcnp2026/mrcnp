@@ -70,7 +70,7 @@ export function ScheduleGrid({ days, rows, dense, labels }: { days: GridDay[]; r
                       </div>
                     )}
                     {c.items.map(({ it, href, color, tag, place }) => (
-                      <Link key={`${it.shiftId ?? it.source}${it.startTime}`} href={href} className={`flex overflow-hidden rounded-button hover:brightness-95 ${color ? TINT[color] : 'bg-surface'}`}>
+                      <Link prefetch={false} key={`${it.shiftId ?? it.source}${it.startTime}`} href={href} className={`flex overflow-hidden rounded-button hover:brightness-95 ${color ? TINT[color] : 'bg-surface'}`}>
                         <span aria-hidden className={`w-1 shrink-0 ${color ? SHIFT_COLOR_CLASS[color] : 'bg-border'}`} />
                         {dense ? (
                           <span className="num flex flex-1 flex-col px-1 py-1 text-center text-xs leading-tight">

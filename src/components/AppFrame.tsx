@@ -77,7 +77,7 @@ export async function AppFrame({ me, children, overlay }: { me: Me; children: Re
           <ConsoleLink role={role} />
           <AccountMenu name={me.name} roleLabel={ts(me.employeeNo === OFFICE_SYSTEM_NO ? 'roleSystem' : branchManager ? 'roleManager' : isAdmin ? 'roleAdmin' : 'roleEmployee')}>
             {ops && (
-              <Link href="/admin/ops" role="menuitem" className="flex min-h-9 items-center gap-2 rounded-button border border-border px-3 text-sm font-medium text-text hover:bg-surface">
+              <Link prefetch={false} href="/admin/ops" role="menuitem" className="flex min-h-9 items-center gap-2 rounded-button border border-border px-3 text-sm font-medium text-text hover:bg-surface">
                 <Activity aria-hidden size={16} strokeWidth={1.75} />
                 {tf('account.ops')}
               </Link>

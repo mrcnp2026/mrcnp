@@ -46,7 +46,7 @@ export default async function PayrollPage({ searchParams }: { searchParams: Prom
         <h1 className="px-1 pt-2 text-2xl font-extrabold tracking-tight">{t('title')}</h1>
         <Card className="flex flex-col gap-3">
           <p className="text-muted">{t('noAccess', { names })}</p>
-          <Link href="/admin/members" className="inline-flex min-h-11 items-center self-start rounded-button bg-primary-tint px-4 text-sm font-bold text-primary">
+          <Link prefetch={false} href="/admin/members" className="inline-flex min-h-11 items-center self-start rounded-button bg-primary-tint px-4 text-sm font-bold text-primary">
             {tn('members')} ›
           </Link>
         </Card>
@@ -88,11 +88,11 @@ export default async function PayrollPage({ searchParams }: { searchParams: Prom
         </div>
         <div className="flex shrink-0 items-center gap-2">
           <nav className="flex items-center rounded-button bg-bg" aria-label={tr('month')}>
-            <Link href={q(shift(ym, -1))} aria-label={tr('prev')} className="flex size-11 items-center justify-center text-primary">
+            <Link prefetch={false} href={q(shift(ym, -1))} aria-label={tr('prev')} className="flex size-11 items-center justify-center text-primary">
               <ChevronLeft aria-hidden size={22} strokeWidth={2} />
             </Link>
             <span className="num px-1 text-lg font-bold">{ym}</span>
-            <Link href={q(shift(ym, 1))} aria-label={tr('next')} className="flex size-11 items-center justify-center text-primary">
+            <Link prefetch={false} href={q(shift(ym, 1))} aria-label={tr('next')} className="flex size-11 items-center justify-center text-primary">
               <ChevronRight aria-hidden size={22} strokeWidth={2} />
             </Link>
           </nav>
@@ -107,7 +107,7 @@ export default async function PayrollPage({ searchParams }: { searchParams: Prom
       {OFFICE.practiceMode && (
         <p className={`flex flex-wrap items-center gap-x-3 text-sm text-primary ${practice ? 'rounded-card bg-primary-tint p-3' : '-my-2'}`}>
           {practice && <span className="min-w-0 flex-1">{tr('practiceBanner')}</span>}
-          <Link href={practice ? `?m=${ym}&live=1` : `?m=${ym}`} className="ml-auto inline-flex min-h-9 items-center font-bold underline">
+          <Link prefetch={false} href={practice ? `?m=${ym}&live=1` : `?m=${ym}`} className="ml-auto inline-flex min-h-9 items-center font-bold underline">
             {practice ? tr('showLive') : tr('showPractice')}
           </Link>
         </p>
@@ -115,7 +115,7 @@ export default async function PayrollPage({ searchParams }: { searchParams: Prom
       {unconfirmed > 0 ? (
         <p className="rounded-card border border-warn bg-warn-tint p-3 text-sm text-warn">
           {t('unconfirmed', { n: unconfirmed })}{' '}
-          <Link href={`/admin/records/list?from=${ym}-01&to=${monthEnd}`} className="font-bold underline">
+          <Link prefetch={false} href={`/admin/records/list?from=${ym}-01&to=${monthEnd}`} className="font-bold underline">
             {t('toConfirm')} ›
           </Link>
         </p>
@@ -148,7 +148,7 @@ export default async function PayrollPage({ searchParams }: { searchParams: Prom
                   <td className="px-5 py-3 text-left font-semibold">
                     {x.person.name}
                     {x.summary.unconfirmedDates.length > 0 && (
-                      <Link href={`/admin/records/list?from=${ym}-01&to=${monthEnd}&q=${encodeURIComponent(x.person.name)}`} className="ml-2 align-middle"><Chip tone="warn">{t('unconfirmedOf', { n: x.summary.unconfirmedDates.length })}</Chip></Link>
+                      <Link prefetch={false} href={`/admin/records/list?from=${ym}-01&to=${monthEnd}&q=${encodeURIComponent(x.person.name)}`} className="ml-2 align-middle"><Chip tone="warn">{t('unconfirmedOf', { n: x.summary.unconfirmedDates.length })}</Chip></Link>
                     )}
                   </td>
                   <td className="px-5 py-3 text-right font-bold">{hmOrDash(x.summary.netMinutes)}</td>

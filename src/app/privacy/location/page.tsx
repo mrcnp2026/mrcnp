@@ -51,7 +51,7 @@ export default async function LocationTermsPage() {
         ))}
         <p className="text-xs text-faint">{t('effective')}</p>
       </Card>
-      <Link href="/privacy" className="flex min-h-11 items-center justify-center gap-1 text-sm text-primary">
+      <Link prefetch={false} href="/privacy" className="flex min-h-11 items-center justify-center gap-1 text-sm text-primary">
         <ArrowLeft aria-hidden size={16} />
         {t('back')}
       </Link>

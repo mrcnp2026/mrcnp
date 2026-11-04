@@ -35,11 +35,11 @@ export default async function PaySlipsPage({ searchParams }: { searchParams: Pro
       <ListHead title={t('title')} desc={t('intro')} />
       {practice && <p className="rounded-card border border-border bg-surface p-3 text-sm text-muted">{t('practice')}</p>}
       <nav className="flex items-center gap-1 self-start rounded-button bg-bg" aria-label={t('month')}>
-        <Link href={`?m=${shift(m, -1)}`} aria-label={t('prev')} className="flex size-11 items-center justify-center text-primary">
+        <Link prefetch={false} href={`?m=${shift(m, -1)}`} aria-label={t('prev')} className="flex size-11 items-center justify-center text-primary">
           <ChevronLeft aria-hidden size={22} strokeWidth={2} />
         </Link>
         <span className="num px-1 text-lg font-bold">{t('monthOf', { m })}</span>
-        <Link href={`?m=${shift(m, 1)}`} aria-label={t('next')} className="flex size-11 items-center justify-center text-primary">
+        <Link prefetch={false} href={`?m=${shift(m, 1)}`} aria-label={t('next')} className="flex size-11 items-center justify-center text-primary">
           <ChevronRight aria-hidden size={22} strokeWidth={2} />
         </Link>
       </nav>
@@ -51,7 +51,7 @@ export default async function PaySlipsPage({ searchParams }: { searchParams: Pro
           <li>{t('how3')}</li>
         </ol>
         {!mailReady() && <p className="mt-3 rounded-card border border-warn bg-warn-tint p-3 text-sm text-warn">{t('mailNotReady')}</p>}
-        <Link href="/admin/hr-log/mail" className="mt-3 inline-flex min-h-9 items-center text-sm font-semibold text-primary">{t('toMailLog')} ›</Link>
+        <Link prefetch={false} href="/admin/hr-log/mail" className="mt-3 inline-flex min-h-9 items-center text-sm font-semibold text-primary">{t('toMailLog')} ›</Link>
       </Card>
       {uploads === null ? (
         <p className="rounded-card border border-warn bg-warn-tint p-4 text-sm text-warn">{t('dbPending')}</p>

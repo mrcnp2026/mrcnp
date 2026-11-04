@@ -22,7 +22,7 @@ export default async function MyPromotionPage({ params }: { params: Promise<{ id
   const open = c.state === 'SENT' && (v.state === 'NOTIFIED' || v.state === 'PLAN_SUBMITTED');
   return (
     <PageShell>
-      <Link href="/punch/leave" className="inline-flex min-h-9 items-center self-start text-sm font-medium text-muted">
+      <Link prefetch={false} href="/punch/leave" className="inline-flex min-h-9 items-center self-start text-sm font-medium text-muted">
         ‹ {t('back')}
       </Link>
       <div>
@@ -43,7 +43,7 @@ export default async function MyPromotionPage({ params }: { params: Promise<{ id
         {v.designated && <p className="num rounded-button border border-warn bg-warn-tint p-2 text-sm font-semibold text-warn">{t('designated', { dates: v.designated.join(', ') })}</p>}
         {v.decisionNote && <p className="text-sm text-muted">{t('decision', { note: v.decisionNote })}</p>}
       </Card>
-      <Link href="/punch/leave?new=leave" className="inline-flex min-h-11 items-center self-start rounded-button bg-primary px-4 font-bold text-on-primary">
+      <Link prefetch={false} href="/punch/leave?new=leave" className="inline-flex min-h-11 items-center self-start rounded-button bg-primary px-4 font-bold text-on-primary">
         {t('toLeave')}
       </Link>
     </PageShell>

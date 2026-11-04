@@ -214,7 +214,7 @@ export default async function SettingsPage({ searchParams }: { searchParams: Pro
                   <>
                     {ti(`${tab}.${r.k}.note`)}
                     {r.href && (
-                      <Link href={r.href} className="ml-2 font-bold whitespace-nowrap text-primary">
+                      <Link prefetch={false} href={r.href} className="ml-2 font-bold whitespace-nowrap text-primary">
                         {tp('go')} ›
                       </Link>
                     )}
@@ -384,7 +384,7 @@ export default async function SettingsPage({ searchParams }: { searchParams: Pro
                 <p className={`font-bold ${here ? 'text-ok' : 'text-warn'}`}>{trace.ip ? t(here ? 'hereYes' : 'hereNo', { ip: trace.ip }) : t('hereUnknown')}</p>
                 <p className="text-muted">{t('networkNote')}</p>
                 <p className="text-muted">{t(locations.some((l) => l.active) ? 'gpsOn' : 'gpsOff')}</p>
-                <Link href="/admin/places" className="inline-flex min-h-8 items-center self-start font-bold text-primary">
+                <Link prefetch={false} href="/admin/places" className="inline-flex min-h-8 items-center self-start font-bold text-primary">
                   {t('placesLink')} ›
                 </Link>
               </SetRow>
@@ -446,7 +446,7 @@ export default async function SettingsPage({ searchParams }: { searchParams: Pro
                     {r.pay && <UseMark on label={ta('payYes')} />}
                     {r.role === 'admin' && (r.pin ? <UseMark on label={ta('pinSet')} /> : <UseMark on={false} label={ta('pinNone')} />)}
                     {r.role === 'admin' && r.pin && r.id !== access.meId && <PinReset employeeId={r.id} name={r.name} />}
-                    <Link href={`/admin/members/${r.id}`} className="ml-auto inline-flex min-h-11 items-center font-bold text-primary">{ta('change')} ›</Link>
+                    <Link prefetch={false} href={`/admin/members/${r.id}`} className="ml-auto inline-flex min-h-11 items-center font-bold text-primary">{ta('change')} ›</Link>
                   </div>
                 </li>
               ))}
@@ -487,7 +487,7 @@ export default async function SettingsPage({ searchParams }: { searchParams: Pro
                       )}
                     </td>
                     <td className="px-3 py-3 text-right">
-                      <Link href={`/admin/members/${r.id}`} className="font-bold whitespace-nowrap text-primary">{ta('change')} ›</Link>
+                      <Link prefetch={false} href={`/admin/members/${r.id}`} className="font-bold whitespace-nowrap text-primary">{ta('change')} ›</Link>
                     </td>
                   </tr>
                 ))}
@@ -499,7 +499,7 @@ export default async function SettingsPage({ searchParams }: { searchParams: Pro
       </div>
 
       {/* 진단 — 사무실 확인이 이상할 때만 보는 화면이라 메뉴에서 빼고 여기에 둔다 (2026-10-06) */}
-      <Link href="/admin/diag" className="inline-flex min-h-11 items-center self-start px-1 text-sm text-muted">
+      <Link prefetch={false} href="/admin/diag" className="inline-flex min-h-11 items-center self-start px-1 text-sm text-muted">
         {tm('diag')} · {tm('diagHint')} ›
       </Link>
       {/* 개발사 표시 (2026-11-02 의뢰인) — 버전은 오류 기록에 남는 값과 같다 */}

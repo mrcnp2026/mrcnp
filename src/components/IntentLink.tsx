@@ -23,6 +23,7 @@ export const IntentLink = forwardRef<HTMLAnchorElement, Props>(function IntentLi
     <Link
       ref={ref}
       href={href}
+      prefetch={false} // 위 마지막 줄대로 — Link 기본값은 운영에서 화면에 보이는 링크를 모두 미리 받는다(메뉴 수십 개 × 화면마다 서버 호출)
       onPointerEnter={(e) => {
         warm();
         onPointerEnter?.(e);

@@ -86,7 +86,7 @@ export default async function LeavePage({ searchParams }: { searchParams: Promis
   return (
     <PageShell wide>
       {promos.map((p) => (
-        <Link key={p.id} href={`/punch/leave/promotion/${p.id}`} className={`num flex min-h-11 items-center justify-between gap-3 rounded-card border p-3 text-sm font-bold ${p.state === 'NOTIFIED' ? 'border-warn bg-warn-tint text-warn' : 'border-border bg-bg text-muted'}`}>
+        <Link prefetch={false} key={p.id} href={`/punch/leave/promotion/${p.id}`} className={`num flex min-h-11 items-center justify-between gap-3 rounded-card border p-3 text-sm font-bold ${p.state === 'NOTIFIED' ? 'border-warn bg-warn-tint text-warn' : 'border-border bg-bg text-muted'}`}>
           <span>{t(p.state === 'NOTIFIED' ? 'promoBanner' : 'promoBannerDone', { title: p.title, due: p.planDueOn })}</span>
           <span className="shrink-0 underline">{t('promoOpen')}</span>
         </Link>
@@ -95,7 +95,7 @@ export default async function LeavePage({ searchParams }: { searchParams: Promis
         {me.role === 'admin' && (
           <nav className="flex border-t border-border">
             {(['mine', 'all'] as const).map((k) => (
-              <Link key={k} href={k === 'mine' ? '/punch/leave' : '/admin/leave'} aria-current={k === 'mine' ? 'page' : undefined} className={`flex min-h-12 flex-1 lg:flex-none lg:px-4 items-center justify-center border-b-2 text-base font-bold ${k === 'mine' ? 'border-text text-text lg:border-primary lg:text-primary' : 'border-transparent text-muted hover:text-text'}`}>
+              <Link prefetch={false} key={k} href={k === 'mine' ? '/punch/leave' : '/admin/leave'} aria-current={k === 'mine' ? 'page' : undefined} className={`flex min-h-12 flex-1 lg:flex-none lg:px-4 items-center justify-center border-b-2 text-base font-bold ${k === 'mine' ? 'border-text text-text lg:border-primary lg:text-primary' : 'border-transparent text-muted hover:text-text'}`}>
                 {ta(k)}
               </Link>
             ))}
@@ -157,11 +157,11 @@ export default async function LeavePage({ searchParams }: { searchParams: Promis
       <section className="flex flex-col gap-2 rounded-card border border-border bg-bg p-4 lg:p-6 shadow-card">
         <div className="flex items-center gap-2">
           <h2 className="flex-1 font-bold">{t('monthlyTitle')}</h2>
-          <Link href={`/punch/leave?y=${Number(year) - 1}`} aria-label={t('prevYear')} className="flex size-9 items-center justify-center rounded-button border border-border text-muted">
+          <Link prefetch={false} href={`/punch/leave?y=${Number(year) - 1}`} aria-label={t('prevYear')} className="flex size-9 items-center justify-center rounded-button border border-border text-muted">
             <ChevronLeft aria-hidden size={16} />
           </Link>
           <span className="num min-w-14 text-center font-bold">{year}</span>
-          <Link href={`/punch/leave?y=${Number(year) + 1}`} aria-label={t('nextYear')} className="flex size-9 items-center justify-center rounded-button border border-border text-muted">
+          <Link prefetch={false} href={`/punch/leave?y=${Number(year) + 1}`} aria-label={t('nextYear')} className="flex size-9 items-center justify-center rounded-button border border-border text-muted">
             <ChevronRight aria-hidden size={16} />
           </Link>
         </div>

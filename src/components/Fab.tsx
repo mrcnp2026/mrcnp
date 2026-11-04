@@ -27,7 +27,7 @@ export function Fab({ label, items, href }: { label: string; items?: { id: strin
             return (
               <li key={i.id}>
                 {i.href ? (
-                  <Link href={i.href} className={row} onClick={() => setMenu(false)}>
+                  <Link prefetch={false} href={i.href} className={row} onClick={() => setMenu(false)}>
                     <Icon aria-hidden size={18} strokeWidth={1.75} className="shrink-0 text-primary" />
                     {i.label}
                   </Link>
@@ -50,7 +50,7 @@ export function Fab({ label, items, href }: { label: string; items?: { id: strin
         </ul>
       )}
       {href ? (
-        <Link href={href} data-fab title={label} className={SHAPE}>
+        <Link prefetch={false} href={href} data-fab title={label} className={SHAPE}>
           <Plus aria-hidden size={20} strokeWidth={2.25} />
           {label}
         </Link>

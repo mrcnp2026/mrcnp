@@ -176,13 +176,13 @@ export default async function MemberDetailPage({ params, searchParams }: { param
             {p.active && (agreedAt ? <Chip tone="ok">{t('consentYes', { date: day(agreedAt) })}</Chip> : <Chip tone="warn">{t('consentNo')}</Chip>)}
           </p>
         </div>
-        <Link href={`/admin/records/${p.id}`} className="inline-flex min-h-11 w-full items-center justify-center gap-2 rounded-button bg-primary-tint px-4 text-sm font-bold text-primary lg:w-auto">
+        <Link prefetch={false} href={`/admin/records/${p.id}`} className="inline-flex min-h-11 w-full items-center justify-center gap-2 rounded-button bg-primary-tint px-4 text-sm font-bold text-primary lg:w-auto">
           <CalendarDays aria-hidden size={18} strokeWidth={2} />
           {t('toRecords')}
         </Link>
         {/* 인사기록카드 — 한 장으로 보기 · PDF (2026-10-29 남은 일 9-4) */}
         {me.role === 'admin' && (
-          <Link href={`/admin/members/${p.id}/card`} className="inline-flex min-h-11 w-full items-center justify-center gap-2 rounded-button border border-border bg-bg px-4 text-sm font-bold text-text lg:w-auto">
+          <Link prefetch={false} href={`/admin/members/${p.id}/card`} className="inline-flex min-h-11 w-full items-center justify-center gap-2 rounded-button border border-border bg-bg px-4 text-sm font-bold text-text lg:w-auto">
             <IdCard aria-hidden size={18} strokeWidth={2} />
             {t('toHrCard')}
           </Link>
@@ -193,7 +193,7 @@ export default async function MemberDetailPage({ params, searchParams }: { param
             <dt className="text-xs text-muted">{t('stat.tenure')}</dt>
             <dd className="num text-2xl leading-tight font-extrabold tracking-tight">{tenure ? <CountUp value={tenure.y > 0 ? t('stat.tenureYm', { y: tenure.y, m: tenure.m }) : t('stat.tenureM', { m: tenure.m })} /> : <span className="text-faint">–</span>}</dd>
           </div>
-          <Link href={`/admin/leave/emp/${p.id}`} className="flex flex-col gap-1 hover:opacity-80">
+          <Link prefetch={false} href={`/admin/leave/emp/${p.id}`} className="flex flex-col gap-1 hover:opacity-80">
             <dt className="text-xs text-muted">{t('stat.leave')} ›</dt>
             <dd className="num text-2xl leading-tight font-extrabold tracking-tight text-primary-ink">{lb ? <CountUp value={t('stat.leaveDays', { n: f.number(minutesToDays(lb.remaining), { maximumFractionDigits: 2 }) })} /> : <span className="font-normal text-faint">–</span>}</dd>
           </Link>
@@ -250,7 +250,7 @@ export default async function MemberDetailPage({ params, searchParams }: { param
             <div className="mt-3 flex flex-wrap items-center gap-x-3 gap-y-1 border-t border-border pt-3">
               <span className="w-20 shrink-0 text-sm text-muted">{td('family')}</span>
               <span className="num min-w-0 flex-1 text-sm font-semibold">{taxNow ? td('familyValue', { n: taxNow.family_count as number, c: taxNow.child_count as number }) : td('familyNone')}</span>
-              <Link href={`/admin/payroll/staff/${p.id}`} className="inline-flex min-h-11 items-center text-sm font-semibold text-primary lg:min-h-9">
+              <Link prefetch={false} href={`/admin/payroll/staff/${p.id}`} className="inline-flex min-h-11 items-center text-sm font-semibold text-primary lg:min-h-9">
                 {td('familyEdit')} ›
               </Link>
             </div>
@@ -263,7 +263,7 @@ export default async function MemberDetailPage({ params, searchParams }: { param
               <div className="flex flex-col gap-1.5 border-b border-border pb-3 lg:flex-row lg:items-center lg:gap-3">
                 <span className="w-24 shrink-0 text-sm text-muted">{tw('pay')}</span>
                 <span className={`num min-w-0 flex-1 text-sm font-semibold ${contract ? '' : 'text-warn'}`}>{payText}</span>
-                <Link href={`/admin/payroll/staff/${p.id}`} className="inline-flex min-h-11 items-center text-sm font-semibold text-primary lg:min-h-9">
+                <Link prefetch={false} href={`/admin/payroll/staff/${p.id}`} className="inline-flex min-h-11 items-center text-sm font-semibold text-primary lg:min-h-9">
                   {tw(contract ? 'payEdit' : 'payAdd')} ›
                 </Link>
               </div>
@@ -274,7 +274,7 @@ export default async function MemberDetailPage({ params, searchParams }: { param
                   <ul className="flex flex-col divide-y divide-border">
                     {slipPage.items.map((x) => (
                       <li key={x.id}>
-                        <Link href={slipHref(x)} className="flex flex-col gap-0.5 py-2.5 hover:bg-surface lg:flex-row lg:items-center lg:gap-4 lg:px-1">
+                        <Link prefetch={false} href={slipHref(x)} className="flex flex-col gap-0.5 py-2.5 hover:bg-surface lg:flex-row lg:items-center lg:gap-4 lg:px-1">
                           <span className="flex items-center gap-2 lg:w-44 lg:shrink-0">
                             <span className="num font-bold">{x.month}</span>
                             <Chip tone={x.kind === 'BONUS' ? 'info' : 'neutral'}>{x.kind === 'BONUS' ? tps('bonus') : tw('slipPay')}</Chip>

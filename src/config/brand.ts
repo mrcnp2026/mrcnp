@@ -8,3 +8,7 @@ export const BRAND = {
   logo: { src: '/brand/logo.png', width: 926, height: 279 },
   mark: { src: '/brand/mark.png', width: 512, height: 512 },
 } as const;
+
+// 앱 아이콘 크기 — 공개 아이콘 주소(/api/brand/icon)가 이것만 쓰려고 lib/logo-image(sharp 30MB)를 끌어오지 않게 여기 둔다 (2026-11-04)
+export const ICON_SIZES = { s64: 64, s180: 180, s192: 192, s512: 512, mask512: 512 } as const;
+export type IconSize = keyof typeof ICON_SIZES;

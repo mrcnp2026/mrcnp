@@ -76,5 +76,7 @@ export async function middleware(request: NextRequest) {
 }
 
 export const config = {
-  matcher: ['/((?!_next/static|_next/image|brand/|icon.png|apple-icon.png|manifest.webmanifest|sw.js|api/passkey).*)'],
+  // 로그인 세션이 필요 없는 곳은 미들웨어를 태우지 않는다 (2026-11-04 사용량 초과) — api/brand: 로고 · 아이콘(타면 CDN 캐시 앞에서 요청마다 돈다),
+  // api/cron · api/health: 비밀값 · 공개 확인으로 따로 지킨다, favicon.ico · robots.txt: 파일
+  matcher: ['/((?!_next/static|_next/image|brand/|icon.png|apple-icon.png|manifest.webmanifest|sw.js|api/passkey|api/brand/|api/cron/|api/health|favicon.ico|robots.txt).*)'],
 };

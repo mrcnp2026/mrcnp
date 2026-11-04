@@ -48,11 +48,11 @@ export async function SituationCard({ today, now }: { today: string; now: Date }
         ))}
       </dl>
       <div className="flex items-center justify-between gap-2 border-t border-border pt-2">
-        <Link href="/punch" aria-label={t('refresh')} className="num inline-flex min-h-11 items-center gap-2 text-sm text-muted">
+        <Link prefetch={false} href="/punch" aria-label={t('refresh')} className="num inline-flex min-h-11 items-center gap-2 text-sm text-muted">
           <RefreshCw aria-hidden size={16} strokeWidth={2} />
           {t('updated', { time: f.dateTime(now, { hour: '2-digit', minute: '2-digit', hourCycle: 'h23' }) })}
         </Link>
-        <Link href="/admin" className="inline-flex min-h-11 items-center text-sm font-bold text-primary">
+        <Link prefetch={false} href="/admin" className="inline-flex min-h-11 items-center text-sm font-bold text-primary">
           {t('more')} ›
         </Link>
       </div>

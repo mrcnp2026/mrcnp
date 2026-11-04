@@ -258,7 +258,7 @@ export default async function AdminSchedulePage({ searchParams }: { searchParams
           <div className="flex items-center gap-2">
             {admin && (
               <>
-                <Link href="/admin/shifts" className="inline-flex min-h-8 items-center rounded-button border border-border bg-bg px-3.5 text-sm font-semibold text-text hover:bg-surface">
+                <Link prefetch={false} href="/admin/shifts" className="inline-flex min-h-8 items-center rounded-button border border-border bg-bg px-3.5 text-sm font-semibold text-text hover:bg-surface">
                   {t('toTemplates')}
                 </Link>
                 <SheetOpener id="schedule" label={t('add')} />
@@ -268,14 +268,14 @@ export default async function AdminSchedulePage({ searchParams }: { searchParams
         </div>
         <div className="flex flex-wrap items-center gap-2">
           <div className="flex">
-            <Link href={board ? boardHref(addDays(bd, -1), pick) : prev} aria-label={t('prevDay')} className="inline-flex size-8 items-center justify-center rounded-l-button border border-border bg-bg text-muted">
+            <Link prefetch={false} href={board ? boardHref(addDays(bd, -1), pick) : prev} aria-label={t('prevDay')} className="inline-flex size-8 items-center justify-center rounded-l-button border border-border bg-bg text-muted">
               <ChevronLeft aria-hidden size={16} />
             </Link>
-            <Link href={board ? boardHref(addDays(bd, 1), pick) : next} aria-label={t('nextDay')} className="-ml-px inline-flex size-8 items-center justify-center rounded-r-button border border-border bg-bg text-muted">
+            <Link prefetch={false} href={board ? boardHref(addDays(bd, 1), pick) : next} aria-label={t('nextDay')} className="-ml-px inline-flex size-8 items-center justify-center rounded-r-button border border-border bg-bg text-muted">
               <ChevronRight aria-hidden size={16} />
             </Link>
           </div>
-          <Link href={board ? boardHref(today, pick) : month ? link(`${today.slice(0, 7)}-01`, addDays(`${addDays(`${today.slice(0, 7)}-01`, 31).slice(0, 7)}-01`, -1)) : dayView ? link(today, today) : link(week, addDays(week, 6))} className="inline-flex min-h-8 items-center rounded-button border border-border bg-bg px-4 text-sm text-muted">
+          <Link prefetch={false} href={board ? boardHref(today, pick) : month ? link(`${today.slice(0, 7)}-01`, addDays(`${addDays(`${today.slice(0, 7)}-01`, 31).slice(0, 7)}-01`, -1)) : dayView ? link(today, today) : link(week, addDays(week, 6))} className="inline-flex min-h-8 items-center rounded-button border border-border bg-bg px-4 text-sm text-muted">
             {t('today')}
           </Link>
           <p className="num ml-2 text-lg font-bold">{rangeTitle}</p>
@@ -303,16 +303,16 @@ export default async function AdminSchedulePage({ searchParams }: { searchParams
             </button>
           </form>
           <div className="flex">
-            <Link href={boardHref(board ? bd : pickDay, null).replace('c=off', 'c=attention')} aria-current={board ? 'page' : undefined} className={viewBtn(board)}>
+            <Link prefetch={false} href={boardHref(board ? bd : pickDay, null).replace('c=off', 'c=attention')} aria-current={board ? 'page' : undefined} className={viewBtn(board)}>
               {t('viewBoard')}
             </Link>
-            <Link href={link(board ? bd : pickDay, board ? bd : pickDay, 'day')} aria-current={dayView ? 'page' : undefined} className={`-ml-px ${viewBtn(dayView)}`}>
+            <Link prefetch={false} href={link(board ? bd : pickDay, board ? bd : pickDay, 'day')} aria-current={dayView ? 'page' : undefined} className={`-ml-px ${viewBtn(dayView)}`}>
               {t('viewDay')}
             </Link>
-            <Link href={link(weekStartOf(board ? bd : from), addDays(weekStartOf(board ? bd : from), 6), 'week')} aria-current={weekView ? 'page' : undefined} className={`-ml-px ${viewBtn(weekView)}`}>
+            <Link prefetch={false} href={link(weekStartOf(board ? bd : from), addDays(weekStartOf(board ? bd : from), 6), 'week')} aria-current={weekView ? 'page' : undefined} className={`-ml-px ${viewBtn(weekView)}`}>
               {t('viewWeek')}
             </Link>
-            <Link href={link(board ? `${bd.slice(0, 7)}-01` : monthStart, board ? addDays(`${addDays(`${bd.slice(0, 7)}-01`, 31).slice(0, 7)}-01`, -1) : addDays(nextMonth, -1), 'month')} aria-current={month ? 'page' : undefined} className={`-ml-px ${viewBtn(month)}`}>
+            <Link prefetch={false} href={link(board ? `${bd.slice(0, 7)}-01` : monthStart, board ? addDays(`${addDays(`${bd.slice(0, 7)}-01`, 31).slice(0, 7)}-01`, -1) : addDays(nextMonth, -1), 'month')} aria-current={month ? 'page' : undefined} className={`-ml-px ${viewBtn(month)}`}>
               {t('viewMonth')}
             </Link>
           </div>
@@ -349,30 +349,30 @@ export default async function AdminSchedulePage({ searchParams }: { searchParams
         </MineBar>
         {!data.rule && <p className="mt-3 rounded-card bg-bg p-5 text-sm text-faint">{t('noRule')}</p>}
         <div className="flex py-2">
-          <Link href={boardHref(bd, null).replace('c=off', 'c=attention')} aria-current={phoneBoard ? 'page' : undefined} className={`flex-1 justify-center ${viewBtn(phoneBoard)}`}>{t('viewBoard')}</Link>
-          <Link href={phoneHref(pm, null)} aria-current={!phoneBoard ? 'page' : undefined} className={`-ml-px flex-1 justify-center ${viewBtn(!phoneBoard)}`}>{t('viewCalendar')}</Link>
+          <Link prefetch={false} href={boardHref(bd, null).replace('c=off', 'c=attention')} aria-current={phoneBoard ? 'page' : undefined} className={`flex-1 justify-center ${viewBtn(phoneBoard)}`}>{t('viewBoard')}</Link>
+          <Link prefetch={false} href={phoneHref(pm, null)} aria-current={!phoneBoard ? 'page' : undefined} className={`-ml-px flex-1 justify-center ${viewBtn(!phoneBoard)}`}>{t('viewCalendar')}</Link>
         </div>
         {phoneBoard && (
           <div className="flex flex-col gap-3 pb-4">
             <div className="flex items-center justify-center gap-1">
-              <Link href={boardHref(addDays(bd, -1), pick)} aria-label={t('prevDay')} className="flex size-11 items-center justify-center text-text"><ChevronLeft aria-hidden size={20} /></Link>
+              <Link prefetch={false} href={boardHref(addDays(bd, -1), pick)} aria-label={t('prevDay')} className="flex size-11 items-center justify-center text-text"><ChevronLeft aria-hidden size={20} /></Link>
               <span className="num min-w-36 text-center text-lg font-bold">{rangeTitle}</span>
-              <Link href={boardHref(addDays(bd, 1), pick)} aria-label={t('nextDay')} className="flex size-11 items-center justify-center text-text"><ChevronRight aria-hidden size={20} /></Link>
-              {bd !== today && <Link href={boardHref(today, pick)} className="ml-1 inline-flex min-h-9 items-center rounded-button border border-border bg-bg px-3 text-sm text-muted">{t('today')}</Link>}
+              <Link prefetch={false} href={boardHref(addDays(bd, 1), pick)} aria-label={t('nextDay')} className="flex size-11 items-center justify-center text-text"><ChevronRight aria-hidden size={20} /></Link>
+              {bd !== today && <Link prefetch={false} href={boardHref(today, pick)} className="ml-1 inline-flex min-h-9 items-center rounded-button border border-border bg-bg px-3 text-sm text-muted">{t('today')}</Link>}
             </div>
             {boardEl}
           </div>
         )}
         <div className={phoneBoard ? 'hidden' : 'contents'}>
         <nav aria-label={t('period')} className="flex items-center justify-center gap-1 py-2">
-          <Link href={phoneHref(shiftYm(pm, -1), null)} aria-label={t('prevMonth')} className="flex size-11 items-center justify-center text-text">
+          <Link prefetch={false} href={phoneHref(shiftYm(pm, -1), null)} aria-label={t('prevMonth')} className="flex size-11 items-center justify-center text-text">
             <ChevronLeft aria-hidden size={20} />
           </Link>
           <span className="num min-w-28 text-center text-lg font-bold">{f.dateTime(kstDateTime(pmRange.from, '12:00'), { year: 'numeric', month: 'long' })}</span>
-          <Link href={phoneHref(shiftYm(pm, 1), null)} aria-label={t('nextMonth')} className="flex size-11 items-center justify-center text-text">
+          <Link prefetch={false} href={phoneHref(shiftYm(pm, 1), null)} aria-label={t('nextMonth')} className="flex size-11 items-center justify-center text-text">
             <ChevronRight aria-hidden size={20} />
           </Link>
-          <Link href={phoneHref(today.slice(0, 7), today)} className="ml-1 inline-flex min-h-9 items-center rounded-button border border-border bg-bg px-3 text-sm text-muted">
+          <Link prefetch={false} href={phoneHref(today.slice(0, 7), today)} className="ml-1 inline-flex min-h-9 items-center rounded-button border border-border bg-bg px-3 text-sm text-muted">
             {t('today')}
           </Link>
         </nav>
@@ -386,7 +386,7 @@ export default async function AdminSchedulePage({ searchParams }: { searchParams
           </div>
           <div className="grid grid-cols-7">
             {phoneCells.map((c) => (
-              <Link
+              <Link prefetch={false}
                 key={c.d}
                 href={phoneHref(pm, c.d)}
                 scroll={false}
@@ -435,7 +435,7 @@ export default async function AdminSchedulePage({ searchParams }: { searchParams
                       </span>
                       <span aria-hidden className={`w-1 shrink-0 self-stretch rounded-chip ${color ? SHIFT_COLOR_CLASS[color] : 'bg-border'}`} />
                       <span className="flex min-w-0 flex-1 flex-col">
-                        <Link href={`/admin/schedule/${p.id}/${pd}?i=${at}`} className="font-bold">
+                        <Link prefetch={false} href={`/admin/schedule/${p.id}/${pd}?i=${at}`} className="font-bold">
                           {p.name}
                           {payOf.get(p.id) && <span className="ml-1.5 text-xs font-normal text-faint">{payOf.get(p.id)}</span>}
                         </Link>
@@ -452,7 +452,7 @@ export default async function AdminSchedulePage({ searchParams }: { searchParams
         })()}
         {admin && (
           <div className="flex justify-end px-1 pt-2 text-sm">
-            <Link href="/admin/shifts" className="inline-flex min-h-11 items-center font-medium text-primary">
+            <Link prefetch={false} href="/admin/shifts" className="inline-flex min-h-11 items-center font-medium text-primary">
               {t('toTemplates')} ›
             </Link>
           </div>

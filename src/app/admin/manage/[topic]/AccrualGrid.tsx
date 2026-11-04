@@ -80,7 +80,7 @@ export async function AccrualGrid({ today }: { today: string }) {
       )}
       <p className="text-sm text-faint">
         {t('editWhere')}{' '}
-        <Link href="/admin/leave/ledger" className="font-bold text-primary">
+        <Link prefetch={false} href="/admin/leave/ledger" className="font-bold text-primary">
           {t('toLedger')} ›
         </Link>
       </p>

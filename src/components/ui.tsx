@@ -111,7 +111,7 @@ const linkCls = 'mt-2 flex w-fit min-h-9 items-center gap-1 rounded-button borde
 //   초록은 저장 · 고른 값 같은 「누를 것」에만, 되돌릴 수 없는 경고는 주황(warn), 숫자 · 조건은 진한 글씨(em)
 export function Explain({ children, link }: { children: ReactNode; link?: { href: string; label: string } }) {
   const more = link ? (link.href.startsWith('/') ? (
-    <Link href={link.href} className={linkCls}>
+    <Link prefetch={false} href={link.href} className={linkCls}>
       {link.label} →
     </Link>
   ) : (

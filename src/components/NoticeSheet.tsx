@@ -1,7 +1,7 @@
 'use client';
 // 공지 팝업 (②-5 7-15 요점 18~22): 아래에서 올라오는 판 + 맨 아래 폭 전체 「확인」.
 // 언어는 상단 언어 버튼을 따른다 — 서버가 그 언어의 번역을 골라 넘긴다 (없으면 한국어 원문).
-// 게시하자마자 뜬다 (2026-10-02 의뢰인): 화면을 연 동안 30초마다, 그리고 앱으로 돌아올 때마다 서버에 새 공지를 묻는다.
+// 게시하자마자 뜬다 (2026-10-02 의뢰인): 화면을 연 동안 3분마다 · 화면을 옮길 때 · 앱으로 돌아올 때 서버에 새 공지를 묻는다 (2026-11-04 30초 → 3분, 사용량).
 //   예전 규칙(출퇴근 화면에서는 찍은 뒤에만, 요점 18)은 의뢰인 결정으로 바꿨다 — 출퇴근 버튼을 누르는 중에만 띄우지 않는다.
 // 공지 목록 화면에서는 띄우지 않는다. 「오늘 하루 보지 않기」는 이 브라우저에만 기억한다.
 import { Megaphone } from 'lucide-react';
@@ -22,7 +22,7 @@ export type SheetNotice = {
 
 export const PUNCHED_EVENT = 'attendance:punched';
 export const PUNCHING_EVENT = 'attendance:punching'; // 출퇴근 확인 중 — 이때는 팝업을 미룬다
-const POLL_MS = 30_000;
+const POLL_MS = 180_000;
 const today = () => new Date().toLocaleDateString('sv-SE', { timeZone: 'Asia/Seoul' });
 const snoozeKey = (n: SheetNotice) => `notice-snooze:${n.id}:${n.version}:${today()}`;
 
@@ -53,21 +53,23 @@ export function NoticeSheet({ items }: { items: SheetNotice[] }) {
     [latest],
   );
 
-  // 새 공지 묻기 — 화면이 보일 때만 (백그라운드 탭에서는 쉬어 서버를 아낀다)
+  // 새 공지 묻기 — 화면이 보일 때만, 3분마다 · 화면을 옮길 때 · 앱으로 돌아올 때. 마지막으로 물은 지 30초 안이면 건너뛴다
+  // (2026-11-04: 30초마다 · 창 전환마다 묻던 것이 알림 숫자와 함께 Vercel 무료 한도를 넘겨 운영이 멈췄다. 게시 즉시 알리는 것은 폰 알림이 맡는다)
+  const asked = useRef(Date.now()); // 처음 목록은 화면 틀이 방금 서버에서 받은 것
   const poll = useCallback(async () => {
-    if (document.visibilityState !== 'visible') return;
+    if (document.visibilityState !== 'visible' || Date.now() - asked.current < 30_000) return;
+    asked.current = Date.now();
     const r = await callApi<{ items: SheetNotice[] }>('/api/notices/pending', { locale });
     if (r.ok) setLatest(r.data.items);
   }, [locale]);
+  useEffect(() => void poll(), [path, poll]);
   useEffect(() => {
     const id = setInterval(poll, POLL_MS);
     const onVisible = () => void poll();
     document.addEventListener('visibilitychange', onVisible);
-    window.addEventListener('focus', onVisible);
     return () => {
       clearInterval(id);
       document.removeEventListener('visibilitychange', onVisible);
-      window.removeEventListener('focus', onVisible);
     };
   }, [poll]);
 

@@ -56,7 +56,7 @@ export default async function PrivacyPage() {
           </ul>
           <p className="text-muted">{t('notCollected')}</p>
           {/* 위치는 따로 약관이 있다 (2026-11-04 의뢰인) */}
-          <Link href="/privacy/location" className="inline-flex min-h-11 items-center gap-1 self-start font-semibold text-primary">
+          <Link prefetch={false} href="/privacy/location" className="inline-flex min-h-11 items-center gap-1 self-start font-semibold text-primary">
             <MapPin aria-hidden size={16} />
             {t('locationLink')} ›
           </Link>
@@ -116,7 +116,7 @@ export default async function PrivacyPage() {
 
         <p className="text-xs text-faint">{t('effective')}</p>
       </Card>
-      <Link href={back} className="flex min-h-11 items-center justify-center gap-1 text-sm text-primary">
+      <Link prefetch={false} href={back} className="flex min-h-11 items-center justify-center gap-1 text-sm text-primary">
         <ArrowLeft aria-hidden size={16} />
         {t('back')}
       </Link>

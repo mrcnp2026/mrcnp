@@ -52,7 +52,7 @@ export function ConsoleClose({ onLeave }: { onLeave: () => void }) {
     }
   }, []);
   return (
-    <Link href={href} onClick={onLeave} aria-label={t('console.close')} title={t('console.close')} className="flex size-10 shrink-0 items-center justify-center rounded-chip text-muted hover:bg-surface hover:text-text">
+    <Link prefetch={false} href={href} onClick={onLeave} aria-label={t('console.close')} title={t('console.close')} className="flex size-10 shrink-0 items-center justify-center rounded-chip text-muted hover:bg-surface hover:text-text">
       <X aria-hidden size={22} strokeWidth={1.75} />
     </Link>
   );

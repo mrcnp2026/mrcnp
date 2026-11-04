@@ -4,7 +4,7 @@ import Link from 'next/link';
 
 export function OffToggle({ href, on, label }: { href: string; on: boolean; label: string }) {
   return (
-    <Link href={href} role="switch" aria-checked={on} className="inline-flex min-h-8 items-center gap-2 self-start text-sm text-muted">
+    <Link prefetch={false} href={href} role="switch" aria-checked={on} className="inline-flex min-h-8 items-center gap-2 self-start text-sm text-muted">
       <span aria-hidden className={`relative h-5 w-9 shrink-0 rounded-chip transition-colors duration-150 ${on ? 'bg-primary' : 'bg-border'}`}>
         <span className={`absolute top-0.5 left-0.5 size-4 rounded-chip bg-bg transition-transform duration-150 ${on ? 'translate-x-4' : ''}`} />
       </span>

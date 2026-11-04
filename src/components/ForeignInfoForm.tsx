@@ -78,7 +78,7 @@ export function ForeignInfoForm({ endpoint, initial, today, payHref }: { endpoin
                 <p className="pt-2 text-muted">{t(`flat.${s.flatTax}`)}</p>
                 {s.departureInsurance && <p className="pt-1 text-muted">{t('departure')}</p>}
                 <p className="pt-2 text-xs text-faint">{t('suggestNote')}</p>
-                <Link href={payHref} className="inline-flex min-h-11 items-center text-sm font-semibold text-primary lg:min-h-9">
+                <Link prefetch={false} href={payHref} className="inline-flex min-h-11 items-center text-sm font-semibold text-primary lg:min-h-9">
                   {t('goPay')} ›
                 </Link>
               </div>

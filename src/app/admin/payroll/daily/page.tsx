@@ -121,7 +121,7 @@ export default async function DailyPage({ searchParams }: { searchParams: Promis
               </Popup>
             )}
             <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-sm lg:flex-col lg:items-start">
-              <Link href={`/admin/payroll/daily?v=work&m=${thisMonth}&p=${p.id}${live ? '&live=1' : ''}`} className={link}>{t('toWork')}</Link>
+              <Link prefetch={false} href={`/admin/payroll/daily?v=work&m=${thisMonth}&p=${p.id}${live ? '&live=1' : ''}`} className={link}>{t('toWork')}</Link>
               <Popup id={`payee-${p.id}-edit`} label={t('payeeEdit')} title={t('payeeEditOf', { name: p.name })} wide triggerClass={link}>
                 <PayeeForm items={items} sheet={`payee-${p.id}-edit`} value={{ id: p.id, name: p.name, workerKind: p.workerKind, nationality: p.nationality, visaType: p.visaType, stayUntil: p.stayUntil, jobTitle: p.jobTitle, phone: p.phone, note: p.note, monthlyItems: p.monthlyItems }} />
               </Popup>
@@ -159,7 +159,7 @@ export default async function DailyPage({ searchParams }: { searchParams: Promis
       <nav className="flex border-b border-border">
         {/* 탭이 곧 순서다 — 번호를 붙여 ① 명단 → ② 근무 → ③ 대장으로 읽히게 (2026-10-29) */}
         {VIEWS.map((v, i) => (
-          <Link key={v} href={href(v)} aria-current={view === v ? 'page' : undefined} className={`${tab(view === v)} gap-1.5`}>
+          <Link prefetch={false} key={v} href={href(v)} aria-current={view === v ? 'page' : undefined} className={`${tab(view === v)} gap-1.5`}>
             <span aria-hidden className={`num flex size-5 items-center justify-center rounded-chip text-xs ${view === v ? 'bg-primary text-on-primary' : 'bg-surface text-muted'}`}>{i + 1}</span>
             {t(`tab.${v}`)}
           </Link>
@@ -211,9 +211,9 @@ export default async function DailyPage({ searchParams }: { searchParams: Promis
       {view === 'work' && (
         <>
           <div className="flex flex-wrap items-center gap-2">
-            <Link href={workHref(shiftMonth(-1), pick?.id)} className="inline-flex h-9 items-center rounded-button border border-border bg-bg px-3 text-sm font-bold" aria-label={t('prevMonth')}>‹</Link>
+            <Link prefetch={false} href={workHref(shiftMonth(-1), pick?.id)} className="inline-flex h-9 items-center rounded-button border border-border bg-bg px-3 text-sm font-bold" aria-label={t('prevMonth')}>‹</Link>
             <span className="num min-w-24 text-center text-base font-bold">{month}</span>
-            <Link href={workHref(shiftMonth(1), pick?.id)} className="inline-flex h-9 items-center rounded-button border border-border bg-bg px-3 text-sm font-bold" aria-label={t('nextMonth')}>›</Link>
+            <Link prefetch={false} href={workHref(shiftMonth(1), pick?.id)} className="inline-flex h-9 items-center rounded-button border border-border bg-bg px-3 text-sm font-bold" aria-label={t('nextMonth')}>›</Link>
             {active.length > 0 && <WorkPayeeFilter payees={payees.map((p) => ({ id: p.id, name: p.name }))} value={pick?.id ?? null} month={month} live={live} />}
             {active.length > 0 && (
               <span className="flex w-full flex-wrap items-center justify-end gap-2 sm:ml-auto sm:w-auto">
@@ -228,7 +228,7 @@ export default async function DailyPage({ searchParams }: { searchParams: Promis
           {active.length === 0 ? (
             <div className="flex flex-col items-center gap-3 rounded-card border border-border p-6 text-center text-sm text-muted">
               {t('workNeedPayee')}
-              <Link href={href('payees')} className="inline-flex h-10 items-center rounded-button bg-primary px-4 font-bold text-on-primary">{t('workNeedPayeeGo')}</Link>
+              <Link prefetch={false} href={href('payees')} className="inline-flex h-10 items-center rounded-button bg-primary px-4 font-bold text-on-primary">{t('workNeedPayeeGo')}</Link>
             </div>
           ) : (
             works.length === 0 && <p className="rounded-card border border-border p-6 text-center text-sm text-faint">{t('workEmpty')}</p>
@@ -313,7 +313,7 @@ export default async function DailyPage({ searchParams }: { searchParams: Promis
           <ul className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
             {runs.map((r) => (
               <li key={r.id}>
-                <Link href={`/admin/payroll/daily/runs/${r.id}`} className="flex flex-col gap-2 rounded-card border border-border bg-bg p-4 hover:bg-surface">
+                <Link prefetch={false} href={`/admin/payroll/daily/runs/${r.id}`} className="flex flex-col gap-2 rounded-card border border-border bg-bg p-4 hover:bg-surface">
                   <span className="flex flex-wrap items-center gap-2">
                     <b className="num">{t('runName', { month: r.periodFrom.slice(0, 7), n: r.sequence })}</b>
                     <Chip tone={RTONE[r.status]}>{t(`rState.${r.status}`)}</Chip>

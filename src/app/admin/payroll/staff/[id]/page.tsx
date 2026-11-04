@@ -119,7 +119,7 @@ export default async function StaffPayDetailPage({ params, searchParams }: { par
 
   return (
     <PageShell wide>
-      <Link href="/admin/payroll/staff" className="inline-flex min-h-9 items-center self-start text-sm font-medium text-muted">
+      <Link prefetch={false} href="/admin/payroll/staff" className="inline-flex min-h-9 items-center self-start text-sm font-medium text-muted">
         ‹ {t('back')}
       </Link>
       <div>
@@ -149,7 +149,7 @@ export default async function StaffPayDetailPage({ params, searchParams }: { par
 
       <nav className="flex gap-1 overflow-x-auto overflow-y-hidden border-b border-border" aria-label={t('tabsLabel')}>
         {TABS.map((k) => (
-          <Link key={k} href={k === 'contract' ? `/admin/payroll/staff/${id}` : `/admin/payroll/staff/${id}?tab=${k}`} aria-current={tab === k ? 'page' : undefined} className={`flex min-h-11 shrink-0 items-center rounded-t-card border border-b-0 px-4 text-sm font-bold whitespace-nowrap lg:min-h-10 ${tab === k ? 'relative -mb-px border-border bg-bg text-primary' : 'border-transparent bg-surface text-muted hover:bg-primary-tint hover:text-primary'}`}>
+          <Link prefetch={false} key={k} href={k === 'contract' ? `/admin/payroll/staff/${id}` : `/admin/payroll/staff/${id}?tab=${k}`} aria-current={tab === k ? 'page' : undefined} className={`flex min-h-11 shrink-0 items-center rounded-t-card border border-b-0 px-4 text-sm font-bold whitespace-nowrap lg:min-h-10 ${tab === k ? 'relative -mb-px border-border bg-bg text-primary' : 'border-transparent bg-surface text-muted hover:bg-primary-tint hover:text-primary'}`}>
             {t(`tab.${k}`)}
           </Link>
         ))}
@@ -286,7 +286,7 @@ export default async function StaffPayDetailPage({ params, searchParams }: { par
         <>
       {common.length > 0 && (
         <Card>
-          <CardTitle aside={<Link href="/admin/settings?tab=pay" className="text-sm font-semibold text-primary">{t('commonEdit')} ›</Link>}>{t('commonTitle')}</CardTitle>
+          <CardTitle aside={<Link prefetch={false} href="/admin/settings?tab=pay" className="text-sm font-semibold text-primary">{t('commonEdit')} ›</Link>}>{t('commonTitle')}</CardTitle>
           <p className="pt-1 text-sm text-faint">{t('commonIntro')}</p>
           <ul className="mt-2 flex flex-col divide-y divide-border">
             {common.map((c) => {
@@ -332,7 +332,7 @@ export default async function StaffPayDetailPage({ params, searchParams }: { par
           <ul className="mt-2 flex flex-col divide-y divide-border">
             {history.map((h) => (
               <li key={h.runId}>
-                <Link href={`/admin/payroll/runs/${h.runId}/${id}`} className="flex min-h-11 flex-wrap items-center gap-x-3 gap-y-0.5 py-2 hover:bg-surface">
+                <Link prefetch={false} href={`/admin/payroll/runs/${h.runId}/${id}`} className="flex min-h-11 flex-wrap items-center gap-x-3 gap-y-0.5 py-2 hover:bg-surface">
                   <span className="num font-bold">{t('historyMonth', { ym: h.periodFrom.slice(0, 7) })}</span>
                   <span className="text-xs text-muted">{[h.kind === 'BONUS' ? t('historyBonus') : null, h.title, h.revision > 0 ? t('historyRevision', { n: h.revision }) : null, t('historyPayDate', { date: h.payDate })].filter(Boolean).join(' · ')}</span>
                   <span className="num ml-auto text-right">

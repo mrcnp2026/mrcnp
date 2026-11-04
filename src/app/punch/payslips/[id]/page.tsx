@@ -42,7 +42,7 @@ export default async function MyPayslipPage({ params }: { params: Promise<{ id: 
 
   return (
     <PageShell>
-      <Link href="/punch/payslips" data-noprint className="inline-flex min-h-9 items-center self-start text-sm font-medium text-muted">
+      <Link prefetch={false} href="/punch/payslips" data-noprint className="inline-flex min-h-9 items-center self-start text-sm font-medium text-muted">
         ‹ {t('title')}
       </Link>
       <div>
@@ -71,7 +71,7 @@ export default async function MyPayslipPage({ params }: { params: Promise<{ id: 
       {replacedBy && (
         <p className="rounded-card border border-warn bg-warn-tint p-3 text-sm text-warn">
           {t('oldVersion')}{' '}
-          <Link href={`/punch/payslips/${replacedBy.id}`} className="font-bold underline">
+          <Link prefetch={false} href={`/punch/payslips/${replacedBy.id}`} className="font-bold underline">
             {t('toCurrent')}
           </Link>
         </p>
@@ -80,7 +80,7 @@ export default async function MyPayslipPage({ params }: { params: Promise<{ id: 
         <p className="rounded-card border border-border bg-surface p-3 text-sm">
           {t('correctedNote', { reason: slip.correctionReason ?? '' })}{' '}
           {previous && (
-            <Link href={`/punch/payslips/${previous.id}`} className="font-bold text-primary hover:underline">
+            <Link prefetch={false} href={`/punch/payslips/${previous.id}`} className="font-bold text-primary hover:underline">
               {t('toPrevious')}
             </Link>
           )}

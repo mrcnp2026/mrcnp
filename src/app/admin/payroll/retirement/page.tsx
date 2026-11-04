@@ -70,7 +70,7 @@ export default async function RetirementPage({ searchParams }: { searchParams: P
             id: r.employeeId,
             dim: !r.active,
             cells: {
-              name: { text: `${r.name} ${r.employeeNo ?? ''}`, node: <Link href={`/admin/payroll/retirement/staff/${r.employeeId}`} className="font-bold text-primary hover:underline">{r.name}{!r.active && <span className="pl-1 text-xs font-normal text-faint">{t('inactive')}</span>}</Link> },
+              name: { text: `${r.name} ${r.employeeNo ?? ''}`, node: <Link prefetch={false} href={`/admin/payroll/retirement/staff/${r.employeeId}`} className="font-bold text-primary hover:underline">{r.name}{!r.active && <span className="pl-1 text-xs font-normal text-faint">{t('inactive')}</span>}</Link> },
               from: { text: r.periodFrom ?? '', node: <span className="num whitespace-nowrap">{r.periodFrom ?? t('blank')}</span> },
               svc: { text: service(r.result.serviceDays), node: <span className="whitespace-nowrap">{service(r.result.serviceDays) || t('blank')}</span> },
               est: { text: r.result.amount === null ? '' : String(r.result.amount), node: <span className="num font-bold whitespace-nowrap">{r.result.amount === null ? (r.result.missing.includes('under_one_year') ? t('under1y') : t('noAmountShort')) : won(r.result.amount)}</span> },
@@ -80,7 +80,7 @@ export default async function RetirementPage({ searchParams }: { searchParams: P
         />
         <div className="flex flex-wrap items-center justify-between gap-2 text-sm">
           <p className="num text-muted">{t('rosterSum', { n: won(total), k: counted })}</p>
-          <Link href={sp.all === '1' ? '/admin/payroll/retirement' : '/admin/payroll/retirement?all=1'} className="font-semibold text-primary">{sp.all === '1' ? t('onlyActive') : t('withInactive')}</Link>
+          <Link prefetch={false} href={sp.all === '1' ? '/admin/payroll/retirement' : '/admin/payroll/retirement?all=1'} className="font-semibold text-primary">{sp.all === '1' ? t('onlyActive') : t('withInactive')}</Link>
         </div>
         <p className="text-xs text-faint">{t('rosterNote')}</p>
       </Card>
@@ -144,7 +144,7 @@ export default async function RetirementPage({ searchParams }: { searchParams: P
         ]}
       />
       {(cs || ck) && (
-        <Link href={cLink(null, null)} className="self-start text-sm font-bold text-primary">
+        <Link prefetch={false} href={cLink(null, null)} className="self-start text-sm font-bold text-primary">
           {t('showAll')}
         </Link>
       )}
@@ -161,7 +161,7 @@ export default async function RetirementPage({ searchParams }: { searchParams: P
         rows={shown.map((k) => ({
           id: k.id,
           cells: {
-            name: { text: `${k.name} ${k.employeeNo ?? ''}`, node: <Link href={`/admin/payroll/retirement/${k.id}`} className="font-bold text-primary hover:underline">{k.name}</Link> },
+            name: { text: `${k.name} ${k.employeeNo ?? ''}`, node: <Link prefetch={false} href={`/admin/payroll/retirement/${k.id}`} className="font-bold text-primary hover:underline">{k.name}</Link> },
             kind: { text: `${t(`kind.${k.kind}`)}${k.revision > 1 ? ` · ${t('rev', { n: k.revision })}` : ''}` },
             period: { text: `${k.periodFrom} ~ ${k.periodTo}`, node: <span className="num whitespace-nowrap">{k.periodFrom} ~ {k.periodTo}</span> },
             amount: { text: k.amount === null ? '' : String(k.amount), node: <span className="num whitespace-nowrap">{won(k.amount)}</span> },

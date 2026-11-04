@@ -47,7 +47,7 @@ export async function SearchPage({ base, searchParams }: { base: '/admin' | '/pu
         <span className="truncate">{h.where}</span>
         {h.level === 'related' && <span className="ml-1 rounded-chip bg-surface px-1.5 text-faint">{t('relatedChip')}</span>}
       </p>
-      <Link href={h.href} className="mt-0.5 block font-bold text-primary hover:underline">
+      <Link prefetch={false} href={h.href} className="mt-0.5 block font-bold text-primary hover:underline">
         {h.title}
       </Link>
       {h.body && <p className="mt-0.5 line-clamp-2 text-sm text-muted">{h.body}</p>}
@@ -86,7 +86,7 @@ export async function SearchPage({ base, searchParams }: { base: '/admin' | '/pu
               const n = k === 'all' ? total : shown(k);
               const on = scope === k;
               return (
-                <Link key={k} href={link({ s: k })} aria-current={on ? 'page' : undefined} className={`inline-flex h-9 items-center rounded-chip border px-4 text-sm font-semibold ${on ? 'border-text bg-text text-bg' : 'border-border bg-bg text-text hover:bg-surface'}`}>
+                <Link prefetch={false} key={k} href={link({ s: k })} aria-current={on ? 'page' : undefined} className={`inline-flex h-9 items-center rounded-chip border px-4 text-sm font-semibold ${on ? 'border-text bg-text text-bg' : 'border-border bg-bg text-text hover:bg-surface'}`}>
                   {k === 'all' ? t('all') : t(`kind.${k}`)}({n})
                 </Link>
               );
@@ -98,7 +98,7 @@ export async function SearchPage({ base, searchParams }: { base: '/admin' | '/pu
               {more && relatedTotal > 0 && <span className="ml-2 text-muted">· {t('related', { n: relatedTotal })}</span>}
             </p>
             {(relatedTotal > 0 || more) && (
-              <Link href={link({ more: !more })} className="inline-flex h-8 items-center rounded-button border border-border bg-bg px-3 text-xs font-semibold text-text hover:bg-surface">
+              <Link prefetch={false} href={link({ more: !more })} className="inline-flex h-8 items-center rounded-button border border-border bg-bg px-3 text-xs font-semibold text-text hover:bg-surface">
                 {more ? t('less') : `+ ${t('more')}`}
               </Link>
             )}
@@ -124,7 +124,7 @@ export async function SearchPage({ base, searchParams }: { base: '/admin' | '/pu
                       ))}
                     </ul>
                     {mine.length > PER_CARD && (
-                      <Link href={link({ s: k })} className="mt-2 inline-flex min-h-9 items-center text-sm font-bold text-primary">
+                      <Link prefetch={false} href={link({ s: k })} className="mt-2 inline-flex min-h-9 items-center text-sm font-bold text-primary">
                         {t('seeAll', { kind: t(`kind.${k}`), n: mine.length })} ›
                       </Link>
                     )}

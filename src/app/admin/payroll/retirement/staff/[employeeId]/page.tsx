@@ -36,7 +36,7 @@ export default async function StaffRetirementPage({ params }: { params: Promise<
   const makeHref = (kind: 'FINAL' | 'INTERIM') => `/admin/payroll/retirement?emp=${employeeId}&kind=${kind}&to=${today}#new`;
   return (
     <PageShell>
-      <Link href="/admin/payroll/retirement" className="inline-flex min-h-9 items-center self-start text-sm font-medium text-muted">‹ {t('title')}</Link>
+      <Link prefetch={false} href="/admin/payroll/retirement" className="inline-flex min-h-9 items-center self-start text-sm font-medium text-muted">‹ {t('title')}</Link>
       <div>
         <h1 className="flex flex-wrap items-center gap-x-2 text-2xl font-bold">
           {t('staffTitle', { name: e.name })}
@@ -76,8 +76,8 @@ export default async function StaffRetirementPage({ params }: { params: Promise<
         <CardTitle>{t('makeTitle')}</CardTitle>
         <p className="text-sm text-muted">{t('makeSub')}</p>
         <div className="flex flex-wrap gap-2">
-          <Link href={makeHref('FINAL')} className="inline-flex min-h-11 items-center rounded-button bg-primary px-4 text-sm font-bold text-on-primary lg:min-h-9">{t('makeFinal')}</Link>
-          <Link href={makeHref('INTERIM')} className="inline-flex min-h-11 items-center rounded-button border border-border bg-bg px-4 text-sm font-bold text-primary lg:min-h-9">{t('makeInterim')}</Link>
+          <Link prefetch={false} href={makeHref('FINAL')} className="inline-flex min-h-11 items-center rounded-button bg-primary px-4 text-sm font-bold text-on-primary lg:min-h-9">{t('makeFinal')}</Link>
+          <Link prefetch={false} href={makeHref('INTERIM')} className="inline-flex min-h-11 items-center rounded-button border border-border bg-bg px-4 text-sm font-bold text-primary lg:min-h-9">{t('makeInterim')}</Link>
         </div>
       </Card>
       {cases.length > 0 && (
@@ -86,7 +86,7 @@ export default async function StaffRetirementPage({ params }: { params: Promise<
           <ul className="flex flex-col divide-y divide-border pt-2">
             {cases.map((k) => (
               <li key={k.id}>
-                <Link href={`/admin/payroll/retirement/${k.id}`} className="flex min-h-11 flex-wrap items-center gap-x-3 gap-y-0.5 py-2 text-sm hover:bg-surface">
+                <Link prefetch={false} href={`/admin/payroll/retirement/${k.id}`} className="flex min-h-11 flex-wrap items-center gap-x-3 gap-y-0.5 py-2 text-sm hover:bg-surface">
                   <span className="font-bold">{t(`kind.${k.kind}`)}</span>
                   <span className="num text-muted">{k.periodFrom} ~ {k.periodTo}</span>
                   <Chip tone={k.state === 'FINALIZED' ? 'ok' : 'neutral'}>{t(`state.${k.state}`)}</Chip>

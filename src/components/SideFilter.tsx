@@ -6,7 +6,7 @@ export function SideFilter({ title, items }: { title: string; items: { key: stri
   return (
     <nav aria-label={title} className="flex flex-col gap-1 rounded-card border border-border bg-bg p-3 shadow-card lg:sticky lg:top-4">
       {items.map((x) => (
-        <Link
+        <Link prefetch={false}
           key={x.key}
           href={x.href}
           aria-current={x.on ? 'page' : undefined}

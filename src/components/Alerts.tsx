@@ -1,6 +1,6 @@
 'use client';
 // 알림 숫자 한곳 (2026-10-14 의뢰인: 요청 · 공지가 있으면 종에 표시, 처리하면 숫자가 바로 바뀌어야 한다)
-// 처음 값은 화면 틀(AppFrame)이 서버에서 세어 넘기고, 화면이 뜰 때 · 화면을 옮길 때마다 · 1분마다 · 창으로 돌아올 때 /api/me/alerts로 다시 센다.
+// 처음 값은 화면 틀(AppFrame)이 서버에서 세어 넘기고, 화면을 옮길 때 · 3분마다 · 창으로 돌아올 때(30초 안이면 건너뜀) /api/me/alerts로 다시 센다.
 // 종 아이콘(AlertBell)과 요청 배지(앱 띠 · 하단 탭)가 같은 숫자를 쓴다.
 import { Bell, ChevronRight } from 'lucide-react';
 import { useTranslations } from 'next-intl';
@@ -27,7 +27,12 @@ export function badgeCount(c: AlertCounts, badge: 'inbox' | 'notices' | 'message
 export function AlertsProvider({ initial, children }: { initial: AlertCounts; children: ReactNode }) {
   const [counts, setCounts] = useState(initial);
   const path = usePathname();
+  // 서버 사용량 (2026-11-04: 1분마다 · 창이 안 보여도 · 화면마다 다시 세서 Vercel 무료 한도의 절반을 이 한 곳이 썼다 → 운영 정지).
+  // 그래서 숨은 창에서는 세지 않고, 저절로 다시 세는 것(화면 이동 · 창 복귀 · 3분 주기)은 마지막으로 센 지 30초가 안 됐으면 건너뛴다.
+  // 승인 · 읽음 뒤의 reloadAlerts와 되살린 화면(bfcache)은 바로 센다 — 「처리하면 숫자가 바로 바뀐다」(2026-10-14)는 그대로.
+  const last = useRef(Date.now()); // 처음 값은 화면 틀이 방금 서버에서 센 것
   const reload = useCallback(async () => {
+    last.current = Date.now();
     try {
       const r = await fetch('/api/me/alerts', { cache: 'no-store' });
       if (r.ok) setCounts(await r.json());
@@ -35,28 +40,24 @@ export function AlertsProvider({ initial, children }: { initial: AlertCounts; ch
       // 잠깐 연결이 끊겨도 앞의 숫자를 그대로 둔다
     }
   }, []);
-  // 처음 뜰 때도 다시 센다 (2026-10-18 의뢰인: 최고관리자로 들어오니 직원 화면 종에 처리할 요청 3건이 안 나오고, 관리자 화면을 한 번 연 뒤에야 나왔다).
-  // 브라우저가 예전에 열어 둔 화면을 그대로 되살리면(뒤로 가기 · 폰에서 앱 다시 열기) 서버가 센 처음 값이 옛날 숫자다.
+  const maybeReload = useCallback(() => {
+    if (document.visibilityState === 'visible' && Date.now() - last.current >= 30_000) void reload();
+  }, [reload]);
+  useEffect(maybeReload, [path, maybeReload]);
   useEffect(() => {
-    void reload();
-  }, [path, reload]);
-  useEffect(() => {
-    const id = window.setInterval(reload, 60_000);
-    const onFocus = () => document.visibilityState === 'visible' && reload();
-    // 되살린 화면(bfcache)은 visibilitychange가 오지 않을 수 있다 — pageshow로 잡는다
+    const id = window.setInterval(maybeReload, 180_000);
+    // 되살린 화면(bfcache)은 visibilitychange가 오지 않고 처음 값이 옛날 숫자다 — pageshow로 바로 센다 (2026-10-18 의뢰인: 종에 요청이 늦게 나왔다)
     const onShow = (e: PageTransitionEvent) => e.persisted && reload();
-    document.addEventListener('visibilitychange', onFocus);
-    window.addEventListener('focus', reload);
+    document.addEventListener('visibilitychange', maybeReload);
     window.addEventListener('pageshow', onShow);
     window.addEventListener(ALERTS_RELOAD_EVENT, reload);
     return () => {
       window.clearInterval(id);
-      document.removeEventListener('visibilitychange', onFocus);
-      window.removeEventListener('focus', reload);
+      document.removeEventListener('visibilitychange', maybeReload);
       window.removeEventListener('pageshow', onShow);
       window.removeEventListener(ALERTS_RELOAD_EVENT, reload);
     };
-  }, [reload]);
+  }, [reload, maybeReload]);
   // 앱 아이콘 숫자 (2026-10-21 의뢰인: 카카오톡처럼) — 종과 같은 숫자. 홈 화면에 설치한 앱에서만 보인다(아이폰 · PC 크롬/엣지).
   // 앱이 닫혀 있을 때는 폰 알림을 받는 순간 서비스 워커(public/sw.js)가 다시 세어 바꾼다
   useEffect(() => {
@@ -119,7 +120,7 @@ export function AlertBell({ approver, size = 'pc' }: { approver: boolean; size?:
         <div role="menu" className="absolute top-11 right-0 z-30 w-72 rounded-card border border-border bg-bg p-2 shadow-pop">
           <p className="px-2 pt-1 pb-2 text-sm font-bold">{t('title')}</p>
           {rows.map((r) => (
-            <Link key={r.key} href={r.href} role="menuitem" className="flex min-h-11 items-center gap-2 rounded-button px-2 text-sm hover:bg-surface">
+            <Link prefetch={false} key={r.key} href={r.href} role="menuitem" className="flex min-h-11 items-center gap-2 rounded-button px-2 text-sm hover:bg-surface">
               <span className="flex-1">{t(r.key)}</span>
               <span className={`num min-w-6 rounded-chip px-2 text-center text-xs font-bold ${r.n > 0 ? 'bg-danger text-on-primary' : 'bg-surface text-faint'}`}>{r.n}</span>
               <ChevronRight aria-hidden size={14} className="text-faint" />

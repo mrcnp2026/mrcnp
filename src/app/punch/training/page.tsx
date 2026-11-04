@@ -22,7 +22,7 @@ export default async function MyTrainingPage({ searchParams }: { searchParams: P
   const todo = list.filter((x) => !x.signedAt), done = list.filter((x) => x.signedAt);
   const line = (x: (typeof list)[number]) => (
     <li key={x.id}>
-      <Link href={`/punch/training/${x.id}`} className="flex items-center gap-3 py-3">
+      <Link prefetch={false} href={`/punch/training/${x.id}`} className="flex items-center gap-3 py-3">
         <span className="min-w-0 flex-1">
           <span className="block truncate font-bold">{x.name}</span>
           <span className="num text-xs text-muted">{f.dateTime(new Date(`${x.heldOn}T00:00:00+09:00`), { year: 'numeric', month: 'short', day: 'numeric' })}</span>

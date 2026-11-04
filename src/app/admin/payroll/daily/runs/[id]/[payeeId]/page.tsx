@@ -33,7 +33,7 @@ export default async function DailyPayeePage({ params }: { params: Promise<{ id:
 
   return (
     <PageShell wide>
-      <Link href={`/admin/payroll/daily/runs/${run.id}`} className="inline-flex min-h-9 items-center self-start text-sm font-medium text-muted">‹ {t('runName', { month: run.periodFrom.slice(0, 7), n: run.sequence })}</Link>
+      <Link prefetch={false} href={`/admin/payroll/daily/runs/${run.id}`} className="inline-flex min-h-9 items-center self-start text-sm font-medium text-muted">‹ {t('runName', { month: run.periodFrom.slice(0, 7), n: run.sequence })}</Link>
       <div>
         <h1 className="flex flex-wrap items-center gap-2 text-2xl font-bold">
           {l.name}

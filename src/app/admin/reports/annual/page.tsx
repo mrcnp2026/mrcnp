@@ -67,12 +67,12 @@ export default async function AnnualReportPage({ searchParams }: { searchParams:
       {/* 조건 — 폰 두 줄, PC 한 줄 */}
       <div className="grid grid-cols-2 items-center gap-2 lg:flex lg:flex-wrap">
         <div className="col-span-2 flex h-11 items-center justify-between rounded-button border border-border bg-bg lg:col-span-1 lg:h-9">
-          <Link href={`?${qs({ y: String(year - 1) })}`} aria-label={t('prevYear')} className="flex size-11 items-center justify-center text-muted hover:text-text lg:size-9">
+          <Link prefetch={false} href={`?${qs({ y: String(year - 1) })}`} aria-label={t('prevYear')} className="flex size-11 items-center justify-center text-muted hover:text-text lg:size-9">
             <ChevronLeft aria-hidden size={18} />
           </Link>
           <span className="num px-3 text-sm font-medium">{t('year', { y: year })}</span>
           {year < thisYear ? (
-            <Link href={`?${qs({ y: String(year + 1) })}`} aria-label={t('nextYear')} className="flex size-11 items-center justify-center text-muted hover:text-text lg:size-9">
+            <Link prefetch={false} href={`?${qs({ y: String(year + 1) })}`} aria-label={t('nextYear')} className="flex size-11 items-center justify-center text-muted hover:text-text lg:size-9">
               <ChevronRight aria-hidden size={18} />
             </Link>
           ) : (
@@ -114,7 +114,7 @@ export default async function AnnualReportPage({ searchParams }: { searchParams:
         <ListCard className="lg:hidden" data-phone-annual>
           {rows.map((e) => (
             <li key={e.employeeId}>
-              <Link href={detail(e.employeeId)} className="flex min-h-14 items-center gap-3 px-4 py-3 active:bg-surface">
+              <Link prefetch={false} href={detail(e.employeeId)} className="flex min-h-14 items-center gap-3 px-4 py-3 active:bg-surface">
                 <span className="flex min-w-0 flex-1 flex-col gap-0.5">
                   <span className="flex items-center gap-2">
                     <span className="truncate text-sm font-medium">{e.name}</span>
@@ -154,7 +154,7 @@ export default async function AnnualReportPage({ searchParams }: { searchParams:
                     ))
                   : ANNUAL_METRICS.map((m) => (
                       <th key={m} scope="col" className={R.th}>
-                        <Link href={`?${qs({ k: m })}`} className="hover:text-primary hover:underline">{t(`m.${m}`)}</Link>
+                        <Link prefetch={false} href={`?${qs({ k: m })}`} className="hover:text-primary hover:underline">{t(`m.${m}`)}</Link>
                       </th>
                     ))}
                 <th scope="col" className={R.th}>{k ? t('total') : t('monthsCol')}</th>
@@ -164,7 +164,7 @@ export default async function AnnualReportPage({ searchParams }: { searchParams:
               {rows.map((e) => (
                 <tr key={e.employeeId} className={R.tr}>
                   <td className={R.td}>
-                    <Link href={detail(e.employeeId)} className="font-medium hover:text-primary hover:underline">{e.name}</Link>
+                    <Link prefetch={false} href={detail(e.employeeId)} className="font-medium hover:text-primary hover:underline">{e.name}</Link>
                   </td>
                   <td className={`${R.td} text-left! text-muted`}>{groupName(e.groupId)}</td>
                   {k

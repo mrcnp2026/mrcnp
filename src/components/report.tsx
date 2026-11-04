@@ -82,7 +82,7 @@ export function KpiStrip({ items, className = '' }: { items: Kpi[]; className?: 
           </>
         );
         return k.href ? (
-          <Link key={k.label} href={k.href} aria-current={k.active ? 'true' : undefined} className={cls}>
+          <Link prefetch={false} key={k.label} href={k.href} aria-current={k.active ? 'true' : undefined} className={cls}>
             {body}
           </Link>
         ) : (

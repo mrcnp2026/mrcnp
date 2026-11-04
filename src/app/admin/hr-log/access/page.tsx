@@ -84,7 +84,7 @@ export default async function AccessLogPage({ searchParams }: { searchParams: Pr
       </div>
       <nav className="flex border-b border-border">
         {TABS.map((k) => (
-          <Link key={k} href={href({ tab: k === 'login' ? null : k, r: null })} aria-current={tab === k ? 'page' : undefined} className={`flex min-h-11 flex-1 items-center justify-center border-b-2 px-2 text-sm font-bold whitespace-nowrap sm:flex-none sm:px-4 ${tab === k ? 'border-primary text-primary' : 'border-transparent text-muted hover:text-text'}`}>
+          <Link prefetch={false} key={k} href={href({ tab: k === 'login' ? null : k, r: null })} aria-current={tab === k ? 'page' : undefined} className={`flex min-h-11 flex-1 items-center justify-center border-b-2 px-2 text-sm font-bold whitespace-nowrap sm:flex-none sm:px-4 ${tab === k ? 'border-primary text-primary' : 'border-transparent text-muted hover:text-text'}`}>
             {t(`tab.${k}`)}
           </Link>
         ))}
@@ -95,12 +95,12 @@ export default async function AccessLogPage({ searchParams }: { searchParams: Pr
         <>
           <nav className="flex flex-wrap gap-2" aria-label={t('range')}>
             {Object.keys(RANGES).map((d) => (
-              <Link key={d} href={href({ d: d === '30' ? null : d })} aria-current={String(days) === d ? 'true' : undefined} className={`inline-flex h-9 items-center rounded-button border px-3 text-sm font-bold ${String(days) === d ? 'border-primary bg-primary-tint text-primary' : 'border-border text-muted'}`}>
+              <Link prefetch={false} key={d} href={href({ d: d === '30' ? null : d })} aria-current={String(days) === d ? 'true' : undefined} className={`inline-flex h-9 items-center rounded-button border px-3 text-sm font-bold ${String(days) === d ? 'border-primary bg-primary-tint text-primary' : 'border-border text-muted'}`}>
                 {t(`d.${d}`)}
               </Link>
             ))}
             {person && (
-              <Link href={href({ p: null })} className="inline-flex h-9 items-center gap-1 rounded-button bg-surface px-3 text-sm font-bold">
+              <Link prefetch={false} href={href({ p: null })} className="inline-flex h-9 items-center gap-1 rounded-button bg-surface px-3 text-sm font-bold">
                 {name(person)} ✕
               </Link>
             )}
@@ -108,7 +108,7 @@ export default async function AccessLogPage({ searchParams }: { searchParams: Pr
           {tab === 'login' && (
             <div className="grid grid-cols-3 gap-3">
               {RESULTS.map((k) => (
-                <Link key={k} href={href({ r: result === k ? null : k })} aria-current={result === k ? 'true' : undefined} className={`rounded-card border p-3 ${result === k ? 'border-primary bg-primary-tint' : 'border-border bg-bg'}`}>
+                <Link prefetch={false} key={k} href={href({ r: result === k ? null : k })} aria-current={result === k ? 'true' : undefined} className={`rounded-card border p-3 ${result === k ? 'border-primary bg-primary-tint' : 'border-border bg-bg'}`}>
                   <p className="text-xs text-muted">{t(`result.${k}`)}</p>
                   <p className={`num pt-1 text-xl font-bold ${k !== 'OK' && count(k) > 0 ? 'text-warn' : ''}`}>{t('count', { n: count(k) })}</p>
                 </Link>
@@ -130,7 +130,7 @@ export default async function AccessLogPage({ searchParams }: { searchParams: Pr
                     {paged.items.map((r) => (
                       <tr key={r.key} className="border-b border-border last:border-0">
                         <td className="num px-3 py-2.5 whitespace-nowrap">{at(r.when)}</td>
-                        <td className="px-3 py-2.5">{r.who ? <Link href={href({ p: r.who })} className="font-bold text-primary hover:underline">{name(r.who)}</Link> : <span className="text-muted">{name(null)}</span>}</td>
+                        <td className="px-3 py-2.5">{r.who ? <Link prefetch={false} href={href({ p: r.who })} className="font-bold text-primary hover:underline">{name(r.who)}</Link> : <span className="text-muted">{name(null)}</span>}</td>
                         {r.chip && <td className="px-3 py-2.5"><Chip tone={r.chip.tone}>{r.chip.text}</Chip></td>}
                         {r.cells.map((c, i) => <td key={i} className="num max-w-80 truncate px-3 py-2.5 text-muted" title={c}>{c || '—'}</td>)}
                       </tr>

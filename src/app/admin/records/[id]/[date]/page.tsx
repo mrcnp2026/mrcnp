@@ -118,7 +118,7 @@ export default async function RecordDetailPage({ params, searchParams }: { param
       {canConfirm && !confirm && !closed && <p className="rounded-card bg-bg p-4 text-sm text-muted">{t('cannotConfirm')}</p>}
       <p className="px-1 text-sm text-faint">
         {t(confirm ? 'hintConfirmed' : 'hint')}{' '}
-        <Link href={`/admin/records/${id}?m=${date.slice(0, 7)}${liveQ}`} className="font-medium text-primary">
+        <Link prefetch={false} href={`/admin/records/${id}?m=${date.slice(0, 7)}${liveQ}`} className="font-medium text-primary">
           {t('toMonth')} ›
         </Link>
       </p>

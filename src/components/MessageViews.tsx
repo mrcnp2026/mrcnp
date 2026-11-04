@@ -17,7 +17,7 @@ export async function MessageList({ items, base, names, sent = false }: { items:
         const unread = !sent && !m.readAt && !m.mine;
         return (
           <li key={m.id}>
-            <Link href={`${base}/${m.id}`} className="flex flex-col gap-1 p-4">
+            <Link prefetch={false} href={`${base}/${m.id}`} className="flex flex-col gap-1 p-4">
               <span className="flex flex-wrap items-center gap-2">
                 {unread && <Chip tone="warn">{t('unread')}</Chip>}
                 <Chip tone={m.kind === 'inquiry' ? 'info' : 'neutral'}>{t(`kind.${m.kind}`)}</Chip>
@@ -44,7 +44,7 @@ export async function MessageThread({ thread, meId, names, back }: { thread: Thr
   const who = (id: string | null) => (id ? (names.get(id) ?? '') : t('system'));
   return (
     <>
-      <Link href={back} className="inline-flex min-h-9 items-center self-start text-sm font-medium text-muted">
+      <Link prefetch={false} href={back} className="inline-flex min-h-9 items-center self-start text-sm font-medium text-muted">
         ‹ {t('title')}
       </Link>
       <Card className="flex flex-col gap-3">
@@ -56,7 +56,7 @@ export async function MessageThread({ thread, meId, names, back }: { thread: Thr
         <p className="num text-xs text-muted">{who(thread.senderId)} · {stamp(thread.createdAt)}</p>
         <RichHtml html={thread.bodyHtml} text={thread.body} />
         {thread.related.href && thread.related.href.startsWith('/') && (
-          <Link href={thread.related.href} className="inline-flex min-h-9 items-center self-start rounded-button border border-primary px-3 text-sm font-bold text-primary">
+          <Link prefetch={false} href={thread.related.href} className="inline-flex min-h-9 items-center self-start rounded-button border border-primary px-3 text-sm font-bold text-primary">
             {t('toRelated')}
           </Link>
         )}

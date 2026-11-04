@@ -139,7 +139,7 @@ export default async function RecordListPage({ searchParams }: { searchParams: P
               {tc('download')}
             </a>
             )}
-            <Link href="/admin/records" className="inline-flex min-h-8 items-center rounded-button border border-border bg-bg px-3.5 text-sm font-semibold text-text hover:bg-surface">
+            <Link prefetch={false} href="/admin/records" className="inline-flex min-h-8 items-center rounded-button border border-border bg-bg px-3.5 text-sm font-semibold text-text hover:bg-surface">
               {t('toMonth')}
             </Link>
             {canAdd && <SheetOpener id="record" label={t('add')} />}
@@ -205,7 +205,7 @@ export default async function RecordListPage({ searchParams }: { searchParams: P
               {pcPage.items.map((r) => (
                   <tr key={r.key}>
                     <td className="px-2.5 py-2.5 whitespace-nowrap">
-                      <Link href={`/admin/records/${r.id}/${r.date}${sp.live === '1' ? '?live=1' : ''}`} className="font-bold hover:text-primary">
+                      <Link prefetch={false} href={`/admin/records/${r.id}/${r.date}${sp.live === '1' ? '?live=1' : ''}`} className="font-bold hover:text-primary">
                         {r.name}
                       </Link>
                       {r.sub && <span className="block max-w-40 truncate text-xs text-faint" title={r.sub}>{r.sub}</span>}
@@ -287,7 +287,7 @@ export default async function RecordListPage({ searchParams }: { searchParams: P
             <ul className="-mx-4 divide-y divide-border border-b border-border bg-bg lg:mx-0">
               {rows.map((x) => (
                 <li key={x.key}>
-                  <Link href={`/admin/records/${x.id}/${x.date}?i=${x.idx}${sp.live === '1' ? '&live=1' : ''}`} className="flex min-h-16 items-center gap-3 py-2 pr-3 pl-5">
+                  <Link prefetch={false} href={`/admin/records/${x.id}/${x.date}?i=${x.idx}${sp.live === '1' ? '&live=1' : ''}`} className="flex min-h-16 items-center gap-3 py-2 pr-3 pl-5">
                     <span className="num flex w-14 shrink-0 flex-col text-sm leading-snug">
                       <span className="font-semibold">{x.start}</span>
                       <span className="text-muted">{x.end ?? '–'}</span>
@@ -312,7 +312,7 @@ export default async function RecordListPage({ searchParams }: { searchParams: P
       <Pager page={page.page} pages={page.pages} param="p" params={{ ...sp }} label={tc('pages')} labelOf={(n) => { const d = dates[n - 1]; return d ? f.dateTime(new Date(`${d}T12:00:00+09:00`), { month: 'long', day: 'numeric', weekday: 'short' }) : String(n); }} />
       <div className="flex flex-wrap items-center justify-between gap-x-3 px-1 pt-2 text-sm">
         <span className="text-muted">{practice ? t('practice') : t('live')}</span>
-        <Link href="/admin/records" className="inline-flex min-h-11 items-center font-medium text-primary">
+        <Link prefetch={false} href="/admin/records" className="inline-flex min-h-11 items-center font-medium text-primary">
           {t('toMonth')} ›
         </Link>
       </div>

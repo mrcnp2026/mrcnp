@@ -69,7 +69,7 @@ export function ConsoleBoard() {
                       <ul>
                         {leaves.map((l) => (
                           <li key={l.href}>
-                            <Link href={l.href} className="flex min-h-11 items-center justify-between gap-2 rounded-button px-2 text-sm text-text hover:bg-surface hover:text-primary lg:min-h-9">
+                            <Link prefetch={false} href={l.href} className="flex min-h-11 items-center justify-between gap-2 rounded-button px-2 text-sm text-text hover:bg-surface hover:text-primary lg:min-h-9">
                               {t(`item.${l.key}`)}
                               <ChevronRight aria-hidden size={14} strokeWidth={1.75} className="text-faint" />
                             </Link>

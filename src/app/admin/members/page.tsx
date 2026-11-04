@@ -94,7 +94,7 @@ export default async function MembersPage({ searchParams }: { searchParams: Prom
     const ok = withPhone.has(p.id);
     return (
       <li key={p.id} data-find={[p.name, p.employeeNo, p.phone, p.email, p.jobTitle, p.jobId ? jobName.get(p.jobId) : ''].filter(Boolean).join(' ')} className={`flex min-h-16 items-center gap-2 py-2 pr-3 pl-5 ${p.active ? '' : 'opacity-60'}`}>
-        <Link href={`/admin/members/${p.id}`} className="flex min-h-12 min-w-0 flex-1 items-center gap-3">
+        <Link prefetch={false} href={`/admin/members/${p.id}`} className="flex min-h-12 min-w-0 flex-1 items-center gap-3">
           <span aria-hidden className={`flex size-10 shrink-0 items-center justify-center rounded-chip bg-primary-tint font-bold text-primary`}>
             {p.name.slice(0, 1)}
           </span>
@@ -144,7 +144,7 @@ export default async function MembersPage({ searchParams }: { searchParams: Prom
             <Download aria-hidden size={16} />
             {tc('download')}
           </a>
-            <Link href="/admin/members/new" className="inline-flex min-h-11 shrink-0 items-center px-2 text-base font-bold text-primary lg:hidden">
+            <Link prefetch={false} href="/admin/members/new" className="inline-flex min-h-11 shrink-0 items-center px-2 text-base font-bold text-primary lg:hidden">
               + {t('addShort')}
             </Link>
             </>
@@ -169,7 +169,7 @@ export default async function MembersPage({ searchParams }: { searchParams: Prom
       {/* 걸러보기 — 숫자가 곧 현황 (가입 9 · 미가입 2). 시프티의 「현재직원 / 미합류 / 비활성」 탭 줄 모양 */}
       <nav className="-mx-4 -mt-3 flex border-b border-border bg-bg px-2 lg:mx-0 lg:mt-0 lg:rounded-card lg:border-0" aria-label={t('filter')}>
         {tabs.map((x) => (
-          <Link
+          <Link prefetch={false}
             key={x.key}
             href={x.key === 'current' ? '/admin/members' : `/admin/members?f=${x.key}`}
             scroll={false}
@@ -182,11 +182,11 @@ export default async function MembersPage({ searchParams }: { searchParams: Prom
         ))}
       </nav>
       <div className="flex gap-2 lg:hidden">
-        <Link href="/admin/leave" className="inline-flex min-h-11 flex-1 items-center justify-center gap-1 rounded-button border border-border bg-bg px-3 text-sm font-bold text-primary">
+        <Link prefetch={false} href="/admin/leave" className="inline-flex min-h-11 flex-1 items-center justify-center gap-1 rounded-button border border-border bg-bg px-3 text-sm font-bold text-primary">
           <CalendarCheck aria-hidden size={18} strokeWidth={2} />
           {t('leaveShort')}
         </Link>
-        <Link href="/admin/members/groups" className="inline-flex min-h-11 flex-1 items-center justify-center gap-1 rounded-button border border-border bg-bg px-3 text-sm font-bold text-primary">
+        <Link prefetch={false} href="/admin/members/groups" className="inline-flex min-h-11 flex-1 items-center justify-center gap-1 rounded-button border border-border bg-bg px-3 text-sm font-bold text-primary">
           <Network aria-hidden size={18} strokeWidth={2} />
           {t('orgShort')}
         </Link>
@@ -223,7 +223,7 @@ export default async function MembersPage({ searchParams }: { searchParams: Prom
               id: p.id,
               dim: !p.active,
               cells: {
-                name: { text: p.name, node: <Link href={`/admin/members/${p.id}`} className="font-bold hover:text-primary">{p.name}</Link> },
+                name: { text: p.name, node: <Link prefetch={false} href={`/admin/members/${p.id}`} className="font-bold hover:text-primary">{p.name}</Link> },
                 role: { text: roleText, node: <RoleCell employeeId={p.id} role={p.role} self={p.id === me.id} waiting={roleWaiting.has(p.id)} level={p.level} actorTop={me.top} /> },
                 no: { text: p.employeeNo ?? '' },
                 phone: { text: p.phone ?? '', node: <span className="num whitespace-nowrap">{showPhone(p.phone)}</span> },

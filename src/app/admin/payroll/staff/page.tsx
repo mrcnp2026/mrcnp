@@ -46,8 +46,8 @@ export default async function StaffPayPage({ searchParams }: { searchParams: Pro
     <PageShell wide>
       <ListHead title={t('title')} desc={t('intro')} settingsHref="/admin/settings?tab=pay" settingsLabel={tGear('item.payEmployeeDefaults')} />
       <nav className="flex gap-1 border-b border-border">
-        <Link href="/admin/payroll/staff" aria-current={!taxTab ? 'page' : undefined} className={tab(!taxTab)}><FileSignature aria-hidden size={16} />{t('board.tabContract')}</Link>
-        <Link href="/admin/payroll/staff?v=tax" aria-current={taxTab ? 'page' : undefined} className={tab(taxTab)}><ReceiptText aria-hidden size={16} />{t('board.tabTax')}</Link>
+        <Link prefetch={false} href="/admin/payroll/staff" aria-current={!taxTab ? 'page' : undefined} className={tab(!taxTab)}><FileSignature aria-hidden size={16} />{t('board.tabContract')}</Link>
+        <Link prefetch={false} href="/admin/payroll/staff?v=tax" aria-current={taxTab ? 'page' : undefined} className={tab(taxTab)}><ReceiptText aria-hidden size={16} />{t('board.tabTax')}</Link>
       </nav>
       {taxTab ? (
         <TaxBoard lines={lines} today={today} />
@@ -70,7 +70,7 @@ export default async function StaffPayPage({ searchParams }: { searchParams: Pro
               <li key={l.employeeId} className="flex flex-wrap items-center gap-x-3 gap-y-1 py-2.5">
                 <b className="shrink-0">{l.name}</b>
                 <span className="min-w-0 flex-1 text-muted">{l.gaps.map((g) => t(`gap.${g}`)).join(' · ')}</span>
-                <Link href={gapHref(l.employeeId, l.gaps[0])} className="inline-flex min-h-9 shrink-0 items-center rounded-button bg-primary-tint px-3 font-bold text-primary">{t('gapFix')} ›</Link>
+                <Link prefetch={false} href={gapHref(l.employeeId, l.gaps[0])} className="inline-flex min-h-9 shrink-0 items-center rounded-button bg-primary-tint px-3 font-bold text-primary">{t('gapFix')} ›</Link>
               </li>
             ))}
           </ul>
@@ -101,7 +101,7 @@ export default async function StaffPayPage({ searchParams }: { searchParams: Pro
           return (
             <li key={l.employeeId} data-find={`${l.name} ${groupPath(groups, l.groupId) ?? ''}`} className="flex items-center">
               <label className="flex min-h-11 items-center pl-3"><BulkCheck id={l.employeeId} label={t('bulk.selectOne', { name: l.name })} /></label>
-              <Link href={`/admin/payroll/staff/${l.employeeId}`} className="flex min-w-0 flex-1 items-center gap-3 px-3 py-2.5 active:bg-surface">
+              <Link prefetch={false} href={`/admin/payroll/staff/${l.employeeId}`} className="flex min-w-0 flex-1 items-center gap-3 px-3 py-2.5 active:bg-surface">
                 <span className="flex min-w-0 flex-1 flex-col">
                   <span className="flex items-center gap-2">
                     <b className="truncate">{l.name}</b>
@@ -137,7 +137,7 @@ export default async function StaffPayPage({ searchParams }: { searchParams: Pro
                 <tr key={l.employeeId} className="border-b border-border align-top">
                   <td className="px-3 py-3"><BulkCheck id={l.employeeId} label={t('bulk.selectOne', { name: l.name })} /></td>
                   <td className="px-3 py-3">
-                    <Link href={`/admin/payroll/staff/${l.employeeId}`} className="font-bold text-primary hover:underline">
+                    <Link prefetch={false} href={`/admin/payroll/staff/${l.employeeId}`} className="font-bold text-primary hover:underline">
                       {l.name}
                     </Link>
                     {!l.active && <span className="ml-2 text-xs text-faint">{t('inactive')}</span>}
@@ -160,14 +160,14 @@ export default async function StaffPayPage({ searchParams }: { searchParams: Pro
                     ) : (
                       // 마우스를 올리면(또는 눌러 고르면) 무엇이 빠졌는지 + 그 설정으로 바로 가는 링크 (2026-10-22 의뢰인: 「미설정이래 — 어떤 상태인지 나오거나 누르면 설정하는 곳으로」)
                       <span className="group relative inline-flex">
-                        <Link href={gapHref(l.employeeId, l.gaps[0])} className="rounded-button focus:outline-none focus-visible:ring-2 focus-visible:ring-primary">
+                        <Link prefetch={false} href={gapHref(l.employeeId, l.gaps[0])} className="rounded-button focus:outline-none focus-visible:ring-2 focus-visible:ring-primary">
                           <Chip tone="warn">{t('stateGap', { n: l.gaps.length })}</Chip>
                         </Link>
                         <span role="tooltip" className="invisible absolute top-full right-0 z-30 w-80 pt-1.5 opacity-0 transition-opacity group-focus-within:visible group-focus-within:opacity-100 group-hover:visible group-hover:opacity-100">
                           <span className="flex flex-col gap-1 rounded-card border border-border bg-bg p-3 text-left shadow-pop">
                             <span className="px-1 pb-1 text-xs font-bold text-faint">{t('gapTitle', { name: l.name })}</span>
                             {l.gaps.map((g) => (
-                              <Link key={g} href={gapHref(l.employeeId, g)} className="flex items-start gap-2 rounded-button px-2 py-1.5 text-sm hover:bg-surface">
+                              <Link prefetch={false} key={g} href={gapHref(l.employeeId, g)} className="flex items-start gap-2 rounded-button px-2 py-1.5 text-sm hover:bg-surface">
                                 <span className="min-w-0 flex-1 text-text">{t(`gap.${g}`)}</span>
                                 <span className="shrink-0 text-xs font-bold whitespace-nowrap text-primary">{t('gapFix')} ›</span>
                               </Link>

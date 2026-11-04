@@ -42,7 +42,7 @@ export function ProfileSection({ employeeId, rows, initial, groups, jobs, foreig
           <p className="pt-2 text-muted">{tf(`flat.${s.flatTax}`)}</p>
           {s.departureInsurance && <p className="pt-1 text-muted">{tf('departure')}</p>}
           <p className="pt-2 text-xs text-faint">{tf('suggestNote')}</p>
-          <Link href={payHref} className="inline-flex min-h-11 items-center text-sm font-semibold text-primary lg:min-h-9">
+          <Link prefetch={false} href={payHref} className="inline-flex min-h-11 items-center text-sm font-semibold text-primary lg:min-h-9">
             {tf('goPay')} ›
           </Link>
         </div>

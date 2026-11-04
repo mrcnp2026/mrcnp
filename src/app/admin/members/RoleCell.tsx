@@ -31,7 +31,7 @@ export function RoleCell({
       {grade === 'employee' ? <span className="text-muted">{tm('grade.employee')}</span> : <Chip tone="info">{tm(`grade.${grade}`)}</Chip>}
       {waiting && <Chip tone="warn">{t('roleWaiting')}</Chip>}
       {!self && !waiting && (!top || actorTop) && (
-        <Link href={`/admin/members/${employeeId}#manage`} className="inline-flex min-h-8 items-center rounded-button border border-border px-2.5 text-xs font-semibold text-text hover:bg-surface">
+        <Link prefetch={false} href={`/admin/members/${employeeId}#manage`} className="inline-flex min-h-8 items-center rounded-button border border-border px-2.5 text-xs font-semibold text-text hover:bg-surface">
           {t('roleChange')} ›
         </Link>
       )}

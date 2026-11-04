@@ -143,27 +143,27 @@ export function CloseBoard({ month, live, lines, canClose }: { month: string; li
   // 폰: 한 사람 = 두 줄(이름 · 시간 · 상태 / 걸리는 것만) — 8줄 카드로 25명이 7천 px였다 (2026-10-17 디자인)
   const issues = (l: Line) => [
     l.unconfirmed > 0 && (
-      <Link key="u" href={`/admin/records/list?from=${month}-01&q=${encodeURIComponent(l.name)}${q}`} className="font-bold text-warn underline">
+      <Link prefetch={false} key="u" href={`/admin/records/list?from=${month}-01&q=${encodeURIComponent(l.name)}${q}`} className="font-bold text-warn underline">
         {t('colUnconfirmed')} {l.unconfirmed}
       </Link>
     ),
     ...l.pending.map((p) => (
-      <Link key={p.key} href={`/admin/inbox${live ? '?live=1' : ''}`} className="font-bold text-warn underline">
+      <Link prefetch={false} key={p.key} href={`/admin/inbox${live ? '?live=1' : ''}`} className="font-bold text-warn underline">
         {t(`pendingOf.${p.key}`, { n: p.n })}
       </Link>
     )),
     l.adminLeaves.length > 0 && (
-      <Link key="al" href={`/admin/records/${l.employeeId}?m=${month}&f=leave${q}`} title={l.adminLeaves.map((a) => `${a.date.slice(5)} ${a.label}`).join(' · ')} className="font-bold text-warn underline">
+      <Link prefetch={false} key="al" href={`/admin/records/${l.employeeId}?m=${month}&f=leave${q}`} title={l.adminLeaves.map((a) => `${a.date.slice(5)} ${a.label}`).join(' · ')} className="font-bold text-warn underline">
         {t('adminLeaves', { n: l.adminLeaves.length })}
       </Link>
     ),
     l.anomalyBlocks > 0 && (
-      <Link key="ab" href={`/admin/attendance-check?m=${month}&e=${l.employeeId}${q}`} className="font-bold text-warn underline">
+      <Link prefetch={false} key="ab" href={`/admin/attendance-check?m=${month}&e=${l.employeeId}${q}`} className="font-bold text-warn underline">
         {t('anomalyBlock', { n: l.anomalyBlocks })}
       </Link>
     ),
     l.anomalyChecks > 0 && (
-      <Link key="ac" href={`/admin/attendance-check?m=${month}&e=${l.employeeId}${q}`} className="text-muted underline">
+      <Link prefetch={false} key="ac" href={`/admin/attendance-check?m=${month}&e=${l.employeeId}${q}`} className="text-muted underline">
         {t('anomalyCheck', { n: l.anomalyChecks })}
         {why(l) && <span className="ml-1 text-xs text-muted no-underline">({why(l)})</span>}
       </Link>
@@ -176,7 +176,7 @@ export function CloseBoard({ month, live, lines, canClose }: { month: string; li
                 <tr key={l.employeeId} className="border-b border-border align-top">
                   <td className="px-3 py-3">{canClose && !l.close && (l.ready ? <input type="checkbox" checked={picked.has(l.employeeId)} onChange={() => toggle(l.employeeId)} aria-label={t('pick', { name: l.name })} className="size-5 accent-primary" /> : <input type="checkbox" disabled title={t('notReadyTip')} aria-label={t('notReadyTip')} className="size-5 cursor-not-allowed opacity-30" />)}</td>
                   <td data-label={t('colName')} className="px-3 py-3">
-                    <Link href={`/admin/members/${l.employeeId}`} className="font-bold hover:text-primary">
+                    <Link prefetch={false} href={`/admin/members/${l.employeeId}`} className="font-bold hover:text-primary">
                       {l.name}
                     </Link>
                     {!l.active && <span className="ml-2 text-xs text-faint">{t('inactive')}</span>}
@@ -188,7 +188,7 @@ export function CloseBoard({ month, live, lines, canClose }: { month: string; li
                   </td>
                   <td data-label={t('colUnconfirmed')} className="num px-3 py-3">
                     {l.unconfirmed > 0 ? (
-                      <Link href={`/admin/records/list?from=${month}-01&q=${encodeURIComponent(l.name)}${q}`} className="font-bold text-warn underline">
+                      <Link prefetch={false} href={`/admin/records/list?from=${month}-01&q=${encodeURIComponent(l.name)}${q}`} className="font-bold text-warn underline">
                         {l.unconfirmed}
                       </Link>
                     ) : (
@@ -199,7 +199,7 @@ export function CloseBoard({ month, live, lines, canClose }: { month: string; li
                     {l.pending.length === 0 ? (
                       <span className="num text-faint">–</span>
                     ) : (
-                      <Link href={`/admin/inbox${live ? '?live=1' : ''}`} className="flex flex-col font-bold text-warn underline">
+                      <Link prefetch={false} href={`/admin/inbox${live ? '?live=1' : ''}`} className="flex flex-col font-bold text-warn underline">
                         {l.pending.map((p) => (
                           <span key={p.key} className="num">
                             {t(`pendingOf.${p.key}`, { n: p.n })}
@@ -210,14 +210,14 @@ export function CloseBoard({ month, live, lines, canClose }: { month: string; li
                   </td>
                   <td data-label={t('colAnomaly')} className="num px-3 py-3">
                     {l.adminLeaves.length > 0 && (
-                      <Link href={`/admin/records/${l.employeeId}?m=${month}&f=leave${q}`} title={l.adminLeaves.map((a) => `${a.date.slice(5)} ${a.label}`).join(' · ')} className="mb-1 block font-bold text-warn underline">
+                      <Link prefetch={false} href={`/admin/records/${l.employeeId}?m=${month}&f=leave${q}`} title={l.adminLeaves.map((a) => `${a.date.slice(5)} ${a.label}`).join(' · ')} className="mb-1 block font-bold text-warn underline">
                         {t('adminLeaves', { n: l.adminLeaves.length })}
                       </Link>
                     )}
                     {l.anomalyBlocks + l.anomalyChecks === 0 ? (
                       <span className="text-faint">–</span>
                     ) : (
-                      <Link href={`/admin/attendance-check?m=${month}&e=${l.employeeId}${q}`} className="group flex flex-col">
+                      <Link prefetch={false} href={`/admin/attendance-check?m=${month}&e=${l.employeeId}${q}`} className="group flex flex-col">
                         {l.anomalyBlocks > 0 && <span className="font-bold text-warn underline group-hover:text-primary">{t('anomalyBlock', { n: l.anomalyBlocks })}</span>}
                         {l.anomalyChecks > 0 && <span className="text-text underline group-hover:text-primary">{t('anomalyCheck', { n: l.anomalyChecks })}</span>}
                         {/* 사유는 마우스를 올리지 않아도 보이게 글씨로 — 브라우저 기본 안내 상자는 쓰지 않는다 (2026-11-03 의뢰인) */}
@@ -270,7 +270,7 @@ export function CloseBoard({ month, live, lines, canClose }: { month: string; li
               </span>
             </div>
           ) : allClosed ? (
-            <Link href={`/admin/payroll/runs${q ? `?${q.replace(/^&/, '')}` : ''}`} className="inline-flex min-h-12 items-center justify-center rounded-button bg-primary px-5 text-base font-bold text-on-primary">
+            <Link prefetch={false} href={`/admin/payroll/runs${q ? `?${q.replace(/^&/, '')}` : ''}`} className="inline-flex min-h-12 items-center justify-center rounded-button bg-primary px-5 text-base font-bold text-on-primary">
               {t('nextCheck')} ›
             </Link>
           ) : (
@@ -308,7 +308,7 @@ export function CloseBoard({ month, live, lines, canClose }: { month: string; li
               <span className="flex w-5 shrink-0 pt-0.5">{canClose && !l.close && (l.ready ? <input type="checkbox" checked={picked.has(l.employeeId)} onChange={() => toggle(l.employeeId)} aria-label={t('pick', { name: l.name })} className="size-5 accent-primary" /> : <input type="checkbox" disabled title={t('notReadyTip')} aria-label={t('notReadyTip')} className="size-5 cursor-not-allowed opacity-30" />)}</span>
               <div className="flex min-w-0 flex-1 flex-col gap-1">
                 <div className="flex items-center gap-2">
-                  <Link href={`/admin/members/${l.employeeId}`} className="shrink-0 font-bold">
+                  <Link prefetch={false} href={`/admin/members/${l.employeeId}`} className="shrink-0 font-bold">
                     {l.name}
                   </Link>
                   <span className="min-w-0 flex-1 truncate text-xs text-faint">{l.group}</span>

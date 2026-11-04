@@ -78,12 +78,12 @@ export default async function LoginPage() {
         {/* 설명 문구는 두지 않는다 — 입력 칸·버튼·링크만 (2026-10-06 의뢰인: 로그인 화면에 설명이 너무 많다) */}
         <p className="flex flex-wrap items-center justify-center gap-x-1 text-sm text-muted">
           {t('firstTime')}
-          <Link href="/register" className="inline-flex min-h-11 items-center px-2 font-semibold text-primary">
+          <Link prefetch={false} href="/register" className="inline-flex min-h-11 items-center px-2 font-semibold text-primary">
             {t('setupLink')}
           </Link>
           <span aria-hidden className="text-faint">·</span>
           {/* 2026-10-16 의뢰인 권한-6: 초대 없이 이메일로 가입 신청 → 관리자 승인 */}
-          <Link href="/signup" className="inline-flex min-h-11 items-center px-2 font-semibold text-primary">
+          <Link prefetch={false} href="/signup" className="inline-flex min-h-11 items-center px-2 font-semibold text-primary">
             {t('emailSignup')}
           </Link>
         </p>
@@ -91,7 +91,7 @@ export default async function LoginPage() {
         <LoginButton />
         {/* 개발사 표시 (2026-11-02 의뢰인) — 처리방침 링크 옆에 작게 */}
         <p className="flex items-center justify-center gap-2 text-xs text-muted">
-          <Link href="/privacy" className="min-h-11 content-center">
+          <Link prefetch={false} href="/privacy" className="min-h-11 content-center">
             {tp('link')}
           </Link>
           <span aria-hidden className="text-faint">·</span>

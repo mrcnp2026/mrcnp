@@ -43,7 +43,7 @@ export default async function PromotionDetailPage({ params }: { params: Promise<
 
   return (
     <PageShell wide>
-      <Link href="/admin/leave/promotion" className="inline-flex min-h-9 items-center self-start text-sm font-medium text-muted">
+      <Link prefetch={false} href="/admin/leave/promotion" className="inline-flex min-h-9 items-center self-start text-sm font-medium text-muted">
         ‹ {t('title')}
       </Link>
       <div>
@@ -95,7 +95,7 @@ export default async function PromotionDetailPage({ params }: { params: Promise<
                 <td className="num px-3 py-3 whitespace-nowrap">{v.notifiedAt ? stamp(v.notifiedAt) : ''}</td>
                 <td className="num px-3 py-3 whitespace-nowrap">
                   {v.messageId ? (
-                    <Link href={`/admin/messages/${v.messageId}`} className="text-primary underline">
+                    <Link prefetch={false} href={`/admin/messages/${v.messageId}`} className="text-primary underline">
                       {readAt.get(v.messageId) ? stamp(readAt.get(v.messageId)!) : t('notRead')}
                     </Link>
                   ) : (

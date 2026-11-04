@@ -72,7 +72,7 @@ export function ListBar({
           </button>
         )}
         {gear && (
-          <Link href={gear.href} aria-label={gear.label} title={gear.label} className="flex size-11 shrink-0 items-center justify-center rounded-button text-text">
+          <Link prefetch={false} href={gear.href} aria-label={gear.label} title={gear.label} className="flex size-11 shrink-0 items-center justify-center rounded-button text-text">
             <Settings aria-hidden size={22} strokeWidth={1.75} />
           </Link>
         )}
@@ -80,7 +80,7 @@ export function ListBar({
       {tabs && (
         <nav className="-mx-4 -mt-1 flex border-b border-border">
           {tabs.map((x) => (
-            <Link key={x.href} href={x.href} aria-current={x.on ? 'page' : undefined} className={`flex min-h-12 flex-1 lg:flex-none lg:px-4 items-center justify-center border-b-2 text-base font-bold ${x.on ? 'border-text text-text lg:border-primary lg:text-primary' : 'border-transparent text-muted hover:text-text'}`}>
+            <Link prefetch={false} key={x.href} href={x.href} aria-current={x.on ? 'page' : undefined} className={`flex min-h-12 flex-1 lg:flex-none lg:px-4 items-center justify-center border-b-2 text-base font-bold ${x.on ? 'border-text text-text lg:border-primary lg:text-primary' : 'border-transparent text-muted hover:text-text'}`}>
               {x.label}
             </Link>
           ))}
@@ -103,7 +103,7 @@ export function ListBar({
           <ChevronDown aria-hidden size={18} />
         </button>
         {side && (
-          <Link href={side.href} className="inline-flex min-h-11 items-center rounded-button border border-primary bg-primary-tint px-4 text-sm font-bold text-primary">
+          <Link prefetch={false} href={side.href} className="inline-flex min-h-11 items-center rounded-button border border-primary bg-primary-tint px-4 text-sm font-bold text-primary">
             {side.label}
           </Link>
         )}

@@ -37,7 +37,7 @@ export default async function OrgPage() {
     <PageShell wide>
       {/* 인쇄: 가로 A4 한 장에 조직도 도형만 (메뉴 · 단추는 globals.css의 print 규칙으로 빠진다) */}
       <style>{'@media print { @page { size: A4 landscape; margin: 12mm; } }'}</style>
-      <Link href="/admin/members" data-noprint className="-mb-2 inline-flex min-h-11 items-center self-start text-sm font-medium text-muted">
+      <Link prefetch={false} href="/admin/members" data-noprint className="-mb-2 inline-flex min-h-11 items-center self-start text-sm font-medium text-muted">
         ‹ {t('back')}
       </Link>
       <div className="flex flex-wrap items-center justify-between gap-2 px-1">

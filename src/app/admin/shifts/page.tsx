@@ -53,7 +53,7 @@ export default async function ShiftsPage() {
               id: x.id,
               dim: !x.active,
               cells: {
-                name: { text: x.name, node: <Link href={`/admin/shifts/${x.id}`} className="font-bold hover:text-primary">{x.name}</Link> },
+                name: { text: x.name, node: <Link prefetch={false} href={`/admin/shifts/${x.id}`} className="font-bold hover:text-primary">{x.name}</Link> },
                 time: { text: `${x.startTime} - ${x.endTime}`, node: <span className="num">{x.startTime} - {x.endTime}</span> },
                 kind: { text: x.kind !== 'none' ? kn(x.kind) : '' },
                 color: { text: x.color, node: <span aria-hidden className={`inline-block size-5 rounded-sm align-middle ${SHIFT_COLOR_CLASS[x.color]}`} /> },
@@ -68,7 +68,7 @@ export default async function ShiftsPage() {
           {(
             <p className="rounded-card bg-bg p-5 text-sm text-muted">
               {rule ? t('baseRule', { start: hhmm(rule.startTime), end: hhmm(rule.endTime), n: none }) : t('noRule')}{' '}
-              <Link href="/admin/settings" className="font-bold text-primary">
+              <Link prefetch={false} href="/admin/settings" className="font-bold text-primary">
                 {t('toSettings')} ›
               </Link>
             </p>
@@ -77,7 +77,7 @@ export default async function ShiftsPage() {
           <RowList>
             {shown.map((x) => (
               <li key={x.id} className={`flex items-center ${x.active ? '' : 'opacity-60'}`}>
-                <Link href={`/admin/shifts/${x.id}`} className="flex min-h-16 min-w-0 flex-1 items-center gap-3 py-3 pl-5">
+                <Link prefetch={false} href={`/admin/shifts/${x.id}`} className="flex min-h-16 min-w-0 flex-1 items-center gap-3 py-3 pl-5">
                   <span aria-hidden className={`size-8 shrink-0 rounded-button ${SHIFT_COLOR_CLASS[x.color]}`} />
                   <span className="flex min-w-0 flex-1 flex-col">
                     <span className="font-bold">{x.name}</span>

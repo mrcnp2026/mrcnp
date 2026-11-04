@@ -50,7 +50,7 @@ export default async function CorrectionsPage({ searchParams }: { searchParams: 
 
   return (
     <PageShell wide>
-      <Link href="/punch/requests" className="inline-flex min-h-11 items-center self-start text-sm font-medium text-muted">
+      <Link prefetch={false} href="/punch/requests" className="inline-flex min-h-11 items-center self-start text-sm font-medium text-muted">
         ‹ {t('backToRequests')}
       </Link>
       <div className="flex flex-wrap items-center gap-x-1">

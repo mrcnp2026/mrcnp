@@ -26,7 +26,7 @@ export default async function NoticePage({ params, searchParams }: { params: Pro
 
   return (
     <PageShell wide>
-      <Link href={`/admin/payroll/insurance?v=notice${live ? '&live=1' : ''}`} className="inline-flex min-h-9 items-center self-start text-sm font-medium text-muted">
+      <Link prefetch={false} href={`/admin/payroll/insurance?v=notice${live ? '&live=1' : ''}`} className="inline-flex min-h-9 items-center self-start text-sm font-medium text-muted">
         ‹ {t('tabNotice')}
       </Link>
       <div>
@@ -94,7 +94,7 @@ export default async function NoticePage({ params, searchParams }: { params: Pro
       </div>
       {v.run && (
         <p className="text-sm">
-          <Link href={`/admin/payroll/runs/${v.run.id}`} className="font-bold text-primary hover:underline">{t('toRun')}</Link> — {t('recalcNote')}
+          <Link prefetch={false} href={`/admin/payroll/runs/${v.run.id}`} className="font-bold text-primary hover:underline">{t('toRun')}</Link> — {t('recalcNote')}
         </p>
       )}
       <p className="text-xs text-faint">{t('diffNote')}</p>

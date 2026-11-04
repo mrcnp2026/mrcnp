@@ -129,7 +129,7 @@ export default async function OpsPage() {
         )}
       </Card>
 
-      <Link href="/admin/ops/mail" className="flex min-h-12 items-center justify-between gap-3 rounded-card border border-border bg-bg px-4 py-3 text-sm font-bold text-primary">
+      <Link prefetch={false} href="/admin/ops/mail" className="flex min-h-12 items-center justify-between gap-3 rounded-card border border-border bg-bg px-4 py-3 text-sm font-bold text-primary">
         {t('toMail')}
         <span aria-hidden>›</span>
       </Link>

@@ -71,7 +71,7 @@ export default async function MyRequestsPage({ searchParams }: { searchParams: P
         <div className="hidden lg:flex lg:flex-wrap lg:justify-end lg:gap-2">
           {fresh.map((x) =>
             x.href ? (
-              <Link key={x.id} href={x.href} className={NEW_BTN}>
+              <Link prefetch={false} key={x.id} href={x.href} className={NEW_BTN}>
                 {(() => {
                   const I = SHEET_ICONS[x.id];
                   return I && <I aria-hidden size={16} />;

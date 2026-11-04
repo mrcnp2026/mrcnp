@@ -45,7 +45,7 @@ export default async function PayStatementPage({ params }: { params: Promise<{ i
 
   return (
     <PageShell wide>
-      <Link href={`/admin/payroll/runs/${id}`} className="inline-flex min-h-9 items-center self-start text-sm font-medium text-muted">
+      <Link prefetch={false} href={`/admin/payroll/runs/${id}`} className="inline-flex min-h-9 items-center self-start text-sm font-medium text-muted">
         ‹ {t('runTitle', { month: run.periodFrom.slice(0, 7) })}
       </Link>
       <div>
@@ -68,11 +68,11 @@ export default async function PayStatementPage({ params }: { params: Promise<{ i
           ))}
           {s.state === 'BLOCKED' && (
             <li className="pt-1 text-muted">
-              <Link href={`/admin/payroll/staff/${employeeId}`} className="font-bold text-primary hover:underline">
+              <Link prefetch={false} href={`/admin/payroll/staff/${employeeId}`} className="font-bold text-primary hover:underline">
                 {t('toStaffPay')}
               </Link>
               {' · '}
-              <Link href={`/admin/closing?m=${run.periodFrom.slice(0, 7)}${run.isTest ? '' : '&live=1'}`} className="font-bold text-primary hover:underline">
+              <Link prefetch={false} href={`/admin/closing?m=${run.periodFrom.slice(0, 7)}${run.isTest ? '' : '&live=1'}`} className="font-bold text-primary hover:underline">
                 {t('toClosing')}
               </Link>
             </li>

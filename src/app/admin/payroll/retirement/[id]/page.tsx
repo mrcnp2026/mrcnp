@@ -39,7 +39,7 @@ export default async function RetirementCasePage({ params }: { params: Promise<{
 
   return (
     <PageShell wide>
-      <Link href="/admin/payroll/retirement" className="inline-flex min-h-9 items-center self-start text-sm font-medium text-muted">
+      <Link prefetch={false} href="/admin/payroll/retirement" className="inline-flex min-h-9 items-center self-start text-sm font-medium text-muted">
         ‹ {t('title')}
       </Link>
       <div>
@@ -59,13 +59,13 @@ export default async function RetirementCasePage({ params }: { params: Promise<{
         <p className="rounded-card bg-primary-tint p-3 text-sm" data-pension>
           {t(plan.plan_kind === 'DC' ? 'pensionDc' : 'pensionDb', { from: plan.joined_on as string })}
           {plan.plan_kind === 'DC' && ` ${t('pensionPaid', { paid: f.number(paidSum), unpaid: f.number(unpaidSum) })}`}{' '}
-          <Link href="/admin/payroll/pension" className="font-bold text-primary hover:underline">{t('pensionLink')}</Link>
+          <Link prefetch={false} href="/admin/payroll/pension" className="font-bold text-primary hover:underline">{t('pensionLink')}</Link>
         </p>
       )}
       {k.state === 'WITHDRAWN' && <p className="rounded-card border border-border bg-surface p-3 text-sm">{t('withdrawnNote', { reason: k.reason ?? '' })}</p>}
       {k.supersedesId && (
         <p className="text-sm">
-          <Link href={`/admin/payroll/retirement/${k.supersedesId}`} className="font-bold text-primary hover:underline">{t('toPrevious')}</Link>
+          <Link prefetch={false} href={`/admin/payroll/retirement/${k.supersedesId}`} className="font-bold text-primary hover:underline">{t('toPrevious')}</Link>
         </p>
       )}
       {k.state === 'DRAFT' ? (

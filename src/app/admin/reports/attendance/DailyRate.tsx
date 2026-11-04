@@ -24,7 +24,7 @@ export async function DailyRate({ daily, mode, hrefOf }: { daily: AttDay[]; mode
           return m.set(k, x);
         }, new Map<string, AttDay>()).values()].map((d) => ({ key: d.date, label: t('weekOf', { date: d.date.slice(5).replace('-', '/') }), long: t('weekOf', { date: d.date }), ...d }));
   const tab = (m: 'day' | 'week') => (
-    <Link href={hrefOf(m)} scroll={false} aria-current={mode === m ? 'page' : undefined} className={`inline-flex h-8 items-center rounded-button px-3 text-sm font-medium ${mode === m ? 'bg-primary text-on-primary' : 'border border-border bg-bg text-muted hover:bg-surface'}`}>
+    <Link prefetch={false} href={hrefOf(m)} scroll={false} aria-current={mode === m ? 'page' : undefined} className={`inline-flex h-8 items-center rounded-button px-3 text-sm font-medium ${mode === m ? 'bg-primary text-on-primary' : 'border border-border bg-bg text-muted hover:bg-surface'}`}>
       {t(m)}
     </Link>
   );

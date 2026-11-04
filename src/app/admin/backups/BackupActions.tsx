@@ -53,7 +53,7 @@ export function BackupRow({ name }: { name: string }) {
         <Download aria-hidden size={16} />
         <span className="hidden sm:inline">{t('download')}</span>
       </a>
-      <Link href={`/admin/backups/restore?name=${encodeURIComponent(name)}`} className="inline-flex min-h-11 items-center gap-1.5 rounded-button bg-primary px-3 text-sm font-bold text-on-primary">
+      <Link prefetch={false} href={`/admin/backups/restore?name=${encodeURIComponent(name)}`} className="inline-flex min-h-11 items-center gap-1.5 rounded-button bg-primary px-3 text-sm font-bold text-on-primary">
         <RotateCcw aria-hidden size={16} />
         {t('restoreGo')}
       </Link>

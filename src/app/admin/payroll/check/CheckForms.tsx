@@ -60,7 +60,7 @@ export function CheckItemRow({ month, employeeId, item, live }: { month: string;
             {item.dates.length > 0 && (
               <p className="flex flex-wrap gap-1.5 pt-1">
                 {item.dates.map((d) => (
-                  <Link key={d.date} href={d.href} className="num inline-flex min-h-9 items-center rounded-chip border border-border bg-bg px-2.5 text-xs font-semibold text-primary hover:bg-surface">{d.date.slice(5)} ›</Link>
+                  <Link prefetch={false} key={d.date} href={d.href} className="num inline-flex min-h-9 items-center rounded-chip border border-border bg-bg px-2.5 text-xs font-semibold text-primary hover:bg-surface">{d.date.slice(5)} ›</Link>
                 ))}
               </p>
             )}
@@ -78,7 +78,7 @@ export function CheckItemRow({ month, employeeId, item, live }: { month: string;
                   <Button type="button" size="sm" disabled={busy} onClick={() => send({ action: 'decide', decision: 'as_is' })}>{t('asIs')}</Button>
                 )}
                 {item.fixHref && (
-                  <Link href={item.fixHref} className="inline-flex min-h-11 items-center justify-center rounded-button border border-border bg-bg px-3 text-sm font-semibold text-text hover:bg-surface lg:min-h-9">{item.fixLabel} ›</Link>
+                  <Link prefetch={false} href={item.fixHref} className="inline-flex min-h-11 items-center justify-center rounded-button border border-border bg-bg px-3 text-sm font-semibold text-text hover:bg-surface lg:min-h-9">{item.fixLabel} ›</Link>
                 )}
                 {!item.must && (
                   <button type="button" onClick={() => setMode(mode === 'adjust' ? null : 'adjust')} aria-pressed={mode === 'adjust'} className={`min-h-11 rounded-button border px-3 text-sm font-semibold lg:min-h-9 ${mode === 'adjust' ? 'border-primary bg-primary-tint text-primary' : 'border-border bg-bg text-text hover:bg-surface'}`}>{t('adjust')}</button>

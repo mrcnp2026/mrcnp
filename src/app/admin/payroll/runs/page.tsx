@@ -41,7 +41,7 @@ export default async function PayRunsPage({ searchParams }: { searchParams: Prom
       {/* 상태별 거르기 — 카드 넷 대신 한 줄 탭 (2026-10-26 의뢰인: 카드 박스 배치가 어색하다) */}
       <nav aria-label={t('cardsTitle')} className="flex flex-wrap gap-1.5">
         {[{ k: null, label: t('all'), n: runs.length }, ...STATES.map((k) => ({ k, label: t(`status.${k}`), n: runs.filter((r) => r.status === k).length }))].map((x) => (
-          <Link key={x.k ?? 'all'} href={stLink(x.k)} scroll={false} aria-current={st === x.k ? 'page' : undefined} className={`inline-flex min-h-9 items-center gap-1.5 rounded-chip px-3.5 text-sm font-semibold ${st === x.k ? 'bg-primary text-on-primary' : 'bg-surface text-muted hover:text-text'}`}>
+          <Link prefetch={false} key={x.k ?? 'all'} href={stLink(x.k)} scroll={false} aria-current={st === x.k ? 'page' : undefined} className={`inline-flex min-h-9 items-center gap-1.5 rounded-chip px-3.5 text-sm font-semibold ${st === x.k ? 'bg-primary text-on-primary' : 'bg-surface text-muted hover:text-text'}`}>
             {x.label}
             <span className="num text-xs font-bold opacity-80">{x.n}</span>
           </Link>
@@ -59,7 +59,7 @@ export default async function PayRunsPage({ searchParams }: { searchParams: Prom
         {shown.map((r) => (
           <tr key={r.id} className="relative cursor-pointer hover:bg-primary-tint/50">
             <td className="num whitespace-nowrap">
-              <Link href={`/admin/payroll/runs/${r.id}`} className="inline-flex items-center gap-1 rounded-button bg-primary-tint px-2.5 py-1 font-bold text-primary after:absolute after:inset-0 after:content-[''] hover:underline">
+              <Link prefetch={false} href={`/admin/payroll/runs/${r.id}`} className="inline-flex items-center gap-1 rounded-button bg-primary-tint px-2.5 py-1 font-bold text-primary after:absolute after:inset-0 after:content-[''] hover:underline">
                 {r.periodFrom.slice(0, 7)} ›
               </Link>
               {r.kind !== 'REGULAR' && <span className="ml-2 text-xs font-bold text-muted">{t('kindSeq', { kind: t(`kind.${r.kind}`), n: r.sequence })}{r.title ? ` · ${r.title}` : ''}</span>}

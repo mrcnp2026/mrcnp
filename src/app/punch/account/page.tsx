@@ -91,18 +91,18 @@ export default async function AccountPage() {
 
         {/* 바로가기 — 홈 설정(2026-10-18 홈 맨 아래에서 옮김) · 개인정보 처리방침(2026-10-29). 한 칸에 묶었다 */}
         <nav className="flex flex-col divide-y divide-border overflow-hidden rounded-card border border-border bg-bg lg:col-start-1 lg:row-start-2">
-          <Link href="/punch/home-settings" className={link}>
+          <Link prefetch={false} href="/punch/home-settings" className={link}>
             <Settings aria-hidden size={18} className="shrink-0 text-muted" />
             <span className="flex-1">{th('settingsLink')}</span>
             <ChevronRight aria-hidden size={18} className="text-faint" />
           </Link>
-          <Link href="/privacy" className={link}>
+          <Link prefetch={false} href="/privacy" className={link}>
             <ShieldCheck aria-hidden size={18} className="shrink-0 text-muted" />
             <span className="flex-1">{tp('link')}</span>
             <ChevronRight aria-hidden size={18} className="text-faint" />
           </Link>
           {/* 위치기반서비스 약관은 개인정보 처리방침 바로 아래 (2026-11-04 의뢰인) */}
-          <Link href="/privacy/location" className={link}>
+          <Link prefetch={false} href="/privacy/location" className={link}>
             <MapPin aria-hidden size={18} className="shrink-0 text-muted" />
             <span className="flex-1">{tl('title')}</span>
             <ChevronRight aria-hidden size={18} className="text-faint" />

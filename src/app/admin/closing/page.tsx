@@ -79,12 +79,12 @@ export default async function ClosingPage({ searchParams }: { searchParams: Prom
       </div>
       <div className="flex flex-wrap items-center gap-3">
         <span className="inline-flex items-center">
-          <Link href={link(shift(month, -1))} aria-label={t('prev')} className="inline-flex size-9 items-center justify-center rounded-l-button border border-border bg-bg text-muted">
+          <Link prefetch={false} href={link(shift(month, -1))} aria-label={t('prev')} className="inline-flex size-9 items-center justify-center rounded-l-button border border-border bg-bg text-muted">
             <ChevronLeft aria-hidden size={18} />
           </Link>
           <b className="num inline-flex h-9 items-center border-y border-border bg-bg px-4 text-base">{month}</b>
           {next <= today.slice(0, 7) ? (
-            <Link href={link(next)} aria-label={t('next')} className="inline-flex size-9 items-center justify-center rounded-r-button border border-border bg-bg text-muted">
+            <Link prefetch={false} href={link(next)} aria-label={t('next')} className="inline-flex size-9 items-center justify-center rounded-r-button border border-border bg-bg text-muted">
               <ChevronRight aria-hidden size={18} />
             </Link>
           ) : (

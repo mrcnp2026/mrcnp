@@ -73,22 +73,22 @@ export default async function RecordsPage({ searchParams }: { searchParams: Prom
           <h1 className="flex flex-wrap items-center gap-x-1 text-2xl font-bold">{t('title')}<HelpTip>{t('intro')}</HelpTip></h1>
         </div>
         <nav className="flex items-center gap-1" aria-label={t('month')}>
-          <Link href={q(shift(ym, -1))} className="flex min-h-11 min-w-11 items-center justify-center" aria-label={t('prev')}>
+          <Link prefetch={false} href={q(shift(ym, -1))} className="flex min-h-11 min-w-11 items-center justify-center" aria-label={t('prev')}>
             <ChevronLeft aria-hidden size={22} strokeWidth={1.75} />
           </Link>
           <span className="num text-xl font-semibold">{ym}</span>
-          <Link href={q(shift(ym, 1))} className="flex min-h-11 min-w-11 items-center justify-center" aria-label={t('next')}>
+          <Link prefetch={false} href={q(shift(ym, 1))} className="flex min-h-11 min-w-11 items-center justify-center" aria-label={t('next')}>
             <ChevronRight aria-hidden size={22} strokeWidth={1.75} />
           </Link>
         </nav>
       </header>
       {/* 바로가기 한 줄 — 기록 목록 · 연습/실제 기록 바꾸기 (2026-10-16 디자인: 링크가 한 줄씩 떨어져 세로가 길었다) */}
       <div className="flex flex-wrap items-center gap-x-4 text-sm">
-        <Link href="/admin/records/list" className="inline-flex min-h-11 items-center font-medium text-primary">
+        <Link prefetch={false} href="/admin/records/list" className="inline-flex min-h-11 items-center font-medium text-primary">
           ‹ {t('toList')}
         </Link>
         {OFFICE.practiceMode && (
-          <Link href={practice ? `?m=${ym}&live=1` : `?m=${ym}`} className="ml-auto inline-flex min-h-11 items-center text-primary">
+          <Link prefetch={false} href={practice ? `?m=${ym}&live=1` : `?m=${ym}`} className="ml-auto inline-flex min-h-11 items-center text-primary">
             {practice ? t('showLive') : t('showPractice')}
           </Link>
         )}
@@ -110,7 +110,7 @@ export default async function RecordsPage({ searchParams }: { searchParams: Prom
           ).map((x) =>
             x.n > 0 ? (
               // 누르면 그 사람만, 다시 누르면 전체 (숫자가 0이면 누를 것이 없다)
-              <Link key={x.k} href={`${q(ym)}${pick === x.f ? '' : `&f=${x.f}`}`} scroll={false} aria-pressed={pick === x.f} className={`flex min-h-16 flex-col items-center justify-center rounded-button transition-colors duration-150 ${pick === x.f ? 'bg-warn-tint ring-2 ring-warn' : 'hover:bg-surface'}`}>
+              <Link prefetch={false} key={x.k} href={`${q(ym)}${pick === x.f ? '' : `&f=${x.f}`}`} scroll={false} aria-pressed={pick === x.f} className={`flex min-h-16 flex-col items-center justify-center rounded-button transition-colors duration-150 ${pick === x.f ? 'bg-warn-tint ring-2 ring-warn' : 'hover:bg-surface'}`}>
                 <CountUp value={x.n} className="num text-2xl leading-none font-extrabold text-warn underline decoration-warn/40 underline-offset-4" />
                 <span className="mt-1 text-xs text-muted">{t(x.k)}</span>
               </Link>
@@ -128,7 +128,7 @@ export default async function RecordsPage({ searchParams }: { searchParams: Prom
         <Card className="flex flex-col gap-0 p-0">
           <div className="flex flex-wrap items-center justify-between gap-2 border-b border-border bg-warn-tint px-4 py-2 text-sm text-warn lg:px-5">
             <span className="font-bold">{t(`picked.${pick}`, { n: shown.length })}</span>
-            <Link href={q(ym)} scroll={false} className="inline-flex min-h-9 items-center font-semibold text-primary">
+            <Link prefetch={false} href={q(ym)} scroll={false} className="inline-flex min-h-9 items-center font-semibold text-primary">
               {t('pickedClear')}
             </Link>
           </div>
@@ -143,7 +143,7 @@ export default async function RecordsPage({ searchParams }: { searchParams: Prom
               return (
                 <li key={person.id} className="flex flex-col gap-2 px-4 py-3 lg:flex-row lg:items-start lg:gap-4 lg:px-5">
                   <div className="flex items-baseline justify-between gap-2 lg:w-52 lg:shrink-0 lg:flex-col lg:items-start lg:gap-0.5">
-                    <Link href={`/admin/records/${person.id}${q(ym)}`} className="font-bold hover:text-primary">
+                    <Link prefetch={false} href={`/admin/records/${person.id}${q(ym)}`} className="font-bold hover:text-primary">
                       {person.name}
                     </Link>
                     <span className="num text-sm text-warn">
@@ -153,7 +153,7 @@ export default async function RecordsPage({ searchParams }: { searchParams: Prom
                   </div>
                   <span className="flex flex-wrap gap-1.5">
                     {items.map((x) => (
-                      <Link key={x.d} href={`/admin/records/${person.id}/${x.d}${OFFICE.practiceMode && !practice ? '?live=1' : ''}`} className="num inline-flex min-h-8 items-center rounded-button border border-warn/40 bg-bg px-2.5 text-sm hover:bg-warn-tint">
+                      <Link prefetch={false} key={x.d} href={`/admin/records/${person.id}/${x.d}${OFFICE.practiceMode && !practice ? '?live=1' : ''}`} className="num inline-flex min-h-8 items-center rounded-button border border-warn/40 bg-bg px-2.5 text-sm hover:bg-warn-tint">
                         {x.text}
                       </Link>
                     ))}
@@ -170,7 +170,7 @@ export default async function RecordsPage({ searchParams }: { searchParams: Prom
         <div className="flex flex-col gap-2 md:hidden">
           <nav className="grid grid-cols-2 rounded-card bg-bg p-1" aria-label={t('filter')}>
             {(['all', 'issues'] as const).map((k) => (
-              <Link
+              <Link prefetch={false}
                 key={k}
                 href={`${q(ym)}${k === 'issues' ? '&f=issues' : ''}`}
                 scroll={false}
@@ -224,7 +224,7 @@ export default async function RecordsPage({ searchParams }: { searchParams: Prom
                           {Number(r.late_count) > 0 && <span className="text-warn">{t('late', { n: Number(r.late_count), m: Number(r.late_minutes) })}</span>}
                         </div>
                         {blocks.length > 0 && <div className="flex flex-wrap gap-1">{blocks.map((b) => <Chip key={b} tone="warn">{b.slice(6)}</Chip>)}</div>}
-                        <Link href={`/admin/records/${person.id}${q(ym)}`} className="inline-flex min-h-11 items-center self-start text-sm font-bold text-primary">
+                        <Link prefetch={false} href={`/admin/records/${person.id}${q(ym)}`} className="inline-flex min-h-11 items-center self-start text-sm font-bold text-primary">
                           {t('viewDays')} ›
                         </Link>
                       </div>
@@ -255,7 +255,7 @@ export default async function RecordsPage({ searchParams }: { searchParams: Prom
                 return (
                   <tr key={person.id}>
                     <td className="truncate px-2 py-2 text-left font-semibold">
-                      <Link href={`/admin/records/${person.id}${q(ym)}`} title={t('viewDays')} className="inline-flex min-h-11 items-center text-primary">
+                      <Link prefetch={false} href={`/admin/records/${person.id}${q(ym)}`} title={t('viewDays')} className="inline-flex min-h-11 items-center text-primary">
                         {person.name}
                       </Link>
                     </td>

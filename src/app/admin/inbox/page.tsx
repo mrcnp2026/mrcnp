@@ -389,7 +389,7 @@ export default async function InboxPage({ searchParams }: { searchParams: Promis
         ))}
       </div>
       <Pager page={lvPage.page} pages={lvPage.pages} param="lp" params={sp} anchor="leave" label={tc('pages')} />
-      <Link href="/admin/leave" className="inline-flex min-h-11 items-center self-start text-sm text-primary">
+      <Link prefetch={false} href="/admin/leave" className="inline-flex min-h-11 items-center self-start text-sm text-primary">
         {t('leaveManage')} ›
       </Link>
     </>
@@ -429,7 +429,7 @@ export default async function InboxPage({ searchParams }: { searchParams: Promis
   const gone = (
     <p className="rounded-card bg-surface p-5 text-sm text-muted">
       {t('focusGone')}{' '}
-      <Link href={listHref} className="font-bold text-primary">
+      <Link prefetch={false} href={listHref} className="font-bold text-primary">
         {t('backToList')} ›
       </Link>
     </p>
@@ -460,7 +460,7 @@ export default async function InboxPage({ searchParams }: { searchParams: Promis
         {practice && <p className="rounded-card bg-primary-tint p-3 text-sm text-primary">{t('practiceBanner')}</p>}
         {/* 기준일 이전 지난 요청 — 「지난 요청 정리」에서 한 번에 닫는다 (개발-63, 최고관리자만) */}
         {me.role === 'admin' && pastCount > 0 && (
-          <Link href={`/admin/inbox/migrate${sp.live === '1' ? '?live=1' : ''}`} className="flex items-center justify-between gap-3 rounded-card border border-warn bg-warn-tint p-3 text-sm text-warn">
+          <Link prefetch={false} href={`/admin/inbox/migrate${sp.live === '1' ? '?live=1' : ''}`} className="flex items-center justify-between gap-3 rounded-card border border-warn bg-warn-tint p-3 text-sm text-warn">
             <span>{tm('banner', { n: pastCount, date: OFFICE.migrationCutoff.replace(/-/g, '. ') + '.' })}</span>
             <b className="shrink-0">{tm('bannerGo')} ›</b>
           </Link>
@@ -470,7 +470,7 @@ export default async function InboxPage({ searchParams }: { searchParams: Promis
           <section className="flex flex-col gap-2 rounded-card border border-border bg-bg p-3" data-cert-requests>
             <div className="flex items-center justify-between gap-2">
               <h2 className="font-bold">{tcert('inboxTitle', { n: certOpen.length })}</h2>
-              <Link href="/admin/certificates" className="inline-flex h-9 shrink-0 items-center rounded-button bg-primary px-3 text-sm font-semibold text-on-primary hover:opacity-90">
+              <Link prefetch={false} href="/admin/certificates" className="inline-flex h-9 shrink-0 items-center rounded-button bg-primary px-3 text-sm font-semibold text-on-primary hover:opacity-90">
                 {tcert('inboxGo')}
               </Link>
             </div>
@@ -509,7 +509,7 @@ export default async function InboxPage({ searchParams }: { searchParams: Promis
       <div className="panel-in contents lg:fixed lg:top-14 lg:right-0 lg:bottom-0 lg:z-30 lg:flex lg:w-136 lg:flex-col lg:gap-4 lg:overflow-y-auto lg:border-l lg:border-border lg:bg-bg lg:p-6 lg:shadow-card">
         <div className="hidden items-center justify-between lg:flex">
           <h2 className="text-lg font-bold">{t('focusTitle')}</h2>
-          <Link href={listHref} aria-label={t('panelClose')} className="flex size-8 items-center justify-center rounded-button text-muted hover:bg-surface">
+          <Link prefetch={false} href={listHref} aria-label={t('panelClose')} className="flex size-8 items-center justify-center rounded-button text-muted hover:bg-surface">
             <X aria-hidden size={18} />
           </Link>
         </div>

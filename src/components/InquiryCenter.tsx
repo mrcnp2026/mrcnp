@@ -40,7 +40,7 @@ export async function InquiryCenter({ base, me, searchParams }: { base: Base; me
   const toLabel = t(routeFor(me.role) === 'SYSTEM' ? 'toSystem' : 'toAdmin');
 
   const tabLink = (k: 'ask' | 'received', label: string, n?: number) => (
-    <Link href={`${base}/inquiry?t=${k}`} aria-current={tab === k ? 'page' : undefined} className={`inline-flex min-h-9 items-center gap-1.5 rounded-chip border px-3.5 text-sm font-semibold ${tab === k ? 'border-primary/30 bg-primary-tint text-primary' : 'border-border bg-bg text-muted hover:bg-surface'}`}>
+    <Link prefetch={false} href={`${base}/inquiry?t=${k}`} aria-current={tab === k ? 'page' : undefined} className={`inline-flex min-h-9 items-center gap-1.5 rounded-chip border px-3.5 text-sm font-semibold ${tab === k ? 'border-primary/30 bg-primary-tint text-primary' : 'border-border bg-bg text-muted hover:bg-surface'}`}>
       {label}
       {n !== undefined && n > 0 && <span className="num min-w-5 rounded-chip bg-danger px-1.5 text-center text-xs leading-5 font-bold text-on-primary">{n}</span>}
     </Link>
@@ -84,7 +84,7 @@ export async function InquiryCenter({ base, me, searchParams }: { base: Base; me
         <section className="flex flex-col gap-3">
           <div className="flex flex-wrap items-center gap-2">
             {FILTERS.map((k) => (
-              <Link key={k} href={`${base}/inquiry?t=received&s=${k}`} aria-current={filter === k ? 'true' : undefined} className={`inline-flex min-h-8 items-center gap-1.5 rounded-chip border px-3 text-sm ${filter === k ? 'border-primary/30 bg-primary-tint font-semibold text-primary' : 'border-border bg-bg text-muted hover:bg-surface'}`}>
+              <Link prefetch={false} key={k} href={`${base}/inquiry?t=received&s=${k}`} aria-current={filter === k ? 'true' : undefined} className={`inline-flex min-h-8 items-center gap-1.5 rounded-chip border px-3 text-sm ${filter === k ? 'border-primary/30 bg-primary-tint font-semibold text-primary' : 'border-border bg-bg text-muted hover:bg-surface'}`}>
                 {t(`filter.${k}`)} <b className="num">{count(k)}</b>
               </Link>
             ))}

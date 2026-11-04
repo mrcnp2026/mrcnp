@@ -35,7 +35,7 @@ function EntryCard({ e }: { e: MonthEntry }) {
   );
   const cls = `flex overflow-hidden rounded-button text-xs ${e.time && e.color ? TINT[e.color] : 'bg-surface'}`;
   return e.href ? (
-    <Link href={e.href} className={`${cls} hover:brightness-95`}>
+    <Link prefetch={false} href={e.href} className={`${cls} hover:brightness-95`}>
       {body}
     </Link>
   ) : (

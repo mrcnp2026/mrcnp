@@ -45,7 +45,7 @@ export default async function JobsPage({ searchParams }: { searchParams: Promise
             rows={shown.map((x) => ({
               id: x.id,
               cells: {
-                name: { text: x.name, node: <Link href={`/admin/jobs/${x.id}`} className="font-bold hover:text-primary">{x.name}</Link> },
+                name: { text: x.name, node: <Link prefetch={false} href={`/admin/jobs/${x.id}`} className="font-bold hover:text-primary">{x.name}</Link> },
                 color: { text: x.color, node: <span aria-hidden className={`inline-block size-5 rounded-sm align-middle ${SHIFT_COLOR_CLASS[x.color]}`} /> },
                 people: { text: String(countOf.get(x.id) ?? 0) },
               },
@@ -60,7 +60,7 @@ export default async function JobsPage({ searchParams }: { searchParams: Promise
           <RowList>
             {shown.map((x) => (
               <li key={x.id}>
-                <Link href={`/admin/jobs/${x.id}`} className="flex min-h-16 items-center gap-3 px-5 py-3">
+                <Link prefetch={false} href={`/admin/jobs/${x.id}`} className="flex min-h-16 items-center gap-3 px-5 py-3">
                   <span aria-hidden className={`w-1 shrink-0 self-stretch rounded-chip ${SHIFT_COLOR_CLASS[x.color]}`} />
                   <span className="min-w-0 flex-1 font-bold">{x.name}</span>
                   <span className="num shrink-0 text-sm text-muted">{t('people', { n: countOf.get(x.id) ?? 0 })}</span>

@@ -22,7 +22,7 @@ export default async function NewMemberPage() {
   const pay = me?.canViewPayroll ? await loadNewStaffPayDefaults(toKstDate(new Date())) : undefined; // 급여를 볼 수 있는 관리자에게만 급여 칸 (2026-10-25)
   return (
     <PageShell wide>
-      <Link href="/admin/members" className="-mb-2 inline-flex min-h-11 items-center self-start text-sm font-medium text-muted">
+      <Link prefetch={false} href="/admin/members" className="-mb-2 inline-flex min-h-11 items-center self-start text-sm font-medium text-muted">
         ‹ {t('title')}
       </Link>
       <h1 className="px-1 text-2xl font-extrabold tracking-tight">{t('addTitle')}</h1>

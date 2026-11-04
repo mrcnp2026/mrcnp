@@ -53,7 +53,7 @@ export function PolicyGroups({ groups, people, today, current }: { groups: Group
                   </Button>
                 )}
                 {(g.isDefault || g.ownPolicy) && (
-                  <Link href={g.isDefault ? '/admin/leave/ledger' : `/admin/leave/ledger?pg=${g.id}`} className="inline-flex min-h-8 items-center rounded-button border border-border px-3 text-xs font-semibold text-text hover:bg-surface">
+                  <Link prefetch={false} href={g.isDefault ? '/admin/leave/ledger' : `/admin/leave/ledger?pg=${g.id}`} className="inline-flex min-h-8 items-center rounded-button border border-border px-3 text-xs font-semibold text-text hover:bg-surface">
                     {t('seePolicy')}
                   </Link>
                 )}

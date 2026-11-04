@@ -63,7 +63,7 @@ export default async function PlacesPage({ searchParams }: { searchParams: Promi
           <RowList>
             {shown.map((l) => (
               <li key={l.id}>
-                <Link href={`/admin/places/${l.id}`} className="flex min-h-16 items-center gap-3 px-5 py-3">
+                <Link prefetch={false} href={`/admin/places/${l.id}`} className="flex min-h-16 items-center gap-3 px-5 py-3">
                   <MapPin aria-hidden size={22} className="shrink-0 text-primary" />
                   <span className="flex min-w-0 flex-1 flex-col">
                     <span className="font-bold">{l.label ?? t('unnamed')}</span>

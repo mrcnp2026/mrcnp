@@ -84,7 +84,7 @@ export default async function EmployeeNoticesPage({ searchParams }: { searchPara
                 {content(opened)}
                 <div className="flex items-center justify-end gap-2">
                   {!opened.confirmed && <ConfirmButton id={opened.id} small />}
-                  <Link href={hrefOf()} className="inline-flex h-8 items-center rounded-button border border-border bg-bg px-3 text-sm font-bold text-muted">
+                  <Link prefetch={false} href={hrefOf()} className="inline-flex h-8 items-center rounded-button border border-border bg-bg px-3 text-sm font-bold text-muted">
                     {t('close')}
                   </Link>
                 </div>
@@ -105,7 +105,7 @@ export default async function EmployeeNoticesPage({ searchParams }: { searchPara
                   name: {
                     text: n.display.title,
                     node: (
-                      <Link href={hrefOf(n.id)} lang={n.display.locale} className={`hover:text-primary ${n.confirmed ? '' : 'font-bold'}`}>
+                      <Link prefetch={false} href={hrefOf(n.id)} lang={n.display.locale} className={`hover:text-primary ${n.confirmed ? '' : 'font-bold'}`}>
                         {n.display.title}
                       </Link>
                     ),

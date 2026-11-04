@@ -25,7 +25,7 @@ export default async function TrainingCoursesPage() {
   };
   return (
     <PageShell wide>
-      <Link href="/admin/training" className="inline-flex min-h-9 items-center self-start text-sm font-medium text-muted">‹ {t('title')}</Link>
+      <Link prefetch={false} href="/admin/training" className="inline-flex min-h-9 items-center self-start text-sm font-medium text-muted">‹ {t('title')}</Link>
       <h1 className="text-2xl font-bold">{t('coursesTitle')}</h1>
       <p className="text-sm text-faint">{t('coursesIntro')}</p>
       <Card className="flex flex-col gap-1">

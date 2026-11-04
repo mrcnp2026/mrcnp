@@ -66,7 +66,7 @@ export default async function AttendanceReportPage({ searchParams }: { searchPar
   const recHref = (id: string) => `/admin/records/${id}?m=${month}${sp.live === '1' ? '&live=1' : ''}`;
   const statusChip = (closed: boolean) => (closed ? <Chip tone="ok">{t('closed')}</Chip> : <Chip tone="warn">{t('open')}</Chip>);
   const toggle = (
-    <Link href={moreHref} scroll={false} className={R.link}>
+    <Link prefetch={false} href={moreHref} scroll={false} className={R.link}>
       {more ? t('lessCols') : t('moreCols')}
     </Link>
   );
@@ -108,7 +108,7 @@ export default async function AttendanceReportPage({ searchParams }: { searchPar
       <div className="flex flex-wrap items-center gap-x-3 gap-y-2 text-sm">
         {provisional === 0 && r.total.people > 0 ? <Chip tone="ok">{t('final')}</Chip> : <Chip tone="warn">{t('provisional', { n: provisional })}</Chip>}
         {practice && <Chip>{t('practice')}</Chip>}
-        <Link href={`/admin/closing?m=${month}${sp.live === '1' ? '&live=1' : ''}`} className={R.link}>
+        <Link prefetch={false} href={`/admin/closing?m=${month}${sp.live === '1' ? '&live=1' : ''}`} className={R.link}>
           {t('toClosing')} ›
         </Link>
       </div>
@@ -190,7 +190,7 @@ export default async function AttendanceReportPage({ searchParams }: { searchPar
         <ListCard className="lg:hidden" data-phone-employees>
           {r.employees.map((e) => (
             <li key={e.employeeId}>
-              <Link href={recHref(e.employeeId)} className="flex items-center gap-3 px-4 py-3 active:bg-surface">
+              <Link prefetch={false} href={recHref(e.employeeId)} className="flex items-center gap-3 px-4 py-3 active:bg-surface">
                 <span className="flex min-w-0 flex-1 flex-col gap-0.5">
                   <span className="flex items-center gap-2">
                     <span className="truncate text-sm font-medium">{e.name}</span>
@@ -222,7 +222,7 @@ export default async function AttendanceReportPage({ searchParams }: { searchPar
               {r.employees.map((e) => (
                 <tr key={e.employeeId} className={R.tr}>
                   <td className={R.td}>
-                    <Link href={recHref(e.employeeId)} className="font-medium hover:text-primary hover:underline">
+                    <Link prefetch={false} href={recHref(e.employeeId)} className="font-medium hover:text-primary hover:underline">
                       {e.name}
                     </Link>
                   </td>

@@ -69,7 +69,7 @@ export default async function RegisterPage({ searchParams }: { searchParams: Pro
           )}
         </Card>
         {!invite && (
-          <Link href="/login" className="min-h-11 content-center text-center text-sm text-primary">
+          <Link prefetch={false} href="/login" className="min-h-11 content-center text-center text-sm text-primary">
             {t('haveAccount')}
           </Link>
         )}

@@ -27,7 +27,7 @@ function Count({ n, cat, strong = false }: { n: number; cat: Cat; strong?: boole
 function PersonLine({ p, label }: { p: BoardPerson; label: (c: Cat) => string }) {
   return (
     <li>
-      <Link href={p.href} className="flex min-h-12 items-center gap-2 rounded-button px-2 py-2 hover:bg-surface lg:gap-3 lg:px-3">
+      <Link prefetch={false} href={p.href} className="flex min-h-12 items-center gap-2 rounded-button px-2 py-2 hover:bg-surface lg:gap-3 lg:px-3">
         <span aria-hidden className={`size-2 shrink-0 rounded-chip ${TONE[p.cat].dot}`} />
         <span className="w-16 shrink-0 truncate font-bold lg:w-24">{p.name}</span>
         <span className="num w-24 shrink-0 text-sm text-muted lg:w-28">{p.time ?? '–'}</span>
@@ -57,7 +57,7 @@ export function ScheduleBoard({
   const card = (key: Cat | 'attention' | null, title: string, n: number, sub: ReactNode, tone: string) => {
     const on = pick === key;
     return (
-      <Link key={String(key)} href={pickHref(on ? null : key)} scroll={false} aria-current={on ? 'true' : undefined} className={`flex flex-col gap-0.5 rounded-card border bg-bg px-3 py-3 transition-colors hover:border-primary lg:gap-1 lg:px-5 lg:py-4 ${on ? 'border-primary ring-1 ring-primary' : 'border-border'}`}>
+      <Link prefetch={false} key={String(key)} href={pickHref(on ? null : key)} scroll={false} aria-current={on ? 'true' : undefined} className={`flex flex-col gap-0.5 rounded-card border bg-bg px-3 py-3 transition-colors hover:border-primary lg:gap-1 lg:px-5 lg:py-4 ${on ? 'border-primary ring-1 ring-primary' : 'border-border'}`}>
         <span className="truncate text-xs font-semibold text-muted lg:text-sm">{title}</span>
         <CountUp value={n} className={`num text-2xl font-bold lg:text-3xl ${n === 0 ? 'text-faint' : tone}`} />
         <span className="text-xs text-faint max-lg:hidden">{sub}</span>
@@ -84,7 +84,7 @@ export function ScheduleBoard({
         <section className="rounded-card border border-border bg-bg p-3 lg:p-4">
           <div className="flex items-center gap-3 px-1 pb-2">
             <h2 className="font-bold">{labels.pickTitle(pick === 'attention' ? labels.attention : labels.cat(pick), picked.length)}</h2>
-            <Link href={pickHref(null)} scroll={false} className="ml-auto text-sm text-muted hover:text-text">
+            <Link prefetch={false} href={pickHref(null)} scroll={false} className="ml-auto text-sm text-muted hover:text-text">
               {labels.clear}
             </Link>
           </div>

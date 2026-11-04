@@ -49,9 +49,9 @@ export default async function BranchPage({ params }: { params: Promise<{ id: str
         <div className="flex flex-col gap-3">
           <FieldList>
             <Field label={t('name')}>{g.name}</Field>
-            <Field label={t('parent')}>{parent ? <Link href={`/admin/branches/${parent.id}`}>{parent.name}</Link> : t('parentNone')}</Field>
+            <Field label={t('parent')}>{parent ? <Link prefetch={false} href={`/admin/branches/${parent.id}`}>{parent.name}</Link> : t('parentNone')}</Field>
             <Field label={t('staff')}>
-              <Link href="/admin/members" className="num">
+              <Link prefetch={false} href="/admin/members" className="num">
                 {t('people', { n: count ?? 0 })}
               </Link>
             </Field>
@@ -62,7 +62,7 @@ export default async function BranchPage({ params }: { params: Promise<{ id: str
             <RowList>
               {mine.map((l) => (
                 <li key={l.id}>
-                  <Link href={`/admin/places/${l.id}`} className="flex min-h-16 items-center gap-3 px-5 py-3">
+                  <Link prefetch={false} href={`/admin/places/${l.id}`} className="flex min-h-16 items-center gap-3 px-5 py-3">
                     <MapPin aria-hidden size={22} className={`shrink-0 ${l.active ? 'text-primary' : 'text-faint'}`} />
                     <span className="flex min-w-0 flex-1 flex-col">
                       <span className="font-bold">{l.label ?? t('unnamedPlace')}</span>

@@ -19,7 +19,7 @@ export function DetailBar({ back, backLabel, title, action, extra, plain = false
     <div className="sticky top-0 z-10 -mx-4 -mt-4 flex min-h-14 items-center gap-2 border-b border-border bg-bg px-4 pt-[env(safe-area-inset-top)] lg:static lg:mx-0 lg:mt-0 lg:min-h-10 lg:border-0 lg:bg-transparent lg:px-0">
       {menuLabel && <span data-dup-menu className="contents"><MenuButton label={menuLabel} /></span>}
       {/* menuLabel이 있으면 폰에서는 ☰만, PC에서는 지금처럼 ← (맨 위 화면 /punch는 PC에서도 숨김) */}
-      <Link href={back} aria-label={backLabel} className={`-ml-2 ${menuLabel ? 'hidden lg:flex' : 'flex'} size-11 shrink-0 items-center justify-center rounded-button text-text lg:ml-0 lg:size-8 lg:border lg:border-border lg:bg-bg lg:text-muted ${back === '/punch' ? 'lg:hidden' : ''}`}>
+      <Link prefetch={false} href={back} aria-label={backLabel} className={`-ml-2 ${menuLabel ? 'hidden lg:flex' : 'flex'} size-11 shrink-0 items-center justify-center rounded-button text-text lg:ml-0 lg:size-8 lg:border lg:border-border lg:bg-bg lg:text-muted ${back === '/punch' ? 'lg:hidden' : ''}`}>
         <ArrowLeft aria-hidden size={24} strokeWidth={1.75} className="lg:size-4.5" />
       </Link>
       <div className="flex min-w-0 flex-1 flex-col">
@@ -30,7 +30,7 @@ export function DetailBar({ back, backLabel, title, action, extra, plain = false
       {sheet && <SheetOpener id={sheet.id} label={sheet.label} className="hidden lg:inline-flex" />}
       {sheet?.mobile && <SheetOpener id={sheet.id} label={sheet.mobile} text className="inline-flex lg:hidden" />}
       {action && (
-        <Link href={action.href} className="inline-flex min-h-11 shrink-0 items-center px-2 text-base font-bold text-primary lg:h-9 lg:min-h-0 lg:gap-1.5 lg:rounded-button lg:bg-primary lg:px-3.5 lg:text-sm lg:font-semibold lg:text-on-primary">
+        <Link prefetch={false} href={action.href} className="inline-flex min-h-11 shrink-0 items-center px-2 text-base font-bold text-primary lg:h-9 lg:min-h-0 lg:gap-1.5 lg:rounded-button lg:bg-primary lg:px-3.5 lg:text-sm lg:font-semibold lg:text-on-primary">
           {(() => {
             const I = (action.id && SHEET_ICONS[action.id]) || Pencil;
             return <I aria-hidden size={16} className="hidden lg:block" />;
@@ -59,7 +59,7 @@ export function Field({ label, value, href }: { label: string; value: ReactNode;
   );
   const cls = 'flex min-h-14 items-center gap-4 px-5 py-2';
   return href ? (
-    <Link href={href} className={cls}>
+    <Link prefetch={false} href={href} className={cls}>
       {body}
     </Link>
   ) : (

@@ -26,7 +26,7 @@ export default async function TrainingSessionPage({ params }: { params: Promise<
 
   return (
     <PageShell wide>
-      <Link href="/admin/training" className="inline-flex min-h-9 items-center self-start text-sm font-medium text-muted">‹ {t('title')}</Link>
+      <Link prefetch={false} href="/admin/training" className="inline-flex min-h-9 items-center self-start text-sm font-medium text-muted">‹ {t('title')}</Link>
       <header className="flex flex-wrap items-center gap-2">
         <h1 className="text-2xl font-bold">{course?.name}</h1>
         {s.cancelled ? <Chip tone="neutral">{t('cancelled')}</Chip> : <Chip tone={signed === live.length && live.length ? 'ok' : 'warn'}>{t('signedValue', { signed, all: live.length })}</Chip>}

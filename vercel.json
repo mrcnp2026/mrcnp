@@ -1,5 +1,11 @@
 {
   "$schema": "https://openapi.vercel.sh/vercel.json",
+  "git": {
+    "deploymentEnabled": {
+      "pc-4": false,
+      "worktree-*": false
+    }
+  },
   "regions": [
     "icn1"
   ],

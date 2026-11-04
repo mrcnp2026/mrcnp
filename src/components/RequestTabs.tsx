@@ -43,7 +43,7 @@ export async function RequestTabs({ admin, active, counts, live = false, q = '' 
           const on = key === active;
           const n = counts[key];
           return (
-            <Link key={key} href={href} aria-current={on ? 'page' : undefined} className={`-mb-px flex min-h-12 flex-1 items-center justify-center gap-2 border-b-2 text-base font-bold whitespace-nowrap lg:flex-none lg:px-4 lg:text-sm ${on ? 'border-text text-text lg:border-primary lg:text-primary' : 'border-transparent text-muted hover:text-text'}`}>
+            <Link prefetch={false} key={key} href={href} aria-current={on ? 'page' : undefined} className={`-mb-px flex min-h-12 flex-1 items-center justify-center gap-2 border-b-2 text-base font-bold whitespace-nowrap lg:flex-none lg:px-4 lg:text-sm ${on ? 'border-text text-text lg:border-primary lg:text-primary' : 'border-transparent text-muted hover:text-text'}`}>
               {t(key === 'pending' ? 'tabPending' : key === 'mine' ? 'tabMine' : 'tabDone')}
               {n !== undefined && <span className={`num min-w-6 rounded-button px-1.5 text-center text-xs leading-5 font-bold ${n > 0 && key === 'pending' ? 'bg-warn text-on-primary' : 'bg-surface text-muted'}`}>{n}</span>}
             </Link>

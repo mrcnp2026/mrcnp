@@ -21,7 +21,7 @@ export async function WeekHoursCard({ meId, today, weekStart, period: given }: {
   const [t, f] = await Promise.all([getTranslations('desk'), getFormatter()]);
   const ws = weekStart ?? weekStartOf(today);
   const we = addDays(ws, 6);
-  const period = given ?? (await loadPeriod(ws, we));
+  const period = given ?? (await loadPeriod(ws, we, undefined, meId));
   const rows = new Map(daysFor(period, meId, ws, we).map((r) => [r.workDate, r]));
   const leave = leaveDaysFor(period, meId);
 

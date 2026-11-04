@@ -59,12 +59,12 @@ export default async function AnnualEmployeePage({ params, searchParams }: { par
       {/* 해 바꾸기 + 상태 한 줄 */}
       <div className="flex flex-wrap items-center gap-3">
         <div className="flex h-10 items-center rounded-button border border-border bg-bg lg:h-9">
-          <Link href={`?${qs({ y: String(year - 1) })}`} aria-label={t('prevYear')} className="flex size-10 items-center justify-center text-muted hover:text-text lg:size-9">
+          <Link prefetch={false} href={`?${qs({ y: String(year - 1) })}`} aria-label={t('prevYear')} className="flex size-10 items-center justify-center text-muted hover:text-text lg:size-9">
             <ChevronLeft aria-hidden size={18} />
           </Link>
           <span className="num px-3 text-sm font-medium">{t('year', { y: year })}</span>
           {year < thisYear ? (
-            <Link href={`?${qs({ y: String(year + 1) })}`} aria-label={t('nextYear')} className="flex size-10 items-center justify-center text-muted hover:text-text lg:size-9">
+            <Link prefetch={false} href={`?${qs({ y: String(year + 1) })}`} aria-label={t('nextYear')} className="flex size-10 items-center justify-center text-muted hover:text-text lg:size-9">
               <ChevronRight aria-hidden size={18} />
             </Link>
           ) : (
@@ -116,7 +116,7 @@ export default async function AnnualEmployeePage({ params, searchParams }: { par
                         return (
                           <li key={i}>
                             {e.cells[i] ? (
-                              <Link href={href(i)} aria-label={label(i, v)} className="-mx-1 flex min-h-9 items-center gap-3 rounded-button px-1 active:bg-surface">{row}</Link>
+                              <Link prefetch={false} href={href(i)} aria-label={label(i, v)} className="-mx-1 flex min-h-9 items-center gap-3 rounded-button px-1 active:bg-surface">{row}</Link>
                             ) : (
                               <div className="flex min-h-9 items-center gap-3">{row}</div>
                             )}
@@ -139,7 +139,7 @@ export default async function AnnualEmployeePage({ params, searchParams }: { par
                         return (
                           <li key={i} className="flex h-full flex-1">
                             {e.cells[i] ? (
-                              <Link href={href(i)} aria-label={label(i, v)} className="flex h-full w-full flex-col items-center justify-end gap-1.5 rounded-button px-1 hover:bg-surface">{col}</Link>
+                              <Link prefetch={false} href={href(i)} aria-label={label(i, v)} className="flex h-full w-full flex-col items-center justify-end gap-1.5 rounded-button px-1 hover:bg-surface">{col}</Link>
                             ) : (
                               <div className="flex h-full w-full flex-col items-center justify-end gap-1.5 px-1">{col}</div>
                             )}

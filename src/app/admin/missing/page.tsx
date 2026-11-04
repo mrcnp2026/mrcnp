@@ -100,8 +100,8 @@ export default async function MissingPage({ searchParams }: { searchParams: Prom
       </div>
       <div className="flex items-center justify-end">
         <div className="flex">
-          <Link href={viewHref(false)} aria-current={!byDate ? 'page' : undefined} className={viewBtn(!byDate)}>{t('viewPeople')}</Link>
-          <Link href={viewHref(true)} aria-current={byDate ? 'page' : undefined} className={`-ml-px ${viewBtn(byDate)}`}>{t('viewDate')}</Link>
+          <Link prefetch={false} href={viewHref(false)} aria-current={!byDate ? 'page' : undefined} className={viewBtn(!byDate)}>{t('viewPeople')}</Link>
+          <Link prefetch={false} href={viewHref(true)} aria-current={byDate ? 'page' : undefined} className={`-ml-px ${viewBtn(byDate)}`}>{t('viewDate')}</Link>
         </div>
       </div>
       {!byDate && data.rule && (
@@ -111,7 +111,7 @@ export default async function MissingPage({ searchParams }: { searchParams: Prom
           <ul className="flex flex-col divide-y divide-border overflow-hidden rounded-card border border-border bg-bg">
             {people.map((p) => (
               <li key={p.id}>
-                <Link href={`/admin/records/${p.id}?m=${p.items[0].workDate.slice(0, 7)}`} className="flex flex-col gap-3 px-5 py-4 hover:bg-surface lg:flex-row lg:items-center lg:gap-6">
+                <Link prefetch={false} href={`/admin/records/${p.id}?m=${p.items[0].workDate.slice(0, 7)}`} className="flex flex-col gap-3 px-5 py-4 hover:bg-surface lg:flex-row lg:items-center lg:gap-6">
                   <span className="flex min-w-0 items-center gap-3 lg:w-64 lg:shrink-0">
                     <span aria-hidden className={`w-1 shrink-0 self-stretch rounded-chip ${p.color}`} />
                     <span className="flex min-w-0 flex-col">
@@ -142,7 +142,7 @@ export default async function MissingPage({ searchParams }: { searchParams: Prom
       {byDate && (
       <nav aria-label={t('title')} className="flex rounded-card bg-bg px-2">
         {(['in', 'out'] as const).map((k) => (
-          <Link key={k} href={q(k)} aria-current={tabKind === k ? 'page' : undefined} className={tab(tabKind === k)}>
+          <Link prefetch={false} key={k} href={q(k)} aria-current={tabKind === k ? 'page' : undefined} className={tab(tabKind === k)}>
             {t(`tab.${k}`)}
             <span className="num">{count(k)}</span>
           </Link>
@@ -162,7 +162,7 @@ export default async function MissingPage({ searchParams }: { searchParams: Prom
             <RowList>
               {rows.map((x) => (
                 <li key={`${x.id}${x.workDate}`}>
-                  <Link href={`/admin/records/${x.id}?m=${x.workDate.slice(0, 7)}`} className="flex min-h-16 items-center gap-3 py-2 pr-3 pl-5">
+                  <Link prefetch={false} href={`/admin/records/${x.id}?m=${x.workDate.slice(0, 7)}`} className="flex min-h-16 items-center gap-3 py-2 pr-3 pl-5">
                     <span className="num flex w-14 shrink-0 flex-col text-sm leading-snug">
                       <span className="font-semibold">{x.start}</span>
                       <span className="text-muted">{x.end ?? '–'}</span>

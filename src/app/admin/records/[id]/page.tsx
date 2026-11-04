@@ -94,7 +94,7 @@ export default async function EmployeeRecordsPage({ params, searchParams }: { pa
 
   return (
     <PageShell wide>
-      <Link href={`/admin/records${q(ym)}`} className="-mb-2 inline-flex min-h-11 items-center self-start text-sm font-medium text-muted">
+      <Link prefetch={false} href={`/admin/records${q(ym)}`} className="-mb-2 inline-flex min-h-11 items-center self-start text-sm font-medium text-muted">
         ‹ {t('backToList')}
       </Link>
       <header className="flex items-center justify-between gap-2">
@@ -103,12 +103,12 @@ export default async function EmployeeRecordsPage({ params, searchParams }: { pa
           {person.employeeNo && <p className="num text-sm text-muted">{person.employeeNo}</p>}
         </div>
         <nav className="flex shrink-0 items-center" aria-label={tr('month')}>
-          <Link href={q(shift(ym, -1))} aria-label={tr('prev')} className="flex size-11 shrink-0 items-center justify-center text-primary">
+          <Link prefetch={false} href={q(shift(ym, -1))} aria-label={tr('prev')} className="flex size-11 shrink-0 items-center justify-center text-primary">
             <ChevronLeft aria-hidden size={22} strokeWidth={1.75} />
           </Link>
           <span className="num text-xl font-semibold">{ym}</span>
           {ym < thisMonth ? (
-            <Link href={q(shift(ym, 1))} aria-label={tr('next')} className="flex size-11 shrink-0 items-center justify-center text-primary">
+            <Link prefetch={false} href={q(shift(ym, 1))} aria-label={tr('next')} className="flex size-11 shrink-0 items-center justify-center text-primary">
               <ChevronRight aria-hidden size={22} strokeWidth={1.75} />
             </Link>
           ) : (
@@ -117,7 +117,7 @@ export default async function EmployeeRecordsPage({ params, searchParams }: { pa
         </nav>
       </header>
       {OFFICE.practiceMode && (
-        <Link href={practice ? `?m=${ym}&live=1` : `?m=${ym}`} className="inline-flex min-h-11 items-center self-start text-sm text-primary">
+        <Link prefetch={false} href={practice ? `?m=${ym}&live=1` : `?m=${ym}`} className="inline-flex min-h-11 items-center self-start text-sm text-primary">
           {practice ? ta('showLive') : ta('showPractice')}
         </Link>
       )}
@@ -142,7 +142,7 @@ export default async function EmployeeRecordsPage({ params, searchParams }: { pa
               </>
             );
             return key && x.v !== '0' ? (
-              <Link key={x.k} href={fq(pick === key ? null : key)} scroll={false} aria-pressed={pick === key} className={`flex min-h-16 flex-col items-center justify-center rounded-button px-1 hover:bg-surface ${pick === key ? 'bg-primary-tint ring-2 ring-primary' : ''}`}>
+              <Link prefetch={false} key={x.k} href={fq(pick === key ? null : key)} scroll={false} aria-pressed={pick === key} className={`flex min-h-16 flex-col items-center justify-center rounded-button px-1 hover:bg-surface ${pick === key ? 'bg-primary-tint ring-2 ring-primary' : ''}`}>
                 {body}
               </Link>
             ) : (
@@ -156,7 +156,7 @@ export default async function EmployeeRecordsPage({ params, searchParams }: { pa
       {pick && (
         <div className="flex items-center justify-between gap-2 rounded-button bg-primary-tint px-3 py-2 text-sm">
           <span className="font-semibold text-primary">{t(`only.${pick}`, { n: shownDays.length })}</span>
-          <Link href={fq(null)} scroll={false} className="inline-flex min-h-9 items-center font-bold text-primary">{t('showAllDays')}</Link>
+          <Link prefetch={false} href={fq(null)} scroll={false} className="inline-flex min-h-9 items-center font-bold text-primary">{t('showAllDays')}</Link>
         </div>
       )}
       {data.rule && details.length === 0 && <p className="text-muted">{tr('emptyMonth')}</p>}

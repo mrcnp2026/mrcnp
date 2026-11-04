@@ -32,11 +32,11 @@ export default async function SignupPage() {
       </Card>
       <p className="flex flex-wrap items-center justify-center gap-x-1 text-sm text-muted">
         {t('haveInvite')}
-        <Link href="/register" className="inline-flex min-h-11 items-center px-2 font-semibold text-primary">
+        <Link prefetch={false} href="/register" className="inline-flex min-h-11 items-center px-2 font-semibold text-primary">
           {t('inviteLink')}
         </Link>
       </p>
-      <Link href="/login" className="min-h-11 content-center text-center text-sm text-primary">
+      <Link prefetch={false} href="/login" className="min-h-11 content-center text-center text-sm text-primary">
         {t('haveAccount')}
       </Link>
     </PageShell>

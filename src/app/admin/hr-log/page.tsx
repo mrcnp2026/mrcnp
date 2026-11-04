@@ -40,7 +40,7 @@ export default async function HrLogPage({ searchParams }: { searchParams: Promis
       </div>
       <nav className="mt-4 flex flex-wrap gap-2" aria-label={t('filterLabel')}>
         {GROUPS.map((g) => (
-          <Link key={g} href={g === 'all' ? '/admin/hr-log' : `/admin/hr-log?k=${g}`} aria-current={k === g ? 'true' : undefined} className={`inline-flex min-h-9 items-center gap-1.5 rounded-chip border px-3 text-sm ${k === g ? 'border-primary bg-primary-tint font-bold text-primary' : 'border-border bg-bg text-muted'}`}>
+          <Link prefetch={false} key={g} href={g === 'all' ? '/admin/hr-log' : `/admin/hr-log?k=${g}`} aria-current={k === g ? 'true' : undefined} className={`inline-flex min-h-9 items-center gap-1.5 rounded-chip border px-3 text-sm ${k === g ? 'border-primary bg-primary-tint font-bold text-primary' : 'border-border bg-bg text-muted'}`}>
             {t(`filter.${g}`)} <b className="num">{count(g)}</b>
           </Link>
         ))}

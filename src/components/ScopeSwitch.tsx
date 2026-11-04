@@ -15,7 +15,7 @@ export async function ScopeSwitch({ kind, current }: { kind: keyof typeof HREF; 
   return (
     <nav aria-label={t('label')} className="grid grid-cols-2 rounded-card bg-bg p-1 lg:hidden">
       {(['all', 'mine'] as const).map((k) => (
-        <Link
+        <Link prefetch={false}
           key={k}
           href={HREF[kind][k]}
           aria-current={current === k ? 'page' : undefined}

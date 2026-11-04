@@ -23,7 +23,7 @@ export default async function MyTrainingSessionPage({ params }: { params: Promis
   const hours = sessionHours(s);
   return (
     <PageShell>
-      <Link href="/punch/training" className="inline-flex min-h-9 items-center self-start text-sm font-medium text-muted">‹ {t('title')}</Link>
+      <Link prefetch={false} href="/punch/training" className="inline-flex min-h-9 items-center self-start text-sm font-medium text-muted">‹ {t('title')}</Link>
       <h1 className="text-2xl font-bold">{course?.name}</h1>
       <p className="num text-sm text-muted">
         {f.dateTime(new Date(`${s.heldOn}T00:00:00+09:00`), { year: 'numeric', month: 'short', day: 'numeric', weekday: 'short' })}

@@ -223,10 +223,10 @@ export default async function MyPayPage({ searchParams }: { searchParams: Promis
                     <tr key={s.id} className={`border-b border-border ${on ? 'bg-primary-tint' : ''}`}>
                       <td className="px-3 py-2.5 text-center">
                         {/* PC: 오른쪽 칸에 펼친다 · 폰: 한 장 화면으로 */}
-                        <Link href={`/punch/payslips?y=${year}&s=${s.id}`} scroll={false} aria-current={on ? 'true' : undefined} className={`num hidden font-semibold lg:inline ${on ? 'text-primary' : ''}`}>
+                        <Link prefetch={false} href={`/punch/payslips?y=${year}&s=${s.id}`} scroll={false} aria-current={on ? 'true' : undefined} className={`num hidden font-semibold lg:inline ${on ? 'text-primary' : ''}`}>
                           {s.month.slice(0, 7)}
                         </Link>
-                        <Link href={`/punch/payslips/${s.id}`} className="num font-semibold text-primary lg:hidden">
+                        <Link prefetch={false} href={`/punch/payslips/${s.id}`} className="num font-semibold text-primary lg:hidden">
                           {s.month.slice(0, 7)}
                         </Link>
                         {(s.revision > 1 || s.kind === 'BONUS') && (

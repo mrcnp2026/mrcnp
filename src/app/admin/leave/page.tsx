@@ -129,7 +129,7 @@ export default async function AdminLeavePage({ searchParams }: { searchParams: P
                   />
                 </section>
                 {waiting > 0 && year === today.slice(0, 4) && (
-                  <Link href="/admin/inbox" className="flex items-center justify-between rounded-card bg-warn-tint px-5 py-3 text-sm font-semibold text-warn">
+                  <Link prefetch={false} href="/admin/inbox" className="flex items-center justify-between rounded-card bg-warn-tint px-5 py-3 text-sm font-semibold text-warn">
                     {t('pcSum.waitingLine', { n: waiting })}
                     <ChevronRight aria-hidden size={16} />
                   </Link>
@@ -154,7 +154,7 @@ export default async function AdminLeavePage({ searchParams }: { searchParams: P
           </a>
         )}
         {admin && (
-          <Link href="/admin/leave/types" className="inline-flex h-8 items-center rounded-button border border-border bg-bg px-3.5 text-sm font-semibold whitespace-nowrap text-text hover:bg-surface">
+          <Link prefetch={false} href="/admin/leave/types" className="inline-flex h-8 items-center rounded-button border border-border bg-bg px-3.5 text-sm font-semibold whitespace-nowrap text-text hover:bg-surface">
             {t('toTypes')}
           </Link>
         )}
@@ -177,10 +177,10 @@ export default async function AdminLeavePage({ searchParams }: { searchParams: P
               </button>
             </form>
             <div className="ml-auto flex">
-              <Link href={viewHref('list')} aria-current={view === 'list' ? 'page' : undefined} className={viewBtn(view === 'list')}>
+              <Link prefetch={false} href={viewHref('list')} aria-current={view === 'list' ? 'page' : undefined} className={viewBtn(view === 'list')}>
                 {t('viewList')}
               </Link>
-              <Link href={viewHref('month')} aria-current={view === 'month' ? 'page' : undefined} className={`-ml-px ${viewBtn(view === 'month')}`}>
+              <Link prefetch={false} href={viewHref('month')} aria-current={view === 'month' ? 'page' : undefined} className={`-ml-px ${viewBtn(view === 'month')}`}>
                 {t('viewMonth')}
               </Link>
             </div>
@@ -207,14 +207,14 @@ export default async function AdminLeavePage({ searchParams }: { searchParams: P
                 return {
                   id: r.id,
                   cells: {
-                    who: { text: name.get(r.employeeId) ?? '', node: <Link href={`/admin/leave/req/${r.id}`} className="font-bold hover:text-primary">{name.get(r.employeeId)}</Link> },
+                    who: { text: name.get(r.employeeId) ?? '', node: <Link prefetch={false} href={`/admin/leave/req/${r.id}`} className="font-bold hover:text-primary">{name.get(r.employeeId)}</Link> },
                     period: { text: `${r.startDate} ${period}`, node: <span className="num">{period}</span> },
                     group: { text: ty?.groupName ?? '' },
                     type: { text: leaveName(r.typeCode) },
                     hours: { text: ty?.isPaid ? t('hoursValue', { h: n((ty.hours ?? 8) * units) }) : t('hoursValue', { h: 0 }) },
                     deduct: { text: t('daysValue', { d: n(ty?.deductsBalance ? r.days : 0) }) },
                     reason: { text: r.reason ?? '' },
-                    act: { text: '', node: admin ? <span className="inline-flex items-center justify-end gap-2">{top && <Link href={editHref(r.employeeId, r.id)} className="inline-flex min-h-9 items-center rounded-button border border-border bg-bg px-3 text-sm font-bold text-primary hover:bg-primary-tint">{tl('directEditOpen')}</Link>}<LeaveCancel id={r.id} name={name.get(r.employeeId) ?? ''} compact /></span> : null },
+                    act: { text: '', node: admin ? <span className="inline-flex items-center justify-end gap-2">{top && <Link prefetch={false} href={editHref(r.employeeId, r.id)} className="inline-flex min-h-9 items-center rounded-button border border-border bg-bg px-3 text-sm font-bold text-primary hover:bg-primary-tint">{tl('directEditOpen')}</Link>}<LeaveCancel id={r.id} name={name.get(r.employeeId) ?? ''} compact /></span> : null },
                   },
                 };
               })}
@@ -335,7 +335,7 @@ export default async function AdminLeavePage({ searchParams }: { searchParams: P
                     </td>
                   )}
                   <td className="px-4 py-3 text-right">
-                    <Link href={pick(p.id)} scroll={false} className="inline-flex min-h-9 items-center rounded-button bg-primary-tint px-3 text-sm font-bold whitespace-nowrap text-primary">
+                    <Link prefetch={false} href={pick(p.id)} scroll={false} className="inline-flex min-h-9 items-center rounded-button bg-primary-tint px-3 text-sm font-bold whitespace-nowrap text-primary">
                       {t('manage')}
                     </Link>
                   </td>
@@ -369,7 +369,7 @@ export default async function AdminLeavePage({ searchParams }: { searchParams: P
                 const on = sp.e === p.id;
                 return (
                   <li key={p.id}>
-                    <Link href={pick(p.id)} scroll={false} aria-current={on ? 'true' : undefined} className={`num flex min-h-14 items-center gap-2 px-5 py-2 ${on ? 'bg-primary-tint' : ''}`}>
+                    <Link prefetch={false} href={pick(p.id)} scroll={false} aria-current={on ? 'true' : undefined} className={`num flex min-h-14 items-center gap-2 px-5 py-2 ${on ? 'bg-primary-tint' : ''}`}>
                       <span className="min-w-0 flex-1 truncate text-base font-bold">{p.name}</span>
                       {bal.grant || bal.ledger ? (
                         ([bal.granted, bal.used, bal.remaining] as const).map((v, i) => (
@@ -402,7 +402,7 @@ export default async function AdminLeavePage({ searchParams }: { searchParams: P
                 </span>
                 <span className="num text-xs text-muted">{hiredOn ? t('hired', { date: hiredOn }) : t('noHireDate')}</span>
               </div>
-              <Link href={`/admin/leave/emp/${p.id}${asOf === today ? '' : `?to=${asOf}`}`} className="inline-flex min-h-11 items-center self-start text-sm font-bold text-primary">
+              <Link prefetch={false} href={`/admin/leave/emp/${p.id}${asOf === today ? '' : `?to=${asOf}`}`} className="inline-flex min-h-11 items-center self-start text-sm font-bold text-primary">
                 {t('toAccrual')} ›
               </Link>
               {bal.grant || bal.ledger ? (
@@ -458,10 +458,10 @@ export default async function AdminLeavePage({ searchParams }: { searchParams: P
             {approvedPage.items.map((r) => (
               <div key={r.id} className="flex flex-col gap-1 py-2.5">
                 <div className="flex items-center justify-between gap-2">
-                  <Link href={`/admin/leave/req/${r.id}`} className="font-semibold">{name.get(r.employeeId)} ›</Link>
+                  <Link prefetch={false} href={`/admin/leave/req/${r.id}`} className="font-semibold">{name.get(r.employeeId)} ›</Link>
                   {admin && (
                     <span className="flex items-center gap-2">
-                      {top && <Link href={editHref(r.employeeId, r.id)} className="inline-flex min-h-9 items-center rounded-button border border-border bg-bg px-3 text-sm font-bold text-primary">{tl('directEditOpen')}</Link>}
+                      {top && <Link prefetch={false} href={editHref(r.employeeId, r.id)} className="inline-flex min-h-9 items-center rounded-button border border-border bg-bg px-3 text-sm font-bold text-primary">{tl('directEditOpen')}</Link>}
                       <LeaveCancel id={r.id} name={name.get(r.employeeId) ?? ''} compact />
                     </span>
                   )}

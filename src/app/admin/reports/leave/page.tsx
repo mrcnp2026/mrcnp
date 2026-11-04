@@ -45,7 +45,7 @@ export default async function LeaveReportPage({ searchParams }: { searchParams: 
   const qs = new URLSearchParams(base).toString();
   const moreHref = `?${new URLSearchParams({ ...base, ...(more ? {} : { more: '1' }) }).toString()}`;
   const toggle = (
-    <Link href={moreHref} scroll={false} className={R.link}>
+    <Link prefetch={false} href={moreHref} scroll={false} className={R.link}>
       {more ? t('lessCols') : t('moreCols')}
     </Link>
   );
@@ -94,7 +94,7 @@ export default async function LeaveReportPage({ searchParams }: { searchParams: 
   );
   const nameLink = (id: string, name: string, inactive: boolean) => (
     <>
-      <Link href={`/admin/leave/ledger?emp=${id}#detail`} className="font-medium hover:text-primary hover:underline">
+      <Link prefetch={false} href={`/admin/leave/ledger?emp=${id}#detail`} className="font-medium hover:text-primary hover:underline">
         {name}
       </Link>
       {inactive && <span className="ml-2 text-xs text-faint">{t('inactive')}</span>}
@@ -136,7 +136,7 @@ export default async function LeaveReportPage({ searchParams }: { searchParams: 
       <div className="flex flex-wrap items-center gap-x-3 gap-y-2 text-sm">
         <Chip tone="info">{t('startedValue', { n: r.total.started, all: r.total.people })}</Chip>
         {practice && <Chip>{t('practice')}</Chip>}
-        <Link href="/admin/leave/ledger" className={R.link}>
+        <Link prefetch={false} href="/admin/leave/ledger" className={R.link}>
           {t('toLedger')} ›
         </Link>
       </div>

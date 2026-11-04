@@ -77,7 +77,7 @@ export async function TaxBoard({ lines, today }: { lines: StaffPayLine[]; today:
           const bits = x ? cols.slice(2).flatMap((c) => { const v = c.cell(x); return v ? [`${c.label} ${v.text}`] : []; }) : [];
           return (
             <li key={l.employeeId}>
-              <Link href={`/admin/payroll/staff/${l.employeeId}`} className="flex items-center gap-3 px-3 py-2.5 active:bg-surface">
+              <Link prefetch={false} href={`/admin/payroll/staff/${l.employeeId}`} className="flex items-center gap-3 px-3 py-2.5 active:bg-surface">
                 <span className="flex min-w-0 flex-1 flex-col">
                   <b className="truncate">{l.name}</b>
                   <span className="num truncate text-xs text-muted">
@@ -105,7 +105,7 @@ export async function TaxBoard({ lines, today }: { lines: StaffPayLine[]; today:
             {lines.map((l) => (
               <tr key={l.employeeId} className="border-b border-border align-top">
                 <td className="px-3 py-3 whitespace-nowrap">
-                  <Link href={`/admin/payroll/staff/${l.employeeId}`} className="font-bold text-primary hover:underline">{l.name}</Link>
+                  <Link prefetch={false} href={`/admin/payroll/staff/${l.employeeId}`} className="font-bold text-primary hover:underline">{l.name}</Link>
                   {!l.active && <span className="ml-2 text-xs text-faint">{t('inactive')}</span>}
                   {!l.tax && fallback && <span className="ml-2 text-xs text-faint">{t('taxDefaultTag')}</span>}
                 </td>

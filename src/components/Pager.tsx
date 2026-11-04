@@ -49,7 +49,7 @@ export function Pager({
   return (
     <nav aria-label={label} className="flex flex-wrap items-center justify-center gap-1 pt-1">
       {page > 1 ? (
-        <Link href={href(page - 1)} scroll={false} aria-label={`${page - 1}`} className={`${cell} text-primary`}>
+        <Link prefetch={false} href={href(page - 1)} scroll={false} aria-label={`${page - 1}`} className={`${cell} text-primary`}>
           <ChevronLeft aria-hidden size={20} strokeWidth={1.75} />
         </Link>
       ) : (
@@ -70,14 +70,14 @@ export function Pager({
             {n}
           </span>
         ) : (
-          <Link key={n} href={href(n)} scroll={false} className={`num ${cell} border border-border text-primary`}>
+          <Link prefetch={false} key={n} href={href(n)} scroll={false} className={`num ${cell} border border-border text-primary`}>
             {n}
           </Link>
         );
       })
       )}
       {page < pages ? (
-        <Link href={href(page + 1)} scroll={false} aria-label={`${page + 1}`} className={`${cell} text-primary`}>
+        <Link prefetch={false} href={href(page + 1)} scroll={false} aria-label={`${page + 1}`} className={`${cell} text-primary`}>
           <ChevronRight aria-hidden size={20} strokeWidth={1.75} />
         </Link>
       ) : (

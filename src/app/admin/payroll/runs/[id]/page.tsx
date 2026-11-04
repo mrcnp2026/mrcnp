@@ -61,7 +61,7 @@ export default async function PayRunPage({ params, searchParams }: { params: Pro
 
   return (
     <PageShell wide>
-      <Link href={`/admin/payroll/runs${run.isTest ? '' : '?live=1'}`} className="inline-flex min-h-9 items-center self-start text-sm font-medium text-muted">
+      <Link prefetch={false} href={`/admin/payroll/runs${run.isTest ? '' : '?live=1'}`} className="inline-flex min-h-9 items-center self-start text-sm font-medium text-muted">
         ‹ {t('back')}
       </Link>
       <div>
@@ -91,7 +91,7 @@ export default async function PayRunPage({ params, searchParams }: { params: Pro
         <p className="rounded-card border border-border bg-surface p-3 text-sm">
           <b>{t('revision', { n: run.revision })}</b> · {t('correctionOf', { reason: run.correctionReason ?? '' })}{' '}
           {original && (
-            <Link href={`/admin/payroll/runs/${original.id}`} className="font-bold text-primary hover:underline">
+            <Link prefetch={false} href={`/admin/payroll/runs/${original.id}`} className="font-bold text-primary hover:underline">
               {t('toOriginal', { n: original.revision })}
             </Link>
           )}
@@ -100,7 +100,7 @@ export default async function PayRunPage({ params, searchParams }: { params: Pro
       {newer && (
         <p className="rounded-card border border-warn bg-warn-tint p-3 text-sm text-warn">
           {t(replaced ? 'replacedBy' : 'correctionOpen', { n: newer.revision })}{' '}
-          <Link href={`/admin/payroll/runs/${newer.id}`} className="font-bold underline">
+          <Link prefetch={false} href={`/admin/payroll/runs/${newer.id}`} className="font-bold underline">
             {t('toRevision', { n: newer.revision })}
           </Link>
         </p>
@@ -224,7 +224,7 @@ export default async function PayRunPage({ params, searchParams }: { params: Pro
       {!final && lines.some((l) => l.included && !l.closed) && (
         <p className="flex flex-wrap items-center gap-x-3 gap-y-1 rounded-card border border-warn bg-warn-tint p-3 text-sm text-warn">
           <span className="font-bold">{t('notClosedBanner', { n: lines.filter((l) => l.included && !l.closed).length })}</span>
-          <Link href={`/admin/closing?m=${run.periodFrom.slice(0, 7)}${run.isTest ? '' : '&live=1'}`} className="font-bold underline">{t('toClosing')} ›</Link>
+          <Link prefetch={false} href={`/admin/closing?m=${run.periodFrom.slice(0, 7)}${run.isTest ? '' : '&live=1'}`} className="font-bold underline">{t('toClosing')} ›</Link>
         </p>
       )}
       <div className="overflow-x-auto table-ruled">
@@ -242,7 +242,7 @@ export default async function PayRunPage({ params, searchParams }: { params: Pro
             {lines.map((l) => (
               <tr key={l.employeeId} className={`border-b border-border align-top ${!l.included ? 'text-faint' : l.state === 'BLOCKED' ? 'bg-danger-tint' : ''}`}>
                 <td className="px-3 py-3">
-                  <Link href={`/admin/payroll/runs/${run.id}/${l.employeeId}`} className="font-bold text-primary hover:underline">
+                  <Link prefetch={false} href={`/admin/payroll/runs/${run.id}/${l.employeeId}`} className="font-bold text-primary hover:underline">
                     {l.name}
                   </Link>
                   <span className="num block text-xs text-faint">{l.employeeNo}</span>

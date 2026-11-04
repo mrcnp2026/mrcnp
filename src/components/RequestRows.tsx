@@ -78,7 +78,7 @@ export async function RequestRows({ items, leaveTypes, names, showName = false, 
                     </td>
                   )}
                   <td className={`${td} font-bold whitespace-nowrap`}>
-                    <Link href={hrefOf(r)} className="hover:text-primary">
+                    <Link prefetch={false} href={hrefOf(r)} className="hover:text-primary">
                       {r.kind === 'punch' ? t(`punchKind.${r.punchKind ?? 'in'}`) : t(`kinds.${r.kind}`)}
                     </Link>
                     {label && <span className="block text-xs font-normal text-muted">{label}</span>}
@@ -111,16 +111,16 @@ export async function RequestRows({ items, leaveTypes, names, showName = false, 
                     {/* 관리자 표의 대기 중 요청: 시프티처럼 줄에 [승인][거절] — 누르면 그 요청의 상세 패널이 열리고 거기서 확인한 뒤 처리한다 (한 번에 처리되지 않게) */}
                     {openKey === 'open' && r.status === 'pending' ? (
                       <span className="inline-flex gap-1">
-                        <Link href={hrefOf(r)} className="inline-flex h-8 items-center rounded-button border border-primary bg-bg px-3 text-sm font-bold text-primary hover:bg-primary-tint">
+                        <Link prefetch={false} href={hrefOf(r)} className="inline-flex h-8 items-center rounded-button border border-primary bg-bg px-3 text-sm font-bold text-primary hover:bg-primary-tint">
                           {t('rowApprove')}
                         </Link>
-                        <Link href={hrefOf(r)} className="inline-flex h-8 items-center rounded-button border border-border bg-bg px-3 text-sm font-bold text-muted hover:bg-surface">
+                        <Link prefetch={false} href={hrefOf(r)} className="inline-flex h-8 items-center rounded-button border border-border bg-bg px-3 text-sm font-bold text-muted hover:bg-surface">
                           {t('rowReject')}
                         </Link>
                       </span>
                     ) : (
                       <span className="inline-flex items-center gap-1">
-                        <Link href={hrefOf(r)} className="inline-flex h-8 items-center rounded-button border border-primary bg-bg px-4 text-sm font-bold text-primary hover:bg-primary-tint">
+                        <Link prefetch={false} href={hrefOf(r)} className="inline-flex h-8 items-center rounded-button border border-primary bg-bg px-4 text-sm font-bold text-primary hover:bg-primary-tint">
                           {t(openKey)}
                         </Link>
                         {hideable && r.status !== 'pending' && <HideRequests keys={[r.key]} />}
@@ -145,7 +145,7 @@ export async function RequestRows({ items, leaveTypes, names, showName = false, 
         const label = sub(r);
         return (
           <li key={r.key} className="relative">
-            <Link href={hrefOf(r)} className={`flex items-start gap-3 px-5 py-3 ${hideable && r.status !== 'pending' ? 'pr-14' : ''}`}>
+            <Link prefetch={false} href={hrefOf(r)} className={`flex items-start gap-3 px-5 py-3 ${hideable && r.status !== 'pending' ? 'pr-14' : ''}`}>
               <span aria-hidden className={`mt-1 flex size-11 shrink-0 items-center justify-center rounded-button ${TONE[r.kind]}`}>
                 <Icon size={21} strokeWidth={1.9} />
               </span>

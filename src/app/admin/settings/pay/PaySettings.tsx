@@ -98,7 +98,7 @@ export async function PaySettings({ sp }: { sp: SP }) {
           <div className="set-card flex flex-col gap-1 rounded-card border border-border bg-surface px-4 py-3 text-sm lg:px-6">
             <p className="font-bold">{t('s09.ruleTitle')}</p>
             <p className="num text-muted">{rule ? t('s09.rule', { start: rule.startTime.slice(0, 5), end: rule.endTime.slice(0, 5), step: rule.roundStepMin ?? 0 }) : t('s09.ruleNone')}</p>
-            <Link href="/admin/settings?tab=work" className="self-start font-bold text-primary">
+            <Link prefetch={false} href="/admin/settings?tab=work" className="self-start font-bold text-primary">
               {t('s09.toRule')} ›
             </Link>
           </div>
@@ -146,7 +146,7 @@ export async function PaySettings({ sp }: { sp: SP }) {
           <div className="border-b border-border bg-surface px-4 py-4 lg:px-6">
             <p className="pb-3 font-bold">{t('item.editTitle', { name: editing.koName })}</p>
             <ItemForm key={editing.id} kind={kind} item={editing} today={today} />
-            <Link href={href({})} className="mt-2 inline-flex min-h-9 items-center text-sm text-muted">
+            <Link prefetch={false} href={href({})} className="mt-2 inline-flex min-h-9 items-center text-sm text-muted">
               {t('cancel')}
             </Link>
           </div>
@@ -161,7 +161,7 @@ export async function PaySettings({ sp }: { sp: SP }) {
               <li key={it.id} className={`flex flex-col gap-2 px-4 py-3 ${it.inUse ? '' : 'opacity-60'}`}>
                 <div className="flex items-start gap-2">
                   <span className="min-w-0 flex-1">
-                    <Link href={href({ edit: it.code })} className="font-bold text-primary">
+                    <Link prefetch={false} href={href({ edit: it.code })} className="font-bold text-primary">
                       {it.koName}
                     </Link>
                     <span className="num block text-xs break-all text-faint">
@@ -216,7 +216,7 @@ export async function PaySettings({ sp }: { sp: SP }) {
                 {items.map((it) => (
                   <tr key={it.id} className={`border-b border-border ${it.inUse ? '' : 'opacity-60'}`}>
                     <td className="px-4 py-2">
-                      <Link href={href({ edit: it.code })} className="font-bold text-primary hover:underline">
+                      <Link prefetch={false} href={href({ edit: it.code })} className="font-bold text-primary hover:underline">
                         {it.koName}
                       </Link>
                       <span className="num block text-xs text-faint">
@@ -263,7 +263,7 @@ export async function PaySettings({ sp }: { sp: SP }) {
     const tabs = (
       <nav className="flex flex-wrap gap-1 border-b border-border px-4 pt-3 lg:px-6" aria-label={t('ref.tabs')}>
         {(['current', 'pending', 'history', 'add'] as const).map((k) => (
-          <Link key={k} href={href({ v: k === 'current' ? undefined : k })} aria-current={view === k ? 'page' : undefined} className={`inline-flex min-h-9 items-center gap-1 border-b-2 px-3 text-sm font-bold ${view === k ? 'border-primary text-primary' : 'border-transparent text-muted'}`}>
+          <Link prefetch={false} key={k} href={href({ v: k === 'current' ? undefined : k })} aria-current={view === k ? 'page' : undefined} className={`inline-flex min-h-9 items-center gap-1 border-b-2 px-3 text-sm font-bold ${view === k ? 'border-primary text-primary' : 'border-transparent text-muted'}`}>
             {t(`ref.tab.${k}`)}
             {k === 'pending' && pending.length > 0 && <span className="num rounded-chip bg-warn px-1.5 text-xs text-on-primary">{pending.length}</span>}
           </Link>
@@ -546,7 +546,7 @@ export async function PaySettings({ sp }: { sp: SP }) {
                     <p className="text-xs font-bold text-faint">{t('s07.colCompany')}</p>
                     <span className="num rounded-chip bg-primary-tint px-3 py-1 text-sm font-semibold text-primary">{company}</span>
                     {v?.note && <p className="text-xs leading-5 text-muted">{v.note}</p>}
-                    <Link href={href({ edit: k })} className="text-xs font-bold text-primary hover:underline">
+                    <Link prefetch={false} href={href({ edit: k })} className="text-xs font-bold text-primary hover:underline">
                       {t('s07.edit')} ›
                     </Link>
                   </div>
@@ -558,7 +558,7 @@ export async function PaySettings({ sp }: { sp: SP }) {
                 {sp.edit === k && (
                   <div className="rounded-card bg-surface p-4 lg:basis-full">
                     <AllowanceForm key={p?.version ?? 0} kind={k} current={v} version={p?.version ?? 0} today={today} />
-                    <Link href={href({})} className="inline-flex min-h-9 items-center text-sm text-muted">
+                    <Link prefetch={false} href={href({})} className="inline-flex min-h-9 items-center text-sm text-muted">
                       {t('cancel')}
                     </Link>
                   </div>

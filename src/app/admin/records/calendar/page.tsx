@@ -138,7 +138,7 @@ export default async function RecordCalendarPage({ searchParams }: { searchParam
               {rows.map(({ p, cells, worked, payable }) => (
                 <tr key={p.id} className="group">
                   <th scope="row" className="sticky left-0 z-10 border-b border-border bg-bg px-3 py-2 text-left font-normal group-hover:bg-surface min-[120rem]:px-4">
-                    <Link href={`/admin/records/${p.id}?ym=${ym}${sp.live === '1' ? '&live=1' : ''}`} className="flex items-center gap-2.5 hover:text-primary">
+                    <Link prefetch={false} href={`/admin/records/${p.id}?ym=${ym}${sp.live === '1' ? '&live=1' : ''}`} className="flex items-center gap-2.5 hover:text-primary">
                       <span aria-hidden className="flex size-7 shrink-0 items-center justify-center rounded-chip bg-primary-tint text-xs font-bold text-primary">{p.name.slice(0, 1)}</span>
                       <span className="flex min-w-0 flex-col">
                         <span className="truncate text-sm font-bold">{p.name}</span>
@@ -152,7 +152,7 @@ export default async function RecordCalendarPage({ searchParams }: { searchParam
                     return (
                       <td key={c.d} className={`num border-b border-border p-0.5 text-center align-middle ${c.d === today ? 'bg-primary-tint/60' : redDay(c.d) ? 'bg-surface/70' : 'group-hover:bg-surface/50'}`}>
                         {c.in || c.out ? (
-                          <Link href={`/admin/records/${p.id}/${c.d}${sp.live === '1' ? '?live=1' : ''}`} title={[c.late ? t('dotLate') : '', c.open ? t('noOut') : '', c.leaveNames].filter(Boolean).join(' · ') || undefined} className={`flex flex-col items-center gap-0.5 rounded-button px-0.5 py-1.5 leading-tight hover:bg-bg hover:shadow-card ${c.deemed ? 'text-muted' : ''}`}>
+                          <Link prefetch={false} href={`/admin/records/${p.id}/${c.d}${sp.live === '1' ? '?live=1' : ''}`} title={[c.late ? t('dotLate') : '', c.open ? t('noOut') : '', c.leaveNames].filter(Boolean).join(' · ') || undefined} className={`flex flex-col items-center gap-0.5 rounded-button px-0.5 py-1.5 leading-tight hover:bg-bg hover:shadow-card ${c.deemed ? 'text-muted' : ''}`}>
                             <span className={c.late ? 'rounded-chip bg-danger-tint px-1 font-bold text-danger' : 'font-medium text-text'}>{c.in ?? '–'}</span>
                             <span className={c.open ? 'rounded-chip bg-warn-tint px-1 font-bold text-warn' : 'text-faint'}>{c.out ?? (c.open ? t('noOutShort') : '–')}</span>
                             {c.deemed && <span className="text-faint">{t('deemed')}</span>}
@@ -202,18 +202,18 @@ export default async function RecordCalendarPage({ searchParams }: { searchParam
           </form>
         </MineBar>
         <nav aria-label={t('month')} className="flex items-center justify-center gap-1">
-          <Link href={link({ ym: prevYm })} aria-label={t('prev')} className="flex size-11 items-center justify-center text-text">
+          <Link prefetch={false} href={link({ ym: prevYm })} aria-label={t('prev')} className="flex size-11 items-center justify-center text-text">
             <ChevronLeft aria-hidden size={20} />
           </Link>
           <span className="num min-w-28 text-center text-lg font-bold">{f.dateTime(kstDateTime(from, '12:00'), { year: 'numeric', month: 'long' })}</span>
           {nextFirst.slice(0, 7) <= today.slice(0, 7) ? (
-            <Link href={link({ ym: nextFirst.slice(0, 7) })} aria-label={t('next')} className="flex size-11 items-center justify-center text-text">
+            <Link prefetch={false} href={link({ ym: nextFirst.slice(0, 7) })} aria-label={t('next')} className="flex size-11 items-center justify-center text-text">
               <ChevronRight aria-hidden size={20} />
             </Link>
           ) : (
             <span className="size-11" />
           )}
-          <Link href={link({ ym: today.slice(0, 7), pd: today })} className="ml-1 inline-flex min-h-9 items-center rounded-button border border-border bg-bg px-3 text-sm text-muted">
+          <Link prefetch={false} href={link({ ym: today.slice(0, 7), pd: today })} className="ml-1 inline-flex min-h-9 items-center rounded-button border border-border bg-bg px-3 text-sm text-muted">
             {t('thisMonth')}
           </Link>
         </nav>
@@ -228,7 +228,7 @@ export default async function RecordCalendarPage({ searchParams }: { searchParam
           <div className="grid grid-cols-7">
             {phoneDays.map((c) =>
               c.inMonth && c.d <= today ? (
-                <Link key={c.d} href={link({ pd: c.d })} scroll={false} aria-current={c.d === pd ? 'date' : undefined} className={`flex min-h-16 flex-col items-center gap-0.5 border-b border-border py-1 ${c.d === pd ? 'bg-primary-tint' : ''}`}>
+                <Link prefetch={false} key={c.d} href={link({ pd: c.d })} scroll={false} aria-current={c.d === pd ? 'date' : undefined} className={`flex min-h-16 flex-col items-center gap-0.5 border-b border-border py-1 ${c.d === pd ? 'bg-primary-tint' : ''}`}>
                   <span className={`num flex size-6 items-center justify-center rounded-chip text-sm ${c.d === today ? 'bg-text font-bold text-on-primary' : redDay(c.d) ? 'text-danger' : ''}`}>{Number(c.d.slice(8))}</span>
                   {c.came > 0 && <span className="num text-xs font-semibold text-primary">{t('cellCame', { n: c.came })}</span>}
                   <span className="flex gap-0.5">
@@ -275,7 +275,7 @@ export default async function RecordCalendarPage({ searchParams }: { searchParam
             <ul className="divide-y divide-border rounded-card border border-border bg-bg shadow-card">
               {dayList.map(({ r, c }) => (
                 <li key={r.p.id}>
-                  <Link href={c.in || c.out ? `/admin/records/${r.p.id}/${pd}${sp.live === '1' ? '?live=1' : ''}` : `/admin/records/${r.p.id}?ym=${ym}`} className="flex min-h-14 items-center gap-3 py-2 pr-4 pl-5">
+                  <Link prefetch={false} href={c.in || c.out ? `/admin/records/${r.p.id}/${pd}${sp.live === '1' ? '?live=1' : ''}` : `/admin/records/${r.p.id}?ym=${ym}`} className="flex min-h-14 items-center gap-3 py-2 pr-4 pl-5">
                     <span className="num flex w-14 shrink-0 flex-col text-sm leading-snug">
                       <span className={`font-semibold ${c.late ? 'text-danger' : ''}`}>{c.in ?? '–'}</span>
                       <span className={c.open ? 'font-bold text-warn' : 'text-muted'}>{c.out ?? '–'}</span>
@@ -311,17 +311,17 @@ export default async function RecordCalendarPage({ searchParams }: { searchParam
         ) : (
           <span className="ml-auto" />
         )}
-        <Link href={`/admin/records/list${sp.live === '1' ? '?live=1' : ''}`} className="inline-flex min-h-8 items-center rounded-button border border-border bg-bg px-3.5 text-sm font-semibold text-text hover:bg-surface">
+        <Link prefetch={false} href={`/admin/records/list${sp.live === '1' ? '?live=1' : ''}`} className="inline-flex min-h-8 items-center rounded-button border border-border bg-bg px-3.5 text-sm font-semibold text-text hover:bg-surface">
           {t('toList')}
         </Link>
       </div>
       <div className="flex flex-wrap items-center gap-2">
         <div className="flex">
-          <Link href={link({ ym: prevYm })} aria-label={t('prev')} className="inline-flex size-8 items-center justify-center rounded-l-button border border-border bg-bg text-muted">
+          <Link prefetch={false} href={link({ ym: prevYm })} aria-label={t('prev')} className="inline-flex size-8 items-center justify-center rounded-l-button border border-border bg-bg text-muted">
             <ChevronLeft aria-hidden size={16} />
           </Link>
           {nextFirst.slice(0, 7) <= today.slice(0, 7) ? (
-            <Link href={link({ ym: nextFirst.slice(0, 7) })} aria-label={t('next')} className="-ml-px inline-flex size-8 items-center justify-center rounded-r-button border border-border bg-bg text-muted">
+            <Link prefetch={false} href={link({ ym: nextFirst.slice(0, 7) })} aria-label={t('next')} className="-ml-px inline-flex size-8 items-center justify-center rounded-r-button border border-border bg-bg text-muted">
               <ChevronRight aria-hidden size={16} />
             </Link>
           ) : (
@@ -330,7 +330,7 @@ export default async function RecordCalendarPage({ searchParams }: { searchParam
             </span>
           )}
         </div>
-        <Link href={link({ ym: today.slice(0, 7) })} className="inline-flex min-h-8 items-center rounded-button border border-border bg-bg px-4 text-sm text-muted">
+        <Link prefetch={false} href={link({ ym: today.slice(0, 7) })} className="inline-flex min-h-8 items-center rounded-button border border-border bg-bg px-4 text-sm text-muted">
           {t('thisMonth')}
         </Link>
         <p className="num ml-2 text-lg font-bold">{f.dateTime(kstDateTime(from, '12:00'), { year: 'numeric', month: 'long' })}</p>

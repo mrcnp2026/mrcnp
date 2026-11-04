@@ -35,7 +35,7 @@ export async function StaffDesk({ meId, today, month }: { meId: string; today: s
   const gridStart = addDays(first, -(isoWeekday(first) % 7));
   const gridEnd = addDays(last, 6 - (isoWeekday(last) % 7));
   const [period, types, { data: named }] = await Promise.all([
-    loadPeriod(gridStart, gridEnd),
+    loadPeriod(gridStart, gridEnd, undefined, meId), // 본인 것만 (2026-11-04 사용량)
     loadAllLeaveTypes(),
     createAdminClient().from('holidays').select('the_date, label').gte('the_date', gridStart).lte('the_date', gridEnd),
   ]);
@@ -95,14 +95,14 @@ export async function StaffDesk({ meId, today, month }: { meId: string; today: s
         <div className="flex flex-wrap items-center gap-2">
           {/* 견본의 달 고르기: 테두리 하나 안에 ‹ 달 › */}
           <div className="inline-flex h-9 items-center rounded-button border border-border bg-bg">
-            <Link href={href(shift(-1))} aria-label={t('prev')} className="flex h-full w-9 items-center justify-center text-muted hover:text-text"><ChevronLeft aria-hidden size={16} /></Link>
+            <Link prefetch={false} href={href(shift(-1))} aria-label={t('prev')} className="flex h-full w-9 items-center justify-center text-muted hover:text-text"><ChevronLeft aria-hidden size={16} /></Link>
             <span className="num px-1 text-sm font-semibold">{f.dateTime(kstDateTime(first, '12:00'), { year: 'numeric', month: 'long' })}</span>
-            <Link href={href(shift(1))} aria-label={t('next')} className="flex h-full w-9 items-center justify-center text-muted hover:text-text"><ChevronRight aria-hidden size={16} /></Link>
+            <Link prefetch={false} href={href(shift(1))} aria-label={t('next')} className="flex h-full w-9 items-center justify-center text-muted hover:text-text"><ChevronRight aria-hidden size={16} /></Link>
           </div>
-          {ym !== today.slice(0, 7) && <Link href="/punch" className={`${tool} border border-border bg-bg font-medium! text-muted hover:bg-surface`}>{t('today')}</Link>}
+          {ym !== today.slice(0, 7) && <Link prefetch={false} href="/punch" className={`${tool} border border-border bg-bg font-medium! text-muted hover:bg-surface`}>{t('today')}</Link>}
           <div className="ml-auto flex flex-wrap gap-2">
-            <Link href="/punch/leave?new=work" className={`${tool} border border-border bg-bg text-text hover:bg-surface`}><MapPinned aria-hidden size={16} />{t('reqWork')}</Link>
-            <Link href="/punch/leave?new=leave" className={`${tool} border border-border bg-bg text-text hover:bg-surface`}><Plane aria-hidden size={16} />{t('reqLeave')}</Link>
+            <Link prefetch={false} href="/punch/leave?new=work" className={`${tool} border border-border bg-bg text-text hover:bg-surface`}><MapPinned aria-hidden size={16} />{t('reqWork')}</Link>
+            <Link prefetch={false} href="/punch/leave?new=leave" className={`${tool} border border-border bg-bg text-text hover:bg-surface`}><Plane aria-hidden size={16} />{t('reqLeave')}</Link>
             <SheetButton sheet="shift" className={`${tool} bg-primary text-on-primary`}><CalendarPlus aria-hidden size={16} />{t('reqShift')}</SheetButton>
           </div>
         </div>

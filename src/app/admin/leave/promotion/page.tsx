@@ -43,7 +43,7 @@ export default async function PromotionPage() {
             {list.map((c) => (
               <tr key={c.id} className="border-b border-border last:border-b-0">
                 <td className="px-3 py-3">
-                  <Link href={`/admin/leave/promotion/${c.id}`} className="font-bold text-primary hover:underline">
+                  <Link prefetch={false} href={`/admin/leave/promotion/${c.id}`} className="font-bold text-primary hover:underline">
                     {c.title}
                   </Link>
                 </td>

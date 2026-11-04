@@ -17,7 +17,7 @@ export default async function RestorePage({ searchParams }: { searchParams: Prom
   const ok = canDownloadBackup(me) && backupReady() && !!p && name.startsWith(backupPrefix() + '/');
   return (
     <PageShell wide>
-      <Link href="/admin/backups" className="inline-flex min-h-9 items-center self-start text-sm font-medium text-muted">‹ {t('title')}</Link>
+      <Link prefetch={false} href="/admin/backups" className="inline-flex min-h-9 items-center self-start text-sm font-medium text-muted">‹ {t('title')}</Link>
       <h1 className="text-2xl font-bold">{t('restoreTitle')}</h1>
       {ok && p ? (
         <>

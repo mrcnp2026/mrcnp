@@ -45,7 +45,7 @@ export default async function LeaveTypesPage({ searchParams }: { searchParams: P
               id: x.code,
               cells: {
                 group: { text: x.groupName ?? '' },
-                name: { text: leaveTypeName(all, x.code, tl), node: <Link href={`/admin/leave/types/${x.code}`} className="font-bold hover:text-primary">{leaveTypeName(all, x.code, tl)}</Link> },
+                name: { text: leaveTypeName(all, x.code, tl), node: <Link prefetch={false} href={`/admin/leave/types/${x.code}`} className="font-bold hover:text-primary">{leaveTypeName(all, x.code, tl)}</Link> },
                 time: { text: x.startTime ? `${x.startTime} - ${x.endTime}` : t('allDay') },
                 hours: { text: t('hoursValue', { h: num(x.hours ?? 0) }) },
                 deduct: { text: x.deductsBalance ? t('daysValue', { d: num(x.dayUnit) }) : t('noDeduct') },
@@ -64,7 +64,7 @@ export default async function LeaveTypesPage({ searchParams }: { searchParams: P
               <RowList>
                 {s.rows.map((x) => (
                   <li key={x.code}>
-                    <Link href={`/admin/leave/types/${x.code}`} className="flex min-h-16 items-center gap-3 px-5 py-3">
+                    <Link prefetch={false} href={`/admin/leave/types/${x.code}`} className="flex min-h-16 items-center gap-3 px-5 py-3">
                       <span className="flex min-w-0 flex-1 flex-col">
                         <span className="font-bold">{leaveTypeName(all, x.code, tl)}</span>
                         <span className="num text-sm text-muted">

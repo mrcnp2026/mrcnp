@@ -54,14 +54,14 @@ export default async function DailyRunPage({ params }: { params: Promise<{ id: s
   const units = (l: DailyLine) => [l.manDays ? t('u.man', { n: f.number(l.manDays) }) : null, l.hours ? t('u.hours', { n: f.number(l.hours) }) : null].filter(Boolean).join(' · ') || '—';
   const who = (l: DailyLine) => (
     <span className="flex flex-col">
-      <Link href={`/admin/payroll/daily/runs/${run.id}/${l.payeeId}`} className="font-bold text-primary hover:underline">{l.name}</Link>
+      <Link prefetch={false} href={`/admin/payroll/daily/runs/${run.id}/${l.payeeId}`} className="font-bold text-primary hover:underline">{l.name}</Link>
       <span className="num text-xs text-muted">{l.internalNo}{l.workerKind === 'FOREIGN' ? ` · ${t('kind.FOREIGN')} ${l.visaType ?? ''}` : ''}</span>
     </span>
   );
 
   return (
     <PageShell wide>
-      <Link href="/admin/payroll/daily?v=runs" className="inline-flex min-h-9 items-center self-start text-sm font-medium text-muted">‹ {t('tab.runs')}</Link>
+      <Link prefetch={false} href="/admin/payroll/daily?v=runs" className="inline-flex min-h-9 items-center self-start text-sm font-medium text-muted">‹ {t('tab.runs')}</Link>
       <div>
         <h1 className="num flex flex-wrap items-center gap-2 text-2xl font-bold">
           {t('runName', { month, n: run.sequence })}
@@ -84,13 +84,13 @@ export default async function DailyRunPage({ params }: { params: Promise<{ id: s
       {prev && (
         <p className="rounded-card border border-border bg-surface p-3 text-sm">
           {t('correctionOf', { reason: run.correctionReason ?? '' })}{' '}
-          <Link href={`/admin/payroll/daily/runs/${prev.id}`} className="font-bold text-primary">{t('seePrev', { n: prev.revision })} ›</Link>
+          <Link prefetch={false} href={`/admin/payroll/daily/runs/${prev.id}`} className="font-bold text-primary">{t('seePrev', { n: prev.revision })} ›</Link>
         </p>
       )}
       {newer && (
         <p className="rounded-card border border-warn bg-warn-tint p-3 text-sm text-warn">
           {t('hasNewer', { n: newer.revision })}{' '}
-          <Link href={`/admin/payroll/daily/runs/${newer.id}`} className="font-bold">{t('seeNewer')} ›</Link>
+          <Link prefetch={false} href={`/admin/payroll/daily/runs/${newer.id}`} className="font-bold">{t('seeNewer')} ›</Link>
         </p>
       )}
       {/* 한눈에 — 인원 · 총지급 · 공제계 · 실지급 */}
@@ -119,7 +119,7 @@ export default async function DailyRunPage({ params }: { params: Promise<{ id: s
                 {l.blockers.map((b) => (
                   <span key={b} className="flex flex-wrap items-center gap-2">
                     {t(`blocker.${b}`)}
-                    <Link href={FIX[b] === 'work' ? `/admin/payroll/daily?v=work&m=${month}&p=${l.payeeId}` : `/admin/payroll/daily#payee-${l.payeeId}`} className="font-bold text-primary underline">{t(FIX[b] === 'work' ? 'fixWork' : 'fixPayee')} ›</Link>
+                    <Link prefetch={false} href={FIX[b] === 'work' ? `/admin/payroll/daily?v=work&m=${month}&p=${l.payeeId}` : `/admin/payroll/daily#payee-${l.payeeId}`} className="font-bold text-primary underline">{t(FIX[b] === 'work' ? 'fixWork' : 'fixPayee')} ›</Link>
                   </span>
                 ))}
               </li>

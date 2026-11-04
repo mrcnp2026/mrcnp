@@ -1,5 +1,6 @@
 // 지금 회사 로고 (2026-10-18) — 로그인 화면에도 나오므로 로그인 없이 연다. 올린 로고가 없으면 원래 로고 파일로 보낸다.
 // 화면은 이 주소를 쓴다(components/Logo). 바뀐 로고는 길어야 5분 뒤 모든 화면에 보인다.
+// s-maxage: Vercel CDN이 5분 들고 있다가 모두에게 나눠 준다 — 없으면 직원마다 5분에 한 번씩 함수가 돌았다 (2026-11-04 사용량 초과)
 import { BRAND } from '@/config/brand';
 import { COLORS } from '@/config/theme';
 import { companyName, companyProfile } from '@/lib/company';
@@ -14,12 +15,12 @@ export async function GET(req: Request): Promise<Response> {
     const name = (await companyName()).replace(/[<>&"']/g, '');
     const w = Math.max(80, Math.round([...name].reduce((n, ch) => n + (ch.charCodeAt(0) > 0x2e80 ? 30 : 17), 0)));
     const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="${w}" height="40" viewBox="0 0 ${w} 40"><text x="0" y="29" font-family="Pretendard, 'Noto Sans KR', 'Malgun Gothic', sans-serif" font-size="28" font-weight="700" fill="${COLORS.primary}">${name}</text></svg>`;
-    return new Response(svg, { headers: { 'content-type': 'image/svg+xml', 'cache-control': 'public, max-age=300', 'x-content-type-options': 'nosniff', 'content-security-policy': "default-src 'none'; style-src 'unsafe-inline'" } });
+    return new Response(svg, { headers: { 'content-type': 'image/svg+xml', 'cache-control': 'public, max-age=300, s-maxage=300, stale-while-revalidate=86400', 'x-content-type-options': 'nosniff', 'content-security-policy': "default-src 'none'; style-src 'unsafe-inline'" } });
   }
   if (!p.logoPath || !p.logoMime) return fallback();
   const { data, error } = await createAdminClient().storage.from('content').download(p.logoPath);
   if (error || !data) return fallback();
   return new Response(data.stream(), {
-    headers: { 'content-type': p.logoMime, 'cache-control': 'public, max-age=300', 'x-content-type-options': 'nosniff', 'content-security-policy': "default-src 'none'" },
+    headers: { 'content-type': p.logoMime, 'cache-control': 'public, max-age=300, s-maxage=300, stale-while-revalidate=86400', 'x-content-type-options': 'nosniff', 'content-security-policy': "default-src 'none'" },
   });
 }

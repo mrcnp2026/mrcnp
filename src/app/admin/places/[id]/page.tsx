@@ -47,7 +47,7 @@ export default async function PlacePage({ params }: { params: Promise<{ id: stri
       <RowList>
         {branches.map((b) => (
           <li key={b.id}>
-            <Link href={`/admin/branches/${b.id}`} className="flex min-h-14 items-center px-5 font-bold">
+            <Link prefetch={false} href={`/admin/branches/${b.id}`} className="flex min-h-14 items-center px-5 font-bold">
               {b.path}
             </Link>
           </li>

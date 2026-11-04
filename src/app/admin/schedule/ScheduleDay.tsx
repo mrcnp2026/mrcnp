@@ -49,7 +49,7 @@ export function ScheduleDay({ lines, labels }: { lines: DayLine[]; labels: { emp
                   </p>
                 )}
                 {l.bars.map((b) => (
-                  <Link key={b.key} href={b.href} style={{ gridColumn: `${slot(b.start) + 1} / ${Math.max(slot(b.end), slot(b.start) + 1) + 1}`, gridRow: 1 }} className={`flex overflow-hidden rounded-button hover:brightness-95 ${b.color ? TINT[b.color] : 'bg-surface'}`}>
+                  <Link prefetch={false} key={b.key} href={b.href} style={{ gridColumn: `${slot(b.start) + 1} / ${Math.max(slot(b.end), slot(b.start) + 1) + 1}`, gridRow: 1 }} className={`flex overflow-hidden rounded-button hover:brightness-95 ${b.color ? TINT[b.color] : 'bg-surface'}`}>
                     <span aria-hidden className={`w-1 shrink-0 ${b.color ? SHIFT_COLOR_CLASS[b.color] : 'bg-border'}`} />
                     <span className="num flex min-w-0 flex-1 items-center gap-2 px-2 py-1.5 text-xs">
                       <span className="truncate font-medium">

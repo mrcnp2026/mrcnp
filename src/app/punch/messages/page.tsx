@@ -60,7 +60,7 @@ export default async function MyMessagesPage({ searchParams }: { searchParams: P
               name: {
                 text: m.title,
                 node: (
-                  <Link href={`/punch/messages/${m.id}`} className={`hover:text-primary ${isUnread(m) ? 'font-bold' : ''}`}>
+                  <Link prefetch={false} href={`/punch/messages/${m.id}`} className={`hover:text-primary ${isUnread(m) ? 'font-bold' : ''}`}>
                     {m.title}
                     {m.replies > 0 && <span className="num ml-1.5 text-xs font-normal text-muted">{t('replyCount', { n: m.replies })}</span>}
                   </Link>

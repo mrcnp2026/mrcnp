@@ -66,7 +66,7 @@ export default async function PunchPage({ searchParams }: { searchParams: Promis
   const [{ data: pr }, period, cards, [notices, inbox], workReqs] = await Promise.all([
     // 승인을 기다리는 반경 밖 출근/퇴근 요청 (오늘 것)
     Promise.resolve(createAdminClient().from('punch_requests').select('kind, requested_at').eq('employee_id', me.id).eq('work_date', today.workDate).eq('status', 'pending').eq('is_test', today.practice).order('requested_at', { ascending: false }).limit(1)),
-    loadPeriod(weekStart, addDays(weekStart, 6)),
+    loadPeriod(weekStart, addDays(weekStart, 6), undefined, me.id), // 본인 것만 (2026-11-04 사용량)
     cardsP,
     newsP,
     loadWorkRequests({ employeeId: me.id, from: today.workDate, to: today.workDate }),
@@ -173,7 +173,7 @@ export default async function PunchPage({ searchParams }: { searchParams: Promis
 
         {/* 사무실 밖에서 찍혔는데 승인된 외근이 없으면 신청 안내 (②-3 7-11) */}
         {today.firstInVerified === false && !approvedAwayToday && (
-          <Link href={`/punch/leave?workDate=${today.workDate}#work`} className="flex min-h-11 items-center justify-between gap-2 rounded-card border border-warn bg-warn-tint px-4 py-3 text-sm text-warn">
+          <Link prefetch={false} href={`/punch/leave?workDate=${today.workDate}#work`} className="flex min-h-11 items-center justify-between gap-2 rounded-card border border-warn bg-warn-tint px-4 py-3 text-sm text-warn">
             <span>{tw('outsideHint')}</span>
             <span className="shrink-0 font-semibold">{tw('outsideLink')} ›</span>
           </Link>

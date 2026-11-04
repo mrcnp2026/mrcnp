@@ -82,8 +82,8 @@ export default async function InsurancePage({ searchParams }: { searchParams: Pr
         <HelpTip>{t('intro')}</HelpTip></h1>
       </div>
       <nav className="flex border-b border-border">
-        <Link href={`/admin/payroll/insurance${live ? '?live=1' : ''}`} aria-current={!notice ? 'page' : undefined} className={tab(!notice)}>{t('tabEnroll')}</Link>
-        <Link href={`/admin/payroll/insurance?v=notice${live}`} aria-current={notice ? 'page' : undefined} className={tab(notice)}>{t('tabNotice')}</Link>
+        <Link prefetch={false} href={`/admin/payroll/insurance${live ? '?live=1' : ''}`} aria-current={!notice ? 'page' : undefined} className={tab(!notice)}>{t('tabEnroll')}</Link>
+        <Link prefetch={false} href={`/admin/payroll/insurance?v=notice${live}`} aria-current={notice ? 'page' : undefined} className={tab(notice)}>{t('tabNotice')}</Link>
       </nav>
       <WarnLine short={t(notice ? 'noticeLegalShort' : 'enrollLegalShort')}>{t(notice ? 'noticeLegal' : 'enrollLegal')}</WarnLine>
       {!notice ? (
@@ -151,7 +151,7 @@ export default async function InsurancePage({ searchParams }: { searchParams: Pr
             <ul className="flex flex-col divide-y divide-border rounded-card border border-border bg-bg lg:hidden">
               {files.map((f) => (
                 <li key={f.id}>
-                  <Link href={`/admin/payroll/insurance/notice/${f.id}${live ? '?live=1' : ''}`} className="flex items-center justify-between gap-2 px-4 py-3 text-sm">
+                  <Link prefetch={false} href={`/admin/payroll/insurance/notice/${f.id}${live ? '?live=1' : ''}`} className="flex items-center justify-between gap-2 px-4 py-3 text-sm">
                     <span className="min-w-0">
                       <b className="num text-primary">{f.month}</b> · {t(`insurer.${f.insurer}`)}
                       <span className="num block text-xs text-muted">{t('rowsValue', { n: f.rows })} · {t(`source.${f.source}`)} · {toKstDate(new Date(f.createdAt))}</span>
@@ -176,7 +176,7 @@ export default async function InsurancePage({ searchParams }: { searchParams: Pr
                 {files.map((f) => (
                   <tr key={f.id} className="border-b border-border last:border-b-0">
                     <td className="num px-3 py-3 whitespace-nowrap">
-                      <Link href={`/admin/payroll/insurance/notice/${f.id}${live ? '?live=1' : ''}`} className="font-bold text-primary hover:underline">{f.month}</Link>
+                      <Link prefetch={false} href={`/admin/payroll/insurance/notice/${f.id}${live ? '?live=1' : ''}`} className="font-bold text-primary hover:underline">{f.month}</Link>
                     </td>
                     <td className="px-3 py-3 whitespace-nowrap">{t(`insurer.${f.insurer}`)}</td>
                     <td className="num px-3 py-3">{t('rowsValue', { n: f.rows })}</td>

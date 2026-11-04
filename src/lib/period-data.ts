@@ -107,36 +107,39 @@ export function leaveDaysFor(data: PeriodData, employeeId: string): Map<string, 
 }
 
 /** from~to 데이터. 주 40시간 계산을 위해 기록은 from이 속한 주 월요일부터 읽는다 (period.ts) */
-export async function loadPeriod(from: string, to: string, practice = OFFICE.practiceMode): Promise<PeriodData> {
+// only: 그 직원 것만 DB에서 읽는다 — 직원 화면 · 퇴근 알림처럼 한 사람만 볼 때. 없으면 회사 전체(2026-11-04: 직원이 화면을 열 때마다
+//   회사 전체 기록을 세 번씩 읽어 Vercel 사용량이 직원 수의 제곱으로 늘었다). 계산은 사람마다 따로라 그 사람 결과는 같다.
+export async function loadPeriod(from: string, to: string, practice = OFFICE.practiceMode, only?: string): Promise<PeriodData> {
   const db = createAdminClient();
+  const mine = <Q,>(q: Q, col = 'employee_id'): Q => (only ? (q as unknown as { eq: (c: string, v: string) => Q }).eq(col, only) : q);
   const readFrom = addDays(weekStartOf(from), -1); // 자정 넘긴 퇴근의 근무일 상속 여유
   const scope = await viewerScope(); // 지점관리자면 맡은 지점 직원만 (scope.ts)
   const [versions, holidays, { data: pplAll }, { data: evAll }, { data: coAll }, { data: otAll }, leaveRequests, leaveTypes, workRequests, templates, shiftsAll] = await Promise.all([
     loadRuleVersions(),
     loadHolidays(readFrom, to),
-    readAll((a, b) => db.from('profiles').select('id, name, employee_no, role, active, joined_on, created_at, group_id, shift_template_id, job_id').order('name').order('id').range(a, b)),
-    readAll((a, b) => db.from('punch_events')
-      .select('id, employee_id, kind, punched_at, work_date, ip_verified, verified_by, source, note, client_ip, location_id')
+    readAll((a, b) => mine(db.from('profiles').select('id, name, employee_no, role, active, joined_on, created_at, group_id, shift_template_id, job_id'), 'id').order('name').order('id').range(a, b)),
+    readAll((a, b) => mine(db.from('punch_events')
+      .select('id, employee_id, kind, punched_at, work_date, ip_verified, verified_by, source, note, client_ip, location_id'))
       .eq('is_test', practice).gte('work_date', readFrom).lte('work_date', to).order('punched_at').order('id').range(a, b)),
-    readAll((a, b) => db.from('punch_corrections')
-      .select('id, correction_type, target_id, employee_id, work_date, kind, new_punched_at, status, reason, requested_by, approved_by, created_at, decided_at')
+    readAll((a, b) => mine(db.from('punch_corrections')
+      .select('id, correction_type, target_id, employee_id, work_date, kind, new_punched_at, status, reason, requested_by, approved_by, created_at, decided_at'))
       .eq('is_test', practice).gte('work_date', readFrom).lte('work_date', to).order('created_at').order('id').range(a, b)),
-    readAll((a, b) => db.from('overtime_requests').select('*').eq('is_test', practice).gte('work_date', from).lte('work_date', to).order('id').range(a, b)),
-    loadLeaveRequests({ from: readFrom, to, practice }),
+    readAll((a, b) => mine(db.from('overtime_requests').select('*')).eq('is_test', practice).gte('work_date', from).lte('work_date', to).order('id').range(a, b)),
+    loadLeaveRequests({ from: readFrom, to, practice, employeeId: only }),
     loadAllLeaveTypes(), // 꺼 둔 종류로 승인된 지난 휴가도 결근이 아니다
-    loadWorkRequests({ from: readFrom, to, practice }),
+    loadWorkRequests({ from: readFrom, to, practice, employeeId: only }),
     loadShiftTemplates(true),
-    loadShifts(readFrom, to),
+    loadShifts(readFrom, to, only),
   ]);
   // 휴게 안 함 표시 (급여-60, 2026-11-02) — 그날 그 휴게시간대만 빼지 않는다
-  const { data: waiverRows } = await db.from('break_waivers').select('employee_id, work_date, break_start').eq('is_test', practice).eq('active', true).gte('work_date', readFrom).lte('work_date', to);
+  const { data: waiverRows } = await mine(db.from('break_waivers').select('employee_id, work_date, break_start')).eq('is_test', practice).eq('active', true).gte('work_date', readFrom).lte('work_date', to);
   const waivedOf = new Map<string, Set<string>>();
   for (const w of waiverRows ?? []) {
     const k = `${w.employee_id}|${w.work_date}`;
     waivedOf.set(k, (waivedOf.get(k) ?? new Set()).add(hhmm(w.break_start as string)));
   }
   // 퇴근할 때 직원이 답한 「저녁 휴게 못 쉬었어요」 (2026-11-04, DB 0089) — 표가 아직 없으면(운영 적용 전) 비어 있는 것으로 본다
-  const { data: skipRows } = await db.from('break_skip_requests').select('id, employee_id, work_date, break_start, break_end, status').eq('is_test', practice).in('status', ['pending', 'approved', 'rejected']).gte('work_date', readFrom).lte('work_date', to);
+  const { data: skipRows } = await mine(db.from('break_skip_requests').select('id, employee_id, work_date, break_start, break_end, status')).eq('is_test', practice).in('status', ['pending', 'approved', 'rejected']).gte('work_date', readFrom).lte('work_date', to);
   const skipOf = new Map<string, BreakSkip>();
   for (const r of skipRows ?? []) {
     const k = `${r.employee_id}|${r.work_date}`;

@@ -64,7 +64,7 @@ export function TwoPane({ title, items, current, children, action, showOff = fal
         <div className="flex items-center gap-2 border-b border-border px-4 py-3">
           <p className="min-w-0 flex-1 truncate text-sm font-bold text-muted">{title}</p>
           {action && (
-            <Link href={action.href} className="inline-flex h-8 shrink-0 items-center gap-1.5 rounded-button px-2.5 text-sm font-semibold text-primary hover:bg-primary-tint">
+            <Link prefetch={false} href={action.href} className="inline-flex h-8 shrink-0 items-center gap-1.5 rounded-button px-2.5 text-sm font-semibold text-primary hover:bg-primary-tint">
               {(() => {
                 const I = (action.id && SHEET_ICONS[action.id]) || Check;
                 return <I aria-hidden size={16} />;
@@ -80,7 +80,7 @@ export function TwoPane({ title, items, current, children, action, showOff = fal
               const on = x.href === current;
               return (
                 <li key={x.href}>
-                  <Link href={x.href} aria-current={on ? 'page' : undefined} className={`mx-1.5 flex min-h-9 flex-col justify-center rounded-button px-2.5 py-1.5 text-sm ${on ? 'bg-primary-tint font-bold text-primary' : 'text-text hover:bg-surface'} ${x.off ? 'opacity-60' : ''}`}>
+                  <Link prefetch={false} href={x.href} aria-current={on ? 'page' : undefined} className={`mx-1.5 flex min-h-9 flex-col justify-center rounded-button px-2.5 py-1.5 text-sm ${on ? 'bg-primary-tint font-bold text-primary' : 'text-text hover:bg-surface'} ${x.off ? 'opacity-60' : ''}`}>
                     <span className="truncate">{x.label}</span>
                     {x.sub && <span className="truncate text-xs font-normal text-faint">{x.sub}</span>}
                   </Link>

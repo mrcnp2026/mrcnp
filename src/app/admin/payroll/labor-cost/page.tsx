@@ -104,7 +104,7 @@ export default async function LaborCostPage({ searchParams }: { searchParams: Pr
         <div className="flex flex-wrap items-center gap-2">
           <nav className="flex gap-1.5" aria-label={t('fYear')}>
             {[thisYear - 2, thisYear - 1, thisYear].map((y) => (
-            <Link key={y} href={yearLink(y)} className={`inline-flex min-h-9 items-center rounded-button border px-3.5 text-sm font-semibold ${y === year ? 'border-primary bg-primary-tint text-primary' : 'border-border bg-bg text-muted hover:bg-surface'}`}>{y}</Link>
+            <Link prefetch={false} key={y} href={yearLink(y)} className={`inline-flex min-h-9 items-center rounded-button border px-3.5 text-sm font-semibold ${y === year ? 'border-primary bg-primary-tint text-primary' : 'border-border bg-bg text-muted hover:bg-surface'}`}>{y}</Link>
           ))}
         </nav>
           {r.rows > 0 && (
@@ -120,7 +120,7 @@ export default async function LaborCostPage({ searchParams }: { searchParams: Pr
           {kind && <Chip tone="info">{t(`kind.${kind}`)}</Chip>}
           {groupId && <Chip tone="info">{options.find((o) => o.id === groupId)?.label}</Chip>}
           {withDraft && <Chip tone="info">{t('fDraft')}</Chip>}
-          <Link href={`/admin/payroll/labor-cost?${new URLSearchParams({ y: String(year), ...(sp.live === '1' ? { live: '1' } : {}) })}`} className="font-bold text-primary underline">{t('clearFilters')}</Link>
+          <Link prefetch={false} href={`/admin/payroll/labor-cost?${new URLSearchParams({ y: String(year), ...(sp.live === '1' ? { live: '1' } : {}) })}`} className="font-bold text-primary underline">{t('clearFilters')}</Link>
         </p>
       )}
       <details className="rounded-card border border-border bg-bg px-4 py-2">

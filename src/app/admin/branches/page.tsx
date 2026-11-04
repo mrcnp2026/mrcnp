@@ -54,7 +54,7 @@ export default async function BranchesPage({ searchParams }: { searchParams: Pro
             rows={rows.map(({ g, parent }) => ({
               id: g.id,
               cells: {
-                name: { text: g.name, node: <Link href={`/admin/branches/${g.id}`} className="font-bold hover:text-primary">{g.name}</Link> },
+                name: { text: g.name, node: <Link prefetch={false} href={`/admin/branches/${g.id}`} className="font-bold hover:text-primary">{g.name}</Link> },
                 parent: { text: parent ?? '' },
                 people: { text: String(countOf.get(g.id) ?? 0) },
                 places: { text: String(placesOf(g.id)) },
@@ -74,7 +74,7 @@ export default async function BranchesPage({ searchParams }: { searchParams: Pro
           <RowList>
             {rows.map(({ g, parent }) => (
               <li key={g.id}>
-                <Link href={`/admin/branches/${g.id}`} className="flex min-h-16 items-center gap-3 px-5 py-3">
+                <Link prefetch={false} href={`/admin/branches/${g.id}`} className="flex min-h-16 items-center gap-3 px-5 py-3">
                   <span className="flex min-w-0 flex-1 flex-col">
                     <span className="font-bold">{g.name}</span>
                     {parent && <span className="truncate text-sm text-muted">{parent}</span>}

@@ -75,7 +75,7 @@ export function HrLogTable({ rows }: { rows: HrRowView[] }) {
                 <span className="flex min-w-0 flex-1 flex-col gap-1">
                   <span className="flex flex-wrap items-center gap-2">
                     <Chip tone={TONE[r.kind]}>{t(r.kind)}</Chip>
-                    <Link href={`/admin/members/${r.employeeId}`} className="font-bold">{r.name}</Link>
+                    <Link prefetch={false} href={`/admin/members/${r.employeeId}`} className="font-bold">{r.name}</Link>
                     <span className="num text-xs text-muted">{r.on ?? ''}</span>
                   </span>
                   {r.reason && <span className="text-sm break-words whitespace-pre-line">{r.reason}</span>}
@@ -101,7 +101,7 @@ export function HrLogTable({ rows }: { rows: HrRowView[] }) {
                   <tr key={r.key} className="border-b border-border align-top last:border-b-0">
                     <td className="px-3 py-3">{check(r)}</td>
                     <td className="px-3 py-3 whitespace-nowrap"><Chip tone={TONE[r.kind]}>{t(r.kind)}</Chip></td>
-                    <td className="px-3 py-3 whitespace-nowrap"><Link href={`/admin/members/${r.employeeId}`} className="font-bold hover:text-primary">{r.name}</Link><span className="num pl-2 text-xs text-muted">{r.employeeNo}</span></td>
+                    <td className="px-3 py-3 whitespace-nowrap"><Link prefetch={false} href={`/admin/members/${r.employeeId}`} className="font-bold hover:text-primary">{r.name}</Link><span className="num pl-2 text-xs text-muted">{r.employeeNo}</span></td>
                     <td className="num px-3 py-3 whitespace-nowrap">{r.on ?? ''}</td>
                     <td className="max-w-md px-3 py-3 break-words whitespace-pre-line">{r.reason ?? (r.on ? '' : t('noRecord'))}</td>
                     <td className="px-3 py-3 whitespace-nowrap">{r.actor ?? ''}</td>

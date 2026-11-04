@@ -63,7 +63,7 @@ export function LateResolve({ employeeId, workDate, lateMinutes, startTime, unpa
       {confirmedHref && (
         <p className="text-sm text-muted">
           {t('confirmedNote')}{' '}
-          <Link href={confirmedHref} className="font-bold text-primary underline">{t('confirmedGo')}</Link>
+          <Link prefetch={false} href={confirmedHref} className="font-bold text-primary underline">{t('confirmedGo')}</Link>
         </p>
       )}
       <div className="flex flex-wrap gap-1.5">

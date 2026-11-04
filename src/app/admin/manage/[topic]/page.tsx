@@ -154,7 +154,7 @@ export default async function ManageInfoPage({ params }: { params: Promise<{ top
         return {
           id: p.id,
           cells: {
-            name: { text: p.name, node: <Link href={`/admin/members/${p.id}`} className="font-bold hover:text-primary">{p.name}</Link> },
+            name: { text: p.name, node: <Link prefetch={false} href={`/admin/members/${p.id}`} className="font-bold hover:text-primary">{p.name}</Link> },
             group: { text: groupPath(groups, p.group_id) ?? '' },
             job: { text: (p.job_id && jobName.get(p.job_id)) || '' },
             days: { text: String(days.length) },
@@ -177,7 +177,7 @@ export default async function ManageInfoPage({ params }: { params: Promise<{ top
           <h1 className="flex flex-wrap items-center gap-x-1 text-2xl font-bold"><span data-dup-title>{head.title}</span><HelpTip phone>{head.intro}</HelpTip></h1>
         </div>
         {link && (
-          <Link href={link.href} className="inline-flex min-h-8 items-center rounded-button border border-border bg-bg px-3.5 text-sm font-semibold whitespace-nowrap text-text hover:bg-surface">
+          <Link prefetch={false} href={link.href} className="inline-flex min-h-8 items-center rounded-button border border-border bg-bg px-3.5 text-sm font-semibold whitespace-nowrap text-text hover:bg-surface">
             {link.label}
           </Link>
         )}

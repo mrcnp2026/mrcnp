@@ -49,7 +49,7 @@ export async function MyAttendance({ me, sp, base, defaultView, extra }: { me: {
   const from = view === 'week' ? weekStartOf(picked) : weekStartOf(month.from);
   const to = view === 'week' ? addDays(from, 6) : addDays(weekStartOf(month.to), 6);
 
-  const [data, { data: hol }, kindNames] = await Promise.all([loadPeriod(from, to, OFFICE.practiceMode), createAdminClient().from('holidays').select('the_date, label, kind').gte('the_date', from).lte('the_date', to), kindNamesP]);
+  const [data, { data: hol }, kindNames] = await Promise.all([loadPeriod(from, to, OFFICE.practiceMode, me.id), createAdminClient().from('holidays').select('the_date, label, kind').gte('the_date', from).lte('the_date', to), kindNamesP]);
   const tk = withKindNames(tkRaw, kindNames);
   const holName = new Map((hol ?? []).filter((h) => h.kind !== 'weekly_rest').map((h) => [h.the_date as string, h.label as string]));
   const upTo = to < today ? to : today;
@@ -259,7 +259,7 @@ export async function MyAttendance({ me, sp, base, defaultView, extra }: { me: {
               const on = x.d === sel.d;
               return (
                 <li key={x.d}>
-                  <Link
+                  <Link prefetch={false}
                     href={q({ v: 'week', d: x.d })}
                     scroll={false}
                     aria-current={on ? 'date' : undefined}
@@ -302,7 +302,7 @@ export async function MyAttendance({ me, sp, base, defaultView, extra }: { me: {
                 <dd>{sel.r && !sel.live ? t('dDetailValue', { r: dur(sel.r.regularMinutes), o: dur(sel.otMin), e: dur(sel.r.overtimeMinutes), h: dur(sel.r.holidayMinutes), n: dur(sel.r.nightMinutes) }) : '–'}</dd>
               </div>
             </dl>
-            <Link href={`/punch/corrections?new=1&date=${sel.d}`} className="inline-flex h-9 items-center gap-1.5 rounded-button border border-border px-3 text-sm font-semibold hover:bg-surface">
+            <Link prefetch={false} href={`/punch/corrections?new=1&date=${sel.d}`} className="inline-flex h-9 items-center gap-1.5 rounded-button border border-border px-3 text-sm font-semibold hover:bg-surface">
               <Pencil aria-hidden size={14} />
               {t('fix')}
             </Link>
@@ -419,7 +419,7 @@ export async function MyAttendance({ me, sp, base, defaultView, extra }: { me: {
                 const dim = !inMonth(x.d);
                 const red = x.holiday || isoDow(x.d) === 7;
                 return (
-                  <Link key={x.d} href={q({ v: 'week', d: x.d })} className={`flex min-h-16 flex-col gap-1 px-1 py-1.5 hover:bg-surface lg:min-h-32 lg:px-2 ${dim ? 'opacity-40' : ''}`}>
+                  <Link prefetch={false} key={x.d} href={q({ v: 'week', d: x.d })} className={`flex min-h-16 flex-col gap-1 px-1 py-1.5 hover:bg-surface lg:min-h-32 lg:px-2 ${dim ? 'opacity-40' : ''}`}>
                     <span className={`num self-center text-sm lg:self-start ${x.d === today ? 'rounded-chip bg-text px-1.5 font-bold text-on-primary' : red ? 'text-danger' : ''}`}>{Number(x.d.slice(8))}</span>
                     {x.holiday && <span className="truncate text-center text-xs text-danger lg:text-left">{x.holiday}</span>}
                     {/* 폰: 근무 시간 숫자와 점만 · PC: 주간과 같은 표시 */}
@@ -463,17 +463,17 @@ export async function MyAttendance({ me, sp, base, defaultView, extra }: { me: {
         <h1 className="hidden text-xl font-bold lg:block">{t('title')}</h1>
         <nav aria-label={t('range')} className="flex min-w-0 items-center gap-0.5 lg:justify-center lg:gap-1">
           {prevHref ? (
-            <Link href={prevHref} aria-label={t('prev')} className={arrow}>
+            <Link prefetch={false} href={prevHref} aria-label={t('prev')} className={arrow}>
               <ChevronLeft aria-hidden size={20} />
             </Link>
           ) : (
             <span className="size-11 lg:size-9" />
           )}
-          <Link href={q(view === 'week' ? { v: 'week' } : { v: 'month' })} title={t('today')} aria-label={`${t('today')}: ${view === 'week' ? `${from} ~ ${to}` : ym}`} className="num min-w-0 rounded-button px-1 text-center text-base font-semibold hover:bg-surface lg:text-2xl">
+          <Link prefetch={false} href={q(view === 'week' ? { v: 'week' } : { v: 'month' })} title={t('today')} aria-label={`${t('today')}: ${view === 'week' ? `${from} ~ ${to}` : ym}`} className="num min-w-0 rounded-button px-1 text-center text-base font-semibold hover:bg-surface lg:text-2xl">
             {rangeLabel}
           </Link>
           {nextHref ? (
-            <Link href={nextHref} aria-label={t('next')} className={arrow}>
+            <Link prefetch={false} href={nextHref} aria-label={t('next')} className={arrow}>
               <ChevronRight aria-hidden size={20} />
             </Link>
           ) : (
@@ -482,7 +482,7 @@ export async function MyAttendance({ me, sp, base, defaultView, extra }: { me: {
         </nav>
         <div role="tablist" aria-label={t('views')} className="grid shrink-0 grid-cols-2 rounded-button border border-border bg-bg p-0.5 text-sm lg:justify-self-end">
           {(['week', 'month'] as const).map((v) => (
-            <Link
+            <Link prefetch={false}
               key={v}
               role="tab"
               aria-selected={view === v}
@@ -498,7 +498,7 @@ export async function MyAttendance({ me, sp, base, defaultView, extra }: { me: {
         {ruleNow && <span className="text-muted">{t('ruleLine', { from: hhmm(ruleNow.startTime), to: hhmm(ruleNow.endTime) })}</span>}
         <span className="ml-auto flex flex-wrap items-center gap-x-4">
           {extra}
-          <Link href="/punch/requests" className="inline-flex min-h-9 items-center gap-1 text-text hover:text-primary">
+          <Link prefetch={false} href="/punch/requests" className="inline-flex min-h-9 items-center gap-1 text-text hover:text-primary">
             <History aria-hidden size={16} />
             {t('history')}
           </Link>

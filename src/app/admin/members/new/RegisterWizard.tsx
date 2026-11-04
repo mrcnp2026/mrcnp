@@ -42,7 +42,7 @@ export function RegisterWizard({ groups, locales, today, jobs, popup = false, pa
           {created.pay === 'saved' && <p role="status" className="rounded-card bg-ok-tint p-3 text-sm text-ok">{t('paySaved')}</p>}
           {created.pay === 'failed' && (
             <p role="alert" className="rounded-card bg-warn-tint p-3 text-sm text-warn">
-              {t('payFailed')} <Link href={`/admin/payroll/staff/${created.employeeId}`} className="font-bold underline">{t('payFailedLink')}</Link>
+              {t('payFailed')} <Link prefetch={false} href={`/admin/payroll/staff/${created.employeeId}`} className="font-bold underline">{t('payFailedLink')}</Link>
             </p>
           )}
           <InviteView employeeId={created.employeeId} name={created.name} invite={created.invite} onClose={() => router.push(`/admin/members/${created.employeeId}`)} />
@@ -50,7 +50,7 @@ export function RegisterWizard({ groups, locales, today, jobs, popup = false, pa
             <Button variant="outline" onClick={() => { setCreated(null); setErr(null); }}>
               {t('addAnother')}
             </Button>
-            <Link href="/admin/members" className="inline-flex min-h-12 items-center justify-center rounded-button bg-primary-tint px-4 font-bold text-primary">
+            <Link prefetch={false} href="/admin/members" className="inline-flex min-h-12 items-center justify-center rounded-button bg-primary-tint px-4 font-bold text-primary">
               {t('toList')}
             </Link>
           </div>

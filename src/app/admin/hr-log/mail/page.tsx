@@ -40,7 +40,7 @@ export default async function SlipMailLogPage({ searchParams }: { searchParams: 
   const at = (iso: string) => f.dateTime(new Date(iso), { month: 'numeric', day: 'numeric', hour: '2-digit', minute: '2-digit', timeZone: 'Asia/Seoul' });
   const href = (nf: Filter) => `?m=${m}${nf === 'all' ? '' : `&f=${nf}`}`;
   const tile = (nf: Filter, label: string, value: number, bad = false) => (
-    <Link key={nf} href={href(nf)} aria-current={filter === nf ? 'true' : undefined} className={`rounded-card border p-3 ${filter === nf ? 'border-primary bg-primary-tint' : 'border-border'} ${bad && filter !== nf ? 'bg-danger-tint' : filter === nf ? '' : 'bg-bg'}`}>
+    <Link prefetch={false} key={nf} href={href(nf)} aria-current={filter === nf ? 'true' : undefined} className={`rounded-card border p-3 ${filter === nf ? 'border-primary bg-primary-tint' : 'border-border'} ${bad && filter !== nf ? 'bg-danger-tint' : filter === nf ? '' : 'bg-bg'}`}>
       <p className="text-xs text-muted">{label}</p>
       <p className={`num pt-1 text-xl font-bold ${bad ? 'text-danger' : ''}`}>{to('count', { n: value })}</p>
     </Link>
@@ -61,9 +61,9 @@ export default async function SlipMailLogPage({ searchParams }: { searchParams: 
         )}
       </div>
       <nav className="flex items-center gap-1 self-start rounded-button bg-bg" aria-label={to('month')}>
-        <Link href={`?m=${shift(m, -1)}`} aria-label={to('prev')} className="flex size-11 items-center justify-center text-primary"><ChevronLeft aria-hidden size={22} strokeWidth={2} /></Link>
+        <Link prefetch={false} href={`?m=${shift(m, -1)}`} aria-label={to('prev')} className="flex size-11 items-center justify-center text-primary"><ChevronLeft aria-hidden size={22} strokeWidth={2} /></Link>
         <span className="num px-1 text-lg font-bold">{to('monthOf', { m })}</span>
-        <Link href={`?m=${shift(m, 1)}`} aria-label={to('next')} className="flex size-11 items-center justify-center text-primary"><ChevronRight aria-hidden size={22} strokeWidth={2} /></Link>
+        <Link prefetch={false} href={`?m=${shift(m, 1)}`} aria-label={to('next')} className="flex size-11 items-center justify-center text-primary"><ChevronRight aria-hidden size={22} strokeWidth={2} /></Link>
       </nav>
       {!mailReady() && <p className="rounded-card border border-warn bg-warn-tint p-3 text-sm text-warn">{t('mailNotReady')}</p>}
       {tableMissing ? (
@@ -77,8 +77,8 @@ export default async function SlipMailLogPage({ searchParams }: { searchParams: 
             <li>{t('how3')}</li>
           </ol>
           <div className="flex flex-wrap gap-3 pt-1 text-sm font-semibold text-primary">
-            <Link href="/admin/payroll/runs">{t('toRuns')} ›</Link>
-            <Link href="/admin/payroll/slips">{t('toSlips')} ›</Link>
+            <Link prefetch={false} href="/admin/payroll/runs">{t('toRuns')} ›</Link>
+            <Link prefetch={false} href="/admin/payroll/slips">{t('toSlips')} ›</Link>
           </div>
         </Card>
       ) : (
@@ -91,7 +91,7 @@ export default async function SlipMailLogPage({ searchParams }: { searchParams: 
           {unsent > 0 && (
             <div className="flex flex-wrap gap-2">
               {([['NONE', 'none'], ['FAILED', 'failed'], ['NO_EMAIL', 'noEmail'], ['NO_BIRTH', 'noBirth']] as const).map(([k, sk]) => (
-                <Link key={k} href={href(k)} aria-current={filter === k ? 'true' : undefined} className={`inline-flex min-h-9 items-center gap-1.5 rounded-chip border px-3 text-sm ${filter === k ? 'border-primary bg-primary-tint font-bold text-primary' : 'border-border bg-bg text-muted'}`}>
+                <Link prefetch={false} key={k} href={href(k)} aria-current={filter === k ? 'true' : undefined} className={`inline-flex min-h-9 items-center gap-1.5 rounded-chip border px-3 text-sm ${filter === k ? 'border-primary bg-primary-tint font-bold text-primary' : 'border-border bg-bg text-muted'}`}>
                   {to(`stat.${sk}`)} <b className="num">{n(k)}</b>
                 </Link>
               ))}
