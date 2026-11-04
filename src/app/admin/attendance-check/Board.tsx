@@ -11,15 +11,33 @@ export type BoardRow = { id: string; row: ReactNode; detail: ReactNode };
 export function Board({ rows, initial, top, head, axis, empty }: { rows: BoardRow[]; initial: string | null; top: ReactNode; head: ReactNode; axis: ReactNode; empty: ReactNode }) {
   const t = useTranslations('admin.attendanceCheck');
   const [sel, setSel] = useState<string | null>(rows.some((r) => r.id === initial) ? initial : null);
-  useEffect(() => {
+  // 뒤로 가기(폰 스와이프 포함)는 직원 목록으로 (2026-11-04 의뢰인: 스와이프하면 관리자 홈으로 갔다) —
+  // 목록에서 직원을 고르면 기록 한 칸을 쌓고, 다른 직원으로 바꿀 때는 그 칸만 바꾼다. 뒤로 가면 주소의 ?e=를 다시 읽는다
+  const urlWith = (id: string | null) => {
     const u = new URL(window.location.href);
-    if (sel) u.searchParams.set('e', sel);
+    if (id) u.searchParams.set('e', id);
     else u.searchParams.delete('e');
-    window.history.replaceState(window.history.state, '', u.toString());
-  }, [sel]);
+    return u.toString();
+  };
+  useEffect(() => {
+    const back = () => {
+      const e = new URL(window.location.href).searchParams.get('e');
+      setSel(e && rows.some((r) => r.id === e) ? e : null);
+    };
+    window.addEventListener('popstate', back);
+    return () => window.removeEventListener('popstate', back);
+  }, [rows]);
   const pick = (id: string) => {
-    setSel((cur) => (cur === id ? null : id));
+    if (sel === id) return toList();
+    if (sel) window.history.replaceState(window.history.state, '', urlWith(id));
+    else window.history.pushState({ ...window.history.state, boardPick: true }, '', urlWith(id));
+    setSel(id);
     if (window.matchMedia('(max-width: 1023px)').matches) window.scrollTo({ top: 0 });
+  };
+  // 목록으로 — 고를 때 쌓은 칸이 있으면 뒤로 가기와 같게, 주소로 바로 열었으면 칸만 바꾼다
+  const toList = () => {
+    if (window.history.state?.boardPick) window.history.back();
+    else { window.history.replaceState(window.history.state, '', urlWith(null)); setSel(null); }
   };
   const shown = sel ? rows.find((r) => r.id === sel) ?? null : null;
 
@@ -60,7 +78,7 @@ export function Board({ rows, initial, top, head, axis, empty }: { rows: BoardRo
       <div className={`lg:min-h-[calc(100vh-14rem)] lg:pt-4 lg:pl-6 ${sel ? '' : 'max-lg:hidden'}`}>
         {shown ? (
           <>
-            <button type="button" onClick={() => setSel(null)} className="inline-flex min-h-11 items-center gap-1 text-sm font-medium text-muted hover:text-text lg:hidden">
+            <button type="button" onClick={toList} className="inline-flex min-h-11 items-center gap-1 text-sm font-medium text-muted hover:text-text lg:hidden">
               <ChevronLeft aria-hidden size={16} />
               {t('backToList')}
             </button>
