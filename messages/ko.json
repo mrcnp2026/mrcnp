@@ -3602,7 +3602,7 @@
       "invalid_input": "입력한 내용을 다시 확인해 주세요.",
       "period_locked": "마감된 달입니다.",
       "colAnomaly": "이상 기록",
-      "anomalyBlock": "처리할 것 {n}건",
+      "anomalyBlock": "확인 필요 {n}건",
       "anomalyCheck": "승인된 날 {n}일",
       "reopenRequested": "다른 관리자에게 다시 열기 확인을 요청했습니다. 그 관리자가 확인하면 열립니다.",
       "reopenWaiting": "다시 열기 확인 대기 · 요청 {name}",
@@ -3907,18 +3907,18 @@
     },
     "attendanceCheck": {
       "title": "근태 점검",
-      "intro": "근무 일정과 실제 출퇴근이 다른 날을 모아 보여 줍니다. 여기서 바로 처리하면 근무시간 · 급여가 다시 계산됩니다. 「처리할 것」이 0건이어야 근태 마감을 할 수 있습니다.",
+      "intro": "근무 일정과 실제 출퇴근이 다른 날을 모아 보여 줍니다. 여기서 바로 처리하면 근무시간 · 급여가 다시 계산됩니다. 「확인 필요」가 0건이어야 근태 마감을 할 수 있습니다.",
       "viewOnly": "대표자 계정은 보기만 할 수 있습니다. 처리는 지점관리자 · 최고관리자가 합니다.",
       "prev": "지난달",
       "next": "다음 달",
       "toClosing": "근태 마감으로",
-      "allClear": "처리할 것이 없습니다",
+      "allClear": "확인할 것이 없습니다",
       "sumPeople": "{n}명",
       "sumBlock": "기록 오류 {n}건",
-      "sumDecide": "처리할 것 {n}건",
+      "sumDecide": "확인 필요 {n}건",
       "sumConfirm": "승인된 날 {n}일",
       "view": {
-        "open": "처리할 것",
+        "open": "확인 필요",
         "confirm": "승인된 날",
         "handled": "처리 완료",
         "all": "전체"
@@ -3932,7 +3932,7 @@
       "cntDecide": "{n}건",
       "cntClear": "끝",
       "legend": {
-        "decide": "처리할 날",
+        "decide": "확인 필요",
         "month": "조기출근(참고)",
         "block": "기록 오류",
         "confirm": "승인된 날",
@@ -3940,7 +3940,23 @@
         "fine": "이상 없음"
       },
       "confirmLeft": "승인된 날 {n}일 보기",
-      "usual": "평소 {span}",
+      "usual": "근무일정 {span}",
+      "usualWhy": "이 달 근무일정 중 가장 많은 시간대입니다. 날마다 다른 일정은 아래 날짜마다 따로 나옵니다.",
+      "viewLabel": "보기",
+      "ev": {
+        "plan": "근무일정",
+        "punch": "출퇴근 기록",
+        "calc": "계산에 쓴 시각",
+        "leave": "휴가",
+        "ot": "연장",
+        "waived": "휴게"
+      },
+      "otStatus": {
+        "pending": "승인 필요",
+        "approved": "승인 완료",
+        "rejected": "거절",
+        "cancelled": "취소"
+      },
       "h": "{h}시간",
       "hm": "{h}시간 {m}분",
       "min": "{n}분",
@@ -3952,7 +3968,7 @@
       "noPlan": "일정 없음",
       "punchLine": "출퇴근 {list}",
       "noPunch": "출퇴근 기록 없음",
-      "calcShort": "{punched} → {counted}로 계산",
+      "calcShort": "{punched} → {counted}",
       "breakCheckWhy": "17:30이 지나서 퇴근했지만 평소보다 일찍 나간 날입니다. 짧게 잔업한 날은 {span} 저녁 휴게 없이 바로 일했을 수 있습니다 — 실제로 쉬었는지 확인해 주세요.",
       "cover": {
         "full": "승인됨",
@@ -3970,7 +3986,7 @@
       },
       "state": {
         "block": "기록 오류",
-        "decide": "처리할 것",
+        "decide": "확인 필요",
         "confirm": "승인된 날",
         "handled": "처리 완료",
         "changed": "처리 뒤 기록이 바뀜"
@@ -4058,7 +4074,7 @@
       "showAll": "전체 직원 보기",
       "guide": {
         "title": "왼쪽에서 직원을 고르세요",
-        "pick": "그 직원의 처리할 날이 여기에 나옵니다."
+        "pick": "그 직원의 확인 필요한 날이 여기에 나옵니다."
       },
       "rowSchedule": "참고 · {n}일을 매일 {span} 일찍 출근 (급여에는 안 들어감)",
       "rowEarly": "한 달 1건 · {n}일 1시간 넘게 일찍 출근",

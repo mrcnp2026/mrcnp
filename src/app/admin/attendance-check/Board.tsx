@@ -31,12 +31,13 @@ export function Board({ rows, initial, top, head, axis, empty }: { rows: BoardRo
     <div className="grid gap-6 lg:grid-cols-2 lg:gap-0 lg:border-t lg:border-border">
       <div className={`lg:border-r lg:border-border lg:pt-4 lg:pr-6 ${sel ? 'max-lg:hidden' : ''}`}>
       <section aria-label={t('listLabel')} className="flex flex-col lg:sticky lg:top-20 lg:max-h-[calc(100vh-6rem)] lg:overflow-y-auto">
-        {head}
+        {/* 보기 단추(data-keep)를 누르면 고른 직원을 주소에 붙여 간다 — 고르기는 화면 안에서만 바뀌어 서버가 만든 주소에는 없다 */}
+        <div onClickCapture={(e) => { const a = (e.target as HTMLElement).closest('a[data-keep]') as HTMLAnchorElement | null; if (a && sel) { const u = new URL(a.href); u.searchParams.set('e', sel); a.href = u.toString(); } }}>{head}</div>
         {/* 색 뜻 — 목록 바로 위에 (2026-11-03 의뢰인: 색이 무슨 뜻인지 모르겠다) */}
         <p className="flex flex-wrap items-center gap-x-3 gap-y-1 px-2 pb-2 text-xs text-muted">
-          {(['decide', 'month', 'block', 'confirm', 'handled', 'fine'] as const).map((k) => ( // 쉬는 날 · 기록 없음은 이상 없음과 같은 칸 (2026-11-04 의뢰인)
+          {(['decide', 'month', 'block', 'handled', 'fine'] as const).map((k) => ( // 쉬는 날 · 기록 없음은 이상 없음과 같은 칸, 승인된 날은 처리 완료와 같은 칸 (2026-11-04 의뢰인)
             <span key={k} className="inline-flex items-center gap-1">
-              <span aria-hidden className={`size-3 rounded-xs ${{ decide: 'bg-warn', month: 'bg-warn/45', block: 'bg-danger', confirm: 'bg-primary/30', handled: 'bg-ok', fine: 'bg-border' }[k]}`} />
+              <span aria-hidden className={`size-3 rounded-xs ${{ decide: 'bg-alert', month: 'bg-alert/35', block: 'bg-danger', handled: 'bg-ok', fine: 'bg-border' }[k]}`} />
               {t(`legend.${k}`)}
             </span>
           ))}

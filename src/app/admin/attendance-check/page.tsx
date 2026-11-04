@@ -22,13 +22,13 @@ import { loadOrgGroups } from '@/lib/org-data';
 import { daysFor, loadPeriod } from '@/lib/period-data';
 import { toKstDate } from '@/lib/time';
 import { Board } from './Board';
-import { ConfirmAll, DayActions, MonthActions, type DayCtx } from './CheckActions';
+import { DayActions, MonthActions, type DayCtx } from './CheckActions';
 
 const shift = (ym: string, by: number) => {
   const [y, m] = ym.split('-').map(Number);
   return new Date(Date.UTC(y, m - 1 + by, 1)).toISOString().slice(0, 7);
 };
-const STATES = ['open', 'confirm', 'handled', 'all'] as const;
+const STATES = ['open', 'handled', 'all'] as const; // 「승인된 날」은 「처리 완료」에 묶는다 (2026-11-04 의뢰인)
 type View = (typeof STATES)[number];
 const MONTH_KINDS = ['schedule_check', 'early_bundle'] as const;
 const hm = (d: Date) => new Date(d.getTime() + 9 * 3600_000).toISOString().slice(11, 16);
@@ -79,8 +79,7 @@ export default async function AttendanceCheckPage({ searchParams }: { searchPara
     if (kindFilter && !live(d).some((p) => p.kind === kindFilter)) return false;
     const done = handled && d.state !== 'block';
     if (view === 'open') return !done && (d.state === 'block' || d.state === 'decide' || changed);
-    if (view === 'confirm') return !done && d.state === 'confirm';
-    if (view === 'handled') return done;
+    if (view === 'handled') return done || d.state === 'confirm'; // 승인이 다 덮은 날도 처리 완료
     return true;
   };
 
@@ -121,11 +120,10 @@ export default async function AttendanceCheckPage({ searchParams }: { searchPara
     const d = r.days.find((x) => x.workDate === date);
     if (date > upTo) return 'border border-dashed border-border';
     if (d?.state === 'block') return 'bg-danger';
-    if (d?.state === 'decide' && !r.st.handled.has(date)) return 'bg-warn';
+    if (d?.state === 'decide' && !r.st.handled.has(date)) return 'bg-alert';
     const monthOpen = r.monthly.some((m) => !r.st.handled.has(monthKey(m))); // 참고(일정 확인)도 칸에는 옅은 주황으로 남긴다
-    if (monthOpen && d?.parts.some((p) => p.bundled)) return 'bg-warn/45'; // 한 달 1건으로 묶인 날
-    if (d?.state && r.st.handled.has(date)) return 'bg-ok';
-    if (d?.state === 'confirm') return 'bg-primary/30'; // 승인된 날(연장 · 휴일근로 승인이 다 덮음)
+    if (monthOpen && d?.parts.some((p) => p.bundled)) return 'bg-alert/35'; // 한 달 1건으로 묶인 날
+    if (d?.state && (r.st.handled.has(date) || d.state === 'confirm')) return 'bg-ok'; // 처리 완료 · 승인이 다 덮은 날 (2026-11-04 하나로)
     return 'bg-border'; // 이상 없음 — 쉬는 날 · 기록 없는 날도 같은 칸 (2026-11-04 의뢰인: 따로 나눌 필요 없다)
   };
 
@@ -190,7 +188,6 @@ export default async function AttendanceCheckPage({ searchParams }: { searchPara
               <b className="text-base">{t('sumPeople', { n: totals.people })}</b>
               {totals.block > 0 && <span className="font-bold text-danger">{t('sumBlock', { n: totals.block })}</span>}
               <span className="font-bold text-warn">{t('sumDecide', { n: totals.decide })}</span>
-              {totals.confirm > 0 && <span className="text-muted">{t('sumConfirm', { n: totals.confirm })}</span>}
             </>
           )}
         </p>
@@ -217,10 +214,14 @@ export default async function AttendanceCheckPage({ searchParams }: { searchPara
   // 왼쪽: 보기 탭 · 날짜 눈금(목록 위) · 직원 한 줄(Board가 단추로 감싼다) · 색 뜻
   const listHead = (
     <>
-      <div className="flex flex-wrap gap-1.5 pb-3">
+      <div className="flex flex-wrap items-center gap-1.5 pb-3">
+        <span className="pr-1 text-xs text-muted">{t('viewLabel')}</span>
         {STATES.map((s) => (
-          <a key={s} href={q({ s, e: null })} aria-current={view === s ? 'page' : undefined} className={`inline-flex min-h-10 items-center rounded-chip px-3 text-sm font-semibold lg:min-h-8 ${view === s ? 'bg-text text-bg' : 'text-muted hover:text-text'}`}>
+          <a key={s} data-keep href={q({ s, e: null })} aria-current={view === s ? 'page' : undefined} className={`inline-flex min-h-10 items-center gap-1.5 rounded-chip px-3 text-sm font-semibold lg:min-h-8 ${view === s ? 'bg-text text-bg' : 'text-muted hover:text-text'}`}>
+            {s === 'open' && <span aria-hidden className="size-2 rounded-full bg-alert" />}
+            {s === 'handled' && <span aria-hidden className="size-2 rounded-full bg-ok" />}
             {t(`view.${s}`)}
+            {s === 'open' && <span className="num">{totals.block + totals.decide}</span>}
           </a>
         ))}
       </div>
@@ -289,13 +290,12 @@ export default async function AttendanceCheckPage({ searchParams }: { searchPara
       if (pl.items.length && pl.rule) { const k = `${pl.rule.startTime.slice(0, 5)}–${pl.rule.endTime.slice(0, 5)}`; spans.set(k, (spans.get(k) ?? 0) + 1); }
     }
     const usual = [...spans].sort((a, b) => b[1] - a[1])[0]?.[0];
-    const confirmLeft = sel.days.filter((d) => d.state === 'confirm' && !sel.st.handled.has(d.workDate)).length;
     const dayRows = daysFor(data, sel.employeeId, from, to);
     return (
       <section aria-label={p.name} className="flex flex-col">
         <div className="flex flex-wrap items-baseline gap-x-3 gap-y-1 border-b border-border pb-2">
           <h2 className="text-lg font-bold">{p.name}</h2>
-          <span className="text-sm text-muted">{[groupPath(groups, p.groupId), usual ? t('usual', { span: usual }) : null].filter(Boolean).join(' · ')}</span>
+          <span className="text-sm text-muted" title={usual ? t('usualWhy') : undefined}>{[groupPath(groups, p.groupId), usual ? t('usual', { span: usual }) : null].filter(Boolean).join(' · ')}</span>
           <a href={`/admin/records/${sel.employeeId}?m=${month}${sp.live === '1' ? '&live=1' : ''}`} className="ml-auto text-sm font-bold text-primary">{t('monthRecord')} ›</a>
         </div>
         {sel.shownDays.length === 0 && sel.shownMonths.length === 0 && <p className="py-8 text-center text-sm text-muted">{t('emptyPerson')}</p>}
@@ -306,7 +306,7 @@ export default async function AttendanceCheckPage({ searchParams }: { searchPara
             return (
               <li key={m.kind} className="flex flex-col gap-1.5 py-3">
                 <p className="flex flex-wrap items-baseline gap-x-2">
-                  <span aria-hidden className={`size-2 shrink-0 self-center rounded-full ${done ? 'bg-ok' : m.info ? 'bg-warn/45' : 'bg-warn'}`} />
+                  <span aria-hidden className={`size-2 shrink-0 self-center rounded-full ${done ? 'bg-ok' : m.info ? 'bg-alert/35' : 'bg-alert'}`} />
                   <b>{t(`kind.${m.kind}`)}</b>
                   <span className="text-xs text-muted">{m.info ? t('infoOnly') : t('monthOne')}</span>
                 </p>
@@ -344,16 +344,17 @@ export default async function AttendanceCheckPage({ searchParams }: { searchPara
             const handled = sel.st.handled.has(d.workDate) && d.state !== 'block';
             const changed = sel.st.changed.has(d.workDate);
             const rv = sel.st.byKey.get(d.workDate);
-            const tone = handled ? 'bg-ok' : d.state === 'block' ? 'bg-danger' : d.state === 'decide' ? 'bg-warn' : 'bg-primary/40';
-            // 근거 한 줄: 일정 · 찍힘 · 계산(올림 · 내림 뒤) · 그날 요청
+            const tone = handled || d.state === 'confirm' ? 'bg-ok' : d.state === 'block' ? 'bg-danger' : 'bg-alert';
+            // 근거 — 이름표 한 줄씩: 근무일정 · 출퇴근 기록 · 계산 · 휴가 · 연장 · 휴게 (2026-11-04 의뢰인: 한 줄로 쭉 늘어놓으면 폰에서 구분이 안 된다)
             const calc = live(d).filter((x) => x.punched && x.counted && x.punched !== x.counted).map((x) => t('calcShort', { punched: x.punched!, counted: x.counted! }));
-            const evidence = [
-              span ? t('planLine', { span }) : t('noPlan'),
-              all?.pairs.length ? t('punchLine', { list: all.pairs.map((x) => `${x.in ? hm(x.in) : '--'}→${x.out ? hm(x.out) : '--'}`).join(', ') }) : t('noPunch'),
-              ...calc,
-              ...leaves.map((l) => `${leaveTypeName(data.leaveTypes, l.typeCode, tl)}${l.startTime ? ` ${l.startTime.slice(0, 5)}–${l.endTime?.slice(0, 5)}` : ''} ${t(`req.${l.status}`)}`),
-              ...(ot ? [t('otLine', { status: t(`req.${ot.status}`), approved: dur(ot.status === 'approved' ? (ot.approvedMinutes ?? ot.overtimeMinutes) + (ot.approvedHolidayMinutes ?? ot.holidayMinutes) : 0) }) + (ot.needsReview && ot.recomputedOvertimeMinutes != null ? ` · ${t('otNow', { n: dur(ot.recomputedOvertimeMinutes) })}` : '')] : []),
-              ...waived.map((w) => t('waivedLine', { start: w })),
+            const otMin = ot ? (ot.status === 'approved' ? (ot.approvedMinutes ?? ot.overtimeMinutes) + (ot.approvedHolidayMinutes ?? ot.holidayMinutes) : ot.overtimeMinutes + ot.holidayMinutes) : 0;
+            const evidence: { k: string; v: string; tone?: string }[] = [
+              { k: 'plan', v: span ?? t('noPlan') },
+              { k: 'punch', v: all?.pairs.length ? all.pairs.map((x) => `${x.in ? hm(x.in) : '--'} → ${x.out ? hm(x.out) : '--'}`).join(', ') : t('noPunch') },
+              ...(calc.length ? [{ k: 'calc', v: calc.join(', ') }] : []),
+              ...leaves.map((l) => ({ k: 'leave', v: `${leaveTypeName(data.leaveTypes, l.typeCode, tl)}${l.startTime ? ` ${l.startTime.slice(0, 5)}–${l.endTime?.slice(0, 5)}` : ''} · ${t(`req.${l.status}`)}` })),
+              ...(ot ? [{ k: 'ot', v: `${t(`otStatus.${ot.status}`)} ${dur(otMin)}${ot.needsReview && ot.recomputedOvertimeMinutes != null ? ` · ${t('otNow', { n: dur(ot.recomputedOvertimeMinutes) })}` : ''}`, tone: ot.status === 'approved' ? 'text-ok' : ot.status === 'pending' ? 'text-warn' : undefined }] : []),
+              ...waived.map((w) => ({ k: 'waived', v: t('waivedLine', { start: w }) })),
             ];
             return (
               <li key={d.workDate} id={`d-${d.workDate}`} className="flex scroll-mt-24 flex-col gap-1 py-3">
@@ -373,7 +374,14 @@ export default async function AttendanceCheckPage({ searchParams }: { searchPara
                   })}
                   {(handled || changed) && <span className="text-xs text-muted">{handled ? t('state.handled') : t('state.changed')}</span>}
                 </div>
-                <p className="num pl-4 text-xs leading-relaxed text-muted">{evidence.join(' · ')}</p>
+                <dl className="num grid grid-cols-[5.5rem_minmax(0,1fr)] gap-x-3 gap-y-0.5 pl-4 text-sm">
+                  {evidence.map((e, i) => (
+                    <div key={i} className="contents">
+                      <dt className="text-xs leading-6 text-muted">{t(`ev.${e.k}`)}</dt>
+                      <dd className={`leading-6 break-words ${e.tone ?? 'text-text'}`}>{e.v}</dd>
+                    </div>
+                  ))}
+                </dl>
                 {live(d).some((x) => x.kind === 'break_request') && <p className="pl-4 text-xs text-warn">{t('breakRequestWhy', { span: live(d).find((x) => x.kind === 'break_request')!.plan ?? '' })}</p>}
                 {live(d).some((x) => x.kind === 'break_check') && <p className="pl-4 text-xs text-warn">{t('breakCheckWhy', { span: live(d).find((x) => x.kind === 'break_check')!.plan ?? '' })}</p>}
                 {handled && rv ? (
@@ -385,8 +393,6 @@ export default async function AttendanceCheckPage({ searchParams }: { searchPara
             );
           })}
         </ul>
-        {canAct && confirmLeft > 0 && (view === 'confirm' || view === 'all') && <ConfirmAll employeeId={sel.employeeId} month={month} n={confirmLeft} />}
-        {view === 'open' && confirmLeft > 0 && <a href={q({ s: 'confirm' })} className="pt-3 text-sm text-muted hover:text-primary">{t('confirmLeft', { n: confirmLeft })} ›</a>}
       </section>
     );
   };

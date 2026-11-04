@@ -3602,7 +3602,7 @@
       "invalid_input": "Please check what you entered.",
       "period_locked": "This month is closed.",
       "colAnomaly": "Exceptions",
-      "anomalyBlock": "To handle {n}",
+      "anomalyBlock": "Needs check {n}",
       "anomalyCheck": "Approved days {n}",
       "reopenRequested": "Asked another admin to confirm reopening. It opens once they confirm.",
       "reopenWaiting": "Waiting for confirmation · requested by {name}",
@@ -3907,18 +3907,18 @@
     },
     "attendanceCheck": {
       "title": "Attendance check",
-      "intro": "Days where the schedule and actual punches differ. Handling them here recalculates hours and pay. Attendance close needs zero items “To handle”.",
+      "intro": "Days where the schedule and actual punches differ. Handling them here recalculates hours and pay. Attendance close needs zero items “Needs check”.",
       "viewOnly": "The CEO account is view-only. Branch managers and top admins handle items.",
       "prev": "Previous month",
       "next": "Next month",
       "toClosing": "Go to attendance close",
-      "allClear": "Nothing to handle",
+      "allClear": "Nothing to check",
       "sumPeople": "{n} people",
       "sumBlock": "Record errors {n}",
-      "sumDecide": "To handle {n}",
+      "sumDecide": "Needs check {n}",
       "sumConfirm": "Approved days {n}",
       "view": {
-        "open": "To handle",
+        "open": "Needs check",
         "confirm": "Approved days",
         "handled": "Done",
         "all": "All"
@@ -3932,7 +3932,7 @@
       "cntDecide": "{n}",
       "cntClear": "done",
       "legend": {
-        "decide": "To handle",
+        "decide": "Needs check",
         "month": "Early arrival (reference)",
         "block": "Record error",
         "confirm": "Approved",
@@ -3940,7 +3940,23 @@
         "fine": "No issue"
       },
       "confirmLeft": "Show {n} approved days",
-      "usual": "Usually {span}",
+      "usual": "Schedule {span}",
+      "usualWhy": "The most common schedule this month. Days with a different schedule show it on their own line below.",
+      "viewLabel": "Show",
+      "ev": {
+        "plan": "Schedule",
+        "punch": "Punches",
+        "calc": "Counted as",
+        "leave": "Leave",
+        "ot": "Overtime",
+        "waived": "Break"
+      },
+      "otStatus": {
+        "pending": "Needs approval",
+        "approved": "Approved",
+        "rejected": "Rejected",
+        "cancelled": "Cancelled"
+      },
       "h": "{h}h",
       "hm": "{h}h {m}m",
       "min": "{n}m",
@@ -3952,7 +3968,7 @@
       "noPlan": "No schedule",
       "punchLine": "Punches {list}",
       "noPunch": "No punches",
-      "calcShort": "{punched} counted as {counted}",
+      "calcShort": "{punched} → {counted}",
       "breakCheckWhy": "Left after 17:30 but earlier than usual. On short overtime days people often work straight through the {span} break — please check whether it was taken.",
       "cover": {
         "full": "Approved",
@@ -3970,7 +3986,7 @@
       },
       "state": {
         "block": "Record error",
-        "decide": "To handle",
+        "decide": "Needs check",
         "confirm": "Approved",
         "handled": "Done",
         "changed": "Changed after handling"
@@ -4058,7 +4074,7 @@
       "showAll": "Show all employees",
       "guide": {
         "title": "Pick an employee on the left",
-        "pick": "Their days to handle appear here."
+        "pick": "Their days that need a check appear here."
       },
       "rowSchedule": "Reference · early by {span} on {n} days (not paid)",
       "rowEarly": "Monthly · over 1h early on {n} days",
