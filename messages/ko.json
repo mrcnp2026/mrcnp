@@ -1268,8 +1268,8 @@
       "emptyYear": "이 해에 승인된 휴가가 없습니다.",
       "pcSum": {
         "sumCount": "{y}년 휴가 건수",
-        "sumDays": "연차에서 뺀 일수",
-        "sumPeople": "휴가 쓴 직원",
+        "sumWeek": "이번 주 휴가자",
+        "sumShort": "연차 당겨 쓴 직원",
         "sumMonth": "이번 달 휴가",
         "sumWaiting": "승인 대기",
         "waitingLine": "승인을 기다리는 휴가 신청 {n}건 — 받은 요청에서 처리",

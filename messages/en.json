@@ -1268,8 +1268,8 @@
       "emptyYear": "No approved leave in this year.",
       "pcSum": {
         "sumCount": "Leave in {y}",
-        "sumDays": "Days deducted",
-        "sumPeople": "People on leave",
+        "sumWeek": "On leave this week",
+        "sumShort": "Used leave in advance",
         "sumMonth": "This month",
         "sumWaiting": "Waiting",
         "waitingLine": "{n} leave requests waiting — open the inbox",

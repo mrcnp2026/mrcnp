@@ -17,7 +17,7 @@ import { CountUp } from '@/components/CountUp';
 import { BarChart } from '@/components/charts/BarChart';
 import { KpiStrip } from '@/components/report';
 import { OFFICE } from '@/config/office';
-import { addDays } from '@/lib/calendar';
+import { addDays, weekStartOf } from '@/lib/calendar';
 import { leaveTypeName, suggestGrant } from '@/lib/leave';
 import { leaveBalancesFor } from '@/lib/leave-balance-data';
 import { loadAllLeaveTypes, loadLeaveGrants, loadLeaveRequests } from '@/lib/leave-data';
@@ -93,18 +93,21 @@ export default async function AdminLeavePage({ searchParams }: { searchParams: P
   // 올해 한눈에 — PC 목록 위 · 폰 목록 위 둘 다 (2026-10-22 의뢰인: 「휴가내역도 시프티를 그냥 베꼈다」, 「모바일에 PC 디자인이 안 들어갔다」)
   const summaryEl = (() => {
             const ym = today.slice(0, 7);
-            const deducted = inYear.reduce((a, r) => a + (typeOf.get(r.typeCode)?.deductsBalance ? r.days : 0), 0);
-            const people = new Set(inYear.map((r) => r.employeeId)).size;
+            // 카드는 관리자가 손댈 것 위주 (2026-11-04 의뢰인: 「연차에서 뺀 일수」 · 「휴가 쓴 직원」 대신) — 이번 주 휴가자 · 승인 대기 · 당겨 쓴 직원 · 이번 달
+            const weekEnd = addDays(weekStartOf(today), 6);
+            const thisWeek = new Set(requests.filter((r) => r.status === 'approved' && name.has(r.employeeId) && inScope(r.employeeId) && r.startDate <= weekEnd && r.endDate >= today).map((r) => r.employeeId)).size;
+            const short = (ppl ?? []).filter((p) => p.employee_no !== OFFICE.ownerEmployeeNo && inScope(p.id as string) && (todayBalances.get(p.id as string)?.remaining ?? 0) < 0).length;
             const thisMonth = inYear.filter((r) => r.startDate.slice(0, 7) <= ym && r.endDate.slice(0, 7) >= ym).length;
             const waiting = requests.filter((r) => r.status === 'pending' && name.has(r.employeeId)).length;
             return (
               <div className="flex flex-col gap-3 lg:gap-4">
                 {/* 2026-10-27 키트: 파스텔 지표 타일 + 월별 휴가 사용 막대(이번 달 초록) */}
                 <KpiStrip
-                  items={([['sumCount', String(inYear.length)], ['sumDays', n(deducted)], ['sumPeople', String(people)], [year === today.slice(0, 4) ? 'sumMonth' : 'sumWaiting', String(year === today.slice(0, 4) ? thisMonth : waiting)]] as const).map(([k, v]) => ({
+                  items={([['sumWeek', String(thisWeek)], ['sumWaiting', String(waiting), '/admin/inbox'], ['sumShort', String(short)], year === today.slice(0, 4) ? ['sumMonth', String(thisMonth)] : ['sumCount', String(inYear.length)]] as [string, string, string?][]).map(([k, v, href]) => ({
                     label: t(`pcSum.${k}`, { y: year }),
                     value: <CountUp value={v} />,
-                    tone: v === '0' ? ('faint' as const) : ('default' as const),
+                    href,
+                    tone: v === '0' ? ('faint' as const) : (k === 'sumWaiting' || k === 'sumShort') ? ('warn' as const) : ('default' as const),
                   }))}
                 />
                 <section className="flex flex-col gap-2 rounded-card border border-border bg-bg p-4 shadow-card lg:p-5">
