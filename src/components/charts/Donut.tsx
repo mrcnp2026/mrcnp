@@ -57,8 +57,11 @@ export function Donut({ slices, center, centerLabel, ariaLabel, after = 0 }: { s
   const sel = hot === null ? null : slices[hot];
 
   return (
-    <div ref={ref} className="flex flex-1 flex-wrap items-center gap-5 lg:flex-nowrap" onPointerLeave={(e) => e.pointerType === 'mouse' && setHot(null)}>
-      <div className="relative size-40 shrink-0" role="img" aria-label={ariaLabel}>
+    // 화면 폭이 아니라 카드 폭으로 배치한다 (2026-11-04 의뢰인: 1024~1280에서 카드가 좁아 범례 글자가 「정…」으로 잘렸다).
+    // 카드가 19rem보다 좁으면 도넛 위 · 범례 아래, 넓으면 나란히
+    <div ref={ref} className="@container flex flex-1" onPointerLeave={(e) => e.pointerType === 'mouse' && setHot(null)}>
+    <div className="flex w-full flex-col items-center gap-4 @[19rem]:flex-row @[19rem]:gap-5">
+      <div className="relative size-36 shrink-0 @[19rem]:size-40" role="img" aria-label={ariaLabel}>
         <svg viewBox="0 0 160 160" className="size-full -rotate-90 overflow-visible" aria-hidden>
           <circle cx={80} cy={80} r={58} pathLength={100} fill="none" stroke={C.track} strokeWidth={16} />
           {total > 0 &&
@@ -94,7 +97,7 @@ export function Donut({ slices, center, centerLabel, ariaLabel, after = 0 }: { s
           {sel && <span className="num text-xs text-faint">{pct(sel)}%</span>}
         </div>
       </div>
-      <ul className="flex min-w-36 flex-1 flex-col gap-1">
+      <ul className="flex w-full flex-col gap-1 @[19rem]:w-auto @[19rem]:min-w-36 @[19rem]:flex-1">
         {slices.map((s, i) => (
           <li key={s.key}>
             <button
@@ -109,11 +112,13 @@ export function Donut({ slices, center, centerLabel, ariaLabel, after = 0 }: { s
               <span aria-hidden className="size-2.5 shrink-0 rounded-sm" style={{ background: s.color }} />
               <span className="min-w-0 flex-1 truncate text-muted">{s.label}</span>
               <span className="num font-bold">{s.n}</span>
-              <span className="num w-12 shrink-0 text-right text-xs text-faint">{total > 0 ? `${Math.round(pct(s))}%` : '–'}</span>
+              {/* 카드가 아주 좁으면(1024 화면 4칸 줄) 비율은 숨긴다 — 이름이 먼저, 비율은 조각을 고르면 가운데에 나온다 */}
+              <span className="num hidden w-12 shrink-0 text-right text-xs text-faint @[11rem]:inline">{total > 0 ? `${Math.round(pct(s))}%` : '–'}</span>
             </button>
           </li>
         ))}
       </ul>
+    </div>
     </div>
   );
 }
