@@ -1204,6 +1204,7 @@
       "pending": "승인 대기",
       "remaining": "잔여",
       "noGrant": "연차 미입력",
+      "excluded": "연차 제외",
       "reference": "계산값 {n}일",
       "add": "연차 입력",
       "edit": "연차 고치기",

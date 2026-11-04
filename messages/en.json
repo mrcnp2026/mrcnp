@@ -1204,6 +1204,7 @@
       "pending": "Waiting",
       "remaining": "Left",
       "noGrant": "Not entered",
+      "excluded": "No annual leave",
       "reference": "Calculated {n} days",
       "add": "Enter leave",
       "edit": "Edit leave",

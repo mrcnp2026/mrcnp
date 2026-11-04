@@ -48,6 +48,10 @@ export default async function AdminLeavePage({ searchParams }: { searchParams: P
     loadLeaveGrants(),
     loadLeaveRequests({ practice }),
   ]);
+  // 「연차 생성 제외」 묶음(최고관리자 · 간주근무 — 2026-11-04 의뢰인: 연차와 근무일정을 따지지 않는다)은 「미입력」 경고 대신 「연차 제외」
+  const { data: exGroups } = await createAdminClient().from('leave_policy_groups').select('id').eq('excluded', true).eq('active', true);
+  const { data: exMembers } = exGroups?.length ? await createAdminClient().from('leave_policy_members').select('employee_id, valid_from, valid_to').eq('active', true).in('group_id', exGroups.map((g) => g.id)) : { data: [] };
+  const excludedOn = (id: string, d: string) => (exMembers ?? []).some((m) => m.employee_id === id && m.valid_from <= d && (!m.valid_to || m.valid_to > d));
   // 기준일 (없거나 잘못되면 오늘)
   const asOf = sp.to && /^\d{4}-\d{2}-\d{2}$/.test(sp.to) && !Number.isNaN(Date.parse(`${sp.to}T00:00:00Z`)) ? sp.to : today;
   const groupOptions = orgOptions(groups);
@@ -69,6 +73,7 @@ export default async function AdminLeavePage({ searchParams }: { searchParams: P
   };
   // 일수는 소수 둘째 자리까지(2026-10-19 의뢰인: 15분 = 0.03125일도 폰 칸을 넘지 않게) — 비례 발생처럼 떨어지지 않는 값도 같게 — 10.9896이 폰 칸을 넘었다 (2026-10-17 디자인)
   const n = (v: number) => f.number(v, { maximumFractionDigits: 2 });
+  const noLeave = (id: string) => (excludedOn(id, asOf) ? <Chip tone="neutral">{t('excluded')}</Chip> : <Chip tone="warn">{t('noGrant')}</Chip>);
   const day = (d: string) => f.dateTime(new Date(`${d}T12:00:00+09:00`), { year: d.slice(0, 4) === today.slice(0, 4) ? undefined : 'numeric', month: 'short', day: 'numeric', weekday: 'short' });
   const name = new Map((ppl ?? []).map((p) => [p.id, p.name]));
   const leaveName = (code: string) => leaveTypeName(types, code, tl);
@@ -326,7 +331,7 @@ export default async function AdminLeavePage({ searchParams }: { searchParams: P
                     ))
                   ) : (
                     <td colSpan={4} className="px-4 py-3 text-right">
-                      <Chip tone="warn">{t('noGrant')}</Chip>
+                      {noLeave(p.id)}
                     </td>
                   )}
                   <td className="px-4 py-3 text-right">
@@ -371,7 +376,7 @@ export default async function AdminLeavePage({ searchParams }: { searchParams: P
                           <span key={i} className={`w-12 text-right ${i === 2 ? (v < 0 ? 'text-danger' : 'text-primary') : ''}`}>{n(v)}</span>
                         ))
                       ) : (
-                        <Chip tone="warn">{t('noGrant')}</Chip>
+                        noLeave(p.id)
                       )}
                       <ChevronRight aria-hidden size={20} strokeWidth={1.75} className="w-5 shrink-0 text-faint" />
                     </Link>
@@ -417,7 +422,7 @@ export default async function AdminLeavePage({ searchParams }: { searchParams: P
                   ))}
                 </dl>
               ) : (
-                <Chip tone="warn">{t('noGrant')}</Chip>
+                noLeave(p.id)
               )}
               {admin && <JoinedOnForm employeeId={p.id} joinedOn={hiredOn} today={today} />}
               {ref && (
