@@ -5,6 +5,7 @@ import { selectableLocales, type Locale } from '@/i18n/locales';
 import { noticeState, numbersMatch, pickDisplay, popupOrder, type NoticeRow, type TranslationRow } from '@/lib/notice-logic';
 import { ApiError } from '@/lib/api';
 import { safeRichHtml } from '@/lib/rich-text';
+import { readAll } from '@/lib/read-all';
 import { createAdminClient } from '@/lib/supabase/admin';
 import { translateNotice } from '@/lib/translate';
 import { NOT_SYSTEM_ADMIN } from '@/lib/system-admin'; // 시스템관리자는 목록에 보이지 않는다 (2026-10-18)
@@ -40,9 +41,10 @@ export async function listNoticesForAdmin(now: Date) {
   const db = createAdminClient();
   const [{ data: ns }, { data: reads }, { data: people }, { data: targets }] = await Promise.all([
     db.from('notices').select('*').order('created_at', { ascending: false }).limit(2000), // 점검 공지가 쌓여도 실제 공지가 밀려나지 않게 (뒤에서 점검 공지를 뺀다)
-    db.from('notice_reads').select('notice_id, employee_id, version'),
+    // 확인 기록 · 대상은 나눠 읽는다 — 한 번에는 1,000줄까지만 와서, 쌓이면 확인 현황 숫자가 모자랐다 (2026-11-04)
+    readAll((a, b) => db.from('notice_reads').select('notice_id, employee_id, version').order('notice_id').order('employee_id').order('version').range(a, b)),
     db.from('profiles').select('id, name, active, employee_no').or(NOT_SYSTEM_ADMIN),
-    db.from('notice_targets').select('notice_id, employee_id'),
+    readAll((a, b) => db.from('notice_targets').select('notice_id, employee_id').order('notice_id').order('employee_id').range(a, b)),
   ]);
   const active = (people ?? []).filter((p) => p.active);
   // 보관함에서 점검용 공지는 뺀다 (2026-10-06 의뢰인: 보관함 18건이 전부 자동 검사·점검 흔적이었다 — 공지는 지울 수 없어 보관함에 쌓인다).

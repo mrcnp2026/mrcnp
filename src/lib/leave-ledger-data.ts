@@ -614,17 +614,36 @@ export async function ledgerForMany(employeeIds: readonly string[], asOf: string
   // 받은 연차 묶음 · 원장 기록 · 정책 그룹 소속을 한꺼번에 읽는다 (2026-10-28 속도: 셋을 차례로 기다렸다).
   // 소속은 「묶음이 있는 직원」을 알기 전에 읽으므로 요청한 직원 전부로 묻는다
   const ids = [...want];
-  const [allLots, allEntries, { data: members, error: memberError }] = await Promise.all([
-    loadLots({ states: ['APPROVED'] }),
-    loadEntries(),
+  // 잔여 계산(ledgerBalance)이 쓰는 것만 읽는다 (2026-11-04: 관리자 홈이 2분마다 원장 전체를 읽어, 쓸수록 사용량이 늘었다).
+  //   묶음: 그날 쓸 수 있거나(liveAt) 앞으로 쓸 수 있는 것 = 승인 · 끝나는 날이 그날보다 뒤이거나 없음. 끝난 묶음은 어느 숫자에도 들어가지 않는다.
+  //   원장: 그 묶음들의 줄 + 묶음 없이 쓴 줄(선사용). 끝난 묶음의 줄은 ledgerBalance가 건너뛴다.
+  const lotsP = ids.length
+    ? readAll((a, b) => db().from('leave_grant_lots').select('*').eq('state', 'APPROVED').in('employee_id', ids).or(`usable_to.is.null,usable_to.gt.${asOf}`).order('granted_on', { ascending: false }).order('id').range(a, b)).then(({ data }) => (data ?? []).map(toLot))
+    : Promise.resolve([] as LotRow[]);
+  const entriesP = lotsP.then(async (ls) => {
+    const lotIds = ls.map((l) => l.id);
+    const parts = await Promise.all([
+      readAll((a, b) => db().from('leave_ledger').select('*').in('employee_id', ids).is('lot_id', null).order('id', { ascending: true }).range(a, b)),
+      ...Array.from({ length: Math.ceil(lotIds.length / 100) }, (_, i) => readAll((a, b) => db().from('leave_ledger').select('*').in('lot_id', lotIds.slice(i * 100, i * 100 + 100)).order('id', { ascending: true }).range(a, b))),
+    ]);
+    return parts.flatMap(({ data }) => (data ?? []).map(toEntry)).sort((x, y) => x.id - y.id);
+  });
+  // 원장이 있는 직원 = 승인된 묶음이 하나라도 있는 직원(끝난 것 포함) — 끝난 묶음뿐이어도 「원장 0일」로 보인다(예전과 같게)
+  const ownersP = ids.length
+    ? readAll((a, b) => db().from('leave_grant_lots').select('id, employee_id').eq('state', 'APPROVED').in('employee_id', ids).order('id').range(a, b)).then(({ data }) => new Set((data ?? []).map((r) => r.employee_id as string)))
+    : Promise.resolve(new Set<string>());
+  const [allLots, allEntries, { data: members, error: memberError }, owners] = await Promise.all([
+    lotsP,
+    entriesP,
     ids.length
       ? db().from('leave_policy_members').select('employee_id, group_id').in('employee_id', ids).eq('active', true).lte('valid_from', asOf).or(`valid_to.is.null,valid_to.gt.${asOf}`)
       : Promise.resolve({ data: [] as { employee_id: string; group_id: string }[], error: null }),
+    ownersP,
   ]);
   if (memberError) boom('ledgerForMany.members', memberError);
   const lots = allLots.filter((l) => want.has(l.employeeId));
-  if (lots.length === 0) return out;
-  const withLots = [...new Set(lots.map((l) => l.employeeId))];
+  const withLots = [...owners].filter((id) => want.has(id));
+  if (withLots.length === 0) return out;
   const lotSet = new Set(withLots);
   const entries = allEntries.filter((e) => lotSet.has(e.employeeId));
   const policyCache = new Map<string, Promise<PolicyRow[]>>();
