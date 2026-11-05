@@ -129,7 +129,7 @@ export default async function AttendanceCheckPage({ searchParams }: { searchPara
     return 'bg-border'; // 이상 없음 — 쉬는 날 · 기록 없는 날도 같은 칸 (2026-11-04 의뢰인: 따로 나눌 필요 없다)
   };
 
-  const ctxOf = (employeeId: string, d: DayCheck): DayCtx => {
+  const ctxOf = (employeeId: string, d: DayCheck, done?: ReadonlySet<string>): DayCtx => { // done = 칸별 판단으로 이미 닫힌 칸
     const plan = data.planFor(employeeId, d.workDate);
     const rule = plan.items.length && plan.rule ? plan.rule : null;
     const ot = data.overtime.find((o) => o.employeeId === employeeId && o.workDate === d.workDate) ?? null;
@@ -148,8 +148,8 @@ export default async function AttendanceCheckPage({ searchParams }: { searchPara
       breakSkip: (() => { const b = data.breakSkipFor(employeeId, d.workDate); return b && b.status === 'pending' ? { id: b.id, start: b.start, end: b.end } : null; })(),
       // 연장 + 휴일을 함께 본다 — 쉬는 날 근무는 휴일 칸에만 시간이 있다
       overtime: ot ? { id: ot.id, status: ot.status, needsReview: !!ot.needsReview, recomputed: ot.recomputedOvertimeMinutes != null || ot.recomputedHolidayMinutes != null ? (ot.recomputedOvertimeMinutes ?? 0) + (ot.recomputedHolidayMinutes ?? 0) : null, approved: ot.status === 'approved' ? (ot.approvedMinutes ?? ot.overtimeMinutes) + (ot.approvedHolidayMinutes ?? ot.holidayMinutes) : 0, fact: ot.overtimeMinutes + ot.holidayMinutes } : null,
-      extraOpen: d.parts.some((p) => (p.kind === 'after_end' || p.kind === 'no_plan_work') && p.state === 'decide'),
-      kinds: live(d).map((p) => p.kind),
+      extraOpen: d.parts.some((p) => (p.kind === 'after_end' || p.kind === 'no_plan_work') && p.state === 'decide' && !done?.has(p.kind)),
+      kinds: live(d).map((p) => p.kind).filter((k) => !done?.has(k)),
       state: d.state,
       base: !!data.ruleAt(d.workDate),
       live: !practice,
@@ -390,7 +390,7 @@ export default async function AttendanceCheckPage({ searchParams }: { searchPara
                 {handled && rv ? (
                   <p className="pl-4 text-sm text-ok">{t(`decided.${rv.decision}`)}{rv.note ? ` — ${rv.note}` : ''}</p>
                 ) : (
-                  canAct && d.state !== 'confirm' && <DayActions ctx={ctxOf(sel.employeeId, d)} reviewId={changed ? rv?.id ?? null : null} />
+                  canAct && d.state !== 'confirm' && <DayActions ctx={ctxOf(sel.employeeId, d, sel.st.doneKinds.get(d.workDate))} reviewId={changed ? rv?.id ?? null : null} />
                 )}
               </li>
             );

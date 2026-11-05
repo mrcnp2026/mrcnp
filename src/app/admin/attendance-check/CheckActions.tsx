@@ -142,7 +142,10 @@ export function DayActions({ ctx, reviewId }: { ctx: DayCtx; reviewId: string | 
         await step(`/api/admin/overtime/${ctx.overtime.id}/accept`, {});
       } else {
         const decision = { lateAck: 'confirmed', notLate: 'not_late', notEarly: 'not_late', breakTaken: 'break_taken', notRecognized: 'not_recognized', absentOk: 'confirmed', confirm: 'confirmed' }[o.k as 'notLate'] as string;
-        await step('/api/admin/attendance-check', { action: 'decide', employeeId: ctx.employeeId, date: ctx.date, scope: 'day', kind: 'day', decision, note: why.trim() || null });
+        // 고른 칸의 항목만 닫는다 — 지각 [무급]이 같은 날 연장 칸까지 닫지 않게 (2026-11-05 의뢰인)
+        const g = groups.find((x) => x.opts.some((y) => y.k === o.k))?.g;
+        const parts = g === 'late' ? ['late_in'] : g === 'early' ? ['early_out'] : g === 'break' ? ['break_check', 'break_request'] : g === 'ot' ? ['after_end'] : g === 'holiday' ? ['no_plan_work', 'after_end'] : ctx.kinds;
+        await step('/api/admin/attendance-check', { action: 'decide', employeeId: ctx.employeeId, date: ctx.date, scope: 'day', kind: 'day', decision, note: why.trim() || null, parts });
       }
       if (unconfirm) await step('/api/admin/records/confirm', { confirm: true, items: [{ employeeId: ctx.employeeId, date: ctx.date }] }).catch(() => null); // 다시 확정 — 남은 대기 요청이 있으면 그날 상세에서
       setPick(null);

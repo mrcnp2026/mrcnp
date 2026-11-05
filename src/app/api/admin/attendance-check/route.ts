@@ -2,8 +2,9 @@
 // 판단할 때 보였던 항목 요약(fingerprint)은 화면이 보낸 값을 믿지 않고 서버가 지금 자료로 다시 계산해 남긴다.
 import { OFFICE } from '@/config/office';
 import { api, ApiError, readJson } from '@/lib/api';
+import { CHECK_KINDS } from '@/lib/attendance-check';
 import { collectChecks, loadBreakEarlyLeaveMin, loadEarlyIgnoreAt, loadLateIgnoreAt, loadPatternMinEarly } from '@/lib/attendance-check-data';
-import { CHECK_DECISIONS, dayFingerprint, loadCheckReviews, monthFingerprint, releaseCheckReview, reviewState, saveCheckReview, type CheckDecision } from '@/lib/attendance-check-reviews';
+import { CHECK_DECISIONS, dayFingerprint, partsFingerprint, loadCheckReviews, monthFingerprint, releaseCheckReview, reviewState, saveCheckReview, type CheckDecision } from '@/lib/attendance-check-reviews';
 import { monthRange } from '@/lib/month-data';
 import { loadPeriod } from '@/lib/period-data';
 import { requireApprover, requireStaffViewer } from '@/lib/scope';
@@ -63,7 +64,12 @@ export const POST = api('admin.attendanceCheck', async (req) => {
     const day = checks?.days.find((d) => d.workDate === date);
     if (!day || !day.state) throw new ApiError(409, 'check_gone'); // 그사이 기록이 바뀌어 확인할 것이 없어졌다
     if (day.state === 'block') throw new ApiError(409, 'check_blocked'); // 막음은 판단으로 풀리지 않는다 — 기록을 고치거나 요청을 처리한다
-    fingerprint = dayFingerprint(day);
+    // 칸별 판단(parts)이면 그 칸만 닫는다 — 같은 날 먼저 닫은 칸은 이어 붙인다 (2026-11-05 의뢰인)
+    const parts = Array.isArray(b.parts) ? (b.parts as unknown[]).filter((x): x is string => typeof x === 'string' && (CHECK_KINDS as readonly string[]).includes(x)) : [];
+    if (parts.length) {
+      const prev = (await loadCheckReviews(date, date, practice, [employeeId])).find((r) => r.scope === 'day')?.fingerprint ?? null;
+      fingerprint = partsFingerprint(day, parts, prev);
+    } else fingerprint = dayFingerprint(day);
   } else {
     const m = checks?.monthly.find((x) => x.kind === kind);
     if (!m) throw new ApiError(409, 'check_gone');
