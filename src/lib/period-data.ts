@@ -22,7 +22,7 @@ import { applyTemplate, deemedPair, planDay, type DayPlan, type DayShift, type S
 import { createAdminClient } from '@/lib/supabase/admin';
 import { hhmm, toKstDate } from '@/lib/time';
 import { waiveBreaks } from '@/lib/break-waiver';
-import { FIRST_TABLES, loadFirstApprovals, type FirstTable } from '@/lib/first-approval';
+import { FIRST_TABLES, type FirstTable } from '@/lib/first-approval';
 import type { HolidayRow, PunchCorrection, PunchEvent, WorkRule } from '@/lib/types';
 
 // startsOn: 입사일(joined_on), 비어 있으면 계정을 만든 날 — 그 전 날짜는 미기록·결근으로 세지 않는다 (7-8 요점 3)
@@ -432,12 +432,16 @@ async function firstStageAdjust(practice: boolean, who: 'top' | 'manager', scope
   if (ids.length === 0) return out;
   const db = createAdminClient();
   // 표 7개를 동시에 본다 (2026-11-04: 하나씩 기다려 관리자 화면 틀이 열릴 때마다 14번을 차례로 왕복했다)
-  await Promise.all(FIRST_TABLES.map(async (t) => {
-    const { data } = await db.from(t).select('id').eq('is_test', practice).eq('status', 'pending').in('employee_id', ids);
-    const rows = (data ?? []).map((r) => r.id as string);
-    const done = await loadFirstApprovals(t, rows);
-    out[t] = who === 'top' ? rows.filter((id) => !done.has(id)).length : rows.filter((id) => done.has(id)).length;
-  }));
+  const pending = await Promise.all(FIRST_TABLES.map(async (t) => ((await db.from(t).select('id').eq('is_test', practice).eq('status', 'pending').in('employee_id', ids)).data ?? []).map((r) => r.id as string)));
+  // 1차 확인은 표 7개 것을 한 번에 읽는다 (2026-11-05 Supabase 로그 한도: 종 숫자를 셀 때마다 표마다 따로 7번 읽었다). 요청 id는 표가 달라도 겹치지 않는다(uuid)
+  const all = pending.flat();
+  const done = new Set<string>();
+  for (let i = 0; i < all.length; i += 300) {
+    const { data, error } = await db.from('first_approvals').select('subject_id').in('subject_id', all.slice(i, i + 300));
+    if (error) throw new Error(`firstStageAdjust: ${error.code}`);
+    for (const r of data ?? []) done.add(r.subject_id as string);
+  }
+  FIRST_TABLES.forEach((t, i) => (out[t] = pending[i].filter((id) => done.has(id) === (who === 'manager')).length));
   return out;
 }
 
