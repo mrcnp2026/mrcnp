@@ -34,7 +34,6 @@ import { ProfileSection } from './ProfileSection';
 import { StaffNotes } from './StaffNotes';
 import { loadStaffNotes } from '@/lib/staff-notes';
 import { StaffDetailsForm } from '@/components/StaffDetailsForm';
-import { ForeignInfoForm } from '@/components/ForeignInfoForm';
 import { daysToStayEnd } from '@/lib/foreign-rules';
 import { loadForeignInfo, loadStaffDetails } from '@/lib/staff-details';
 

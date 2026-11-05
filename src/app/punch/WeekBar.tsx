@@ -2,7 +2,7 @@
 // 2026-10-18 의뢰인: 요일 칸은 일정이 아니라 **실제 출근 · 퇴근 시각**. 아직 안 찍은 날만 일정을 흐리게 보인다.
 // 서버가 계산한 값만 그린다 — 화면이 다시 계산하지 않는다. 막대 길이는 52시간 = 100%, 넘으면 끝에서 멈춘다.
 // 색만 쓰지 않고 숫자와 상태 글자를 함께. 알림은 보내지 않는다 (7-13 요점 3). 5인 미만이면 색 없이 숫자만 (요점 4).
-import { AlertTriangle, CalendarDays, ChevronLeft, ChevronRight } from 'lucide-react';
+import { CalendarDays, ChevronLeft, ChevronRight } from 'lucide-react';
 import { getTranslations } from 'next-intl/server';
 import Link from 'next/link';
 import { CountUp } from '@/components/CountUp';

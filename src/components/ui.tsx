@@ -91,7 +91,7 @@ export function CardTitle({ children, aside, help }: { icon?: LucideIcon; childr
 }
 
 const WIDTH = 'max-w-md md:max-w-3xl lg:mx-0 lg:max-w-none'; // 모든 화면이 같은 폭 — PC는 옆 판 오른쪽 남은 영역을 끝까지 쓴다(다우오피스처럼, 2026-10-30 의뢰인 스샷2/사이즈 · 사이즈1 — 1920px 모니터에서 1280px 제한은 오른쪽이 비었다)
-export function PageShell({ children, wide = false, flush = false }: { children: ReactNode; wide?: boolean; flush?: boolean }) {
+export function PageShell({ children, flush = false }: { children: ReactNode; wide?: boolean; flush?: boolean }) {
   // 화면 좌우 16px, 폰 기준 폭 (4-9). 폰에서는 언제나 좁은 한 칸이다.
   // 2026-10-30 의뢰인: 「모든 메뉴 · 하위 메뉴의 화면 좌우 폭이 같아야 한다 — 늘었다 줄었다 하면 어지럽다(다우오피스처럼)」 →
   //   폭은 한 가지: 옆 메뉴 판 오른쪽 남은 영역을 채운다(제한 없음). 오른쪽은 남긴다 — 왼쪽 40px · 오른쪽 64px(넓은 화면 112px). 다우오피스의 오른쪽 메뉴 자리만큼(같은 날 의뢰인: 「끝까지 채우는 게 아니라 우리는 우측에 메뉴가 없잖아」)

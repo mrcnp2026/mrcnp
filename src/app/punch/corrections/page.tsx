@@ -20,7 +20,6 @@ export default async function CorrectionsPage({ searchParams }: { searchParams: 
   const me = await getMe();
   if (!me) redirect('/login');
   const t = await getTranslations('corrections');
-  const tc = await getTranslations('common');
   const f = await getFormatter();
   const sp = await searchParams;
   const [r, sw] = await Promise.all([loadEmployeeRecent(me.id, new Date()), switches()]);

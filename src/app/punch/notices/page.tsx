@@ -7,7 +7,6 @@ import { HelpTip } from '@/components/Help';
 import { getFormatter, getLocale, getTranslations } from 'next-intl/server';
 import Link from 'next/link';
 import { redirect } from 'next/navigation';
-import { NoticeBody } from '@/components/NoticeBody';
 import { RichHtml } from '@/components/RichHtml';
 import { SideFilter } from '@/components/SideFilter';
 import { PcTable } from '@/components/PcTable';

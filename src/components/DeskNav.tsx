@@ -108,6 +108,7 @@ export function DeskNav({ role, initialWide = false }: { role: NavRole; inboxCou
     }
     const id = requestAnimationFrame(() => setReady(true)); // 처음 그릴 때는 움직이지 않고 고른 모양으로 바로 놓는다
     return () => cancelAnimationFrame(id);
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- 처음 열 때 한 번만: 예전 브라우저 기억(localStorage)을 쿠키로 옮긴다. 그 뒤 폭은 toggleWide가 바꾼다
   }, []);
   const toggleWide = () =>
     setWide((w) => {

@@ -3,7 +3,6 @@
 // 급여 담당 관리자(관리자 + 급여 열람 권한)만 본다. 값은 「임시」로 들어가고 경영지원실의 검증을 받으면 「검증됨」으로 바꾼다.
 // 공식 기준 자료는 「검토 대기」를 거쳐 관리자가 「확인 후 반영」한 것만 쓰인다 — 자동으로 반영되지 않는다.
 import { AUTO_PAYMENT_CODES } from '@/lib/payroll/engine/reserved-items';
-import { CircleMinus, CirclePlus, ClipboardList, Clock, EyeOff, Scale, ShieldCheck, TableProperties, Users, type LucideIcon } from 'lucide-react';
 import { getFormatter, getTranslations } from 'next-intl/server';
 import Link from 'next/link';
 import type { ReactNode } from 'react';
@@ -21,7 +20,6 @@ import { ItemAdd } from './ItemWizard';
 import { Explain, em } from '@/components/ui';
 import { AllowanceForm, ImportForm, ItemForm, ManualForm, RefreshButton, ReviewForm, SeedButton, SettingForm, TaxCalc, UseToggle, VerifyButton } from './PayForms';
 
-const ICONS: Record<PaySection, LucideIcon> = { 'employee-defaults': Users, ledger: ClipboardList, 'payment-items': CirclePlus, 'deduction-items': CircleMinus, 'insurance-rates': ShieldCheck, 'income-tax': TableProperties, allowances: Scale, masking: EyeOff, 'working-time': Clock };
 const TAX_KINDS: ReferenceKind[] = ['income-tax.table', 'income-tax.child-adjust'];
 const PCT_FIELDS = new Set(['employeeRate', 'employerRate', 'totalRate', 'incomeRate', 'healthRate', 'rate', 'stabilityUnder150', 'stabilityPriority150', 'stability150to1000', 'stabilityOver1000']);
 const KRW_FIELDS = new Set(['lower', 'upper', 'hourly', 'monthly209', 'monthlyLimit', 'child1', 'child2', 'perExtraChild', 'wageMin', 'wageMaxExclusive', 'premiumUpper', 'premiumUpperEmployee', 'premiumLower', 'incomePremiumUpper']);

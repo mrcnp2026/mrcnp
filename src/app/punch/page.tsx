@@ -1,6 +1,5 @@
 // 직원 홈 (PWA 진입점). 2026-10-10 의뢰인: 시프티 홈처럼 — (관리자) 바로가기 카드 → 「오늘 근무」 → 미기록 안내 → 「이번주 근무」(요일 7칸 + 계획 막대) → 근무노트.
 // 상단 바·하단 탭은 layout.tsx(components/AppFrame).
-import { ChartNoAxesColumn, ChevronRight, ClipboardX } from 'lucide-react';
 import { getFormatter, getLocale, getTranslations } from 'next-intl/server';
 import { cookies, headers } from 'next/headers';
 import Link from 'next/link';
@@ -30,7 +29,6 @@ import { loadInbox } from '@/lib/work-messages';
 import { LocationPrompt } from '@/components/LocationPrompt';
 import { PushToggle } from '@/components/PushToggle';
 import { Fab } from '@/components/Fab';
-import { SituationCard } from './SituationCard';
 import { judgeLateness } from '@/lib/lateness';
 import { StaffDesk } from './StaffDesk';
 import { ShiftRequestSheet } from './schedule/request/ShiftRequestSheet';
@@ -42,7 +40,6 @@ import { getSettingAt } from '@/lib/settings';
 export default async function PunchPage({ searchParams }: { searchParams: Promise<{ w?: string; m?: string; new?: string }> }) {
   const me = await getMe();
   if (!me) redirect('/login');
-  const t = await getTranslations('home');
   const tw = await getTranslations('work');
   const tr = await getTranslations('requests'); // 홈의 + 단추 (요청 종류)
   const f = await getFormatter();

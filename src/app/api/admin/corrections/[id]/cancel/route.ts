@@ -2,7 +2,6 @@
 // 정정 행은 지우지 않는다 — 상태만 'cancelled'가 되고 결정 기록에 누가·왜가 남는다 (0016). 원본(punch_events)은 그대로다.
 // 자기 기록의 정정은 스스로 취소하지 못한다 (다른 관리자가 한다). 마감된 달은 취소할 수 없다.
 // 취소 뒤 그 날 집계는 화면을 열 때 다시 계산되고, 이미 결정한 연장 요청은 "재확인 필요"로 올라온다 (R-4).
-import { OFFICE } from '@/config/office';
 import { api, ApiError, readJson } from '@/lib/api';
 import { assertStaffTarget } from '@/lib/staff-data';
 import { requireAdmin } from '@/lib/auth';

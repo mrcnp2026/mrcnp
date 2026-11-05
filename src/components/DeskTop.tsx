@@ -95,7 +95,7 @@ export function MenuSearch({ role }: { role: NavRole }) {
       (['my', 'admin', 'console'] as const).flatMap((space) =>
         appsFor(space, role, system, logs).flatMap((a) => appLeaves(a).map((l) => ({ href: l.href, name: t(`item.${l.key}`), where: `${t(`space.${space}`)} › ${t(space === 'console' ? `app.${a.key}` : `appFull.${a.key}`)}` }))),
       ),
-    [role, t, system],
+    [role, t, system, logs],
   );
   useEffect(() => {
     setOpen(false);
@@ -295,7 +295,6 @@ export function Crumb({ role }: { role: NavRole }) {
   const parts = [t(`space.${at.space}`), ...(at.app.section ? [t(`console.${at.app.section}`)] : []), t(`appFull.${at.app.key}`), ...(single ? [] : [t(`item.${at.leaf.key}`)])];
   // 앱 이름과 항목 이름이 같으면(홈 · 요청함) 한 번만
   const shown = parts.filter((p, i) => i === 0 || p !== parts[i - 1]);
-  const siblings = at.app ? appLeaves(at.app) : [];
   return (
     <p data-noprint className="hidden items-center gap-1 px-8 pt-5 text-xs text-faint lg:flex">
       {shown.map((p, i) => (

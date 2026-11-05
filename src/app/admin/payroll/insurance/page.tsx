@@ -15,8 +15,6 @@ import { toKstDate } from '@/lib/time';
 import { ConfirmOldButton, EnrollAdd, EnrollGroupRow, NoticeManual } from './InsuranceForms';
 import { NoticeUpload } from './NoticeUpload';
 
-const TONE = { UNREPORTED: 'warn', CHECKING: 'info', CONFIRMED: 'ok' } as const;
-
 export default async function InsurancePage({ searchParams }: { searchParams: Promise<{ v?: string; live?: string }> }) {
   const [t, me, sp] = await Promise.all([getTranslations('admin.insurance'), getMe(), searchParams]);
   if (!me || me.role !== 'admin' || !me.canViewPayroll) return <PageShell><p className="rounded-card bg-warn-tint p-4 text-sm text-warn">{t('forbidden')}</p></PageShell>;
