@@ -1,6 +1,6 @@
 'use client';
 // 알림 숫자 한곳 (2026-10-14 의뢰인: 요청 · 공지가 있으면 종에 표시, 처리하면 숫자가 바로 바뀌어야 한다)
-// 처음 값은 화면 틀(AppFrame)이 서버에서 세어 넘기고, 화면을 옮길 때 · 3분마다 · 창으로 돌아올 때(30초 안이면 건너뜀) /api/me/alerts로 다시 센다.
+// 처음 값은 화면 틀(AppFrame)이 서버에서 세어 넘기고, 화면을 옮길 때 · 3분마다 · 창으로 돌아올 때(3분 안이면 건너뜀) /api/me/alerts로 다시 센다.
 // 종 아이콘(AlertBell)과 요청 배지(앱 띠 · 하단 탭)가 같은 숫자를 쓴다.
 import { Bell, ChevronRight } from 'lucide-react';
 import { useTranslations } from 'next-intl';
@@ -28,7 +28,8 @@ export function AlertsProvider({ initial, children }: { initial: AlertCounts; ch
   const [counts, setCounts] = useState(initial);
   const path = usePathname();
   // 서버 사용량 (2026-11-04: 1분마다 · 창이 안 보여도 · 화면마다 다시 세서 Vercel 무료 한도의 절반을 이 한 곳이 썼다 → 운영 정지).
-  // 그래서 숨은 창에서는 세지 않고, 저절로 다시 세는 것(화면 이동 · 창 복귀 · 3분 주기)은 마지막으로 센 지 30초가 안 됐으면 건너뛴다.
+  // 그래서 숨은 창에서는 세지 않고, 저절로 다시 세는 것(화면 이동 · 창 복귀 · 3분 주기)은 마지막으로 센 지 3분이 안 됐으면 건너뛴다.
+  // 2026-11-05: Supabase 로그 한도(1GB)를 넘었다 — 한 번 세는 데 DB를 15~25번 묻고 하루 500번 셌다. 화면 이동으로 다시 세는 것도 3분 간격으로 줄였다.
   // 승인 · 읽음 뒤의 reloadAlerts와 되살린 화면(bfcache)은 바로 센다 — 「처리하면 숫자가 바로 바뀐다」(2026-10-14)는 그대로.
   const last = useRef(Date.now()); // 처음 값은 화면 틀이 방금 서버에서 센 것
   const reload = useCallback(async () => {
@@ -41,7 +42,7 @@ export function AlertsProvider({ initial, children }: { initial: AlertCounts; ch
     }
   }, []);
   const maybeReload = useCallback(() => {
-    if (document.visibilityState === 'visible' && Date.now() - last.current >= 30_000) void reload();
+    if (document.visibilityState === 'visible' && Date.now() - last.current >= 180_000) void reload();
   }, [reload]);
   useEffect(maybeReload, [path, maybeReload]);
   useEffect(() => {

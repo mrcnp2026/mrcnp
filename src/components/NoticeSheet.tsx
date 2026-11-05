@@ -58,11 +58,11 @@ export function NoticeSheet({ items, messages }: { items: SheetNotice[]; message
     [latest],
   );
 
-  // 새 공지 묻기 — 화면이 보일 때만, 3분마다 · 화면을 옮길 때 · 앱으로 돌아올 때. 마지막으로 물은 지 30초 안이면 건너뛴다
+  // 새 공지 묻기 — 화면이 보일 때만, 3분마다 · 화면을 옮길 때 · 앱으로 돌아올 때. 마지막으로 물은 지 3분 안이면 건너뛴다
   // (2026-11-04: 30초마다 · 창 전환마다 묻던 것이 알림 숫자와 함께 Vercel 무료 한도를 넘겨 운영이 멈췄다. 게시 즉시 알리는 것은 폰 알림이 맡는다)
   const asked = useRef(Date.now()); // 처음 목록은 화면 틀이 방금 서버에서 받은 것
   const poll = useCallback(async () => {
-    if (document.visibilityState !== 'visible' || Date.now() - asked.current < 30_000) return;
+    if (document.visibilityState !== 'visible' || Date.now() - asked.current < 180_000) return; // 2026-11-05: 30초 → 3분 (Supabase 로그 한도)
     asked.current = Date.now();
     const r = await callApi<{ items: SheetNotice[]; messages?: SheetMessage[] }>('/api/notices/pending', { locale });
     if (r.ok) setLatest(merge(r.data.items, r.data.messages));
