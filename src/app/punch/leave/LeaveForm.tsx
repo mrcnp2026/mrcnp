@@ -4,7 +4,7 @@
 import { Select } from '@/components/Select';
 import { useTranslations } from 'next-intl';
 import { useRouter } from 'next/navigation';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { DateTimeInput } from '@/components/DateTimeInput';
 import { callApi } from '@/components/client-api';
 import { ErrorNote } from '@/components/ErrorNote';
@@ -26,6 +26,21 @@ export function LeaveForm({ today, types, direct, change }: { today: string; typ
   const cur = types.find((x) => x.code === code);
   const oneDay = (cur?.unit ?? 1) < 1;
   const groups = [...new Set(types.map((x) => x.group))];
+  const timed = oneDay && !cur?.startTime;
+  const [day, setDay] = useState(init?.startDate ?? today);
+  const [startTime, setStartTime] = useState(init?.startTime ?? '');
+  // 시간 휴가: 고른 날짜 · 시각으로 끝나는 시각을 미리 받는다 (안 되면 가장 늦은 시작 시각)
+  const [win, setWin] = useState<{ endTime: string | null; latest: string | null } | null>(null);
+  useEffect(() => {
+    setWin(null);
+    if (!timed || !day) return;
+    let live = true;
+    callApi<{ endTime: string | null; latest: string | null }>('/api/leave/window', { typeCode: code, date: day, startTime: startTime || null, employeeId: direct?.employeeId }).then((r) => live && r.ok && setWin(r.data));
+    return () => {
+      live = false;
+    };
+  }, [timed, code, day, startTime, direct?.employeeId]);
+  const blocked = timed && !!startTime && !!win && !win.endTime;
   const option = (x: (typeof types)[number]) => (
     <option key={x.code} value={x.code}>
       {x.name}
@@ -49,13 +64,17 @@ export function LeaveForm({ today, types, direct, change }: { today: string; typ
             typeCode: code,
             startDate: fd.get('startDate'),
             endDate: oneDay ? fd.get('startDate') : fd.get('endDate'),
-            startTime: oneDay && !cur?.startTime ? fd.get('startTime') : null,
+            startTime: timed ? startTime : null,
             reason: fd.get('reason'),
           });
           setBusy(false);
           if (!r.ok) return setErr(r);
           setSent(r.data.days);
-          if (!direct?.replaceId && !change) form.reset();
+          if (!direct?.replaceId && !change) {
+            form.reset();
+            setDay(today);
+            setStartTime('');
+          }
           router.refresh();
           change?.onDone?.();
         }}
@@ -90,7 +109,7 @@ export function LeaveForm({ today, types, direct, change }: { today: string; typ
         <div className={`grid gap-3 ${oneDay ? '' : 'grid-cols-2'}`}>
           <label className="flex flex-col gap-1 text-sm text-muted">
             {oneDay ? t('date') : t('start')}
-            <DateTimeInput name="startDate" type="date" required defaultValue={init?.startDate ?? today} className={`num ${field}`} />
+            <DateTimeInput name="startDate" type="date" required value={day} onChange={setDay} className={`num ${field}`} />
           </label>
           {!oneDay && (
             <label className="flex flex-col gap-1 text-sm text-muted">
@@ -99,11 +118,20 @@ export function LeaveForm({ today, types, direct, change }: { today: string; typ
             </label>
           )}
         </div>
-        {oneDay && !cur?.startTime && (
+        {timed && (
           <label className="flex flex-col gap-1 text-sm text-muted">
             {t('startTime')}
-            <DateTimeInput name="startTime" type="time" required defaultValue={init?.startTime ?? undefined} className={`num ${field}`} />
+            <DateTimeInput name="startTime" type="time" required value={startTime} onChange={setStartTime} className={`num ${field}`} />
             <span className="text-xs text-faint">{t('startTimeHint', { h: cur?.hours ?? 0 })}</span>
+            {win &&
+              (startTime || !win.latest) &&
+              (win.endTime ? (
+                <span className="num text-sm font-semibold text-text">{t('windowEnd', { start: startTime, end: win.endTime, h: cur?.hours ?? 0 })}</span>
+              ) : (
+                <span role="status" className="text-sm font-semibold text-warn">
+                  {win.latest ? t('windowLate', { latest: win.latest, h: cur?.hours ?? 0 }) : t('windowNone')}
+                </span>
+              ))}
           </label>
         )}
         <p className="text-xs text-faint">{t('workdaysOnly')}</p>
@@ -114,7 +142,7 @@ export function LeaveForm({ today, types, direct, change }: { today: string; typ
         </label>
         {err && <ErrorNote code={err.code} requestId={err.requestId} namespace="leave" />}
         {sent !== null && <p className="text-sm font-semibold text-ok">{t(direct ? 'directDone' : change ? 'changeSent' : 'sent', { n: sent })}</p>}
-        <Button type="submit" disabled={busy} className="w-full">
+        <Button type="submit" disabled={busy || blocked} className="w-full">
           {t(direct ? (direct.replaceId ? 'directEditSave' : 'directAddSave') : change ? 'changeSend' : 'submit')}
         </Button>
       </form>

@@ -1,5 +1,5 @@
 import { expect,it } from 'vitest';
-import { leaveDurationMismatch, leaveWindowForPlan, scheduledMinutes } from '@/lib/payroll/engine/scheduled-attendance';
+import { latestLeaveStart, leaveDurationMismatch, leaveWindowForPlan, scheduledMinutes } from '@/lib/payroll/engine/scheduled-attendance';
 import { timeFromAttendance } from '@/lib/payroll/engine/attendance';
 import type { DayPlan } from '@/lib/shifts';
 const plan: DayPlan = { rule: {startTime:'09:00',endTime:'18:00',breakStart:'12:00',breakEnd:'13:00',lateGraceMin:0,workdays:[1,2,3,4,5],weeklyRestDay:7},deemed:null,items:[{startTime:'09:00',endTime:'18:00',kind:'normal',name:null,color:null,shiftId:null,note:null,source:'rule'}] };
@@ -23,6 +23,15 @@ it('점심을 포함한 09–13시를 순휴가 4시간으로 잘못 계산하�
 it('4시간 오전 휴가는 09시부터 점심을 건너뛰어 14시에 끝난다',()=>{
  expect(leaveWindowForPlan(plan,'2026-10-12',4,'09:00')).toEqual({startTime:'09:00',endTime:'14:00'});
  expect(leaveWindowForPlan(plan,'2026-10-12',4,'17:00')).toBeNull();
+});
+
+// 2026-11-05: 늦게 시작해 시간이 모자라면 신청 화면이 「가장 늦은 시작 시각」을 알려 준다 (17:00–17:30 둘째 휴게 포함)
+it('시간 휴가의 가장 늦은 시작 시각은 휴게를 뺀 남은 일정으로 정한다',()=>{
+ const two: DayPlan={...plan,rule:{...plan.rule!,extraBreaks:[{start:'17:00',end:'17:30'}]}};
+ expect(latestLeaveStart(two,'2026-10-12',2)).toBe('15:30');
+ expect(latestLeaveStart(two,'2026-10-12',4)).toBe('13:30');
+ expect(leaveWindowForPlan(two,'2026-10-12',2,'15:30')).toEqual({startTime:'15:30',endTime:'18:00'});
+ expect(latestLeaveStart({...plan,rule:null,items:[]},'2026-10-12',2)).toBeNull();
 });
 
 // 2026-10-15 회귀: 하루 4시간 일정인 단시간 근무자의 종일 휴가(시각 없음)가 480분과 비교돼 막히던 문제

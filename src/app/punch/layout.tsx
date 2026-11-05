@@ -7,15 +7,19 @@ import { NoticeSheet } from '@/components/NoticeSheet';
 import { getMe } from '@/lib/auth';
 import { pendingNoticesFor } from '@/lib/notices';
 import { switchOn } from '@/lib/switches';
+import { pendingPopupMessages } from '@/lib/work-messages';
 
 export default async function PunchLayout({ children }: { children: React.ReactNode }) {
   const me = await getMe();
   if (!me) redirect('/login');
   // 공지 팝업: 대상 · 게시 중 · 현재 판 미확인 · 최대 3개 (②-5 7-15 요점 19). 언어는 지금 고른 언어
   // 통합설정 › 알림의 「공지 알림」을 끄면 팝업 없이 목록 · 종 숫자에만 보인다 (2026-10-19)
-  const pending = !(await switchOn('notify.notice')) ? [] : (await pendingNoticesFor(me.id, await getLocale())).map(({ id, version, important, display, original }) => ({ id, version, important, display, original }));
+  const [pending, messages] = await Promise.all([
+    switchOn('notify.notice').then(async (on) => (!on ? [] : (await pendingNoticesFor(me.id, await getLocale())).map(({ id, version, important, display, original }) => ({ id, version, important, display, original })))),
+    pendingPopupMessages(me.id), // 전달 · 연차 사용 촉진도 공지처럼 띄운다 (2026-11-05 의뢰인)
+  ]);
   return (
-    <AppFrame me={me} overlay={<NoticeSheet items={pending} />}>
+    <AppFrame me={me} overlay={<NoticeSheet items={pending} messages={messages} />}>
       {children}
     </AppFrame>
   );

@@ -4,12 +4,14 @@ import { api, ApiError, readJson } from '@/lib/api';
 import { getMe } from '@/lib/auth';
 import { pendingNoticesFor } from '@/lib/notices';
 import { switchOn } from '@/lib/switches';
+import { pendingPopupMessages } from '@/lib/work-messages';
 
 export const POST = api('notices.pending', async (req) => {
   const me = await getMe();
   if (!me) throw new ApiError(401, 'not_signed_in');
-  if (!(await switchOn('notify.notice'))) return { items: [] }; // 「공지 알림」을 끄면 팝업 없음 — 화면 틀(punch/layout)과 같게
+  const messages = await pendingPopupMessages(me.id); // 전달 · 연차 사용 촉진 (2026-11-05 의뢰인) — 「공지 알림」 스위치와 상관없이
+  if (!(await switchOn('notify.notice'))) return { items: [], messages }; // 「공지 알림」을 끄면 공지 팝업 없음 — 화면 틀(punch/layout)과 같게
   const { locale } = await readJson(req);
   const list = await pendingNoticesFor(me.id, typeof locale === 'string' ? locale : me.locale);
-  return { items: list.map(({ id, version, important, display, original }) => ({ id, version, important, display, original })) };
+  return { items: list.map(({ id, version, important, display, original }) => ({ id, version, important, display, original })), messages };
 });

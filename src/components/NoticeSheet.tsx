@@ -3,8 +3,9 @@
 // 언어는 상단 언어 버튼을 따른다 — 서버가 그 언어의 번역을 골라 넘긴다 (없으면 한국어 원문).
 // 게시하자마자 뜬다 (2026-10-02 의뢰인): 화면을 연 동안 3분마다 · 화면을 옮길 때 · 앱으로 돌아올 때 서버에 새 공지를 묻는다 (2026-11-04 30초 → 3분, 사용량).
 //   예전 규칙(출퇴근 화면에서는 찍은 뒤에만, 요점 18)은 의뢰인 결정으로 바꿨다 — 출퇴근 버튼을 누르는 중에만 띄우지 않는다.
+// 2026-11-05 의뢰인: 안 읽은 「전달」과 연차 사용 촉진도 공지 다음에 같은 판으로 띄운다 — 「확인」은 읽음 표시, 촉진은 계획 화면으로 가는 단추가 더 있다(오늘 하루 보지 않기 없음).
 // 공지 목록 화면에서는 띄우지 않는다. 「오늘 하루 보지 않기」는 이 브라우저에만 기억한다.
-import { Megaphone } from 'lucide-react';
+import { CalendarClock, Mail, Megaphone } from 'lucide-react';
 import { useLocale, useTranslations } from 'next-intl';
 import { usePathname, useRouter } from 'next/navigation';
 import { useCallback, useEffect, useRef, useState } from 'react';
@@ -18,7 +19,11 @@ export type SheetNotice = {
   important: boolean;
   display: { locale: string; title: string; body: string; machine: boolean; stale: boolean; translated: boolean };
   original: { title: string; body: string; html?: string }; // html: 서버가 거른 서식 본문(2026-10-16)
+  message?: { promotionHref: string | null }; // 전달 · 촉진 글 (공지가 아니다)
 };
+export type SheetMessage = { id: string; title: string; body: string; html: string; promotionHref: string | null };
+const fromMessage = (m: SheetMessage): SheetNotice => ({ id: m.id, version: 0, important: !!m.promotionHref, display: { locale: 'ko', title: m.title, body: m.body, machine: false, stale: false, translated: false }, original: { title: m.title, body: m.body, html: m.html || undefined }, message: { promotionHref: m.promotionHref } });
+const merge = (items: SheetNotice[], messages: SheetMessage[] = []) => [...items, ...messages.map(fromMessage)];
 
 export const PUNCHED_EVENT = 'attendance:punched';
 export const PUNCHING_EVENT = 'attendance:punching'; // 출퇴근 확인 중 — 이때는 팝업을 미룬다
@@ -34,7 +39,7 @@ function snoozed(n: SheetNotice) {
   }
 }
 
-export function NoticeSheet({ items }: { items: SheetNotice[] }) {
+export function NoticeSheet({ items, messages }: { items: SheetNotice[]; messages?: SheetMessage[] }) {
   const t = useTranslations('notices');
   const tc = useTranslations('common');
   const locale = useLocale();
@@ -42,12 +47,12 @@ export function NoticeSheet({ items }: { items: SheetNotice[] }) {
   const [queue, setQueue] = useState<SheetNotice[]>([]);
   const path = usePathname();
   const [punching, setPunching] = useState(false);
-  const [latest, setLatest] = useState<SheetNotice[]>(items);
+  const [latest, setLatest] = useState<SheetNotice[]>(() => merge(items, messages));
   const handled = useRef(new Set<string>()); // 이 화면에서 이미 확인·미룬 공지 (서버 반영 전에 다시 뜨지 않게)
   const [showOriginal, setShowOriginal] = useState(false);
   const [busy, setBusy] = useState(false);
 
-  useEffect(() => setLatest(items), [items]);
+  useEffect(() => setLatest(merge(items, messages)), [items, messages]);
   useEffect(
     () => setQueue(latest.filter((n) => !handled.current.has(`${n.id}:${n.version}`) && (n.important || !snoozed(n)))),
     [latest],
@@ -59,8 +64,8 @@ export function NoticeSheet({ items }: { items: SheetNotice[] }) {
   const poll = useCallback(async () => {
     if (document.visibilityState !== 'visible' || Date.now() - asked.current < 30_000) return;
     asked.current = Date.now();
-    const r = await callApi<{ items: SheetNotice[] }>('/api/notices/pending', { locale });
-    if (r.ok) setLatest(r.data.items);
+    const r = await callApi<{ items: SheetNotice[]; messages?: SheetMessage[] }>('/api/notices/pending', { locale });
+    if (r.ok) setLatest(merge(r.data.items, r.data.messages));
   }, [locale]);
   useEffect(() => void poll(), [path, poll]);
   useEffect(() => {
@@ -96,9 +101,15 @@ export function NoticeSheet({ items }: { items: SheetNotice[] }) {
   };
   async function confirm() {
     setBusy(true);
-    await callApi(`/api/notices/${n.id}/confirm`, { locale }); // 실패해도 다음에 다시 뜰 뿐이다 — 막지 않는다
+    // 실패해도 다음에 다시 뜰 뿐이다 — 막지 않는다
+    if (n.message) await callApi('/api/messages', { action: 'read', id: n.id });
+    else await callApi(`/api/notices/${n.id}/confirm`, { locale });
     setBusy(false);
     next();
+  }
+  async function openPromotion(href: string) {
+    await confirm();
+    router.push(href);
   }
   function snooze() {
     try {
@@ -119,9 +130,9 @@ export function NoticeSheet({ items }: { items: SheetNotice[] }) {
         <div className="flex flex-col gap-3 overflow-y-auto p-4">
           <div className="flex flex-wrap items-center gap-2">
             <span className="flex size-9 items-center justify-center rounded-button bg-primary-tint text-primary">
-              <Megaphone aria-hidden size={20} strokeWidth={1.75} />
+              {n.message?.promotionHref ? <CalendarClock aria-hidden size={20} strokeWidth={1.75} /> : n.message ? <Mail aria-hidden size={20} strokeWidth={1.75} /> : <Megaphone aria-hidden size={20} strokeWidth={1.75} />}
             </span>
-            <span className="text-sm font-semibold text-muted">{t('title')}</span>
+            <span className="text-sm font-semibold text-muted">{t(n.message?.promotionHref ? 'promotionTitle' : n.message ? 'messageTitle' : 'title')}</span>
             {n.important && <Chip tone="warn">{t('important')}</Chip>}
             {queue.length > 1 && <span className="num ml-auto text-xs text-faint">{t('more', { n: queue.length - 1 })}</span>}
           </div>
@@ -148,7 +159,12 @@ export function NoticeSheet({ items }: { items: SheetNotice[] }) {
               {t('snooze')}
             </button>
           )}
-          <Button disabled={busy} onClick={confirm} className="min-h-14 w-full">
+          {n.message?.promotionHref && (
+            <Button disabled={busy} onClick={() => openPromotion(n.message!.promotionHref!)} className="min-h-14 w-full">
+              {t('openPromotion')}
+            </Button>
+          )}
+          <Button disabled={busy} variant={n.message?.promotionHref ? 'outline' : undefined} onClick={confirm} className="min-h-14 w-full">
             {t('confirm')}
           </Button>
         </div>

@@ -44,3 +44,13 @@ export function leaveWindowForPlan(plan: DayPlan,date: string,hours: number,star
   }
   return null;
 }
+
+/** leaveWindowForPlan이 성립하는 가장 늦은 시작 시각 — 그 뒤 남은 일정(휴게 제외)이 hours보다 짧으면 안 된다. 일정이 없는 날은 null */
+export function latestLeaveStart(plan: DayPlan,date: string,hours: number): string|null {
+  const need=Math.round(hours*60);
+  for (let s=1438;s>=0;s--) {
+    const startTime=String(Math.floor(s/60)).padStart(2,'0')+':'+String(s%60).padStart(2,'0');
+    if (scheduledLeaveMinutes(plan,date,{typeCode:'',isPaid:false,unit:hours/8,requestId:'',startTime,endTime:'23:59'})>=need) return startTime;
+  }
+  return null;
+}

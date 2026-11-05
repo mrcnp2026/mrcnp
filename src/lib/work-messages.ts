@@ -154,6 +154,26 @@ export async function loadThread(id: string, me: Me): Promise<Thread | null> {
   };
 }
 
+/** 팝업으로 띄울 안 읽은 글 — 관리자가 보낸 전달과 연차 사용 촉진만 (2026-11-05 의뢰인: 공지처럼 폰에서 바로 보이게). 처리 결과 같은 다른 프로그램 알림은 띄우지 않는다 */
+export async function pendingPopupMessages(employeeId: string, limit = 3): Promise<{ id: string; title: string; body: string; html: string; promotionHref: string | null }[]> {
+  const { data, error } = await db().from('work_message_recipients').select('message_id, work_messages!inner(kind, title, body, body_html, related, hidden_at, created_at)').eq('employee_id', employeeId).is('read_at', null).is('work_messages.hidden_at', null).order('created_at', { ascending: false }).limit(20);
+  if (error) boom('pendingPopupMessages', error);
+  return (data ?? [])
+    .map((r) => ({ id: r.message_id as string, m: r.work_messages as unknown as Row }))
+    .filter(({ m }) => m.kind === 'notice' || (m.related as Related | null)?.type === 'promotion')
+    .slice(0, limit)
+    .map(({ id, m }) => {
+      const related = (m.related ?? {}) as Related;
+      return { id, title: m.title as string, body: m.body as string, html: safeRichHtml(m.body_html as string | null), promotionHref: related.type === 'promotion' && related.href ? related.href : null };
+    });
+}
+
+/** 받는 사람이 팝업에서 「확인」 — 읽음으로 표시한다(열어 본 것과 같다. 동의 · 법적 통지 완료를 뜻하지 않는다) */
+export async function markRead(messageId: string, employeeId: string): Promise<void> {
+  const { error } = await db().from('work_message_recipients').update({ read_at: new Date().toISOString() }).eq('message_id', messageId).eq('employee_id', employeeId).is('read_at', null);
+  if (error) boom('markRead', error);
+}
+
 /** 요청 처리 결과 글(「○○가 승인되었습니다」)은 이만큼 지나면 자동으로 숨긴다 (2026-11-03 의뢰인: 「계속 누적해서 볼 필요는 없다」) */
 export const DECISION_MESSAGE_DAYS = 7;
 /** 매일 아침 — 오래된 처리 결과 글을 숨긴다(지우지 않는다, 0085). 숨긴 수 */

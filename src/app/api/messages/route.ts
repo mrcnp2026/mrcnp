@@ -4,7 +4,7 @@ import { after } from 'next/server';
 import { api, ApiError, readJson } from '@/lib/api';
 import { getMe } from '@/lib/auth';
 import { notifyBoardPost } from '@/lib/push-events';
-import { sendNotice, type Audience } from '@/lib/work-messages';
+import { markRead, sendNotice, type Audience } from '@/lib/work-messages';
 
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 const ids = (v: unknown): string[] | null => (Array.isArray(v) && v.length > 0 && v.length <= 500 && v.every((x) => typeof x === 'string' && UUID.test(x)) ? [...new Set(v as string[])] : null);
@@ -23,6 +23,12 @@ export const POST = api('messages', async (req) => {
     const sent = await sendNotice({ me, title: b.title, body: b.body, bodyHtml: b.bodyHtml, needsReply: false, audience });
     after(() => notifyBoardPost(sent.id)); // 받는 직원 폰에 제목만 (2026-10-21 의뢰인)
     return sent;
+  }
+  // 팝업 「확인」 — 내가 받은 글만 읽음으로 바뀐다
+  if (b.action === 'read') {
+    if (typeof b.id !== 'string' || !UUID.test(b.id)) throw new ApiError(400, 'invalid_input');
+    await markRead(b.id, me.id);
+    return { ok: true };
   }
   // 예전의 직원 문의 · 회신 · 답하기는 막는다(옛 화면이 열려 있어도 서버에서 거절)
   if (b.action === 'inquiry' || b.action === 'reply' || b.action === 'answer') throw new ApiError(403, 'board_admin_only');
