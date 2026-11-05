@@ -5,6 +5,7 @@ import { companyName } from '@/lib/company'; // 통합설정 › 회사 기본�
 import { groupPath } from '@/lib/org';
 import { slipCalcShown } from '@/lib/switches';
 import { loadOrgGroups } from '@/lib/org-data';
+import { payFileName } from './file-name';
 import { buildSlipPdf } from './slip-pdf';
 
 export type SlipPdfInput = {
@@ -70,7 +71,7 @@ export async function slipPdfBytes(a: SlipPdfInput): Promise<{ bytes: Uint8Array
     },
   });
   // 파일 이름: 급여명세_귀속월_사번_revN.pdf — 주민번호 · 계좌는 넣지 않는다
-  const file = `${t('pdfFile')}_${a.month.replace('-', '')}_${(a.employeeNo ?? '').replace(/[^\w가-힣-]/g, '')}_rev${a.revision}${a.draft ? `_${t('pdfDraft')}` : ''}.pdf`;
+  const file = await payFileName({ ym: a.month, doc: 'slips', who: a.name, revision: a.revision, draft: a.draft, ext: 'pdf' }); // 「2026년 10월 급여명세서 정재호.pdf」 (2026-11-05 의뢰인)
   return { bytes, file, draftLabel: t('pdfDraft'), fileLabel: t('pdfFile') };
 }
 

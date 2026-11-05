@@ -6,6 +6,7 @@ import { ApiError } from '@/lib/api';
 import { deny } from '@/lib/csv-response';
 import { requirePayroll } from '@/lib/payroll/data';
 import { loadRun, loadRunBoard, loadStatement } from '@/lib/payroll/run-data';
+import { payFileName } from '@/lib/payroll/file-name';
 import { asSlipTime, slipPdfBytes, slipTax } from '@/lib/payroll/slip-pdf-response';
 import { slipFamilyTemp } from '@/lib/payroll/tax-defaults';
 import { payrollAudit } from '@/lib/payroll/staff-data';
@@ -52,7 +53,7 @@ export async function GET(_req: Request, ctx: { params: Promise<{ id: string }> 
   out.setTitle(`${labels.file} ${month} rev${run.revision}`);
   await payrollAudit({ actorId: me.id, action: 'run.pdf_all', table: 'payroll_runs', subjectId: run.id, runId: run.id, requestId, detail: { people: ok.length, status: run.status, revision: run.revision } });
   const bytes = await out.save();
-  const file = `${labels.file}_${month.replace('-', '')}_${run.kind}${run.sequence}_rev${run.revision}_${ok.length}${run.status !== 'FINALIZED' ? `_${labels.draft}` : ''}.pdf`;
+  const file = await payFileName({ ym: month, doc: 'slips', bonusSeq: run.kind === 'BONUS' ? run.sequence : null, revision: run.revision, draft: run.status !== 'FINALIZED', ext: 'pdf' });
   return new Response(bytes as unknown as BodyInit, {
     headers: {
       'content-type': 'application/pdf',

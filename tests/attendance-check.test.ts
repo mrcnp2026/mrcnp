@@ -159,4 +159,8 @@ describe('일정 없는 날 근무는 평소 시작부터 (급여-59 ①)', () =
     const r = judgeDay({ ...base, plan: null, clipStart: '08:00', pairs: [{ in: at('07:29'), out: at('17:05') }], approvedExtraMin: 480 });
     expect(kinds(r)).toEqual(['no_plan_work:480:confirm']);
   });
+  it('조기 틀 07:40 · 07:40:21 출근 → 초를 버려 07:40부터 (급여 계산과 같게 8시간 20분)', () => {
+    const r = judgeDay({ ...base, plan: null, clipStart: '07:40', pairs: [{ in: new Date(at('07:40').getTime() + 21_000), out: at('17:06') }] });
+    expect(kinds(r)).toEqual(['no_plan_work:500:decide']);
+  });
 });

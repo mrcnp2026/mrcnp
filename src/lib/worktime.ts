@@ -117,6 +117,12 @@ export function calcWorkMinutes(pairs: PunchPair[], rule: WorkRule, ctx: WorkCtx
       else if (work[i][0] < start) work[i] = [start, work[i][1]];
     }
   }
+  // 잔업 일정 안에서 퇴근했으면 일정 끝까지 인정한다 — 시프티 「잔업 3H」처럼 일정대로 (급여-76). 기록은 그대로, 계산만 늘린다
+  for (const x of rule.extraCredit ?? []) {
+    const [s, e] = [kstDateTime(ctx.workDate, x.start.slice(0, 5)).getTime(), kstDateTime(ctx.workDate, x.end.slice(0, 5)).getTime()];
+    const last = work.length ? work.reduce((a, b) => (b[1] > a[1] ? b : a)) : null;
+    if (last && last[1] > s && last[1] < e) last[1] = e;
+  }
 
   // 요점 1: 휴게시간대와 실제 근무가 **겹친 분만** 뺀다. 휴게시간대가 없으면 공제 0. 시간대가 여럿이면 각각 뺀다(겹치는 시간대끼리도 한 번만 빠진다).
   const breaks = breakWindows(rule, ctx.workDate, work);
@@ -151,7 +157,9 @@ export function calcWorkMinutes(pairs: PunchPair[], rule: WorkRule, ctx: WorkCtx
     const weekLeft = Math.max(0, LABOR.weeklyRegularLimitMin - ctx.weekRegularMinutesSoFar);
     // 그날 일정이 끝난 뒤 일한 시간은 하루 8시간이 안 돼도 연장이다 (급여-61, 2026-11-02 의뢰인 · 26.10 3공장 대장:
     //   늦게 온 날 · 반차 쓴 날도 17:30 뒤는 1.5배. 늦게 온 시간은 연차에서 차감하므로 8시간을 채우지 않는다)
-    const endMs = kstDateTime(ctx.workDate, rule.endTime.slice(0, 5)).getTime();
+    // 잔업 일정이 붙은 날은 일정 끝이 잔업 끝(20:30)까지 늘어나 있다 — 연장 경계는 잔업 시작 전(정규 일정 끝)으로 (급여-76)
+    const endHm = [rule.endTime.slice(0, 5), ...(rule.extraCredit ?? []).map((x) => x.start.slice(0, 5))].reduce((a, b) => (b < a ? b : a));
+    const endMs = kstDateTime(ctx.workDate, endHm).getTime();
     const counted = step ? cutBreaks(rounded) : net;
     const afterEnd = toMin(counted.reduce((a, [s0, e0]) => a + Math.max(0, e0 - Math.max(s0, endMs)), 0));
     regularMinutes = Math.min(splitMinutes - afterEnd, LABOR.dailyRegularLimitMin, weekLeft);

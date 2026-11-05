@@ -145,7 +145,8 @@ export default async function AttendanceCheckPage({ searchParams }: { searchPara
       early: early ? { minutes: early.minutes - early.covered, unpaid: pickType(early.minutes - early.covered, false), annual: pickType(early.minutes - early.covered, true) } : null,
       evening: evening?.plan ? { start: evening.plan.split('–')[0], end: evening.plan.split('–')[1] } : null,
       breakSkip: (() => { const b = data.breakSkipFor(employeeId, d.workDate); return b && b.status === 'pending' ? { id: b.id, start: b.start, end: b.end } : null; })(),
-      overtime: ot ? { id: ot.id, status: ot.status, needsReview: !!ot.needsReview, recomputed: ot.recomputedOvertimeMinutes ?? null } : null,
+      // 연장 + 휴일을 함께 본다 — 쉬는 날 근무는 휴일 칸에만 시간이 있다
+      overtime: ot ? { id: ot.id, status: ot.status, needsReview: !!ot.needsReview, recomputed: ot.recomputedOvertimeMinutes != null || ot.recomputedHolidayMinutes != null ? (ot.recomputedOvertimeMinutes ?? 0) + (ot.recomputedHolidayMinutes ?? 0) : null, approved: ot.status === 'approved' ? (ot.approvedMinutes ?? ot.overtimeMinutes) + (ot.approvedHolidayMinutes ?? ot.holidayMinutes) : 0 } : null,
       extraOpen: d.parts.some((p) => (p.kind === 'after_end' || p.kind === 'no_plan_work') && p.state === 'decide'),
       kinds: live(d).map((p) => p.kind),
       state: d.state,
@@ -267,12 +268,12 @@ export default async function AttendanceCheckPage({ searchParams }: { searchPara
             <span className="ml-auto">{count}</span>
           </span>
           {strip(r)}
-          {why && <span className="text-xs text-muted">{why}</span>}
         </span>
         <span className={`grid items-center gap-2 max-lg:hidden ${ROW_COLS}`} title={why || undefined}>
           <span className="flex min-w-0 flex-col">
             <b className="truncate">{p.name}</b>
-            <span className="truncate text-xs text-muted">{openMonths.length ? t(`kind.${openMonths[0].kind}`) : groupPath(groups, p.groupId)}</span>
+            {/* 이름 밑은 늘 소속(1·2·3공장) — 「매일 일찍 출근」 같은 한 달 묶음은 오른쪽 상세에만 (2026-11-05 의뢰인) */}
+            <span className="truncate text-xs text-muted">{groupPath(groups, p.groupId)}</span>
           </span>
           {strip(r)}
           {count}
@@ -354,7 +355,7 @@ export default async function AttendanceCheckPage({ searchParams }: { searchPara
               { k: 'punch', v: all?.pairs.length ? all.pairs.map((x) => `${x.in ? hm(x.in) : '--'} → ${x.out ? hm(x.out) : '--'}`).join(', ') : t('noPunch') },
               ...(calc.length ? [{ k: 'calc', v: calc.join(', ') }] : []),
               ...leaves.map((l) => ({ k: 'leave', v: `${leaveTypeName(data.leaveTypes, l.typeCode, tl)}${l.startTime ? ` ${l.startTime.slice(0, 5)}–${l.endTime?.slice(0, 5)}` : ''} · ${t(`req.${l.status}`)}` })),
-              ...(ot ? [{ k: 'ot', v: `${t(`otStatus.${ot.status}`)} ${dur(otMin)}${ot.needsReview && ot.recomputedOvertimeMinutes != null ? ` · ${t('otNow', { n: dur(ot.recomputedOvertimeMinutes) })}` : ''}`, tone: ot.status === 'approved' ? 'text-ok' : ot.status === 'pending' ? 'text-warn' : undefined }] : []),
+              ...(ot ? [{ k: 'ot', v: `${t(`otStatus.${ot.status}`)} ${dur(otMin)}${ot.needsReview && (ot.recomputedOvertimeMinutes != null || ot.recomputedHolidayMinutes != null) ? ` · ${t('otNow', { n: dur((ot.recomputedOvertimeMinutes ?? 0) + (ot.recomputedHolidayMinutes ?? 0)) })}` : ''}`, tone: ot.status === 'approved' ? 'text-ok' : ot.status === 'pending' ? 'text-warn' : undefined }] : []),
               ...waived.map((w) => ({ k: 'waived', v: t('waivedLine', { start: w }) })),
             ];
             return (

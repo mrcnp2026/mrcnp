@@ -3,7 +3,9 @@
 import { api, ApiError, readJson } from '@/lib/api';
 import { requireAdmin } from '@/lib/auth';
 import { addDays } from '@/lib/calendar';
+import { OFFICE } from '@/config/office';
 import { syncOvertimeRange } from '@/lib/period-data';
+import { createAdminClient } from '@/lib/supabase/admin';
 
 const DAY = /^\d{4}-\d{2}-\d{2}$/;
 
@@ -14,5 +16,12 @@ export const POST = api('admin.overtime.sync', async (req) => {
   if (!me) throw new ApiError(403, 'forbidden');
   const b = await readJson(req);
   if (typeof b.from !== 'string' || typeof b.to !== 'string' || !DAY.test(b.from) || !DAY.test(b.to) || b.from > b.to || addDays(b.from, 92) < b.to) throw new ApiError(400, 'invalid_input');
-  return { changed: await syncOvertimeRange(b.from, b.to) };
+  // recheck: 이관 기준일 전 날짜도 지금 규칙으로 다시 계산한다(새벽 정기 작업은 건너뜀) — 계산 규칙을 바로잡은 뒤 지난 달을 맞출 때 (2026-11-05 의뢰인: 10월을 새 계산으로)
+  let only: Set<string> | undefined;
+  if (b.recheck === true) {
+    const { data, error } = await createAdminClient().from('profiles').select('id');
+    if (error) throw new Error(`overtime.sync.people: ${error.code}`);
+    only = new Set((data ?? []).map((p) => p.id as string));
+  }
+  return { changed: await syncOvertimeRange(b.from, b.to, OFFICE.practiceMode, only) };
 });

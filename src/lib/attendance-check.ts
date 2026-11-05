@@ -103,7 +103,8 @@ export function judgeDay(a: DayCheckInput): DayCheck {
   if (!a.plan) {
     // 쉬는 날 · 일정 없는 날 근무 — 계산 시각으로 센 근무 분 전부
     const clip = a.clipStart ? kstDateTime(a.workDate, a.clipStart).getTime() : null;
-    const worked = done.reduce((n, p) => { const s = clip !== null && p.in.getTime() <= clip ? clip : ceilTo(p.in.getTime(), step); return n + netMinutes(s, floorTo(p.out.getTime(), step), breaks); }, 0);
+    // 초는 버리고 비교한다 — 급여 계산(worktime, 확정-9)과 같게. 07:40:21 출근을 07:45로 올리면 5분이 어긋난다 (2026-11-05 강호수 10/5)
+    const worked = done.reduce((n, p) => { const inMin = floorTo(p.in.getTime(), 1); const s = clip !== null && inMin <= clip ? clip : ceilTo(inMin, step); return n + netMinutes(s, floorTo(p.out.getTime(), step), breaks); }, 0);
     if (worked > 0 && !a.unscheduled) push('no_plan_work', worked, 'extra', {});
     return out();
   }

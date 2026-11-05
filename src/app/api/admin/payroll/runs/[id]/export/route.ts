@@ -7,6 +7,7 @@ import { ApiError } from '@/lib/api';
 import { deny } from '@/lib/csv-response';
 import { requirePayroll } from '@/lib/payroll/data';
 import { loadRun } from '@/lib/payroll/run-data';
+import { payFileName } from '@/lib/payroll/file-name';
 import { buildRunWorkbook } from '@/lib/payroll/run-export';
 import { payrollAudit } from '@/lib/payroll/staff-data';
 
@@ -32,11 +33,12 @@ export async function GET(_req: Request, ctx: { params: Promise<{ id: string }> 
     labels: {
       status: t(`status.${run.status}`), kind: t(`kind.${run.kind}`), mode: t(run.isTest ? 'practiceChip' : 'liveChip'), line: (code, fallback) => (t.has(`line.${code}`) ? t(`line.${code}`) : fallback),
       pay: t('kindPay'), deduction: t('kindDeduct'), employer: t('colEmployer'), auto: t('source.AUTO'), manual: t('source.MANUAL'), override: t('source.OVERRIDE'), blocked: t('exportBlocked'), ok: t('resultOk'), draftBanner: t('exportDraft'), finalBanner: t('status.FINALIZED'),
+      blocker: (code) => (t.has(`blocker.${code}`) ? t(`blocker.${code}`) : code),
     },
   });
   await payrollAudit({ actorId: me.id, action: 'run.export', table: 'payroll_runs', subjectId: run.id, runId: run.id, requestId, detail: { statements, status: run.status } });
   const month = run.periodFrom.slice(0, 7).replace('-', '');
-  const name = `${t('exportFile')}_${month}_${run.kind === 'BONUS' ? `${t('kind.BONUS')}${run.sequence}_` : ''}rev${run.revision}.xlsx`;
+  const name = await payFileName({ ym: run.periodFrom.slice(0, 7), doc: 'ledger', bonusSeq: run.kind === 'BONUS' ? run.sequence : null, revision: run.revision, draft: run.status !== 'FINALIZED', ext: 'xlsx' });
   return new Response((await wb.xlsx.writeBuffer()) as ArrayBuffer, {
     headers: {
       'content-type': 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',

@@ -16,6 +16,7 @@ export type WorkRule = {
   roundStepMin?: number; // 급여용 시간의 끊는 단위(분). 출근은 올림 · 퇴근은 내림 — 확정-9. 0이나 없음 = 끊지 않는다
   restOffAsHoliday?: boolean; // 쉬는 날(rest_off, 보통 토요일) 근무를 휴일근로로 센다 (OFFICE.restOffWorkAsHoliday, 결정 사항 급여-43)
   lateRound?: LateRound; // 늦은 출근을 끊는 방식 — 회사 설정 pay.late_round (2026-11-03 대표 확인: 1분 단위). 없으면 예전대로 올림
+  extraCredit?: { start: string; end: string }[]; // 잔업 일정(예: 17:30–20:30) — 그 안에서 퇴근해도 일정 끝까지 인정. 많이 일찍 나간 날은 근태 점검이 조퇴로 띄운다 (급여-76, 2026-11-05 의뢰인)
   clipBeforeStart?: boolean; // 일정 시작 전 출근 시간을 근무로 치지 않는다 (OFFICE.earlyArrivalCounts=false, 2026-10-16). 시작 시각은 그날 일정으로 바뀐 startTime
   workdays: number[]; // ISO 1=월 … 7=일
   weeklyRestDay: number; // 주휴일 (기본 7=일)

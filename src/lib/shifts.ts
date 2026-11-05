@@ -110,6 +110,7 @@ export function planDay(args: { rule: WorkRule | null; tpl: ShiftTemplate | null
     }
   }
   for (const e of extra) span = span ? { startTime: span.startTime, endTime: maxT(span.endTime, e.endTime) } : { startTime: e.startTime, endTime: e.endTime };
+  const extraCredit = extra.length ? extra.map((e) => ({ start: e.startTime, end: e.endTime })) : undefined; // 잔업 일정대로 인정 (급여-76)
   items.sort((a, b) => a.startTime.localeCompare(b.startTime));
   const intervals = main.length ? main.filter((s) => s.kind === 'deemed') : deemed ? [deemed] : [];
   const deemedIntervals: { startTime: string; endTime: string }[] = [];
@@ -119,7 +120,7 @@ export function planDay(args: { rule: WorkRule | null; tpl: ShiftTemplate | null
     else deemedIntervals.push({ startTime: s.startTime, endTime: s.endTime });
   }
   const free = tpl?.kind === 'free' && !span; // 무일정 근무자 — 시작 시각이 없으니 출근 전 시간을 자르지 않는다
-  return { deemedIntervals, rule: rule && span ? { ...rule, startTime: span.startTime, endTime: span.endTime } : free ? (rule ? { ...rule, clipBeforeStart: false } : null) : applyTemplate(rule, tpl), deemed, items };
+  return { deemedIntervals, rule: rule && span ? { ...rule, startTime: span.startTime, endTime: span.endTime, ...(extraCredit ? { extraCredit } : {}) } : free ? (rule ? { ...rule, clipBeforeStart: false } : null) : applyTemplate(rule, tpl), deemed, items };
 }
 
 export type ShiftInput = { date: string; startTime: string; endTime: string; kind: ShiftKind; templateId: string | null; note: string | null; employeeIds: string[] };

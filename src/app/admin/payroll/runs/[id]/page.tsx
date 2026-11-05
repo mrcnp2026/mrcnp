@@ -14,6 +14,7 @@ import { toKstDate } from '@/lib/time';
 import { loadPublication } from '@/lib/payroll/publish-data';
 import { CorrectionStart, MemberToggle, PublishAll, PublishToggle, RunActions } from '../RunForms';
 import { BulkAdjust } from '../BulkAdjust';
+import { DownloadMenu } from '../DownloadMenu';
 import { SwitchToggle } from '@/components/SwitchToggle';
 import { SLIP_CALC, slipCalcShown } from '@/lib/switches';
 import { bulkContext } from '@/lib/payroll/bulk-data';
@@ -139,9 +140,10 @@ export default async function PayRunPage({ params, searchParams }: { params: Pro
       {run.kind === 'BONUS' && !final && <p className="rounded-card border border-border bg-surface p-3 text-sm text-muted">{t('bonusNote')}</p>}
       {run.generationId && (
         <div className="flex flex-wrap gap-2">
-          <a href={`/api/admin/payroll/runs/${run.id}/export`} className="inline-flex h-8 items-center gap-1 rounded-button border border-border bg-bg px-3.5 text-sm font-semibold text-text hover:bg-surface">
-            {t('exportDo')}
-          </a>
+          <DownloadMenu label={t('ledgerDl')} items={[
+            { href: `/api/admin/payroll/runs/${run.id}/export`, title: t('ledgerXlsx'), desc: t('ledgerXlsxDesc') },
+            { href: `/api/admin/payroll/runs/${run.id}/ledger-pdf`, title: t('ledgerPdf'), desc: t('ledgerPdfDesc') },
+          ]} />
           {okCount > 0 ? (
             <a href={`/api/admin/payroll/runs/${run.id}/pdf-all`} className="inline-flex h-8 items-center gap-1 rounded-button border border-border bg-bg px-3.5 text-sm font-semibold text-text hover:bg-surface">
               {t(final ? 'pdfAll' : 'pdfAllDraft')}

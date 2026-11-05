@@ -21,7 +21,7 @@ export type DayCtx = {
   early: { minutes: number; unpaid: LeaveOpt[]; annual: LeaveOpt[] } | null;
   evening: { start: string; end: string } | null;
   breakSkip: { id: string; start: string; end: string } | null; // 직원이 퇴근할 때 「못 쉬었어요」라고 답한 것(대기)
-  overtime: { id: string; status: string; needsReview: boolean; recomputed: number | null } | null;
+  overtime: { id: string; status: string; needsReview: boolean; recomputed: number | null; approved: number } | null;
   extraOpen: boolean;
   kinds: CheckKind[];
   state: CheckState | null;
@@ -35,13 +35,14 @@ type Opt =
 const addMin = (hhmm: string, min: number) => { const [h, m] = hhmm.split(':').map(Number); const x = h * 60 + m + min; return `${String(Math.floor(x / 60)).padStart(2, '0')}:${String(x % 60).padStart(2, '0')}`; };
 const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
 
-function Pills({ opts, pick, setPick, label }: { opts: Opt[]; pick: Opt | null; setPick: (o: Opt | null) => void; label: (o: Opt) => string }) {
+function Pills({ opts, pick, setPick, label, rec, recText }: { opts: Opt[]; pick: Opt | null; setPick: (o: Opt | null) => void; label: (o: Opt) => string; rec?: Opt['k']; recText: string }) {
   return (
     <div className="flex flex-wrap gap-2">
       {opts.map((o) => (
         <button key={o.k} type="button" aria-pressed={pick?.k === o.k} onClick={() => setPick(pick?.k === o.k ? null : o)}
-          className={`min-h-11 rounded-chip border px-3.5 text-sm font-medium transition-colors lg:min-h-9 ${pick?.k === o.k ? 'border-primary bg-primary text-on-primary' : 'border-border bg-bg text-text hover:border-primary/40 hover:bg-surface'}`}>
+          className={`inline-flex min-h-11 min-w-22 items-center justify-center gap-1.5 rounded-chip border px-3.5 text-sm font-medium transition-colors lg:min-h-9 lg:min-w-32 ${pick?.k === o.k ? 'border-primary bg-primary text-on-primary' : 'border-border bg-bg text-text hover:border-primary/40 hover:bg-surface'}`}>
           {label(o)}
+          {rec === o.k && <span className={`text-xs font-bold ${pick?.k === o.k ? 'text-on-primary' : 'text-primary'}`}>· {recText}</span>}
         </button>
       ))}
     </div>
@@ -50,6 +51,8 @@ function Pills({ opts, pick, setPick, label }: { opts: Opt[]; pick: Opt | null; 
 
 export function DayActions({ ctx, reviewId }: { ctx: DayCtx; reviewId: string | null }) {
   const t = useTranslations('admin.attendanceCheck.act');
+  const tc = useTranslations('admin.attendanceCheck');
+  const dur = (min: number) => (min >= 60 ? (min % 60 ? tc('hm', { h: Math.floor(min / 60), m: min % 60 }) : tc('h', { h: min / 60 })) : tc('min', { n: min }));
   const router = useRouter();
   const [pick, setPick] = useState<Opt | null>(null);
   const [hour, setHour] = useState(0); // 고른 시간 휴가(짧은 것부터 몇 번째)
@@ -59,30 +62,44 @@ export function DayActions({ ctx, reviewId }: { ctx: DayCtx; reviewId: string | 
   const [err, setErr] = useState<{ code: string; requestId?: string } | null>(null);
   const has = (k: CheckKind) => ctx.kinds.includes(k);
 
-  const opts: Opt[] = [];
+  // 사유별로 묶는다 — 지각 단추와 연장 단추가 한 줄에 섞이면 어느 것이 무엇을 처리하는지 모른다 (2026-11-05 의뢰인)
+  const groups: { g: 'late' | 'early' | 'break' | 'ot' | 'holiday' | 'day'; opts: Opt[]; rec?: Opt['k'] }[] = [];
   if (has('late_in') && ctx.late) {
-    // 지각은 이미 늦은 만큼 자동으로 빠진다(급여-70) — 무급휴가로 덮으면 시간 단위라 더 빠질 수 있어 「확인」으로 (2026-11-04 의뢰인)
-    opts.push({ k: 'lateAck' }, { k: 'notLate' });
-    if (ctx.late.annual.length) opts.push({ k: 'lateAnnual', leaves: ctx.late.annual }); // 연차는 직원이 요청했을 때만 — 사유 필수
+    // 지각은 이미 늦은 만큼 자동으로 빠진다(급여-70) — 무급휴가로 덮으면 시간 단위라 더 빠질 수 있어 「확인」으로 (2026-11-04 의뢰인). 대장도 늦은 시간을 빼고 지급(26.10 3공장 10/6)
+    const o: Opt[] = [{ k: 'lateAck' }, { k: 'notLate' }];
+    if (ctx.late.annual.length) o.push({ k: 'lateAnnual', leaves: ctx.late.annual }); // 연차는 직원이 요청했을 때만 — 사유 필수
+    groups.push({ g: 'late', opts: o, rec: 'lateAck' });
   }
   if (has('early_out') && ctx.early) {
-    if (ctx.early.unpaid.length) opts.push({ k: 'earlyUnpaid', leaves: ctx.early.unpaid });
-    opts.push({ k: 'notEarly' });
-    if (ctx.early.annual.length) opts.push({ k: 'earlyAnnual', leaves: ctx.early.annual });
+    const o: Opt[] = [];
+    if (ctx.early.unpaid.length) o.push({ k: 'earlyUnpaid', leaves: ctx.early.unpaid });
+    o.push({ k: 'notEarly' });
+    if (ctx.early.annual.length) o.push({ k: 'earlyAnnual', leaves: ctx.early.annual });
+    groups.push({ g: 'early', opts: o });
   }
-  if (has('break_request') && ctx.breakSkip) opts.push({ k: 'skipApprove' }, { k: 'skipReject' });
-  if (has('break_check') && ctx.evening) opts.push({ k: 'waive' }, { k: 'breakTaken' });
+  if (has('break_request') && ctx.breakSkip) groups.push({ g: 'break', opts: [{ k: 'skipApprove' }, { k: 'skipReject' }] });
+  if (has('break_check') && ctx.evening) groups.push({ g: 'break', opts: [{ k: 'waive' }, { k: 'breakTaken' }] }); // 권장 없음 — 저녁 휴게를 빼는 기준(잔업 길이)을 급여 담당에게 확인 중
+  // 쉬는 날 근무는 「확인 완료」도 같은 칸에 — 따로 「처리」 칸을 두면 무엇을 확인하는지 모른다 (2026-11-05 의뢰인)
+  const offDay = has('no_plan_work');
   if (ctx.extraOpen) {
-    if (ctx.overtime?.needsReview) opts.push({ k: 'accept' });
-    opts.push({ k: 'notRecognized' });
+    // 다시 계산해 늘어난 연장만 고를 것이 둘(승인 · 지급 안 함) — 회사는 15분 연장도 지급한다(26.08 · 26.10 대장).
+    // 그 밖에는 「지급 안 함」 · 「확인 완료」가 같은 결과(승인한 시간만 지급, 그날을 처리됨으로)라 「확인 완료」 하나만 (2026-11-05 의뢰인)
+    const review = !!ctx.overtime?.needsReview;
+    groups.push({ g: offDay ? 'holiday' : 'ot', opts: review ? [{ k: 'accept' }, { k: 'notRecognized' }] : [{ k: 'confirm' }], rec: review ? 'accept' : undefined });
   }
-  if (has('missing_in')) opts.push({ k: 'absentOk' });
-  if (ctx.state === 'decide' && (has('leave_day_punch') || has('no_plan_work') || opts.length === 0)) opts.push({ k: 'confirm' });
+  const day: Opt[] = [];
+  if (has('missing_in')) day.push({ k: 'absentOk' });
+  if (ctx.state === 'decide' && !ctx.extraOpen && (has('leave_day_punch') || offDay || (groups.length === 0 && day.length === 0))) day.push({ k: 'confirm' });
+  if (day.length) groups.push({ g: 'day', opts: day });
   const blocked = ctx.state === 'block';
   const dayHref = `/admin/records/${ctx.employeeId}/${ctx.date}${ctx.live ? '' : ''}`;
 
-  const label = (o: Opt) =>
-    'leaves' in o ? t(o.k.endsWith('Unpaid') ? 'unpaidBtn' : 'annualBtn') : o.k === 'accept' && ctx.overtime?.recomputed != null ? t('acceptN', { n: ctx.overtime.recomputed }) : t(o.k);
+  const otTo = ctx.overtime?.recomputed ?? ctx.overtime?.approved ?? 0;
+  const label = (o: Opt) => {
+    if ('leaves' in o) return t(o.k.endsWith('Unpaid') ? 'unpaidBtn' : 'annualBtn');
+    if (o.k === 'accept' && ctx.overtime?.recomputed != null && ctx.overtime.recomputed > ctx.overtime.approved) return t('acceptN', { d: dur(ctx.overtime.recomputed - ctx.overtime.approved) });
+    return t(o.k);
+  };
   const will = (o: Opt) => {
     if ('leaves' in o) {
       const lv = leaveOf(o);
@@ -90,6 +107,8 @@ export function DayActions({ ctx, reviewId }: { ctx: DayCtx; reviewId: string | 
       const from = late ? ctx.planStart ?? '' : addMin(ctx.planEnd ?? '', -lv.hours * 60);
       return t('leaveWill', { name: lv.name, from, to: addMin(from, lv.hours * 60) });
     }
+    if (o.k === 'lateAck') return t('lateAckWill', { d: dur(ctx.late?.minutes ?? 0) });
+    if (o.k === 'accept') return t('acceptWill', { to: dur(otTo) });
     return t(`${o.k}Will`);
   };
   const needsWhy = (o: Opt) => o.k === 'notLate' || o.k === 'notEarly' || o.k === 'lateAnnual' || o.k === 'earlyAnnual'; // 연차는 직원 요청 내용을 남긴다
@@ -144,11 +163,27 @@ export function DayActions({ ctx, reviewId }: { ctx: DayCtx; reviewId: string | 
         </a>
       ) : (
         <>
-          <div className="flex flex-wrap items-center gap-x-3 gap-y-2">
-            <Pills opts={opts} pick={pick} setPick={(o) => { setPick(o); setHour(0); setErr(null); }} label={label} />
-            {ctx.overtime?.status === 'pending' && ctx.extraOpen && (
-              <a href={`/admin/inbox?k=overtime&id=${ctx.overtime.id}`} className="inline-flex min-h-11 items-center text-sm font-bold text-primary lg:min-h-9">{t('goOvertime')} ›</a>
-            )}
+          {/* 근거 표(dl)와 같은 두 칸 — 왼쪽 이름이 위 「근무일정 · 출퇴근 기록」과 한 줄로 맞는다 */}
+          <div className="grid grid-cols-[5.5rem_minmax(0,1fr)] gap-x-3 gap-y-2">
+            {groups.map(({ g, opts, rec }) => (
+              <div key={g + opts[0].k} className="contents">
+                <span className="pt-2.5 text-xs font-semibold text-muted lg:pt-2">{t(`grp.${g}`)}</span>
+                <div className="flex min-w-0 flex-col gap-1.5 lg:flex-row lg:items-center lg:gap-5">
+                  <div className="flex shrink-0 flex-wrap items-center gap-x-3 gap-y-2">
+                    <Pills opts={opts} pick={pick} setPick={(o) => { setPick(o); setHour(0); setErr(null); }} label={label} rec={rec} recText={t('rec')} />
+                    {(g === 'ot' || g === 'holiday') && ctx.overtime?.status === 'pending' && (
+                      <a href={`/admin/inbox?k=overtime&id=${ctx.overtime.id}`} className="inline-flex min-h-11 items-center text-sm font-bold text-primary lg:min-h-9">{t('goOvertime')} ›</a>
+                    )}
+                  </div>
+                  {/* 단추마다 무엇이 바뀌는지 늘 보이게 — 올려 보기 상자는 폰에서 안 보인다. 「남은 ○○ 승인 · 지급 안 함」은 이름으로 충분해서 뺀다 (2026-11-05 의뢰인) */}
+                  {!opts.some((o) => o.k === 'accept') && (
+                    <ul className="flex flex-col text-xs leading-5 text-muted">
+                      {opts.map((o) => <li key={o.k}>{t(`hint.${o.k === 'confirm' && (g === 'ot' || g === 'holiday') ? 'confirmPaid' : o.k}`)}</li>)}
+                    </ul>
+                  )}
+                </div>
+              </div>
+            ))}
           </div>
           {pick && (
             <div className="flex flex-col gap-2 rounded-button bg-surface/60 p-3 text-sm">
