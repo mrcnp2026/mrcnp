@@ -34,7 +34,7 @@ type Result = { employeeId: string; result: string };
 export function CloseBoard({ month, live, lines, canClose }: { month: string; live: boolean; lines: Line[]; canClose: boolean }) {
   const t = useTranslations('admin.closing');
   // 남은 이상 기록의 가장 많은 사유 한 줄 (2026-11-03 의뢰인: 마우스를 올리면 짧게 — 여러 사유면 가장 많은 것 하나)
-  const why = (l: Line) => (l.anomalyTop ? (l.anomalyTop.type === 'schedule_check' || l.anomalyTop.type === 'early_bundle' ? t(`reason.${l.anomalyTop.type}`) : t('reasonLine', { why: t(`reason.${l.anomalyTop.type}`), n: l.anomalyTop.n })) : undefined); // 한 달 1건은 건수 없이 이름만
+  const why = (l: Line) => (l.anomalyTop ? t(`reason.${l.anomalyTop.type}`) : undefined); // 사유 이름만 — 건수는 앞의 「확인 필요 N건」에 있다 (2026-11-05 의뢰인: 단순하게)
   const router = useRouter();
   const [picked, setPicked] = useState<Set<string>>(new Set());
   const [ask, setAsk] = useState(false);
@@ -157,15 +157,11 @@ export function CloseBoard({ month, live, lines, canClose }: { month: string; li
         {t('adminLeaves', { n: l.adminLeaves.length })}
       </Link>
     ),
+    // 할 일만 — 「확인 필요 N건 (사유)」. 승인된 날은 정상이라 보이지 않는다 (2026-11-05 의뢰인: 마감 화면을 단순하게)
     l.anomalyBlocks > 0 && (
       <Link prefetch={false} key="ab" href={`/admin/attendance-check?m=${month}&e=${l.employeeId}${q}`} className="font-bold text-warn underline">
         {t('anomalyBlock', { n: l.anomalyBlocks })}
-      </Link>
-    ),
-    l.anomalyChecks > 0 && (
-      <Link prefetch={false} key="ac" href={`/admin/attendance-check?m=${month}&e=${l.employeeId}${q}`} className="text-muted underline">
-        {t('anomalyCheck', { n: l.anomalyChecks })}
-        {why(l) && <span className="ml-1 text-xs text-muted no-underline">({why(l)})</span>}
+        {why(l) && <span className="ml-1 font-normal text-muted">({why(l)})</span>}
       </Link>
     ),
   ].filter(Boolean);
@@ -214,14 +210,13 @@ export function CloseBoard({ month, live, lines, canClose }: { month: string; li
                         {t('adminLeaves', { n: l.adminLeaves.length })}
                       </Link>
                     )}
-                    {l.anomalyBlocks + l.anomalyChecks === 0 ? (
-                      <span className="text-faint">–</span>
+                    {/* 할 일만 한 줄 — 「확인 필요 N건 (사유)」. 승인된 날은 정상이라 빼고, 없으면 빈칸 (2026-11-05 의뢰인) */}
+                    {l.anomalyBlocks === 0 ? (
+                      l.adminLeaves.length === 0 && <span className="text-faint">–</span>
                     ) : (
-                      <Link prefetch={false} href={`/admin/attendance-check?m=${month}&e=${l.employeeId}${q}`} className="group flex flex-col">
-                        {l.anomalyBlocks > 0 && <span className="font-bold text-warn underline group-hover:text-primary">{t('anomalyBlock', { n: l.anomalyBlocks })}</span>}
-                        {l.anomalyChecks > 0 && <span className="text-text underline group-hover:text-primary">{t('anomalyCheck', { n: l.anomalyChecks })}</span>}
-                        {/* 사유는 마우스를 올리지 않아도 보이게 글씨로 — 브라우저 기본 안내 상자는 쓰지 않는다 (2026-11-03 의뢰인) */}
-                        {why(l) && <span className="text-xs text-muted">{why(l)}</span>}
+                      <Link prefetch={false} href={`/admin/attendance-check?m=${month}&e=${l.employeeId}${q}`} className="group font-bold text-warn underline group-hover:text-primary">
+                        {t('anomalyBlock', { n: l.anomalyBlocks })}
+                        {why(l) && <span className="ml-1 text-xs font-normal text-muted">({why(l)})</span>}
                       </Link>
                     )}
                   </td>

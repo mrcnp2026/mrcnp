@@ -17,12 +17,14 @@ export const POST = api<{ params: Promise<{ id: string }> }>('admin.overtime.acc
   const db = createAdminClient();
   const { data: row } = await db
     .from('overtime_requests')
-    .select('employee_id, status, needs_review, overtime_minutes, night_minutes, holiday_minutes, recomputed_overtime_minutes, recomputed_night_minutes, recomputed_holiday_minutes')
+    .select('employee_id, status, needs_review, overtime_minutes, night_minutes, holiday_minutes, approved_minutes, approved_night_minutes, approved_holiday_minutes, recomputed_overtime_minutes, recomputed_night_minutes, recomputed_holiday_minutes')
     .eq('id', id)
     .maybeSingle();
   if (!row) throw new ApiError(404, 'not_found');
   await requireApprover(row.employee_id);
-  if (!row.needs_review || row.status === 'rejected') return { result: 'already' }; // 그사이 누가 처리했다
+  // 일부만 승인한 건(예: 집계 3시간 15분 중 53분)도 남은 시간을 승인할 수 있다 — 다시 계산이 집계와 같으면 재확인이 켜지지 않아 길이 없었다 (2026-11-05 운영 정재호 10/6)
+  const partial = row.status === 'approved' && ((row.approved_minutes ?? row.overtime_minutes) < row.overtime_minutes || (row.approved_night_minutes ?? row.night_minutes) < row.night_minutes || (row.approved_holiday_minutes ?? row.holiday_minutes) < row.holiday_minutes);
+  if ((!row.needs_review && !partial) || row.status === 'rejected') return { result: 'already' }; // 그사이 누가 처리했다
   const { data, error } = await db.rpc('resync_overtime', {
     p_id: id,
     p_overtime: row.recomputed_overtime_minutes ?? row.overtime_minutes,

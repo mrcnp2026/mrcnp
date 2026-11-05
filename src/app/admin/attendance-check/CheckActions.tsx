@@ -21,7 +21,7 @@ export type DayCtx = {
   early: { minutes: number; unpaid: LeaveOpt[]; annual: LeaveOpt[] } | null;
   evening: { start: string; end: string } | null;
   breakSkip: { id: string; start: string; end: string } | null; // 직원이 퇴근할 때 「못 쉬었어요」라고 답한 것(대기)
-  overtime: { id: string; status: string; needsReview: boolean; recomputed: number | null; approved: number } | null;
+  overtime: { id: string; status: string; needsReview: boolean; recomputed: number | null; approved: number; fact: number } | null; // fact = 집계(연장 + 휴일)
   extraOpen: boolean;
   kinds: CheckKind[];
   state: CheckState | null;
@@ -84,7 +84,8 @@ export function DayActions({ ctx, reviewId }: { ctx: DayCtx; reviewId: string | 
   if (ctx.extraOpen) {
     // 다시 계산해 늘어난 연장만 고를 것이 둘(승인 · 지급 안 함) — 회사는 15분 연장도 지급한다(26.08 · 26.10 대장).
     // 그 밖에는 「지급 안 함」 · 「확인 완료」가 같은 결과(승인한 시간만 지급, 그날을 처리됨으로)라 「확인 완료」 하나만 (2026-11-05 의뢰인)
-    const review = !!ctx.overtime?.needsReview;
+    // 일부만 승인한 건도 남은 시간을 고른다 (2026-11-05 운영 정재호 10/6: 집계 3시간 15분 중 53분만 승인)
+    const review = !!ctx.overtime && (ctx.overtime.needsReview || (ctx.overtime.status === 'approved' && ctx.overtime.approved < ctx.overtime.fact));
     groups.push({ g: offDay ? 'holiday' : 'ot', opts: review ? [{ k: 'accept' }, { k: 'notRecognized' }] : [{ k: 'confirm' }], rec: review ? 'accept' : undefined });
   }
   const day: Opt[] = [];
@@ -94,10 +95,10 @@ export function DayActions({ ctx, reviewId }: { ctx: DayCtx; reviewId: string | 
   const blocked = ctx.state === 'block';
   const dayHref = `/admin/records/${ctx.employeeId}/${ctx.date}${ctx.live ? '' : ''}`;
 
-  const otTo = ctx.overtime?.recomputed ?? ctx.overtime?.approved ?? 0;
+  const otTo = ctx.overtime ? (ctx.overtime.needsReview ? ctx.overtime.recomputed ?? ctx.overtime.fact : ctx.overtime.fact) : 0; // 승인하면 될 시간 — 재확인이면 다시 계산한 값, 아니면 집계
   const label = (o: Opt) => {
     if ('leaves' in o) return t(o.k.endsWith('Unpaid') ? 'unpaidBtn' : 'annualBtn');
-    if (o.k === 'accept' && ctx.overtime?.recomputed != null && ctx.overtime.recomputed > ctx.overtime.approved) return t('acceptN', { d: dur(ctx.overtime.recomputed - ctx.overtime.approved) });
+    if (o.k === 'accept' && ctx.overtime && otTo > ctx.overtime.approved) return t('acceptN', { d: dur(otTo - ctx.overtime.approved) });
     return t(o.k);
   };
   const will = (o: Opt) => {

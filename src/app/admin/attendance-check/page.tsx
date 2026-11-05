@@ -146,7 +146,7 @@ export default async function AttendanceCheckPage({ searchParams }: { searchPara
       evening: evening?.plan ? { start: evening.plan.split('–')[0], end: evening.plan.split('–')[1] } : null,
       breakSkip: (() => { const b = data.breakSkipFor(employeeId, d.workDate); return b && b.status === 'pending' ? { id: b.id, start: b.start, end: b.end } : null; })(),
       // 연장 + 휴일을 함께 본다 — 쉬는 날 근무는 휴일 칸에만 시간이 있다
-      overtime: ot ? { id: ot.id, status: ot.status, needsReview: !!ot.needsReview, recomputed: ot.recomputedOvertimeMinutes != null || ot.recomputedHolidayMinutes != null ? (ot.recomputedOvertimeMinutes ?? 0) + (ot.recomputedHolidayMinutes ?? 0) : null, approved: ot.status === 'approved' ? (ot.approvedMinutes ?? ot.overtimeMinutes) + (ot.approvedHolidayMinutes ?? ot.holidayMinutes) : 0 } : null,
+      overtime: ot ? { id: ot.id, status: ot.status, needsReview: !!ot.needsReview, recomputed: ot.recomputedOvertimeMinutes != null || ot.recomputedHolidayMinutes != null ? (ot.recomputedOvertimeMinutes ?? 0) + (ot.recomputedHolidayMinutes ?? 0) : null, approved: ot.status === 'approved' ? (ot.approvedMinutes ?? ot.overtimeMinutes) + (ot.approvedHolidayMinutes ?? ot.holidayMinutes) : 0, fact: ot.overtimeMinutes + ot.holidayMinutes } : null,
       extraOpen: d.parts.some((p) => (p.kind === 'after_end' || p.kind === 'no_plan_work') && p.state === 'decide'),
       kinds: live(d).map((p) => p.kind),
       state: d.state,
