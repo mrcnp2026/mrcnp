@@ -3605,6 +3605,8 @@
       "invalid_input": "입력한 내용을 다시 확인해 주세요.",
       "period_locked": "마감된 달입니다.",
       "colAnomaly": "이상 기록",
+      "colCheck": "확인 필요",
+      "checkN": "{n}건",
       "anomalyBlock": "확인 필요 {n}건",
       "anomalyCheck": "승인된 날 {n}일",
       "reopenRequested": "다른 관리자에게 다시 열기 확인을 요청했습니다. 그 관리자가 확인하면 열립니다.",

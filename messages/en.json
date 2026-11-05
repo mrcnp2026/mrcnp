@@ -3605,6 +3605,8 @@
       "invalid_input": "Please check what you entered.",
       "period_locked": "This month is closed.",
       "colAnomaly": "Exceptions",
+      "colCheck": "To check",
+      "checkN": "{n}",
       "anomalyBlock": "Needs check {n}",
       "anomalyCheck": "Approved days {n}",
       "reopenRequested": "Asked another admin to confirm reopening. It opens once they confirm.",

@@ -4,6 +4,7 @@
 // 한눈에 (2026-11-03 의뢰인: 「스크롤을 계속 내려야 해, 한눈에 딱 들어오게」): 왼쪽 = 직원 한 줄 + 그달 날짜 칸(색 = 상태), 오른쪽 = 고른 직원의 남은 항목만.
 //   폰은 직원 목록 → 누르면 그 직원 항목(뒤로 가기). 사유 칩으로 유형을 거른다. 대표자는 보기만 한다.
 import { ChevronDown, ChevronLeft, ChevronRight, X } from 'lucide-react';
+import { Fragment } from 'react';
 import { getFormatter, getTranslations } from 'next-intl/server';
 import { HelpTip } from '@/components/Help';
 import { PageShell } from '@/components/ui';
@@ -236,7 +237,7 @@ export default async function AttendanceCheckPage({ searchParams }: { searchPara
     </span>
   );
   const listAxis = listed.length > 0 ? (
-    <span aria-hidden className={`grid px-2 pb-1 lg:gap-2 ${ROW_COLS}`}>
+    <span key="axis" aria-hidden className={`grid px-2 pb-1 lg:gap-2 ${ROW_COLS}`}>
       <span className="max-lg:hidden" />
       {axisNums}
       <span className="max-lg:hidden" />
@@ -260,7 +261,7 @@ export default async function AttendanceCheckPage({ searchParams }: { searchPara
       </span>
     );
     return (
-      <>
+      <Fragment key={r.employeeId}>
         <span className="flex flex-col gap-1.5 lg:hidden">
           <span className="flex items-baseline gap-2">
             <b>{p.name}</b>
@@ -278,7 +279,7 @@ export default async function AttendanceCheckPage({ searchParams }: { searchPara
           {strip(r)}
           {count}
         </span>
-      </>
+      </Fragment>
     );
   };
 
@@ -294,7 +295,7 @@ export default async function AttendanceCheckPage({ searchParams }: { searchPara
     const usual = [...spans].sort((a, b) => b[1] - a[1])[0]?.[0];
     const dayRows = daysFor(data, sel.employeeId, from, to);
     return (
-      <section aria-label={p.name} className="flex flex-col">
+      <section key={sel.employeeId} aria-label={p.name} className="flex flex-col">
         <div className="flex flex-wrap items-baseline gap-x-3 gap-y-1 border-b border-border pb-2">
           <h2 className="text-lg font-bold">{p.name}</h2>
           <span className="text-sm text-muted" title={usual ? t('usualWhy') : undefined}>{[groupPath(groups, p.groupId), usual ? t('usual', { span: usual }) : null].filter(Boolean).join(' · ')}</span>

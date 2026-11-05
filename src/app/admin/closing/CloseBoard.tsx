@@ -34,7 +34,7 @@ type Result = { employeeId: string; result: string };
 export function CloseBoard({ month, live, lines, canClose }: { month: string; live: boolean; lines: Line[]; canClose: boolean }) {
   const t = useTranslations('admin.closing');
   // 남은 이상 기록의 가장 많은 사유 한 줄 (2026-11-03 의뢰인: 마우스를 올리면 짧게 — 여러 사유면 가장 많은 것 하나)
-  const why = (l: Line) => (l.anomalyTop ? t(`reason.${l.anomalyTop.type}`) : undefined); // 사유 이름만 — 건수는 앞의 「확인 필요 N건」에 있다 (2026-11-05 의뢰인: 단순하게)
+  const checkN = (l: Line) => l.pending.reduce((n, p) => n + p.n, 0) + l.anomalyBlocks; // 대기 요청 + 이상 기록 — 근태 점검에서 처리
   const router = useRouter();
   const [picked, setPicked] = useState<Set<string>>(new Set());
   const [ask, setAsk] = useState(false);
@@ -147,21 +147,10 @@ export function CloseBoard({ month, live, lines, canClose }: { month: string; li
         {t('colUnconfirmed')} {l.unconfirmed}
       </Link>
     ),
-    ...l.pending.map((p) => (
-      <Link prefetch={false} key={p.key} href={`/admin/inbox${live ? '?live=1' : ''}`} className="font-bold text-warn underline">
-        {t(`pendingOf.${p.key}`, { n: p.n })}
-      </Link>
-    )),
-    l.adminLeaves.length > 0 && (
-      <Link prefetch={false} key="al" href={`/admin/records/${l.employeeId}?m=${month}&f=leave${q}`} title={l.adminLeaves.map((a) => `${a.date.slice(5)} ${a.label}`).join(' · ')} className="font-bold text-warn underline">
-        {t('adminLeaves', { n: l.adminLeaves.length })}
-      </Link>
-    ),
-    // 할 일만 — 「확인 필요 N건 (사유)」. 승인된 날은 정상이라 보이지 않는다 (2026-11-05 의뢰인: 마감 화면을 단순하게)
-    l.anomalyBlocks > 0 && (
-      <Link prefetch={false} key="ab" href={`/admin/attendance-check?m=${month}&e=${l.employeeId}${q}`} className="font-bold text-warn underline">
-        {t('anomalyBlock', { n: l.anomalyBlocks })}
-        {why(l) && <span className="ml-1 font-normal text-muted">({why(l)})</span>}
+    // 대기 요청 + 이상 기록을 「확인 필요 N건」 하나로 — 무엇인지는 근태 점검에서 본다 (2026-11-05 의뢰인: 마감 화면은 짧게)
+    checkN(l) > 0 && (
+      <Link prefetch={false} key="ck" href={`/admin/attendance-check?m=${month}&e=${l.employeeId}${q}`} className="font-bold text-warn underline">
+        {t('anomalyBlock', { n: checkN(l) })}
       </Link>
     ),
   ].filter(Boolean);
@@ -191,33 +180,13 @@ export function CloseBoard({ month, live, lines, canClose }: { month: string; li
                       <span className="text-faint">–</span>
                     )}
                   </td>
-                  <td data-label={t('colPending')} className="px-3 py-3">
-                    {l.pending.length === 0 ? (
-                      <span className="num text-faint">–</span>
+                  <td data-label={t('colCheck')} className="num px-3 py-3">
+                    {checkN(l) > 0 ? (
+                      <Link prefetch={false} href={`/admin/attendance-check?m=${month}&e=${l.employeeId}${q}`} className="font-bold text-warn underline hover:text-primary">
+                        {t('checkN', { n: checkN(l) })}
+                      </Link>
                     ) : (
-                      <Link prefetch={false} href={`/admin/inbox${live ? '?live=1' : ''}`} className="flex flex-col font-bold text-warn underline">
-                        {l.pending.map((p) => (
-                          <span key={p.key} className="num">
-                            {t(`pendingOf.${p.key}`, { n: p.n })}
-                          </span>
-                        ))}
-                      </Link>
-                    )}
-                  </td>
-                  <td data-label={t('colAnomaly')} className="num px-3 py-3">
-                    {l.adminLeaves.length > 0 && (
-                      <Link prefetch={false} href={`/admin/records/${l.employeeId}?m=${month}&f=leave${q}`} title={l.adminLeaves.map((a) => `${a.date.slice(5)} ${a.label}`).join(' · ')} className="mb-1 block font-bold text-warn underline">
-                        {t('adminLeaves', { n: l.adminLeaves.length })}
-                      </Link>
-                    )}
-                    {/* 할 일만 한 줄 — 「확인 필요 N건 (사유)」. 승인된 날은 정상이라 빼고, 없으면 빈칸 (2026-11-05 의뢰인) */}
-                    {l.anomalyBlocks === 0 ? (
-                      l.adminLeaves.length === 0 && <span className="text-faint">–</span>
-                    ) : (
-                      <Link prefetch={false} href={`/admin/attendance-check?m=${month}&e=${l.employeeId}${q}`} className="group font-bold text-warn underline group-hover:text-primary">
-                        {t('anomalyBlock', { n: l.anomalyBlocks })}
-                        {why(l) && <span className="ml-1 text-xs font-normal text-muted">({why(l)})</span>}
-                      </Link>
+                      <span className="text-faint">–</span>
                     )}
                   </td>
                   <td data-label={t('colHours')} className="num px-3 py-3 whitespace-nowrap">{l.hours}</td>
@@ -347,7 +316,7 @@ export function CloseBoard({ month, live, lines, canClose }: { month: string; li
             <thead>
             <tr className="border-b border-border bg-surface text-left">
               <th scope="col" className="w-10 px-3 py-2" />
-              {['colName', 'colGroup', 'colDays', 'colUnconfirmed', 'colPending', 'colAnomaly', 'colHours', 'colState', 'colManage'].map((k) => (
+              {['colName', 'colGroup', 'colDays', 'colUnconfirmed', 'colCheck', 'colHours', 'colState', 'colManage'].map((k) => (
                 <th key={k} scope="col" className="px-3 py-2.5 text-xs font-semibold whitespace-nowrap text-muted">
                   {t(k)}
                 </th>
@@ -369,7 +338,7 @@ export function CloseBoard({ month, live, lines, canClose }: { month: string; li
               <thead>
             <tr className="border-b border-border bg-surface text-left">
               <th scope="col" className="w-10 px-3 py-2" />
-              {['colName', 'colGroup', 'colDays', 'colUnconfirmed', 'colPending', 'colAnomaly', 'colHours', 'colState', 'colManage'].map((k) => (
+              {['colName', 'colGroup', 'colDays', 'colUnconfirmed', 'colCheck', 'colHours', 'colState', 'colManage'].map((k) => (
                 <th key={k} scope="col" className="px-3 py-2.5 text-xs font-semibold whitespace-nowrap text-muted">
                   {t(k)}
                 </th>
