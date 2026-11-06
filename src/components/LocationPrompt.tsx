@@ -35,9 +35,11 @@ export function LocationPrompt({ bare = false }: { bare?: boolean } = {}) {
   }, []);
   if (state === 'unknown' || state === 'granted') return null;
   return (
-    <div className={bare ? 'flex items-center gap-2 py-2 pr-2 pl-3' : 'flex items-center gap-2 rounded-card border border-warn bg-warn-tint py-2 pr-2 pl-3'} data-location-prompt={state}>
-      <MapPin aria-hidden size={18} className="shrink-0 text-warn" />
-      <p className="min-w-0 flex-1 text-sm text-text">{t(state === 'denied' ? 'denied' : 'ask')}</p>
+    // 단추는 글 아래 왼쪽 — 오른쪽 끝이면 폰 홈의 떠 있는 「새 요청」 단추에 가려졌다 (2026-11-06 의뢰인)
+    <div className={bare ? 'flex items-start gap-2 py-2 pr-2 pl-3' : 'flex items-start gap-2 rounded-card border border-warn bg-warn-tint py-2 pr-2 pl-3'} data-location-prompt={state}>
+      <MapPin aria-hidden size={18} className="mt-0.5 shrink-0 text-warn" />
+      <div className="flex min-w-0 flex-1 flex-col items-start gap-2">
+      <p className="text-sm text-text">{t(state === 'denied' ? 'denied' : 'ask')}</p>
       {state === 'prompt' && (
         <button
           type="button"
@@ -53,6 +55,7 @@ export function LocationPrompt({ bare = false }: { bare?: boolean } = {}) {
           {t('allow')}
         </button>
       )}
+      </div>
     </div>
   );
 }

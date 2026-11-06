@@ -102,14 +102,17 @@ export function PushToggle({ mode = 'menu', audience = 'staff', bare = false, ca
   if (mode === 'prompt') {
     if (state !== 'off' && state !== 'ios-home' && state !== 'denied') return null;
     return (
-      <div className={bare ? 'flex items-center gap-2 py-2 pr-1 pl-3' : 'flex items-center gap-2 rounded-card border border-primary bg-primary-tint py-2 pr-1 pl-3'} data-push-prompt={state}>
-        <Bell aria-hidden size={18} className="shrink-0 text-primary" />
-        <p className="min-w-0 flex-1 py-1.5 text-sm text-text">{note ?? (state === 'ios-home' ? t('iosHome') : state === 'denied' ? t('denied') : t('promptEmployee'))}</p>
-        {state === 'off' && (
-          <button type="button" disabled={busy} onClick={turnOn} className={`min-h-9 shrink-0 rounded-button px-3 text-sm font-bold text-primary disabled:opacity-50 ${bare ? 'bg-primary-tint' : 'bg-bg'}`}>
-            {t('promptOn')}
-          </button>
-        )}
+      // 단추는 글 아래 왼쪽 — 오른쪽 끝이면 폰 홈의 떠 있는 「새 요청」 단추에 가려졌다 (2026-11-06 의뢰인)
+      <div className={bare ? 'flex items-start gap-2 py-2 pr-1 pl-3' : 'flex items-start gap-2 rounded-card border border-primary bg-primary-tint py-2 pr-1 pl-3'} data-push-prompt={state}>
+        <Bell aria-hidden size={18} className="mt-0.5 shrink-0 text-primary" />
+        <div className="flex min-w-0 flex-1 flex-col items-start gap-2">
+          <p className="text-sm text-text">{note ?? (state === 'ios-home' ? t('iosHome') : state === 'denied' ? t('denied') : t('promptEmployee'))}</p>
+          {state === 'off' && (
+            <button type="button" disabled={busy} onClick={turnOn} className={`min-h-9 shrink-0 rounded-button px-3 text-sm font-bold text-primary disabled:opacity-50 ${bare ? 'bg-primary-tint' : 'bg-bg'}`}>
+              {t('promptOn')}
+            </button>
+          )}
+        </div>
       </div>
     );
   }

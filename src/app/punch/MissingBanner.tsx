@@ -13,21 +13,22 @@ export async function MissingBanner({ items }: { items: MissingPunch[] }) {
   return (
     <section role="status" className="flex flex-col gap-2 rounded-card border border-warn bg-warn-tint p-3 text-warn">
       {[...items].sort((x, y) => (x.workDate < y.workDate ? 1 : -1)).slice(0, 3).map((m) => (
-        <div key={`${m.workDate}-${m.kind}`} className="flex items-center justify-between gap-2">
-          <p className="flex items-center gap-2 text-sm">
-            <TriangleAlert aria-hidden size={18} strokeWidth={1.75} className="shrink-0" />
-            {t(m.kind === 'out' ? 'noOut' : 'noIn', { day: day(m.workDate) })}
-          </p>
-          {m.hasPendingRequest ? (
-            <span className="shrink-0 text-xs">{t('reviewing')}</span>
-          ) : (
-            <Link prefetch={false}
-              href={`/punch/corrections?date=${m.workDate}&kind=${m.kind}`}
-              className="inline-flex min-h-11 shrink-0 items-center rounded-button border border-warn bg-bg px-3 text-sm font-semibold"
-            >
-              {t('request')}
-            </Link>
-          )}
+        // 단추는 글 아래 왼쪽 — 오른쪽 끝이면 폰 홈의 떠 있는 「새 요청」 단추에 가려졌다 (2026-11-06 의뢰인)
+        <div key={`${m.workDate}-${m.kind}`} className="flex items-start gap-2">
+          <TriangleAlert aria-hidden size={18} strokeWidth={1.75} className="mt-0.5 shrink-0" />
+          <div className="flex min-w-0 flex-1 flex-col items-start gap-1.5">
+            <p className="text-sm">{t(m.kind === 'out' ? 'noOut' : 'noIn', { day: day(m.workDate) })}</p>
+            {m.hasPendingRequest ? (
+              <span className="text-xs">{t('reviewing')}</span>
+            ) : (
+              <Link prefetch={false}
+                href={`/punch/corrections?date=${m.workDate}&kind=${m.kind}`}
+                className="inline-flex min-h-11 items-center rounded-button border border-warn bg-bg px-3 text-sm font-semibold"
+              >
+                {t('request')}
+              </Link>
+            )}
+          </div>
         </div>
       ))}
       {items.length > 3 && <p className="text-xs">{t('more', { n: items.length - 3 })}</p>}
