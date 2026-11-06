@@ -10,6 +10,28 @@ import { createAdminClient } from '@/lib/supabase/admin';
 
 export const REQUEST_WINDOW_DAYS = 62; // 완료 목록은 최근 두 달
 
+// 시프티에서 옮긴 날(직원|날짜) — 올해 옮긴 출퇴근 1만여 줄을 500줄씩 34번 읽어 요청함이 0.5초 늦었다 (2026-11-06 측정).
+// 옮긴 기록은 가져오기 스크립트로만 바뀌므로 10분 보관한다. 처리 끝난 요청을 완료 목록에서 빼는 데만 쓴다(대기 요청은 늘 보인다)
+// shortcut: 서버 한 대의 메모리에만 보관, 가져오기 직후 10분 동안은 새로 옮긴 날의 처리 끝난 요청이 완료 목록에 보일 수 있다 — 문제가 되면 가져오기 때 비우기
+const IMPORT_KEEP_MS = 600_000;
+const importKept = new Map<string, { at: number; days: Promise<string[]> }>();
+function importedDaysOf(from: string, to: string, employeeId?: string): Promise<string[]> {
+  const key = `${from}|${to}|${employeeId ?? ''}`;
+  const hit = importKept.get(key);
+  if (hit && Date.now() - hit.at < IMPORT_KEEP_MS) return hit.days;
+  const db = createAdminClient();
+  // 쪽마다 조회를 새로 만든다 (하나를 고쳐 쓰면 여러 쪽을 동시에 물을 때 첫 쪽만 받는다 — 2026-11-01)
+  const q = () => {
+    const b = db.from('punch_events').select('employee_id, work_date').eq('source', 'import').gte('work_date', from).lte('work_date', to);
+    return employeeId ? b.eq('employee_id', employeeId) : b;
+  };
+  const days = readAll((a, b) => q().order('id').range(a, b)).then(({ data }) => [...new Set(data.map((e) => `${e.employee_id}|${e.work_date}`))]);
+  if (importKept.size > 100) importKept.clear();
+  importKept.set(key, { at: Date.now(), days });
+  days.catch(() => importKept.delete(key));
+  return days;
+}
+
 /** 대기 중인 것 전부 + 최근 두 달 안에 낸 것. employeeId를 주면 그 사람 것만 */
 export async function loadRequests(opts: { employeeId?: string; practice?: boolean } = {}): Promise<ReqItem[]> {
   const db = createAdminClient();
@@ -48,13 +70,7 @@ export async function loadRequests(opts: { employeeId?: string; practice?: boole
   const importedDays = new Set<string>();
   if (checkDays.length) {
     const dates = checkDays.map((r) => r.work_date as string).sort();
-    // 쪽마다 조회를 새로 만든다 (하나를 고쳐 쓰면 여러 쪽을 동시에 물을 때 첫 쪽만 받는다 — 2026-11-01)
-    const q = () => {
-      const b = db.from('punch_events').select('employee_id, work_date').eq('source', 'import').gte('work_date', dates[0]).lte('work_date', dates[dates.length - 1]);
-      return opts.employeeId ? b.eq('employee_id', opts.employeeId) : b;
-    };
-    const { data: imp } = await readAll((a, b) => q().order('id').range(a, b));
-    for (const e of imp) importedDays.add(`${e.employee_id}|${e.work_date}`);
+    for (const k of await importedDaysOf(dates[0], dates[dates.length - 1], opts.employeeId)) importedDays.add(k);
   }
   const fromImport = (r: Record<string, unknown>) => importedDays.has(`${r.employee_id}|${r.work_date}`);
   const otShown = ot.filter((o) => !(settled(o) && fromImport(o)));
