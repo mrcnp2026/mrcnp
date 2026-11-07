@@ -5,6 +5,8 @@ import { assertStaffTarget } from '@/lib/staff-data';
 import { validateContract, validateItemAssign, validateTax } from '@/lib/payroll/contract';
 import { requirePayroll } from '@/lib/payroll/data';
 import { cleanText, isDate } from '@/lib/payroll/settings';
+import { disableSensitive, revealSensitive, saveSensitive } from '@/lib/payroll/sensitive';
+import { SENSITIVE_KINDS, type SensitiveKind } from '@/lib/payroll/sensitive-core';
 import { addStaffItem, cancelScheduledVersion, endStaffItem, saveContract, saveTax } from '@/lib/payroll/staff-data';
 import { toKstDate } from '@/lib/time';
 import { createAdminClient } from '@/lib/supabase/admin';
@@ -50,6 +52,23 @@ export const POST = api<{ params: Promise<{ id: string }> }>('admin.payroll.staf
     if (typeof b.itemId !== 'string' || !UUID.test(b.itemId) || !isDate(b.endOn)) throw new ApiError(400, 'invalid_input');
     await endStaffItem({ id: b.itemId, employeeId: id, endOn: b.endOn, me, requestId: ctx.requestId });
     return { ok: true };
+  }
+  // 민감정보(급여-36) — 원문은 요청 본문에만 있고 기록 · 오류에는 남지 않는다
+  if (b.action === 'sensitive.save') {
+    const kind = b.kind as SensitiveKind;
+    const needBasis = cleanText(b.needBasis, 300);
+    if (!SENSITIVE_KINDS.includes(kind) || !needBasis || needBasis.length < 2) throw new ApiError(400, 'invalid_input');
+    return saveSensitive({ employeeId: id, kind, raw: b.value, bank: b.bank, needBasis, me, requestId: ctx.requestId });
+  }
+  if (b.action === 'sensitive.disable' || b.action === 'sensitive.view') {
+    if (typeof b.recordId !== 'string' || !UUID.test(b.recordId)) throw new ApiError(400, 'invalid_input');
+    if (b.action === 'sensitive.disable') {
+      await disableSensitive({ recordId: b.recordId, employeeId: id, me, requestId: ctx.requestId });
+      return { ok: true };
+    }
+    const reason = cleanText(b.reason, 300);
+    if (!reason || reason.length < 2) throw new ApiError(400, 'invalid_input');
+    return { value: await revealSensitive({ recordId: b.recordId, employeeId: id, reason, me, requestId: ctx.requestId }) };
   }
   throw new ApiError(400, 'invalid_input');
 });

@@ -11,6 +11,8 @@ const dev = config({ path: path.join(root, '.env.dev'), quiet: true, processEnv:
 const need = ['DEV_SUPABASE_URL', 'DEV_SUPABASE_PUBLISHABLE_KEY', 'DEV_SUPABASE_SERVICE_ROLE_KEY', 'DEV_SUPABASE_DB_URL'];
 if (need.some((k) => !dev[k] || /YOUR-PASSWORD/.test(dev[k]))) throw new Error('.env.dev 값이 비어 있습니다');
 if (dev.DEV_SUPABASE_URL === prod.NEXT_PUBLIC_SUPABASE_URL) throw new Error('개발 주소가 운영 주소와 같아서 멈춥니다');
+// 민감정보 열쇠(급여-37)는 개발 전용만 — 운영 → 개발 복사로 넘어온 운영 암호문을 개발에서 풀 수 없게 한다
+if (dev.DEV_PAYROLL_SECRET_KEY && dev.DEV_PAYROLL_SECRET_KEY === prod.PAYROLL_SECRET_KEY) throw new Error('개발 열쇠가 운영 열쇠와 같아서 멈춥니다');
 
 const env = {
   ...process.env,
@@ -22,6 +24,7 @@ const env = {
   VERCEL_ENV: 'preview', // 「개발 서버입니다」 빨간 띠와 백업 보관 위치(dev/)가 미리보기와 똑같이 동작하게 (2026-10-26 의뢰인)
   VAPID_PRIVATE_KEY: '', // 폰 알림 끔
   GEMINI_API_KEY: '', // 번역 호출 끔
+  PAYROLL_SECRET_KEY: dev.DEV_PAYROLL_SECRET_KEY ?? '', // 없으면 민감정보 입력 · 보기가 꺼진다(.env.local의 운영 열쇠는 쓰지 않는다)
 };
 console.log(`\n  개발용 DB로 띄웁니다: ${new URL(dev.DEV_SUPABASE_URL).host}\n  주소: http://localhost:4123\n`);
 // --fast: 운영과 같은 방식(미리 한 번 만들고 띄우기). next dev는 누를 때마다 화면을 새로 조립해 오래 켜 두면 한 번에 수십 초씩 걸린다 (2026-10-30)

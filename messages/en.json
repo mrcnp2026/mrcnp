@@ -4252,6 +4252,66 @@
       "evidence": "Evidence required — cannot be approved without a file (can still be requested)"
     },
     "staffPay": {
+      "sens": {
+        "title": "ID & bank account (encrypted)",
+        "intro": "Numbers are stored encrypted and only masked values are shown. Admins with permission can view the original after entering a reason; every view is logged.",
+        "kind": {
+          "RRN": "Resident registration no.",
+          "FOREIGN_NO": "Alien registration no.",
+          "PASSPORT": "Passport no.",
+          "BANK": "Salary account"
+        },
+        "none": "None",
+        "add": "Enter",
+        "replace": "Replace",
+        "view": "View original",
+        "hide": "Hide now",
+        "disable": "Remove",
+        "fValue": "Number",
+        "fBank": "Bank",
+        "fAccount": "Account no.",
+        "fBasis": "Purpose",
+        "basis": {
+          "RRN": "Tax withholding & social insurance reports",
+          "FOREIGN_NO": "Tax withholding & social insurance reports",
+          "PASSPORT": "Foreign worker residence & insurance reports",
+          "BANK": "Salary transfer"
+        },
+        "ph": {
+          "RRN": "000000-0000000",
+          "FOREIGN_NO": "000000-0000000",
+          "PASSPORT": "M12345678",
+          "BANK": "Digits, dashes allowed"
+        },
+        "save": "Save",
+        "close": "Close",
+        "fReason": "Reason",
+        "reasonPh": "e.g. social insurance enrollment",
+        "viewNote": "This view is logged with your reason.",
+        "shown": "Hidden again in 30 seconds.",
+        "disableNote": "You will need to enter it again. The removal is logged.",
+        "disableYes": "Confirm remove",
+        "grantTitle": "Permission to view originals",
+        "grantMine": "You can view originals until {d}.",
+        "grantNone": "Another admin must grant you permission (you cannot grant yourself).",
+        "grantLine": "{who} · until {d} · {reason} (by {by})",
+        "grantTo": "Admin",
+        "grantDays": "Period",
+        "daysN": "{n} days",
+        "grantReason": "Reason",
+        "grantReasonPh": "e.g. November insurance filing",
+        "grantGive": "Grant",
+        "revoke": "Revoke",
+        "grantNoOther": "No other admin to grant.",
+        "err": {
+          "sensitive_invalid": "The number format is not valid. Please check it.",
+          "sensitive_duplicate": "Another employee already has this number.",
+          "sensitive_no_grant": "You don't have permission to view originals. Ask another admin.",
+          "sensitive_key_missing": "The encryption key is not set yet, so numbers cannot be entered or viewed.",
+          "sensitive_unreadable": "This number cannot be opened with the current key. Please enter it again.",
+          "sensitive_self_grant": "You cannot grant permission to yourself."
+        }
+      },
       "sumRenew": "Contract renewal {n}",
       "renewOver": "Contract expired — renew",
       "renewSoon": "Contract renewal due",

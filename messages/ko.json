@@ -4252,6 +4252,66 @@
       "evidence": "증빙 파일 필수 — 파일이 없으면 승인할 수 없습니다(신청은 됩니다)"
     },
     "staffPay": {
+      "sens": {
+        "title": "주민번호 · 계좌 (암호 보관)",
+        "intro": "번호는 암호로 잠가 저장하고 화면에는 가린 값만 보입니다. 원문은 허락받은 관리자가 이유를 적어야 볼 수 있고, 누가 언제 봤는지 기록이 남습니다.",
+        "kind": {
+          "RRN": "주민등록번호",
+          "FOREIGN_NO": "외국인등록번호",
+          "PASSPORT": "여권번호",
+          "BANK": "급여 계좌"
+        },
+        "none": "없음",
+        "add": "입력",
+        "replace": "바꾸기",
+        "view": "원문 보기",
+        "hide": "지금 가리기",
+        "disable": "지우기",
+        "fValue": "번호",
+        "fBank": "은행",
+        "fAccount": "계좌번호",
+        "fBasis": "모으는 이유",
+        "basis": {
+          "RRN": "원천징수 · 4대보험 신고(소득세법 제145조, 국민연금법 등)",
+          "FOREIGN_NO": "원천징수 · 4대보험 신고(소득세법 제145조, 국민연금법 등)",
+          "PASSPORT": "외국인 근로자 체류 · 보험 신고",
+          "BANK": "급여 계좌 이체"
+        },
+        "ph": {
+          "RRN": "000000-0000000",
+          "FOREIGN_NO": "000000-0000000",
+          "PASSPORT": "M12345678",
+          "BANK": "숫자만 또는 - 포함"
+        },
+        "save": "저장",
+        "close": "닫기",
+        "fReason": "보는 이유",
+        "reasonPh": "예: 4대보험 취득 신고",
+        "viewNote": "이 이유와 함께 본 기록이 남습니다.",
+        "shown": "30초 뒤 다시 가려집니다.",
+        "disableNote": "지우면 다시 입력해야 합니다. 지운 기록은 남습니다.",
+        "disableYes": "지우기 확인",
+        "grantTitle": "원문 보기 허락",
+        "grantMine": "나는 {d}까지 원문을 볼 수 있습니다.",
+        "grantNone": "원문을 보려면 다른 관리자가 허락해야 합니다(스스로 줄 수 없음).",
+        "grantLine": "{who} · {d}까지 · {reason} (허락: {by})",
+        "grantTo": "허락할 관리자",
+        "grantDays": "기간",
+        "daysN": "{n}일",
+        "grantReason": "이유",
+        "grantReasonPh": "예: 11월 4대보험 신고 담당",
+        "grantGive": "허락 주기",
+        "revoke": "거두기",
+        "grantNoOther": "허락을 줄 다른 관리자가 없습니다.",
+        "err": {
+          "sensitive_invalid": "번호 모양이 맞지 않습니다. 다시 확인해 주세요.",
+          "sensitive_duplicate": "같은 번호가 다른 직원에게 이미 있습니다.",
+          "sensitive_no_grant": "원문 보기 허락이 없습니다. 다른 관리자에게 허락을 받아 주세요.",
+          "sensitive_key_missing": "암호 열쇠가 아직 설정되지 않아 입력 · 보기를 할 수 없습니다.",
+          "sensitive_unreadable": "이 번호는 지금 열쇠로 열 수 없습니다. 다시 입력해 주세요.",
+          "sensitive_self_grant": "자기 자신에게는 허락을 줄 수 없습니다."
+        }
+      },
       "sumRenew": "계약 갱신 필요 {n}명",
       "renewOver": "계약 만료 — 갱신 필요",
       "renewSoon": "계약 갱신 필요",

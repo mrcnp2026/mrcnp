@@ -245,5 +245,43 @@ begin
     perform set_config('role', 'postgres', true);
   end;
 
+  -- ── 민감정보 (0039 · 0093, 급여-36): 로그인 세션으로는 읽기 · 쓰기 모두 막힘, 암호문 · 기록은 고치지 못함, 스스로 허락 못 줌 ──
+  declare v_s uuid;
+  begin
+    insert into public.payroll_sensitive_records (employee_id, record_kind, ciphertext, key_version, masked, need_basis, created_by)
+      values (emp, 'PASSPORT', repeat('A', 40), 1, 'M******78', 'test', adm) returning id into v_s;
+    out := out || E'PASS|64|passport kind accepted
+';
+    begin update public.payroll_sensitive_records set ciphertext = repeat('B', 40) where id = v_s; out := out || E'FAIL|65|server update sensitive ciphertext
+';
+    exception when others then out := out || E'PASS|65|sensitive ciphertext immutable
+'; end;
+    insert into public.payroll_sensitive_access_logs (actor_id, record_id, action, reason) values (adm, v_s, 'VIEW', 'test');
+    begin delete from public.payroll_sensitive_access_logs where record_id = v_s; out := out || E'FAIL|66|server delete sensitive access log
+';
+    exception when others then out := out || E'PASS|66|sensitive access log delete denied
+'; end;
+    begin insert into public.payroll_sensitive_grants (admin_id, granted_by, reason, expires_at) values (adm, adm, 'self', now() + interval '1 day'); out := out || E'FAIL|67|self grant accepted
+';
+    exception when others then out := out || E'PASS|67|self grant denied
+'; end;
+    perform set_config('request.jwt.claims', json_build_object('sub', adm, 'role', 'authenticated')::text, true);
+    perform set_config('role', 'authenticated', true);
+    begin select count(*) into n from public.payroll_sensitive_records; out := out || E'FAIL|68|admin session select sensitive records
+';
+    exception when others then out := out || E'PASS|68|admin session select sensitive records denied (server only)
+'; end;
+    begin select count(*) into n from public.payroll_sensitive_grants; out := out || E'FAIL|69|admin session select sensitive grants
+';
+    exception when others then out := out || E'PASS|69|admin session select sensitive grants denied
+'; end;
+    perform set_config('request.jwt.claims', json_build_object('sub', emp, 'role', 'authenticated')::text, true);
+    begin select count(*) into n from public.payroll_sensitive_access_logs; out := out || E'FAIL|70|employee select sensitive access logs
+';
+    exception when others then out := out || E'PASS|70|employee select sensitive access logs denied
+'; end;
+    perform set_config('role', 'postgres', true);
+  end;
+
   raise exception 'RLS_RESULTS_BEGIN%RLS_RESULTS_END', E'\n' || out;
 end $$;
