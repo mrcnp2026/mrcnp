@@ -209,6 +209,7 @@ async function buildInputs(run: RunRow, memberIds?: string[]): Promise<Built> {
   const bonus = run.kind === 'BONUS';
   const priorOf = bonus ? await loadPrior(run) : null;
   const exemptYtd = await loadExemptYtd(run); // 같은 해 앞서 확정한 명세의 항목별 비과세 합계 (2026-10-19)
+  const smeYtd = reliefOn.sme ? await loadSmeYtd(run) : new Map<string, number>(); // 같은 해 앞서 받은 중소기업 감면 합계 (개발-32)
   const comp = bonus ? new Map<string, number>() : await compMinutesFor(ym, run.isTest); // 보상휴가로 돌린 연장(분) — 연장수당에서 뺀다 (2026-10-19, 묶음 29)
 
   const contracts = (cons ?? []) as Row[];
@@ -228,9 +229,9 @@ async function buildInputs(run: RunRow, memberIds?: string[]): Promise<Built> {
     const taxRow = versionAt(taxRows.filter((x) => x.employee_id === id).map((x) => ({ ...x, validFrom: x.valid_from as string, validTo: x.valid_to as string | null })), last) as Row | null;
     const inc = ((con?.included ?? {}) as Row) ?? {};
     let contract: EngineInput['contract'] = con ? { payType: con.pay_type as ContractRow['payType'], amount: Number(con.amount), monthlyHours: con.monthly_hours === null ? null : Number(con.monthly_hours), annualDivisor: con.annual_divisor === null ? null : Number(con.annual_divisor), included: { overtimeHours: inc.overtimeHours == null ? null : Number(inc.overtimeHours), holidayHours: inc.holidayHours == null ? null : Number(inc.holidayHours) } } : null;
-    const ins = ((taxRow?.insurance ?? {}) as Record<string, { state?: string; reportedWage?: number | null }>) ?? {};
+    const ins = ((taxRow?.insurance ?? {}) as Record<string, { state?: string; reportedWage?: number | null; joinMonth?: boolean }>) ?? {};
     const dd = basis.taxDefaults?.defaults ?? null;
-    const one = (k: string) => ({ state: fillState((ins[k]?.state ?? 'UNKNOWN') as TaxRow['insurance']['pension']['state'], k as 'pension' | 'health' | 'employment' | 'accident', dd), reportedWage: ins[k]?.reportedWage ?? null });
+    const one = (k: string) => ({ state: fillState((ins[k]?.state ?? 'UNKNOWN') as TaxRow['insurance']['pension']['state'], k as 'pension' | 'health' | 'employment' | 'accident', dd), reportedWage: ins[k]?.reportedWage ?? null, ...(ins[k]?.joinMonth ? { joinMonth: true } : {}) });
     const loan = (taxRow?.student_loan ?? {}) as { state?: string; monthlyAmount?: number | null; from?: string | null; to?: string | null };
     // 감면 · 지원: 회사가 켠 것만, 그 달에 걸치는 기간만. 상여 대장은 소득세 감면만 본다(보험은 상여에서 계산하지 않는다)
     const rel = taxRow ? reliefsForMonth(taxRow.reliefs, reliefOn, from, last) : dd ? reliefsForMonth(NO_RELIEFS, reliefOn, from, last) : null;
@@ -354,7 +355,7 @@ async function buildInputs(run: RunRow, memberIds?: string[]): Promise<Built> {
     if (!bonus && overrides.some((o) => (o.itemCode === 'PENSION_SETTLE' && basisOf('pension') === 'NOTICE') || (o.itemCode === 'HEALTH_SETTLE' && basisOf('health') === 'NOTICE') || (o.itemCode === 'EMPLOYMENT_SETTLE' && basisOf('employment') === 'NOTICE'))) pre.push({ code: 'notice_settlement_duplicate' });
     // 부양가족 신고 전(세무 판이 없거나 신고일이 비어 있음)이면 가족 수는 임시다 — 계산은 그대로, 화면 · 명세서에 「임시」 (묶음 38 · 급여-57)
     if (tax && !taxRow?.family_reported_on) notes.push({ code: 'family_unreported', detail: String(tax.familyCount) });
-    const input: MemberInput['input'] = { runKind: bonus ? 'BONUS' : 'REGULAR', contract, tax, time, partialMonth, items: engineItems, policy, reference, insuranceBasis, insuranceBasisOf, notices: notice?.notices, overrides, prior, skipInsurance: bonus, minimumHourly: bonus ? null : minimumHourly, exemptYtd: exemptYtd.get(id) ?? {} };
+    const input: MemberInput['input'] = { runKind: bonus ? 'BONUS' : 'REGULAR', contract, tax, time, partialMonth, items: engineItems, policy, reference, insuranceBasis, insuranceBasisOf, notices: notice?.notices, overrides, prior, skipInsurance: bonus, minimumHourly: bonus ? null : minimumHourly, exemptYtd: exemptYtd.get(id) ?? {}, joinedMid: !bonus && joinedMid, smeReliefYtd: smeYtd.get(id) ?? 0 };
     members.push({ employeeId: id, input, pre, notes, closeId: (close?.id as string | undefined) ?? null, contractId: (con?.id as string | undefined) ?? null, taxId: (taxRow?.id as string | undefined) ?? null, snapshot: { contract, tax, time, attendance: facts, items: engineItems, notices: notice?.notices ?? null, overrides, partialMonth, prior, closeHash: close?.input_hash ?? null } });
   }
   const usedItems = items.filter((it) => members.some((m) => m.input.items.some((x) => x.itemVersionId === it.id)));
@@ -386,9 +387,16 @@ async function buildInputs(run: RunRow, memberIds?: string[]): Promise<Built> {
  * 앞선 달의 정규 · 상여 + 같은 달의 정규(상여 대장일 때) · 앞 차수 상여. 대장(종류 · 기간 · 차수)마다 가장 새 확정 판만 센다(정정 전 판을 두 번 세지 않는다).
  * 줄마다 계산 때 남긴 calc_trace.exempt를 더한다 — 엔진 1.3 전에 계산한 줄은 비과세 금액이 없어 0으로 본다.
  */
-export async function loadExemptYtd(run: Pick<RunRow, 'id' | 'kind' | 'periodFrom' | 'periodTo' | 'sequence' | 'isTest'>, employeeIds?: string[]): Promise<Map<string, Record<string, number>>> {
+type YtdRun = Pick<RunRow, 'id' | 'kind' | 'periodFrom' | 'periodTo' | 'sequence' | 'isTest'>;
+/** 명세 한 줄(소득세)이 받은 중소기업 감면. 예전 명세(engine-1.7 이전)는 smeRelief가 없어 감면 전 − 감면 뒤로 센다 */
+const smeReliefOf = (t: Row | null): number => {
+  if (!t || t.smePct == null) return 0;
+  const v = t.smeRelief != null ? Number(t.smeRelief) : Number(t.beforeRelief ?? 0) - Number(t.groupTax ?? 0);
+  return Number.isFinite(v) && v > 0 ? v : 0;
+};
+/** 같은 해 앞서 확정한 명세 — 직원별 (2026-11-08 감면 누적과 같이 쓰려고 나눔) */
+async function earlierStatements(run: YtdRun, employeeIds?: string[]): Promise<Map<string, string>> {
   const c = db();
-  const out = new Map<string, Record<string, number>>();
   const yearStart = `${run.periodFrom.slice(0, 4)}-01-01`;
   const { data: runs, error } = await c.from('payroll_runs').select('id, run_kind, period_from, period_to, sequence, revision, current_generation_id').eq('is_test', run.isTest).eq('status', 'FINALIZED').in('run_kind', ['REGULAR', 'BONUS']).gte('period_from', yearStart).lte('period_from', run.periodFrom);
   if (error) fail('loadExemptYtd', error);
@@ -404,12 +412,31 @@ export async function loadExemptYtd(run: Pick<RunRow, 'id' | 'kind' | 'periodFro
     if (!latest.has(k) || (latest.get(k)!.revision as number) < (r.revision as number)) latest.set(k, r);
   }
   const gens = [...latest.values()].map((r) => r.current_generation_id as string).filter(Boolean);
-  if (gens.length === 0) return out;
+  if (gens.length === 0) return new Map();
   let sq = c.from('payroll_statements').select('id, employee_id').in('generation_id', gens).eq('state', 'OK');
   if (employeeIds) sq = sq.in('employee_id', employeeIds);
   const { data: sts, error: e2 } = await sq;
   if (e2) fail('loadExemptYtd.statements', e2);
-  const who = new Map((sts ?? []).map((s) => [s.id as string, s.employee_id as string]));
+  return new Map((sts ?? []).map((s) => [s.id as string, s.employee_id as string]));
+}
+export async function loadSmeYtd(run: YtdRun): Promise<Map<string, number>> {
+  const out = new Map<string, number>();
+  const who = await earlierStatements(run);
+  if (who.size === 0) return out;
+  const { data: lines, error } = await db().from('payroll_statement_items').select('statement_id, calc_trace').in('statement_id', [...who.keys()]).eq('kind', 'DEDUCTION').eq('item_code', 'INCOME_TAX');
+  if (error) fail('loadSmeYtd', error);
+  for (const l of (lines ?? []) as Row[]) {
+    const v = smeReliefOf(l.calc_trace as Row | null);
+    if (v === 0) continue;
+    const emp = who.get(l.statement_id as string)!;
+    out.set(emp, (out.get(emp) ?? 0) + v);
+  }
+  return out;
+}
+export async function loadExemptYtd(run: YtdRun, employeeIds?: string[]): Promise<Map<string, Record<string, number>>> {
+  const c = db();
+  const out = new Map<string, Record<string, number>>();
+  const who = await earlierStatements(run, employeeIds);
   if (who.size === 0) return out;
   const { data: lines, error: e3 } = await c.from('payroll_statement_items').select('statement_id, item_code, calc_trace').in('statement_id', [...who.keys()]).eq('kind', 'PAYMENT');
   if (e3) fail('loadExemptYtd.lines', e3);
@@ -431,9 +458,9 @@ export async function exemptYtdForYear(employeeId: string, year: string, practic
   return all.get(employeeId) ?? {};
 }
 
-async function loadPrior(run: RunRow): Promise<Map<string, { taxable: number; incomeTax: number; localTax: number }>> {
+async function loadPrior(run: RunRow): Promise<Map<string, { taxable: number; incomeTax: number; localTax: number; smeRelief: number }>> {
   const c = db();
-  const out = new Map<string, { taxable: number; incomeTax: number; localTax: number }>();
+  const out = new Map<string, { taxable: number; incomeTax: number; localTax: number; smeRelief: number }>();
   const { data: runs, error } = await c.from('payroll_runs').select('id, run_kind, sequence, revision, current_generation_id').eq('period_from', run.periodFrom).eq('period_to', run.periodTo).eq('is_test', run.isTest).eq('status', 'FINALIZED').in('run_kind', ['REGULAR', 'BONUS']);
   if (error) fail('loadPrior', error);
   // 대장(종류 · 차수)마다 가장 새 확정 판만
@@ -444,19 +471,20 @@ async function loadPrior(run: RunRow): Promise<Map<string, { taxable: number; in
     if (!latest.has(k) || (latest.get(k)!.revision as number) < (r.revision as number)) latest.set(k, r);
   }
   if (![...latest.values()].some((r) => r.run_kind === 'REGULAR')) return out;
-  out.set('*', { taxable: 0, incomeTax: 0, localTax: 0 });
+  out.set('*', { taxable: 0, incomeTax: 0, localTax: 0, smeRelief: 0 });
   const gens = [...latest.values()].map((r) => r.current_generation_id as string).filter(Boolean);
   const { data: sts } = await c.from('payroll_statements').select('id, employee_id, snapshot').in('generation_id', gens).eq('state', 'OK');
   const ids = (sts ?? []).map((s) => s.id as string);
-  const { data: lines } = ids.length ? await c.from('payroll_statement_items').select('statement_id, item_code, amount').in('statement_id', ids).in('item_code', ['INCOME_TAX', 'LOCAL_TAX']).eq('kind', 'DEDUCTION') : { data: [] as Row[] };
+  const { data: lines } = ids.length ? await c.from('payroll_statement_items').select('statement_id, item_code, amount, calc_trace').in('statement_id', ids).in('item_code', ['INCOME_TAX', 'LOCAL_TAX']).eq('kind', 'DEDUCTION') : { data: [] as Row[] };
   const missing = new Set<string>();
   for (const s of sts ?? []) {
     const id = s.employee_id as string;
     const taxable = ((s.snapshot as Row | null)?.totals as { taxable?: number } | null | undefined)?.taxable;
     if (typeof taxable !== 'number') { missing.add(id); continue; }
-    const cur = out.get(id) ?? { taxable: 0, incomeTax: 0, localTax: 0 };
-    const of = (code: string) => ((lines ?? []) as Row[]).filter((l) => l.statement_id === s.id && l.item_code === code).reduce((a, l) => a + Number(l.amount), 0);
-    out.set(id, { taxable: cur.taxable + taxable, incomeTax: cur.incomeTax + of('INCOME_TAX'), localTax: cur.localTax + of('LOCAL_TAX') });
+    const cur = out.get(id) ?? { taxable: 0, incomeTax: 0, localTax: 0, smeRelief: 0 };
+    const mine = ((lines ?? []) as Row[]).filter((l) => l.statement_id === s.id);
+    const of = (code: string) => mine.filter((l) => l.item_code === code).reduce((a, l) => a + Number(l.amount), 0);
+    out.set(id, { taxable: cur.taxable + taxable, incomeTax: cur.incomeTax + of('INCOME_TAX'), localTax: cur.localTax + of('LOCAL_TAX'), smeRelief: cur.smeRelief + mine.filter((l) => l.item_code === 'INCOME_TAX').reduce((a, l) => a + smeReliefOf(l.calc_trace as Row | null), 0) });
   }
   for (const id of missing) out.delete(id);
   if (missing.size > 0) out.delete('*'); // 과세 합계를 모르는 명세가 섞여 있으면 「없던 사람은 0」으로 보지 않는다

@@ -204,7 +204,7 @@ export function TaxForm({ reportedUsed, employeeId, today, version, last, relief
             const ok = await save({
               action: 'tax', expectedVersion: version, validFrom: f.get('validFrom'), reason: f.get('reason') || null,
               withholdingRatio: Number(f.get('ratio')), familyCount: f.get('family'), childCount: f.get('child'), familyReportedOn: f.get('familyReported') || null,
-              insurance: Object.fromEntries(INSURERS.map((k) => [k, { state: f.get(`${k}.state`), reportedWage: f.get(`${k}.wage`), note: f.get(`${k}.note`) || null }])),
+              insurance: Object.fromEntries(INSURERS.map((k) => [k, { state: f.get(`${k}.state`), reportedWage: f.get(`${k}.wage`), note: f.get(`${k}.note`) || null, joinMonth: f.get(`${k}.joinMonth`) === 'on' }])),
               studentLoan: { state: f.get('loan.state'), monthlyAmount: f.get('loan.amount'), from: f.get('loan.from') || null, to: f.get('loan.to') || null },
               // 회사가 끈 감면 · 지원은 화면에 없으니 앞 판의 값을 그대로 넘긴다(지우지 않는다)
               reliefs: {
@@ -251,6 +251,12 @@ export function TaxForm({ reportedUsed, employeeId, today, version, last, relief
                 <input name={`${k}.wage`} type="number" min="0" step="1" defaultValue={last?.insurance[k].reportedWage ?? ''} placeholder={t('fReported')} aria-label={t('fReported')} className={field} />
                 <input name={`${k}.note`} maxLength={200} defaultValue={last?.insurance[k].note ?? ''} placeholder={t(insNo[k] ? 'fExcludeNeed' : 'fExclude')} aria-label={t('fExclude')} required={insNo[k]} className={`${field} ${insNo[k] ? 'border-danger' : ''}`} autoComplete="off" />
               </div>
+              {k === 'pension' && (
+                <label className="flex items-start gap-2 text-sm">
+                  <input type="checkbox" name="pension.joinMonth" defaultChecked={!!last?.insurance.pension.joinMonth} className="mt-0.5" />
+                  <span>{t('fPensionJoinMonth')}<span className="block text-xs text-faint">{t('pensionJoinMonthHint')}</span></span>
+                </label>
+              )}
               {k !== 'accident' && <p className="text-xs text-faint">{t(reportedUsed[k] ? 'reportedUsedHint' : 'reportedUnusedHint')}</p>}
             </fieldset>
           ))}

@@ -37,7 +37,7 @@ const toContract = (r: Row): ContractRow => {
 export type TaxRow = TaxInput & { id: string; employeeId: string; validFrom: string; validTo: string | null; version: number; reason: string | null; createdBy: string; createdAt: string };
 const toTax = (r: Row): TaxRow => {
   const src = (r.insurance ?? {}) as Record<string, Partial<InsuranceState>>;
-  const insurance = Object.fromEntries(INSURERS.map((k) => [k, { state: src[k]?.state ?? 'UNKNOWN', reportedWage: n(src[k]?.reportedWage), note: src[k]?.note ?? null }])) as Record<Insurer, InsuranceState>;
+  const insurance = Object.fromEntries(INSURERS.map((k) => [k, { state: src[k]?.state ?? 'UNKNOWN', reportedWage: n(src[k]?.reportedWage), note: src[k]?.note ?? null, ...(src[k]?.joinMonth ? { joinMonth: true } : {}) }])) as Record<Insurer, InsuranceState>;
   const loan = (r.student_loan ?? {}) as Partial<TaxInput['studentLoan']>;
   const rel = (r.reliefs ?? {}) as Partial<Reliefs>;
   return {

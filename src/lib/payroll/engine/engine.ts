@@ -6,7 +6,10 @@
 import { AUTO_PAYMENT_CODES, canonicalItemCode } from './reserved-items';
 import { add, dec, div, hoursOf, isNeg, max, min, mul, sub, text, toWon, type Dec, type Rounding } from './decimal';
 
-export const ENGINE_VERSION = 'engine-1.7'; // 1.7 (2026-10-20): 고정 연장 · 휴일이 든 월급 — 통상시급 = 월급 ÷ (월 시간 + 포함 연장 × 1.5 + 포함 휴일 × 1.5), 넘은 시간은 그 시급 × 1.5(휴일 8h 초과 × 2)로 지급(예전: 막음). 1.6 (2026-10-20): 외국인 단일세율 19%(조세특례제한법 제18조의2) — 비과세 없이 지급 전액 × 19%, 10원 미만 버림. 1.5 (2026-10-20): 일부 비과세(식대 등)의 비과세분을 보험 기준에서 뺌 · 건강보험 월 보험료 상한 · 하한. 1.4 (2026-10-20): 보험마다 공제 기준을 따로(국민연금 · 건강 · 고용, 비우면 기본 기준). 1.3 (2026-10-19): 비과세 연간 한도 · 누적. 1.2 (2026-10-16): 시급제 주휴 · 유급휴일, 시급제 기본급은 소정 시간만 + 연장 · 휴일 줄에 1배 포함
+export const ENGINE_VERSION = 'engine-1.8'; // 1.8 (2026-11-08): 달 중간(1일이 아닌 날) 입사한 달은 4대보험을 떼지 않는다 — 국민연금만 본인이 원하면 그 달부터(급여-45). 중소기업 취업자 감면은 그 해 200만원까지만(개발-32). 1.7 (2026-10-20): 고정 연장 · 휴일이 든 월급 — 통상시급 = 월급 ÷ (월 시간 + 포함 연장 × 1.5 + 포함 휴일 × 1.5), 넘은 시간은 그 시급 × 1.5(휴일 8h 초과 × 2)로 지급(예전: 막음). 1.6 (2026-10-20): 외국인 단일세율 19%(조세특례제한법 제18조의2) — 비과세 없이 지급 전액 × 19%, 10원 미만 버림. 1.5 (2026-10-20): 일부 비과세(식대 등)의 비과세분을 보험 기준에서 뺌 · 건강보험 월 보험료 상한 · 하한. 1.4 (2026-10-20): 보험마다 공제 기준을 따로(국민연금 · 건강 · 고용, 비우면 기본 기준). 1.3 (2026-10-19): 비과세 연간 한도 · 누적. 1.2 (2026-10-16): 시급제 주휴 · 유급휴일, 시급제 기본급은 소정 시간만 + 연장 · 휴일 줄에 1배 포함
+
+/** 중소기업 취업자 소득세 감면의 과세연도 한도(조세특례제한법 제30조, 연 200만원). 임시 — 검증 대기 기록 */
+export const SME_ANNUAL_LIMIT = 2_000_000;
 
 export type EngineContract = { payType: 'MONTHLY' | 'HOURLY' | 'ANNUAL'; amount: number; monthlyHours: number | null; annualDivisor: number | null; included: { overtimeHours: number | null; holidayHours: number | null } };
 export type Tri = 'YES' | 'NO' | 'UNKNOWN';
@@ -14,7 +17,7 @@ export type EngineTax = {
   withholdingRatio: 80 | 100 | 120;
   familyCount: number;
   childCount: number;
-  insurance: Record<'pension' | 'health' | 'employment' | 'accident', { state: Tri; reportedWage: number | null }>;
+  insurance: Record<'pension' | 'health' | 'employment' | 'accident', { state: Tri; reportedWage: number | null; joinMonth?: boolean }>; // joinMonth = 국민연금 입사한 달 납부를 본인이 원함
   studentLoan: { state: Tri; monthlyAmount: number | null };
   /** 그 달에 적용하는 감면 · 지원(넘겨주는 쪽이 회사 설정 · 기간을 보고 정한다). 없으면 적용 안 함 */
   reliefs?: { smeRate: number | null; durunuri: { pension: number; employment: number } | null; flat19?: boolean }; // flat19 = 외국인 단일세율 19% (engine-1.6)
@@ -54,8 +57,10 @@ export type EngineInput = {
   withholding: Withholding | null;
   overrides: EngineOverride[];
   notices?: Partial<Record<'pension' | 'health' | 'employment' | 'accident', { employee: number; employer: number | null; id: string }>>;
-  prior?: { taxable: number; incomeTax: number; localTax: number } | null; // 상여: 같은 징수 묶음에서 앞서 낸 명세의 과세 합계와 세액
+  prior?: { taxable: number; incomeTax: number; localTax: number; smeRelief?: number } | null; // 상여: 같은 징수 묶음에서 앞서 낸 명세의 과세 합계와 세액
   skipInsurance?: boolean; // 상여 대장: 4대보험을 여기서 계산하지 않는다(정기 급여에서 이미 냈거나 정산으로 맞춘다) — 경고로 알린다
+  joinedMid?: boolean; // 그 달 2일 이후에 입사 — 4대보험은 다음 달부터 (급여-45)
+  smeReliefYtd?: number; // 같은 해 앞서 확정한 명세에서 이미 감면받은 소득세 합계 — 연 한도 계산 (개발-32)
   exemptYtd?: Record<string, number>; // 같은 해(귀속 연도) 앞서 확정한 명세에서 항목마다 이미 비과세로 뺀 합계 — 연간 한도 계산에 쓴다 (2026-10-19)
   minimumHourly?: number | null; // 그 달에 적용되는 최저시급(승인된 기준 자료). 계약의 시간당 임금이 이보다 낮으면 「참고」로 알린다(막지 않는다)
 };
@@ -253,6 +258,7 @@ export function calculateStatement(input: EngineInput): EngineResult {
       const basis = basisOf(key);
       if (st.state === 'UNKNOWN') return block('insurance_unknown', key), null;
       if (st.state === 'NO') return null;
+      if (input.joinedMid && !(key === 'pension' && st.joinMonth)) return null; // 취득한 달은 다음 달부터 낸다
       if (basis === 'NOTICE') {
         const notice = input.notices?.[key];
         if (!notice) return block('notice_required', key), null;
@@ -292,6 +298,7 @@ export function calculateStatement(input: EngineInput): EngineResult {
       return { employee: BigInt(mine.amount), employer: BigInt(theirs.amount) };
     };
     const on = !input.skipInsurance;
+    if (on && input.joinedMid) warnings.push({ code: 'insurance_join_month' });
     if (on) insure('pension', ref.pension);
     const health = on ? insure('health', ref.health) : null;
     if (health && basisOf('health') !== 'NOTICE') {
@@ -308,7 +315,7 @@ export function calculateStatement(input: EngineInput): EngineResult {
     if (!on) {
       // 상여 대장에서는 건너뛴다
     } else if (acc.state === 'UNKNOWN') block('insurance_unknown', 'accident');
-    else if (acc.state === 'YES') {
+    else if (acc.state === 'YES' && !input.joinedMid) {
       // 산재 요율(업종별)이 없어도 직원 명세는 계산된다 — 사업주 부담 합계에서 빠진다는 것만 알린다
       if (input.insuranceBasis === 'NOTICE') {
         const notice = input.notices?.accident;
@@ -345,11 +352,16 @@ export function calculateStatement(input: EngineInput): EngineResult {
         const already = input.runKind === 'BONUS' ? input.prior! : { incomeTax: 0, localTax: 0 };
         const one: Rounding = { mode: 'HALF_UP', unit: 1 }; // 세액은 세액표 · 규칙이 이미 끊어서 준다
         // 중소기업 취업자 감면: 세액표 소득세에 (1 − 감면율)을 곱해 10원 미만을 버린다. 지방소득세는 감면 뒤 소득세의 10%(10원 미만 버림). 임시 — 검증 대기 기록
+        //   연 한도(SME_ANNUAL_LIMIT): 그 해 앞서 받은 감면 + 이번 감면이 한도를 넘지 않게 줄인다. 상여는 같은 묶음의 앞 명세가 받은 감면을 빼고 센다
         const smeRate = tax.reliefs?.smeRate ?? null;
-        const groupIncome = smeRate ? Math.floor((w.incomeTax * (100 - smeRate)) / 100 / 10) * 10 : w.incomeTax;
+        const priorRelief = input.runKind === 'BONUS' ? (input.prior!.smeRelief ?? 0) : 0;
+        const fullRelief = smeRate ? w.incomeTax - Math.floor((w.incomeTax * (100 - smeRate)) / 100 / 10) * 10 - priorRelief : 0;
+        const smeRelief = Math.max(0, Math.min(fullRelief, SME_ANNUAL_LIMIT - (input.smeReliefYtd ?? 0)));
+        const groupIncome = smeRate ? w.incomeTax - priorRelief - smeRelief : w.incomeTax;
         const groupLocal = smeRate ? Math.floor(groupIncome / 100) * 10 : w.localTax;
-        if (smeRate) warnings.push({ code: 'sme_applied', detail: `${smeRate}%, -${(w.incomeTax - groupIncome).toLocaleString('en-US')}` });
-        push({ code: 'INCOME_TAX', kind: 'DEDUCTION', label: 'incomeTax', raw: sub(dec(groupIncome), dec(already.incomeTax)), rounding: one, trace: { taxable: group, groupTax: groupIncome, already: already.incomeTax, ...w.trace, ...(smeRate ? { smePct: smeRate, beforeRelief: w.incomeTax } : {}) } });
+        if (smeRate) warnings.push({ code: 'sme_applied', detail: `${smeRate}%, -${smeRelief.toLocaleString('en-US')}` });
+        if (smeRate && smeRelief < fullRelief) warnings.push({ code: 'sme_annual_reached', detail: SME_ANNUAL_LIMIT.toLocaleString('en-US') });
+        push({ code: 'INCOME_TAX', kind: 'DEDUCTION', label: 'incomeTax', raw: sub(dec(groupIncome), dec(already.incomeTax)), rounding: one, trace: { taxable: group, groupTax: groupIncome, already: already.incomeTax, ...w.trace, ...(smeRate ? { smePct: smeRate, beforeRelief: w.incomeTax, smeRelief } : {}) } });
         push({ code: 'LOCAL_TAX', kind: 'DEDUCTION', label: 'localTax', raw: sub(dec(groupLocal), dec(already.localTax)), rounding: one, trace: { groupTax: groupLocal, already: already.localTax } });
       }
     }

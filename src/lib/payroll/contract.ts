@@ -47,7 +47,7 @@ export function validateContract(b: Record<string, unknown>): Result<ContractInp
 export const INSURERS = ['pension', 'health', 'employment', 'accident'] as const; // 국민연금 · 건강보험(장기요양은 건강보험을 따른다) · 고용보험 · 산재보험
 export type Insurer = (typeof INSURERS)[number];
 export type Tri = 'YES' | 'NO' | 'UNKNOWN';
-export type InsuranceState = { state: Tri; reportedWage: number | null; note: string | null }; // 신고 보수(기준소득월액 · 보수월액), 제외 근거
+export type InsuranceState = { state: Tri; reportedWage: number | null; note: string | null; joinMonth?: boolean }; // 신고 보수(기준소득월액 · 보수월액), 제외 근거. joinMonth = 국민연금만: 입사한 달 납부를 본인이 원함 (급여-45)
 export type TaxInput = {
   withholdingRatio: 80 | 100 | 120;
   familyCount: number; // 본인 포함
@@ -92,7 +92,7 @@ export function validateTax(b: Record<string, unknown>): Result<TaxInput> {
     const wage = num(o.reportedWage), note = text(o.note, 200);
     if (!tri(o.state) || wage === undefined || note === undefined || (wage !== null && (!Number.isInteger(wage) || wage < 0 || wage > MAX_AMOUNT))) return { ok: false, code: 'tax_insurance' };
     if (o.state === 'NO' && !note) return { ok: false, code: 'tax_insurance_reason' }; // 가입하지 않는다면 근거를 적는다
-    insurance[k] = { state: o.state, reportedWage: wage, note };
+    insurance[k] = { state: o.state, reportedWage: wage, note, ...(k === 'pension' && o.joinMonth === true ? { joinMonth: true } : {}) };
   }
   const loan = (b.studentLoan && typeof b.studentLoan === 'object' ? b.studentLoan : {}) as Record<string, unknown>;
   const amt = num(loan.monthlyAmount);
