@@ -13,7 +13,7 @@ import 'pretendard/dist/web/variable/pretendardvariable-dynamic-subset.css'; // 
 import './globals.css';
 
 // 7-11 요점 5: 베트남어 성조 부호·태국 문자가 □로 깨지지 않게 Noto 글꼴. 빌드는 성공해도 글자만 깨지는 곳이다 (B-18)
-const latin = Noto_Sans({ subsets: ['latin'], weight: ['400', '500', '700', '800'], variable: '--font-latin' }); // 태국어 · 베트남어 글꼴은 2026-10-22 언어를 빼며 뺐다
+const latin = Noto_Sans({ subsets: ['latin'], weight: ['400', '500', '700', '800'], variable: '--font-latin', preload: false }); // preload 끔(2026-11-07): 영문도 Pretendard가 그려서 Noto는 없는 글자 대신일 뿐인데 화면마다 4개 굵기를 미리 받았다. 태국어 · 베트남어 글꼴은 2026-10-22 언어를 빼며 뺐다
 const kr = Noto_Sans_KR({ weight: ['400', '500', '700', '800'], variable: '--font-kr', preload: false });
 
 export async function generateMetadata(): Promise<Metadata> {

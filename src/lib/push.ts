@@ -42,7 +42,7 @@ export async function sendPush(userIds: string[], payload: PushPayload): Promise
   await Promise.all(
     (data ?? []).map(async (s) => {
       try {
-        await webpush.sendNotification({ endpoint: s.endpoint, keys: { p256dh: s.p256dh, auth: s.auth } }, body, { TTL: 6 * 3600, urgency: 'high' });
+        await webpush.sendNotification({ endpoint: s.endpoint, keys: { p256dh: s.p256dh, auth: s.auth } }, body, { TTL: 6 * 3600, urgency: 'high', timeout: 10_000 });
         ok.push(s.id);
       } catch (e) {
         const status = (e as { statusCode?: number }).statusCode;

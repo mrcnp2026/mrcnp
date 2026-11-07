@@ -9,11 +9,12 @@ import { requireAdmin } from '@/lib/auth';
 type Hit = { lat: number; lng: number; approx: boolean; source: 'naver' | 'kakao' | 'osm' };
 const clean = (v: unknown) => (typeof v === 'string' ? v.replace(/[\u0000-\u001f]/g, '').trim().slice(0, 200) : '');
 
+// 각 요청은 5초에서 끊고 다음 방법으로 넘어간다(아래 .catch) — 한 곳이 멈춰도 관리자가 함수 한도까지 기다리지 않게 (2026-11-07)
 // 네이버 클라우드 Geocoding (2026-10-22 의뢰인: 지도는 네이버로) — 열쇠가 있으면 가장 먼저 쓴다
 async function naver(q: string, id: string, secret: string): Promise<Hit | null> {
   const r = await fetch(`https://maps.apigw.ntruss.com/map-geocode/v2/geocode?query=${encodeURIComponent(q)}&count=1`, {
     headers: { 'x-ncp-apigw-api-key-id': id, 'x-ncp-apigw-api-key': secret, Accept: 'application/json' },
-    cache: 'no-store',
+    cache: 'no-store', signal: AbortSignal.timeout(5_000),
   });
   if (!r.ok) return null;
   const d = (await r.json()) as { addresses?: { x: string; y: string }[] };
@@ -22,7 +23,7 @@ async function naver(q: string, id: string, secret: string): Promise<Hit | null>
 }
 
 async function kakao(q: string, key: string): Promise<Hit | null> {
-  const r = await fetch(`https://dapi.kakao.com/v2/local/search/address.json?query=${encodeURIComponent(q)}&size=1`, { headers: { Authorization: `KakaoAK ${key}` }, cache: 'no-store' });
+  const r = await fetch(`https://dapi.kakao.com/v2/local/search/address.json?query=${encodeURIComponent(q)}&size=1`, { headers: { Authorization: `KakaoAK ${key}` }, cache: 'no-store', signal: AbortSignal.timeout(5_000) });
   if (!r.ok) return null;
   const d = (await r.json()) as { documents?: { x: string; y: string }[] };
   const h = d.documents?.[0];
@@ -32,7 +33,7 @@ async function kakao(q: string, key: string): Promise<Hit | null> {
 async function osm(q: string): Promise<{ lat: number; lng: number } | null> {
   const r = await fetch(`https://nominatim.openstreetmap.org/search?format=jsonv2&countrycodes=kr&limit=1&accept-language=ko&q=${encodeURIComponent(q)}`, {
     headers: { 'User-Agent': 'mrcnp-attendance/1.0 (office location setup)' },
-    cache: 'no-store',
+    cache: 'no-store', signal: AbortSignal.timeout(5_000),
   });
   if (!r.ok) return null;
   const d = (await r.json()) as { lat: string; lon: string }[];
