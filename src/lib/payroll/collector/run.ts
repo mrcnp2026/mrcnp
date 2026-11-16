@@ -11,7 +11,8 @@ import { collectOne, SOURCES, type SourceResult } from './sources';
 const LOCK_MS = 5 * 60 * 1000;
 
 /** only: 이 출처들만 받는다 (통합설정의 탭마다 그 탭 자료만 — 사회보험 요율표 / 간이세액표). 비우면 전부 */
-export async function runCollector(actor: Me | null, trigger: 'manual' | 'scheduled', only?: readonly string[]): Promise<{ runId: string; status: string; results: SourceResult[] }> {
+/** before: 실행 기록을 연 뒤(앞선 실행이 없을 때만) 수집 전에 할 일 — 「검토 대기 비우고 다시 받기」의 거두기 */
+export async function runCollector(actor: Me | null, trigger: 'manual' | 'scheduled', only?: readonly string[], before?: () => Promise<unknown>): Promise<{ runId: string; status: string; results: SourceResult[] }> {
   const db = createAdminClient();
   const { data: busy } = await db.from('payroll_refresh_runs').select('id').eq('status', 'running').in('trigger', ['manual', 'scheduled']).gte('started_at', new Date(Date.now() - LOCK_MS).toISOString()).limit(1);
   if (busy?.length) throw new ApiError(409, 'payroll_refresh_running');
@@ -19,6 +20,7 @@ export async function runCollector(actor: Me | null, trigger: 'manual' | 'schedu
   if (error || !run) throw new Error(`runCollector.start: ${error?.code}`);
   const results: SourceResult[] = [];
   try {
+    await before?.();
     const done = await Promise.all(SOURCES.filter((x) => !only || only.includes(x.id)).map(collectOne));
     // 후보 넣기는 차례대로 (같은 종류의 중복 검사가 서로 엇갈리지 않게)
     for (const d of done) {

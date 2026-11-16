@@ -271,6 +271,13 @@ export async function approveReference(args: { id: string; payloadHash: string; 
   if (!data?.length) throw new ApiError(409, 'payroll_version_conflict');
 }
 
+/** 「검토 대기 비우고 다시 받기」 — 승인 전 후보만 거둔다(WITHDRAWN, 지우지 않음 · 이력에 남음). 승인해서 쓰는 값은 건드리지 않는다 */
+export async function withdrawPending(kinds: readonly ReferenceKind[], reason: string): Promise<number> {
+  const { data, error } = await db().from('payroll_reference_versions').update({ state: 'WITHDRAWN', review_reason: reason }).in('reference_kind', kinds).eq('state', 'PENDING_ADMIN_REVIEW').select('id');
+  if (error) fail('withdrawPending', error);
+  return data?.length ?? 0;
+}
+
 export async function rejectReference(id: string, reason: string): Promise<void> {
   const { data, error } = await db().from('payroll_reference_versions').update({ state: 'REJECTED', review_reason: reason }).eq('id', id).eq('state', 'PENDING_ADMIN_REVIEW').select('id');
   if (error) fail('reject', error);

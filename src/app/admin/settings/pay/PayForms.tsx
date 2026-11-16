@@ -439,13 +439,26 @@ const closePopup = (id: string) => window.dispatchEvent(new CustomEvent(CLOSE_SH
 
 type Run = { status: string; results: { source: string; ok: boolean; error?: string; found: number; staged?: number; unchanged?: number }[] };
 
-/** 「지금 업데이트」 — 그 탭의 공식기관 원문만 지금 다시 받아 읽는다(사회보험 요율표 / 간이세액표). 결과는 검토 대기로만 들어간다.
- *  「초기화」는 화면에 나온 결과 목록만 지운다 — 받은 자료 · 검토 대기 후보 · 실행 기록은 그대로다(지우는 기능 없음, ②-0 4-6) */
+/** 업데이트 결과 줄 — 출처마다 새 후보 · 변경 없음 또는 받지 못한 이유 */
+function RunList({ run }: { run: Run }) {
+  const t = useTranslations('admin.paySettings');
+  return (
+    <ul role="status" className="flex flex-col gap-1 rounded-button bg-surface p-3 text-sm">
+      {run.results.map((r) => (
+        <li key={r.source} className="flex flex-wrap items-center justify-between gap-2">
+          <span className="font-bold">{t(`refresh.source.${r.source}`)}</span>
+          <span className={r.ok ? 'num text-muted' : 'text-warn'}>{r.ok ? t('refresh.okLine', { staged: r.staged ?? 0, unchanged: r.unchanged ?? 0 }) : t('refresh.failLine', { why: r.error ?? '' })}</span>
+        </li>
+      ))}
+    </ul>
+  );
+}
+
+/** 「지금 업데이트」 — 그 탭의 공식기관 원문만 지금 다시 받아 읽는다(사회보험 요율표 / 간이세액표). 결과는 검토 대기로만 들어간다 */
 export function RefreshButton({ section }: { section: 'insurance-rates' | 'income-tax' }) {
   const t = useTranslations('admin.paySettings');
   const { busy, err, post } = usePost();
   const [run, setRun] = useState<Run | null>(null);
-  const resetId = `refresh-reset-${section}`;
   return (
     <div className="flex w-full flex-col gap-2">
       <div className="flex flex-wrap items-start justify-between gap-3">
@@ -463,53 +476,64 @@ export function RefreshButton({ section }: { section: 'insurance-rates' | 'incom
           </Button>
           <span className="text-xs text-faint">{t('refresh.note')}</span>
         </div>
-        <span className="flex flex-wrap items-center gap-2">
-          <a href="/api/admin/payroll/confirm-sheet" className="inline-flex h-9 items-center gap-1 rounded-button border border-border bg-bg px-3.5 text-sm font-semibold whitespace-nowrap text-text hover:bg-surface">
-            <Download aria-hidden size={16} />
-            {t('confirm.download')}
-          </a>
-          <Popup
-            id={resetId}
-            title={t('refresh.resetTitle')}
-            triggerClass="inline-flex h-9 items-center gap-1 rounded-button border border-border bg-bg px-3.5 text-sm font-semibold whitespace-nowrap text-text hover:bg-surface disabled:opacity-60"
-            label={
-              <>
-                <RotateCcw aria-hidden size={16} />
-                {t('refresh.reset')}
-              </>
-            }
-          >
-            <div className="flex flex-col gap-4 px-2 pt-1 pb-2 lg:px-0 lg:pt-0 lg:pb-0">
-              <p className="text-sm leading-6 whitespace-pre-line text-muted">{t('refresh.resetBody')}</p>
-              <div className="flex justify-end gap-2">
-                <Button type="button" size="sm" variant="outline" onClick={() => closePopup(resetId)}>
-                  {t('cancel')}
-                </Button>
-                <Button
-                  type="button"
-                  size="sm"
-                  onClick={() => {
-                    setRun(null);
-                    closePopup(resetId);
-                  }}
-                >
-                  {t('refresh.resetDo')}
-                </Button>
-              </div>
-            </div>
-          </Popup>
-        </span>
+        <a href="/api/admin/payroll/confirm-sheet" className="inline-flex h-9 items-center gap-1 rounded-button border border-border bg-bg px-3.5 text-sm font-semibold whitespace-nowrap text-text hover:bg-surface">
+          <Download aria-hidden size={16} />
+          {t('confirm.download')}
+        </a>
       </div>
       {err && <ErrorNote code={err.code} requestId={err.requestId} namespace="admin.paySettings" />}
+      {run && <RunList run={run} />}
+    </div>
+  );
+}
+
+/** 「검토 대기 비우고 다시 받기」 (검토 대기 탭에만) — 그 탭의 승인 전 후보를 거두고(지우지 않음, 이력에 남음 · ②-0 4-6) 새로 받는다. 승인해서 쓰는 값은 그대로 (2026-11-16 의뢰인) */
+export function ResetPending({ section, pending }: { section: 'insurance-rates' | 'income-tax'; pending: number }) {
+  const t = useTranslations('admin.paySettings');
+  const { busy, err, post } = usePost();
+  const [run, setRun] = useState<Run | null>(null);
+  const id = `refresh-reset-${section}`;
+  return (
+    <div className="flex flex-col items-end gap-2">
+      {pending > 0 && (
+        <Popup
+          id={id}
+          title={t('refresh.resetTitle')}
+          triggerClass="inline-flex h-9 items-center gap-1 rounded-button border border-border bg-bg px-3.5 text-sm font-semibold whitespace-nowrap text-text hover:bg-surface"
+          label={
+            <>
+              <RotateCcw aria-hidden size={16} />
+              {busy ? t('refresh.running') : t('refresh.reset')}
+            </>
+          }
+        >
+          <div className="flex flex-col gap-4 px-2 pt-1 pb-2 lg:px-0 lg:pt-0 lg:pb-0">
+            <p className="text-sm leading-6 whitespace-pre-line text-muted">{t('refresh.resetBody', { n: pending })}</p>
+            <div className="flex justify-end gap-2">
+              <Button type="button" size="sm" variant="outline" onClick={() => closePopup(id)}>
+                {t('cancel')}
+              </Button>
+              <Button
+                type="button"
+                size="sm"
+                disabled={busy}
+                onClick={async () => {
+                  closePopup(id);
+                  setRun(null);
+                  setRun(await post<Run>('/api/admin/payroll/reference/refresh', { section, reset: true }));
+                }}
+              >
+                {t('refresh.resetDo')}
+              </Button>
+            </div>
+          </div>
+        </Popup>
+      )}
+      {err && <ErrorNote code={err.code} requestId={err.requestId} namespace="admin.paySettings" />}
       {run && (
-        <ul role="status" className="flex flex-col gap-1 rounded-button bg-surface p-3 text-sm">
-          {run.results.map((r) => (
-            <li key={r.source} className="flex flex-wrap items-center justify-between gap-2">
-              <span className="font-bold">{t(`refresh.source.${r.source}`)}</span>
-              <span className={r.ok ? 'num text-muted' : 'text-warn'}>{r.ok ? t('refresh.okLine', { staged: r.staged ?? 0, unchanged: r.unchanged ?? 0 }) : t('refresh.failLine', { why: r.error ?? '' })}</span>
-            </li>
-          ))}
-        </ul>
+        <div className="w-full">
+          <RunList run={run} />
+        </div>
       )}
     </div>
   );

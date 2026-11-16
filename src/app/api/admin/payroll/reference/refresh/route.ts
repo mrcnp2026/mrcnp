@@ -4,7 +4,8 @@ import { api } from '@/lib/api';
 import { requireConsole } from '@/lib/console-pin';
 import { runCollector } from '@/lib/payroll/collector/run';
 import { SOURCES } from '@/lib/payroll/collector/sources';
-import { requirePayroll } from '@/lib/payroll/data';
+import { requirePayroll, withdrawPending } from '@/lib/payroll/data';
+import { RATE_KINDS, TAX_KINDS } from '@/lib/payroll/reference';
 
 export const maxDuration = 60;
 
@@ -14,7 +15,9 @@ const TAX = ['tax', 'tax_amendment'];
 export const POST = api('admin.payroll.reference.refresh', async (req) => {
   await requireConsole(); // 통합설정 잠금 — 숫자 4자리로 연 관리자만 (2026-10-14 결정 사항 개발-29)
   const me = await requirePayroll();
-  const { section } = (await req.json().catch(() => ({}))) as { section?: string };
+  const { section, reset } = (await req.json().catch(() => ({}))) as { section?: string; reset?: boolean };
   const only = section === 'income-tax' ? TAX : section === 'insurance-rates' ? SOURCES.map((x) => x.id).filter((id) => !TAX.includes(id)) : undefined;
-  return await runCollector(me, 'manual', only);
+  // reset: 그 탭의 승인 전 후보를 거두고 새로 받는다 (탭이 정해졌을 때만 — 전체를 한꺼번에 거두지 않는다)
+  const kinds = section === 'income-tax' ? TAX_KINDS : section === 'insurance-rates' ? RATE_KINDS : null;
+  return await runCollector(me, 'manual', only, reset && kinds ? () => withdrawPending(kinds, '「검토 대기 비우고 다시 받기」로 거둠') : undefined);
 });

@@ -6,6 +6,8 @@ export const REFERENCE_KINDS = ['pension.rate', 'pension.limit', 'health.rate', 
 export type ReferenceKind = (typeof REFERENCE_KINDS)[number];
 /** S05 사회보험 요율표에 보이는 종류 (세액표 두 가지는 S06) */
 export const RATE_KINDS: ReferenceKind[] = ['pension.rate', 'pension.limit', 'health.rate', 'health.limit', 'ltc.rate', 'employment.rate', 'accident.commute', 'minimum-wage', 'maternity.limit'];
+/** S06 근로소득 간이세액표에 보이는 종류 */
+export const TAX_KINDS: ReferenceKind[] = ['income-tax.table', 'income-tax.child-adjust'];
 
 export type Json = string | number | boolean | null | Json[] | { [k: string]: Json };
 export type TaxBand = { wageFrom: number; wageTo: number | null; taxes: number[] }; // taxes[0] = 가족 1명

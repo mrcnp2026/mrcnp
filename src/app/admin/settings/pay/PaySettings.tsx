@@ -10,7 +10,7 @@ import { Chip } from '@/components/ui';
 import { loadActiveRule } from '@/lib/attendance-data';
 import { getMe } from '@/lib/auth';
 import { loadItems, loadPolicies, loadReferences, loadRuns, loadSettingHistory, type ReferenceRow } from '@/lib/payroll/data';
-import { pickAt, RATE_KINDS, rateToPct, type ReferenceKind } from '@/lib/payroll/reference';
+import { pickAt, RATE_KINDS, rateToPct, TAX_KINDS } from '@/lib/payroll/reference';
 import { ALLOWANCE_KINDS, PAY_SECTIONS, payDateFor, type AllowancePolicy, type AnnualLeavePolicy, type Ledger, type PaySection, type SettingSection } from '@/lib/payroll/settings';
 import { createAdminClient } from '@/lib/supabase/admin';
 import { toKstDate } from '@/lib/time';
@@ -18,9 +18,8 @@ import { Download } from 'lucide-react';
 import { ItemExcel } from './ItemExcel';
 import { ItemAdd } from './ItemWizard';
 import { Explain, em } from '@/components/ui';
-import { AllowanceForm, ImportForm, ItemForm, ManualForm, RefreshButton, ReviewForm, SeedButton, SettingForm, TaxCalc, UseToggle, VerifyButton } from './PayForms';
+import { AllowanceForm, ImportForm, ItemForm, ManualForm, RefreshButton, ResetPending, ReviewForm, SeedButton, SettingForm, TaxCalc, UseToggle, VerifyButton } from './PayForms';
 
-const TAX_KINDS: ReferenceKind[] = ['income-tax.table', 'income-tax.child-adjust'];
 const PCT_FIELDS = new Set(['employeeRate', 'employerRate', 'totalRate', 'incomeRate', 'healthRate', 'rate', 'stabilityUnder150', 'stabilityPriority150', 'stability150to1000', 'stabilityOver1000']);
 const KRW_FIELDS = new Set(['lower', 'upper', 'hourly', 'monthly209', 'monthlyLimit', 'child1', 'child2', 'perExtraChild', 'wageMin', 'wageMaxExclusive', 'premiumUpper', 'premiumUpperEmployee', 'premiumLower', 'incomePremiumUpper']);
 type SP = { section?: string; v?: string; year?: string; from?: string; edit?: string; add?: string; adv?: string };
@@ -374,8 +373,13 @@ export async function PaySettings({ sp }: { sp: SP }) {
         </>
       );
     } else if (view === 'pending') {
-      inner =
-        pending.length === 0 ? (
+      // 「검토 대기 비우고 다시 받기」는 여기에만 (2026-11-16 의뢰인)
+      inner = (
+        <>
+          <div className="px-4 pt-4 lg:px-6">
+            <ResetPending key={section} section={section} pending={pending.length} />
+          </div>
+          {pending.length === 0 ? (
           <p className="px-4 py-8 text-center text-sm text-faint lg:px-6">{t('ref.pendingNone')}</p>
         ) : (
           <ul className="flex flex-col gap-3 px-4 py-4 lg:px-6">
@@ -414,7 +418,9 @@ export async function PaySettings({ sp }: { sp: SP }) {
               );
             })}
           </ul>
-        );
+          )}
+        </>
+      );
     } else if (view === 'history') {
       const [all, runs] = await Promise.all([loadReferences(kinds, ['PENDING_ADMIN_REVIEW', 'APPROVED', 'REJECTED', 'WITHDRAWN']), loadRuns(5)]);
       const who = await names(all.map((r) => r.approvedBy));
