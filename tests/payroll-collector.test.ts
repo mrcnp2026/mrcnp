@@ -1,11 +1,11 @@
 // 공식자료 수집기의 읽기 검사 — 실제로 받아 둔 공식 원문으로 (PRD v1.3 29.3: 기관별 실제 성공 원문을 fixture로).
-//   · 고용보험 · 건강보험 상하한: tests/fixtures/payroll/ (2026-10-13 받은 원문)
+//   · 고용보험: tests/fixtures/payroll/employment.html (2026-11-16 고용24에서 받은 원문) · 건강보험 상하한: 같은 폴더 (2026-10-13 받은 원문)
 //   · 나머지: `공식자료 수집 검증/data/raw/` (2026-10-12 시험 프로그램이 받은 원문) — 폴더가 없으면 그 검사는 건너뛴다
 // 기대값은 원문을 사람이 읽어 확인한 값이다(교차검수 보고서 · 고시 원문). 읽기 함수가 낸 값을 그대로 옮기지 않았다.
 import { existsSync, readFileSync } from 'node:fs';
 import path from 'node:path';
 import { describe, expect, it } from 'vitest';
-import { findAccidentNotice, findHwpxLink, pageText, ParseError, parseAccident, parseEmployment, parseHealth, parseHealthLimits, parseMaternity, parseMinimumWage, parsePension, parsePensionLimits, parseTaxAmendment, parseTaxTable, pct } from '@/lib/payroll/collector/parse';
+import { ediPopups, ediRatePopup, findAccidentNotice, findHwpxLink, findMinimumWagePost, findPensionLimitsPost, pageText, ParseError, parseAccident, parseEmployment, parseHealth, parseHealthLimits, parseMaternity, parseMinimumWage, parsePension, parsePensionLimits, parseTaxAmendment, parseTaxTable, pct } from '@/lib/payroll/collector/parse';
 import { asChildRule, asTaxRules, estimateTax } from '@/lib/payroll/reference';
 
 const FIX = path.join(import.meta.dirname, 'fixtures', 'payroll');
@@ -36,6 +36,23 @@ describe('고용보험 · 건강보험 상하한 (새로 넣은 출처)', () => 
   });
 });
 
+describe('해마다 새로 올라오는 글을 목록에서 찾기 (2026-11-16)', () => {
+  it('최저임금: 보도자료 목록에서 결정 글만 · 최근 연도 → 2027년 시간급 10,700원 · 월 2,236,300원', () => {
+    const list = '<a href="enewsView.do?news_seq=19744">2027년도 적용 최저임금 시간급 10,700원</a><a href="enewsView.do?news_seq=19659">2027년 적용 최저임금안 시간급 10,700원</a><a href="enewsView.do?news_seq=18144">2026년 적용 최저임금 시간급 10,320원</a>';
+    expect(findMinimumWagePost(list)).toEqual({ year: 2027, href: 'enewsView.do?news_seq=19744' });
+    expect(parseMinimumWage(readFileSync(path.join(FIX, 'minimum-wage-2027.html'), 'utf8'))[0]).toMatchObject({ validFrom: '2027-01-01', validTo: '2028-01-01', payload: { hourly: 10700, monthly209: 2236300 } });
+  });
+  it('국민연금 기준소득월액: 공지 목록에서 「상·하한액 조정 안내」만 (임의가입자 정기결정 글은 고르지 않는다)', () => {
+    const list = '<a href="/pnsgdnc/newgdnc/getOHAE0001M1.do?pstId=A">2026년도 임의가입자 및 기타임의계속가입자 기준소득월액 정기결정 안내</a><a href="/pnsgdnc/newgdnc/getOHAE0001M1.do?pstId=B">2026년도 국민연금 기준소득월액 상·하한액 조정 안내</a>';
+    expect(findPensionLimitsPost(list)).toEqual({ year: 2026, href: '/pnsgdnc/newgdnc/getOHAE0001M1.do?pstId=B' });
+  });
+  it('건강보험: EDI 첫 화면의 팝업 → 「YYYY년도 보험료율」 팝업의 본문 주소', () => {
+    expect(ediPopups(`<a onclick="open('/portal/images/popup/20251203_pop01.html')"></a><a onclick="open('/portal/images/popup/20260929_pop01.html')"></a>`)).toEqual(['/portal/images/popup/20251203_pop01.html', '/portal/images/popup/20260929_pop01.html']);
+    expect(ediRatePopup(readFileSync(path.join(FIX, 'health-popup-2026.html'), 'utf8'))).toEqual({ year: 2026, href: '/portal/images/popup/20251204_pop01longdesc.html' });
+    expect(ediRatePopup('<title>건강보험 이의신청 이제, 모바일로!</title><img longdesc="/x.html">')).toBeNull();
+  });
+});
+
 describe.skipIf(!has)('시험 프로그램이 받아 둔 원문', () => {
   it('건강보험 · 장기요양', () => {
     const [h, l] = parseHealth(text(reqs('health')[0]));
@@ -57,6 +74,9 @@ describe.skipIf(!has)('시험 프로그램이 받아 둔 원문', () => {
     expect(findHwpxLink(text(r[1]))).toContain('file_ext=hwpx');
     expect((await parseAccident(bytes(r.at(-1)!), 2026))[0]).toMatchObject({ validFrom: '2026-01-01', payload: { perThousand: '0.6', rate: '0.0006' } });
     expect(findAccidentNotice('<a href="view.do?x=1">2019년도 다른 고시</a>')).toBeNull();
+    // 2026-11 실제 글: 같은 글에 「예시」 첨부가 더 붙음 + 「다운로드」 버튼 링크
+    const two = ['a', 'b'].map((k, i) => `<a href="/d?f=${k}&file_ext=hwpx">2026년도 사업종류별 산재보험료율${i ? ' 및 사업종류 예시' : ''}.hwpx</a><a href="/d?f=${k}&file_ext=hwpx">다운로드</a>`).join('');
+    expect(findHwpxLink(two)).toBe('/d?f=a&file_ext=hwpx');
   });
   it('개정문: 자녀 공제 1명 20,830원 · 2명 45,830원 · 3명부터 1명당 33,330원, 2026-03-01 시행', () => {
     expect(parseTaxAmendment(text(reqs('tax_amendment_probe')[0]))[0]).toMatchObject({ validFrom: '2026-03-01', payload: { child1: 20830, child2: 45830, perExtraChild: 33330, previousChild1: 12500, previousChild2: 29160, previousPerExtraChild: 25000 } });

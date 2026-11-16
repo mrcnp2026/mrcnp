@@ -4,6 +4,7 @@
 import { timingSafeEqual } from 'node:crypto';
 import { ApiError } from '@/lib/api';
 import { runCollector } from '@/lib/payroll/collector/run';
+import { notifyReferenceRun } from '@/lib/push-events';
 
 export const maxDuration = 300; // 직원 · 기록이 늘어도 시간 제한에 조용히 끊기지 않게 (2026-11-04, Fluid는 실제 계산 시간만 과금)
 export const dynamic = 'force-dynamic';
@@ -16,6 +17,7 @@ export async function GET(req: Request): Promise<Response> {
   if (got.length !== want.length || !timingSafeEqual(got, want)) return Response.json({ error: 'forbidden' }, { status: 403 });
   try {
     const r = await runCollector(null, 'scheduled');
+    await notifyReferenceRun(r.runId, r.results); // 못 받은 곳 · 새 후보가 있으면 관리자에게
     return Response.json({ runId: r.runId, status: r.status, failed: r.results.filter((x) => !x.ok).map((x) => x.source) });
   } catch (e) {
     if (e instanceof ApiError) return Response.json({ error: e.code }, { status: e.status });

@@ -3,12 +3,18 @@
 import { api } from '@/lib/api';
 import { requireConsole } from '@/lib/console-pin';
 import { runCollector } from '@/lib/payroll/collector/run';
+import { SOURCES } from '@/lib/payroll/collector/sources';
 import { requirePayroll } from '@/lib/payroll/data';
 
 export const maxDuration = 60;
 
-export const POST = api('admin.payroll.reference.refresh', async () => {
+/** 탭별 출처 — 간이세액표 탭은 세액표 · 개정문만, 사회보험 요율표 탭은 나머지 */
+const TAX = ['tax', 'tax_amendment'];
+
+export const POST = api('admin.payroll.reference.refresh', async (req) => {
   await requireConsole(); // 통합설정 잠금 — 숫자 4자리로 연 관리자만 (2026-10-14 결정 사항 개발-29)
   const me = await requirePayroll();
-  return await runCollector(me, 'manual');
+  const { section } = (await req.json().catch(() => ({}))) as { section?: string };
+  const only = section === 'income-tax' ? TAX : section === 'insurance-rates' ? SOURCES.map((x) => x.id).filter((id) => !TAX.includes(id)) : undefined;
+  return await runCollector(me, 'manual', only);
 });

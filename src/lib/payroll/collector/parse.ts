@@ -176,27 +176,30 @@ export function parsePensionLimits(html: string): C[] {
   return out;
 }
 
-/** 고용보험 요율 (고용보험 공식 안내) — 실업급여 근로자/사업주, 고용안정 · 직업능력개발 사업의 규모별 사업주 요율 */
+/**
+ * 고용보험 요율 (고용24 제도안내 「고용보험」) — 실업급여 근로자/사업주, 고용안정 · 직업능력개발 사업의 규모별 사업주 요율.
+ * 2026-11-16 옛 고용보험 사이트(edrm.ei.go.kr)가 닫히고 고용24로 옮겨 왔다. 이 화면은 「(1) 근로자」 줄에 근로자 · 사업주 같은 값 하나만 적는다.
+ * 같은 화면의 「(2) 예술인 · 노무제공자 0.8%」를 잘못 읽지 않게 「(1) 근로자」에 붙여 찾는다.
+ */
 export function parseEmployment(html: string): C[] {
   const t = pageText(html);
-  const u = need(/고용보험요율 안내\s*실업급여\s*노동자\s*([\d.]+)%\s*사업주\s*([\d.]+)%/, t, 'unemployment');
+  const u = need(/고용보험료율\s*\(1\)\s*근로자\s*▶?\s*실업급여 계정\s*:\s*근로자\s*·\s*사업주 각각 근로자 보수총액의\s*([\d.]+)%/, t, 'unemployment');
   const tier = (re: RegExp, what: string) => pct(need(re, t, what)[1]);
   const payload = {
     employeeRate: pct(u[1]),
-    employerRate: pct(u[2]),
-    stabilityUnder150: tier(/150인 미만 기업\s*([\d.]+)%/, 'under150'),
-    stabilityPriority150: tier(/150인 이상 기업\s*\(우선지원 대상 기업 제외\)\s*([\d.]+)%/, 'priority150'),
-    stability150to1000: tier(/150인 이상 기업\s*~\s*1000인 미만 기업\s*\(우선지원 대상 기업 제외\)\s*([\d.]+)%/, '150to1000'),
-    stabilityOver1000: tier(/1000인 이상 기업[^%]{0,60}?([\d.]+)%/, 'over1000'),
+    employerRate: pct(u[1]),
+    stabilityUnder150: tier(/상시근로자 150인 미만 기업\s*([\d.]+)%/, 'under150'),
+    stabilityPriority150: tier(/상시근로자 150인 이상인 우선지원대상기업\s*([\d.]+)%/, 'priority150'),
+    stability150to1000: tier(/상시근로자 150인 이상\s*[∼~～]\s*1,?000인 미만 기업\s*\(우선지원대상기업 제외\)\s*([\d.]+)%/, '150to1000'),
+    stabilityOver1000: tier(/상시근로자 1,?000인 이상 기업[^%]{0,60}?([\d.]+)%/, 'over1000'),
   };
-  // 안내 화면의 둘째 구간 문구("150인 이상 기업 (우선지원 대상 기업 제외) 0.45%")는 법령의 "150인 이상 우선지원 대상기업"과 표현이 다르다 — 값은 원문대로 두고 확인하도록 알린다
-  return [cand('employment.rate', '고용노동부', '%', null, null, payload, ['rate_effective_date_not_in_source', 'employment_tier_wording_check'])];
+  return [cand('employment.rate', '고용노동부', '%', null, null, payload, ['rate_effective_date_not_in_source'])];
 }
 
 /** 최저임금 (고용노동부 보도자료) — 월 환산액 = 시급 × 209 인지 검산한다 */
 export function parseMinimumWage(html: string): C[] {
   const t = pageText(html);
-  const m = need(/(\d{4})년 적용 최저임금 시간급\s*([\d,]+)원/, t, 'hourly');
+  const m = need(/(\d{4})년도? 적용 최저임금 시간급\s*([\d,]+)원/, t, 'hourly');
   const hourly = num(m[2]);
   const monthly = num(need(/월 환산액은\s*([\d,]+)원/, t, 'monthly')[1]);
   if (hourly * 209 !== monthly) throw new ParseError('minimumWage:monthly_check');
@@ -211,16 +214,31 @@ export function parseMaternity(html: string): C[] {
   return [cand('maternity.limit', '고용노동부', '원', `20${m[1]}-${pad(m[2])}-${pad(m[3])}`, null, { monthlyLimit: Number(m[4]) * 10000 }, ['official_consultation_not_notice'])];
 }
 
-/** 산재보험: 고시 목록에서 가장 최근 연도의 「사업종류별 산재보험료율」 고시 찾기 → 상세 주소 */
-export function findAccidentNotice(listHtml: string): { year: number; href: string } | null {
+/** 목록 화면에서 제목이 title(첫 묶음 = 연도)에 맞는 글 중 가장 최근 연도의 것 → 상세 주소. 기관이 해마다 새 글을 올리는 자료를 주소 고정 없이 찾는다 */
+export function findLatestPost(listHtml: string, title: RegExp, href: string): { year: number; href: string } | null {
   const hits = pageLinks(listHtml)
-    .map((l) => ({ m: l.text.match(/(\d{4})년도 사업종류별 산재보험료율/), href: l.href }))
-    .filter((x) => x.m && x.href.includes('view.do?'))
+    .map((l) => ({ m: l.text.match(title), href: l.href }))
+    .filter((x) => x.m && x.href.includes(href))
     .map((x) => ({ year: Number(x.m![1]), href: x.href }));
   return hits.sort((a, b) => b.year - a.year)[0] ?? null;
 }
+/** 산재보험: 고시 목록에서 가장 최근 연도의 「사업종류별 산재보험료율」 고시 찾기 → 상세 주소 */
+export const findAccidentNotice = (listHtml: string) => findLatestPost(listHtml, /(\d{4})년도 사업종류별 산재보험료율/, 'view.do?');
+/** 최저임금: 고용노동부 보도자료 목록에서 「YYYY년(도) 적용 최저임금 시간급」(결정 · 고시 글). 「최저임금안」 글은 확정 전이라 고르지 않는다 */
+export const findMinimumWagePost = (listHtml: string) => findLatestPost(listHtml, /(\d{4})년도? 적용 최저임금 시간급/, 'enewsView.do?');
+/** 국민연금 기준소득월액: 공단 공지 목록에서 「YYYY년도 국민연금 기준소득월액 상·하한액 조정 안내」 */
+export const findPensionLimitsPost = (listHtml: string) => findLatestPost(listHtml, /(\d{4})년도 국민연금 기준소득월액 상\s*[·ㆍ・]?\s*하한액/, 'getOHAE0001M1.do?');
+/** 건강보험: EDI 첫 화면에 걸린 공지 팝업 주소들 */
+export const ediPopups = (mainHtml: string): string[] => [...new Set([...mainHtml.matchAll(/\/portal\/images\/popup\/\d{8}_pop\d+\.html/g)].map((m) => m[0]))];
+/** 건강보험: 팝업 하나가 「YYYY년도 보험료율 …」 안내면 그 연도와 글 본문(그림의 긴 설명) 주소 */
+export function ediRatePopup(popupHtml: string): { year: number; href: string } | null {
+  const y = /<title>\s*(\d{4})년도 보험료율/.exec(popupHtml);
+  const d = /\blongdesc="([^"]+)"/.exec(popupHtml);
+  return y && d ? { year: Number(y[1]), href: unescape(d[1]) } : null;
+}
 export function findHwpxLink(detailHtml: string): string {
-  const links = [...new Set(pageLinks(detailHtml).filter((l) => l.href.includes('file_ext=hwpx')).map((l) => l.href))];
+  // 2026-11 「…산재보험료율 및 사업종류 예시.hwpx」가 같은 글에 더 붙었다 — 이름이 「…사업종류별 산재보험료율.hwpx」로 끝나는 첨부만 고른다
+  const links = [...new Set(pageLinks(detailHtml).filter((l) => l.href.includes('file_ext=hwpx') && /사업종류별 산재보험료율\.hwpx$/.test(l.text)).map((l) => l.href))];
   if (links.length !== 1) throw new ParseError('accident:attachment');
   return links[0];
 }

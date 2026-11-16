@@ -1944,6 +1944,16 @@
         "note": "Fetches and reads the official sources again. Results only become pending review; the values in use do not change.",
         "okLine": "{staged} new, {unchanged} unchanged",
         "failLine": "not received ({why})",
+        "reset": "Reset",
+        "resetTitle": "Reset results",
+        "resetBody": "Clears the update results shown here. Collected data, pending reviews and run history stay as they are. Press \"Update now\" again to collect afresh.\nReset now?",
+        "resetDo": "Reset",
+        "alert": {
+          "failTitle": "Official data update: {n} source(s) could not be fetched",
+          "failBody": "Not fetched: {list}. The agency site may have changed — current values stay as they are.",
+          "newTitle": "{n} new official value(s) awaiting review",
+          "newBody": "New: {list}. Review and approve them under Settings › Pending review."
+        },
         "runsTitle": "Collection runs",
         "runsNone": "No collection has been run yet.",
         "dataTitle": "Data history",

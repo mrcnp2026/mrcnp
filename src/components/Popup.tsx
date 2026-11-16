@@ -5,6 +5,7 @@
 import { X } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 import { useEffect, useState, type ReactNode } from 'react';
+import { createPortal } from 'react-dom';
 import { CLOSE_SHEET_EVENT } from './AddSheet';
 
 export function Popup({ id, label, title, children, wide = false, triggerClass, triggerLabel }: { id: string; label: ReactNode; title: string; children: ReactNode; wide?: boolean; triggerClass: string; triggerLabel?: string }) {
@@ -30,7 +31,9 @@ export function Popup({ id, label, title, children, wide = false, triggerClass, 
       <button type="button" className={triggerClass} aria-label={triggerLabel} aria-haspopup="dialog" onClick={() => setOpen(true)}>
         {label}
       </button>
-      {open && (
+      {/* body에 띄운다 — 통합설정처럼 창 안의 화면에서 열면 그 창에 갇혀 아래가 잘렸다 (2026-11-16 초기화 확인 창) */}
+      {open &&
+        createPortal(
         <div className="fixed inset-0 z-40 flex flex-col justify-end lg:items-center lg:justify-center">
           <button type="button" tabIndex={-1} aria-label={t('close')} onClick={() => setOpen(false)} className="fade-from flex-1 bg-text opacity-40 lg:absolute lg:inset-0 lg:opacity-70" />
           <div role="dialog" aria-modal="true" aria-label={title} className={`sheet-up flex max-h-[calc(100dvh-3rem)] flex-col rounded-t-card bg-surface pb-[env(safe-area-inset-bottom)] lg:relative ${wide ? 'lg:w-240' : 'lg:w-180'} lg:max-w-[calc(100vw-2rem)] lg:rounded-card lg:border lg:border-border lg:bg-bg lg:pb-0 lg:shadow-card`}>
@@ -42,8 +45,9 @@ export function Popup({ id, label, title, children, wide = false, triggerClass, 
             </div>
             <div className="overflow-y-auto px-3 pb-3 lg:p-4">{children}</div>
           </div>
-        </div>
-      )}
+        </div>,
+          document.body,
+        )}
     </>
   );
 }

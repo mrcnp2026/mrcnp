@@ -4,6 +4,7 @@
 // 2026-10-21 의뢰인: 외근 · 출장 · 재택 신청을 바로 알림 · 지각 · 조퇴를 찍는 순간 관리자에게 · 승인 · 거절 결과를 직원 본인에게 (결정 사항 알림-10 ~ 12).
 // 관리자에게 가는 알림은 받는 사람을 알림-9 규칙으로 거른다(lib/push-recipients.ts — notifyApprovers · sendStaffPush가 거친다).
 import 'server-only';
+import { getTranslations } from 'next-intl/server';
 import { resolveDayType } from '@/config/labor-rules';
 import { collectAnomalies, loadAnomalyPolicy } from '@/lib/anomaly-data';
 import { OFFICE } from '@/config/office';
@@ -498,6 +499,36 @@ export async function notifyContractRenewal(now = new Date()): Promise<number> {
     return (await pushOn()) ? await sendPush(to, { title, body, url: '/admin/payroll/staff', tag: `contract-${today}` }) : 0;
   } catch (e) {
     console.error(JSON.stringify({ route: 'push.contract', detail: String((e as Error)?.message ?? e).slice(0, 200) }));
+    return 0;
+  }
+}
+
+/**
+ * 공식자료 정기 수집 결과 알림 (2026-11-16 의뢰인: 정부 사이트가 바뀌어 못 받아도 아무도 몰랐다 · 새 값이 들어와도 승인할 사람이 몰랐다).
+ * 못 받은 출처가 있거나 「검토 대기」에 새 후보가 생겼을 때만 최고관리자에게(대표자 · 시스템관리자 제외, 알림-9) 앱 알림 + 폰 알림. 「지금 업데이트」는 화면에 바로 보이므로 부르지 않는다.
+ */
+export async function notifyReferenceRun(runId: string, results: { source: string; ok: boolean; staged?: number }[]): Promise<number> {
+  try {
+    if (OFFICE.practiceMode) return 0;
+    const failed = results.filter((r) => !r.ok);
+    const staged = results.filter((r) => r.ok && (r.staged ?? 0) > 0);
+    if (!failed.length && !staged.length) return 0;
+    if (!(await firstTime(`refresh:${runId}`))) return 0;
+    const db = createAdminClient();
+    const { data: admins } = await db.from('profiles').select('id, admin_level, employee_no').eq('role', 'admin').eq('active', true);
+    const to = await staffPushFilter((admins ?? []).filter((a) => a.admin_level !== 'ceo' && a.employee_no !== SYSTEM_ADMIN_NO && !String(a.employee_no ?? '').startsWith('e2e-')).map((a) => a.id as string));
+    if (!to.length) return 0;
+    const t = await getTranslations({ locale: 'ko', namespace: 'admin.paySettings.refresh' });
+    const names = (rs: { source: string }[]) => rs.map((r) => (t.has(`source.${r.source}`) ? t(`source.${r.source}`) : r.source)).join(', ');
+    // 세액표 출처만 걸리면 간이세액표 탭으로, 아니면 사회보험 요율표 탭으로 — 실패가 있으면 「이력」, 새 후보만이면 「검토 대기」
+    const tax = [...failed, ...staged].every((r) => r.source === 'tax' || r.source === 'tax_amendment');
+    const url = `/admin/settings?tab=pay&section=${tax ? 'income-tax' : 'insurance-rates'}&v=${failed.length ? 'history' : 'pending'}`;
+    const title = failed.length ? t('alert.failTitle', { n: failed.length }) : t('alert.newTitle', { n: staged.reduce((a, r) => a + (r.staged ?? 0), 0) });
+    const body = [failed.length ? t('alert.failBody', { list: names(failed) }) : '', staged.length ? t('alert.newBody', { list: names(staged) }) : ''].filter(Boolean).join(' ');
+    await sendSystem({ dedupeKey: `refresh:${runId}`, title, body, employeeIds: to, related: { type: 'reference', id: runId, href: url }, senderId: null, isTest: false });
+    return (await pushOn()) ? await sendPush(to, { title, body, url, tag: `refresh-${runId}` }) : 0;
+  } catch (e) {
+    console.error(JSON.stringify({ route: 'push.reference', detail: String((e as Error)?.message ?? e).slice(0, 200) }));
     return 0;
   }
 }

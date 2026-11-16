@@ -5,10 +5,10 @@
 import 'server-only';
 import { createHash } from 'node:crypto';
 import type { Candidate } from '../reference';
-import { findAccidentNotice, findHwpxLink, ParseError, parseAccident, parseEmployment, parseHealth, parseHealthLimits, parseMaternity, parseMinimumWage, parsePension, parsePensionLimits, parseTaxAmendment, parseTaxTable, pageText } from './parse';
+import { ediPopups, ediRatePopup, findAccidentNotice, findHwpxLink, findMinimumWagePost, findPensionLimitsPost, ParseError, parseAccident, parseEmployment, parseHealth, parseHealthLimits, parseMaternity, parseMinimumWage, parsePension, parsePensionLimits, parseTaxAmendment, parseTaxTable, pageText } from './parse';
 
 export const PARSER_VERSION = 'app-1.0';
-const ALLOWED = new Set(['edi.nhis.or.kr', 'www.nhis.or.kr', 'www.nps.or.kr', 'www.moel.go.kr', '1350.moel.go.kr', 'www.data.go.kr', 'www.law.go.kr', 'edrm.ei.go.kr']);
+const ALLOWED = new Set(['edi.nhis.or.kr', 'www.nhis.or.kr', 'www.nps.or.kr', 'www.moel.go.kr', '1350.moel.go.kr', 'www.data.go.kr', 'www.law.go.kr', 'www.work24.go.kr']);
 const MAX_BYTES = 20 * 1024 * 1024;
 const UA = 'PayrollSourceCollector/1.0 (public documents; manual review required)';
 
@@ -54,8 +54,8 @@ export class Session {
         this.evidence.push({ url: target, status: res.status, bytes: buf.byteLength, sha256: createHash('sha256').update(buf).digest('hex'), contentType: type });
         return { bytes: buf, text, url: target };
       } catch (e) {
-        // 시간 초과만 한 번 더 해 본다. 인증서 · 차단 · 형식 오류는 다시 하지 않는다
-        if (attempt === 0 && e instanceof Error && e.name === 'TimeoutError') continue;
+        // 시간 초과 · 연결 끊김만 한 번 더 해 본다(국민연금 공단은 목록을 넘길 때 연결을 가끔 끊는다, 2026-11-16 실측). 인증서 · 차단 · 형식 오류는 다시 하지 않는다
+        if (attempt === 0 && e instanceof Error && (e.name === 'TimeoutError' || (e.cause as { code?: string } | undefined)?.code === 'UND_ERR_SOCKET')) continue;
         throw e instanceof FetchError ? e : new FetchError(e instanceof Error ? (e.name === 'TimeoutError' ? 'timeout' : `network:${(e.cause as { code?: string } | undefined)?.code ?? e.name}`) : 'network');
       }
     }
@@ -66,21 +66,46 @@ type Found = Omit<Candidate, 'sourceUrl' | 'sourceHash' | 'parserVersion'>[];
 export type Source = { id: string; authority: string; url: string; run: (s: Session) => Promise<Found> };
 
 /**
- * 출처 등록부. 주소는 기관이 해마다 새 글을 올리면 바뀔 수 있다(건강보험 안내 · 국민연금 공지 · 최저임금 보도자료) —
- * 그때는 값이 그대로 다시 읽혀 「변경 없음」이 되거나 글 모양이 달라 실패로 남는다. 실패 · 오래된 자료는 화면의 수집 결과에 보인다.
- * 산재보험은 고시 목록을 앞쪽부터 넘겨 가며 가장 최근 연도의 고시를 찾는다(시험 프로그램은 14쪽 고정이었다).
+ * 출처 등록부. 해마다 새 글로 올라오는 자료는 주소를 고정하지 않고 기관의 목록에서 가장 최근 연도의 글을 찾는다
+ * (산재보험 고시 · 국민연금 기준소득월액 공지 · 최저임금 보도자료 · 건강보험 요율 팝업, 2026-11-16 의뢰인: 해마다 주소를 고치지 않게).
+ * 글 모양이 달라지면 값을 짐작하지 않고 실패로 남는다. 실패 · 오래된 자료는 화면의 수집 결과에 보인다.
  */
 export const SOURCES: Source[] = [
-  { id: 'health', authority: '국민건강보험공단', url: 'https://edi.nhis.or.kr/portal/images/popup/20251204_pop01longdesc.html', run: async (s) => parseHealth((await s.fetch('https://edi.nhis.or.kr/portal/images/popup/20251204_pop01longdesc.html')).text) },
+  {
+    id: 'health',
+    authority: '국민건강보험공단',
+    url: 'https://edi.nhis.or.kr/homeapp/wep/m/retrieveMain.xx',
+    run: async (s) => {
+      // EDI 첫 화면에 걸린 팝업 중 「YYYY년도 보험료율 …」 안내를 찾는다. 요율 팝업은 연말 · 연초에만 걸리므로, 없으면 마지막으로 확인한 안내(2026년도)를 다시 읽는다
+      const main = await s.fetch('https://edi.nhis.or.kr/homeapp/wep/m/retrieveMain.xx');
+      let best: { year: number; href: string; from: string } | null = null;
+      for (const path of ediPopups(main.text).slice(0, 15)) {
+        const pop = await s.fetch(new URL(path, main.url).toString());
+        const hit = ediRatePopup(pop.text);
+        if (hit && (!best || hit.year > best.year)) best = { ...hit, from: pop.url };
+      }
+      const url = best ? new URL(best.href, best.from).toString() : 'https://edi.nhis.or.kr/portal/images/popup/20251204_pop01longdesc.html';
+      return parseHealth((await s.fetch(url)).text);
+    },
+  },
   { id: 'health_limits', authority: '보건복지부', url: 'https://www.nhis.or.kr/lm/lmxsrv/law/lawFullContent.do?SEQ=39', run: async (s) => parseHealthLimits((await s.fetch('https://www.nhis.or.kr/lm/lmxsrv/law/lawFullContent.do?SEQ=39')).text) },
   { id: 'pension', authority: '국민연금공단', url: 'https://www.nps.or.kr/eng/ntnlpnsplan/cntb/getOHAI0013M0.do', run: async (s) => parsePension((await s.fetch('https://www.nps.or.kr/eng/ntnlpnsplan/cntb/getOHAI0013M0.do')).text) },
   {
     id: 'pension_limits',
     authority: '국민연금공단',
-    url: 'https://www.nps.or.kr/pnsgdnc/newgdnc/getOHAE0001M1.do?hmpgBbsCd=BS20240137&hmpgCd=01&menuId=MN24000897&pageIndex=3&pstId=ZZ202600000000000147&searchGbu=%EC%A0%84%EC%B2%B4&sortSe=FR',
-    run: async (s) => parsePensionLimits((await s.fetch('https://www.nps.or.kr/pnsgdnc/newgdnc/getOHAE0001M1.do?hmpgBbsCd=BS20240137&hmpgCd=01&menuId=MN24000897&pageIndex=3&pstId=ZZ202600000000000147&searchGbu=%EC%A0%84%EC%B2%B4&sortSe=FR')).text),
+    url: 'https://www.nps.or.kr/pnsgdnc/newgdnc/getOHAE0001M0List.do?menuId=MN24000897',
+    run: async (s) => {
+      // 공지 목록을 1쪽부터 — 「YYYY년도 국민연금 기준소득월액 상·하한액 조정 안내」가 나올 때까지(최대 20쪽, 해마다 2월쯤 올라온다)
+      for (let page = 1; page <= 20; page++) {
+        const list = await s.fetch(`https://www.nps.or.kr/pnsgdnc/newgdnc/getOHAE0001M0List.do?menuId=MN24000897&hmpgCd=01&hmpgBbsCd=BS20240137&sortSe=FR&pageIndex=${page}`);
+        const hit = findPensionLimitsPost(list.text);
+        if (hit) return parsePensionLimits((await s.fetch(new URL(hit.href, list.url).toString())).text);
+      }
+      throw new ParseError('pensionLimits:notice_not_found');
+    },
   },
-  { id: 'employment', authority: '고용노동부', url: 'https://edrm.ei.go.kr/ei/eim/eg/ei/eiEminsr/retrieveEi0301Info.do', run: async (s) => parseEmployment((await s.fetch('https://edrm.ei.go.kr/ei/eim/eg/ei/eiEminsr/retrieveEi0301Info.do')).text) },
+  // 2026-11-16 옛 고용보험 사이트(edrm.ei.go.kr)가 닫혀 고용24 제도안내 「고용보험」으로 옮겼다
+  { id: 'employment', authority: '고용노동부', url: 'https://www.work24.go.kr/cm/c/f/1100/selecSystInfo.do?systClId=SC00000350&systId=SI00000419', run: async (s) => parseEmployment((await s.fetch('https://www.work24.go.kr/cm/c/f/1100/selecSystInfo.do?systClId=SC00000350&systId=SI00000419')).text) },
   {
     id: 'accident',
     authority: '고용노동부',
@@ -125,7 +150,18 @@ export const SOURCES: Source[] = [
     },
   },
   { id: 'tax_amendment', authority: '국가법령정보센터', url: 'https://www.law.go.kr/LSW/lsRvsDocListP.do?lsId=003956', run: async (s) => parseTaxAmendment((await s.fetch('https://www.law.go.kr/LSW/lsRvsDocListP.do?lsId=003956')).text) },
-  { id: 'minimum_wage', authority: '고용노동부', url: 'https://www.moel.go.kr/news/enews/report/enewsView.do?news_seq=18144', run: async (s) => parseMinimumWage((await s.fetch('https://www.moel.go.kr/news/enews/report/enewsView.do?news_seq=18144')).text) },
+  {
+    id: 'minimum_wage',
+    authority: '고용노동부',
+    url: 'https://www.moel.go.kr/news/enews/report/enewsList.do?searchField=1&searchText=%EC%B5%9C%EC%A0%80%EC%9E%84%EA%B8%88',
+    run: async (s) => {
+      // 보도자료를 제목 「최저임금」으로 찾아 가장 최근 연도의 결정 · 고시 글(「YYYY년도 적용 최저임금 시간급 …」)을 읽는다 — 해마다 8월 초에 올라온다
+      const list = await s.fetch('https://www.moel.go.kr/news/enews/report/enewsList.do?searchField=1&searchText=%EC%B5%9C%EC%A0%80%EC%9E%84%EA%B8%88');
+      const hit = findMinimumWagePost(list.text);
+      if (!hit) throw new ParseError('minimumWage:notice_not_found');
+      return parseMinimumWage((await s.fetch(new URL(hit.href, list.url).toString())).text);
+    },
+  },
   { id: 'maternity', authority: '고용노동부', url: 'https://1350.moel.go.kr/rtmview.do?id=1000316539', run: async (s) => parseMaternity((await s.fetch('https://1350.moel.go.kr/rtmview.do?id=1000316539')).text) },
 ];
 

@@ -492,11 +492,8 @@ export async function PaySettings({ sp }: { sp: SP }) {
       <>
         <p className="border-b border-border bg-primary-tint px-4 py-3 text-sm text-primary lg:px-6">{t('ref.principle')}</p>
         <div className="flex flex-wrap items-start justify-between gap-3 border-b border-border px-4 py-3 lg:px-6">
-          <RefreshButton />
-          <a href="/api/admin/payroll/confirm-sheet" className="inline-flex h-9 items-center gap-1 rounded-button border border-border bg-bg px-3.5 text-sm font-semibold whitespace-nowrap text-text hover:bg-surface">
-            <Download aria-hidden size={16} />
-            {t('confirm.download')}
-          </a>
+          {/* key: 탭을 옮기면 앞 탭의 결과 목록을 들고 오지 않게 새로 그린다 */}
+          <RefreshButton key={section} section={section} />
         </div>
         {tabs}
         {inner}

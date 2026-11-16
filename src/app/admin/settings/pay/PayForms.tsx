@@ -2,6 +2,9 @@
 // 회사 설정 › 급여의 입력 양식들 (PRD v1.3 17장). 저장은 명시적 버튼으로만 하고, 저장하면 화면을 새로 읽는다.
 // 다른 담당자가 먼저 저장했으면(409) 입력을 지우지 않고 안내만 보인다.
 import { CommonItemsEditor } from './CommonItemsEditor';
+import { Download, RotateCcw } from 'lucide-react';
+import { CLOSE_SHEET_EVENT } from '@/components/AddSheet';
+import { Popup } from '@/components/Popup';
 import { Select } from '@/components/Select';
 import { useTranslations } from 'next-intl';
 import { useRouter } from 'next/navigation';
@@ -432,28 +435,70 @@ export function VerifyButton({ target, id, verified }: { target: 'setting' | 'it
   );
 }
 
+const closePopup = (id: string) => window.dispatchEvent(new CustomEvent(CLOSE_SHEET_EVENT, { detail: id }));
+
 type Run = { status: string; results: { source: string; ok: boolean; error?: string; found: number; staged?: number; unchanged?: number }[] };
 
-/** 「지금 업데이트」 — 공식기관 원문을 지금 다시 받아 읽는다. 결과는 검토 대기로만 들어간다 */
-export function RefreshButton() {
+/** 「지금 업데이트」 — 그 탭의 공식기관 원문만 지금 다시 받아 읽는다(사회보험 요율표 / 간이세액표). 결과는 검토 대기로만 들어간다.
+ *  「초기화」는 화면에 나온 결과 목록만 지운다 — 받은 자료 · 검토 대기 후보 · 실행 기록은 그대로다(지우는 기능 없음, ②-0 4-6) */
+export function RefreshButton({ section }: { section: 'insurance-rates' | 'income-tax' }) {
   const t = useTranslations('admin.paySettings');
   const { busy, err, post } = usePost();
   const [run, setRun] = useState<Run | null>(null);
+  const resetId = `refresh-reset-${section}`;
   return (
-    <div className="flex flex-col gap-2">
-      <div className="flex flex-wrap items-center gap-2">
-        <Button
-          type="button"
-          size="sm"
-          disabled={busy}
-          onClick={async () => {
-            setRun(null);
-            setRun(await post<Run>('/api/admin/payroll/reference/refresh', {}));
-          }}
-        >
-          {busy ? t('refresh.running') : t('refresh.now')}
-        </Button>
-        <span className="text-xs text-faint">{t('refresh.note')}</span>
+    <div className="flex w-full flex-col gap-2">
+      <div className="flex flex-wrap items-start justify-between gap-3">
+        <div className="flex flex-wrap items-center gap-2">
+          <Button
+            type="button"
+            size="sm"
+            disabled={busy}
+            onClick={async () => {
+              setRun(null);
+              setRun(await post<Run>('/api/admin/payroll/reference/refresh', { section }));
+            }}
+          >
+            {busy ? t('refresh.running') : t('refresh.now')}
+          </Button>
+          <span className="text-xs text-faint">{t('refresh.note')}</span>
+        </div>
+        <span className="flex flex-wrap items-center gap-2">
+          <a href="/api/admin/payroll/confirm-sheet" className="inline-flex h-9 items-center gap-1 rounded-button border border-border bg-bg px-3.5 text-sm font-semibold whitespace-nowrap text-text hover:bg-surface">
+            <Download aria-hidden size={16} />
+            {t('confirm.download')}
+          </a>
+          <Popup
+            id={resetId}
+            title={t('refresh.resetTitle')}
+            triggerClass="inline-flex h-9 items-center gap-1 rounded-button border border-border bg-bg px-3.5 text-sm font-semibold whitespace-nowrap text-text hover:bg-surface disabled:opacity-60"
+            label={
+              <>
+                <RotateCcw aria-hidden size={16} />
+                {t('refresh.reset')}
+              </>
+            }
+          >
+            <div className="flex flex-col gap-4 px-2 pt-1 pb-2 lg:px-0 lg:pt-0 lg:pb-0">
+              <p className="text-sm leading-6 whitespace-pre-line text-muted">{t('refresh.resetBody')}</p>
+              <div className="flex justify-end gap-2">
+                <Button type="button" size="sm" variant="outline" onClick={() => closePopup(resetId)}>
+                  {t('cancel')}
+                </Button>
+                <Button
+                  type="button"
+                  size="sm"
+                  onClick={() => {
+                    setRun(null);
+                    closePopup(resetId);
+                  }}
+                >
+                  {t('refresh.resetDo')}
+                </Button>
+              </div>
+            </div>
+          </Popup>
+        </span>
       </div>
       {err && <ErrorNote code={err.code} requestId={err.requestId} namespace="admin.paySettings" />}
       {run && (
