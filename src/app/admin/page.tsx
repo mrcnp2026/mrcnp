@@ -88,7 +88,6 @@ export default async function AdminHome({ searchParams }: { searchParams: Promis
   );
 
   let missingPeople = 0;
-  const missingNames: string[] = [];
   // PC 그래프: 이번 주 요일별 연장근로(연장 + 휴일 근로) 분 — 직원별 하루 집계를 날짜로 더한다
   const overtimeByDay = new Map<string, number>();
   const people: BoardPerson[] = active.map((p) => {
@@ -110,7 +109,6 @@ export default async function AdminHome({ searchParams }: { searchParams: Promis
       // 그날 일정이 간주 근무인 날도 뺀다 — 폰 알림 · 누락 화면과 같게
       if (miss.some((m) => !data.planFor(p.id, m.workDate).deemed)) {
         missingPeople++;
-        missingNames.push(p.name);
       }
     }
     return {
@@ -210,17 +208,9 @@ export default async function AdminHome({ searchParams }: { searchParams: Promis
       <PanelPortal>
         <div className="flex flex-col gap-4 px-3 pb-4">
           <p className="num text-xs text-muted">{t('asOf', { date: fmt.dateTime(now, { month: 'long', day: 'numeric', weekday: 'short' }), time: fmt.dateTime(now, { hour: '2-digit', minute: '2-digit', hourCycle: 'h23' }) })}</p>
-          {/* 2026-10-30 의뢰인: 옆 판만 반원(리포트 때 만든 키트 Gauge), 본문 「오늘의 근무 현황」은 도넛 그대로 */}
+          {/* 2026-10-30 의뢰인: 옆 판만 반원(리포트 때 만든 키트 Gauge), 본문 「오늘의 근무 현황」은 도넛 그대로.
+              반원 아래 지각 · 미출근 · 휴가 줄은 뺐다 — 위 숫자 칸과 같은 숫자 (2026-11-17 의뢰인: 그래프는 두고 겹치는 숫자만) */}
           <Gauge value={rate} caption={t('panelCaption', { n: inCount, total: active.length })} ariaLabel={t('donutTitle')} />
-          <ul className="flex flex-col divide-y divide-border rounded-button border border-border bg-bg text-sm">
-            {([['bg-warn', th('status.late'), board.late.length], ['bg-danger', th('status.absent'), board.absent.length], ['bg-faint', t('donutOff'), board.off.length]] as const).map(([dot, label, n]) => (
-              <li key={label} className="flex min-h-9 items-center gap-2 px-3">
-                <span aria-hidden className={`size-2 rounded-full ${dot}`} />
-                <span className="flex-1 text-muted">{label}</span>
-                <b className="num">{n}</b>
-              </li>
-            ))}
-          </ul>
           <div className="flex flex-col items-start">
             <Link prefetch={false} href="/punch" className="inline-flex min-h-9 items-center text-sm font-bold text-primary">{t('myPunch')} ›</Link>
             {OFFICE.practiceMode && (
@@ -257,7 +247,7 @@ export default async function AdminHome({ searchParams }: { searchParams: Promis
 
       <KpiRow
         kpis={[
-          { label: t('chartRate'), filter: 'in', trend: daily.filter((x) => x.workday).map((x) => x.n), value: rate === null ? '–' : `${rate}%`, sub: rate === null ? t('chartNoTarget') : delta === null ? t('chartRateSub', { n: Math.min(inCount, target), target }) : `${t('chartRateSub', { n: Math.min(inCount, target), target })} · ${t('kpiDelta', { d: `${delta > 0 ? '+' : ''}${delta}` })}` },
+          { label: t('chartRate'), filter: 'in', pcHidden: true, trend: daily.filter((x) => x.workday).map((x) => x.n), value: rate === null ? '–' : `${rate}%`, sub: rate === null ? t('chartNoTarget') : delta === null ? t('chartRateSub', { n: Math.min(inCount, target), target }) : `${t('chartRateSub', { n: Math.min(inCount, target), target })} · ${t('kpiDelta', { d: `${delta > 0 ? '+' : ''}${delta}` })}` },
           { label: th('status.late'), filter: 'late', trend: daily.filter((x) => x.workday).map((x) => x.late), value: String(board.late.length), warn: board.late.length > 0, sub: t('kpiNames') },
           { label: th('status.absent'), filter: 'absent', value: String(board.absent.length), sub: t('kpiNames') },
           { label: t('todo'), value: String(todo.filter((x) => x.key !== 'pendingInquiry').reduce((a, x) => a + x.n, 0)), sub: t('kpiTodo'), href: '/admin/inbox' },
@@ -326,9 +316,9 @@ export default async function AdminHome({ searchParams }: { searchParams: Promis
 
       {/* PC: ① 오늘 직원 현황(넓게) + 처리할 일 ② 30일 추이 + 14일 지각 ③ 주 52시간 + 근무노트 — 줄마다 높이를 맞춘다 (2026-10-06 의뢰인: 흩어져 난잡했다) · 폰: 한 칸 */}
       {/* ⑤ PC 카드 줄 — 폰에서는 숨긴다 (2026-10-29 의뢰인: 같은 날 폰에도 보이게 했다가 「오늘 현황이 너무 길어졌다」 → 누락은 「처리할 일」에 이미 있고, 관리 필요 직원은 홈에서 볼 필요 없음) */}
-      {/* PC 카드 줄: 공지사항 · 출퇴근 누락 · 관리가 필요한 직원 · 휴가 현황 (2026-10-23 의뢰인: 공지사항과 출퇴근 누락 자리 바꿈) */}
-      {/* 1024~1439는 두 칸씩 (2026-11-04 의뢰인: 네 칸이면 카드가 150~200px라 글자가 꺾이고 잘렸다), 1440부터 네 칸 */}
-      <div className="hidden gap-4 lg:grid lg:grid-cols-2 min-[90rem]:grid-cols-4">
+      {/* PC 카드 줄: 공지사항 · 관리가 필요한 직원 · 휴가 현황. 출퇴근 누락 카드는 「처리할 일」의 미기록 줄과 같아 뺐다 (2026-11-17 의뢰인) */}
+      {/* 1024~1439는 두 칸씩 (2026-11-04 의뢰인: 네 칸이면 카드가 150~200px라 글자가 꺾이고 잘렸다), 1440부터 세 칸 */}
+      <div className="hidden gap-4 lg:grid lg:grid-cols-2 min-[90rem]:grid-cols-3">
         <Card className="flex flex-col gap-2">
           <CardTitle>{t('cardNotices')}</CardTitle>
           {(latestNotices ?? []).length === 0 ? (
@@ -349,15 +339,6 @@ export default async function AdminHome({ searchParams }: { searchParams: Promis
           <Link prefetch={false} href="/admin/notices" className={cardLink}>{t('cardNoticesAll')} ›</Link>
         </Card>
         <Card className="flex flex-col gap-2">
-          <CardTitle aside={<span className={`num text-lg font-bold ${missingPeople > 0 ? 'text-warn' : 'text-faint'}`}>{missingPeople}</span>}>{t('cardMissing')}</CardTitle>
-          {missingNames.length === 0 ? (
-            <p className="flex-1 py-4 text-center text-sm text-faint">{t('cardMissingNone')}</p>
-          ) : (
-            <PagedList className="flex-1 divide-y divide-border text-sm" items={missingNames.map((x) => <li key={x} className="py-1.5 font-bold">{x}</li>)} />
-          )}
-          <Link prefetch={false} href="/admin/missing" className={cardLink}>{t('cardMissingMore')} ›</Link>
-        </Card>
-        <Card className="flex flex-col gap-2">
           <CardTitle aside={<span className="num text-sm text-muted">{t('totalStaff')} <b className="text-text">{real.length}</b></span>}>{t('cardCare')}</CardTitle>
           <PagedList
             className="flex-1 text-sm"
@@ -373,7 +354,8 @@ export default async function AdminHome({ searchParams }: { searchParams: Promis
             ))}
           />
         </Card>
-        <Card className="flex flex-col gap-2">
+        {/* 카드가 세 개라 1024~1439(두 칸)에서는 휴가 현황이 혼자 남는다 — 두 칸 너비로 */}
+        <Card className="flex flex-col gap-2 lg:col-span-2 min-[90rem]:col-span-1">
           <CardTitle>{t('cardLeave')}</CardTitle>
           {leaveRows.length === 0 ? (
             <p className="flex-1 py-4 text-center text-sm text-faint">{t('cardLeaveNone')}</p>
