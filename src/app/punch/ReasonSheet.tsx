@@ -16,6 +16,8 @@ import type { ReasonAsk } from '@/lib/reason-ask';
 export { reasonAsk, type ReasonAsk } from '@/lib/reason-ask';
 
 const NOTE_MAX = 200;
+// 눌러서 채우는 흔한 사유 — 채운 뒤 고쳐 쓸 수 있다 (2026-11-17 키트 B4, 정정 화면의 빠른 사유처럼)
+const QUICK = { in: ['traffic', 'client', 'personal'], out: ['deadline', 'repair', 'urgent'] } as const;
 
 export function ReasonSheet({ ask, today, note, canAskWork, onClose }: { ask: ReasonAsk; today: string; note: string | null; canAskWork: boolean; onClose: () => void }) {
   const t = useTranslations('home.reason');
@@ -62,6 +64,13 @@ export function ReasonSheet({ ask, today, note, canAskWork, onClose }: { ask: Re
           ))}
         </ul>
         <p className="text-sm text-muted">{t(ask.kind === 'in' ? 'askIn' : 'askOut')}</p>
+        <div className="flex flex-wrap gap-2">
+          {QUICK[ask.kind === 'in' ? 'in' : 'out'].map((k) => (
+            <button key={k} type="button" aria-pressed={text === t(`quick.${k}`)} onClick={() => setText(t(`quick.${k}`))} className={`min-h-9 rounded-chip border px-3 text-sm ${text === t(`quick.${k}`) ? 'border-primary bg-primary-tint text-primary' : 'border-border'}`}>
+              {t(`quick.${k}`)}
+            </button>
+          ))}
+        </div>
         <textarea
           value={text}
           onChange={(e) => setText(e.target.value.slice(0, 150))}

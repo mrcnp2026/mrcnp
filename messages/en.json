@@ -291,7 +291,15 @@
       "placePh": "Where are you working?",
       "note": "Your note is saved to today and sent to your admin.",
       "save": "Save",
-      "saveWork": "Send field work request"
+      "saveWork": "Send field work request",
+      "quick": {
+        "traffic": "Traffic delay",
+        "client": "Visited a client first",
+        "personal": "Hospital / personal matter",
+        "deadline": "Delivery deadline",
+        "repair": "Equipment check",
+        "urgent": "Urgent work"
+      }
     }
   },
   "errors": {

@@ -12,7 +12,8 @@ import { Button, Card } from '@/components/ui';
 const field = 'min-h-11 w-full rounded-button border border-border bg-bg px-3 text-base text-text';
 const KINDS = ['outside', 'business_trip', 'remote'] as const;
 
-export function WorkForm({ today, initialDate }: { today: string; initialDate: string | null }) {
+// 시각은 내 근무 틀로, 장소는 지난 신청에서 고르게 미리 둔다 (2026-11-17 키트 B4)
+export function WorkForm({ today, initialDate, shift, places = [] }: { today: string; initialDate: string | null; shift?: { startTime: string; endTime: string } | null; places?: string[] }) {
   const t = useTranslations('work');
   const router = useRouter();
   const [kind, setKind] = useState<(typeof KINDS)[number]>('outside');
@@ -78,17 +79,24 @@ export function WorkForm({ today, initialDate }: { today: string; initialDate: s
           <div className="grid grid-cols-2 gap-3">
             <label className="flex flex-col gap-1 text-sm text-muted">
               {t('from')}
-              <DateTimeInput name="startTime" type="time" required className={`num ${field}`} />
+              <DateTimeInput name="startTime" type="time" required defaultValue={shift?.startTime} className={`num ${field}`} />
             </label>
             <label className="flex flex-col gap-1 text-sm text-muted">
               {t('until')}
-              <DateTimeInput name="endTime" type="time" required className={`num ${field}`} />
+              <DateTimeInput name="endTime" type="time" required defaultValue={shift?.endTime} className={`num ${field}`} />
             </label>
           </div>
         )}
         <label className="flex flex-col gap-1 text-sm text-muted">
           {t('place')}
-          <input name="place" required maxLength={100} placeholder={t('placeHint')} className={field} />
+          <input name="place" required maxLength={100} placeholder={t('placeHint')} list={places.length ? 'work-places' : undefined} autoComplete="off" className={field} />
+          {places.length > 0 && (
+            <datalist id="work-places">
+              {places.map((p) => (
+                <option key={p} value={p} />
+              ))}
+            </datalist>
+          )}
         </label>
         <label className="flex flex-col gap-1 text-sm text-muted">
           {t('reason')}

@@ -18,6 +18,9 @@ export function Fab({ label, items, href }: { label: string; items?: { id: strin
   const [menu, setMenu] = useState(false);
   const many = (items?.length ?? 0) > 1;
   return (
+    <>
+    {/* 목록이 뜨면 뒤를 어둡게 — 다른 창(ReasonSheet · AddSheet)과 같게, 누르면 닫힌다 (2026-11-17 키트 B2) */}
+    {menu && many && <div aria-hidden className="fixed inset-0 z-20 bg-text/40 lg:hidden" onClick={() => setMenu(false)} />}
     <div className="fab-root fixed right-4 bottom-[calc(5rem+env(safe-area-inset-bottom))] z-20 flex flex-col items-end gap-2 lg:hidden">
       {menu && many && (
         <ul className="flex flex-col gap-1 rounded-card border border-border bg-bg p-2 shadow-pop">
@@ -61,6 +64,7 @@ export function Fab({ label, items, href }: { label: string; items?: { id: strin
         </button>
       )}
     </div>
+    </>
   );
 }
 

@@ -25,6 +25,7 @@ import { loadEntries, loadLots, loadTypeRules } from '@/lib/leave-ledger-data';
 import { OFFICE } from '@/config/office';
 import { toKstDate } from '@/lib/time';
 import { loadWorkRequests } from '@/lib/work-data';
+import { loadTemplateOf } from '@/lib/shift-data';
 import { loadRejectReasons } from '@/lib/reject-reason';
 import { CancelLeave, DeleteLeaveRequest, LeaveForm } from './LeaveForm';
 import { CancelWork, WorkForm } from './WorkForm';
@@ -40,7 +41,7 @@ export default async function LeavePage({ searchParams }: { searchParams: Promis
   const f = await getFormatter();
   const sp = await searchParams;
   const today = toKstDate(new Date());
-  const [types, grants, requests, works] = await Promise.all([loadAllLeaveTypes(), loadLeaveGrants(me.id), loadLeaveRequests({ employeeId: me.id }), loadWorkRequests({ employeeId: me.id })]);
+  const [types, grants, requests, works, myShift] = await Promise.all([loadAllLeaveTypes(), loadLeaveGrants(me.id), loadLeaveRequests({ employeeId: me.id }), loadWorkRequests({ employeeId: me.id }), loadTemplateOf(me.id)]);
   const bal = calcLeaveBalance({ grants, requests, types, asOf: today });
   // 긴 목록은 10건씩 (2026-10-15 의뢰인: 폰에서 끝없이 길어진다)
   const reqPage = pageOf(requests, sp.lp, 10);
@@ -224,7 +225,7 @@ export default async function LeavePage({ searchParams }: { searchParams: Promis
 
       {/* 폰: 양식은 + 버튼을 누르면 올라온다 (2026-10-10 의뢰인) · PC: 제자리에 펼쳐 둔다 */}
       <AddSheet id="leave" title={t('request')} defaultOpen={sp.new === 'leave'} modal>
-        <LeaveForm today={today} types={formTypes} />
+        <LeaveForm today={today} types={formTypes} shiftStart={myShift?.startTime} />
       </AddSheet>
 
       <section id="mine" className="order-1 flex scroll-mt-16 flex-col gap-2">
@@ -255,7 +256,7 @@ export default async function LeavePage({ searchParams }: { searchParams: Promis
 
       {/* 홈의 "사무실 밖" 안내에서 날짜를 채워 넘어오면 열린 채로 시작한다 */}
       <AddSheet id="work" title={tw('title')} defaultOpen={!!sp.workDate || sp.new === 'work'} modal>
-        <WorkForm today={today} initialDate={sp.workDate && /^\d{4}-\d{2}-\d{2}$/.test(sp.workDate) ? sp.workDate : null} />
+        <WorkForm today={today} initialDate={sp.workDate && /^\d{4}-\d{2}-\d{2}$/.test(sp.workDate) ? sp.workDate : null} shift={myShift} places={[...new Set(works.map((w) => w.place).filter(Boolean))].slice(0, 5)} />
       </AddSheet>
       <section id="work" className="order-2 flex scroll-mt-16 flex-col gap-2">
         <span id="work-mine" aria-hidden />

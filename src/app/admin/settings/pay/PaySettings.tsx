@@ -14,7 +14,7 @@ import { MANUAL_FIELDS, pickAt, RATE_KINDS, rateToPct, TAX_KINDS } from '@/lib/p
 import { ALLOWANCE_KINDS, PAY_SECTIONS, payDateFor, type AllowancePolicy, type AnnualLeavePolicy, type Ledger, type PaySection, type SettingSection } from '@/lib/payroll/settings';
 import { createAdminClient } from '@/lib/supabase/admin';
 import { toKstDate } from '@/lib/time';
-import { Download } from 'lucide-react';
+import { Download, TriangleAlert } from 'lucide-react';
 import { ItemExcel } from './ItemExcel';
 import { ItemAdd } from './ItemWizard';
 import { Explain, em } from '@/components/ui';
@@ -531,7 +531,9 @@ export async function PaySettings({ sp }: { sp: SP }) {
         </div>
         {tabs}
         {view === 'current' && pending.length > 0 && (
-          <Link prefetch={false} href={href({ v: 'pending' })} className="block border-b border-border bg-warn-tint px-4 py-3 text-sm font-semibold text-warn lg:px-6">
+          // 칠한 띠 대신 한 줄 글 — 광고 띠처럼 건너뛰지 않게 (2026-11-17 키트 B3)
+          <Link prefetch={false} href={href({ v: 'pending' })} className="flex items-center gap-2 border-b border-border px-4 py-2.5 text-sm font-semibold text-text hover:bg-surface lg:px-6">
+            <TriangleAlert aria-hidden size={16} className="shrink-0 text-warn" />
             {t('ref.pendingBanner', { n: pending.length })}
           </Link>
         )}

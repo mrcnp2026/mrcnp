@@ -17,7 +17,7 @@ const KINDS = ['none', 'normal', 'outside', 'remote', 'holiday', 'extra'] as con
 type Kind = (typeof KINDS)[number];
 
 // sheet: 팝업(ShiftRequestSheet) 안에서 쓸 때 그 창 이름 — 보내면 창을 닫는다
-export function ShiftRequestForm({ today, templates, sheet, kindNames }: { kindNames?: KindNames; today: string; templates: { id: string; name: string; startTime: string; endTime: string; kind: string }[]; sheet?: string }) {
+export function ShiftRequestForm({ today, templates, mineId, sheet, kindNames }: { kindNames?: KindNames; today: string; mineId?: string | null; templates: { id: string; name: string; startTime: string; endTime: string; kind: string }[]; sheet?: string }) {
   const t = useTranslations('scheduleRequest');
   const tk = withKindNames(useTranslations('requests.shiftKind'), kindNames);
   const router = useRouter();
@@ -26,10 +26,12 @@ export function ShiftRequestForm({ today, templates, sheet, kindNames }: { kindN
   const [skipWeekend, setSkipWeekend] = useState(true);
   const [pick, setPick] = useState<WeekdayPick | null>(null); // 요일로 고르기 (2026-11-03 의뢰인)
   const dates = pick ? datesOfWeekdays(pick, today) : datesBetween(date, dateEnd, skipWeekend && dateEnd !== null && dateEnd !== date);
-  const [tpl, setTpl] = useState('');
-  const [start, setStart] = useState('08:00');
-  const [end, setEnd] = useState('17:00');
-  const [kind, setKind] = useState<Kind>('none');
+  // 처음 값은 내 근무 틀 — 없으면 예전 기본 08:00–17:00 (2026-11-17 키트 B4: 아는 건 채워 두기)
+  const mine = templates.find((v) => v.id === mineId);
+  const [tpl, setTpl] = useState(mine?.id ?? '');
+  const [start, setStart] = useState(mine?.startTime ?? '08:00');
+  const [end, setEnd] = useState(mine?.endTime ?? '17:00');
+  const [kind, setKind] = useState<Kind>(mine && (KINDS as readonly string[]).includes(mine.kind) ? (mine.kind as Kind) : 'none');
   const [reason, setReason] = useState('');
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState<{ code: string; requestId?: string } | null>(null);

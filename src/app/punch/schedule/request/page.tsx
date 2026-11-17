@@ -7,6 +7,7 @@ import { DetailBar } from '@/components/detail';
 import { Card, PageShell } from '@/components/ui';
 import { OFFICE } from '@/config/office';
 import { getMe } from '@/lib/auth';
+import { loadTemplateOf } from '@/lib/shift-data';
 import { createAdminClient } from '@/lib/supabase/admin';
 import { kstDateTime, toKstDate } from '@/lib/time';
 import { CancelShiftRequest, ShiftRequestForm } from './ShiftRequestForm';
@@ -16,9 +17,10 @@ export default async function ShiftRequestPage() {
   if (!me) redirect('/login');
   const [t, f] = await Promise.all([getTranslations('scheduleRequest'), getFormatter()]);
   const db = createAdminClient();
-  const [{ data: tpl }, { data: mine }] = await Promise.all([
+  const [{ data: tpl }, { data: mine }, myTpl] = await Promise.all([
     db.from('shift_templates').select('id, name, start_time, end_time, kind').eq('active', true).order('name'),
     db.from('shift_requests').select('id, work_date, start_time, end_time, reason').eq('employee_id', me.id).eq('status', 'pending').eq('is_test', OFFICE.practiceMode).order('work_date'),
+    loadTemplateOf(me.id),
   ]);
   const templates = (tpl ?? []).filter((x) => x.kind !== 'deemed' && !(x.name as string).startsWith('e2e-')).map((x) => ({ id: x.id as string, name: x.name as string, startTime: (x.start_time as string).slice(0, 5), endTime: (x.end_time as string).slice(0, 5), kind: x.kind as string }));
   return (
@@ -26,7 +28,7 @@ export default async function ShiftRequestPage() {
       <DetailBar back="/punch/requests" backLabel={t('back')} title={t('title')} />
       <Card className="flex flex-col gap-3">
         <p className="text-sm text-muted">{t('intro')}</p>
-        <ShiftRequestForm today={toKstDate(new Date())} templates={templates} kindNames={await getShiftKindNames(toKstDate(new Date()))} />
+        <ShiftRequestForm today={toKstDate(new Date())} templates={templates} mineId={myTpl?.id} kindNames={await getShiftKindNames(toKstDate(new Date()))} />
       </Card>
       {(mine ?? []).length > 0 && (
         <section className="flex flex-col gap-2">

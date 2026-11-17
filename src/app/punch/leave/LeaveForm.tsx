@@ -15,7 +15,7 @@ const field = 'min-h-11 w-full rounded-button border border-border bg-bg px-3 te
 export type ChangeLeave = { leaveId: string; initial: { typeCode: string; startDate: string; endDate: string; startTime: string | null }; onDone?: () => void };
 export type DirectLeave = { employeeId: string; replaceId?: string; initial?: { typeCode: string; startDate: string; endDate: string; startTime: string | null } };
 
-export function LeaveForm({ today, types, direct, change }: { today: string; types: { code: string; name: string; unit: number; deducts: boolean; hours: number; startTime: string | null; endTime: string | null; group: string | null }[]; direct?: DirectLeave; change?: ChangeLeave }) {
+export function LeaveForm({ today, types, direct, change, shiftStart }: { shiftStart?: string | null; today: string; types: { code: string; name: string; unit: number; deducts: boolean; hours: number; startTime: string | null; endTime: string | null; group: string | null }[]; direct?: DirectLeave; change?: ChangeLeave }) {
   const t = useTranslations('leave');
   const router = useRouter();
   const init = (direct ?? change)?.initial;
@@ -28,7 +28,7 @@ export function LeaveForm({ today, types, direct, change }: { today: string; typ
   const groups = [...new Set(types.map((x) => x.group))];
   const timed = oneDay && !cur?.startTime;
   const [day, setDay] = useState(init?.startDate ?? today);
-  const [startTime, setStartTime] = useState(init?.startTime ?? '');
+  const [startTime, setStartTime] = useState(init?.startTime ?? shiftStart ?? ''); // 시간 휴가 시작은 내 근무 시작으로 먼저 채운다 (2026-11-17 키트 B4)
   // 시간 휴가: 고른 날짜 · 시각으로 끝나는 시각을 미리 받는다 (안 되면 가장 늦은 시작 시각)
   const [win, setWin] = useState<{ endTime: string | null; latest: string | null } | null>(null);
   useEffect(() => {
