@@ -138,7 +138,7 @@ export async function WeekBar({
                 <span className={c.outAt ? 'font-semibold' : 'text-primary'}>{c.outAt ?? (c.working ? t('workingShort') : '—')}</span>
               </span>
             ) : c.leave ? (
-              <span className="rounded-chip bg-tile-1 px-1.5 py-0.5 text-xs font-semibold text-warn">{t('leave')}</span>
+              <span className="rounded-chip bg-tile-1 px-1.5 py-0.5 text-xs font-semibold text-muted">{t('leave')}</span>
             ) : c.start ? (
               <span className="num flex flex-col text-xs leading-snug text-faint">
                 <span>{c.start}</span>

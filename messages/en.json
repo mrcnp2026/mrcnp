@@ -174,9 +174,9 @@
     "missing": {
       "noOut": "No clock-out on {day}",
       "noIn": "No clock-in on {day}",
-      "reviewing": "Request under review",
-      "request": "Request correction",
-      "more": "{n} more"
+      "reviewingN": "{n} correction request(s) under review",
+      "days": "{n} day(s) with a missing clock-in or clock-out",
+      "request": "Fix it"
     },
     "now": "Current time",
     "clockInLabel": "Clock-in",

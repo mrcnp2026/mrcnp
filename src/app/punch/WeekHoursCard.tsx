@@ -91,7 +91,7 @@ export async function WeekHoursCard({ meId, today, weekStart, period: given }: {
         <dl className="num flex min-w-0 flex-1 flex-col gap-2 text-sm">
           <div className="flex items-baseline justify-between gap-2"><dt className="text-muted">{t('weekOver')}</dt><dd className={`font-semibold ${over > 0 ? 'text-text' : 'text-faint'}`}>{dash(over)}</dd></div>
           <div className="flex items-baseline justify-between gap-2"><dt className="text-muted">{t('weekNight')}</dt><dd className={`font-semibold ${night > 0 ? '' : 'text-faint'}`}>{dash(night)}</dd></div>
-          <div className="flex items-baseline justify-between gap-2"><dt className="text-muted">{t('weekLate')}</dt><dd className={`font-semibold ${lateN > 0 ? 'text-warn' : 'text-faint'}`}>{lateN > 0 ? t('weekLateValue', { n: lateN, m: lateMin }) : '–'}</dd></div>
+          <div className="flex items-baseline justify-between gap-2"><dt className="text-muted">{t('weekLate')}</dt><dd className={`font-semibold ${lateN > 0 ? 'text-muted' : 'text-faint'}`}>{lateN > 0 ? t('weekLateValue', { n: lateN, m: lateMin }) : '–'}</dd></div>
         </dl>
       </div>
 

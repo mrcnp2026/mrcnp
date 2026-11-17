@@ -174,9 +174,9 @@
     "missing": {
       "noOut": "{day} 퇴근 기록이 없습니다",
       "noIn": "{day} 출근 기록이 없습니다",
-      "reviewing": "정정 요청 검토 중",
-      "request": "정정 요청",
-      "more": "그 밖에 {n}건"
+      "reviewingN": "정정 요청 {n}건 검토 중",
+      "days": "출퇴근 기록이 빠진 날이 {n}일 있습니다",
+      "request": "정정 요청"
     },
     "now": "지금 시각",
     "clockInLabel": "출근",

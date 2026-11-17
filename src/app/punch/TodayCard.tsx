@@ -198,7 +198,7 @@ export function TodayCard(props: {
           {props.firstInVerified === false && <span className="text-xs font-medium text-warn">{t('outside')}</span>}
         </p>
         {props.pendingPunch && !result && (
-          <p className="num flex flex-wrap items-center gap-2 text-sm font-bold text-warn">
+          <p className="num flex flex-wrap items-center gap-2 text-sm font-bold text-muted">
             <Clock aria-hidden size={16} strokeWidth={2} />
             {t(props.pendingPunch.kind === 'in' ? 'requestWaitIn' : 'requestWaitOut', { time: time(props.pendingPunch.at) })}
           </p>
@@ -207,7 +207,7 @@ export function TodayCard(props: {
       </div>
 
       {result?.requested && (
-        <div className="flex flex-col gap-1 rounded-button bg-warn-tint px-4 py-3 text-warn" aria-live="polite">
+        <div className="flex flex-col gap-1 rounded-button bg-surface px-4 py-3 text-text" aria-live="polite">
           <p className="num font-bold">{t(result.kind === 'in' ? 'requestedIn' : 'requestedOut', { time: time(result.punchedAt) })}</p>
           <p className="text-sm">{t(geoFailed ? 'requestedNoLocation' : 'requestedExplain')}</p>
         </div>
