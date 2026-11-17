@@ -22,6 +22,8 @@ import { groupPath } from '@/lib/org';
 import { loadOrgGroups } from '@/lib/org-data';
 import { daysFor, loadPeriod } from '@/lib/period-data';
 import { toKstDate } from '@/lib/time';
+import { MonthFlow } from '@/components/MonthFlow';
+import { findRun } from '@/lib/payroll/run-data';
 import { Board } from './Board';
 import { DayActions, MonthActions, type DayCtx } from './CheckActions';
 
@@ -48,7 +50,7 @@ export default async function AttendanceCheckPage({ searchParams }: { searchPara
   const { from, to } = monthRange(month);
   const upTo = to < today ? to : today;
 
-  const [data, groups, earlyAt, patternMin, breakMin, confirms, reviews, lateAt] = await Promise.all([loadPeriod(from, to, practice), loadOrgGroups(), loadEarlyIgnoreAt(), loadPatternMinEarly(to), loadBreakEarlyLeaveMin(to), loadConfirms(from, to, practice), loadCheckReviews(from, to, practice), loadLateIgnoreAt()]);
+  const [data, groups, earlyAt, patternMin, breakMin, confirms, reviews, lateAt, runId, tf] = await Promise.all([loadPeriod(from, to, practice), loadOrgGroups(), loadEarlyIgnoreAt(), loadPatternMinEarly(to), loadBreakEarlyLeaveMin(to), loadConfirms(from, to, practice), loadCheckReviews(from, to, practice), loadLateIgnoreAt(), findRun({ practice, kind: 'REGULAR', from: `${month}-01`, test: false }), getTranslations('admin.monthFlow')]);
   const checks = collectChecks(data, from, upTo, new Date(), earlyAt, patternMin, breakMin, lateAt);
   const person = new Map(data.people.map((p) => [p.id, p]));
   const dur = (min: number) => (min >= 60 ? (min % 60 ? t('hm', { h: Math.floor(min / 60), m: min % 60 }) : t('h', { h: min / 60 })) : t('min', { n: min }));
@@ -169,6 +171,7 @@ export default async function AttendanceCheckPage({ searchParams }: { searchPara
         <h1 className="flex flex-wrap items-center gap-x-1 text-2xl font-bold">{t('title')}<HelpTip>{t('intro')}</HelpTip></h1>
         {!canAct && <p className="text-sm text-muted">{t('viewOnly')}</p>}
       </div>
+      <MonthFlow month={month} live={sp.live === '1'} now="check" runId={runId} notes={{ check: totals.block + totals.decide > 0 ? tf('checkLeft', { n: totals.block + totals.decide }) : tf('checkClear'), run: runId ? undefined : tf('noRun') }} />
       <div className="flex flex-wrap items-center gap-x-4 gap-y-2">
         <span className="inline-flex items-center">
           <a href={q({ m: shift(month, -1), e: null })} aria-label={t('prev')} className="inline-flex size-11 items-center justify-center rounded-l-button border border-border bg-bg text-muted lg:size-9">
@@ -194,7 +197,7 @@ export default async function AttendanceCheckPage({ searchParams }: { searchPara
             </>
           )}
         </p>
-        <a href={`/admin/closing?m=${month}${sp.live === '1' ? '&live=1' : ''}`} className="ml-auto inline-flex min-h-11 items-center rounded-button border border-border bg-bg px-3.5 text-sm font-semibold text-text hover:border-primary/40 lg:min-h-9">
+        <a href={`/admin/closing?m=${month}${sp.live === '1' ? '&live=1' : ''}`} className={`ml-auto inline-flex min-h-11 items-center rounded-button px-3.5 text-sm font-semibold lg:min-h-9 ${totals.block + totals.decide === 0 ? 'bg-primary font-bold text-on-primary' : 'border border-border bg-bg text-text hover:border-primary/40'}`}>
           {t('toClosing')} ›
         </a>
       </div>

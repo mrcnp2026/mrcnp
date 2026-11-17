@@ -4683,6 +4683,17 @@
       "gapSummary": "{n} employees with incomplete setup",
       "gapMore": "The other {n} are at the top of the list below."
     },
+    "monthFlow": {
+      "label": "Month-end steps",
+      "check": "Attendance check",
+      "closing": "Attendance close",
+      "run": "Payroll ledger",
+      "checkLeft": "{n} to check",
+      "checkClear": "Nothing to check",
+      "closed": "Closed {n}/{total}",
+      "notClosed": "{n} not closed",
+      "noRun": "Not created yet"
+    },
     "payRuns": {
       "title": "Payroll ledgers",
       "intro": "Create a ledger each month, calculate, review, then finalize. A finalized ledger never changes. Only employees whose attendance is closed are calculated.",

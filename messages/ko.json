@@ -4683,6 +4683,17 @@
       "gapSummary": "설정이 덜 된 직원 {n}명",
       "gapMore": "나머지 {n}명은 아래 목록 맨 위에 있습니다."
     },
+    "monthFlow": {
+      "label": "이번 달 마감 순서",
+      "check": "근태 점검",
+      "closing": "근태 마감",
+      "run": "급여대장",
+      "checkLeft": "확인 필요 {n}건",
+      "checkClear": "확인할 것 없음",
+      "closed": "마감 {n}/{total}명",
+      "notClosed": "마감 안 됨 {n}명",
+      "noRun": "아직 안 만듦"
+    },
     "payRuns": {
       "title": "급여대장",
       "intro": "달마다 대장을 만들어 계산하고, 검토한 뒤 확정합니다. 확정한 대장은 바뀌지 않습니다. 근태를 마감한 직원만 계산됩니다.",

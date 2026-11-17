@@ -23,7 +23,7 @@ const INFO = new Set(['overtime_unreviewed', 'employer_rate_missing', 'basis_unv
 const TONE = { DRAFT: 'neutral', CALCULATED: 'info', REVIEWED: 'warn', FINALIZED: 'ok' } as const;
 
 export default async function PayRunPage({ params, searchParams }: { params: Promise<{ id: string }>; searchParams: Promise<{ existed?: string }> }) {
-  const [t, f, me, { id }] = await Promise.all([getTranslations('admin.payRuns'), getFormatter(), getMe(), params]);
+  const [t, f, me, { id }, tf] = await Promise.all([getTranslations('admin.payRuns'), getFormatter(), getMe(), params, getTranslations('admin.monthFlow')]);
   if (!me || me.role !== 'admin' || !me.canViewPayroll) return <PageShell><p className="rounded-card bg-warn-tint p-4 text-sm text-warn">{t('forbidden')}</p></PageShell>;
   if (!/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(id)) notFound();
   const run = await loadRun(id);
@@ -60,6 +60,8 @@ export default async function PayRunPage({ params, searchParams }: { params: Pro
   const commonWarn = okLines.length >= 2 ? [...new Map(okLines.flatMap((l) => l.blockers.filter((b) => b.warning)).map((b) => [warnKey(b), b])).values()].filter((b) => okLines.every((l) => l.blockers.some((x) => x.warning && warnKey(x) === warnKey(b)))) : [];
   const commonKeys = new Set(commonWarn.map(warnKey));
 
+  const notClosed = lines.filter((l) => l.included && !l.closed).length;
+
   return (
     <PageShell wide>
       <Link prefetch={false} href={`/admin/payroll/runs${run.isTest ? '' : '?live=1'}`} className="inline-flex min-h-9 items-center self-start text-sm font-medium text-muted">
@@ -79,13 +81,22 @@ export default async function PayRunPage({ params, searchParams }: { params: Pro
         </p>
       </div>
       {(await searchParams).existed === '1' && <p role="status" className="rounded-card bg-primary-tint p-3 text-sm font-semibold text-primary">{t('existedNote')}</p>}
-      {/* 이 대장이 어디까지 왔는가 — 만들기 → 계산 → 검토 → 확정 → 공개 (2026-10-14 의뢰인) */}
+      {/* 이 대장이 어디까지 왔는가 — 만들기 → 계산 → 검토 → 확정 → 공개 (2026-10-14 의뢰인).
+          정규 대장은 앞에 근태 점검 · 근태 마감을 붙여 마감 화면에서 이어지게 한다 (2026-11-17 B5 이어짐, components/MonthFlow와 같은 순서) */}
       <Steps
         label={t('stepsLabel')}
-        steps={(['DRAFT', 'CALCULATED', 'REVIEWED', 'FINALIZED', 'PUBLISHED'] as const).map((k, i) => {
-          const at = final ? (waiting === 0 && pub.size > 0 ? 5 : 4) : ['DRAFT', 'CALCULATED', 'REVIEWED'].indexOf(run.status) + 1;
-          return { key: k, label: t(`flowStep.${k}`), state: i < at ? 'done' : i === at ? 'now' : 'todo' };
-        })}
+        steps={[
+          ...(run.kind === 'REGULAR'
+            ? (['check', 'closing'] as const).map((k) => {
+                const m = run.periodFrom.slice(0, 7);
+                return { key: k, label: tf(k), href: `/admin/${k === 'check' ? 'attendance-check' : 'closing'}?m=${m}${run.isTest ? '' : '&live=1'}`, state: notClosed === 0 ? ('done' as const) : ('todo' as const), note: k === 'closing' && notClosed > 0 ? tf('notClosed', { n: notClosed }) : undefined };
+              })
+            : []),
+          ...(['DRAFT', 'CALCULATED', 'REVIEWED', 'FINALIZED', 'PUBLISHED'] as const).map((k, i) => {
+            const at = final ? (waiting === 0 && pub.size > 0 ? 5 : 4) : ['DRAFT', 'CALCULATED', 'REVIEWED'].indexOf(run.status) + 1;
+            return { key: k, label: t(`flowStep.${k}`), state: i < at ? ('done' as const) : i === at ? ('now' as const) : ('todo' as const) };
+          }),
+        ]}
       />
 
       {run.revision > 1 && (
@@ -223,9 +234,9 @@ export default async function PayRunPage({ params, searchParams }: { params: Pro
           </ul>
         </section>
       )}
-      {!final && lines.some((l) => l.included && !l.closed) && (
+      {!final && notClosed > 0 && (
         <p className="flex flex-wrap items-center gap-x-3 gap-y-1 rounded-card border border-warn bg-warn-tint p-3 text-sm text-warn">
-          <span className="font-bold">{t('notClosedBanner', { n: lines.filter((l) => l.included && !l.closed).length })}</span>
+          <span className="font-bold">{t('notClosedBanner', { n: notClosed })}</span>
           <Link prefetch={false} href={`/admin/closing?m=${run.periodFrom.slice(0, 7)}${run.isTest ? '' : '&live=1'}`} className="font-bold underline">{t('toClosing')} ›</Link>
         </p>
       )}

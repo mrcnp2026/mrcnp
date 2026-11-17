@@ -31,7 +31,7 @@ export type Line = {
 };
 type Result = { employeeId: string; result: string };
 
-export function CloseBoard({ month, live, lines, canClose }: { month: string; live: boolean; lines: Line[]; canClose: boolean }) {
+export function CloseBoard({ month, live, lines, canClose, runHref }: { month: string; live: boolean; lines: Line[]; canClose: boolean; runHref: string }) {
   const t = useTranslations('admin.closing');
   // 남은 이상 기록의 가장 많은 사유 한 줄 (2026-11-03 의뢰인: 마우스를 올리면 짧게 — 여러 사유면 가장 많은 것 하나)
   const checkN = (l: Line) => l.pending.reduce((n, p) => n + p.n, 0) + l.anomalyBlocks; // 대기 요청 + 이상 기록 — 근태 점검에서 처리
@@ -234,7 +234,7 @@ export function CloseBoard({ month, live, lines, canClose }: { month: string; li
               </span>
             </div>
           ) : allClosed ? (
-            <Link prefetch={false} href={`/admin/payroll/runs${q ? `?${q.replace(/^&/, '')}` : ''}`} className="inline-flex min-h-12 items-center justify-center rounded-button bg-primary px-5 text-base font-bold text-on-primary">
+            <Link prefetch={false} href={runHref} className="inline-flex min-h-12 items-center justify-center rounded-button bg-primary px-5 text-base font-bold text-on-primary">
               {t('nextCheck')} ›
             </Link>
           ) : (

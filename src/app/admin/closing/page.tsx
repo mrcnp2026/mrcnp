@@ -21,6 +21,8 @@ import { loadSentFor } from '@/lib/attendance-notify';
 import { CloseBoard, type Line } from './CloseBoard';
 import { ClosingNotice } from './NoticeForm';
 import { adminPage } from '@/lib/admin-gate';
+import { MonthFlow, runHref } from '@/components/MonthFlow';
+import { findRun } from '@/lib/payroll/run-data';
 
 const shift = (ym: string, by: number) => {
   const [y, m] = ym.split('-').map(Number);
@@ -36,7 +38,7 @@ export default async function ClosingPage({ searchParams }: { searchParams: Prom
   const month = isMonth(sp.m) && sp.m <= today.slice(0, 7) ? sp.m : shift(today.slice(0, 7), -1);
   const practice = OFFICE.practiceMode && sp.live !== '1';
   const live = sp.live === '1';
-  const [{ lines, data: period }, groups, tl] = await Promise.all([loadCloseBoard(month, practice), loadOrgGroups(), getTranslations('leave')]);
+  const [{ lines, data: period }, groups, tl, runId, tf] = await Promise.all([loadCloseBoard(month, practice), loadOrgGroups(), getTranslations('leave'), findRun({ practice, kind: 'REGULAR', from: `${month}-01`, test: false }), getTranslations('admin.monthFlow')]);
   const requests = await loadReopenRequests(lines.flatMap((l) => (l.close ? [l.close.id] : [])));
   const meId = (await getMe())?.id;
   const ids = [...new Set([...lines.flatMap((l) => l.history.map((h) => h.closedBy)), ...[...requests.values()].map((r) => r.requestedBy)])];
@@ -68,6 +70,7 @@ export default async function ClosingPage({ searchParams }: { searchParams: Prom
   }));
   const closed = rows.filter((r) => r.close).length;
   const ready = rows.filter((r) => !r.close && r.ready).length;
+  const blocked = rows.length - closed - ready;
   const link = (m: string) => `/admin/closing?m=${m}${live ? '&live=1' : ''}`;
   const next = shift(month, 1);
   const notices = meId ? await loadSentFor('closing', month, (await getMe())!) : [];
@@ -77,6 +80,7 @@ export default async function ClosingPage({ searchParams }: { searchParams: Prom
       <div>
         <h1 className="flex flex-wrap items-center gap-x-1 text-2xl font-bold">{t('title')}<SettingsLink href="/admin/settings?tab=closing" label={tGear('item.setClosing')} /><HelpTip>{t('intro')}</HelpTip></h1>
       </div>
+      <MonthFlow month={month} live={live} now="closing" runId={runId} done={blocked === 0 ? ['check'] : []} notes={{ check: blocked > 0 ? tf('checkLeft', { n: blocked }) : tf('checkClear'), closing: tf('closed', { n: closed, total: rows.length }), run: runId ? undefined : tf('noRun') }} />
       <div className="flex flex-wrap items-center gap-3">
         <span className="inline-flex items-center">
           <Link prefetch={false} href={link(shift(month, -1))} aria-label={t('prev')} className="inline-flex size-9 items-center justify-center rounded-l-button border border-border bg-bg text-muted">
@@ -99,7 +103,7 @@ export default async function ClosingPage({ searchParams }: { searchParams: Prom
               ['sumTarget', rows.length, ''],
               ['sumClosed', closed, 'text-ok'],
               ['sumReady', ready, 'text-primary'],
-              ['sumBlocked', rows.length - closed - ready, rows.length - closed - ready > 0 ? 'text-warn' : ''],
+              ['sumBlocked', blocked, blocked > 0 ? 'text-warn' : ''],
             ] as const
           ).map(([k, n, tone]) => (
             <div key={k} className="flex items-baseline gap-1">
@@ -116,7 +120,7 @@ export default async function ClosingPage({ searchParams }: { searchParams: Prom
       </div>
       {practice && <p className="rounded-card bg-primary-tint p-3 text-sm text-primary">{t('practice')}</p>}
       {!canClose && <p className="rounded-card bg-warn-tint p-3 text-sm text-warn">{t('future')}</p>}
-      {rows.length === 0 ? <p className="rounded-card bg-bg p-8 text-center text-sm text-faint">{t('none')}</p> : <CloseBoard key={month} month={month} live={live} lines={rows} canClose={canClose} />}
+      {rows.length === 0 ? <p className="rounded-card bg-bg p-8 text-center text-sm text-faint">{t('none')}</p> : <CloseBoard key={month} month={month} live={live} lines={rows} canClose={canClose} runHref={runHref(runId, live)} />}
     </PageShell>
   );
 }
