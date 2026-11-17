@@ -22,7 +22,7 @@ import { CloseBoard, type Line } from './CloseBoard';
 import { ClosingNotice } from './NoticeForm';
 import { adminPage } from '@/lib/admin-gate';
 import { MonthFlow, runHref } from '@/components/MonthFlow';
-import { findRun } from '@/lib/payroll/run-data';
+import { findRun, loadRun } from '@/lib/payroll/run-data';
 
 const shift = (ym: string, by: number) => {
   const [y, m] = ym.split('-').map(Number);
@@ -39,6 +39,7 @@ export default async function ClosingPage({ searchParams }: { searchParams: Prom
   const practice = OFFICE.practiceMode && sp.live !== '1';
   const live = sp.live === '1';
   const [{ lines, data: period }, groups, tl, runId, tf] = await Promise.all([loadCloseBoard(month, practice), loadOrgGroups(), getTranslations('leave'), findRun({ practice, kind: 'REGULAR', from: `${month}-01`, test: false }), getTranslations('admin.monthFlow')]);
+  const payRun = runId ? await loadRun(runId) : null;
   const requests = await loadReopenRequests(lines.flatMap((l) => (l.close ? [l.close.id] : [])));
   const meId = (await getMe())?.id;
   const ids = [...new Set([...lines.flatMap((l) => l.history.map((h) => h.closedBy)), ...[...requests.values()].map((r) => r.requestedBy)])];
@@ -120,7 +121,7 @@ export default async function ClosingPage({ searchParams }: { searchParams: Prom
       </div>
       {practice && <p className="rounded-card bg-primary-tint p-3 text-sm text-primary">{t('practice')}</p>}
       {!canClose && <p className="rounded-card bg-warn-tint p-3 text-sm text-warn">{t('future')}</p>}
-      {rows.length === 0 ? <p className="rounded-card bg-bg p-8 text-center text-sm text-faint">{t('none')}</p> : <CloseBoard key={month} month={month} live={live} lines={rows} canClose={canClose} runHref={runHref(runId, live)} />}
+      {rows.length === 0 ? <p className="rounded-card bg-bg p-8 text-center text-sm text-faint">{t('none')}</p> : <CloseBoard key={month} month={month} live={live} lines={rows} canClose={canClose} runHref={runHref(runId, live)} payRun={payRun ? { id: payRun.id, version: payRun.version, final: payRun.status === 'FINALIZED' } : null} />}
     </PageShell>
   );
 }

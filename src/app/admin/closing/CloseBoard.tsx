@@ -31,7 +31,7 @@ export type Line = {
 };
 type Result = { employeeId: string; result: string };
 
-export function CloseBoard({ month, live, lines, canClose, runHref }: { month: string; live: boolean; lines: Line[]; canClose: boolean; runHref: string }) {
+export function CloseBoard({ month, live, lines, canClose, runHref, payRun }: { month: string; live: boolean; lines: Line[]; canClose: boolean; runHref: string; payRun: { id: string; version: number; final: boolean } | null }) {
   const t = useTranslations('admin.closing');
   // 남은 이상 기록의 가장 많은 사유 한 줄 (2026-11-03 의뢰인: 마우스를 올리면 짧게 — 여러 사유면 가장 많은 것 하나)
   const checkN = (l: Line) => l.pending.reduce((n, p) => n + p.n, 0) + l.anomalyBlocks; // 대기 요청 + 이상 기록 — 근태 점검에서 처리
@@ -44,6 +44,8 @@ export function CloseBoard({ month, live, lines, canClose, runHref }: { month: s
   const [reopen, setReopen] = useState<string | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
   const [ack, setAck] = useState(false); // 관리자가 넣은 무급 · 연차를 확인했다
+  const [calcErr, setCalcErr] = useState<{ code: string; requestId?: string } | null>(null);
+  const [askCalc, setAskCalc] = useState(false); // 마감한 뒤 「급여대장 계산할까요?」 (개발-65: 자동으로 돌리지 않고 한 번 묻는다)
   const ready = lines.filter((l) => l.ready && !l.close);
   // 확인이 필요한 직원을 맨 위로, 마감 가능한 직원 다음, 이미 마감한 직원은 접어 둔다 (2026-10-26 의뢰인: 이슈만 먼저, 나머지는 더보기)
   const open = lines.filter((l) => !l.close).sort((a, b) => Number(a.ready) - Number(b.ready));
@@ -66,6 +68,7 @@ export function CloseBoard({ month, live, lines, canClose, runHref }: { month: s
       return false;
     }
     setResults(r.data.results ?? []);
+    setAskCalc(!payRun?.final && (r.data.results ?? []).some((x) => x.result === 'closed'));
     setNotice(r.data.reopen === 'requested' ? t('reopenRequested') : null);
     setPicked(new Set());
     setAsk(false);
@@ -74,6 +77,31 @@ export function CloseBoard({ month, live, lines, canClose, runHref }: { month: s
     return true;
   };
   const resultOf = (id: string) => results.find((r) => r.employeeId === id)?.result;
+  // 그 달 정규 대장을 계산하고 연다. 대장이 없으면 만들고(새 대장은 판 1) 계산한다
+  const calculate = async () => {
+    setBusy(true);
+    setCalcErr(null);
+    let id = payRun?.id ?? null;
+    let version = payRun?.version ?? 1;
+    if (!id) {
+      const c = await callApi<{ id: string; existed?: boolean }>('/api/admin/payroll/runs', { action: 'create', kind: 'REGULAR', month, live });
+      if (!c.ok) {
+        setBusy(false);
+        setCalcErr(c);
+        return;
+      }
+      id = c.data.id;
+      if (c.data.existed) return router.push(`/admin/payroll/runs/${id}?existed=1`); // 다른 관리자가 막 만든 대장 — 판을 모르니 열기만
+      version = 1;
+    }
+    const r = await callApi(`/api/admin/payroll/runs/${id}`, { action: 'calculate', expectedVersion: version });
+    if (!r.ok) {
+      setBusy(false);
+      setCalcErr(r);
+      return;
+    }
+    router.push(`/admin/payroll/runs/${id}`);
+  };
   const q = live ? '&live=1' : '';
 
   // 다시 열기 · 다시 열기 요청 처리 — PC 표와 폰 목록이 같이 쓴다
@@ -204,6 +232,20 @@ export function CloseBoard({ month, live, lines, canClose, runHref }: { month: s
 
   return (
     <div className="flex flex-col gap-3">
+      {askCalc && (
+        <div role="status" className="flex flex-col flex-wrap gap-3 rounded-card border border-primary/30 bg-primary-tint p-4 lg:flex-row lg:items-center">
+          <span className="text-sm font-bold text-primary lg:flex-1">{t('calcAsk', { month })}</span>
+          <span className="flex gap-2">
+            <Button type="button" className="flex-1 lg:min-w-28" disabled={busy} onClick={calculate}>
+              {busy ? t('calcWorking') : t('calcYes')}
+            </Button>
+            <Button type="button" variant="outline" className="flex-1" disabled={busy} onClick={() => setAskCalc(false)}>
+              {t('calcLater')}
+            </Button>
+          </span>
+          {calcErr && <ErrorNote code={calcErr.code} requestId={calcErr.requestId} namespace="admin.payRuns" />}
+        </div>
+      )}
       {canClose && (
         <div className="flex flex-col gap-2 lg:flex-row lg:items-center lg:justify-end">
           {ask ? (

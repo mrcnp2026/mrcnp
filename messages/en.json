@@ -3660,6 +3660,10 @@
       "closeSelected": "Close {n} selected",
       "clearPick": "Clear selection",
       "nextCheck": "Go to payroll ledger",
+      "calcAsk": "Closed. Calculate the {month} payroll ledger now?",
+      "calcYes": "Calculate",
+      "calcLater": "Later",
+      "calcWorking": "Calculating…",
       "allClosed": "Nobody needs attention. Everyone is closed.",
       "reason": {
         "break_request": "Evening break skipped (employee)",

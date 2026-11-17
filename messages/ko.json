@@ -3660,6 +3660,10 @@
       "closeSelected": "선택한 {n}명 마감",
       "clearPick": "선택 해제",
       "nextCheck": "급여대장으로",
+      "calcAsk": "마감했습니다. {month} 급여대장을 지금 계산할까요?",
+      "calcYes": "계산",
+      "calcLater": "나중에",
+      "calcWorking": "계산하는 중…",
       "allClosed": "확인이 필요한 직원이 없습니다. 모두 마감했습니다.",
       "reason": {
         "break_request": "저녁 휴게 못 쉼(직원 답)",
