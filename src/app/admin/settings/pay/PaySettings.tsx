@@ -10,7 +10,7 @@ import { Chip } from '@/components/ui';
 import { loadActiveRule } from '@/lib/attendance-data';
 import { getMe } from '@/lib/auth';
 import { loadItems, loadPolicies, loadReferences, loadRuns, loadSettingHistory, type ReferenceRow } from '@/lib/payroll/data';
-import { pickAt, RATE_KINDS, rateToPct, TAX_KINDS } from '@/lib/payroll/reference';
+import { MANUAL_FIELDS, pickAt, RATE_KINDS, rateToPct, TAX_KINDS } from '@/lib/payroll/reference';
 import { ALLOWANCE_KINDS, PAY_SECTIONS, payDateFor, type AllowancePolicy, type AnnualLeavePolicy, type Ledger, type PaySection, type SettingSection } from '@/lib/payroll/settings';
 import { createAdminClient } from '@/lib/supabase/admin';
 import { toKstDate } from '@/lib/time';
@@ -22,7 +22,7 @@ import { AllowanceForm, ImportForm, ItemForm, ManualForm, RefreshButton, ResetPe
 
 const PCT_FIELDS = new Set(['employeeRate', 'employerRate', 'totalRate', 'incomeRate', 'healthRate', 'rate', 'stabilityUnder150', 'stabilityPriority150', 'stability150to1000', 'stabilityOver1000']);
 const KRW_FIELDS = new Set(['lower', 'upper', 'hourly', 'monthly209', 'monthlyLimit', 'child1', 'child2', 'perExtraChild', 'wageMin', 'wageMaxExclusive', 'premiumUpper', 'premiumUpperEmployee', 'premiumLower', 'incomePremiumUpper']);
-type SP = { section?: string; v?: string; year?: string; from?: string; edit?: string; add?: string; adv?: string };
+type SP = { section?: string; v?: string; year?: string; on?: string; copy?: string; from?: string; edit?: string; add?: string; adv?: string };
 
 function Band({ children, aside }: { children: ReactNode; aside?: ReactNode }) {
   return (
@@ -255,7 +255,7 @@ export async function PaySettings({ sp }: { sp: SP }) {
   } else if (section === 'insurance-rates' || section === 'income-tax') {
     const kinds = section === 'insurance-rates' ? RATE_KINDS : TAX_KINDS;
     const view = sp.v === 'pending' || sp.v === 'history' || sp.v === 'add' ? sp.v : 'current';
-    const year = sp.year && /^\d{4}$/.test(sp.year) ? sp.year : today.slice(0, 4);
+    const on = sp.on && /^\d{4}-\d{2}-\d{2}$/.test(sp.on) ? sp.on : today;
     const [approved, pending] = await Promise.all([loadReferences(kinds, ['APPROVED']), loadReferences(kinds, ['PENDING_ADMIN_REVIEW'])]);
     const tabs = (
       <nav className="flex flex-wrap gap-1 border-b border-border px-4 pt-3 lg:px-6" aria-label={t('ref.tabs')}>
@@ -269,38 +269,44 @@ export async function PaySettings({ sp }: { sp: SP }) {
     );
     let inner: ReactNode;
     if (view === 'current') {
-      // 그 해에 걸쳐 있는 승인본만 — 없는 해에 다른 해의 표를 대신 보이지 않는다
-      const inYear = approved.filter((r) => (r.validFrom ?? '') <= `${year}-12-31` && (r.validTo === null || r.validTo > `${year}-01-01`));
+      // 기준일에 적용 중인 판 + 승인해 둔 적용 예정 판만. 끝난 판은 「이력」에서 본다 (2026-11-17 의뢰인)
+      const atDay = kinds.flatMap((k) => {
+        const list = approved.filter((r) => r.kind === k);
+        return [pickAt(list, on), ...list.filter((r) => (r.validFrom ?? '') > on)].filter((r) => r !== null);
+      });
+      const upcoming = (r: ReferenceRow) => (r.validFrom ?? '') > on;
+      const stateChip = (r: ReferenceRow) => (upcoming(r) ? <Chip tone="info">{t('ref.upcoming')}</Chip> : <Chip tone="ok">{on === today ? t('ref.inEffect') : t('ref.inEffectOn')}</Chip>);
       inner = (
         <>
           <form action="/admin/settings" className="flex flex-wrap items-center gap-2 border-b border-border px-4 py-3 lg:px-6">
             <input type="hidden" name="tab" value="pay" />
             <input type="hidden" name="section" value={section} />
             <label className="flex items-center gap-2 text-sm font-bold">
-              {t('ref.year')}
-              <input type="number" name="year" min={2000} max={2100} defaultValue={year} className="num h-9 w-24 rounded-button border border-border bg-bg px-2 text-sm" />
+              {t('ref.onDate')}
+              <input type="date" name="on" defaultValue={on} className="num h-9 rounded-button border border-border bg-bg px-2 text-sm" />
             </label>
             <button type="submit" className="inline-flex h-9 items-center rounded-button border border-border bg-bg px-3.5 text-sm font-semibold text-text hover:bg-surface">
               {t('ref.lookup')}
             </button>
-            <span className="num text-xs text-faint">{t('ref.lookupNote', { year })}</span>
+            <span className="num text-xs text-faint">{t('ref.lookupNote', { on })}</span>
           </form>
           {/* 폰: 종류마다 카드 (2026-10-18 의뢰인: 모바일 가로 스크롤 금지) */}
           <ul className="divide-y divide-border lg:hidden">
             {kinds.flatMap((k) => {
-              const rows = inYear.filter((r) => r.kind === k).sort((a, b) => (a.validFrom! < b.validFrom! ? -1 : 1));
+              const rows = atDay.filter((r) => r.kind === k).sort((a, b) => (a.validFrom! < b.validFrom! ? -1 : 1));
               if (rows.length === 0)
                 return [
                   <li key={k} className="flex flex-col gap-1 px-4 py-3 text-sm">
                     <b>{t(`ref.${k.replace('.', '_')}`)}</b>
-                    <span className="text-faint">{t('ref.notAcquired', { year })}</span>
+                    <span className="text-faint">{t('ref.notAcquired', { on })}</span>
                   </li>,
                 ];
               return rows.map((r) => (
-                <li key={r.id} className="flex flex-col gap-2 px-4 py-3 text-sm">
+                <li key={r.id} className={`flex flex-col gap-2 px-4 py-3 text-sm ${upcoming(r) ? 'opacity-60' : ''}`}>
                   <div className="flex flex-wrap items-center gap-2">
                     <b>{t(`ref.${k.replace('.', '_')}`)}</b>
                     <span className="num text-muted">{period(r.validFrom, r.validTo)}</span>
+                    {stateChip(r)}
                   </div>
                   <dl className="flex flex-col gap-0.5">{payloadLines(r)}</dl>
                   <p className="text-xs text-muted">
@@ -327,23 +333,26 @@ export async function PaySettings({ sp }: { sp: SP }) {
               </thead>
               <tbody>
                 {kinds.flatMap((k) => {
-                  const rows = inYear.filter((r) => r.kind === k).sort((a, b) => (a.validFrom! < b.validFrom! ? -1 : 1));
+                  const rows = atDay.filter((r) => r.kind === k).sort((a, b) => (a.validFrom! < b.validFrom! ? -1 : 1));
                   if (rows.length === 0)
                     return [
                       <tr key={k} className="border-b border-border last:border-b-0">
                         <td className="px-4 py-3 font-bold">{t(`ref.${k.replace('.', '_')}`)}</td>
                         <td colSpan={4} className="px-4 py-3 text-faint">
-                          {t('ref.notAcquired', { year })}
+                          {t('ref.notAcquired', { on })}
                         </td>
                       </tr>,
                     ];
                   return rows.map((r) => (
-                    <tr key={r.id} className="border-b border-border align-top">
+                    <tr key={r.id} className={`border-b border-border align-top ${upcoming(r) ? 'opacity-60' : ''}`}>
                       <td className="px-4 py-3 font-bold">{t(`ref.${k.replace('.', '_')}`)}</td>
                       <td className="px-4 py-3">
                         <dl className="flex min-w-48 flex-col gap-0.5">{payloadLines(r)}</dl>
                       </td>
-                      <td className="num px-4 py-3 whitespace-nowrap">{period(r.validFrom, r.validTo)}</td>
+                      <td className="px-4 py-3 whitespace-nowrap">
+                        <span className="num block">{period(r.validFrom, r.validTo)}</span>
+                        {stateChip(r)}
+                      </td>
                       <td className="px-4 py-3 text-xs text-muted">
                         {r.source?.authority}
                         <span className="block">{t(`ref.origin.${r.origin}`)}</span>
@@ -466,6 +475,21 @@ export async function PaySettings({ sp }: { sp: SP }) {
                   <span className="num text-muted">{period(r.validFrom, r.validTo)}</span>
                   <span className="num text-xs text-faint">{toKstDate(new Date(r.createdAt))}</span>
                 </div>
+                {r.state === 'APPROVED' && r.validTo !== null && r.validTo <= today && (
+                  <div className="flex flex-col gap-1.5 rounded-button bg-surface p-3">
+                    <p className="text-xs text-muted">{t('ref.endedNote', { period: period(r.validFrom, r.validTo) })}</p>
+                    <span className="flex flex-wrap gap-2">
+                      <Link prefetch={false} href={href({ on: r.validFrom ?? undefined })} className="inline-flex h-9 items-center rounded-button border border-border bg-bg px-3.5 text-sm font-semibold text-text hover:bg-surface">
+                        {t('ref.viewThen')}
+                      </Link>
+                      {MANUAL_FIELDS[r.kind] && (
+                        <Link prefetch={false} href={href({ v: 'add', copy: r.id })} className="inline-flex h-9 items-center rounded-button border border-border bg-bg px-3.5 text-sm font-semibold text-text hover:bg-surface">
+                          {t('ref.copyAsNew')}
+                        </Link>
+                      )}
+                    </span>
+                  </div>
+                )}
                 {r.reviewReason && (
                   <p className="text-muted">
                     {r.approvedBy ? `${who.get(r.approvedBy) ?? ''} · ` : ''}
@@ -479,6 +503,10 @@ export async function PaySettings({ sp }: { sp: SP }) {
         </>
       );
     } else {
+      // 이력의 「이 값으로 새 판 만들기」 — 값만 채워 두고 적용 시작일 · 근거는 새로 적는다. 저장하면 검토 대기로 간다
+      const copy = approved.find((r) => r.id === sp.copy && MANUAL_FIELDS[r.kind]);
+      const copyValues = (r: ReferenceRow) =>
+        Object.fromEntries((MANUAL_FIELDS[r.kind] ?? []).map((x) => { const v = r.payload[x.key]; return [x.key, v === null || v === undefined ? '' : x.type === 'pct' ? rateToPct(v as string) : String(v)]; }));
       inner = (
         <>
           <Band>{t('import.title')}</Band>
@@ -489,7 +517,7 @@ export async function PaySettings({ sp }: { sp: SP }) {
           <Band>{t('manual.title')}</Band>
           <div className="px-4 py-4 lg:px-6">
             <p className="pb-3 text-sm text-muted">{t('manual.intro')}</p>
-            <ManualForm kinds={kinds} />
+            <ManualForm key={copy?.id ?? 'new'} kinds={kinds} copy={copy ? { kind: copy.kind, values: copyValues(copy) } : undefined} />
           </div>
         </>
       );
@@ -502,6 +530,11 @@ export async function PaySettings({ sp }: { sp: SP }) {
           <RefreshButton key={section} section={section} />
         </div>
         {tabs}
+        {view === 'current' && pending.length > 0 && (
+          <Link prefetch={false} href={href({ v: 'pending' })} className="block border-b border-border bg-warn-tint px-4 py-3 text-sm font-semibold text-warn lg:px-6">
+            {t('ref.pendingBanner', { n: pending.length })}
+          </Link>
+        )}
         {inner}
       </>
     );

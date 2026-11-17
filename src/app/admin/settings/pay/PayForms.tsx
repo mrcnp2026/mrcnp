@@ -590,11 +590,11 @@ export function ImportForm() {
 }
 
 /** 직접 입력 — 수집기가 읽지 못하는 자료. 근거를 꼭 적고, 이것도 「검토 대기」로 들어간다 */
-export function ManualForm({ kinds }: { kinds: ReferenceKind[] }) {
+export function ManualForm({ kinds, copy }: { kinds: ReferenceKind[]; copy?: { kind: ReferenceKind; values: Record<string, string> } }) {
   const t = useTranslations('admin.paySettings');
   const { busy, err, done, post } = usePost();
   const list = kinds.filter((k) => MANUAL_FIELDS[k]);
-  const [kind, setKind] = useState<ReferenceKind>(list.includes('employment.rate') ? 'employment.rate' : list[0]);
+  const [kind, setKind] = useState<ReferenceKind>(copy && list.includes(copy.kind) ? copy.kind : list.includes('employment.rate') ? 'employment.rate' : list[0]);
   return (
     <form
       className="flex flex-col gap-3"
@@ -610,7 +610,7 @@ export function ManualForm({ kinds }: { kinds: ReferenceKind[] }) {
       </Row>
       {(MANUAL_FIELDS[kind] ?? []).map((f) => (
         <Row key={`${kind}.${f.key}`} label={t(`refField.${f.key}`)} hint={t(`unit.${f.type}`)}>
-          <input name={f.key} required={!f.optional} inputMode="decimal" className={`num ${field} lg:max-w-56`} autoComplete="off" />
+          <input name={f.key} required={!f.optional} defaultValue={copy?.kind === kind ? copy.values[f.key] : undefined} inputMode="decimal" className={`num ${field} lg:max-w-56`} autoComplete="off" />
         </Row>
       ))}
       <Row label={t('validFrom')} hint={t('manual.validFromHint')}>

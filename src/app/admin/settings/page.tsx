@@ -62,7 +62,7 @@ function SetRow({ label, children, side = false }: { label: string; children: Re
   );
 }
 
-export default async function SettingsPage({ searchParams }: { searchParams: Promise<{ tab?: string; section?: string; v?: string; year?: string; from?: string; edit?: string; add?: string; adv?: string }> }) {
+export default async function SettingsPage({ searchParams }: { searchParams: Promise<{ tab?: string; section?: string; v?: string; year?: string; on?: string; copy?: string; from?: string; edit?: string; add?: string; adv?: string }> }) {
   // PC: 시프티의 회사 설정 구성 (2026-10-11 의뢰인 스샷 `스샷/관리-회사설정*.png`) — 사이드 메뉴 옆 둘째 메뉴에서 탭을 고르고,
   // 본문은 「굵은 항목 이름 — 값」 줄 + 회색 띠 묶음 제목 + 오른쪽 위 버튼. 폰은 예전처럼 카드 네 장을 한 화면에
   const sp = await searchParams;
