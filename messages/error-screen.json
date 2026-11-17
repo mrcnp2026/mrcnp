@@ -1,0 +1,16 @@
+{
+  "ko": {
+    "title": "잠시 연결이 불안정합니다",
+    "body": "서버나 데이터 서비스가 잠깐 응답하지 않았습니다. 잠시 뒤 다시 시도해 주세요. 계속되면 관리자에게 아래 문의번호를 알려 주세요.",
+    "retry": "다시 시도",
+    "home": "처음 화면으로",
+    "reference": "문의번호 {id}"
+  },
+  "en": {
+    "title": "Connection is unstable for a moment",
+    "body": "The server or data service did not respond. Please try again shortly. If it keeps happening, tell your administrator the reference number below.",
+    "retry": "Try again",
+    "home": "Go to home",
+    "reference": "Reference number: {id}"
+  }
+}
