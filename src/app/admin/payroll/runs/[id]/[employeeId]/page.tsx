@@ -11,6 +11,7 @@ import { slipTax } from '@/lib/payroll/slip-pdf-response';
 import { slipFamilyTemp } from '@/lib/payroll/tax-defaults';
 import { createAdminClient } from '@/lib/supabase/admin';
 import { OverrideForm } from '../../RunForms';
+import { blockerText } from '@/lib/payroll/blocker-text';
 
 const AUTO_CODES: { code: string; kind: 'PAYMENT' | 'DEDUCTION' }[] = [
   { code: 'BASE', kind: 'PAYMENT' }, { code: 'OVERTIME', kind: 'PAYMENT' }, { code: 'NIGHT', kind: 'PAYMENT' }, { code: 'HOLIDAY', kind: 'PAYMENT' }, { code: 'HOLIDAY_OVER8', kind: 'PAYMENT' }, { code: 'PAID_LEAVE', kind: 'PAYMENT' },
@@ -34,8 +35,7 @@ export default async function PayStatementPage({ params }: { params: Promise<{ i
   const tps = await getTranslations('payslip');
   const won = (v: number) => t('won', { n: f.number(v) });
   const label = (code: string, fallback: string) => (t.has(`line.${code}`) ? t(`line.${code}`) : (items.find((x) => x.code === code)?.koName ?? fallback));
-  const dk = (d: string) => d.replace(/[.-]/g, '_'); // 번역 열쇠에는 점 · 줄표를 쓸 수 없다
-  const why = (b: { code: string; detail?: string }) => (t.has(`blocker.${b.code}`) ? t(`blocker.${b.code}`, { detail: b.detail ? (t.has(`detail.${dk(b.detail)}`) ? t(`detail.${dk(b.detail)}`) : b.detail) : '' }) : `${b.code}${b.detail ? ` (${b.detail})` : ''}`);
+  const why = await blockerText();
   const num = (v: string | null) => (v === null ? '' : f.number(Number(v), { maximumFractionDigits: 4 }));
   const att = (s?.snapshot.attendance ?? null) as { regularMinutes: number; netMinutes: number; payableMinutes: number; approved: { overtime: number; night: number; holidayWithin8: number; holidayOver8: number }; paidLeaveDays: number } | null;
   const hm = (min: number) => t('hm', { h: Math.floor(min / 60), m: min % 60 });

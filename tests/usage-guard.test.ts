@@ -61,9 +61,10 @@ describe('서버 사용량 지킴이 (2026-11-04 한도 초과 재발 막기)', 
     expect(over).toEqual([]);
   });
 
-  it('vercel.json: pc-4 · 작업 사본 자동 배포 끔, 크론은 하루 한 번 이하(무료 요금제는 그보다 잦으면 배포가 막힌다)', () => {
+  it('vercel.json: 작업 사본 자동 배포 끔(pc-4는 개발 사이트라 켬), 크론은 하루 한 번 이하(무료 요금제는 그보다 잦으면 배포가 막힌다)', () => {
     const v = JSON.parse(read('vercel.json')) as { git: { deploymentEnabled: Record<string, boolean> }; crons: { path: string; schedule: string }[] };
-    expect(v.git.deploymentEnabled).toMatchObject({ 'pc-4': false, 'worktree-*': false });
+    // pc-4 = 개발 사이트(미리보기)라 켠다 (2026-11-17 의뢰인: pc-4 = 개발 · main = 운영). 작업 사본은 계속 끈다 — 미리보기 보관은 1일(11-05 Vercel 설정)
+    expect(v.git.deploymentEnabled).toMatchObject({ 'pc-4': true, 'worktree-*': false });
     const often = v.crons.filter((c) => !/^\d+ \d+ /.test(c.schedule)).map((c) => c.path);
     expect(often).toEqual([]);
   });

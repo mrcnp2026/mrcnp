@@ -24,6 +24,7 @@ import { CancelVersionButton, ContractForm, ItemForms, NewItemCreate, TaxForm } 
 import { SensitiveForms } from './SensitiveForms';
 import { loadGrants, loadSensitive, sensitiveKeyReady } from '@/lib/payroll/sensitive';
 import { GRANT_DAYS } from '@/lib/payroll/sensitive-core';
+import { blockerText } from '@/lib/payroll/blocker-text';
 
 const TABS = ['contract', 'tax', 'items', 'history'] as const;
 type Tab = (typeof TABS)[number];
@@ -79,8 +80,7 @@ export default async function StaffPayDetailPage({ params, searchParams }: { par
   // 민감정보(급여-36) — 세무 탭에서만 읽는다. 외국인 직원은 외국인등록번호 · 여권, 아니면 주민번호. 이미 넣은 종류는 늘 보인다
   const sens = tab === 'tax' ? await Promise.all([loadSensitive(id), loadGrants(), db.from('profiles').select('id, name').eq('role', 'admin').eq('active', true)]) : null;
   const sensKinds = sens ? (['RRN', 'FOREIGN_NO', 'PASSPORT', 'BANK'] as const).filter((k) => k === 'BANK' || (foreign.nationality ? k !== 'RRN' : k === 'RRN') || sens[0].some((r) => r.kind === k)) : [];
-  const dk = (d: string) => d.replace(/[.-]/g, '_');
-  const whyNot = (b: { code: string; detail?: string }) => (tr.has(`blocker.${b.code}`) ? tr(`blocker.${b.code}`, { detail: b.detail ? (tr.has(`detail.${dk(b.detail)}`) ? tr(`detail.${dk(b.detail)}`) : b.detail) : '' }) : b.code);
+  const whyNot = await blockerText();
   const lineName = (code: string, fallback: string) => (tr.has(`line.${code}`) ? tr(`line.${code}`) : (items.find((x) => x.code === code)?.koName ?? fallback));
 
   const previewCard = (

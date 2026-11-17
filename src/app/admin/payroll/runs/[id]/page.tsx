@@ -18,6 +18,7 @@ import { DownloadMenu } from '../DownloadMenu';
 import { SwitchToggle } from '@/components/SwitchToggle';
 import { SLIP_CALC, slipCalcShown } from '@/lib/switches';
 import { bulkContext } from '@/lib/payroll/bulk-data';
+import { blockerText } from '@/lib/payroll/blocker-text';
 
 const INFO = new Set(['overtime_unreviewed', 'employer_rate_missing', 'basis_unverified']); // 참고 안내 — 조치가 필요 없다
 const TONE = { DRAFT: 'neutral', CALCULATED: 'info', REVIEWED: 'warn', FINALIZED: 'ok' } as const;
@@ -52,7 +53,7 @@ export default async function PayRunPage({ params, searchParams }: { params: Pro
   const pub: Map<string, { statementId: string; published: boolean; at: string | null }> = final ? await loadPublication(run.id, run.generationId) : new Map();
   const waiting = [...pub.values()].filter((x) => !x.published).length;
   const dk = (d: string) => d.replace(/[.-]/g, '_'); // 번역 열쇠에는 점 · 줄표를 쓸 수 없다
-  const why = (b: { code: string; detail?: string }) => (t.has(`blocker.${b.code}`) ? t(`blocker.${b.code}`, { detail: b.detail ? (t.has(`detail.${dk(b.detail)}`) ? t(`detail.${dk(b.detail)}`) : b.detail) : '' }) : `${b.code}${b.detail ? ` (${b.detail})` : ''}`);
+  const why = await blockerText();
 
   // 모든 직원에게 똑같이 붙는 참고 안내(예: 기준값 검증 전)는 한 번만 보여 준다 — 줄마다 되풀이하면 관리자가 읽지 않는다 (2026-10-25 의뢰인)
   const okLines = lines.filter((l) => l.included && l.state === 'OK');

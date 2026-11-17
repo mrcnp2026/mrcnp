@@ -4832,6 +4832,10 @@
       "ovNew": "{amount} (manual)",
       "ovChange": "{from} → {to}",
       "ovHint": "Automatic amounts are never edited directly; an adjustment is recorded instead. Press Recalculate after adding or withdrawing. Pay items cannot be negative.",
+      "basis": {
+        "ledger": "Ledger settings",
+        "employeeDefaults": "Employee pay defaults"
+      },
       "blocker": {
         "no_contract": "No contract.",
         "no_tax": "No tax and insurance settings.",
@@ -4859,7 +4863,7 @@
         "no_work_rule": "No work rule.",
         "item_missing": "An unusable item is attached ({detail}).",
         "item_amount_missing": "An item has no amount ({detail}).",
-        "employer_rate_missing": "No employer rate, so it is left out of employer cost ({detail}). Net pay is not affected.",
+        "employer_rate_missing": "The company rate for {detail} is not entered yet, so it is left out of the employer total. Employee net pay is not affected.",
         "no_bonus_amount": "No bonus amount entered. Enter it under Adjustments or exclude this employee.",
         "insurance_not_calculated": "Social insurance is not calculated in a bonus ledger. Settle or adjust separately if needed.",
         "overtime_unreviewed": "Note: {detail} min of overtime under 15 minutes a day was not paid (too short to need approval).",
@@ -4879,8 +4883,8 @@
         "notice_settlement_duplicate": "Direct billing amounts and settlement adjustments overlap. Review the settlement adjustment.",
         "employer_notice_missing": "Employer billing amount missing ({detail}); excluded from employer totals.",
         "rounded_time_missing": "Rounded attendance categories are missing.",
-        "basis_unverified": "Payroll basis is not verified ({detail}).",
-        "family_unreported": "Dependants not yet declared — calculated with {detail} (incl. self) as a provisional value. After the declaration, enter the date under Staff pay › Tax and recalculate.",
+        "basis_unverified": "Some pay settings are not marked as checked yet: {detail}. Check them in Company settings › Pay before finalizing this ledger.",
+        "family_unreported": "The dependents form has not been received, so tax was calculated with {detail} family member(s) including the employee. When you receive it, enter the date in Employee pay › Tax and recalculate.",
         "policy_changed_in_period": "A payroll basis changed during this period ({detail}). Review the period calculation.",
         "leave_duration_mismatch": "Leave duration does not match scheduled work time ({detail}). Review the leave and schedule.",
         "weekly_rest_with_absence": "There were absent days this month ({detail}). Per company rule, weekly paid rest is kept even for a week with an absence.",

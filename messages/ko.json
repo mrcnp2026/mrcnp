@@ -4832,6 +4832,10 @@
       "ovNew": "{amount} (직접 넣음)",
       "ovChange": "{from} → {to}",
       "ovHint": "자동 계산 금액을 직접 고치지 않고 조정으로 남깁니다. 넣거나 거둔 뒤 「다시 계산」을 눌러야 반영됩니다. 지급 항목에는 음수를 넣을 수 없습니다.",
+      "basis": {
+        "ledger": "급여대장 설정",
+        "employeeDefaults": "사원급여 기본값"
+      },
       "blocker": {
         "no_contract": "계약이 없습니다.",
         "no_tax": "세무 · 보험 설정이 없습니다.",
@@ -4859,7 +4863,7 @@
         "no_work_rule": "근무 규칙이 없습니다.",
         "item_missing": "쓸 수 없는 항목이 붙어 있습니다 ({detail}).",
         "item_amount_missing": "항목의 금액이 없습니다 ({detail}).",
-        "employer_rate_missing": "사업주 부담 요율이 없어 사업주 부담 합계에서 빠졌습니다 ({detail}). 직원 실지급에는 영향이 없습니다.",
+        "employer_rate_missing": "회사가 내는 {detail} 요율이 아직 입력되지 않아 「사업주 부담」 합계에서 빠졌습니다. 직원이 받는 돈에는 영향이 없습니다.",
         "no_bonus_amount": "상여 금액을 넣지 않았습니다. 「금액 조정」에서 넣거나 대상에서 빼 주세요.",
         "insurance_not_calculated": "상여 대장에서는 4대보험을 계산하지 않습니다. 필요하면 정산 · 조정으로 맞춰 주세요.",
         "overtime_unreviewed": "참고: 하루 15분 미만 연장 {detail}분은 지급하지 않았습니다(승인 대상이 아닌 짧은 시간).",
@@ -4879,8 +4883,8 @@
         "notice_settlement_duplicate": "고지액 직접 반영과 보험 정산 조정이 중복됩니다. 정산 조정을 먼저 검토해 주세요.",
         "employer_notice_missing": "사업주 고지액이 없습니다 ({detail}). 사업주 부담 합계에서 빠집니다.",
         "rounded_time_missing": "반올림 기준으로 분류한 근태 자료가 없습니다.",
-        "basis_unverified": "검증되지 않은 급여 기준이 있습니다 ({detail}).",
-        "family_unreported": "부양가족 신고 전 — 가족 수 {detail}명(본인 포함)으로 계산한 임시 값입니다. 신고를 받으면 직원 급여 › 세무에 신고일을 넣고 다시 계산하세요.",
+        "basis_unverified": "아직 「확인됨」으로 바꾸지 않은 급여 설정이 있습니다: {detail}. 회사 설정 › 급여에서 확인을 마쳐야 대장을 확정할 수 있습니다.",
+        "family_unreported": "부양가족 신고서를 아직 받지 않아 가족을 {detail}명(본인 포함)으로 보고 세금을 계산했습니다. 신고서를 받으면 사원별 급여 › 세무에 받은 날짜를 넣고 다시 계산하세요.",
         "policy_changed_in_period": "귀속 기간 중 기준이 바뀌었습니다 ({detail}). 기간별 계산 기준을 검토해 주세요.",
         "leave_duration_mismatch": "휴가 시간과 일정의 순근무시간이 맞지 않습니다 ({detail}). 휴가·일정을 검토해 주세요.",
         "weekly_rest_with_absence": "이 달에 결근한 날이 있습니다({detail}). 회사 규칙대로 결근한 주에도 주휴수당은 빼지 않았습니다(급여-41).",
