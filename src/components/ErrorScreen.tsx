@@ -20,7 +20,8 @@ export function ErrorView({ locale, digest, onRetry }: { locale: string; digest?
       <p className="text-sm text-muted">{m.body}</p>
       <div className="flex w-full flex-col gap-2 sm:flex-row sm:justify-center">
         <Button type="button" onClick={onRetry} className="sm:min-w-32">{m.retry}</Button>
-        {/* 보통 <a> — 틀이 깨진 상태에서도 확실히 처음부터 다시 받게 */}
+        {/* 보통 <a> — 틀이 깨진 상태에서도 확실히 처음부터 다시 받게(화면 안 이동은 깨진 틀을 그대로 쓴다) */}
+        {/* eslint-disable-next-line @next/next/no-html-link-for-pages */}
         <a href="/" className="inline-flex min-h-11 items-center justify-center rounded-button border border-border bg-bg px-4 text-sm font-semibold text-text hover:bg-surface sm:min-w-32">{m.home}</a>
       </div>
       {digest && <p className="num text-xs text-faint">{m.reference.replace('{id}', digest)}</p>}
