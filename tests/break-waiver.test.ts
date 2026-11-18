@@ -1,6 +1,6 @@
 // 휴게 안 함 표시 (급여-60, 2026-11-02) — 26.10 3공장 대장 10/7: 18:51 퇴근, 17:00–17:30 휴게 때 일함 → 연장 1.75시간
 import { expect, it } from 'vitest';
-import { waiveBreaks } from '@/lib/break-waiver';
+import { eveningSkipped, waiveBreaks } from '@/lib/break-waiver';
 import { kstDateTime } from '@/lib/time';
 import type { WorkRule } from '@/lib/types';
 import { calcWorkMinutes } from '@/lib/worktime';
@@ -19,4 +19,11 @@ it('17:00 휴게를 「휴게 안 함」으로 표시하면 그 30분이 근무�
 it('점심 휴게만 표시하면 점심만 빠지고 저녁 휴게는 그대로 뺀다', () => {
   const w = waiveBreaks(RULE, new Set(['12:00']));
   expect([w.breakStart, w.breakEnd, w.extraBreaks]).toEqual([null, null, [{ start: '17:00', end: '17:30' }]]);
+});
+it('저녁 휴게 기본값(급여-78): 시작일 전은 그대로, 시작일부터 「안 쉼」, 나중 판 「쉼」이면 다시 뺀다', () => {
+  const rows = [{ valid_from: '2026-10-01', skip_evening: true }, { valid_from: '2026-11-01', skip_evening: false }];
+  expect(eveningSkipped(rows, '2026-09-30', RULE)).toEqual([]);
+  expect(eveningSkipped(rows, '2026-10-01', RULE)).toEqual(['17:00']);
+  expect(eveningSkipped(rows, '2026-11-01', RULE)).toEqual([]);
+  expect(eveningSkipped([], '2026-10-01', RULE)).toEqual([]);
 });

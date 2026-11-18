@@ -21,7 +21,7 @@ import { loadShifts, loadShiftTemplates } from '@/lib/shift-data';
 import { applyTemplate, deemedPair, planDay, type DayPlan, type DayShift, type ShiftTemplate } from '@/lib/shifts';
 import { createAdminClient } from '@/lib/supabase/admin';
 import { hhmm, toKstDate } from '@/lib/time';
-import { waiveBreaks } from '@/lib/break-waiver';
+import { eveningSkipped, waiveBreaks } from '@/lib/break-waiver';
 import { FIRST_TABLES, type FirstTable } from '@/lib/first-approval';
 import type { HolidayRow, PunchCorrection, PunchEvent, WorkRule } from '@/lib/types';
 
@@ -138,6 +138,15 @@ export async function loadPeriod(from: string, to: string, practice = OFFICE.pra
     const k = `${w.employee_id}|${w.work_date}`;
     waivedOf.set(k, (waivedOf.get(k) ?? new Set()).add(hhmm(w.break_start as string)));
   }
+  // 직원별 저녁 휴게 기본값 (급여-78, DB 0094) — 그날 걸린 판이 「안 쉼」이면 17시 이후 회사 휴게를 휴게 안 함으로 본다. 표가 아직 없으면 비어 있는 것으로 본다
+  const { data: defaultRows } = await mine(db.from('break_defaults').select('employee_id, valid_from, skip_evening')).eq('is_test', practice).lte('valid_from', to).order('valid_from').order('created_at');
+  const defaultsOf = new Map<string, { valid_from: string; skip_evening: boolean }[]>();
+  for (const r of defaultRows ?? []) defaultsOf.set(r.employee_id as string, [...(defaultsOf.get(r.employee_id as string) ?? []), { valid_from: r.valid_from as string, skip_evening: r.skip_evening as boolean }]);
+  const waivedAt = (employeeId: string, date: string): Set<string> | undefined => {
+    const marked = waivedOf.get(`${employeeId}|${date}`);
+    const evening = eveningSkipped(defaultsOf.get(employeeId) ?? [], date, ruleAt(versions, date));
+    return evening.length ? new Set([...(marked ?? []), ...evening]) : marked;
+  };
   // 퇴근할 때 직원이 답한 「저녁 휴게 못 쉬었어요」 (2026-11-04, DB 0089) — 표가 아직 없으면(운영 적용 전) 비어 있는 것으로 본다
   const { data: skipRows } = await mine(db.from('break_skip_requests').select('id, employee_id, work_date, break_start, break_end, status')).eq('is_test', practice).in('status', ['pending', 'approved', 'rejected']).gte('work_date', readFrom).lte('work_date', to);
   const skipOf = new Map<string, BreakSkip>();
@@ -172,7 +181,7 @@ export async function loadPeriod(from: string, to: string, practice = OFFICE.pra
     const timed = timedLeaveOf.get(`${employeeId}|${date}`);
     // 그날 일정이 등록되지 않은 날도 평소 근무 틀 시작부터 센다 (급여-59, 2026-11-02 의뢰인: 「근무일정은 있었는데 등록을 안 한 것」).
     // 26.10 3공장 대장: 일정 없는 쉬는 날 특근 13건 모두 08:00부터. 예전 임시 방식(일정 없는 날은 실제 출근부터)은 없앴다
-    const waived = waivedOf.get(`${employeeId}|${date}`);
+    const waived = waivedAt(employeeId, date);
     const p2 = waived && plan.rule ? { ...plan, rule: waiveBreaks(plan.rule, waived) } : plan;
     return timed && p2.rule ? { ...p2, rule: trimRuleByLeave(p2.rule, timed) } : p2;
   };
@@ -188,7 +197,7 @@ export async function loadPeriod(from: string, to: string, practice = OFFICE.pra
     ruleFor: (employeeId: string, date: string) => planFor(employeeId, date).rule,
     shifts,
     planFor,
-    waivedFor: (employeeId: string, date: string) => waivedOf.get(`${employeeId}|${date}`) ?? new Set<string>(),
+    waivedFor: (employeeId: string, date: string) => waivedAt(employeeId, date) ?? new Set<string>(),
     breakSkipFor: (employeeId: string, date: string) => skipOf.get(`${employeeId}|${date}`) ?? null,
     holidays,
     people: (ppl ?? []).map((p) => ({

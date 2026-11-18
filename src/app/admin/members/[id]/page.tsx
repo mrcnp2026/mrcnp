@@ -31,6 +31,7 @@ import { Pager, pageOf } from '@/components/Pager';
 import { loadMySlips } from '@/lib/payroll/publish-data';
 import { OFFICE } from '@/config/office';
 import { ProfileSection } from './ProfileSection';
+import { BreakDefault } from './BreakDefault';
 import { StaffNotes } from './StaffNotes';
 import { loadStaffNotes } from '@/lib/staff-notes';
 import { StaffDetailsForm } from '@/components/StaffDetailsForm';
@@ -68,6 +69,8 @@ export default async function MemberDetailPage({ params, searchParams }: { param
   // 부양가족 · 자녀 수 (미팅 2026-10-15): 급여 세무 판(사원별 급여 › 세금)에 있는 값을 여기서도 보여 준다 — 고치는 곳은 급여 한 곳
   const today = toKstDate(new Date());
   const { data: taxNow } = await db.from('payroll_employee_tax_versions').select('family_count, child_count').eq('employee_id', id).eq('status', 'active').lte('valid_from', today).order('valid_from', { ascending: false }).limit(1).maybeSingle();
+  // 저녁 휴게 기본값 (급여-78) — 가장 늦게 시작하는 판(앞으로 시작할 판이면 그 판)
+  const { data: breakNow } = await db.from('break_defaults').select('skip_evening, valid_from').eq('employee_id', id).eq('is_test', OFFICE.practiceMode).order('valid_from', { ascending: false }).order('created_at', { ascending: false }).limit(1).maybeSingle();
   // 가입 = 비밀번호를 만들었거나, 출퇴근 기기를 등록해 둔 사람. 출퇴근 기기(key)는 직원당 1대
   const key = keys?.[0] ?? null;
   const hasPasskey = !!key;
@@ -240,6 +243,7 @@ export default async function MemberDetailPage({ params, searchParams }: { param
               foreign={foreign}
               payHref={`/admin/payroll/staff/${p.id}`}
             />
+            <BreakDefault employeeId={p.id} current={breakNow ? { skipEvening: breakNow.skip_evening as boolean, validFrom: breakNow.valid_from as string } : null} today={today} />
           </Fold>
 
           {/* 개인 정보 (묶음 17): 생년월일 · 비상연락처 · 자격증 · 차량 + 부양가족(급여 세무 칸 값) */}

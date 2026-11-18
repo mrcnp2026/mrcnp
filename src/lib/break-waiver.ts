@@ -7,3 +7,10 @@ export function waiveBreaks(rule: WorkRule, starts: ReadonlySet<string>): WorkRu
   const main = rule.breakStart && starts.has(hhmm(rule.breakStart));
   return { ...rule, breakStart: main ? null : rule.breakStart, breakEnd: main ? null : rule.breakEnd, extraBreaks: (rule.extraBreaks ?? []).filter((b) => !starts.has(hhmm(b.start))) };
 }
+
+/** 저녁 휴게 기본값 (급여-78) — 그날 걸린 판이 「안 쉼」이면 그날 규칙의 17시 이후 휴게 시작 시각들. 판은 시작일 · 넣은 순서로 정렬해 받는다 */
+export function eveningSkipped(rows: readonly { valid_from: string; skip_evening: boolean }[], date: string, rule: WorkRule | null): string[] {
+  let off = false;
+  for (const r of rows) if (r.valid_from <= date) off = r.skip_evening;
+  return off && rule ? (rule.extraBreaks ?? []).map((b) => hhmm(b.start)).filter((s) => s >= '17:00') : [];
+}
