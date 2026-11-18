@@ -31,14 +31,15 @@ import { Pager, pageOf } from '@/components/Pager';
 import { loadMySlips } from '@/lib/payroll/publish-data';
 import { OFFICE } from '@/config/office';
 import { ProfileSection } from './ProfileSection';
-import { BreakDefault } from './BreakDefault';
+import { BreakDefault, type EveningBreak } from './BreakDefault';
+import { loadActiveRule } from '@/lib/attendance-data';
 import { StaffNotes } from './StaffNotes';
 import { loadStaffNotes } from '@/lib/staff-notes';
 import { StaffDetailsForm } from '@/components/StaffDetailsForm';
 import { daysToStayEnd } from '@/lib/foreign-rules';
 import { loadForeignInfo, loadStaffDetails } from '@/lib/staff-details';
 
-export default async function MemberDetailPage({ params, searchParams }: { params: Promise<{ id: string }>; searchParams: Promise<{ sp?: string }> }) {
+export default async function MemberDetailPage({ params, searchParams }: { params: Promise<{ id: string }>; searchParams: Promise<{ sp?: string; edit?: string }> }) {
   const t = await getTranslations('admin.members');
   const td = await getTranslations('details');
   const tc = await getTranslations('common');
@@ -70,6 +71,11 @@ export default async function MemberDetailPage({ params, searchParams }: { param
   const today = toKstDate(new Date());
   const { data: taxNow } = await db.from('payroll_employee_tax_versions').select('family_count, child_count').eq('employee_id', id).eq('status', 'active').lte('valid_from', today).order('valid_from', { ascending: false }).limit(1).maybeSingle();
   // 저녁 휴게 기본값 (급여-78) — 가장 늦게 시작하는 판(앞으로 시작할 판이면 그 판)
+  // 저녁 휴게 = 회사 규칙의 17시 이후 휴게 (eveningSkipped와 같은 기준). 화면에 시각 · 분을 보인다
+  const evening: EveningBreak = await loadActiveRule().then((r) => {
+    const b = (r?.extraBreaks ?? []).map((x) => ({ start: hhmm(x.start), end: hhmm(x.end) })).find((x) => x.start >= '17:00');
+    return b ? { ...b, minutes: (Number(b.end.slice(0, 2)) * 60 + Number(b.end.slice(3, 5))) - (Number(b.start.slice(0, 2)) * 60 + Number(b.start.slice(3, 5))) } : null;
+  });
   const { data: breakNow } = await db.from('break_defaults').select('skip_evening, valid_from').eq('employee_id', id).eq('is_test', OFFICE.practiceMode).order('valid_from', { ascending: false }).order('created_at', { ascending: false }).limit(1).maybeSingle();
   // 가입 = 비밀번호를 만들었거나, 출퇴근 기기를 등록해 둔 사람. 출퇴근 기기(key)는 직원당 1대
   const key = keys?.[0] ?? null;
@@ -82,6 +88,7 @@ export default async function MemberDetailPage({ params, searchParams }: { param
   const jobName = p.job_id ? (jobList.find((x) => x.id === p.job_id)?.name ?? null) : null;
   // 근무 · 급여 (2026-10-19 의뢰인): 근무일정 틀은 여기서 바로 고르고(틀 만들기는 통합설정), 급여 계약은 보이기만 하고 고치기는 사원별 급여
   const tw = await getTranslations('admin.members.workPay');
+  const tbd = await getTranslations('admin.members.breakDefault');
   const tpay = await getTranslations('admin.staffPay.payType');
   const seePay = me.canViewPayroll;
   const { data: contract } = seePay
@@ -89,7 +96,7 @@ export default async function MemberDetailPage({ params, searchParams }: { param
     : { data: null };
   const payText = contract ? tw('payValue', { type: tpay(contract.pay_type as string), amount: f.number(Number(contract.amount)), from: contract.valid_from as string }) : tw('payNone');
   // 급(상)여 명세서 (2026-10-19 의뢰인: 직원 화면에서 최근 6개월, 넘으면 쪽 넘김) — 그 직원이 「내 급여」에서 보는 공개된 명세서 그대로. 급여를 볼 수 있는 관리자만
-  const slipSp = (await searchParams).sp;
+  const { sp: slipSp, edit } = await searchParams;
   const slips = seePay ? await loadMySlips(id, OFFICE.practiceMode) : [];
   const slipPage = pageOf(slips, slipSp, 6);
   const tps = await getTranslations('payslip');
@@ -243,7 +250,6 @@ export default async function MemberDetailPage({ params, searchParams }: { param
               foreign={foreign}
               payHref={`/admin/payroll/staff/${p.id}`}
             />
-            <BreakDefault employeeId={p.id} current={breakNow ? { skipEvening: breakNow.skip_evening as boolean, validFrom: breakNow.valid_from as string } : null} today={today} />
           </Fold>
 
           {/* 개인 정보 (묶음 17): 생년월일 · 비상연락처 · 자격증 · 차량 + 부양가족(급여 세무 칸 값) */}
@@ -270,6 +276,19 @@ export default async function MemberDetailPage({ params, searchParams }: { param
                   {tw(contract ? 'payEdit' : 'payAdd')} ›
                 </Link>
               </div>
+              {/* 회사 기본(쉼)과 다른 사람만 — 지급 시간이 달라지는 예외라 급여 형태 바로 아래 (급여-78) */}
+              {breakNow?.skip_evening && (
+                <div className="flex flex-col gap-1.5 border-b border-border py-3 lg:flex-row lg:items-center lg:gap-3">
+                  <span className="w-24 shrink-0 text-sm text-muted">{tbd('title')}</span>
+                  <span className="flex min-w-0 flex-1 flex-col">
+                    <span className="num text-sm font-semibold">{tbd('rowValue', { from: breakNow.valid_from as string })}</span>
+                    <span className="num text-xs text-muted">{evening ? tbd('rowNote', { start: evening.start, end: evening.end, n: evening.minutes }) : tbd('pickOffNoteNone')}</span>
+                  </span>
+                  <Link prefetch={false} href={`?edit=break#break-default`} className="inline-flex min-h-11 items-center text-sm font-semibold text-primary lg:min-h-9">
+                    {tbd('change')} ›
+                  </Link>
+                </div>
+              )}
               {slips.length === 0 ? (
                 <p className="pt-3 text-sm text-faint">{tw('slipEmpty')}</p>
               ) : (
@@ -373,6 +392,9 @@ export default async function MemberDetailPage({ params, searchParams }: { param
               </details>
             )}
             {!pendingRole && p.active && targetTop && !me.top && <p className="px-5 py-3 text-sm text-muted">{tm('owner_only')}</p>}
+            {p.active && (
+              <BreakDefault employeeId={p.id} current={breakNow ? { skipEvening: breakNow.skip_evening as boolean, validFrom: breakNow.valid_from as string } : null} today={today} evening={evening} startOpen={edit === 'break'} />
+            )}
             {key && (
               <ManageAction title={tm('revokeDevice')} hint={tm('revokeDeviceHint')} confirmLabel={tm('revokeDevice')} endpoint={`${api}/device`} body={{}} presets={[tm('preset.lost'), tm('preset.newPhone')]} notes={[tm('revokeDeviceNote')]} danger />
             )}

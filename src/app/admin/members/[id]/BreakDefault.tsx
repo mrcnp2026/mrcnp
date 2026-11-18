@@ -1,75 +1,103 @@
 'use client';
-// 직원별 저녁 휴게 기본값 (급여-78, 2026-11-18 의뢰인: 저녁 휴게 없이 일하는 직원은 한 번 설정) — 지금 판 한 줄 + 「바꾸기」로 새 판.
+// 직원별 저녁 휴게 (급여-78) — 관리 칸의 한 줄. 회사 기본(쉼)인 사람은 여기서만 보이고, 「쉬지 않고 일함」인 사람만 급여 칸에 한 줄 더 나온다 (2026-11-18 의뢰인: 평소엔 숨기고 예외만)
+import { ChevronDown } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 import { useRouter } from 'next/navigation';
 import { useState } from 'react';
 import { callApi } from '@/components/client-api';
 import { DateTimeInput } from '@/components/DateTimeInput';
+import { Button } from '@/components/ui';
 
-const field = 'min-h-11 w-full rounded-button border border-border bg-bg px-3 text-sm lg:min-h-9';
+export type EveningBreak = { start: string; end: string; minutes: number } | null;
 
-export function BreakDefault({ employeeId, current, today }: { employeeId: string; current: { skipEvening: boolean; validFrom: string } | null; today: string }) {
+export function BreakDefault({ employeeId, current, today, evening, startOpen = false }: { employeeId: string; current: { skipEvening: boolean; validFrom: string } | null; today: string; evening: EveningBreak; startOpen?: boolean }) {
   const t = useTranslations('admin.members.breakDefault');
   const te = useTranslations('errors');
   const router = useRouter();
-  const [open, setOpen] = useState(false);
-  const [v, setV] = useState({ skipEvening: !current?.skipEvening, validFrom: today, reason: '' });
+  const skipNow = !!current?.skipEvening;
+  const [open, setOpen] = useState(startOpen);
+  const [v, setV] = useState({ skipEvening: !skipNow, validFrom: today, reason: '' });
   const [busy, setBusy] = useState(false);
-  const [msg, setMsg] = useState<{ ok: boolean; text: string } | null>(null);
+  const [err, setErr] = useState<string | null>(null);
+  const [saved, setSaved] = useState(false);
+  const when = evening ? t('when', { start: evening.start, end: evening.end, n: evening.minutes }) : t('whenNone');
+  const ready = v.reason.trim().length > 0 && v.reason.trim().length <= 200 && v.skipEvening !== skipNow;
+  const choices = [
+    { skip: false, title: t('pickOn'), note: t('pickOnNote') },
+    { skip: true, title: t('pickOff'), note: evening ? t('pickOffNote', { n: evening.minutes }) : t('pickOffNoteNone') },
+  ];
+
   const save = async () => {
-    if (!v.reason.trim() || v.reason.trim().length > 200) return setMsg({ ok: false, text: t('reasonRequired') });
+    if (!ready) return setErr(t('reasonRequired'));
     setBusy(true);
-    setMsg(null);
+    setErr(null);
     const r = await callApi(`/api/admin/employees/${employeeId}/break-default`, v);
     setBusy(false);
-    if (!r.ok) return setMsg({ ok: false, text: r.code === 'reason_required' ? t('reasonRequired') : te.has(r.code) ? te(r.code) : te('generic') });
+    if (!r.ok) return setErr(r.code === 'reason_required' ? t('reasonRequired') : te.has(r.code) ? te(r.code) : te('generic'));
     setOpen(false);
-    setMsg({ ok: true, text: t('saved') });
+    setSaved(true);
+    setV({ skipEvening: !v.skipEvening, validFrom: today, reason: '' });
     router.refresh();
   };
+
   return (
-    <div className="flex flex-col gap-2 border-b border-border py-2.5 text-sm">
-      <div className="flex min-w-0 items-center gap-3">
-        <span className="w-24 shrink-0 text-muted">{t('title')}</span>
-        <span className="flex min-w-0 flex-1 flex-col">
-          <span className="num font-semibold">{current?.skipEvening ? t.rich('off', { from: current.validFrom, d: (x) => <span className="whitespace-nowrap">{x}</span> }) : t('on')}</span>
-          <span className="text-xs text-faint">{current?.skipEvening ? t('offNote') : t('onNote')}</span>
+    <div id="break-default" className="scroll-mt-20 border-t border-border first:border-t-0">
+      <button type="button" aria-expanded={open} onClick={() => { setOpen(!open); setErr(null); setSaved(false); }} className="flex min-h-14 w-full items-center gap-3 px-5 py-3 text-left hover:bg-surface">
+        <span className="min-w-0 flex-1">
+          <span className="block font-medium">{t('title')}</span>
+          <span className="num flex flex-wrap gap-x-1.5 text-xs text-muted">
+            <span className="whitespace-nowrap">{when}</span>
+            <span className={`whitespace-nowrap ${skipNow ? 'font-semibold text-text' : ''}`}>{skipNow ? t('nowOff', { from: current!.validFrom }) : t('nowOn')}</span>
+          </span>
         </span>
-        {!open && (
-          <button type="button" onClick={() => { setOpen(true); setMsg(null); }} className="inline-flex min-h-11 shrink-0 items-center text-sm font-semibold text-primary lg:min-h-9">
-            {t('change')} ›
-          </button>
-        )}
-      </div>
-      {msg?.ok && <p role="status" className="text-sm font-semibold text-ok">{msg.text}</p>}
+        <ChevronDown aria-hidden size={18} strokeWidth={2} className={`shrink-0 text-faint transition-transform ${open ? 'rotate-180' : ''}`} />
+      </button>
+      {saved && !open && <p role="status" className="px-5 pb-3 text-sm font-semibold text-ok">{t('saved')}</p>}
       {open && (
-        <div className="flex flex-col gap-2 rounded-card bg-surface p-3">
-          <div role="radiogroup" aria-label={t('title')} className="flex gap-2">
-            {[false, true].map((skip) => (
-              <button key={String(skip)} type="button" role="radio" aria-checked={v.skipEvening === skip} onClick={() => setV({ ...v, skipEvening: skip })} className={`min-h-11 flex-1 rounded-button border px-3 text-sm font-semibold lg:min-h-9 ${v.skipEvening === skip ? 'border-primary bg-primary text-on-primary' : 'border-border bg-bg text-text'}`}>
-                {skip ? t('pickOff') : t('pickOn')}
-              </button>
-            ))}
+        <form className="flex flex-col gap-3 px-5 pb-4" onSubmit={(e) => { e.preventDefault(); void save(); }}>
+          <div role="radiogroup" aria-label={t('title')} className="flex flex-col gap-2">
+            {choices.map((c) => {
+              const on = v.skipEvening === c.skip;
+              return (
+                <button key={String(c.skip)} type="button" role="radio" aria-checked={on} onClick={() => setV({ ...v, skipEvening: c.skip })} className={`flex min-h-14 items-center gap-3 rounded-button border px-3 py-2.5 text-left transition-colors ${on ? 'border-primary bg-primary-tint' : 'border-border hover:bg-surface'}`}>
+                  <span aria-hidden className={`grid size-5 shrink-0 place-items-center rounded-full border-2 ${on ? 'border-primary' : 'border-border'}`}>
+                    {on && <span className="size-2.5 rounded-full bg-primary" />}
+                  </span>
+                  <span className="min-w-0 flex-1">
+                    <span className={`flex flex-wrap items-center gap-x-2 text-sm font-semibold ${on ? 'text-primary' : 'text-text'}`}>
+                      {c.title}
+                      {!c.skip && <span className="text-xs font-medium text-muted">{t('companyDefault')}</span>}
+                      {c.skip === skipNow && <span className="text-xs font-medium text-muted">{t('nowTag')}</span>}
+                    </span>
+                    <span className="block text-xs text-muted">{c.note}</span>
+                  </span>
+                </button>
+              );
+            })}
           </div>
-          <label className="flex flex-col gap-1">
-            <span className="text-xs text-muted">{t('from')}</span>
-            <DateTimeInput type="date" required value={v.validFrom} onChange={(x) => setV({ ...v, validFrom: x })} className={`num ${field}`} />
-          </label>
-          <label className="flex flex-col gap-1">
-            <span className="text-xs text-muted">{t('reason')}</span>
-            <input value={v.reason} maxLength={200} placeholder={t('reasonHint')} onChange={(e) => setV({ ...v, reason: e.target.value })} className={field} />
-          </label>
-          <p className="text-xs text-faint">{t('hint')}</p>
-          {msg && !msg.ok && <p className="text-sm text-danger">{msg.text}</p>}
-          <div className="flex justify-end gap-2">
-            <button type="button" onClick={() => { setOpen(false); setMsg(null); }} className="min-h-11 rounded-button px-4 text-sm font-semibold text-muted lg:min-h-9">
+          {v.skipEvening !== skipNow && (
+            <>
+              <label className="flex flex-col gap-1">
+                <span className="text-sm text-muted">{t('from')}</span>
+                <DateTimeInput type="date" required value={v.validFrom} onChange={(x) => setV({ ...v, validFrom: x })} className="num min-h-11 w-full rounded-button border border-border bg-bg px-3 text-base lg:min-h-9 lg:text-sm" />
+              </label>
+              <label className="flex flex-col gap-1">
+                <span className="text-sm text-muted">{t('reason')}</span>
+                <input value={v.reason} maxLength={200} placeholder={t('reasonHint')} onChange={(e) => setV({ ...v, reason: e.target.value })} className="min-h-11 w-full rounded-button border border-border bg-bg px-3 text-base lg:min-h-9 lg:text-sm" />
+              </label>
+              <p className="text-xs text-faint">{t('hint')}</p>
+            </>
+          )}
+          {err && <p className="text-sm text-danger">{err}</p>}
+          <div className="flex gap-2">
+            <Button type="button" variant="outline" className="flex-1" onClick={() => { setOpen(false); setErr(null); }}>
               {t('cancel')}
-            </button>
-            <button type="button" onClick={save} disabled={busy} className="min-h-11 rounded-button bg-primary px-4 text-sm font-bold text-on-primary disabled:opacity-50 lg:min-h-9">
+            </Button>
+            <Button type="submit" variant="primary" disabled={!ready || busy} className="flex-1">
               {busy ? '…' : t('save')}
-            </button>
+            </Button>
           </div>
-        </div>
+        </form>
       )}
     </div>
   );
