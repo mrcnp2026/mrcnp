@@ -2,6 +2,7 @@ import type { LeaveOnDay } from '@/lib/leave';
 import type { DayPlan } from '@/lib/shifts';
 import { kstDateTime } from '@/lib/time';
 import { calcWorkMinutes } from '@/lib/worktime';
+import type { PunchPair, WorkRule } from '@/lib/types';
 
 /** 일정 합집합에서 승인 휴가 구간과 휴게를 한 번씩 제외한다. */
 export function scheduledMinutes(plan: DayPlan, date: string, leaves: readonly LeaveOnDay[] = []): number {
@@ -53,4 +54,19 @@ export function latestLeaveStart(plan: DayPlan,date: string,hours: number): stri
     if (scheduledLeaveMinutes(plan,date,{typeCode:'',isPaid:false,unit:hours/8,requestId:'',startTime,endTime:'23:59'})>=need) return startTime;
   }
   return null;
+}
+
+/** 시각을 정한 휴가 구간 안에서 실제로 일한 순근무 분(휴게 제외) — 근무로 이미 셌으므로 휴가 시간에서 뺀다 (급여-77, 2공장 10월 대조: 휴가 시간에 일하면 두 번 셈) */
+export function workedInLeaveMinutes(pairs: readonly PunchPair[], rule: WorkRule, date: string, leaves: readonly LeaveOnDay[]): number {
+  let total = 0;
+  for (const leave of leaves.filter((l) => l.startTime && l.endTime)) {
+    const s = kstDateTime(date,leave.startTime!).getTime(), e = kstDateTime(date,leave.endTime!).getTime();
+    const inside = pairs.flatMap((p) => {
+      if (!p.in || !p.out) return [];
+      const a = Math.max(s,p.in.getTime()), b = Math.min(e,p.out.getTime());
+      return b > a ? [{ in: new Date(a),out: new Date(b) }] : [];
+    });
+    if (inside.length) total += calcWorkMinutes(inside,{ ...rule,roundStepMin:0 },{ workDate:date,dayType:'workday',weekRegularMinutesSoFar:0,weekTotalMinutesSoFar:0 }).netMinutes;
+  }
+  return total;
 }

@@ -23,8 +23,8 @@ import { INSURERS, reliefCovers, reliefsForMonth, versionAt } from './contract';
 import { mergeAssigned } from './common-items';
 import { loadCommonItems, loadItems, loadTaxDefaults, loadPolicies, loadReferences, loadSettingHistory, reliefSwitches, sha } from './data';
 import { canonicalItemCode, PERFECT_ATTENDANCE_CODES } from './engine/reserved-items';
-import { leaveDurationMismatch, scheduledMinutes } from './engine/scheduled-attendance';
-import { roundedAttendance } from './engine/rounded-attendance';
+import { leaveDurationMismatch, scheduledMinutes, workedInLeaveMinutes } from './engine/scheduled-attendance';
+import { roundPairs, roundedAttendance } from './engine/rounded-attendance';
 import { timeFromAttendance } from './engine/attendance';
 import { restAndHolidayMinutes } from './engine/weekly-rest';
 import { calculateStatement, ENGINE_VERSION, type Blocker, type EngineInput, type EngineItem, type EngineOverride, type EngineResult, type Withholding } from './engine/engine';
@@ -276,10 +276,20 @@ async function buildInputs(run: RunRow, memberIds?: string[]): Promise<Built> {
           pendingMinutes: num('pending_overtime_minutes') + num('pending_night_minutes') + num('pending_holiday_minutes'),
           pendingDates: s.pendingDays.map((d) => d.date.slice(5)),
           unreviewedMinutes: num('unreviewed_overtime_minutes'),
-          unpaidLeaveDays: num('unpaid_leave_days'), lateMinutes: num('late_minutes'), paidLeaveDays: s.paidLeaveDays, flags: String(s.row.flags ?? '').split(';').map((x) => x.trim()).filter(Boolean), unconfirmedDays: s.unconfirmedDates.length,
+          unpaidLeaveDays: num('unpaid_leave_days'), lateMinutes: num('late_minutes'), paidLeaveDays: s.paidLeaveDays, paidLeaveWorkedMinutes: 0, flags: String(s.row.flags ?? '').split(';').map((x) => x.trim()).filter(Boolean), unconfirmedDays: s.unconfirmedDates.length,
         };
-        const rounded = roundedAttendance(daysFor(period, id, weekStartOf(from), last), (d) => period.ruleFor(id, d) ?? period.rule!);
-        const roundedFacts = { regularMinutes: 0, approved: { overtime: 0, night: 0, holidayWithin8: 0, holidayOver8: 0 } };
+        const ruleOf = (d: string) => period.ruleFor(id, d) ?? period.rule!;
+        const weekDays = daysFor(period, id, weekStartOf(from), last);
+        const rounded = roundedAttendance(weekDays, ruleOf);
+        const leaveDays = leaveDaysFor(period, id);
+        const roundedFacts = { regularMinutes: 0, approved: { overtime: 0, night: 0, holidayWithin8: 0, holidayOver8: 0 }, paidLeaveWorkedMinutes: 0 };
+        // 유급 휴가 구간에 실제로 일한 시간 — 근무로 이미 셌으니 휴가 시간에서 뺀다. 간주 근무일은 찍은 시각이 아니라 일정이라 빼지 않는다
+        for (const d of weekDays) {
+          const paid = leaveDays.get(d.workDate)?.filter((l) => l.isPaid);
+          if (!paid?.length || d.deemed || d.workDate < from || !confirms.has(confirmKey(id, d.workDate))) continue;
+          att.paidLeaveWorkedMinutes += workedInLeaveMinutes(d.pairs, ruleOf(d.workDate), d.workDate, paid);
+          roundedFacts.paidLeaveWorkedMinutes += workedInLeaveMinutes(roundPairs(d, ruleOf(d.workDate)), ruleOf(d.workDate), d.workDate, paid);
+        }
         for (const [date, day] of rounded) {
           if (date < from || date > last || !confirms.has(confirmKey(id, date))) continue;
           roundedFacts.regularMinutes += day.regularMinutes;
@@ -290,7 +300,6 @@ async function buildInputs(run: RunRow, memberIds?: string[]): Promise<Built> {
           roundedFacts.approved.holidayWithin8 += Math.min(allowed.holidayWithin8, day.holidayWithin8Minutes);
           roundedFacts.approved.holidayOver8 += Math.min(allowed.holidayOver8, day.holidayOver8Minutes);
         }
-        const leaveDays = leaveDaysFor(period, id);
         let scheduleMinutes = 0;
         const unconfirmedSchedule = new Set(s.unconfirmedDates);
         for (let date = from; date <= last; date = addDays(date, 1)) {

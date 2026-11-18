@@ -1,5 +1,5 @@
 import { expect,it } from 'vitest';
-import { latestLeaveStart, leaveDurationMismatch, leaveWindowForPlan, scheduledMinutes } from '@/lib/payroll/engine/scheduled-attendance';
+import { latestLeaveStart, leaveDurationMismatch, leaveWindowForPlan, scheduledMinutes, workedInLeaveMinutes } from '@/lib/payroll/engine/scheduled-attendance';
 import { timeFromAttendance } from '@/lib/payroll/engine/attendance';
 import type { DayPlan } from '@/lib/shifts';
 const plan: DayPlan = { rule: {startTime:'09:00',endTime:'18:00',breakStart:'12:00',breakEnd:'13:00',lateGraceMin:0,workdays:[1,2,3,4,5],weeklyRestDay:7},deemed:null,items:[{startTime:'09:00',endTime:'18:00',kind:'normal',name:null,color:null,shiftId:null,note:null,source:'rule'}] };
@@ -47,4 +47,20 @@ it('단시간 근무자의 시각 없는 종일 휴가는 그날 일정 전체�
 it('일정 기준 시급제는 일정 시간에 인정된 연장 · 휴일 시간을 더해 지급한다',()=>{
  const r=timeFromAttendance({regularMinutes:0,netMinutes:0,payableMinutes:0,scheduleMinutes:480,approved:{overtime:120,night:0,holidayWithin8:60,holidayOver8:0},pendingMinutes:0,paidLeaveDays:0,flags:[],unconfirmedDays:0},'SCHEDULE','HOURLY',480,'ACTUAL');
  expect(r.time?.workedMinutes).toBe(660);expect(r.time?.overtimeMinutes).toBe(120);
+});
+
+it('휴가 구간에 실제로 일한 시간은 휴가로 다시 주지 않는다 (급여-77, 2공장 정원채 10/19 · 10/28)',()=>{
+ const at=(t:string)=>new Date(`2026-10-12T${t}:00+09:00`);
+ const leave={typeCode:'hour',isPaid:true,unit:3/8,requestId:'r',startTime:'14:00',endTime:'17:00'};
+ // 하루를 다 일함 → 휴가 3시간 전부 겹침
+ expect(workedInLeaveMinutes([{in:at('09:00'),out:at('18:00')}],plan.rule!,'2026-10-12',[leave])).toBe(180);
+ // 16:00에 나감 → 14–16시 2시간만 겹침, 점심은 휴가 구간 밖
+ expect(workedInLeaveMinutes([{in:at('09:00'),out:at('16:00')}],plan.rule!,'2026-10-12',[leave])).toBe(120);
+ // 시각 없는 휴가는 비교할 구간이 없다
+ expect(workedInLeaveMinutes([{in:at('09:00'),out:at('18:00')}],plan.rule!,'2026-10-12',[{...leave,startTime:null,endTime:null}])).toBe(0);
+ const base={regularMinutes:480,netMinutes:480,payableMinutes:480,approved:{overtime:0,night:0,holidayWithin8:0,holidayOver8:0},pendingMinutes:0,paidLeaveDays:3/8,paidLeaveWorkedMinutes:180,flags:[],unconfirmedDays:0};
+ expect(timeFromAttendance(base,'ACTUAL','HOURLY',480,'ACTUAL').time?.paidLeaveMinutes).toBe(0);
+ expect(timeFromAttendance({...base,rounded:{regularMinutes:480,approved:base.approved,paidLeaveWorkedMinutes:120}},'ROUNDED','HOURLY',480,'ACTUAL').time?.paidLeaveMinutes).toBe(60);
+ // 일정 기준은 일정에서 휴가 구간을 이미 뺐으니 그대로
+ expect(timeFromAttendance({...base,scheduleMinutes:300},'SCHEDULE','HOURLY',480,'ACTUAL').time?.paidLeaveMinutes).toBe(180);
 });

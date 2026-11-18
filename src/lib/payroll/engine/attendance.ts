@@ -13,9 +13,10 @@ export type AttendanceFacts = {
   pendingDates?: string[]; // 위 대기가 어느 날인지 (월-일) — 막힘 안내에 날짜를 보인다
   unreviewedMinutes?: number; // 확인 기준 미만의 연장 — 인정하지 않은 시간이라 지급하지 않고 참고로만 남긴다
   paidLeaveDays: number;
+  paidLeaveWorkedMinutes?: number; // 시각을 정한 유급 휴가 구간 안에서 실제로 일한 분 — 근무 시간에 이미 들어 있어 휴가 지급에서 뺀다
   unpaidLeaveDays?: number;
   lateMinutes?: number;
-  rounded?: { regularMinutes: number; approved: AttendanceFacts['approved'] };
+  rounded?: { regularMinutes: number; approved: AttendanceFacts['approved']; paidLeaveWorkedMinutes?: number };
   scheduleMinutes?: number;
   flags: string[]; // 'block:…' / 'warn:…'
   unconfirmedDays: number;
@@ -45,8 +46,10 @@ export function timeFromAttendance(a: AttendanceFacts, basis: 'ACTUAL' | 'ROUNDE
     worked = 0;
   }
   if (blockers.length > 0) return { time: null, blockers };
+  // 일정 기준은 일정에서 휴가 구간을 이미 뺐으므로 겹침을 다시 빼지 않는다
+  const leaveWorked = basis === 'ACTUAL' ? a.paidLeaveWorkedMinutes ?? 0 : basis === 'ROUNDED' ? a.rounded?.paidLeaveWorkedMinutes ?? 0 : 0;
   return {
-    time: { workedMinutes: worked, overtimeMinutes: approved.overtime, nightMinutes: approved.night, holidayMinutes: approved.holidayWithin8 + approved.holidayOver8, holidayOver8Minutes: approved.holidayOver8, paidLeaveMinutes: Math.round(a.paidLeaveDays * dayMinutes), unpaidLeaveMinutes: Math.round((a.unpaidLeaveDays ?? 0) * dayMinutes), lateMinutes: a.lateMinutes ?? 0 },
+    time: { workedMinutes: worked, overtimeMinutes: approved.overtime, nightMinutes: approved.night, holidayMinutes: approved.holidayWithin8 + approved.holidayOver8, holidayOver8Minutes: approved.holidayOver8, paidLeaveMinutes: Math.max(0, Math.round(a.paidLeaveDays * dayMinutes) - leaveWorked), unpaidLeaveMinutes: Math.round((a.unpaidLeaveDays ?? 0) * dayMinutes), lateMinutes: a.lateMinutes ?? 0 },
     blockers: [],
   };
 }
